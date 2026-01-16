@@ -2,6 +2,8 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/DateTime.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

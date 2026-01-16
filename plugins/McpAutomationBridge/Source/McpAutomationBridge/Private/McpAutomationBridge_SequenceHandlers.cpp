@@ -8,6 +8,9 @@
 #include "MovieSceneSequence.h"
 #include "MovieSceneTrack.h"
 #include "UObject/UObjectIterator.h"
+#include "Misc/Paths.h"
+#include "Misc/Guid.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

@@ -6,6 +6,7 @@
 #include "Misc/Guid.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Math/UnrealMathUtility.h"
 
 // Reuse the log category from the subsystem for consistency
 // (It is declared extern in McpAutomationBridgeSubsystem.h)

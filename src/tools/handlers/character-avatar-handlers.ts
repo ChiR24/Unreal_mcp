@@ -141,6 +141,37 @@ export async function handleCharacterAvatarTools(
       return sendRequest('export_metahuman_settings');
     }
 
+    // Wave 8.1-8.8: Additional MetaHuman Actions
+    case 'set_metahuman_expression': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('set_metahuman_expression');
+    }
+
+    case 'apply_metahuman_animation': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('apply_metahuman_animation');
+    }
+
+    case 'export_metahuman': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('export_metahuman');
+    }
+
+    case 'get_metahuman_components': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('get_metahuman_components');
+    }
+
+    case 'configure_metahuman_physics': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('configure_metahuman_physics');
+    }
+
+    case 'set_metahuman_outfit': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('set_metahuman_outfit');
+    }
+
     // =========================================================================
     // 36.2 Groom/Hair Actions (14 actions)
     // =========================================================================
@@ -215,6 +246,33 @@ export async function handleCharacterAvatarTools(
     case 'get_groom_info': {
       requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
       return sendRequest('get_groom_info');
+    }
+
+    // Wave 8.9-8.14: Additional Groom/Hair Actions
+    case 'configure_groom_physics': {
+      requireNonEmptyString(argsRecord.groomAssetPath, 'groomAssetPath', 'Missing required parameter: groomAssetPath');
+      return sendRequest('configure_groom_physics');
+    }
+
+    case 'set_groom_material': {
+      requireNonEmptyString(argsRecord.groomAssetPath, 'groomAssetPath', 'Missing required parameter: groomAssetPath');
+      return sendRequest('set_groom_material');
+    }
+
+    case 'bind_groom_to_skeleton': {
+      requireNonEmptyString(argsRecord.groomAssetPath, 'groomAssetPath', 'Missing required parameter: groomAssetPath');
+      requireNonEmptyString(argsRecord.skeletalMeshPath, 'skeletalMeshPath', 'Missing required parameter: skeletalMeshPath');
+      return sendRequest('bind_groom_to_skeleton');
+    }
+
+    case 'get_groom_strands_info': {
+      requireNonEmptyString(argsRecord.groomAssetPath, 'groomAssetPath', 'Missing required parameter: groomAssetPath');
+      return sendRequest('get_groom_strands_info');
+    }
+
+    case 'bake_groom_simulation': {
+      requireNonEmptyString(argsRecord.groomAssetPath, 'groomAssetPath', 'Missing required parameter: groomAssetPath');
+      return sendRequest('bake_groom_simulation');
     }
 
     // =========================================================================
@@ -309,6 +367,33 @@ export async function handleCharacterAvatarTools(
       return sendRequest('spawn_customizable_actor');
     }
 
+    // Wave 8.15-8.19: Additional Mutable Actions
+    case 'configure_mutable_object': {
+      requireNonEmptyString(argsRecord.objectPath, 'objectPath', 'Missing required parameter: objectPath');
+      return sendRequest('configure_mutable_object');
+    }
+
+    case 'set_mutable_parameters': {
+      requireNonEmptyString(argsRecord.instancePath, 'instancePath', 'Missing required parameter: instancePath');
+      return sendRequest('set_mutable_parameters');
+    }
+
+    case 'bake_mutable_instance': {
+      requireNonEmptyString(argsRecord.instancePath, 'instancePath', 'Missing required parameter: instancePath');
+      return sendRequest('bake_mutable_instance');
+    }
+
+    case 'get_mutable_options': {
+      requireNonEmptyString(argsRecord.objectPath, 'objectPath', 'Missing required parameter: objectPath');
+      return sendRequest('get_mutable_options');
+    }
+
+    case 'apply_mutable_preset': {
+      requireNonEmptyString(argsRecord.instancePath, 'instancePath', 'Missing required parameter: instancePath');
+      requireNonEmptyString(argsRecord.presetName, 'presetName', 'Missing required parameter: presetName');
+      return sendRequest('apply_mutable_preset');
+    }
+
     // =========================================================================
     // 36.4 Ready Player Me Actions (12 actions)
     // =========================================================================
@@ -369,6 +454,27 @@ export async function handleCharacterAvatarTools(
 
     case 'get_rpm_info': {
       return sendRequest('get_rpm_info');
+    }
+
+    // Wave 8.20-8.23: Additional Ready Player Me Actions
+    case 'import_rpm_avatar': {
+      requireNonEmptyString(argsRecord.avatarUrl, 'avatarUrl', 'Missing required parameter: avatarUrl');
+      return sendRequest('import_rpm_avatar');
+    }
+
+    case 'configure_rpm_settings': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('configure_rpm_settings');
+    }
+
+    case 'export_rpm_avatar': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('export_rpm_avatar');
+    }
+
+    case 'get_rpm_morph_targets': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('get_rpm_morph_targets');
     }
 
     // =========================================================================

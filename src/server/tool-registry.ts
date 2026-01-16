@@ -546,12 +546,16 @@ export class ToolRegistry {
             this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
             
             // Filter by category AND hide manage_pipeline from clients that can't use it
+            // AND hide experimental tools unless EXPERIMENTAL_TOOLS is enabled
             const filtered = consolidatedToolDefinitions
                 .filter((t: ToolDefinition) => 
                     !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
                 )
                 .filter((t: ToolDefinition) => 
                     supportsListChanged || t.name !== 'manage_pipeline'
+                )
+                .filter((t: ToolDefinition) =>
+                    !t.experimental || config.EXPERIMENTAL_TOOLS
                 );
             
              const sanitized = filtered.map((t: ToolDefinition) => {

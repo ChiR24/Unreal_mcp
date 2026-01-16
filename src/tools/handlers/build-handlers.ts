@@ -241,6 +241,172 @@ export async function handleBuildTools(
       )) as HandlerResult;
 
     // =========================================
+    // PERFORMANCE PROFILING (Wave 6.1-6.10)
+    // =========================================
+    case 'start_unreal_insights_trace':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for start_unreal_insights_trace'
+      )) as HandlerResult;
+
+    case 'stop_unreal_insights_trace':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for stop_unreal_insights_trace'
+      )) as HandlerResult;
+
+    case 'get_trace_summary':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_trace_summary'
+      )) as HandlerResult;
+
+    case 'benchmark_scene':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for benchmark_scene'
+      )) as HandlerResult;
+
+    case 'get_frame_statistics':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_frame_statistics'
+      )) as HandlerResult;
+
+    case 'profile_render_thread':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for profile_render_thread'
+      )) as HandlerResult;
+
+    case 'get_memory_report':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_memory_report'
+      )) as HandlerResult;
+
+    case 'analyze_shader_complexity':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for analyze_shader_complexity'
+      )) as HandlerResult;
+
+    case 'get_draw_call_count':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_draw_call_count'
+      )) as HandlerResult;
+
+    case 'generate_performance_report':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for generate_performance_report'
+      )) as HandlerResult;
+
+    // =========================================
+    // TESTING AUTOMATION (Wave 6.11-6.20)
+    // =========================================
+    case 'create_automation_test':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for create_automation_test'
+      )) as HandlerResult;
+
+    case 'run_automation_test':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for run_automation_test'
+      )) as HandlerResult;
+
+    case 'run_test_suite':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for run_test_suite'
+      )) as HandlerResult;
+
+    case 'capture_screenshot_test':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for capture_screenshot_test'
+      )) as HandlerResult;
+
+    case 'compare_screenshots':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for compare_screenshots'
+      )) as HandlerResult;
+
+    case 'validate_asset_conventions':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for validate_asset_conventions'
+      )) as HandlerResult;
+
+    case 'get_test_results':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_test_results'
+      )) as HandlerResult;
+
+    case 'configure_test_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for configure_test_settings'
+      )) as HandlerResult;
+
+    case 'create_functional_test':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for create_functional_test'
+      )) as HandlerResult;
+
+    case 'get_test_coverage':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_build',
+        payload,
+        'Automation bridge not available for get_test_coverage'
+      )) as HandlerResult;
+
+    // =========================================
     // DEFAULT CASE
     // =========================================
     default:

@@ -329,6 +329,36 @@ static inline bool McpSafeAssetSave(UObject* Asset)
     
     return true;
 }
+
+/**
+ * Create a standardized error response for unavailable plugins.
+ * @param PluginName Name of the required plugin that is not loaded.
+ * @returns JSON object with success=false, error=PLUGIN_UNAVAILABLE, and plugin name.
+ */
+inline TSharedPtr<FJsonObject> MakePluginUnavailableResponse(const FString& PluginName)
+{
+    TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+    Response->SetBoolField(TEXT("success"), false);
+    Response->SetStringField(TEXT("error"), TEXT("PLUGIN_UNAVAILABLE"));
+    Response->SetStringField(TEXT("plugin"), PluginName);
+    return Response;
+}
+
+/**
+ * Create a standardized error response for features requiring a newer UE version.
+ * @param Feature Name of the feature that is unavailable.
+ * @param MinVersion Minimum required Unreal Engine version (e.g., "5.7").
+ * @returns JSON object with success=false, error=REQUIRES_UE_VERSION, feature, and minVersion.
+ */
+inline TSharedPtr<FJsonObject> MakeFeatureUnavailableResponse(const FString& Feature, const FString& MinVersion)
+{
+    TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+    Response->SetBoolField(TEXT("success"), false);
+    Response->SetStringField(TEXT("error"), TEXT("REQUIRES_UE_VERSION"));
+    Response->SetStringField(TEXT("feature"), Feature);
+    Response->SetStringField(TEXT("minVersion"), MinVersion);
+    return Response;
+}
 #endif
 
 #if WITH_EDITOR

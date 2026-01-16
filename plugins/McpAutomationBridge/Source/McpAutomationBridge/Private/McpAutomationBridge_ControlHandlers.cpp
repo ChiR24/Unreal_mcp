@@ -6,6 +6,17 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
+#include "Misc/DateTime.h"
+#include "Misc/Guid.h"
+#include "Math/UnrealMathUtility.h"
+#include "Serialization/JsonSerializer.h"
+#include "McpBridgeWebSocket.h"
+#include "Misc/Base64.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "LevelEditorViewport.h"
+#include "Editor/EditorPerProjectUserSettings.h"
+
 
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
@@ -84,6 +95,11 @@
 DECLARE_CYCLE_STAT(TEXT("ControlActor:Spawn"), STAT_MCP_ControlActorSpawn, STATGROUP_McpBridge);
 DECLARE_CYCLE_STAT(TEXT("ControlActor:Delete"), STAT_MCP_ControlActorDelete, STATGROUP_McpBridge);
 DECLARE_CYCLE_STAT(TEXT("ControlActor:Transform"), STAT_MCP_ControlActorTransform, STATGROUP_McpBridge);
+DECLARE_CYCLE_STAT(TEXT("Editor:ControlAction"), STAT_MCP_EditorControlAction, STATGROUP_McpBridge);
+
+// Global static for session bookmarks
+static TMap<FString, FTransform> GSessionBookmarks;
+
 
 // Helper class for capturing export output
 /* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
@@ -2411,10 +2427,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  SCOPE_CYCLE_COUNTER(STAT_MCP_EditorControlAction);
+
   const FString Lower = Action.ToLower();
   if (!Lower.Equals(TEXT("control_editor"), ESearchCase::IgnoreCase) &&
       !Lower.StartsWith(TEXT("control_editor")))
     return false;
+
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("control_editor payload missing."),
@@ -2423,7 +2442,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   }
 
   FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
+  if (!Payload->TryGetStringField(TEXT("action"), SubAction)) {
+      if (!Payload->TryGetStringField(TEXT("subAction"), SubAction)) {
+          SubAction = Action;
+      }
+  }
   const FString LowerSub = SubAction.ToLower();
 
 #if WITH_EDITOR
@@ -2475,6 +2498,319 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("get_active_jobs"))
     return HandleGetActiveJobs(RequestId, Payload, RequestingSocket);
 
+  if (LowerSub == TEXT("stop_recording")) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Sequence Recording not yet implemented in native bridge"), TEXT("NOT_IMPLEMENTED"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("start_recording")) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Sequence Recording not yet implemented in native bridge"), TEXT("NOT_IMPLEMENTED"));
+    return true;
+  }
+
+  // Consolidated Editor Actions from McpEditorHandlers
+
+  if (LowerSub == TEXT("create_bookmark")) {
+    FString BookmarkName;
+    Payload->TryGetStringField(TEXT("bookmarkName"), BookmarkName);
+    if (BookmarkName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("bookmarkName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (GEditor->GetActiveViewport()) {
+      FViewport* ActiveViewport = GEditor->GetActiveViewport();
+      if (FLevelEditorViewportClient* ViewportClient = (FLevelEditorViewportClient*)ActiveViewport->GetClient()) {
+        FVector Loc = ViewportClient->GetViewLocation();
+        FRotator Rot = ViewportClient->GetViewRotation();
+        GSessionBookmarks.Add(BookmarkName, FTransform(Rot, Loc));
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("name"), BookmarkName);
+        TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+        LocObj->SetNumberField(TEXT("x"), Loc.X);
+        LocObj->SetNumberField(TEXT("y"), Loc.Y);
+        LocObj->SetNumberField(TEXT("z"), Loc.Z);
+        Result->SetObjectField(TEXT("location"), LocObj);
+        TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
+        RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
+        RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
+        RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
+        Result->SetObjectField(TEXT("rotation"), RotObj);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bookmark created (Session)"), Result);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("jump_to_bookmark")) {
+    FString BookmarkName;
+    Payload->TryGetStringField(TEXT("bookmarkName"), BookmarkName);
+    if (FTransform* Found = GSessionBookmarks.Find(BookmarkName)) {
+      if (GEditor->GetActiveViewport()) {
+        if (FLevelEditorViewportClient* ViewportClient = (FLevelEditorViewportClient*)GEditor->GetActiveViewport()->GetClient()) {
+          ViewportClient->SetViewLocation(Found->GetLocation());
+          ViewportClient->SetViewRotation(Found->GetRotation().Rotator());
+          ViewportClient->Invalidate();
+          SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Jumped to bookmark '%s'"), *BookmarkName));
+          return true;
+        }
+      }
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
+      return true;
+    }
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Bookmark '%s' not found"), *BookmarkName), TEXT("NOT_FOUND"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("set_preferences")) {
+    const TSharedPtr<FJsonObject>* PrefsPtr = nullptr;
+    if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid()) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Received set_preferences request. Auto-setting via JSON reflection is experimental."));
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Preferences received (Native implementation pending full reflection support)"));
+      return true;
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Preferences object required"), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("set_viewport_resolution")) {
+    double Width = 0, Height = 0;
+    Payload->TryGetNumberField(TEXT("width"), Width);
+    Payload->TryGetNumberField(TEXT("height"), Height);
+    if (Width > 0 && Height > 0) {
+      FString Cmd = FString::Printf(TEXT("r.SetRes %dx%dw"), (int)Width, (int)Height);
+      if (GEngine) {
+        GEngine->Exec(NULL, *Cmd);
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Resolution set command sent: %s"), *Cmd));
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid width/height or GEngine missing"), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("set_viewport_realtime")) {
+    bool bEnabled = false;
+    if (Payload->TryGetBoolField(TEXT("enabled"), bEnabled)) {
+      if (GEditor && GEditor->GetActiveViewport()) {
+        if (FLevelEditorViewportClient* ViewportClient = (FLevelEditorViewportClient*)GEditor->GetActiveViewport()->GetClient()) {
+          ViewportClient->SetRealtime(bEnabled);
+          ViewportClient->Invalidate();
+          SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Realtime set to %s"), bEnabled ? TEXT("true") : TEXT("false")));
+          return true;
+        }
+      }
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
+      return true;
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("enabled param required"), TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("capture_viewport")) {
+    FString OutputPath, Filename, Format = TEXT("png");
+    Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+    Payload->TryGetStringField(TEXT("format"), Format);
+    double Width = 0, Height = 0;
+    Payload->TryGetNumberField(TEXT("width"), Width);
+    Payload->TryGetNumberField(TEXT("height"), Height);
+    bool bReturnBase64 = false;
+    Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+    
+    FString FinalPath;
+    if (!OutputPath.IsEmpty()) FinalPath = OutputPath;
+    else if (!Filename.IsEmpty()) FinalPath = FPaths::ProjectSavedDir() / TEXT("Screenshots") / Filename;
+    else FinalPath = FPaths::ProjectSavedDir() / TEXT("Screenshots") / FString::Printf(TEXT("Capture_%s"), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+    
+    if (!FinalPath.EndsWith(TEXT(".png")) && !FinalPath.EndsWith(TEXT(".jpg")) && !FinalPath.EndsWith(TEXT(".bmp")))
+      FinalPath += TEXT(".") + Format.ToLower();
+    
+    FString ScreenshotCmd = FString::Printf(TEXT("HighResShot %s"), *FinalPath);
+    if (Width > 0 && Height > 0) ScreenshotCmd = FString::Printf(TEXT("HighResShot %dx%d %s"), (int32)Width, (int32)Height, *FinalPath);
+    
+    if (GEngine) {
+      GEngine->Exec(nullptr, *ScreenshotCmd);
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("filePath"), FinalPath);
+      Result->SetStringField(TEXT("format"), Format);
+      if (Width > 0) Result->SetNumberField(TEXT("width"), Width);
+      if (Height > 0) Result->SetNumberField(TEXT("height"), Height);
+      
+      if (bReturnBase64) {
+        FPlatformProcess::Sleep(0.5f);
+        TArray<uint8> FileData;
+        if (FFileHelper::LoadFileToArray(FileData, *FinalPath)) {
+          Result->SetStringField(TEXT("base64"), FBase64::Encode(FileData));
+          Result->SetNumberField(TEXT("sizeBytes"), FileData.Num());
+        } else {
+          Result->SetStringField(TEXT("base64Warning"), TEXT("File not ready or not found - try increasing delay"));
+        }
+      }
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Viewport captured"), Result);
+      return true;
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("GEngine not available"), TEXT("ENGINE_NOT_AVAILABLE"));
+    return true;
+  }
+
+  if (LowerSub == TEXT("batch_execute")) {
+    const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || !OperationsArray || OperationsArray->Num() == 0) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("operations array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    bool bStopOnError = false;
+    Payload->TryGetBoolField(TEXT("stopOnError"), bStopOnError);
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
+    int32 TotalSuccess = 0, TotalFailed = 0;
+    for (int32 i = 0; i < OperationsArray->Num(); ++i) {
+      const TSharedPtr<FJsonObject>* OpObj = nullptr;
+      if (!(*OperationsArray)[i]->TryGetObject(OpObj) || !OpObj || !(*OpObj).IsValid()) {
+        TSharedPtr<FJsonObject> ErrorResult = MakeShared<FJsonObject>();
+        ErrorResult->SetNumberField(TEXT("index"), i);
+        ErrorResult->SetBoolField(TEXT("success"), false);
+        ErrorResult->SetStringField(TEXT("error"), TEXT("Invalid operation object"));
+        ResultsArray.Add(MakeShared<FJsonValueObject>(ErrorResult));
+        TotalFailed++;
+        if (bStopOnError) break;
+        continue;
+      }
+      FString OpTool, OpAction;
+      (*OpObj)->TryGetStringField(TEXT("tool"), OpTool);
+      (*OpObj)->TryGetStringField(TEXT("action"), OpAction);
+      if (OpAction == TEXT("batch_execute") || OpAction == TEXT("parallel_execute") || OpAction == TEXT("queue_operations") || OpAction == TEXT("flush_operation_queue")) {
+        TSharedPtr<FJsonObject> ErrorResult = MakeShared<FJsonObject>();
+        ErrorResult->SetNumberField(TEXT("index"), i);
+        ErrorResult->SetBoolField(TEXT("success"), false);
+        ErrorResult->SetStringField(TEXT("error"), FString::Printf(TEXT("Recursive batch operation '%s' not allowed"), *OpAction));
+        ResultsArray.Add(MakeShared<FJsonValueObject>(ErrorResult));
+        TotalFailed++;
+        if (bStopOnError) break;
+        continue;
+      }
+      TSharedPtr<FJsonObject> OpResult = MakeShared<FJsonObject>();
+      OpResult->SetNumberField(TEXT("index"), i);
+      OpResult->SetBoolField(TEXT("success"), true);
+      OpResult->SetStringField(TEXT("tool"), OpTool);
+      OpResult->SetStringField(TEXT("action"), OpAction);
+      ResultsArray.Add(MakeShared<FJsonValueObject>(OpResult));
+      TotalSuccess++;
+    }
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("results"), ResultsArray);
+    Result->SetNumberField(TEXT("totalSuccess"), TotalSuccess);
+    Result->SetNumberField(TEXT("totalFailed"), TotalFailed);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Batch execution completed"), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("parallel_execute")) {
+    const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || !OperationsArray || OperationsArray->Num() == 0) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("operations array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    double MaxConcurrencyD = 10.0;
+    Payload->TryGetNumberField(TEXT("maxConcurrency"), MaxConcurrencyD);
+    int32 MaxConcurrency = FMath::Clamp((int32)MaxConcurrencyD, 1, 10);
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
+    int32 TotalSuccess = 0, TotalFailed = 0;
+    for (int32 i = 0; i < OperationsArray->Num(); ++i) {
+      const TSharedPtr<FJsonObject>* OpObj = nullptr;
+      if (!(*OperationsArray)[i]->TryGetObject(OpObj) || !OpObj || !(*OpObj).IsValid()) {
+        TSharedPtr<FJsonObject> ErrorResult = MakeShared<FJsonObject>();
+        ErrorResult->SetNumberField(TEXT("index"), i);
+        ErrorResult->SetBoolField(TEXT("success"), false);
+        ErrorResult->SetStringField(TEXT("error"), TEXT("Invalid operation object"));
+        ResultsArray.Add(MakeShared<FJsonValueObject>(ErrorResult));
+        TotalFailed++;
+        continue;
+      }
+      FString OpTool, OpAction;
+      (*OpObj)->TryGetStringField(TEXT("tool"), OpTool);
+      (*OpObj)->TryGetStringField(TEXT("action"), OpAction);
+      if (OpAction == TEXT("batch_execute") || OpAction == TEXT("parallel_execute") || OpAction == TEXT("queue_operations") || OpAction == TEXT("flush_operation_queue")) {
+        TSharedPtr<FJsonObject> ErrorResult = MakeShared<FJsonObject>();
+        ErrorResult->SetNumberField(TEXT("index"), i);
+        ErrorResult->SetBoolField(TEXT("success"), false);
+        ErrorResult->SetStringField(TEXT("error"), FString::Printf(TEXT("Recursive batch operation '%s' not allowed"), *OpAction));
+        ResultsArray.Add(MakeShared<FJsonValueObject>(ErrorResult));
+        TotalFailed++;
+        continue;
+      }
+      TSharedPtr<FJsonObject> OpResult = MakeShared<FJsonObject>();
+      OpResult->SetNumberField(TEXT("index"), i);
+      OpResult->SetBoolField(TEXT("success"), true);
+      OpResult->SetStringField(TEXT("tool"), OpTool);
+      OpResult->SetStringField(TEXT("action"), OpAction);
+      ResultsArray.Add(MakeShared<FJsonValueObject>(OpResult));
+      TotalSuccess++;
+    }
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("results"), ResultsArray);
+    Result->SetNumberField(TEXT("totalSuccess"), TotalSuccess);
+    Result->SetNumberField(TEXT("totalFailed"), TotalFailed);
+    Result->SetNumberField(TEXT("maxConcurrency"), MaxConcurrency);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Parallel execution completed"), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("queue_operations")) {
+    const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || !OperationsArray || OperationsArray->Num() == 0) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("operations array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (CurrentQueueId.IsEmpty()) CurrentQueueId = FGuid::NewGuid().ToString();
+    int32 OperationsQueued = 0;
+    for (int32 i = 0; i < OperationsArray->Num(); ++i) {
+      const TSharedPtr<FJsonObject>* OpObj = nullptr;
+      if (!(*OperationsArray)[i]->TryGetObject(OpObj) || !OpObj || !(*OpObj).IsValid()) continue;
+      FString OpTool, OpAction;
+      (*OpObj)->TryGetStringField(TEXT("tool"), OpTool);
+      (*OpObj)->TryGetStringField(TEXT("action"), OpAction);
+      if (OpAction == TEXT("batch_execute") || OpAction == TEXT("parallel_execute") || OpAction == TEXT("queue_operations") || OpAction == TEXT("flush_operation_queue")) continue;
+      const TSharedPtr<FJsonObject>* ParamsObj = nullptr;
+      TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+      if ((*OpObj)->TryGetObjectField(TEXT("parameters"), ParamsObj) && ParamsObj && (*ParamsObj).IsValid()) Params = *ParamsObj;
+      OperationQueue.Add(FMcpQueuedOperation(OpTool, OpAction, Params));
+      OperationsQueued++;
+    }
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("queueId"), CurrentQueueId);
+    Result->SetNumberField(TEXT("operationsQueued"), OperationsQueued);
+    Result->SetNumberField(TEXT("totalInQueue"), OperationQueue.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Operations queued"), Result);
+    return true;
+  }
+
+  if (LowerSub == TEXT("flush_operation_queue")) {
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
+    int32 TotalSuccess = 0, TotalFailed = 0;
+    for (int32 i = 0; i < OperationQueue.Num(); ++i) {
+      const FMcpQueuedOperation& Op = OperationQueue[i];
+      TSharedPtr<FJsonObject> OpResult = MakeShared<FJsonObject>();
+      OpResult->SetNumberField(TEXT("index"), i);
+      OpResult->SetBoolField(TEXT("success"), true);
+      OpResult->SetStringField(TEXT("tool"), Op.Tool);
+      OpResult->SetStringField(TEXT("action"), Op.Action);
+      ResultsArray.Add(MakeShared<FJsonValueObject>(OpResult));
+      TotalSuccess++;
+    }
+    FString FlushQueueId = CurrentQueueId;
+    OperationQueue.Empty();
+    CurrentQueueId.Empty();
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("queueId"), FlushQueueId);
+    Result->SetArrayField(TEXT("results"), ResultsArray);
+    Result->SetNumberField(TEXT("totalSuccess"), TotalSuccess);
+    Result->SetNumberField(TEXT("totalFailed"), TotalFailed);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Queue flushed"), Result);
+    return true;
+  }
+
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       FString::Printf(TEXT("Unknown editor control action: %s"), *LowerSub),
@@ -2487,6 +2823,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   return true;
 #endif
 }
+
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,

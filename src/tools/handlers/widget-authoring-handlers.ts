@@ -563,6 +563,71 @@ export async function handleWidgetAuthoringTools(
     }
 
     // =========================================================================
+    // 19.9 Widget Enhancement Actions (Wave 4.31-4.38)
+    // =========================================================================
+
+    case 'create_widget_template': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      requireNonEmptyString(argsRecord.templateType, 'templateType', 'Missing required parameter: templateType');
+      // Creates a reusable widget template that can be instantiated
+      // Optional: folder, templateConfig, parentClass
+      return sendRequest('create_widget_template');
+    }
+
+    case 'configure_widget_binding_batch': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      if (!argsRecord.bindings || !Array.isArray(argsRecord.bindings)) {
+        throw new Error('Missing required parameter: bindings (array of binding configs)');
+      }
+      // Batch configure multiple widget bindings in a single call
+      // bindings: array of { slot, property, source, bindingType }
+      return sendRequest('configure_widget_binding_batch');
+    }
+
+    case 'create_widget_animation_advanced': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      requireNonEmptyString(argsRecord.animationName, 'animationName', 'Missing required parameter: animationName');
+      // Creates advanced widget animation with easing and keyframes
+      // Optional: animationDuration, easing, animationProperties, animationKeyframes
+      return sendRequest('create_widget_animation_advanced');
+    }
+
+    case 'configure_widget_navigation': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Configures navigation flow between widgets (focus, tab order)
+      // Optional: navigationMap, navigationMode, defaultFocus, wrapNavigation
+      return sendRequest('configure_widget_navigation');
+    }
+
+    case 'validate_widget_accessibility': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Validates widget accessibility against WCAG guidelines
+      // Optional: wcagLevel, accessibilityRules, checkContrast, checkFocusOrder, checkTextSize, checkScreenReader
+      return sendRequest('validate_widget_accessibility');
+    }
+
+    case 'create_hud_layout': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      // Creates a HUD layout with zone-based widget placement
+      // Optional: folder, hudLayoutName, hudZones
+      return sendRequest('create_hud_layout');
+    }
+
+    case 'configure_safe_zone': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Configures safe zone settings for TV/monitor display edges
+      // Optional: safeZoneType, safeZonePadding, scalingRule
+      return sendRequest('configure_safe_zone');
+    }
+
+    case 'batch_localize_widgets': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Batch apply localization to multiple widget text elements
+      // Optional: targetWidgets, localizationNamespace, localizationKey, extractStrings, updateBindings
+      return sendRequest('batch_localize_widgets');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 

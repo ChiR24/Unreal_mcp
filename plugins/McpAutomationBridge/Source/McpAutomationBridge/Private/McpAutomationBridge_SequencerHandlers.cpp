@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "Misc/Guid.h"
 
 #if WITH_EDITOR
 #include "LevelSequence.h"

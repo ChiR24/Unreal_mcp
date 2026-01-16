@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
+#include "Misc/Paths.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

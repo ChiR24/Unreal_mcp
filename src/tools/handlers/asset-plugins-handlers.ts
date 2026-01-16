@@ -373,6 +373,46 @@ export async function handleAssetPluginsTools(
         'Automation bridge not available for get_usd_prim_children'
       )) as HandlerResult;
 
+    case 'import_usd_stage':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for import_usd_stage'
+      )) as HandlerResult;
+
+    case 'export_to_usd':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for export_to_usd'
+      )) as HandlerResult;
+
+    case 'get_usd_prims':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for get_usd_prims'
+      )) as HandlerResult;
+
+    case 'configure_usd_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for configure_usd_settings'
+      )) as HandlerResult;
+
+    case 'link_usd_layer':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for link_usd_layer'
+      )) as HandlerResult;
+
     // =========================================
     // ALEMBIC (15 actions)
     // =========================================
@@ -494,6 +534,30 @@ export async function handleAssetPluginsTools(
         'manage_asset_plugins',
         payload,
         'Automation bridge not available for export_to_alembic'
+      )) as HandlerResult;
+
+    case 'import_alembic':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for import_alembic'
+      )) as HandlerResult;
+
+    case 'configure_alembic_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for configure_alembic_settings'
+      )) as HandlerResult;
+
+    case 'get_alembic_cache_info':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for get_alembic_cache_info'
       )) as HandlerResult;
 
     // =========================================
@@ -625,6 +689,14 @@ export async function handleAssetPluginsTools(
         'manage_asset_plugins',
         payload,
         'Automation bridge not available for configure_gltf_material_baking'
+      )) as HandlerResult;
+
+    case 'configure_gltf_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for configure_gltf_settings'
       )) as HandlerResult;
 
     // =========================================
@@ -772,6 +844,22 @@ export async function handleAssetPluginsTools(
         'manage_asset_plugins',
         payload,
         'Automation bridge not available for sync_datasmith_changes'
+      )) as HandlerResult;
+
+    case 'import_datasmith':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for import_datasmith'
+      )) as HandlerResult;
+
+    case 'configure_datasmith_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for configure_datasmith_settings'
       )) as HandlerResult;
 
     // =========================================
@@ -981,6 +1069,14 @@ export async function handleAssetPluginsTools(
         'manage_asset_plugins',
         payload,
         'Automation bridge not available for import_hda'
+      )) as HandlerResult;
+
+    case 'bake_hda_output':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_asset_plugins',
+        payload,
+        'Automation bridge not available for bake_hda_output'
       )) as HandlerResult;
 
     case 'instantiate_hda':

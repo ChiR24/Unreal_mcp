@@ -135,6 +135,50 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     )) as HandlerResult;
   }
 
+  // Wave 4.1-4.10: Niagara Enhancement Actions
+  const niagaraEnhancementActions = [
+    'create_niagara_sim_cache', 'configure_niagara_lod', 'export_niagara_system', 'import_niagara_module',
+    'configure_niagara_determinism', 'create_niagara_data_interface', 'configure_gpu_simulation',
+    'batch_compile_niagara', 'get_niagara_parameters', 'set_niagara_variable'
+  ];
+
+  if (niagaraEnhancementActions.includes(action)) {
+    mutableArgs.subAction = action;
+
+    // Validate required parameters for specific actions
+    if (action === 'create_niagara_sim_cache' || action === 'export_niagara_system' ||
+        action === 'configure_niagara_lod' || action === 'configure_niagara_determinism' ||
+        action === 'configure_gpu_simulation' || action === 'get_niagara_parameters') {
+      requireNonEmptyString(argsTyped.systemPath, 'systemPath', `Missing required parameter: systemPath for ${action}`);
+    }
+
+    if (action === 'import_niagara_module') {
+      requireNonEmptyString(mutableArgs.modulePath as string | undefined, 'modulePath', 'Missing required parameter: modulePath for import_niagara_module');
+    }
+
+    if (action === 'create_niagara_data_interface') {
+      requireNonEmptyString(mutableArgs.className as string | undefined, 'className', 'Missing required parameter: className for create_niagara_data_interface');
+    }
+
+    if (action === 'batch_compile_niagara') {
+      if (!Array.isArray(mutableArgs.systemPaths) || mutableArgs.systemPaths.length === 0) {
+        throw new Error('Missing required parameter: systemPaths (array) for batch_compile_niagara');
+      }
+    }
+
+    if (action === 'set_niagara_variable') {
+      requireNonEmptyString(argsTyped.systemPath, 'systemPath', 'Missing required parameter: systemPath for set_niagara_variable');
+      requireNonEmptyString(argsTyped.parameterName, 'parameterName', 'Missing required parameter: parameterName for set_niagara_variable');
+    }
+
+    return cleanObject(await executeAutomationRequest(
+      tools,
+      'manage_effect',
+      mutableArgs,
+      'Automation bridge not available for Niagara Enhancement operations'
+    )) as HandlerResult;
+  }
+
   // Handle debug cleanup actions
   if (action === 'clear_debug_shapes') {
     return executeAutomationRequest(tools, action, mutableArgs) as Promise<HandlerResult>;

@@ -5,6 +5,7 @@
 #include "McpBridgeWebSocket.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/StaticMesh.h"
+#include "Math/UnrealMathUtility.h"
 
 // ============================================================================
 // 8. NANITE HANDLERS
@@ -46,10 +47,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEnableNaniteMesh(
     return true;
   }
 
+#if MCP_UE56_PLUS
+  if (Mesh->GetNaniteSettings().bEnabled != bEnable) {
+    Mesh->Modify();
+    FMeshNaniteSettings Settings = Mesh->GetNaniteSettings();
+    Settings.bEnabled = bEnable;
+    Mesh->SetNaniteSettings(Settings);
+    Mesh->PostEditChange();
+#else
   if (Mesh->NaniteSettings.bEnabled != bEnable) {
     Mesh->Modify();
     Mesh->NaniteSettings.bEnabled = bEnable;
     Mesh->PostEditChange();
+#endif
+
     
     // Save the asset
     if (!McpSafeAssetSave(Mesh)) {
@@ -60,7 +71,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEnableNaniteMesh(
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
+#if MCP_UE56_PLUS
+  Resp->SetBoolField(TEXT("enabled"), Mesh->GetNaniteSettings().bEnabled);
+#else
   Resp->SetBoolField(TEXT("enabled"), Mesh->NaniteSettings.bEnabled);
+#endif
+
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -105,10 +121,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
   Mesh->Modify();
   bool bChanged = false;
 
+#if MCP_UE56_PLUS
+  FMeshNaniteSettings Settings = Mesh->GetNaniteSettings();
+#else
+  FMeshNaniteSettings& Settings = Mesh->NaniteSettings;
+#endif
+
   int32 PositionPrecision = 0;
   if (Payload->TryGetNumberField(TEXT("positionPrecision"), PositionPrecision)) {
-      if (Mesh->NaniteSettings.PositionPrecision != PositionPrecision) {
-          Mesh->NaniteSettings.PositionPrecision = PositionPrecision;
+      if (Settings.PositionPrecision != PositionPrecision) {
+          Settings.PositionPrecision = PositionPrecision;
           bChanged = true;
       }
   }
@@ -117,22 +139,26 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
   if (Payload->TryGetNumberField(TEXT("percentTriangles"), PercentTriangles)) {
       // Clamp 0-1
       float Val = FMath::Clamp((float)PercentTriangles, 0.0f, 1.0f);
-      if (Mesh->NaniteSettings.KeepPercentTriangles != Val) {
-          Mesh->NaniteSettings.KeepPercentTriangles = Val;
+      if (Settings.KeepPercentTriangles != Val) {
+          Settings.KeepPercentTriangles = Val;
           bChanged = true;
       }
   }
 
   double FallbackError;
   if (Payload->TryGetNumberField(TEXT("fallbackRelativeError"), FallbackError)) {
-      if (Mesh->NaniteSettings.FallbackRelativeError != (float)FallbackError) {
-          Mesh->NaniteSettings.FallbackRelativeError = (float)FallbackError;
+      if (Settings.FallbackRelativeError != (float)FallbackError) {
+          Settings.FallbackRelativeError = (float)FallbackError;
           bChanged = true;
       }
   }
 
   if (bChanged) {
+#if MCP_UE56_PLUS
+      Mesh->SetNaniteSettings(Settings);
+#endif
       Mesh->PostEditChange();
+
       if (!McpSafeAssetSave(Mesh)) {
           SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save asset"), TEXT("SAVE_FAILED"));
           return true;
@@ -141,8 +167,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
+#if MCP_UE56_PLUS
+  Resp->SetNumberField(TEXT("positionPrecision"), Mesh->GetNaniteSettings().PositionPrecision);
+  Resp->SetNumberField(TEXT("percentTriangles"), Mesh->GetNaniteSettings().KeepPercentTriangles);
+#else
   Resp->SetNumberField(TEXT("positionPrecision"), Mesh->NaniteSettings.PositionPrecision);
   Resp->SetNumberField(TEXT("percentTriangles"), Mesh->NaniteSettings.KeepPercentTriangles);
+#endif
+
   
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Nanite settings updated"), Resp);
@@ -198,14 +230,29 @@ bool UMcpAutomationBridgeSubsystem::HandleBatchNaniteConvert(
   int32 UpdatedCount = 0;
   for (const FAssetData &AssetData : AssetList) {
       UStaticMesh *Mesh = Cast<UStaticMesh>(AssetData.GetAsset());
-      if (Mesh && Mesh->NaniteSettings.bEnabled != bEnable) {
-          Mesh->Modify();
-          Mesh->NaniteSettings.bEnabled = bEnable;
-          Mesh->PostEditChange();
-          McpSafeAssetSave(Mesh);
-          UpdatedCount++;
+      if (Mesh) {
+#if MCP_UE56_PLUS
+          if (Mesh->GetNaniteSettings().bEnabled != bEnable) {
+              Mesh->Modify();
+              FMeshNaniteSettings Settings = Mesh->GetNaniteSettings();
+              Settings.bEnabled = bEnable;
+              Mesh->SetNaniteSettings(Settings);
+              Mesh->PostEditChange();
+              McpSafeAssetSave(Mesh);
+              UpdatedCount++;
+          }
+#else
+          if (Mesh->NaniteSettings.bEnabled != bEnable) {
+              Mesh->Modify();
+              Mesh->NaniteSettings.bEnabled = bEnable;
+              Mesh->PostEditChange();
+              McpSafeAssetSave(Mesh);
+              UpdatedCount++;
+          }
+#endif
       }
   }
+
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);

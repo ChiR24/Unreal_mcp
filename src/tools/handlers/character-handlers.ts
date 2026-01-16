@@ -163,6 +163,79 @@ export async function handleCharacterTools(
     }
 
     // =========================================================================
+    // Wave 3.21-3.30: Character System Actions (10 actions)
+    // =========================================================================
+
+    case 'configure_locomotion_state': {
+      // 3.21: Configure locomotion state machine
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_locomotion_state');
+    }
+
+    case 'query_interaction_targets': {
+      // 3.22: Query available interactions
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('query_interaction_targets');
+    }
+
+    case 'configure_inventory_slot': {
+      // 3.23: Configure inventory slot
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      if (typeof argsRecord.slotIndex !== 'number') {
+        throw new Error('manage_character:configure_inventory_slot requires slotIndex (number)');
+      }
+      return sendRequest('configure_inventory_slot');
+    }
+
+    case 'batch_add_inventory_items': {
+      // 3.24: Add multiple items at once
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      if (!Array.isArray(argsRecord.itemDataAssets)) {
+        throw new Error('manage_character:batch_add_inventory_items requires itemDataAssets (array)');
+      }
+      return sendRequest('batch_add_inventory_items');
+    }
+
+    case 'configure_equipment_socket': {
+      // 3.25: Configure equipment attachment
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      requireNonEmptyString(argsRecord.socketName, 'socketName', 'Missing required parameter: socketName');
+      return sendRequest('configure_equipment_socket');
+    }
+
+    case 'get_character_stats_snapshot': {
+      // 3.26: Get all stats snapshot
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('get_character_stats_snapshot');
+    }
+
+    case 'apply_status_effect': {
+      // 3.27: Apply status effect to character
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.statusEffectId, 'statusEffectId', 'Missing required parameter: statusEffectId');
+      return sendRequest('apply_status_effect');
+    }
+
+    case 'configure_footstep_system': {
+      // 3.28: Configure footstep sounds/VFX
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_footstep_system');
+    }
+
+    case 'set_movement_mode': {
+      // 3.29: Set character movement mode
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.movementMode, 'movementMode', 'Missing required parameter: movementMode');
+      return sendRequest('set_movement_mode');
+    }
+
+    case 'configure_mantle_vault': {
+      // 3.30: Configure mantle/vault system
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_mantle_vault');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 

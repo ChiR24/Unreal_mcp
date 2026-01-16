@@ -3,6 +3,10 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "ScopedTransaction.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Misc/Guid.h"
+#include "Math/UnrealMathUtility.h"
 
 
 #if WITH_EDITOR

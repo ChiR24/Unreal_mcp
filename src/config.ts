@@ -54,6 +54,9 @@ export const EnvSchema = z.object({
 
   // Tool Categories (comma-separated: core,world,authoring,gameplay,utility,all)
   MCP_DEFAULT_CATEGORIES: z.string().default('core'),
+
+  // Experimental Tools (enable unstable/preview tools)
+  EXPERIMENTAL_TOOLS: z.preprocess(stringToBoolean, z.boolean().default(false)),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

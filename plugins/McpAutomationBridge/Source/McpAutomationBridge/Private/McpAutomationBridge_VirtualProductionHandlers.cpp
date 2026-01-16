@@ -19,6 +19,7 @@
 #include "EngineUtils.h"
 #include "Misc/Timecode.h"
 #include "Misc/FrameRate.h"
+#include "Misc/DateTime.h"
 
 // ============================================================================
 // nDISPLAY (conditional - requires DisplayCluster plugin)

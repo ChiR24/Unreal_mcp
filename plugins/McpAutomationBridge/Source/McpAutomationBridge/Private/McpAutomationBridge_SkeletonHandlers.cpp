@@ -8,6 +8,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 

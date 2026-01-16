@@ -19,6 +19,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 // Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "Factories/Factory.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -122,9 +123,13 @@
 // ============================================
 #if __has_include("ChaosVehicles/ChaosWheeledVehicleMovementComponent.h")
 #include "ChaosVehicles/ChaosWheeledVehicleMovementComponent.h"
+#ifndef MCP_HAS_CHAOS_VEHICLES
 #define MCP_HAS_CHAOS_VEHICLES 1
+#endif
 #else
+#ifndef MCP_HAS_CHAOS_VEHICLES
 #define MCP_HAS_CHAOS_VEHICLES 0
+#endif
 #endif
 
 #if __has_include("ChaosWheeledVehicleMovementComponent.h")
@@ -133,6 +138,7 @@
 #define MCP_HAS_CHAOS_VEHICLES 1
 #endif
 #endif
+
 
 #if __has_include("WheeledVehiclePawn.h")
 #include "WheeledVehiclePawn.h"
@@ -153,10 +159,15 @@
 // ============================================
 #if __has_include("ChaosCloth/ChaosClothingSimulationFactory.h")
 #include "ChaosCloth/ChaosClothingSimulationFactory.h"
+#ifndef MCP_HAS_CHAOS_CLOTH
 #define MCP_HAS_CHAOS_CLOTH 1
+#endif
 #else
+#ifndef MCP_HAS_CHAOS_CLOTH
 #define MCP_HAS_CHAOS_CLOTH 0
 #endif
+#endif
+
 
 #if __has_include("ClothingAsset.h")
 #include "ClothingAsset.h"
@@ -191,10 +202,15 @@
 // ============================================
 #if __has_include("ChaosFlesh/ChaosFleshActor.h")
 #include "ChaosFlesh/ChaosFleshActor.h"
+#ifndef MCP_HAS_CHAOS_FLESH
 #define MCP_HAS_CHAOS_FLESH 1
+#endif
 #else
+#ifndef MCP_HAS_CHAOS_FLESH
 #define MCP_HAS_CHAOS_FLESH 0
 #endif
+#endif
+
 
 #if __has_include("ChaosFlesh/FleshComponent.h")
 #include "ChaosFlesh/FleshComponent.h"

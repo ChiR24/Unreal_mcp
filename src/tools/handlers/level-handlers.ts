@@ -271,6 +271,107 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         }) as HandlerResult;
       }
     }
+    // Wave 2.31-2.40: Level Enhancement Actions (incl. PCG GPU)
+    case 'create_pcg_hlsl_node': {
+      // UE 5.7+ feature
+      const graphPath = requireNonEmptyString(argsTyped.graphPath, 'graphPath');
+      const hlslCode = requireNonEmptyString(argsTyped.hlslCode, 'hlslCode');
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'create_pcg_hlsl_node',
+        graphPath,
+        hlslCode,
+        nodeName: argsTyped.nodeName
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'enable_pcg_gpu_processing': {
+      // UE 5.7+ feature
+      const graphPath = requireNonEmptyString(argsTyped.graphPath, 'graphPath');
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'enable_pcg_gpu_processing',
+        graphPath,
+        enabled: argsTyped.enabled ?? true
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'configure_pcg_mode_brush': {
+      // UE 5.7+ feature
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'configure_pcg_mode_brush',
+        brushSize: argsTyped.brushSize,
+        brushStrength: argsTyped.brushStrength,
+        brushFalloff: argsTyped.brushFalloff
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'export_pcg_hlsl_template': {
+      // UE 5.7+ feature
+      const outputPath = requireNonEmptyString(argsTyped.outputPath, 'outputPath');
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'export_pcg_hlsl_template',
+        outputPath,
+        templateType: argsTyped.templateType ?? 'point_processor'
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'batch_execute_pcg_with_gpu': {
+      // UE 5.7+ feature
+      const graphPaths = argsTyped.graphPaths;
+      if (!Array.isArray(graphPaths) || graphPaths.length === 0) {
+        throw new Error('manage_level.batch_execute_pcg_with_gpu: graphPaths array is required');
+      }
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'batch_execute_pcg_with_gpu',
+        graphPaths,
+        useGPU: argsTyped.useGPU ?? true
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'get_world_partition_cells': {
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'get_world_partition_cells',
+        bounds: argsTyped.bounds,
+        includeLoaded: argsTyped.includeLoaded ?? true,
+        includeUnloaded: argsTyped.includeUnloaded ?? false
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'stream_level_async': {
+      const levelPath = requireNonEmptyString(argsTyped.levelPath || argsTyped.subLevelPath, 'levelPath');
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'stream_level_async',
+        levelPath,
+        shouldBeLoaded: argsTyped.shouldBeLoaded ?? true,
+        shouldBeVisible: argsTyped.shouldBeVisible ?? true,
+        blockOnLoad: argsTyped.blockOnLoad ?? false
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'get_streaming_levels_status': {
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'get_streaming_levels_status'
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'configure_hlod_settings': {
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'configure_hlod_settings',
+        hlodLayerName: argsTyped.hlodLayerName,
+        cellSize: argsTyped.cellSize,
+        loadingDistance: argsTyped.loadingDistance,
+        spatiallyLoaded: argsTyped.spatiallyLoaded
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'build_hlod_for_level': {
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'build_hlod_for_level',
+        levelPath: argsTyped.levelPath,
+        hlodLayerName: argsTyped.hlodLayerName,
+        rebuildAll: argsTyped.rebuildAll ?? false
+      });
+      return cleanObject(res) as HandlerResult;
+    }
     default:
       return await executeAutomationRequest(tools, 'manage_level', args) as HandlerResult;
   }

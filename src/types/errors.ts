@@ -30,6 +30,10 @@ export enum McpErrorCode {
   EXECUTION_FAILED = 'EXECUTION_FAILED',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
   NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
+
+  // Plugin/Feature Availability
+  PLUGIN_UNAVAILABLE = 'PLUGIN_UNAVAILABLE',
+  REQUIRES_UE_VERSION = 'REQUIRES_UE_VERSION',
   
   // System
   UNKNOWN_ERROR = 'UNKNOWN_ERROR'
@@ -86,3 +90,27 @@ export class McpError extends Error {
     };
   }
 }
+
+/**
+ * Response indicating a required plugin is not available
+ */
+export interface PluginUnavailableResponse {
+  success: false;
+  error: 'PLUGIN_UNAVAILABLE';
+  plugin: string;
+}
+
+/**
+ * Response indicating a feature requires a newer UE version
+ */
+export interface FeatureUnavailableResponse {
+  success: false;
+  error: 'REQUIRES_UE_VERSION';
+  feature: string;
+  minVersion: string;
+}
+
+/**
+ * Union type for all MCP error responses
+ */
+export type McpErrorResponse = PluginUnavailableResponse | FeatureUnavailableResponse;

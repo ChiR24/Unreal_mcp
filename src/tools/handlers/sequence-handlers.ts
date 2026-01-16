@@ -422,12 +422,104 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       if (!Number.isFinite(start)) throw new Error('Invalid start: must be a number');
       if (!Number.isFinite(end)) throw new Error('Invalid end: must be a number');
 
-      const res = await tools.sequenceTools.setWorkRange({
+const res = await tools.sequenceTools.setWorkRange({
         path: args.path as string | undefined,
         start,
         end
       });
       return cleanObject(res);
+    }
+    // Wave 4.11-4.20: Sequencer Enhancement Actions
+    case 'create_media_track': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'create_media_track'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'configure_sequence_streaming': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'configure_sequence_streaming'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'create_event_trigger_track': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'create_event_trigger_track'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'add_procedural_camera_shake': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'add_procedural_camera_shake'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'configure_sequence_lod': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'configure_sequence_lod'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'create_camera_cut_track': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'create_camera_cut_track'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'configure_mrq_settings': {
+      const payload = {
+        ...args,
+        subAction: 'configure_mrq_settings'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'batch_render_sequences': {
+      const sequencePaths = Array.isArray(args.sequencePaths) ? args.sequencePaths : [];
+      if (sequencePaths.length === 0) {
+        throw new Error('Missing required parameter: sequencePaths (array of sequence paths)');
+      }
+      const payload = {
+        ...args,
+        sequencePaths,
+        subAction: 'batch_render_sequences'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'get_sequence_bindings': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'get_sequence_bindings'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
+    }
+    case 'configure_audio_track': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = {
+        ...args,
+        path,
+        subAction: 'configure_audio_track'
+      };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     default:
       // Ensure subAction is set for compatibility with C++ handler expectations

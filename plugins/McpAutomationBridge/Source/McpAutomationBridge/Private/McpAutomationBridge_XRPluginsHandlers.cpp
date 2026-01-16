@@ -11,6 +11,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/Guid.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

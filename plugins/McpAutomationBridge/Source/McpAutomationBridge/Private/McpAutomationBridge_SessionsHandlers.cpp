@@ -11,6 +11,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

@@ -14,6 +14,7 @@ import {
   extractOptionalNumber,
   extractOptionalBoolean,
 } from './argument-helper.js';
+import { ResponseFactory } from '../../utils/response-factory.js';
 
 /** Helper to extract optional object from params */
 function extractOptionalObject(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
@@ -22,7 +23,6 @@ function extractOptionalObject(params: Record<string, unknown>, key: string): Re
   if (typeof val === 'object' && !Array.isArray(val)) return val as HandlerResult;
   return undefined;
 }
-import { ResponseFactory } from '../../utils/response-factory.js';
 
 /** Material authoring response */
 interface MaterialAuthoringResponse {
@@ -924,6 +924,271 @@ export async function handleMaterialAuthoringTools(
           return ResponseFactory.error(res.error ?? 'Failed to get material info', res.errorCode);
         }
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
+      }
+
+      // ===== Wave 4.21-4.30: Material Enhancement Actions =====
+      case 'convert_material_to_substrate': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'preserveOriginal', default: true },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const preserveOriginal = extractOptionalBoolean(params, 'preserveOriginal') ?? true;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'convert_material_to_substrate',
+          assetPath,
+          preserveOriginal,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to convert material to Substrate', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Material converted to Substrate');
+      }
+
+      case 'batch_convert_to_substrate': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPaths', aliases: ['materialPaths'], required: true },
+          { key: 'preserveOriginals', default: true },
+          { key: 'save', default: true },
+        ]);
+
+        if (!Array.isArray(params.assetPaths)) {
+          return ResponseFactory.error('assetPaths must be an array', 'INVALID_PARAMS');
+        }
+        const assetPaths = params.assetPaths as string[];
+        const preserveOriginals = extractOptionalBoolean(params, 'preserveOriginals') ?? true;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'batch_convert_to_substrate',
+          assetPaths,
+          preserveOriginals,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to batch convert materials to Substrate', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Batch converted ${assetPaths.length} materials to Substrate`);
+      }
+
+      case 'create_material_expression_template': {
+        const params = normalizeArgs(args, [
+          { key: 'name', required: true },
+          { key: 'path', aliases: ['directory'], default: '/Game/Materials/Templates' },
+          { key: 'expressionType', required: true },
+          { key: 'description' },
+          { key: 'parameters', default: {} },
+          { key: 'save', default: true },
+        ]);
+
+        const name = extractString(params, 'name');
+        const path = extractOptionalString(params, 'path') ?? '/Game/Materials/Templates';
+        const expressionType = extractString(params, 'expressionType');
+        const description = extractOptionalString(params, 'description');
+        const parameters = extractOptionalObject(params, 'parameters') ?? {};
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'create_material_expression_template',
+          name,
+          path,
+          expressionType,
+          description,
+          parameters,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to create material expression template', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Material expression template '${name}' created`);
+      }
+
+      case 'configure_landscape_material_layer': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'layerName', required: true },
+          { key: 'blendType', default: 'LB_WeightBlend' },
+          { key: 'texturePath' },
+          { key: 'normalPath' },
+          { key: 'uvScale', default: 1.0 },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const layerName = extractString(params, 'layerName');
+        const blendType = extractOptionalString(params, 'blendType') ?? 'LB_WeightBlend';
+        const texturePath = extractOptionalString(params, 'texturePath');
+        const normalPath = extractOptionalString(params, 'normalPath');
+        const uvScale = extractOptionalNumber(params, 'uvScale') ?? 1.0;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'configure_landscape_material_layer',
+          assetPath,
+          layerName,
+          blendType,
+          texturePath,
+          normalPath,
+          uvScale,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to configure landscape material layer', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Landscape layer '${layerName}' configured`);
+      }
+
+      case 'create_material_instance_batch': {
+        const params = normalizeArgs(args, [
+          { key: 'parentMaterial', aliases: ['parent'], required: true },
+          { key: 'instances', required: true },
+          { key: 'path', aliases: ['directory'], default: '/Game/Materials/Instances' },
+          { key: 'save', default: true },
+        ]);
+
+        const parentMaterial = extractString(params, 'parentMaterial');
+        if (!Array.isArray(params.instances)) {
+          return ResponseFactory.error('instances must be an array', 'INVALID_PARAMS');
+        }
+        const instances = params.instances as Array<{ name: string; parameters?: Record<string, unknown> }>;
+        const path = extractOptionalString(params, 'path') ?? '/Game/Materials/Instances';
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'create_material_instance_batch',
+          parentMaterial,
+          instances,
+          path,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to batch create material instances', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Created ${instances.length} material instances`);
+      }
+
+      case 'get_material_dependencies': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'recursive', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const recursive = extractOptionalBoolean(params, 'recursive') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'get_material_dependencies',
+          assetPath,
+          recursive,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get material dependencies', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Material dependencies retrieved');
+      }
+
+      case 'validate_material': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'checkErrors', default: true },
+          { key: 'checkWarnings', default: true },
+          { key: 'checkPerformance', default: false },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const checkErrors = extractOptionalBoolean(params, 'checkErrors') ?? true;
+        const checkWarnings = extractOptionalBoolean(params, 'checkWarnings') ?? true;
+        const checkPerformance = extractOptionalBoolean(params, 'checkPerformance') ?? false;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'validate_material',
+          assetPath,
+          checkErrors,
+          checkWarnings,
+          checkPerformance,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to validate material', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Material validation complete');
+      }
+
+      case 'configure_material_lod': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'lodIndex', required: true },
+          { key: 'qualityLevel', default: 'Epic' },
+          { key: 'simplifyNodes', default: false },
+          { key: 'disableFeatures', default: [] },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const lodIndex = extractOptionalNumber(params, 'lodIndex') ?? 0;
+        const qualityLevel = extractOptionalString(params, 'qualityLevel') ?? 'Epic';
+        const simplifyNodes = extractOptionalBoolean(params, 'simplifyNodes') ?? false;
+        if (params.disableFeatures !== undefined && !Array.isArray(params.disableFeatures)) {
+          return ResponseFactory.error('disableFeatures must be an array', 'INVALID_PARAMS');
+        }
+        const disableFeatures = params.disableFeatures as string[] ?? [];
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'configure_material_lod',
+          assetPath,
+          lodIndex,
+          qualityLevel,
+          simplifyNodes,
+          disableFeatures,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to configure material LOD', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Material LOD ${lodIndex} configured`);
+      }
+
+      case 'export_material_template': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'exportPath', required: true },
+          { key: 'includeTextures', default: true },
+          { key: 'includeParameters', default: true },
+          { key: 'format', default: 'json' },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const exportPath = extractString(params, 'exportPath');
+        const includeTextures = extractOptionalBoolean(params, 'includeTextures') ?? true;
+        const includeParameters = extractOptionalBoolean(params, 'includeParameters') ?? true;
+        const format = extractOptionalString(params, 'format') ?? 'json';
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'export_material_template',
+          assetPath,
+          exportPath,
+          includeTextures,
+          includeParameters,
+          format,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to export material template', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Material template exported to ${exportPath}`);
       }
 
       default:

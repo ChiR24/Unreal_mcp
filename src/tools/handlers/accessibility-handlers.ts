@@ -449,6 +449,41 @@ export async function handleAccessibilityTools(
         'Automation bridge not available for reset_accessibility_defaults'
       )) as HandlerResult;
 
+    // =========================================
+    // ACCESSIBILITY VALIDATION & REPORTING
+    // =========================================
+    case 'validate_accessibility':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_accessibility',
+        payload,
+        'Automation bridge not available for validate_accessibility'
+      )) as HandlerResult;
+
+    case 'configure_subtitle_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_accessibility',
+        payload,
+        'Automation bridge not available for configure_subtitle_settings'
+      )) as HandlerResult;
+
+    case 'get_accessibility_report':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_accessibility',
+        payload,
+        'Automation bridge not available for get_accessibility_report'
+      )) as HandlerResult;
+
+    case 'configure_input_remapping':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_accessibility',
+        payload,
+        'Automation bridge not available for configure_input_remapping'
+      )) as HandlerResult;
+
     default:
       return {
         success: false,

@@ -658,6 +658,181 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Material node added successfully');
       }
+      // Wave 1.14: Query Enhancement - query assets by predicate
+      case 'query_assets_by_predicate': {
+        const predicate = args.predicate || {};
+        const limit = typeof args.limit === 'number' ? args.limit : 100;
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'query_assets_by_predicate',
+          predicate,
+          limit
+        });
+        return ResponseFactory.success(res, 'Assets queried by predicate');
+      }
+      // Wave 2.1-2.10: Blueprint Enhancement Actions
+      case 'bp_implement_interface': {
+        const blueprintPath = extractString(normalizeArgs(args, [{ key: 'blueprintPath', aliases: ['assetPath'], required: true }]), 'blueprintPath');
+        const interfacePath = extractString(normalizeArgs(args, [{ key: 'interfacePath', required: true }]), 'interfacePath');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_implement_interface',
+          blueprintPath,
+          interfacePath
+        });
+        return ResponseFactory.success(res, 'Interface implemented');
+      }
+      case 'bp_add_macro': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'macroName', aliases: ['name'], required: true },
+          { key: 'inputs' },
+          { key: 'outputs' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const macroName = extractString(params, 'macroName');
+        const inputs = extractOptionalArray<Record<string, unknown>>(params, 'inputs');
+        const outputs = extractOptionalArray<Record<string, unknown>>(params, 'outputs');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_add_macro',
+          blueprintPath,
+          macroName,
+          inputs,
+          outputs
+        });
+        return ResponseFactory.success(res, 'Macro added');
+      }
+      case 'bp_create_widget_binding': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'propertyName', required: true },
+          { key: 'bindingType' },
+          { key: 'functionName' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const propertyName = extractString(params, 'propertyName');
+        const bindingType = extractOptionalString(params, 'bindingType');
+        const functionName = extractOptionalString(params, 'functionName');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_create_widget_binding',
+          blueprintPath,
+          propertyName,
+          bindingType,
+          functionName
+        });
+        return ResponseFactory.success(res, 'Widget binding created');
+      }
+      case 'bp_add_custom_event': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'eventName', aliases: ['name'], required: true },
+          { key: 'parameters' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const eventName = extractString(params, 'eventName');
+        const parameters = extractOptionalArray<Record<string, unknown>>(params, 'parameters') ?? [];
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_add_custom_event',
+          blueprintPath,
+          eventName,
+          parameters
+        });
+        return ResponseFactory.success(res, 'Custom event added');
+      }
+      case 'bp_set_replication_settings': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'replicates' },
+          { key: 'replicateMovement' },
+          { key: 'netUpdateFrequency' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const replicates = extractOptionalBoolean(params, 'replicates');
+        const replicateMovement = extractOptionalBoolean(params, 'replicateMovement');
+        const netUpdateFrequency = extractOptionalNumber(params, 'netUpdateFrequency');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_set_replication_settings',
+          blueprintPath,
+          replicates,
+          replicateMovement,
+          netUpdateFrequency
+        });
+        return ResponseFactory.success(res, 'Replication settings configured');
+      }
+      case 'bp_add_event_dispatcher': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'dispatcherName', aliases: ['name'], required: true },
+          { key: 'parameters' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const dispatcherName = extractString(params, 'dispatcherName');
+        const parameters = extractOptionalArray<Record<string, unknown>>(params, 'parameters') ?? [];
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_add_event_dispatcher',
+          blueprintPath,
+          dispatcherName,
+          parameters
+        });
+        return ResponseFactory.success(res, 'Event dispatcher added');
+      }
+      case 'bp_bind_event': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'eventName', required: true },
+          { key: 'functionName', required: true }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const eventName = extractString(params, 'eventName');
+        const functionName = extractString(params, 'functionName');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'bp_bind_event',
+          blueprintPath,
+          eventName,
+          functionName
+        });
+        return ResponseFactory.success(res, 'Event bound to function');
+      }
+      case 'get_blueprint_dependencies': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true },
+          { key: 'recursive' }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'get_blueprint_dependencies',
+          blueprintPath,
+          recursive
+        });
+        return ResponseFactory.success(res, 'Dependencies retrieved');
+      }
+      case 'validate_blueprint': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPath', aliases: ['assetPath'], required: true }
+        ]);
+        const blueprintPath = extractString(params, 'blueprintPath');
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'validate_blueprint',
+          blueprintPath
+        });
+        return ResponseFactory.success(res, 'Blueprint validated');
+      }
+      case 'compile_blueprint_batch': {
+        const params = normalizeArgs(args, [
+          { key: 'blueprintPaths', aliases: ['assetPaths'], required: true },
+          { key: 'stopOnError' }
+        ]);
+        const blueprintPaths = extractOptionalArray<string>(params, 'blueprintPaths');
+        if (!Array.isArray(blueprintPaths) || blueprintPaths.length === 0) {
+          throw new Error('manage_asset.compile_blueprint_batch: blueprintPaths array is required');
+        }
+        const stopOnError = extractOptionalBoolean(params, 'stopOnError') ?? false;
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          action: 'compile_blueprint_batch',
+          blueprintPaths,
+          stopOnError
+        });
+        return ResponseFactory.success(res, 'Batch compile completed');
+      }
       default: {
         const res = await executeAutomationRequest(tools, action || 'manage_asset', args) as AssetOperationResponse;
         const result = res ?? {};

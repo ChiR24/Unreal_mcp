@@ -20,6 +20,8 @@
 // TextureCompressorModule removed in UE 5.7
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Misc/Paths.h"
+#include "Math/UnrealMathUtility.h"
 
 // Helper macro for error responses
 #define TEXTURE_ERROR_RESPONSE(Msg) \

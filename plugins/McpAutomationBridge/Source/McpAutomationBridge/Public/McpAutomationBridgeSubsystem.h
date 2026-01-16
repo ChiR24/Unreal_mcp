@@ -1,5 +1,7 @@
 #pragma once
 
+#include "McpVersionGuards.h"
+
 #include "Containers/Ticker.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
@@ -167,6 +169,20 @@ private:
 
   // Event Push System subscriptions (Phase 4.1)
   TSet<FString> EventSubscriptions;
+  
+  // Operation Queue for batch operations (Wave 1.5-1.8)
+  struct FMcpQueuedOperation
+  {
+    FString Tool;
+    FString Action;
+    TSharedPtr<FJsonObject> Parameters;
+    
+    FMcpQueuedOperation() {}
+    FMcpQueuedOperation(const FString& InTool, const FString& InAction, TSharedPtr<FJsonObject> InParams)
+      : Tool(InTool), Action(InAction), Parameters(InParams) {}
+  };
+  TArray<FMcpQueuedOperation> OperationQueue;
+  FString CurrentQueueId;
   
   // Cache event handlers
   void OnActorSpawned(AActor* Actor);

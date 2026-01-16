@@ -230,9 +230,68 @@ export async function handleCombatTools(
     // Utility (1 action)
     // =========================================================================
 
-    case 'get_combat_info': {
+case 'get_combat_info': {
       requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
       return sendRequest('get_combat_info');
+    }
+
+    // =========================================================================
+    // Wave 3.11-3.20: Combat System Actions
+    // =========================================================================
+
+    case 'create_combo_sequence': {
+      // Create combo sequence definition
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      return sendRequest('create_combo_sequence');
+    }
+
+    case 'apply_damage_with_effects': {
+      // Apply damage with VFX/SFX
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('apply_damage_with_effects');
+    }
+
+    case 'configure_weapon_trace': {
+      // Configure weapon trace channel
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_weapon_trace');
+    }
+
+    case 'create_projectile_pool': {
+      // Create projectile object pool
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('create_projectile_pool');
+    }
+
+    case 'configure_gas_effect': {
+      // Configure GAS gameplay effect
+      requireNonEmptyString(argsRecord.effectPath, 'effectPath', 'Missing required parameter: effectPath');
+      return sendRequest('configure_gas_effect');
+    }
+
+    case 'grant_gas_ability': {
+      // Grant ability via GAS
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      requireNonEmptyString(argsRecord.abilityClass, 'abilityClass', 'Missing required parameter: abilityClass');
+      return sendRequest('grant_gas_ability');
+    }
+
+    case 'configure_melee_trace': {
+      // Configure melee attack trace
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_melee_trace');
+    }
+
+    case 'get_combat_stats': {
+      // Get combat statistics for actor
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      return sendRequest('get_combat_stats');
+    }
+
+    case 'configure_block_parry': {
+      // Configure block/parry system
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_block_parry');
     }
 
     // =========================================================================

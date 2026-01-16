@@ -7,6 +7,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Misc/Guid.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"

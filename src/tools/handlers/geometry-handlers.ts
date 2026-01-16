@@ -44,10 +44,13 @@ const GEOMETRY_ACTIONS = [
   'generate_lods', 'set_lod_settings', 'set_lod_screen_sizes', 'convert_to_nanite',
   // Transform operations
   'mirror', 'array_linear', 'array_radial',
-  // Export/conversion
+// Export/conversion
   'convert_to_static_mesh',
   // Utils
-  'get_mesh_info'
+  'get_mesh_info',
+  // Wave 5.29-5.35: Geometry Actions
+  'create_procedural_box', 'boolean_mesh_operation', 'generate_mesh_uvs',
+  'create_mesh_from_spline', 'configure_nanite_settings', 'export_geometry_to_file'
 ] as const;
 
 type GeometryAction = (typeof GEOMETRY_ACTIONS)[number];

@@ -372,6 +372,83 @@ export async function handleAITools(
     }
 
     // =========================================================================
+    // AI Enhancement Actions (Wave 3.1-3.10)
+    // =========================================================================
+
+    // 3.1 - AI Assistant Query (UE 5.7+)
+    case 'ai_assistant_query': {
+      requireNonEmptyString(argsRecord.query, 'query', 'Missing required parameter: query');
+      // context is optional
+      return sendRequest('ai_assistant_query');
+    }
+
+    // 3.2 - AI Assistant Explain Feature (UE 5.7+)
+    case 'ai_assistant_explain_feature': {
+      requireNonEmptyString(argsRecord.featureName, 'featureName', 'Missing required parameter: featureName');
+      // detailLevel is optional (brief, detailed, comprehensive)
+      return sendRequest('ai_assistant_explain_feature');
+    }
+
+    // 3.3 - AI Assistant Suggest Fix (UE 5.7+)
+    case 'ai_assistant_suggest_fix': {
+      requireNonEmptyString(argsRecord.issue, 'issue', 'Missing required parameter: issue');
+      // context, assetPath are optional
+      return sendRequest('ai_assistant_suggest_fix');
+    }
+
+    // 3.4 - Configure State Tree Node
+    case 'configure_state_tree_node': {
+      requireNonEmptyString(argsRecord.stateTreePath, 'stateTreePath', 'Missing required parameter: stateTreePath');
+      requireNonEmptyString(argsRecord.nodeId, 'nodeId', 'Missing required parameter: nodeId');
+      // nodeConfig is optional object with node-specific settings
+      return sendRequest('configure_state_tree_node');
+    }
+
+    // 3.5 - Debug Behavior Tree
+    case 'debug_behavior_tree': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // includeBlackboard, includeHistory are optional
+      return sendRequest('debug_behavior_tree');
+    }
+
+    // 3.6 - Query EQS Results
+    case 'query_eqs_results': {
+      requireNonEmptyString(argsRecord.queryPath, 'queryPath', 'Missing required parameter: queryPath');
+      requireNonEmptyString(argsRecord.querierActor, 'querierActor', 'Missing required parameter: querierActor');
+      // maxResults, debugDraw are optional
+      return sendRequest('query_eqs_results');
+    }
+
+    // 3.7 - Configure Mass AI Fragment
+    case 'configure_mass_ai_fragment': {
+      requireNonEmptyString(argsRecord.configPath, 'configPath', 'Missing required parameter: configPath');
+      requireNonEmptyString(argsRecord.fragmentType, 'fragmentType', 'Missing required parameter: fragmentType');
+      // fragmentSettings is optional object
+      return sendRequest('configure_mass_ai_fragment');
+    }
+
+    // 3.8 - Spawn Mass AI Entities
+    case 'spawn_mass_ai_entities': {
+      requireNonEmptyString(argsRecord.configPath, 'configPath', 'Missing required parameter: configPath');
+      // count, spawnLocation, spawnRadius are optional
+      return sendRequest('spawn_mass_ai_entities');
+    }
+
+    // 3.9 - Get AI Perception Data
+    case 'get_ai_perception_data': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // senseType is optional (Sight, Hearing, Damage, Touch, All)
+      return sendRequest('get_ai_perception_data');
+    }
+
+    // 3.10 - Configure Smart Object
+    case 'configure_smart_object': {
+      requireNonEmptyString(argsRecord.objectHandle, 'objectHandle', 'Missing required parameter: objectHandle');
+      // slotIndex, slotConfig, tags, priority are optional
+      return sendRequest('configure_smart_object');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 

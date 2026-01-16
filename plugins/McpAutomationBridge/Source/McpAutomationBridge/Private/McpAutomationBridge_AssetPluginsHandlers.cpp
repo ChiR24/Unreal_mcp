@@ -23,6 +23,7 @@
 #include "Misc/FileHelper.h"
 #include "HAL/FileManager.h"
 #include "EditorAssetLibrary.h"
+#include "Misc/Paths.h"
 
 // ============================================================================
 // INTERCHANGE FRAMEWORK (conditional - UE 5.0+)

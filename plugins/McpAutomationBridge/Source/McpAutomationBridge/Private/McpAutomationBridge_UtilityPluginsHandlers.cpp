@@ -18,6 +18,8 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 // Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "MeshDescription.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

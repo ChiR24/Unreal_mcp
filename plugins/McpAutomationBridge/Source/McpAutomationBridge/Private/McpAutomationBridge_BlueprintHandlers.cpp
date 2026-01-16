@@ -8,6 +8,7 @@
 #include "McpConnectionManager.h"
 #include "Misc/DateTime.h"
 #include "Misc/ScopeExit.h"
+#include "Misc/Guid.h"
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"

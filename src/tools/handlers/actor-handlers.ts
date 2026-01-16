@@ -270,6 +270,126 @@ const handlers: Record<string, ActorActionHandler> = {
         // Use the plugin's fuzzy query endpoint (contains-match) instead of the
         // exact lookup endpoint. This improves "spawn then find" reliability.
         return tools.actorTools.findByName(name);
+    },
+    // Wave 1.13: Query Enhancement - query actors by predicate
+    query_actors_by_predicate: async (args, tools) => {
+        const predicate = args.predicate || {};
+        const limit = typeof args.limit === 'number' ? args.limit : 100;
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'query_actors_by_predicate',
+            predicate,
+            limit
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    // Wave 2.11-2.20: Actor Enhancement
+    get_all_component_properties: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_all_component_properties',
+            actorName,
+            componentFilter: args.componentFilter
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    batch_set_component_properties: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const properties = args.properties;
+        if (!properties || typeof properties !== 'object') {
+            throw new Error('control_actor.batch_set_component_properties: properties object is required');
+        }
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'batch_set_component_properties',
+            actorName,
+            properties
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    clone_component_hierarchy: async (args, tools) => {
+        const sourceActor = extractString(normalizeArgs(args, [{ key: 'sourceActor', aliases: ['actorName'], required: true }]), 'sourceActor');
+        const targetActor = extractString(normalizeArgs(args, [{ key: 'targetActor', required: true }]), 'targetActor');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'clone_component_hierarchy',
+            sourceActor,
+            targetActor,
+            componentName: args.componentName
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    serialize_actor_state: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'serialize_actor_state',
+            actorName,
+            includeComponents: args.includeComponents ?? true
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    deserialize_actor_state: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const state = args.state;
+        if (!state || typeof state !== 'object') {
+            throw new Error('control_actor.deserialize_actor_state: state object is required');
+        }
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'deserialize_actor_state',
+            actorName,
+            state
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    get_actor_bounds: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_actor_bounds',
+            actorName,
+            includeChildActors: args.includeChildActors ?? false
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    batch_transform_actors: async (args, tools) => {
+        const transforms = args.transforms;
+        if (!Array.isArray(transforms) || transforms.length === 0) {
+            throw new Error('control_actor.batch_transform_actors: transforms array is required');
+        }
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'batch_transform_actors',
+            transforms
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    get_actor_references: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_actor_references',
+            actorName
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    replace_actor_class: async (args, tools) => {
+        const actorName = extractString(normalizeArgs(args, [{ key: 'actorName', aliases: ['name'], required: true }]), 'actorName');
+        const newClass = extractString(normalizeArgs(args, [{ key: 'newClass', aliases: ['classPath'], required: true }]), 'newClass');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'replace_actor_class',
+            actorName,
+            newClass,
+            preserveTransform: args.preserveTransform ?? true,
+            preserveComponents: args.preserveComponents ?? false
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    merge_actors: async (args, tools) => {
+        const actorNames = args.actorNames;
+        if (!Array.isArray(actorNames) || actorNames.length < 2) {
+            throw new Error('control_actor.merge_actors: actorNames array with at least 2 actors is required');
+        }
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'merge_actors',
+            actorNames,
+            targetName: args.targetName,
+            mergeType: args.mergeType ?? 'static_mesh'
+        });
+        return cleanObject(res) as HandlerResult;
     }
 };
 

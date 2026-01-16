@@ -23,6 +23,7 @@
 #include "Sound/SoundBase.h"
 #include "Sound/SoundWave.h"
 #include "Kismet/GameplayStatics.h"
+#include "Math/UnrealMathUtility.h"
 
 // ============================================================================
 // BINK VIDEO (built-in - UE 5.0+)

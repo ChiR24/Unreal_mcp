@@ -2,6 +2,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Misc/Paths.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"

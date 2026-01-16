@@ -180,6 +180,14 @@ export interface EditorArgs extends HandlerArgs {
     category?: string;
     preferences?: Record<string, unknown>;
     timeoutMs?: number;
+    /** Number of frames to step (for step_frame action) */
+    steps?: number;
+    /** Return screenshot as base64 (for capture_viewport action) */
+    returnBase64?: boolean;
+    /** Capture HDR data (for capture_viewport action) */
+    captureHDR?: boolean;
+    /** Include UI in capture (for capture_viewport action) */
+    showUI?: boolean;
 }
 
 // ============================================================================
@@ -347,6 +355,34 @@ export interface LightingArgs extends HandlerArgs {
     indirectLightingIntensity?: number;
     buildOnlySelected?: boolean;
     buildReflectionCaptures?: boolean;
+    // Lumen properties
+    lumenQuality?: number;
+    lumenDetailTrace?: boolean;
+    lumenReflectionQuality?: number;
+    lumenUpdateSpeed?: number;
+    lumenFinalGatherQuality?: number;
+    virtualShadowMapResolution?: number;
+    virtualShadowMapQuality?: number;
+    // Wave 5.11-5.20: MegaLights & Advanced Lighting properties
+    megalightsEnabled?: boolean;
+    megalightsBudget?: number;
+    megalightsQuality?: string;
+    giMethod?: string;
+    lightQuality?: string;
+    previewBake?: boolean;
+    fogInscatteringColor?: number[];
+    fogExtinctionScale?: number;
+    fogViewDistance?: number;
+    fogStartDistance?: number;
+    lights?: unknown[];
+    shadowBias?: number;
+    shadowSlopeBias?: number;
+    shadowResolution?: number;
+    dynamicShadowCascades?: number;
+    insetShadows?: boolean;
+    validatePerformance?: boolean;
+    validateOverlap?: boolean;
+    validateShadows?: boolean;
 }
 
 // ============================================================================

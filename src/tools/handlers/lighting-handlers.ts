@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { LightingArgs } from '../../types/handler-types.js';
-import { normalizeLocation } from './common-handlers.js';
+import { normalizeLocation, executeAutomationRequest } from './common-handlers.js';
 
 // Valid light types supported by UE
 const VALID_LIGHT_TYPES = ['point', 'directional', 'spot', 'rect', 'sky'];
@@ -231,6 +231,98 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
         enabled: args.enabled !== false,
         resolution: toNumber(args.virtualShadowMapResolution),
         quality: toNumber(args.virtualShadowMapQuality)
+      }));
+    }
+    // Wave 5.11-5.20: MegaLights & Advanced Lighting Actions
+    case 'configure_megalights_scene': {
+      // 5.7+ feature: Enable MegaLights for scene
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'configure_megalights_scene',
+        enabled: args.megalightsEnabled !== false,
+        budget: toNumber(args.megalightsBudget),
+        quality: toString(args.megalightsQuality)
+      }));
+    }
+    case 'get_megalights_budget': {
+      // 5.7+ feature: Get light budget stats
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'get_megalights_budget'
+      }));
+    }
+    case 'optimize_lights_for_megalights': {
+      // 5.7+ feature: Optimize lights for MegaLights system
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'optimize_lights_for_megalights',
+        budget: toNumber(args.megalightsBudget)
+      }));
+    }
+    case 'configure_gi_settings': {
+      // Configure global illumination settings
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'configure_gi_settings',
+        method: toString(args.giMethod),
+        quality: toString(args.quality),
+        bounces: toNumber(args.bounces),
+        indirectLightingIntensity: toNumber(args.indirectLightingIntensity)
+      }));
+    }
+    case 'bake_lighting_preview': {
+      // Quick lighting preview bake
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'bake_lighting_preview',
+        quality: toString(args.lightQuality),
+        preview: args.previewBake !== false
+      }));
+    }
+    case 'get_light_complexity': {
+      // Get light complexity analysis
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'get_light_complexity'
+      }));
+    }
+    case 'configure_volumetric_fog': {
+      // Configure volumetric fog (more advanced than setup_volumetric_fog)
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'configure_volumetric_fog',
+        enabled: args.enabled !== false,
+        density: toNumber(args.density),
+        scatteringIntensity: toNumber(args.scatteringIntensity),
+        fogHeight: toNumber(args.fogHeight),
+        inscatteringColor: toColor3(args.fogInscatteringColor),
+        extinctionScale: toNumber(args.fogExtinctionScale),
+        viewDistance: toNumber(args.fogViewDistance),
+        startDistance: toNumber(args.fogStartDistance)
+      }));
+    }
+    case 'create_light_batch': {
+      // Create multiple lights at once
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'create_light_batch',
+        lights: args.lights
+      }));
+    }
+    case 'configure_shadow_settings': {
+      // Configure shadow settings
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'configure_shadow_settings',
+        shadowQuality: toString(args.shadowQuality),
+        shadowBias: toNumber(args.shadowBias),
+        shadowSlopeBias: toNumber(args.shadowSlopeBias),
+        shadowResolution: toNumber(args.shadowResolution),
+        cascadedShadows: toBoolean(args.cascadedShadows),
+        dynamicShadowCascades: toNumber(args.dynamicShadowCascades),
+        contactShadows: toBoolean(args.contactShadows),
+        insetShadows: toBoolean(args.insetShadows),
+        rayTracedShadows: toBoolean(args.rayTracedShadows)
+      }));
+    }
+    case 'validate_lighting_setup': {
+      // Validate lighting for issues
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'validate_lighting_setup',
+        validatePerformance: toBoolean(args.validatePerformance),
+        validateOverlap: toBoolean(args.validateOverlap),
+        validateShadows: toBoolean(args.validateShadows)
       }));
     }
     default:

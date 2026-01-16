@@ -567,6 +567,73 @@ export async function handleLiveLinkTools(
         'Automation bridge not available for force_livelink_tick'
       )) as HandlerResult;
 
+    // =========================================
+    // WAVE 7.16-7.25 ADDITIONS
+    // =========================================
+    case 'get_livelink_subjects':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for get_livelink_subjects'
+      )) as HandlerResult;
+
+    case 'configure_livelink_preset':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for configure_livelink_preset'
+      )) as HandlerResult;
+
+    case 'record_livelink_data':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for record_livelink_data'
+      )) as HandlerResult;
+
+    case 'get_livelink_frame':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for get_livelink_frame'
+      )) as HandlerResult;
+
+    case 'set_subject_role':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for set_subject_role'
+      )) as HandlerResult;
+
+    case 'configure_face_tracking':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for configure_face_tracking'
+      )) as HandlerResult;
+
+    case 'calibrate_livelink':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for calibrate_livelink'
+      )) as HandlerResult;
+
+    case 'get_livelink_statistics':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_livelink',
+        payload,
+        'Automation bridge not available for get_livelink_statistics'
+      )) as HandlerResult;
+
     default:
       return cleanObject({
         success: false,

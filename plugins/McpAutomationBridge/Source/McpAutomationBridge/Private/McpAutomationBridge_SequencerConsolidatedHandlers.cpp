@@ -4,6 +4,8 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Misc/Paths.h"
+#include "Misc/Guid.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

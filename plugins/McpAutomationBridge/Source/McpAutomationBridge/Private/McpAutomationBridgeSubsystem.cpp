@@ -14,6 +14,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "Math/UnrealMathUtility.h"
 
 // Editor-only includes for ExecuteEditorCommands
 #if WITH_EDITOR
@@ -444,6 +445,9 @@ void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
 void UMcpAutomationBridgeSubsystem::RegisterHandler(
     const FString &Action, FAutomationHandler Handler) {
   if (Handler) {
+    // Catch duplicate handler registrations early - fatal in Development builds
+    checkf(!AutomationHandlers.Contains(Action),
+           TEXT("Duplicate handler registration: %s"), *Action);
     AutomationHandlers.Add(Action, Handler);
   }
 }
@@ -1392,20 +1396,6 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAnimationPhysicsAction(R, A, P, S);
                   });
 
-  RegisterHandler(TEXT("play_anim_montage"),
-                  [this](const FString &R, const FString &A,
-                         const TSharedPtr<FJsonObject> &P,
-                         TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandlePlayAnimMontage(R, A, P, S);
-                  });
-
-  RegisterHandler(TEXT("setup_ragdoll"),
-                  [this](const FString &R, const FString &A,
-                         const TSharedPtr<FJsonObject> &P,
-                         TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleSetupRagdoll(R, A, P, S);
-                  });
-
   // Modern AI Handlers
   RegisterHandler(TEXT("bind_statetree"),
                   [this](const FString &R, const FString &A,
@@ -1543,6 +1533,8 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleTriggerMetaSound(R, A, P, S);
                   });
+
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Initialized %d handlers"), AutomationHandlers.Num());
 }
 
 // Drain and process any automation requests that were enqueued while the

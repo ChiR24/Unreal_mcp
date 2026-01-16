@@ -3,6 +3,7 @@
 #include "McpSpawnerComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
+#include "Math/UnrealMathUtility.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpSpawner, Log, All);
 

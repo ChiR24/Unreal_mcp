@@ -1191,6 +1191,92 @@ export async function handleXRPluginsTools(
         'Automation bridge not available for get_xr_runtime_name'
       )) as HandlerResult;
 
+    // =========================================
+    // XR INTEGRATION - VR/AR (Wave 7.26-7.30)
+    // =========================================
+    case 'configure_vr_settings':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for configure_vr_settings'
+      )) as HandlerResult;
+
+    case 'get_hmd_info':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for get_hmd_info'
+      )) as HandlerResult;
+
+    case 'configure_hand_tracking':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for configure_hand_tracking'
+      )) as HandlerResult;
+
+    case 'toggle_passthrough':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for toggle_passthrough'
+      )) as HandlerResult;
+
+    // =========================================
+    // XR INTEGRATION - Virtual Production (Wave 7.31-7.36)
+    // =========================================
+    case 'configure_ndisplay':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for configure_ndisplay'
+      )) as HandlerResult;
+
+    case 'get_cluster_nodes':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for get_cluster_nodes'
+      )) as HandlerResult;
+
+    case 'sync_timecode':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for sync_timecode'
+      )) as HandlerResult;
+
+    case 'configure_icvfx':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for configure_icvfx'
+      )) as HandlerResult;
+
+    case 'set_dmx_fixture':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for set_dmx_fixture'
+      )) as HandlerResult;
+
+    case 'record_virtual_camera':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_xr',
+        payload,
+        'Automation bridge not available for record_virtual_camera'
+      )) as HandlerResult;
+
     default:
       return {
         success: false,

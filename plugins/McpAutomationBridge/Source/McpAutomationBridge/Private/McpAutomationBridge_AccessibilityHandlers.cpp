@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/ActorComponent.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Math/UnrealMathUtility.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

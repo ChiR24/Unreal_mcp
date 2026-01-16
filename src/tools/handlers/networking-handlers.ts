@@ -276,6 +276,74 @@ export async function handleNetworkingTools(
     }
 
     // =========================================================================
+    // Wave 3.31-3.40: Networking System Actions
+    // =========================================================================
+
+    case 'debug_replication_graph': {
+      // Get replication graph debug info
+      // Optional: showConnections, showActorList
+      return sendRequest('debug_replication_graph');
+    }
+
+    case 'configure_net_relevancy': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // Configure actor net relevancy
+      // Optional: relevancyRadius, relevancyMode
+      return sendRequest('configure_net_relevancy');
+    }
+
+    case 'get_rpc_statistics': {
+      // Get RPC call statistics
+      // Optional: includeRpcDetails, resetStats
+      return sendRequest('get_rpc_statistics');
+    }
+
+    case 'configure_prediction_settings': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      // Configure network prediction settings
+      // Optional: predictionEnabled, predictionAmount, interpolationEnabled
+      return sendRequest('configure_prediction_settings');
+    }
+
+    case 'simulate_network_conditions': {
+      // Simulate network latency, packet loss, jitter
+      // Optional: latencyMs, packetLoss, jitterMs, bandwidthLimit
+      return sendRequest('simulate_network_conditions');
+    }
+
+    case 'get_session_players': {
+      // Get all players in current session
+      // Optional: includeInactive
+      return sendRequest('get_session_players');
+    }
+
+    case 'configure_team_settings': {
+      // Configure team assignment for actor or player
+      // Optional: teamId, teamName, autoBalance, actorName
+      return sendRequest('configure_team_settings');
+    }
+
+    case 'send_server_rpc': {
+      requireNonEmptyString(argsRecord.rpcName, 'rpcName', 'Missing required parameter: rpcName');
+      // Send custom server RPC
+      // Optional: targetActor, rpcParameters
+      return sendRequest('send_server_rpc');
+    }
+
+    case 'get_net_role_info': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // Get network role information for actor
+      return sendRequest('get_net_role_info');
+    }
+
+    case 'configure_dormancy': {
+      requireNonEmptyString(argsRecord.actorName, 'actorName', 'Missing required parameter: actorName');
+      // Configure actor dormancy settings
+      // Optional: dormancyMode, flushDormancy
+      return sendRequest('configure_dormancy');
+    }
+
+    // =========================================================================
     // Default: Unknown action
     // =========================================================================
 

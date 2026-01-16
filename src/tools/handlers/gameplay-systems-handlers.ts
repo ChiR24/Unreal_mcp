@@ -193,6 +193,54 @@ export interface GameplaySystemsArgs {
   applyImmediately?: boolean;
   scale?: number;
   
+  // Wave 3.41-3.50: Additional parameters
+  // Objective chain
+  objectiveIds?: string[];
+  chainType?: string;
+  failOnAnyFail?: boolean;
+  
+  // Checkpoint data
+  savePlayerState?: boolean;
+  saveActorStates?: boolean;
+  actorFilter?: string[];
+  customData?: Record<string, unknown>;
+  
+  // Dialogue node
+  nodeType?: string;
+  conditions?: string[];
+  
+  // Targeting priority
+  targetPriorities?: Array<{ tag: string; priority: number }>;
+  ignoreTags?: string[];
+  preferredTargetType?: string;
+  
+  // Minimap icon
+  iconTexture?: string;
+  iconSize?: number;
+  rotateWithActor?: boolean;
+  visibleOnMinimap?: boolean;
+  minimapLayer?: number;
+  
+  // Quest stage
+  stageId?: string;
+  stageName?: string;
+  stageType?: string;
+  nextStageIds?: string[];
+  stageObjectives?: string[];
+  
+  // Game state
+  stateKey?: string;
+  stateValue?: unknown;
+  persistent?: boolean;
+  replicated?: boolean;
+  
+  // Save system
+  saveSystemType?: string;
+  maxSaveSlots?: number;
+  autoSaveInterval?: number;
+  compressSaves?: boolean;
+  encryptSaves?: boolean;
+  
   // Common
   save?: boolean;
 }
@@ -707,6 +755,148 @@ export async function handleGameplaySystemsTools(
       }));
     }
     
+    // ==================== WAVE 3.41-3.50: ADDITIONAL GAMEPLAY ACTIONS ====================
+    
+    // 3.41: Create linked objectives
+    case 'create_objective_chain': {
+      const objectiveIds = args.objectiveIds;
+      if (!objectiveIds || !Array.isArray(objectiveIds) || objectiveIds.length === 0) {
+        return {
+          success: false,
+          error: 'manage_gameplay_systems: create_objective_chain requires objectiveIds array'
+        };
+      }
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'create_objective_chain',
+        objectiveIds,
+        chainType: args.chainType ?? 'Sequential',
+        failOnAnyFail: args.failOnAnyFail ?? false,
+        description: args.description
+      }));
+    }
+    
+    // 3.42: Configure checkpoint save data
+    case 'configure_checkpoint_data': {
+      const checkpointId = requireNonEmptyString(args.checkpointId, 'checkpointId');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'configure_checkpoint_data',
+        checkpointId,
+        savePlayerState: args.savePlayerState ?? true,
+        saveActorStates: args.saveActorStates ?? true,
+        saveWorldState: args.saveWorldState ?? true,
+        actorFilter: args.actorFilter ?? [],
+        customData: args.customData ?? {}
+      }));
+    }
+    
+    // 3.43: Create dialogue tree node
+    case 'create_dialogue_node': {
+      const assetPath = requireNonEmptyString(args.assetPath, 'assetPath');
+      const nodeId = requireNonEmptyString(args.nodeId, 'nodeId');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'create_dialogue_node',
+        assetPath,
+        nodeId,
+        nodeType: args.nodeType ?? 'Speech',
+        speakerId: args.speakerId,
+        text: args.text,
+        audioAsset: args.audioAsset,
+        duration: args.duration ?? 0.0,
+        choices: args.choices ?? [],
+        nextNodeId: args.nextNodeId,
+        conditions: args.conditions ?? [],
+        events: args.events ?? []
+      }));
+    }
+    
+    // 3.44: Configure targeting priorities
+    case 'configure_targeting_priority': {
+      const actorName = requireNonEmptyString(args.actorName, 'actorName');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'configure_targeting_priority',
+        actorName,
+        componentName: args.componentName,
+        targetPriorities: args.targetPriorities ?? [],
+        ignoreTags: args.ignoreTags ?? [],
+        preferredTargetType: args.preferredTargetType
+      }));
+    }
+    
+    // 3.45: Enable/configure photo mode (already exists as enable_photo_mode, this is an alias)
+    // Note: enable_photo_mode already implemented above
+    
+    // 3.46: Add/modify localization entry
+    case 'configure_localization_entry': {
+      const assetPath = requireNonEmptyString(args.assetPath, 'assetPath');
+      const key = requireNonEmptyString(args.key, 'key');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'configure_localization_entry',
+        assetPath,
+        key,
+        sourceString: args.sourceString,
+        namespace: args.namespace ?? 'Game',
+        culture: args.culture ?? 'en',
+        comment: args.comment,
+        save: args.save ?? true
+      }));
+    }
+    
+    // 3.47: Create quest stage
+    case 'create_quest_stage': {
+      const assetPath = requireNonEmptyString(args.assetPath, 'assetPath');
+      const stageId = requireNonEmptyString(args.stageId, 'stageId');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'create_quest_stage',
+        assetPath,
+        stageId,
+        stageName: args.stageName,
+        description: args.description,
+        stageType: args.stageType ?? 'Progress',
+        nextStageIds: args.nextStageIds ?? [],
+        stageObjectives: args.stageObjectives ?? [],
+        save: args.save ?? true
+      }));
+    }
+    
+    // 3.48: Configure minimap display
+    case 'configure_minimap_icon': {
+      const actorName = requireNonEmptyString(args.actorName, 'actorName');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'configure_minimap_icon',
+        actorName,
+        iconTexture: args.iconTexture ?? args.iconPath,
+        iconSize: args.iconSize ?? 32.0,
+        color: args.color ?? { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+        rotateWithActor: args.rotateWithActor ?? true,
+        visibleOnMinimap: args.visibleOnMinimap ?? true,
+        minimapLayer: args.minimapLayer ?? 0
+      }));
+    }
+    
+    // 3.49: Set global game state value
+    case 'set_game_state': {
+      const stateKey = requireNonEmptyString(args.stateKey, 'stateKey');
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'set_game_state',
+        stateKey,
+        stateValue: args.stateValue,
+        persistent: args.persistent ?? false,
+        replicated: args.replicated ?? false
+      }));
+    }
+    
+    // 3.50: Configure save system settings
+    case 'configure_save_system': {
+      return cleanObject(await executeAutomationRequest(tools, 'manage_gameplay_systems', {
+        action: 'configure_save_system',
+        saveSystemType: args.saveSystemType ?? 'Slot',
+        maxSaveSlots: args.maxSaveSlots ?? 10,
+        autoSaveInterval: args.autoSaveInterval ?? 0,
+        compressSaves: args.compressSaves ?? true,
+        encryptSaves: args.encryptSaves ?? false
+      }));
+    }
+    
     default:
       return {
         success: false,
@@ -723,7 +913,10 @@ export async function handleGameplaySystemsTools(
           'create_string_table, add_string_entry, get_string_entry, import_localization, ' +
           'export_localization, set_culture, get_available_cultures, ' +
           'create_device_profile, configure_scalability_group, set_quality_level, ' +
-          'get_scalability_settings, set_resolution_scale, get_gameplay_systems_info'
+          'get_scalability_settings, set_resolution_scale, get_gameplay_systems_info, ' +
+          'create_objective_chain, configure_checkpoint_data, create_dialogue_node, ' +
+          'configure_targeting_priority, configure_localization_entry, create_quest_stage, ' +
+          'configure_minimap_icon, set_game_state, configure_save_system'
       };
   }
 }

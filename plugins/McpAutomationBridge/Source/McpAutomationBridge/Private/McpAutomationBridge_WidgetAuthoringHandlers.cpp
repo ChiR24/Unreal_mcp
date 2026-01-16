@@ -55,6 +55,9 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "EditorAssetLibrary.h"
+#include "Misc/Paths.h"
+#include "Misc/Guid.h"
+#include "Math/UnrealMathUtility.h"
 
 // ============================================================================
 // Helper Functions

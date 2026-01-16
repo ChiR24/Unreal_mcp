@@ -17,6 +17,7 @@
 #include "Misc/FileHelper.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Misc/DateTime.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

@@ -17,6 +17,8 @@
 #include "Engine/Engine.h"
 #include "Editor.h"
 #include "Features/IModularFeatures.h"
+#include "Misc/Guid.h"
+#include "Math/UnrealMathUtility.h"
 
 // ============================================================================
 // LIVE LINK (conditional - built-in since UE 4.19+)

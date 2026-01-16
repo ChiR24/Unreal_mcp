@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, HandlerResult, AnimationArgs, ComponentInfo } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
 /** Response from getComponents */
 interface ComponentsResponse {
@@ -501,6 +501,125 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         { ...argsTyped, action_type: mappedAction }, // Pass action_type override 
         'Automation bridge not available for Chaos Physics operations'
       )) as HandlerResult;
+    }
+
+    // Wave 2.41-2.50: Animation Enhancement Actions (incl. Animator Kit)
+    case 'create_anim_layer': {
+      // UE 5.7+ feature
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const layerName = requireNonEmptyString(argsTyped.layerName ?? argsTyped.name, 'layerName');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_anim_layer',
+        skeletonPath,
+        layerName,
+        blendMode: argsTyped.blendMode ?? 'Additive'
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'stack_anim_layers': {
+      // UE 5.7+ feature
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const layers = argsTyped.layers;
+      if (!Array.isArray(layers) || layers.length === 0) {
+        throw new Error('animation_physics.stack_anim_layers: layers array is required');
+      }
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'stack_anim_layers',
+        skeletonPath,
+        layers
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'configure_squash_stretch': {
+      // UE 5.7+ feature
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const boneName = requireNonEmptyString(argsTyped.boneName, 'boneName');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'configure_squash_stretch',
+        skeletonPath,
+        boneName,
+        stretchAmount: argsTyped.stretchAmount ?? 1.0,
+        squashAmount: argsTyped.squashAmount ?? 1.0
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'create_rigging_layer': {
+      // UE 5.7+ feature
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const layerName = requireNonEmptyString(argsTyped.layerName ?? argsTyped.name, 'layerName');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_rigging_layer',
+        skeletonPath,
+        layerName,
+        rigType: argsTyped.rigType ?? 'FK'
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'configure_layer_blend_mode': {
+      // UE 5.7+ feature
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const layerName = requireNonEmptyString(argsTyped.layerName, 'layerName');
+      const blendMode = requireNonEmptyString(argsTyped.blendMode, 'blendMode');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'configure_layer_blend_mode',
+        skeletonPath,
+        layerName,
+        blendMode,
+        blendWeight: argsTyped.blendWeight ?? 1.0
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'create_control_rig_physics': {
+      const controlRigPath = requireNonEmptyString(argsTyped.controlRigPath ?? argsTyped.assetPath, 'controlRigPath');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_control_rig_physics',
+        controlRigPath,
+        physicsProfile: argsTyped.physicsProfile,
+        bones: argsTyped.bones
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'configure_ragdoll_profile': {
+      const skeletonPath = requireNonEmptyString(argsTyped.skeletonPath ?? argsTyped.assetPath, 'skeletonPath');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'configure_ragdoll_profile',
+        skeletonPath,
+        profileName: argsTyped.profileName,
+        blendWeight: argsTyped.blendWeight ?? 1.0,
+        solverIterations: argsTyped.solverIterations ?? 8
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'blend_ragdoll_to_animation': {
+      const actorName = requireNonEmptyString(argsTyped.actorName, 'actorName');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'blend_ragdoll_to_animation',
+        actorName,
+        blendDuration: argsTyped.blendDuration ?? 0.5,
+        targetAnimation: argsTyped.targetAnimation
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'get_bone_transforms': {
+      const actorName = requireNonEmptyString(argsTyped.actorName, 'actorName');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'get_bone_transforms',
+        actorName,
+        boneNames: argsTyped.boneNames,
+        space: argsTyped.space ?? 'World'
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'apply_pose_asset': {
+      const actorName = requireNonEmptyString(argsTyped.actorName, 'actorName');
+      const poseAssetPath = requireNonEmptyString(argsTyped.poseAssetPath ?? argsTyped.assetPath, 'poseAssetPath');
+      const res = await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'apply_pose_asset',
+        actorName,
+        poseAssetPath,
+        blendWeight: argsTyped.blendWeight ?? 1.0
+      });
+      return cleanObject(res) as HandlerResult;
     }
 
     default: {

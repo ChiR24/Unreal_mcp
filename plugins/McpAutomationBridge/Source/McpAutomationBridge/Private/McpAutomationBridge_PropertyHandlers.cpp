@@ -1,6 +1,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Math/UnrealMathUtility.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,

@@ -5,6 +5,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
+#include "Misc/Guid.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"

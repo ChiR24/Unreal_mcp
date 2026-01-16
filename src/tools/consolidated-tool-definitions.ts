@@ -22,6 +22,8 @@ export interface ToolDefinition {
   outputSchema?: Record<string, unknown>;
   /** Phase E4: Structured tool annotations */
   annotations?: ToolAnnotation;
+  /** Mark tool as experimental (hidden unless EXPERIMENTAL_TOOLS=true) */
+  experimental?: boolean;
   [key: string]: unknown;
 }
 export const consolidatedToolDefinitions: ToolDefinition[] = [
@@ -83,7 +85,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'bp_add_function', 'bp_add_event', 'bp_remove_event', 'bp_add_construction_script', 'bp_set_variable_metadata',
             'bp_create_node', 'bp_add_node', 'bp_delete_node', 'bp_connect_pins', 'bp_break_pin_links',
             'bp_set_node_property', 'bp_create_reroute_node', 'bp_get_node_details', 'bp_get_graph_details',
-            'bp_get_pin_details', 'bp_list_node_types', 'bp_set_pin_default_value'
+            'bp_get_pin_details', 'bp_list_node_types', 'bp_set_pin_default_value',
+            // Wave 1.14: Query Enhancement
+            'query_assets_by_predicate',
+            // Wave 2.1-2.10: Blueprint Enhancement
+            'bp_implement_interface', 'bp_add_macro', 'bp_create_widget_binding', 'bp_add_custom_event',
+            'bp_set_replication_settings', 'bp_add_event_dispatcher', 'bp_bind_event',
+            'get_blueprint_dependencies', 'validate_blueprint', 'compile_blueprint_batch'
           ],
           description: 'Action to perform'
         },
@@ -184,7 +192,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // Inspect (merged from inspect tool)
             'inspect_object', 'set_property', 'get_property', 'inspect_class', 'list_objects',
             'get_component_property', 'set_component_property', 'get_metadata',
-            'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box'
+            'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
+            // Wave 1.13: Query Enhancement
+            'query_actors_by_predicate',
+            // Wave 2.11-2.20: Actor Enhancement
+            'get_all_component_properties', 'batch_set_component_properties', 'clone_component_hierarchy',
+            'serialize_actor_state', 'deserialize_actor_state', 'get_actor_bounds',
+            'batch_transform_actors', 'get_actor_references', 'replace_actor_class', 'merge_actors'
           ],
           description: 'Action'
         },
@@ -273,9 +287,19 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'start_background_job', 'get_job_status', 'cancel_job', 'get_active_jobs',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             'set_cvar', 'get_project_settings', 'validate_assets', 'set_project_setting',
-            'batch_execute',
+            'batch_execute', 'parallel_execute', 'queue_operations', 'flush_operation_queue',
             // Viewport capture (G1)
-            'capture_viewport'
+            'capture_viewport',
+            // Wave 1.1-1.4: Error Recovery
+            'get_last_error_details', 'suggest_fix_for_error', 'validate_operation_preconditions', 'get_operation_history',
+            // Wave 1.9-1.12: Introspection
+            'get_available_actions', 'explain_action_parameters', 'get_class_hierarchy', 'validate_action_input',
+            // Wave 1.15-1.16: Query Enhancements
+            'get_action_statistics', 'get_bridge_health',
+            // Wave 2.21-2.30: Editor Enhancement (incl. 5.7 features)
+            'configure_megalights', 'get_light_budget_stats', 'convert_to_substrate', 'batch_substrate_migration',
+            'record_input_session', 'playback_input_session', 'capture_viewport_sequence',
+            'set_editor_mode', 'get_selection_info', 'toggle_realtime_rendering'
           ],
           description: 'Editor action'
         },
@@ -333,7 +357,24 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             required: ['tool', 'action']
           },
           description: 'List of requests to execute in batch.'
-        }
+        },
+        // Batch operation properties (Wave 1.5-1.8)
+        operations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              tool: { type: 'string' },
+              action: { type: 'string' },
+              parameters: { type: 'object' }
+            },
+            required: ['tool', 'action']
+          },
+          description: 'Operations for batch_execute, parallel_execute, queue_operations.'
+        },
+        stopOnError: commonSchemas.booleanProp,
+        maxConcurrency: { type: 'integer', description: 'Max concurrent operations for parallel_execute (default 10, max 10).' },
+        queueId: commonSchemas.stringProp
       },
       required: ['action']
     },
@@ -381,7 +422,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_static_mesh_spawner', 'add_actor_spawner', 'add_spline_spawner',
             'execute_pcg_graph', 'set_pcg_partition_grid_size', 'get_pcg_info',
             // Advanced PCG (Phase 3A.2)
-            'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution'
+            'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution',
+            // Wave 2.31-2.40: Level Enhancement (incl. PCG GPU)
+            'create_pcg_hlsl_node', 'enable_pcg_gpu_processing', 'configure_pcg_mode_brush',
+            'export_pcg_hlsl_template', 'batch_execute_pcg_with_gpu',
+            'get_world_partition_cells', 'stream_level_async', 'get_streaming_levels_status',
+            'configure_hlod_settings', 'build_hlod_for_level'
           ],
           description: 'Level action'
         },
@@ -607,7 +653,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'chaos_set_flesh_rest_state', 'chaos_create_flesh_cache', 'chaos_record_flesh_simulation',
             'chaos_get_flesh_asset_info',
             // [PhysicsDestruction] Utility (4 actions - merged)
-            'chaos_get_physics_destruction_info', 'chaos_list_geometry_collections', 'chaos_list_chaos_vehicles', 'chaos_get_plugin_status'
+            'chaos_get_physics_destruction_info', 'chaos_list_geometry_collections', 'chaos_list_chaos_vehicles', 'chaos_get_plugin_status',
+            // Wave 2.41-2.50: Animation Enhancement (incl. Animator Kit)
+            'create_anim_layer', 'stack_anim_layers', 'configure_squash_stretch',
+            'create_rigging_layer', 'configure_layer_blend_mode',
+            'create_control_rig_physics', 'configure_ragdoll_profile', 'blend_ragdoll_to_animation',
+            'get_bone_transforms', 'apply_pose_asset'
           ],
           description: 'Action'
         },
@@ -763,7 +814,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_niagara_info', 'validate_niagara_system',
             // Niagara Advanced (Phase 3E)
             'create_niagara_module', 'add_niagara_script', 'add_data_interface',
-            'setup_niagara_fluids', 'create_fluid_simulation', 'add_chaos_integration'
+            'setup_niagara_fluids', 'create_fluid_simulation', 'add_chaos_integration',
+            // Wave 4.1-4.10: Niagara Enhancement
+            'create_niagara_sim_cache', 'configure_niagara_lod', 'export_niagara_system', 'import_niagara_module',
+            'configure_niagara_determinism', 'create_niagara_data_interface', 'configure_gpu_simulation',
+            'batch_compile_niagara', 'get_niagara_parameters', 'set_niagara_variable'
           ],
           description: 'Action'
         },
@@ -915,7 +970,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'set_water_zone', 'get_water_surface_info', 'get_wave_info',
             // Weather (merged from manage_weather - Phase 54)
             'configure_wind', 'create_weather_system',
-            'configure_rain_particles', 'configure_snow_particles', 'configure_lightning'
+            'configure_rain_particles', 'configure_snow_particles', 'configure_lightning',
+            // Wave 5: Environment Actions
+            'configure_weather_preset', 'query_water_bodies', 'configure_ocean_waves',
+            'create_landscape_spline', 'configure_foliage_density', 'batch_paint_foliage',
+            'configure_sky_atmosphere', 'create_volumetric_cloud', 'configure_wind_directional',
+            'get_terrain_height_at'
           ],
           description: 'Action'
         },
@@ -1132,7 +1192,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'configure_anti_aliasing', 'set_spatial_sample_count', 'set_temporal_sample_count',
             'add_burn_in', 'remove_burn_in', 'configure_burn_in',
             'start_render', 'stop_render', 'get_render_status', 'get_render_progress',
-            'add_console_variable', 'remove_console_variable', 'configure_high_res_settings', 'set_tile_count'
+'add_console_variable', 'remove_console_variable', 'configure_high_res_settings', 'set_tile_count',
+            // Wave 4.11-4.20: Sequencer Enhancement Actions
+            'create_media_track', 'configure_sequence_streaming', 'create_event_trigger_track',
+            'add_procedural_camera_shake', 'configure_sequence_lod', 'create_camera_cut_track',
+            'configure_mrq_settings', 'batch_render_sequences', 'get_sequence_bindings', 'configure_audio_track'
           ],
           description: 'Sequencer/MRQ action'
         },
@@ -1225,9 +1289,34 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         rotation: commonSchemas.rotation,
         overwrite: commonSchemas.overwrite,
         metadata: commonSchemas.objectProp,
-        exportPath: commonSchemas.exportPath,
+exportPath: commonSchemas.exportPath,
         exportFormat: { type: 'string', enum: ['FBX', 'USD'], description: 'Export format.' },
-        save: commonSchemas.save
+        save: commonSchemas.save,
+        // Wave 4.11-4.20: Sequencer Enhancement properties
+        mediaPath: { type: 'string', description: 'Path to media file (video/image sequence).' },
+        mediaSourceName: { type: 'string', description: 'Name for the media source.' },
+        streamingSettings: { type: 'object', description: 'Streaming configuration for sequence playback.' },
+        eventTriggerName: { type: 'string', description: 'Name for event trigger track.' },
+        eventPayload: { type: 'object', description: 'Payload data for event trigger.' },
+        shakeIntensity: { type: 'number', description: 'Camera shake intensity (0-1).' },
+        shakeFrequency: { type: 'number', description: 'Camera shake frequency.' },
+        shakeBlendIn: { type: 'number', description: 'Camera shake blend in time (seconds).' },
+        shakeBlendOut: { type: 'number', description: 'Camera shake blend out time (seconds).' },
+        shakeDuration: { type: 'number', description: 'Camera shake duration (seconds).' },
+        lodBias: { type: 'number', description: 'LOD bias for sequence.' },
+        forceLod: { type: 'number', description: 'Force specific LOD level (0-based).' },
+        cameraCutName: { type: 'string', description: 'Name for camera cut.' },
+        targetCamera: { type: 'string', description: 'Target camera actor for cut.' },
+        blendTime: { type: 'number', description: 'Blend time between camera cuts.' },
+        mrqPreset: { type: 'string', description: 'MRQ preset name to apply.' },
+        mrqSettings: { type: 'object', description: 'MRQ configuration settings object.' },
+        sequencePaths: { type: 'array', items: { type: 'string' }, description: 'Array of sequence paths for batch operations.' },
+        outputSettings: { type: 'object', description: 'Output settings for batch render.' },
+        parallelRenders: { type: 'number', description: 'Number of parallel render jobs.' },
+        audioTrackName: { type: 'string', description: 'Name for audio track.' },
+        audioAssetPath: { type: 'string', description: 'Path to audio asset for track.' },
+        audioStartOffset: { type: 'number', description: 'Audio start offset in seconds.' },
+        audioVolumeMultiplier: { type: 'number', description: 'Volume multiplier for audio track (0-1).' }
       },
       required: ['action']
     },
@@ -1426,7 +1515,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'configure_lightmass_settings', 'build_lighting_quality', 'configure_indirect_lighting_cache', 'configure_volumetric_lightmap',
             // Lumen (Phase 3G.2)
             'configure_lumen_gi', 'set_lumen_reflections', 'tune_lumen_performance',
-            'create_lumen_volume', 'set_virtual_shadow_maps'
+            'create_lumen_volume', 'set_virtual_shadow_maps',
+            // Wave 5.11-5.20: MegaLights & Advanced Lighting
+            'configure_megalights_scene', 'get_megalights_budget', 'optimize_lights_for_megalights',
+            'configure_gi_settings', 'bake_lighting_preview', 'get_light_complexity',
+            'configure_volumetric_fog', 'create_light_batch', 'configure_shadow_settings', 'validate_lighting_setup'
           ],
           description: 'Action'
         },
@@ -1517,7 +1610,27 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         lumenUpdateSpeed: { type: 'number', description: 'Lumen update speed.' },
         lumenFinalGatherQuality: { type: 'number', description: 'Lumen final gather quality.' },
         virtualShadowMapResolution: { type: 'number', description: 'Virtual shadow map resolution.' },
-        virtualShadowMapQuality: { type: 'number', description: 'Virtual shadow map quality.' }
+        virtualShadowMapQuality: { type: 'number', description: 'Virtual shadow map quality.' },
+        // Wave 5.11-5.20: MegaLights & Advanced Lighting properties
+        megalightsEnabled: { type: 'boolean', description: 'Enable MegaLights for scene (5.7+).' },
+        megalightsBudget: { type: 'number', description: 'MegaLights budget (max lights).' },
+        megalightsQuality: { type: 'string', description: 'MegaLights quality preset.' },
+        giMethod: { type: 'string', enum: ['lumen', 'screenspace', 'raytraced', 'baked', 'none'], description: 'Global illumination method.' },
+        lightQuality: { type: 'string', description: 'Light quality preset for baking.' },
+        previewBake: { type: 'boolean', description: 'Quick preview bake instead of full build.' },
+        fogInscatteringColor: commonSchemas.color,
+        fogExtinctionScale: commonSchemas.numberProp,
+        fogViewDistance: commonSchemas.numberProp,
+        fogStartDistance: commonSchemas.numberProp,
+        lights: { type: 'array', items: { type: 'object' }, description: 'Array of light definitions for batch creation.' },
+        shadowBias: commonSchemas.numberProp,
+        shadowSlopeBias: commonSchemas.numberProp,
+        shadowResolution: commonSchemas.numberProp,
+        dynamicShadowCascades: commonSchemas.numberProp,
+        insetShadows: commonSchemas.booleanProp,
+        validatePerformance: { type: 'boolean', description: 'Validate lighting performance.' },
+        validateOverlap: { type: 'boolean', description: 'Check for overlapping lights.' },
+        validateShadows: { type: 'boolean', description: 'Validate shadow casting settings.' }
       },
       required: ['action']
     },
@@ -1627,8 +1740,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'recalculate_normals', 'flip_normals', 'recompute_tangents',
             'generate_collision', 'generate_complex_collision', 'simplify_collision',
             'generate_lods', 'set_lod_settings', 'set_lod_screen_sizes', 'convert_to_nanite',
-            'convert_to_static_mesh',
-            'get_mesh_info'
+'convert_to_static_mesh',
+            'get_mesh_info',
+            // Wave 5.29-5.35: Geometry Actions
+            'create_procedural_box', 'boolean_mesh_operation', 'generate_mesh_uvs',
+            'create_mesh_from_spline', 'configure_nanite_settings', 'export_geometry_to_file'
           ],
           description: 'Geometry action to perform'
         },
@@ -1692,10 +1808,21 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         includeNormals: { type: 'boolean', description: 'Include normals in export.' },
         includeUVs: { type: 'boolean', description: 'Include UVs in export.' },
         includeTangents: { type: 'boolean', description: 'Include tangents in export.' },
-        createAsset: { type: 'boolean', description: 'Create as persistent asset.' },
+createAsset: { type: 'boolean', description: 'Create as persistent asset.' },
         overwrite: commonSchemas.overwrite,
         save: commonSchemas.save,
-        enableNanite: { type: 'boolean', description: 'Enable Nanite for the output mesh.' }
+        enableNanite: { type: 'boolean', description: 'Enable Nanite for the output mesh.' },
+        // Wave 5.29-5.35: Additional properties
+        booleanOperation: { type: 'string', enum: ['Union', 'Subtract', 'Intersection'], description: 'Boolean operation type for boolean_mesh_operation.' },
+        uvMethod: { type: 'string', enum: ['Auto', 'Box', 'Cylindrical', 'Spherical', 'Planar'], description: 'UV generation method for generate_mesh_uvs.' },
+        splinePath: { type: 'string', description: 'Path to spline actor for create_mesh_from_spline.' },
+        profileShape: { type: 'string', enum: ['Circle', 'Square', 'Custom'], description: 'Profile shape for spline mesh generation.' },
+        profileSize: { type: 'number', description: 'Size of the profile for spline mesh.' },
+        nanitePositionPrecision: { type: 'number', description: 'Nanite position precision (0=auto, 1-4=explicit).' },
+        nanitePercentTriangles: { type: 'number', description: 'Percent of triangles to keep for Nanite fallback (0-100).' },
+        naniteFallbackRelativeError: { type: 'number', description: 'Fallback relative error threshold for Nanite.' },
+        naniteTrimRelativeError: { type: 'number', description: 'Trim relative error for Nanite.' },
+        filePath: { type: 'string', description: 'File path for export_geometry_to_file.' }
       },
       required: ['action']
     },
@@ -1878,7 +2005,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_texture_info',
             // Substrate (Phase 3G.1)
             'create_substrate_material', 'set_substrate_properties',
-            'configure_sss_profile', 'configure_exposure'
+            'configure_sss_profile', 'configure_exposure',
+            // Wave 4.21-4.30: Material Enhancement Actions
+            'convert_material_to_substrate', 'batch_convert_to_substrate',
+            'create_material_expression_template', 'configure_landscape_material_layer',
+            'create_material_instance_batch', 'get_material_dependencies',
+            'validate_material', 'configure_material_lod', 'export_material_template'
           ],
           description: 'Material authoring action to perform'
         },
@@ -2051,7 +2183,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'inv_configure_equipment_effects', 'inv_add_equipment_functions', 'inv_configure_equipment_visuals',
             'inv_create_loot_table', 'inv_add_loot_entry', 'inv_configure_loot_drop', 'inv_set_loot_quality_tiers',
             'inv_create_crafting_recipe', 'inv_configure_recipe_requirements', 'inv_create_crafting_station',
-            'inv_add_crafting_component', 'inv_get_inventory_info'
+            'inv_add_crafting_component', 'inv_get_inventory_info',
+            // Wave 3.21-3.30: Character System Actions
+            'configure_locomotion_state', 'query_interaction_targets', 'configure_inventory_slot',
+            'batch_add_inventory_items', 'configure_equipment_socket', 'get_character_stats_snapshot',
+            'apply_status_effect', 'configure_footstep_system', 'set_movement_mode', 'configure_mantle_vault'
           ],
           description: 'Character action to perform.'
         },
@@ -2159,7 +2295,45 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         },
         footstepSoundPath: { type: 'string', description: 'Path to footstep sound cue.' },
         footstepParticlePath: { type: 'string', description: 'Path to footstep particle.' },
-        footstepDecalPath: { type: 'string', description: 'Path to footstep decal.' }
+        footstepDecalPath: { type: 'string', description: 'Path to footstep decal.' },
+        // Wave 3.21-3.30: Character System properties
+        locomotionState: { type: 'string', description: 'Locomotion state name (Idle, Walking, Running, Sprinting, Jumping, Falling, etc.).' },
+        stateMachineBlueprint: { type: 'string', description: 'Path to locomotion state machine blueprint.' },
+        stateTransitions: { type: 'array', items: { type: 'object' }, description: 'Array of state transition definitions.' },
+        blendTime: { type: 'number', description: 'Blend time between locomotion states.' },
+        interactionRange: { type: 'number', description: 'Range for interaction target query.' },
+        interactionTypes: { type: 'array', items: { type: 'string' }, description: 'Filter by interaction types (e.g., Pickup, Use, Talk).' },
+        slotIndex: { type: 'number', description: 'Inventory slot index.' },
+        slotType: { type: 'string', enum: ['Primary', 'Secondary', 'Consumable', 'Quest', 'Equipment', 'Misc'], description: 'Inventory slot type.' },
+        slotCapacity: { type: 'number', description: 'Maximum items in slot.' },
+        slotFilter: { type: 'array', items: { type: 'string' }, description: 'Allowed item categories for slot.' },
+        itemDataAssets: { type: 'array', items: { type: 'string' }, description: 'Array of item data asset paths to add.' },
+        targetSlot: { type: 'string', description: 'Target slot for batch add (optional).' },
+        autoStack: { type: 'boolean', description: 'Automatically stack items if possible.' },
+        socketName: { type: 'string', description: 'Equipment socket name for attachment.' },
+        socketBone: { type: 'string', description: 'Bone to attach equipment socket to.' },
+        socketOffset: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Socket location offset.' },
+        socketRotation: { type: 'object', properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' } }, description: 'Socket rotation offset.' },
+        socketScale: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, description: 'Socket scale.' },
+        includeStats: { type: 'array', items: { type: 'string' }, description: 'Stats to include in snapshot (empty = all).' },
+        statusEffectId: { type: 'string', description: 'Status effect ID or class path to apply.' },
+        effectDuration: { type: 'number', description: 'Duration of status effect (-1 = infinite).' },
+        effectMagnitude: { type: 'number', description: 'Magnitude/strength of status effect.' },
+        effectStacks: { type: 'number', description: 'Number of effect stacks to apply.' },
+        effectSource: { type: 'string', description: 'Source actor of status effect.' },
+        footstepMaterialMap: { type: 'object', description: 'Map of surface types to sound/VFX paths.' },
+        footstepVolumeScale: { type: 'number', description: 'Volume multiplier for footstep sounds.' },
+        footstepInterval: { type: 'number', description: 'Minimum time between footstep triggers.' },
+        movementMode: { type: 'string', enum: ['Walking', 'NavWalking', 'Falling', 'Swimming', 'Flying', 'Custom'], description: 'Character movement mode.' },
+        customModeIndex: { type: 'number', description: 'Index for custom movement mode (if movementMode is Custom).' },
+        mantleEnabled: { type: 'boolean', description: 'Enable mantling.' },
+        vaultEnabled: { type: 'boolean', description: 'Enable vaulting.' },
+        mantleMinHeight: { type: 'number', description: 'Minimum height for mantle.' },
+        mantleMaxHeight: { type: 'number', description: 'Maximum height for mantle.' },
+        vaultMaxWidth: { type: 'number', description: 'Maximum obstacle width for vault.' },
+        mantleSpeed: { type: 'number', description: 'Mantle animation speed multiplier.' },
+        vaultSpeed: { type: 'number', description: 'Vault animation speed multiplier.' },
+        actorName: commonSchemas.actorName
       },
       required: ['action']
     },
@@ -2211,6 +2385,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'configure_muzzle_flash', 'configure_tracer', 'configure_impact_effects', 'configure_shell_ejection',
             'create_melee_trace', 'configure_combo_system', 'create_hit_pause', 'configure_hit_reaction', 'setup_parry_block_system', 'configure_weapon_trails',
             'get_combat_info',
+            // Wave 3.11-3.20: Combat System Actions
+            'create_combo_sequence', 'apply_damage_with_effects', 'configure_weapon_trace',
+            'create_projectile_pool', 'configure_gas_effect', 'grant_gas_ability',
+            'configure_melee_trace', 'get_combat_stats', 'configure_block_parry',
             // GAS (merged from manage_gas)
             'add_ability_system_component', 'configure_asc', 'create_attribute_set', 'add_attribute',
             'set_attribute_base_value', 'set_attribute_clamping', 'create_gameplay_ability', 'set_ability_tags',
@@ -2424,7 +2602,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_character_emotion', 'get_character_goals', 'trigger_inworld_event', 'get_inworld_info',
             'configure_audio2face', 'process_audio_to_blendshapes', 'configure_blendshape_mapping',
             'start_audio2face_stream', 'stop_audio2face_stream', 'get_audio2face_status',
-            'configure_ace_emotions', 'get_ace_info', 'get_ai_npc_info', 'list_available_ai_backends'
+'configure_ace_emotions', 'get_ace_info', 'get_ai_npc_info', 'list_available_ai_backends',
+            // AI Enhancement (Wave 3.1-3.10)
+            'ai_assistant_query', 'ai_assistant_explain_feature', 'ai_assistant_suggest_fix',
+            'configure_state_tree_node', 'debug_behavior_tree', 'query_eqs_results',
+            'configure_mass_ai_fragment', 'spawn_mass_ai_entities', 'get_ai_perception_data', 'configure_smart_object'
           ],
           description: 'AI action to perform'
         },
@@ -2770,7 +2952,16 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_dialog_widget',
             'create_radial_menu',
             'get_widget_info',
-            'preview_widget'
+            'preview_widget',
+            // Wave 4.31-4.38: Widget Enhancement Actions
+            'create_widget_template',
+            'configure_widget_binding_batch',
+            'create_widget_animation_advanced',
+            'configure_widget_navigation',
+            'validate_widget_accessibility',
+            'create_hud_layout',
+            'configure_safe_zone',
+            'batch_localize_widgets'
           ],
           description: 'The widget authoring action to perform.'
         },
@@ -3075,7 +3266,119 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'Preview resolution preset.'
         },
         customWidth: { type: 'number', description: 'Custom preview width.' },
-        customHeight: { type: 'number', description: 'Custom preview height.' }
+        customHeight: { type: 'number', description: 'Custom preview height.' },
+        // Wave 4.31-4.38: Widget Enhancement Properties
+        templateName: { type: 'string', description: 'Widget template name.' },
+        templateType: {
+          type: 'string',
+          enum: ['button', 'panel', 'list_item', 'dialog', 'tooltip', 'hud_element', 'menu_item', 'custom'],
+          description: 'Type of widget template.'
+        },
+        templateConfig: {
+          type: 'object',
+          description: 'Template configuration settings.'
+        },
+        bindings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              slot: commonSchemas.stringProp,
+              property: commonSchemas.stringProp,
+              source: commonSchemas.stringProp,
+              bindingType: commonSchemas.stringProp
+            }
+          },
+          description: 'Array of binding configurations for batch binding.'
+        },
+        animationDuration: { type: 'number', description: 'Animation duration in seconds.' },
+        easing: {
+          type: 'string',
+          enum: ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'Cubic', 'Bounce', 'Elastic'],
+          description: 'Animation easing function.'
+        },
+        animationProperties: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Properties to animate (position, opacity, scale, color, etc.).'
+        },
+        animationKeyframes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              time: commonSchemas.numberProp,
+              value: { type: 'object' }
+            }
+          },
+          description: 'Animation keyframe data.'
+        },
+        navigationMap: {
+          type: 'object',
+          description: 'Navigation flow map between widgets.'
+        },
+        navigationMode: {
+          type: 'string',
+          enum: ['Explicit', 'Automatic', 'Custom', 'Escape'],
+          description: 'Navigation mode.'
+        },
+        defaultFocus: { type: 'string', description: 'Default focused widget slot.' },
+        wrapNavigation: { type: 'boolean', description: 'Wrap navigation at edges.' },
+        accessibilityRules: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Accessibility rules to validate.'
+        },
+        wcagLevel: {
+          type: 'string',
+          enum: ['A', 'AA', 'AAA'],
+          description: 'WCAG compliance level to check.'
+        },
+        checkContrast: { type: 'boolean', description: 'Check color contrast ratios.' },
+        checkFocusOrder: { type: 'boolean', description: 'Check focus/tab order.' },
+        checkTextSize: { type: 'boolean', description: 'Check minimum text sizes.' },
+        checkScreenReader: { type: 'boolean', description: 'Check screen reader compatibility.' },
+        hudLayoutName: { type: 'string', description: 'HUD layout preset name.' },
+        hudZones: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              zone: commonSchemas.stringProp,
+              widgets: commonSchemas.arrayOfStrings
+            }
+          },
+          description: 'HUD zone assignments (top-left, top-center, bottom-left, etc.).'
+        },
+        safeZoneType: {
+          type: 'string',
+          enum: ['ActionSafe', 'TitleSafe', 'Custom'],
+          description: 'Safe zone type preset.'
+        },
+        safeZonePadding: {
+          type: 'object',
+          properties: {
+            left: commonSchemas.numberProp,
+            top: commonSchemas.numberProp,
+            right: commonSchemas.numberProp,
+            bottom: commonSchemas.numberProp
+          },
+          description: 'Safe zone padding percentages.'
+        },
+        scalingRule: {
+          type: 'string',
+          enum: ['ShortestSide', 'LongestSide', 'Horizontal', 'Vertical', 'Custom'],
+          description: 'DPI scaling rule.'
+        },
+        targetWidgets: {
+          type: 'array',
+          items: commonSchemas.stringProp,
+          description: 'Widget slots to localize.'
+        },
+        localizationNamespace: { type: 'string', description: 'Localization namespace.' },
+        localizationKey: { type: 'string', description: 'Localization key prefix.' },
+        extractStrings: { type: 'boolean', description: 'Extract text strings for localization.' },
+        updateBindings: { type: 'boolean', description: 'Update text bindings to use localization.' }
       },
       required: ['action']
     },
@@ -3149,6 +3452,17 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'set_net_role',
             'configure_replicated_movement',
             'get_networking_info',
+            // Wave 3.31-3.40: Networking System Actions
+            'debug_replication_graph',
+            'configure_net_relevancy',
+            'get_rpc_statistics',
+            'configure_prediction_settings',
+            'simulate_network_conditions',
+            'get_session_players',
+            'configure_team_settings',
+            'send_server_rpc',
+            'get_net_role_info',
+            'configure_dormancy',
             // Sessions (merged from manage_sessions - Phase 54)
             'configure_local_session_settings', 'configure_session_interface',
             'configure_split_screen', 'set_split_screen_type', 'add_local_player', 'remove_local_player',
@@ -3315,7 +3629,30 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         muted: commonSchemas.muted,
         attenuationRadius: { type: 'number', description: 'Radius for voice attenuation.' },
         pushToTalkEnabled: { type: 'boolean', description: 'Enable push-to-talk mode.' },
-        pushToTalkKey: { type: 'string', description: 'Key binding for push-to-talk.' }
+        pushToTalkKey: { type: 'string', description: 'Key binding for push-to-talk.' },
+        // Wave 3.31-3.40: Networking System Actions input properties
+        showConnections: { type: 'boolean', description: 'Show connection details in replication graph debug.' },
+        showActorList: { type: 'boolean', description: 'Show actor list in replication graph debug.' },
+        relevancyRadius: { type: 'number', description: 'Relevancy check radius.' },
+        relevancyMode: { type: 'string', enum: ['Default', 'Custom', 'AlwaysRelevant', 'OwnerOnly', 'ConnectionOnly'], description: 'Relevancy mode.' },
+        includeRpcDetails: { type: 'boolean', description: 'Include detailed RPC stats.' },
+        resetStats: { type: 'boolean', description: 'Reset RPC statistics after fetch.' },
+        predictionEnabled: { type: 'boolean', description: 'Enable network prediction.' },
+        predictionAmount: { type: 'number', description: 'Prediction time amount in ms.' },
+        interpolationEnabled: { type: 'boolean', description: 'Enable interpolation for smoothing.' },
+        latencyMs: { type: 'number', description: 'Simulated latency in milliseconds.' },
+        packetLoss: { type: 'number', description: 'Simulated packet loss percentage (0-100).' },
+        jitterMs: { type: 'number', description: 'Simulated jitter in milliseconds.' },
+        bandwidthLimit: { type: 'number', description: 'Simulated bandwidth limit in bytes/sec.' },
+        includeInactive: { type: 'boolean', description: 'Include inactive players in list.' },
+        teamId: { type: 'number', description: 'Team ID to assign.' },
+        teamName: { type: 'string', description: 'Team name.' },
+        autoBalance: { type: 'boolean', description: 'Enable auto team balancing.' },
+        rpcName: { type: 'string', description: 'RPC function name to call.' },
+        rpcParameters: { type: 'object', description: 'Parameters to pass to the RPC.' },
+        targetActor: { type: 'string', description: 'Target actor for the RPC call.' },
+        dormancyMode: { type: 'string', enum: ['DORM_Never', 'DORM_Awake', 'DORM_DormantAll', 'DORM_DormantPartial', 'DORM_Initial'], description: 'Dormancy mode to set.' },
+        flushDormancy: { type: 'boolean', description: 'Flush dormancy state.' }
       },
       required: ['action']
     },
@@ -3330,6 +3667,48 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         isLocallyControlled: { type: 'boolean', description: 'Local control check result.' },
         role: { type: 'string', description: 'Current net role.' },
         remoteRole: { type: 'string', description: 'Current remote role.' },
+        // Wave 3.31-3.40: Networking System Actions output properties
+        replicationGraph: {
+          type: 'object',
+          properties: {
+            nodes: { type: 'array' },
+            connections: { type: 'array' },
+            actorCount: commonSchemas.numberProp
+          },
+          description: 'Replication graph debug info.'
+        },
+        rpcStatistics: {
+          type: 'object',
+          properties: {
+            totalCalls: commonSchemas.numberProp,
+            callsByType: { type: 'object' },
+            bandwidth: commonSchemas.numberProp
+          },
+          description: 'RPC statistics.'
+        },
+        sessionPlayers: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              playerId: commonSchemas.stringProp,
+              playerName: commonSchemas.stringProp,
+              teamId: commonSchemas.numberProp,
+              isActive: commonSchemas.booleanProp
+            }
+          },
+          description: 'List of session players.'
+        },
+        netRoleInfo: {
+          type: 'object',
+          properties: {
+            role: commonSchemas.stringProp,
+            remoteRole: commonSchemas.stringProp,
+            isNetRelevant: commonSchemas.booleanProp,
+            dormancyState: commonSchemas.stringProp
+          },
+          description: 'Network role information.'
+        },
         networkingInfo: {
           type: 'object',
           properties: {
@@ -4066,7 +4445,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_device_profile', 'configure_scalability_group', 'set_quality_level',
             'get_scalability_settings', 'set_resolution_scale',
             // Utility
-            'get_gameplay_systems_info'
+            'get_gameplay_systems_info',
+            // Wave 3.41-3.50: Additional Gameplay Actions
+            'create_objective_chain', 'configure_checkpoint_data', 'create_dialogue_node',
+            'configure_targeting_priority', 'configure_localization_entry', 'create_quest_stage',
+            'configure_minimap_icon', 'set_game_state', 'configure_save_system'
           ],
           description: 'Gameplay systems action to perform.'
         },

@@ -344,6 +344,49 @@ export async function handleDataTools(
         'Automation bridge not available for reload_config'
       )) as HandlerResult;
 
+    // =========================================
+    // ANALYTICS
+    // =========================================
+    case 'log_analytics_event':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_data',
+        payload,
+        'Automation bridge not available for log_analytics_event'
+      )) as HandlerResult;
+
+    case 'get_session_analytics':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_data',
+        payload,
+        'Automation bridge not available for get_session_analytics'
+      )) as HandlerResult;
+
+    case 'export_analytics_data':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_data',
+        payload,
+        'Automation bridge not available for export_analytics_data'
+      )) as HandlerResult;
+
+    case 'configure_telemetry':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_data',
+        payload,
+        'Automation bridge not available for configure_telemetry'
+      )) as HandlerResult;
+
+    case 'get_crash_reports':
+      return cleanObject(await executeAutomationRequest(
+        tools,
+        'manage_data',
+        payload,
+        'Automation bridge not available for get_crash_reports'
+      )) as HandlerResult;
+
     default:
       return {
         success: false,
