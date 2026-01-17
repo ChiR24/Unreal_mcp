@@ -3,7 +3,7 @@
 Rust-based performance layer for math and property parsing.
 
 ## OVERVIEW
-High-performance Rust modules compiled to WebAssembly. Provides 5-10x speedup for JSON parsing, transform math, and dependency resolution. Automatic TS fallback when WASM unavailable.
+High-performance Rust modules compiled to WebAssembly. Provides 5-10x speedup for JSON parsing, transform math, and dependency resolution. Automatic TS fallback when WASM unavailable. Enable with `WASM_ENABLED=true`.
 
 ## STRUCTURE
 ```
@@ -32,7 +32,7 @@ wasm/
 - **Fallbacks**: Every WASM function MUST have matching TS implementation
 - **Types**: Use `wasm-bindgen` for type generation
 - **f32 Precision**: Use `f32` for floating-point (performance)
-- **Batching**: Batch data to minimize TS ↔ Rust FFI calls
+- **Batching**: Batch data to minimize TS <-> Rust FFI calls
 
 ## ANTI-PATTERNS
 - **Heavy FFI**: Avoid frequent small calls; batch data instead

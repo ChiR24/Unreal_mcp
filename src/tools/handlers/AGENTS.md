@@ -1,9 +1,9 @@
 # src/tools/handlers
 
-Domain-specific handler implementations for 53 MCP tools.
+Domain-specific handler implementations for 38 consolidated MCP tools.
 
 ## OVERVIEW
-61 handler files organized by domain. Each implements actions for one or more consolidated tools, calling `executeAutomationRequest()` to dispatch to C++.
+62 handler files organized by domain. Each implements actions for one or more consolidated tools, calling `executeAutomationRequest()` to dispatch to C++.
 
 ## STRUCTURE
 ```
@@ -39,7 +39,7 @@ export async function handleMyDomain(args: unknown) {
     case 'my_action':
       return executeAutomationRequest('my_tool', action, args);
     default:
-      throw new Error(`Unknown action: ${action}`);
+      throw new Error(`[my_tool:${action}] Unknown action`);
   }
 }
 ```

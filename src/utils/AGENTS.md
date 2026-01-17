@@ -13,11 +13,12 @@ utils/
 ├── validation.ts          # Zod schemas, sanitizePathSafe()
 ├── command-validator.ts   # Console command safety filtering
 ├── unreal-command-queue.ts # Throttled UE command execution
-├── safe-json.ts           # Depth-limited JSON parsing
+├── safe-json.ts           # Depth-limited JSON parsing (circular ref detection)
 ├── response-factory.ts    # Standardized response builders
 ├── result-helpers.ts      # Success/error result utilities
 ├── error-handler.ts       # Centralized error handling
 ├── logger.ts              # Logging (stderr only, not stdout)
+├── security-logger.ts     # Security event logging
 └── elicitation.ts         # User prompt utilities
 ```
 

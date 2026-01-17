@@ -3,7 +3,7 @@
 Native C++ Automation Bridge for Unreal Engine 5.0-5.7.
 
 ## OVERVIEW
-Editor-only UE subsystem executing automation requests via WebSocket. Receives JSON from TS MCP server, dispatches to game thread handlers.
+Editor-only UE subsystem executing automation requests via WebSocket. Receives JSON from TS MCP server, dispatches to game thread handlers. Default ports: 8090, 8091.
 
 ## STRUCTURE
 ```
@@ -16,7 +16,7 @@ McpAutomationBridge/
 │   └── Private/
 │       ├── McpAutomationBridgeSubsystem.cpp     # Initialize, tick, dispatch
 │       ├── McpAutomationBridge_ProcessRequest.cpp # Request routing
-│       ├── *Handlers.cpp                         # 90+ action implementations
+│       ├── *Handlers.cpp                         # 83 action implementations
 │       └── McpConnectionManager.cpp              # WebSocket server
 ├── Config/
 │   └── DefaultMcpAutomationBridge.ini
@@ -47,5 +47,5 @@ McpAutomationBridge/
 - **Blocking Thread**: WebSocket processing must not block game thread
 - **Raw UObject***: Use `TWeakObjectPtr` for stored references
 - **CDO Iteration**: Filter CDOs when using `TObjectIterator`
-- **TObjectIterator**: Unsafe in UE 5.7. Use `GetDerivedClasses()` helper.
-- **FindActorByName**: Unsafe lookup. Use `FindActorByLabelOrName()`.
+- **TObjectIterator**: Unsafe in UE 5.7. Use `GetDerivedClasses()` helper
+- **FindActorByName**: Unsafe lookup. Use `FindActorByLabelOrName()`

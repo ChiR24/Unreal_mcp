@@ -1,7 +1,7 @@
 # src/tools
 
-30 consolidated MCP tools with action-based dispatch to native C++ handlers.
-Token-optimized: ~26k tokens for all 1,600+ actions visible to LLM.
+38 consolidated MCP tools with action-based dispatch to native C++ handlers.
+Token-optimized: 2,640 actions visible to LLM.
 
 ## OVERVIEW
 Consolidated tool architecture. Each tool groups related actions (e.g., `manage_asset` handles create, delete, duplicate). TS validates schema, dispatches to C++.
@@ -9,7 +9,7 @@ Consolidated tool architecture. Each tool groups related actions (e.g., `manage_
 ## STRUCTURE
 ```
 src/tools/
-├── consolidated-tool-definitions.ts  # All 30 tool schemas + action enums (7,385 lines)
+├── consolidated-tool-definitions.ts  # All 38 tool schemas + action enums (7,385 lines)
 ├── consolidated-tool-handlers.ts     # Registry dispatch + routing (43KB)
 ├── handlers/                          # Domain-specific implementations (62 files)
 ├── tool-definition-utils.ts          # 200+ reusable common schema definitions

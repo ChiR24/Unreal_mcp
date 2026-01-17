@@ -2,9 +2,9 @@
 
 This document maps the TypeScript tool definitions to their corresponding C++ handlers in the Unreal Engine plugin.
 
-## Current Tool Structure (30 Consolidated Tools)
+## Current Tool Structure (38 Consolidated Tools)
 
-As of Phase 3 Token Optimization, the MCP server exposes **30 consolidated tools** with ~26,000 tokens and 1,600+ actions.
+As of Phase 3 Token Optimization, the MCP server exposes **38 consolidated tools** with 2,640 actions.
 
 ### Core Tools
 - `manage_pipeline` - Filter tools by category

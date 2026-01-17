@@ -1,15 +1,15 @@
 # Private/ (C++ Handler Implementations)
 
-90+ C++ handler files implementing UE automation actions.
+83 C++ handler files implementing UE automation actions.
 
 ## OVERVIEW
-Each `*Handlers.cpp` file implements actions for one tool domain. Handlers are registered in `McpAutomationBridgeSubsystem::InitializeHandlers()`.
+Each `*Handlers.cpp` file implements actions for one tool domain. Handlers are registered in `McpAutomationBridgeSubsystem::InitializeHandlers()`. Largest: BlueprintHandlers (5,751 lines), GeometryHandlers (4,499 lines).
 
 ## STRUCTURE
 ```
 Private/
 ├── McpAutomationBridgeSubsystem.cpp      # Subsystem lifecycle + handler registration
-├── McpAutomationBridge_ProcessRequest.cpp # Tool → handler routing
+├── McpAutomationBridge_ProcessRequest.cpp # Tool -> handler routing
 ├── McpAutomationBridgeHelpers.h           # CRITICAL safety helpers
 ├── McpConnectionManager.cpp               # WebSocket server
 ├── McpBridgeWebSocket.cpp                 # WS frame handling
@@ -18,7 +18,7 @@ Private/
 │   ├── _AIHandlers.cpp                    # AI controllers, EQS, perception
 │   ├── _AnimationHandlers.cpp             # Animation BPs, montages, blendspaces
 │   ├── _AssetWorkflowHandlers.cpp         # Asset CRUD operations
-│   ├── _BlueprintHandlers.cpp             # BP creation + graph editing
+│   ├── _BlueprintHandlers.cpp             # BP creation + graph editing (5,751 lines)
 │   ├── _CombatHandlers.cpp                # Weapons, projectiles, damage
 │   ├── _EnvironmentHandlers.cpp           # Landscape, foliage
 │   ├── _GASHandlers.cpp                   # Gameplay Ability System
@@ -31,7 +31,7 @@ Private/
 │   ├── _WaterHandlers.cpp                 # Water bodies (ocean, lake, river)
 │   ├── _WeatherHandlers.cpp               # Sky, fog, volumetric clouds
 │   ├── _XRPluginsHandlers.cpp             # OpenXR, Quest, SteamVR, ARKit
-│   └── ... (70+ more)
+│   └── ... (65+ more)
 ```
 
 ## HANDLER PATTERN
@@ -65,6 +65,7 @@ Handlers.Add(TEXT("my_action"),
 - **Error Responses**: Use `MakeErrorResponse()` with descriptive messages
 - **Null Safety**: Check all pointers before use, especially after `SpawnActor()`
 - **Conditional Compilation**: Use `#if WITH_EDITOR` for editor-only code
+- **TArray Access**: `ContainerPtrToValuePtr` on TArray returns header, NOT element data
 
 ## ANTI-PATTERNS
 - **UPackage::SavePackage()**: Crashes in UE 5.7. Use `McpSafeAssetSave()`
