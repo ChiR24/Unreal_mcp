@@ -9,11 +9,12 @@ Consolidated tool architecture. Each tool groups related actions (e.g., `manage_
 ## STRUCTURE
 ```
 src/tools/
-├── consolidated-tool-definitions.ts  # All 30 tool schemas + action enums
-├── consolidated-tool-handlers.ts     # Registry dispatch + routing
-├── handlers/                          # Domain-specific implementations (61 files)
-├── tool-definition-utils.ts          # Schema helpers
+├── consolidated-tool-definitions.ts  # All 30 tool schemas + action enums (7,385 lines)
+├── consolidated-tool-handlers.ts     # Registry dispatch + routing (43KB)
+├── handlers/                          # Domain-specific implementations (62 files)
+├── tool-definition-utils.ts          # 200+ reusable common schema definitions
 ├── property-dictionary.ts            # UE property mappings
+├── dynamic-handler-registry.ts       # Global toolRegistry instance
 └── *.ts                               # Legacy single-tool files (being consolidated)
 ```
 
@@ -24,6 +25,7 @@ src/tools/
 | Register handler | `consolidated-tool-handlers.ts` | `toolRegistry.register()` in `registerDefaultHandlers()` |
 | Implement action | `handlers/*-handlers.ts` | Call `executeAutomationRequest()` |
 | Common utilities | `handlers/common-handlers.ts` | `requireAction()`, `executeAutomationRequest()` |
+| Reusable schemas | `tool-definition-utils.ts` | Transforms, paths, names, properties |
 
 ## CONVENTIONS
 - **Consolidated Pattern**: Group by domain, switch on `args.action`
