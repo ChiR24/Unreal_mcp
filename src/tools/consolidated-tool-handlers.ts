@@ -15,7 +15,7 @@ import { handleEffectTools } from './handlers/effect-handlers.js';
 import { handleEnvironmentTools } from './handlers/environment-handlers.js';
 import { handleSystemTools, handleConsoleCommand } from './handlers/system-handlers.js';
 import { handleInspectTools } from './handlers/inspect-handlers.js';
-import { handlePipelineTools } from './handlers/pipeline-handlers.js';
+import { handlePipelineTools } from './handlers/tool-config-handlers.js';
 import { handleGraphTools } from './handlers/graph-handlers.js';
 import { handleAudioTools } from './handlers/audio-handlers.js';
 import { handleLightingTools } from './handlers/lighting-handlers.js';
@@ -160,7 +160,7 @@ function normalizeToolCall(
     normalizedName = 'system_control';
     action = 'console_command';
   }
-  // manage_pipeline is a standalone tool - do NOT reroute to system_control
+  // configure_tools is a standalone MCP meta-tool - do NOT reroute to system_control
   // It has its own actions: list_categories, set_categories, get_status
   if (normalizedName === 'manage_tests') {
     normalizedName = 'system_control';
@@ -762,8 +762,8 @@ function registerDefaultHandlers() {
   // 63. MODDING & UGC SYSTEM (Phase 46)
   toolRegistry.register('manage_modding', async (args, tools) => await handleModdingTools(getAction(args), args, tools));
 
-  // 64. PIPELINE MANAGEMENT
-  toolRegistry.register('manage_pipeline', async (args, tools) => await handlePipelineTools(getAction(args), args, tools));
+  // NOTE: configure_tools is intercepted in tool-registry.ts before reaching here
+  // No registration needed - it's a pure MCP meta-tool handled by handlePipelineCall()
 
   // 65. GAMEPLAY ABILITIES (Phase 13 Breakdown)
   toolRegistry.register('manage_gameplay_abilities', async (args, tools) => await handleGASTools(getAction(args), args, tools));

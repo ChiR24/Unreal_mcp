@@ -916,7 +916,7 @@
       }
     },
     {
-      "name": "manage_pipeline",
+      "name": "configure_tools",
       "actionCount": 3,
       "raw": {
         "chars": 636,

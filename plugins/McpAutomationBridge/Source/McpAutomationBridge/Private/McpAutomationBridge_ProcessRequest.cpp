@@ -571,11 +571,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
         return;
 
       // 2. Execution & Build / Test Pipeline
-      if (HandleAndLog(TEXT("HandlePipelineAction"), [&]() {
-            return HandlePipelineAction(RequestId, Action, Payload,
-                                        RequestingSocket);
-          }))
-        return;
+      // NOTE: configure_tools (formerly manage_pipeline) is handled entirely in TS
       if (HandleAndLog(TEXT("HandleTestAction"), [&]() {
             return HandleTestAction(RequestId, Action, Payload,
                                     RequestingSocket);

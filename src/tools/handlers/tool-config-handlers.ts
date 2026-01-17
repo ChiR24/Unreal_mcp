@@ -1,7 +1,5 @@
 import { cleanObject } from '../../utils/safe-json.js';
-import { ITools } from '../../types/tool-interfaces.js';
 import type { PipelineArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -106,7 +104,7 @@ function tokenizeArgs(extraArgs: string): string[] {
   return args;
 }
 
-export async function handlePipelineTools(action: string, args: PipelineArgs, tools: ITools) {
+export async function handlePipelineTools(action: string, args: PipelineArgs, _tools?: unknown) {
   switch (action) {
     case 'run_ubt': {
       const target = args.target;
@@ -247,7 +245,6 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       });
     }
     default:
-      const res = await executeAutomationRequest(tools, 'manage_pipeline', { ...args, subAction: action }, 'Automation bridge not available for manage_pipeline');
-      return cleanObject(res);
+      return cleanObject({ success: false, error: 'INVALID_ACTION', message: `Unknown configure_tools action: ${action}` });
   }
 }

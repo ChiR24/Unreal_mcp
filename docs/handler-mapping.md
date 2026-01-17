@@ -7,7 +7,7 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 As of Phase 3 Token Optimization, the MCP server exposes **38 consolidated tools** with 2,640 actions.
 
 ### Core Tools
-- `manage_pipeline` - Filter tools by category
+- `configure_tools` - MCP meta-tool: filter which tools are visible by category
 - `manage_asset` - Assets, Materials, Blueprints (includes SCS, graph nodes)
 - `control_actor` - Spawn actors, transforms, physics, components, tags
 - `control_editor` - PIE, viewport, console, screenshots, CVars, UBT, input

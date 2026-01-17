@@ -545,14 +545,14 @@ export class ToolRegistry {
 
             this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
             
-            // Filter by category AND hide manage_pipeline from clients that can't use it
+            // Filter by category AND hide configure_tools from clients that can't use it
             // AND hide experimental tools unless EXPERIMENTAL_TOOLS is enabled
             const filtered = consolidatedToolDefinitions
                 .filter((t: ToolDefinition) => 
                     !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
                 )
                 .filter((t: ToolDefinition) => 
-                    supportsListChanged || t.name !== 'manage_pipeline'
+                    supportsListChanged || t.name !== 'configure_tools'
                 )
                 .filter((t: ToolDefinition) =>
                     !t.experimental || config.EXPERIMENTAL_TOOLS
@@ -573,9 +573,9 @@ export class ToolRegistry {
                      }
                      
                       // DEBUG: Log the first tool's schema to see what's wrong
-                      if (t.name === 'manage_pipeline' && this.logger.isDebugEnabled()) {
-                         this.logger.debug(`manage_pipeline schema: ${JSON.stringify(copy.inputSchema)}`);
-                     }
+                      if (t.name === 'configure_tools' && this.logger.isDebugEnabled()) {
+                          this.logger.debug(`configure_tools schema: ${JSON.stringify(copy.inputSchema)}`);
+                      }
 
                      return copy;
                  } catch (_e) {
@@ -602,7 +602,7 @@ export class ToolRegistry {
              // ---------------------------------
              args = this.normalizeToolArgs(name, args);
 
-             if (name === 'manage_pipeline') {
+             if (name === 'configure_tools') {
                  return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
              }
 

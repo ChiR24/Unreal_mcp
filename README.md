@@ -197,7 +197,7 @@ ASSET_LIST_TTL_MS=10000
 ### Core Tools
 | Tool | Description |
 |------|-------------|
-| `manage_pipeline` | Filter tools by category (core, world, authoring, gameplay, utility) |
+| `configure_tools` | MCP meta-tool: filter which tools are visible by category (not UE-related) |
 | `manage_asset` | Assets, Materials, Blueprints (SCS, graph nodes) |
 | `control_actor` | Spawn actors, transforms, physics, components, tags |
 | `control_editor` | PIE, viewport, console, screenshots, CVars, UBT, input |

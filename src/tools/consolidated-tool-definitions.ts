@@ -28,13 +28,13 @@ export interface ToolDefinition {
 }
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
-    name: 'manage_pipeline',
-    description: 'Filter tools by category (core, world, authoring, gameplay, utility).',
+    name: 'configure_tools',
+    description: 'MCP meta-tool: filter which MCP tools are visible by category. NOT an Unreal Engine tool.',
     category: 'core',
     annotations: {
       audience: ['developer'],
       priority: 10,
-      tags: ['system', 'meta', 'configuration']
+      tags: ['system', 'meta', 'mcp', 'configuration']
     },
     inputSchema: {
       type: 'object',
