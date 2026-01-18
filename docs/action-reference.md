@@ -4,11 +4,11 @@
 
 Generated: 2026-01-16T12:25:18.807Z
 
-Total Tools: 38
+Total Tools: 37
 
 ## Table of Contents
 
-Total Actions: 2640
+Total Actions: 2578
 
 - [manage_pipeline](#manage-pipeline) (3 actions)
 - [manage_asset](#manage-asset) (99 actions)

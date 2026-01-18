@@ -1,7 +1,7 @@
 # src/tools
 
-38 consolidated MCP tools with action-based dispatch to native C++ handlers.
-Token-optimized: 2,640 actions visible to LLM.
+37 consolidated MCP tools with action-based dispatch to native C++ handlers.
+Token-optimized: 2,578 actions visible to LLM.
 
 ## OVERVIEW
 Consolidated tool architecture. Each tool groups related actions (e.g., `manage_asset` handles create, delete, duplicate). TS validates schema, dispatches to C++.

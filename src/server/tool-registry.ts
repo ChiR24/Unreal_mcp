@@ -330,8 +330,23 @@ export class ToolRegistry {
 
     private async handlePipelineCall(args: Record<string, unknown>) {
         const action = args.action as string;
+        const VALID_CATEGORIES = ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'] as const;
+        
         if (action === 'set_categories') {
             const newCats = Array.isArray(args.categories) ? args.categories as string[] : [];
+            
+            // Validate category names to prevent self-lock bug
+            const invalidCats = newCats.filter(c => !VALID_CATEGORIES.includes(c as typeof VALID_CATEGORIES[number]));
+            if (invalidCats.length > 0) {
+                this.logger.warn(`Invalid categories rejected: ${invalidCats.join(', ')}`);
+                return { 
+                    success: false, 
+                    error: 'INVALID_CATEGORIES', 
+                    message: `Invalid category names: ${invalidCats.join(', ')}. Valid categories: ${VALID_CATEGORIES.join(', ')}`,
+                    validCategories: [...VALID_CATEGORIES]
+                };
+            }
+            
             this.currentCategories = newCats.length > 0 ? newCats : ['all'];
             this.logger.info(`MCP Categories updated to: ${this.currentCategories.join(', ')}`);
             
@@ -346,7 +361,7 @@ export class ToolRegistry {
             return { 
                 success: true, 
                 categories: this.currentCategories, 
-                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'] 
+                available: [...VALID_CATEGORIES] 
             };
         } else if (action === 'get_status') {
             return { 
@@ -547,9 +562,10 @@ export class ToolRegistry {
             
             // Filter by category AND hide configure_tools from clients that can't use it
             // AND hide experimental tools unless EXPERIMENTAL_TOOLS is enabled
+            // SAFETY: Always expose configure_tools to prevent self-lock when invalid categories are set
             const filtered = consolidatedToolDefinitions
                 .filter((t: ToolDefinition) => 
-                    !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
+                    t.name === 'configure_tools' || !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
                 )
                 .filter((t: ToolDefinition) => 
                     supportsListChanged || t.name !== 'configure_tools'

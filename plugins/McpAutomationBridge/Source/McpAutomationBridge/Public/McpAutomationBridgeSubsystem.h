@@ -1217,6 +1217,51 @@ private:
   bool HandleControlActorGetMetadata(const FString &RequestId,
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorFindByClass(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorInspectObject(const FString &RequestId,
+                                       const TSharedPtr<FJsonObject> &Payload,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetProperty(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorSetProperty(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorInspectClass(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorListObjects(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetComponentProperty(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorSetComponentProperty(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorDeleteObject(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorQueryByPredicate(const FString &RequestId,
+                                          const TSharedPtr<FJsonObject> &Payload,
+                                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetAllComponentProperties(const FString &RequestId,
+                                                   const TSharedPtr<FJsonObject> &Payload,
+                                                   TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorBatchSetComponentProperties(const FString &RequestId,
+                                                     const TSharedPtr<FJsonObject> &Payload,
+                                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorSerializeState(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetReferences(const FString &RequestId,
+                                       const TSharedPtr<FJsonObject> &Payload,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorReplaceClass(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control Editor Subhandlers
   bool HandleControlEditorPlay(const FString &RequestId,

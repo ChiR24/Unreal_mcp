@@ -3,17 +3,17 @@
 **Generated:** 2026-01-16
 **Commit:** a64d1ba
 **Branch:** pcg
-**Tools:** 38 consolidated tools (2,640 actions)
+**Tools:** 37 consolidated tools (2,578 actions)
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 38 consolidated tools with 2,640 actions covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, PCG, environment (water + weather), post-processing, cinematics (MRQ), virtual production (nDisplay, ICVFX), XR platforms, character/avatar plugins, asset plugins (USD, Alembic, glTF, Datasmith, Houdini, Substance), audio middleware (Wwise, FMOD), Live Link, AI NPC plugins, physics/destruction, accessibility, and modding/UGC.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C++ (Bridge Plugin). 37 consolidated tools with 2,578 actions covering assets, actors, blueprints, levels, animation, VFX, audio, AI, gameplay systems, PCG, environment (water + weather), post-processing, cinematics (MRQ), virtual production (nDisplay, ICVFX), XR platforms, character/avatar plugins, asset plugins (USD, Alembic, glTF, Datasmith, Houdini, Substance), audio middleware (Wwise, FMOD), Live Link, AI NPC plugins, physics/destruction, accessibility, and modding/UGC.
 
 ## STRUCTURE
 ```
 ./
 ├── src/               # TS Server (NodeNext ESM)
 │   ├── automation/    # Bridge Client & Handshake
-│   ├── tools/         # Tool Definitions & Handlers (38 tools)
+│   ├── tools/         # Tool Definitions & Handlers (37 tools)
 │   │   └── handlers/  # Domain-specific handler implementations (62 files)
 │   ├── utils/         # Normalization, Security, Validation
 │   ├── graphql/       # Optional GraphQL API (disabled by default)

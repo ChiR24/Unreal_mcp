@@ -122,7 +122,35 @@ export async function executeAutomationRequest(
   }
 
   try {
-    return await automationBridge.sendAutomationRequest(toolName, args, options);
+    const result = await automationBridge.sendAutomationRequest(toolName, args, options);
+    
+    // Universal check: if C++ returns { success: false }, propagate as error
+    // This prevents handlers from masking NOT_IMPLEMENTED or other C++ errors
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      const resultObj = result as Record<string, unknown>;
+      if (resultObj.success === false) {
+        const errorCode = String(resultObj.errorCode || resultObj.error || 'BRIDGE_ERROR');
+        const errorMsg = String(resultObj.message || resultObj.error || `${toolName} failed`);
+        
+        // Check for NOT_IMPLEMENTED specifically
+        if (errorCode === 'NOT_IMPLEMENTED' || errorMsg.includes('not implemented')) {
+          throw new McpError(
+            McpErrorCode.NOT_IMPLEMENTED,
+            `[${toolName}] ${errorMsg}`,
+            { retryable: false }
+          );
+        }
+        
+        // Map other error codes
+        throw new McpError(
+          McpErrorCode.BRIDGE_ERROR,
+          `[${toolName}] ${errorMsg}`,
+          { details: { errorCode } }
+        );
+      }
+    }
+    
+    return result;
   } catch (error) {
     throw mapToMcpError(error);
   }

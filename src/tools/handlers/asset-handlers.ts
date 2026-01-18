@@ -47,6 +47,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
 
         const res = await tools.assetResources.list(path, effectiveRecursive, limit, { refresh, depth });
 
+        // Check if the underlying operation failed (e.g., NOT_IMPLEMENTED from C++)
+        const resObj = res as Record<string, unknown>;
+        if (resObj.success === false) {
+          const errorMsg = String(resObj.error || resObj.message || 'Asset listing failed');
+          return ResponseFactory.error('NOT_IMPLEMENTED', errorMsg);
+        }
+
         const assets: AssetListItem[] = (Array.isArray(res.assets) ? res.assets : []) as AssetListItem[];
 
         const totalCount = typeof res.count === 'number' ? res.count : assets.length;

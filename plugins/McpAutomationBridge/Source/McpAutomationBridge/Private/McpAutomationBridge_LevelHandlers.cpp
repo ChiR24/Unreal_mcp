@@ -248,6 +248,20 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
 #endif
     } else {
+      // Try to forward to level structure handlers (configure_world_settings, etc.)
+      // Create a modified payload with subAction field for the structure handler
+      TSharedPtr<FJsonObject> StructurePayload = MakeShared<FJsonObject>();
+      if (Payload.IsValid()) {
+        for (const auto& Field : Payload->Values) {
+          StructurePayload->Values.Add(Field.Key, Field.Value);
+        }
+      }
+      StructurePayload->SetStringField(TEXT("subAction"), SubAction);
+      
+      if (HandleManageLevelStructureAction(RequestId, Action, StructurePayload, RequestingSocket)) {
+        return true;
+      }
+      
       SendAutomationError(
           RequestingSocket, RequestId,
           FString::Printf(TEXT("Unknown manage_level action: %s"), *SubAction),

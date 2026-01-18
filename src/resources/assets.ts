@@ -237,10 +237,15 @@ export class AssetResources extends BaseTool implements IAssetResources {
           cached: false
         };
       }
-    } catch { /* Fallback failed */ }
-
-    // If we reached here, it failed
-    throw new Error('AssetRegistry query failed or returned no payload');
+      
+      // C++ returned success: false - propagate error instead of masking it
+      const errorMsg = String((response as Record<string, unknown>).message || (response as Record<string, unknown>).error || 'Asset listing not implemented in native bridge');
+      throw new Error(errorMsg);
+    } catch (err) {
+      // Re-throw with context instead of silently swallowing
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`AssetRegistry query failed: ${message}`);
+    }
   }
 
   async find(assetPath: string) {

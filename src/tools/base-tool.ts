@@ -71,6 +71,19 @@ export abstract class BaseTool implements IBaseTool {
         if (!automation.isConnected()) {
             throw new Error('Automation bridge not connected');
         }
-        return automation.sendAutomationRequest(action, params, options);
+        const response = await automation.sendAutomationRequest(action, params, options);
+        
+        // Universal error check: if C++ returns { success: false }, throw error
+        // This prevents callers from masking NOT_IMPLEMENTED or other C++ errors
+        if (response && typeof response === 'object' && !Array.isArray(response)) {
+            const responseObj = response as Record<string, unknown>;
+            if (responseObj.success === false) {
+                const errorCode = String(responseObj.errorCode || responseObj.error || 'BRIDGE_ERROR');
+                const errorMsg = String(responseObj.message || responseObj.error || `${action} failed`);
+                throw new Error(`[${action}] ${errorMsg} (${errorCode})`);
+            }
+        }
+        
+        return response as T;
     }
 }
