@@ -923,6 +923,10 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     DestName = FPaths::GetBaseFilename(SourcePath);
   }
 
+  // Sanitize DestName: UE asset names cannot contain spaces or dots
+  DestName.ReplaceInline(TEXT(" "), TEXT("_"));
+  DestName.ReplaceInline(TEXT("."), TEXT("_"));
+
   // Defer the import to the next tick to avoid TaskGraph recursion issues with
   // UE 5.7+ Interchange Framework. See issue #137.
   // We use SetTimerForNextTick to ensure we're completely outside of any
@@ -952,21 +956,45 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
           TArray<UObject *> ImportedAssets =
               AssetTools.ImportAssetsAutomated(ImportData);
 
-          if (ImportedAssets.Num() > 0) {
-            UObject *Asset = ImportedAssets[0];
+          // Find the first valid (non-null) asset in the array.
+          // ImportAssetsAutomated can return arrays with nullptr entries.
+          UObject *Asset = nullptr;
+          for (UObject *ImportedObj : ImportedAssets) {
+            if (ImportedObj) {
+              Asset = ImportedObj;
+              break;
+            }
+          }
+
+          if (Asset) {
+            // Compute the final asset path. If we rename, use the destination
+            // path/name since RenameAssets may invalidate the Asset pointer.
+            FString FinalAssetPath;
+            bool bRenameSucceeded = true;
+
             // Rename if needed
-            if (Asset && Asset->GetName() != DestName) {
+            if (Asset->GetName() != DestName) {
               FAssetRenameData RenameData(Asset, DestPath, DestName);
-              AssetTools.RenameAssets({RenameData});
+              bRenameSucceeded = AssetTools.RenameAssets({RenameData});
+              // After rename, compute path from destination (Asset pointer may
+              // be stale)
+              FinalAssetPath = DestPath / DestName + TEXT(".") + DestName;
+            } else {
+              // No rename needed, safe to use the asset's current path
+              FinalAssetPath = Asset->GetPathName();
             }
 
             TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("assetPath"),
-                                 Asset ? Asset->GetPathName() : TEXT(""));
-            StrongThis->SendAutomationResponse(Socket, RequestId, true,
-                                               TEXT("Asset imported"), Resp,
-                                               FString());
+            Resp->SetStringField(TEXT("assetPath"), FinalAssetPath);
+            if (!bRenameSucceeded) {
+              Resp->SetBoolField(TEXT("renameWarning"), true);
+            }
+            StrongThis->SendAutomationResponse(
+                Socket, RequestId, true,
+                bRenameSucceeded ? TEXT("Asset imported")
+                                 : TEXT("Asset imported but rename failed"),
+                Resp, FString());
           } else {
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, false,
