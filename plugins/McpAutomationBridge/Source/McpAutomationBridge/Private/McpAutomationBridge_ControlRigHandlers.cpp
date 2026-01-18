@@ -50,11 +50,8 @@
 #endif
 
 // IK Rig headers
-#if __has_include("IKRigDefinition.h")
-#include "IKRigDefinition.h"
-#define MCP_HAS_IKRIG 1
-#else
-#define MCP_HAS_IKRIG 0
+#if MCP_HAS_IKRIG
+  #include "Rig/IKRigDefinition.h"
 #endif
 
 #if __has_include("RigEditor/IKRigDefinitionFactory.h")
@@ -120,20 +117,19 @@
 #include "PoseSearch/PoseSearchSchema.h"
 #endif
 
-// ML Deformer
+// ML Deformer - use __has_include since no module dependency (optional plugin)
 #if __has_include("MLDeformerAsset.h")
-#include "MLDeformerAsset.h"
-#define MCP_HAS_MLDEFORMER 1
+  #include "MLDeformerAsset.h"
+  #include "MLDeformerModel.h"
+  #define MCP_LOCAL_HAS_MLDEFORMER 1
 #else
-#define MCP_HAS_MLDEFORMER 0
+  #define MCP_LOCAL_HAS_MLDEFORMER 0
 #endif
 
 // Animation Modifiers
-#if __has_include("AnimationModifier.h")
-#include "AnimationModifier.h"
-#define MCP_HAS_ANIM_MODIFIERS 1
-#else
-#define MCP_HAS_ANIM_MODIFIERS 0
+#if MCP_HAS_ANIM_MODIFIERS
+  #include "AnimationModifier.h"
+  #include "Animation/AnimSequence.h"
 #endif
 
 // JSON Helpers
@@ -470,7 +466,7 @@ TSharedPtr<FJsonObject> HandleControlRigRequest(const TSharedPtr<FJsonObject>& P
 
     if (SubAction == TEXT("setup_ml_deformer"))
     {
-#if MCP_HAS_MLDEFORMER
+#if MCP_LOCAL_HAS_MLDEFORMER
         FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/MLDeformer")));
         FString SkeletalMeshPath = GetStringFieldSafe(Params, TEXT("skeletalMeshPath"), TEXT(""));
@@ -488,8 +484,10 @@ TSharedPtr<FJsonObject> HandleControlRigRequest(const TSharedPtr<FJsonObject>& P
 
         if (!SkeletalMeshPath.IsEmpty())
         {
-            USkeletalMesh* Mesh = LoadSkeletalMesh(SkeletalMeshPath);
-            if (Mesh) Deformer->SetSkeletalMesh(Mesh);
+            // Note: UMLDeformerAsset in UE 5.7 is a wrapper; skeletal mesh is set via the Model.
+            // The Model is typically created through the editor UI or training process.
+            // We just log that the mesh path was provided but actual setup requires a trained model.
+            UE_LOG(LogTemp, Log, TEXT("ML Deformer created; SkeletalMeshPath '%s' noted but model setup requires training"), *SkeletalMeshPath);
         }
 
         // Base mesh usually handled via geometry cache or similar, specific to deformer type

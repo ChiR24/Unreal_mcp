@@ -3460,6 +3460,88 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
 #endif
 }
 
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  double Speed = 1.0;
+  Payload->TryGetNumberField(TEXT("speed"), Speed);
+  
+  // Clamp speed to reasonable range (0.01 to 100.0)
+  Speed = FMath::Clamp(Speed, 0.01, 100.0);
+  
+  UWorld* World = GetActiveWorld();
+  if (!World) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active world available"), nullptr,
+                           TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+  
+  AWorldSettings* WorldSettings = World->GetWorldSettings();
+  if (!WorldSettings) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("WorldSettings not available"), nullptr,
+                           TEXT("WORLD_SETTINGS_NOT_FOUND"));
+    return true;
+  }
+  
+  WorldSettings->TimeDilation = Speed;
+  
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetNumberField(TEXT("speed"), Speed);
+  Resp->SetNumberField(TEXT("actualTimeDilation"), WorldSettings->TimeDilation);
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("Game speed set to %.2fx"), Speed),
+                         Resp, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFOV(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  double FOV = 90.0;
+  Payload->TryGetNumberField(TEXT("fov"), FOV);
+  
+  // Clamp FOV to valid range (5 to 170 degrees)
+  FOV = FMath::Clamp(FOV, 5.0, 170.0);
+  
+  if (!GEditor || !GEditor->GetActiveViewport()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active viewport available"), nullptr,
+                           TEXT("NO_VIEWPORT"));
+    return true;
+  }
+  
+  FViewport* ActiveViewport = GEditor->GetActiveViewport();
+  if (FViewportClient* BaseClient = ActiveViewport->GetClient()) {
+    FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
+    ViewportClient->ViewFOV = FOV;
+    ViewportClient->Invalidate();
+    
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetNumberField(TEXT("fov"), FOV);
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Camera FOV set to %.1f degrees"), FOV),
+                           Resp, FString());
+    return true;
+  }
+  
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Failed to get viewport client"), nullptr,
+                         TEXT("VIEWPORT_CLIENT_NOT_FOUND"));
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -3510,6 +3592,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetCamera(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_view_mode"))
     return HandleControlEditorSetViewMode(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_game_speed"))
+    return HandleControlEditorSetGameSpeed(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_camera_fov"))
+    return HandleControlEditorSetCameraFOV(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_asset"))
     return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
 

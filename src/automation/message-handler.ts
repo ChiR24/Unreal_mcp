@@ -204,7 +204,11 @@ export class MessageHandler {
             });
         }
 
-        const buffer = this.chunkBuffers.get(requestId)!;
+        const buffer = this.chunkBuffers.get(requestId);
+        if (!buffer) {
+            this.log.error(`Buffer not found for ${requestId} after initial create check`);
+            return;
+        }
 
         if (buffer.parts.length !== totalChunks) {
             this.log.error(`Chunk count mismatch for ${requestId}: expected ${buffer.parts.length}, got ${totalChunks} in chunk`);

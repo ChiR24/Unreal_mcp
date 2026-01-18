@@ -202,8 +202,17 @@ public class McpAutomationBridge : ModuleRules
             }
 
             // Phase 3F.2: Advanced Animation
+            // MLDeformerFramework is an OPTIONAL plugin (may not be enabled in project).
+            // Use DefineOptionalPluginMacro (macro-only, no DLL dependency) and __has_include in C++.
             DefineOptionalPluginMacro(EngineDir, "MLDeformerFramework", "MCP_HAS_MLDEFORMER");
-            DefineOptionalPluginMacro(EngineDir, "AnimationModifiers", "MCP_HAS_ANIM_MODIFIERS");
+            if (TryAddConditionalModule(Target, EngineDir, "AnimationModifiers", "AnimationModifiers"))
+            {
+                PublicDefinitions.Add("MCP_HAS_ANIM_MODIFIERS=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_ANIM_MODIFIERS=0");
+            }
             DefineOptionalPluginMacro(EngineDir, "SkeletalMeshModelingTools", "MCP_HAS_SKEL_MESH_MODELING");
 
             // ============================================================================
@@ -528,6 +537,14 @@ public class McpAutomationBridge : ModuleRules
                     Path.Combine(PluginsDir, "Editor", SearchName),
                     Path.Combine(PluginsDir, "FX", SearchName),
                     Path.Combine(PluginsDir, "Animation", SearchName),
+                    // Animation plugins have nested module structures
+                    Path.Combine(PluginsDir, "Animation", "IKRig", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "ControlRig", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "RigLogic", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "MLDeformer", "MLDeformerFramework", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "AnimationModifiers", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "AnimationWarping", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "PoseSearch", "Source", SearchName),
                     // Phase 40: Virtual Production Plugin paths
                     Path.Combine(PluginsDir, "VirtualProduction", SearchName),
                     Path.Combine(PluginsDir, "VirtualProduction", "DMX", "Source", SearchName),

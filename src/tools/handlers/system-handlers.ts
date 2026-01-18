@@ -372,8 +372,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       // Reconstruct final results array in original order
       const results: AssetValidationResult[] = requests.map((req, index) => {
         const reqId = String(index);
-        if (resultsMap.has(reqId)) {
-          return resultsMap.get(reqId)!;
+        const result = resultsMap.get(reqId);
+        if (result) {
+          return result;
         }
         return {
           assetPath: req.assetPath,

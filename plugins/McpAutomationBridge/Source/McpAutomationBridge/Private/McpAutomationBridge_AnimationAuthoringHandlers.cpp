@@ -86,11 +86,8 @@
 #endif
 
 // IK Rig support (UE 5.0+)
-#if __has_include("IKRigDefinition.h")
-#include "IKRigDefinition.h"
-#define MCP_HAS_IKRIG 1
-#else
-#define MCP_HAS_IKRIG 0
+#if MCP_HAS_IKRIG
+  #include "Rig/IKRigDefinition.h"
 #endif
 
 // IK Rig Factory (for creating IK Rig assets)

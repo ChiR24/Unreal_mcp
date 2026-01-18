@@ -652,14 +652,43 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       // Save the level
       bool bSaved = FEditorFileUtils::SaveLevel(
           GetActiveWorld()->PersistentLevel, *Path);
+      
+      // UE 5.7 + Intel GPU Workaround: Level save with HLOD/WorldPartition triggers
+      // recursive FlushRenderingCommands which can cause a GPU driver race condition.
+      // Defer the response by ~100ms to let rendering thread stabilize.
       if (bSaved) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("path"), Path);
         Resp->SetStringField(TEXT("message"),
                              TEXT("Level created with lighting"));
-        SendAutomationResponse(RequestingSocket, RequestId, true,
+        
+        // Capture for deferred response
+        TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf = this;
+        const FString CapturedRequestId = RequestId;
+        TSharedPtr<FMcpBridgeWebSocket> CapturedSocket = RequestingSocket;
+        TSharedPtr<FJsonObject> CapturedResp = Resp;
+        
+        if (GEditor)
+        {
+          FTimerDelegate ResponseDelegate;
+          ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, CapturedResp]()
+          {
+            if (UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get())
+            {
+              Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, true,
+                                 TEXT("Level created with lighting"), CapturedResp);
+            }
+          });
+          
+          FTimerHandle TempHandle;
+          GEditor->GetTimerManager()->SetTimer(TempHandle, ResponseDelegate, 0.1f, false);
+        }
+        else
+        {
+          SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level created with lighting"), Resp);
+        }
       } else {
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Failed to save level"), TEXT("SAVE_FAILED"));

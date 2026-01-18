@@ -594,9 +594,9 @@ export class WASMIntegration {
     let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
     for (let i = 0; i < vertices.length; i += 3) {
-      const x = vertices[i]!;
-      const y = vertices[i + 1]!;
-      const z = vertices[i + 2]!;
+      const x = vertices[i] ?? 0;
+      const y = vertices[i + 1] ?? 0;
+      const z = vertices[i + 2] ?? 0;
 
       if (x < minX) minX = x;
       if (y < minY) minY = y;
@@ -613,14 +613,14 @@ export class WASMIntegration {
     let totalArea = 0;
 
     for (let i = 0; i < indices.length; i += 3) {
-      const idx0 = (indices[i]!) * 3;
-      const idx1 = (indices[i + 1]!) * 3;
-      const idx2 = (indices[i + 2]!) * 3;
+      const idx0 = (indices[i] ?? 0) * 3;
+      const idx1 = (indices[i + 1] ?? 0) * 3;
+      const idx2 = (indices[i + 2] ?? 0) * 3;
 
       if (idx0 + 2 < vertices.length && idx1 + 2 < vertices.length && idx2 + 2 < vertices.length) {
-        const v0x = vertices[idx0]!, v0y = vertices[idx0 + 1]!, v0z = vertices[idx0 + 2]!;
-        const v1x = vertices[idx1]!, v1y = vertices[idx1 + 1]!, v1z = vertices[idx1 + 2]!;
-        const v2x = vertices[idx2]!, v2y = vertices[idx2 + 1]!, v2z = vertices[idx2 + 2]!;
+        const v0x = vertices[idx0] ?? 0, v0y = vertices[idx0 + 1] ?? 0, v0z = vertices[idx0 + 2] ?? 0;
+        const v1x = vertices[idx1] ?? 0, v1y = vertices[idx1 + 1] ?? 0, v1z = vertices[idx1 + 2] ?? 0;
+        const v2x = vertices[idx2] ?? 0, v2y = vertices[idx2 + 1] ?? 0, v2z = vertices[idx2 + 2] ?? 0;
 
         // Edges
         const e1x = v1x - v0x, e1y = v1y - v0y, e1z = v1z - v0z;

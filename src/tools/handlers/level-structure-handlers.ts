@@ -142,6 +142,27 @@ export async function handleLevelStructureTools(
     case 'get_level_structure_info':
       return sendRequest('get_level_structure_info');
 
+    // ========================================================================
+    // World Partition Phase 3H (6 actions)
+    // ========================================================================
+    case 'configure_world_partition':
+      return sendRequest('configure_world_partition');
+
+    case 'create_streaming_volume':
+      return sendRequest('create_streaming_volume');
+
+    case 'configure_large_world_coordinates':
+      return sendRequest('configure_large_world_coordinates');
+
+    case 'create_world_partition_cell':
+      return sendRequest('create_world_partition_cell');
+
+    case 'configure_runtime_loading':
+      return sendRequest('configure_runtime_loading');
+
+    case 'configure_world_settings':
+      return sendRequest('configure_world_settings');
+
     default:
       return cleanObject({
         success: false,

@@ -12,9 +12,9 @@ vi.mock('./common-handlers.js', () => ({
   }),
 }));
 
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest } from './common-handlers.js';
 const mockedExecuteAutomationRequest = vi.mocked(executeAutomationRequest);
-const mockedRequireNonEmptyString = vi.mocked(requireNonEmptyString);
+// requireNonEmptyString is mocked but used internally by handlers
 
 function createMockTools(): ITools {
   return {

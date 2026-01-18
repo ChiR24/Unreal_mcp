@@ -571,12 +571,45 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     bSaved = FEditorFileUtils::SaveCurrentLevel();
 #endif
 
+    // UE 5.7 + Intel GPU Workaround: Level save with HLOD/WorldPartition triggers
+    // recursive FlushRenderingCommands which can cause a GPU driver race condition.
+    // Defer the response by ~100ms to let rendering thread stabilize.
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     Out->SetBoolField(TEXT("success"), bSaved);
-    SendAutomationResponse(RequestingSocket, RequestId, bSaved,
-                           bSaved ? TEXT("Level saved")
-                                  : TEXT("Failed to save level"),
-                           Out, bSaved ? FString() : TEXT("SAVE_FAILED"));
+    
+    // Capture for deferred response
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf = this;
+    const FString CapturedRequestId = RequestId;
+    const bool bCapturedSaved = bSaved;
+    TSharedPtr<FMcpBridgeWebSocket> CapturedSocket = RequestingSocket;
+    TSharedPtr<FJsonObject> CapturedOut = Out;
+    
+    // Defer response to next frame to allow rendering commands to settle
+    if (GEditor)
+    {
+      FTimerDelegate ResponseDelegate;
+      ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, bCapturedSaved, CapturedOut]()
+      {
+        if (UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get())
+        {
+          Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, bCapturedSaved,
+                             bCapturedSaved ? TEXT("Level saved")
+                                            : TEXT("Failed to save level"),
+                             CapturedOut, bCapturedSaved ? FString() : TEXT("SAVE_FAILED"));
+        }
+      });
+      
+      FTimerHandle TempHandle;
+      GEditor->GetTimerManager()->SetTimer(TempHandle, ResponseDelegate, 0.1f, false);
+    }
+    else
+    {
+      // Fallback: send immediately if timer not available
+      SendAutomationResponse(RequestingSocket, RequestId, bSaved,
+                             bSaved ? TEXT("Level saved")
+                                    : TEXT("Failed to save level"),
+                             Out, bSaved ? FString() : TEXT("SAVE_FAILED"));
+    }
     return true;
   }
 

@@ -106,8 +106,11 @@ function generateDocs(): void {
   
   // Write file
   writeFileSync(outputPath, lines.join('\n'));
+  // eslint-disable-next-line no-console
   console.log(`Generated: ${outputPath}`);
+  // eslint-disable-next-line no-console
   console.log(`Tools documented: ${consolidatedToolDefinitions.length}`);
+  // eslint-disable-next-line no-console
   console.log(`Total actions: ${totalActions}`);
 }
 

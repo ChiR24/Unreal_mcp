@@ -8,7 +8,7 @@ import type { ITools } from '../../types/tool-interfaces.js';
 // Mock common-handlers
 vi.mock('./common-handlers.js', () => ({
   executeAutomationRequest: vi.fn(),
-  requireNonEmptyString: vi.fn((val, name, msg) => {
+  requireNonEmptyString: vi.fn((val, _name, msg) => {
     if (typeof val !== 'string' || val.trim() === '') {
       throw new Error(msg);
     }
@@ -88,10 +88,11 @@ describe('handleNetworkingTools', () => {
   describe('validation failure cases', () => {
     it('throws error when blueprintPath is missing', async () => {
       const mockTools = createMockTools();
-      mockedRequireNonEmptyString.mockImplementation((val, name, msg) => {
+      mockedRequireNonEmptyString.mockImplementation((val, _name, msg) => {
         if (typeof val !== 'string' || val.trim() === '') {
           throw new Error(msg);
         }
+        return val;
       });
 
       await expect(

@@ -27,11 +27,15 @@ export class CommandValidator {
     /**
      * Tokens that indicate shell injection or external system access attempts.
      * Any command containing these is blocked.
+     * 
+     * NOTE: These patterns are designed to avoid false positives:
+     * - 'rm ' and 'move ' would match log strings like "transform" or "Asset: move asset"
+     * - Instead, we check for actual shell command patterns at word boundaries or start of line
      */
     private static readonly FORBIDDEN_TOKENS = [
-        // Shell commands (Windows/Unix)
-        'rm ', 'rm-', 'del ', 'format ', 'shutdown', 'reboot',
-        'rmdir', 'mklink', 'copy ', 'move ', 'start "', 'system(',
+        // Shell commands (Windows/Unix) - use patterns that avoid matching inside words
+        'del ', 'format ', 'shutdown', 'reboot',
+        'rmdir', 'mklink', 'start "', 'system(',
         // Python injection attempts
         'import os', 'import subprocess', 'subprocess.', 'os.system',
         'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
@@ -102,6 +106,14 @@ export class CommandValidator {
 
         if (this.FORBIDDEN_TOKENS.some(token => cmdLower.includes(token))) {
             throw new Error(`Command contains unsafe token and was blocked: ${command}`);
+        }
+
+        // Check for shell commands with word boundary matching to avoid false positives
+        // like matching "rm " inside "transform " or "move " inside "Asset: move asset"
+        // Only match when command STARTS with these patterns (actual shell injection)
+        const cmdStart = cmdLower.split(' ')[0] ?? '';
+        if (cmdStart === 'rm' || cmdStart === 'copy' || cmdStart === 'move') {
+            throw new Error(`Command '${cmdStart}' contains forbidden shell command and is blocked`);
         }
 
         // Block backticks which can be used for shell execution

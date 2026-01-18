@@ -68,6 +68,7 @@ export class AutomationBridge extends EventEmitter {
     private queuedRequestItems: QueuedRequestItem[] = [];
     private connectionPromise?: Promise<void>;
     private connectionLock = false;
+    private isStopping = false;
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
@@ -188,6 +189,13 @@ export class AutomationBridge extends EventEmitter {
 
     private startClient(): void {
         try {
+            // Close any existing sockets before reconnecting to avoid zombie connections
+            const existingSockets = this.connectionManager.getActiveSockets();
+            if (existingSockets.size > 0) {
+                this.log.info(`Closing ${existingSockets.size} existing socket(s) before reconnecting`);
+                this.connectionManager.closeAll(1000, 'Reconnecting');
+            }
+
             const url = `ws://${this.clientHost}:${this.clientPort}`;
             this.log.info(`Connecting to Unreal Engine automation server at ${url} (Pool Size: ${this.maxConcurrentConnections})`);
 
@@ -368,13 +376,22 @@ export class AutomationBridge extends EventEmitter {
                 this.log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
 
                 if (!this.connectionManager.isConnected()) {
-                    this.requestTracker.rejectAll(new Error(reason || 'Connection lost'));
+                    // Reset connection state to allow reconnection
+                    this.connectionLock = false;
+                    this.connectionPromise = undefined;
+                    
+                    // Only reject pending requests if not stopping intentionally
+                    if (!this.isStopping) {
+                        this.requestTracker.rejectAll(new Error(reason || 'Connection lost'));
+                        this.log.info('All sockets disconnected - will attempt reconnection on next request');
+                    }
                 }
             }
         });
     }
 
     stop(): void {
+        this.isStopping = true;
         if (this.isConnected()) {
             this.broadcast({
                 type: 'bridge_shutdown',

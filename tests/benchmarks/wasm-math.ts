@@ -5,8 +5,11 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Benchmark logging helper (console is intentional for CLI output)
+const log = (msg: string) => process.stdout.write(msg + '\n');
+
 async function runBenchmark() {
-    console.log('--- WASM Math Benchmark ---');
+    log('--- WASM Math Benchmark ---');
 
     // 1. Setup Data
     const vertexCount = 100000; // 100k vertices
@@ -21,7 +24,7 @@ async function runBenchmark() {
     // From tests/benchmarks/: ../../src/wasm/pkg/unreal_mcp_wasm.js
     const wasmPath = path.resolve(__dirname, '../../src/wasm/pkg/unreal_mcp_wasm.js');
     
-    console.log(`Loading WASM from: ${wasmPath}`);
+    log(`Loading WASM from: ${wasmPath}`);
 
     const wasm = new WASMIntegration({ enabled: true, wasmPath });
     const ts = new WASMIntegration({ enabled: false });
@@ -29,7 +32,7 @@ async function runBenchmark() {
     await wasm.initialize();
     await ts.initialize();
 
-    console.log(`WASM Ready: ${wasm.isReady()}`);
+    log(`WASM Ready: ${wasm.isReady()}`);
     // TS instance won't be "ready" in terms of module loaded, but works for fallback
 
     // 3. Measure Bounds Calculation
@@ -45,7 +48,7 @@ async function runBenchmark() {
         ts.calculateMeshBounds(vertices);
     }
     const tsTime = performance.now() - start;
-    console.log(`TS Total: ${tsTime.toFixed(2)}ms, Avg: ${(tsTime/iterations).toFixed(4)}ms`);
+    log(`TS Total: ${tsTime.toFixed(2)}ms, Avg: ${(tsTime/iterations).toFixed(4)}ms`);
 
     // WASM Run
     start = performance.now();
@@ -53,10 +56,12 @@ async function runBenchmark() {
         wasm.calculateMeshBounds(vertices);
     }
     const wasmTime = performance.now() - start;
-    console.log(`WASM Total: ${wasmTime.toFixed(2)}ms, Avg: ${(wasmTime/iterations).toFixed(4)}ms`);
+    log(`WASM Total: ${wasmTime.toFixed(2)}ms, Avg: ${(wasmTime/iterations).toFixed(4)}ms`);
 
     const speedup = tsTime / wasmTime;
-    console.log(`Speedup: ${speedup.toFixed(2)}x`);
+    log(`Speedup: ${speedup.toFixed(2)}x`);
 }
 
-runBenchmark().catch(console.error);
+runBenchmark().catch((err: unknown) => {
+    process.stderr.write(String(err) + '\n');
+});
