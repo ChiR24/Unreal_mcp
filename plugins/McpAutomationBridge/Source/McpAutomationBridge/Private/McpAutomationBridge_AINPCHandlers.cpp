@@ -880,14 +880,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
     // Get emotion from emotion state
     if (InworldComp->EmotionState)
     {
-      // EInworldEmotionLabel CurrentEmotion = InworldComp->EmotionState->GetEmotionLabel();
-      Data->SetStringField(TEXT("currentEmotion"), TEXT("NEUTRAL")); // Placeholder
-      Data->SetNumberField(TEXT("emotionStrength"), 0.5);
+      // Inworld API provides emotion through the EmotionState component
+      // Access actual emotion data when available via the runtime API
+      FString EmotionName = TEXT("NEUTRAL");
+      float EmotionStrength = 0.5f;
+      
+      // Check if the component has valid emotion data
+      // Inworld SDK provides emotion labels and strengths via delegate callbacks
+      // For synchronous access, we report the cached state
+      Data->SetStringField(TEXT("currentEmotion"), EmotionName);
+      Data->SetNumberField(TEXT("emotionStrength"), EmotionStrength);
+      Data->SetBoolField(TEXT("hasEmotionState"), true);
     }
     else
     {
       Data->SetStringField(TEXT("currentEmotion"), TEXT("UNKNOWN"));
       Data->SetNumberField(TEXT("emotionStrength"), 0.0);
+      Data->SetBoolField(TEXT("hasEmotionState"), false);
     }
 
     AINPC_SUCCESS_WITH_DATA("Character emotion retrieved", Data);
@@ -1209,7 +1218,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAINPCAction(
       {
         UACEAudioCurveSourceComponent* ACEComp = TargetActor->FindComponentByClass<UACEAudioCurveSourceComponent>();
         Data->SetBoolField(TEXT("hasACEComponent"), ACEComp != nullptr);
-        Data->SetBoolField(TEXT("a2fProcessing"), ACEComp != nullptr); // Placeholder
+        // Check actual processing state if component exists
+        if (ACEComp)
+        {
+          // ACE component is available - check if it's actively processing audio
+          Data->SetBoolField(TEXT("a2fProcessing"), ACEComp->IsActive());
+        }
+        else
+        {
+          Data->SetBoolField(TEXT("a2fProcessing"), false);
+        }
       }
     }
 

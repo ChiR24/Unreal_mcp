@@ -59,6 +59,7 @@
 #include "Materials/MaterialFunction.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Engine/SubsurfaceProfile.h"  // For USubsurfaceProfile and FSubsurfaceProfileStruct
 // Note: SavePackage.h removed - use McpSafeAssetSave() from McpAutomationBridgeHelpers.h instead
 #include "EditorAssetLibrary.h"
 
@@ -1931,8 +1932,84 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    // Placeholder implementation as SubsurfaceProfile requires dedicated factory/asset class
-    SendAutomationResponse(Socket, RequestId, true, TEXT("SSS profile configured (placeholder)."));
+    
+    FString SavePath;
+    if (!Payload->TryGetStringField(TEXT("savePath"), SavePath)) {
+        SavePath = TEXT("/Game/Materials/SSSProfiles");
+    }
+    
+    // Normalize path
+    if (!SavePath.StartsWith(TEXT("/Game"))) {
+        SavePath = TEXT("/Game/") + SavePath;
+    }
+    
+    FString FullPath = SavePath / Name;
+    
+    // Create package for SSS Profile
+    UPackage* Package = CreatePackage(*FullPath);
+    if (!Package) {
+        SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
+        return true;
+    }
+    
+    Package->FullyLoad();
+    
+    // Create the SubsurfaceProfile asset
+    USubsurfaceProfile* SSSProfile = NewObject<USubsurfaceProfile>(Package, *Name, RF_Public | RF_Standalone);
+    if (!SSSProfile) {
+        SendAutomationError(Socket, RequestId, TEXT("Failed to create SubsurfaceProfile."), TEXT("CREATE_ERROR"));
+        return true;
+    }
+    
+    // Configure SSS settings from payload
+    FSubsurfaceProfileStruct& Settings = SSSProfile->Settings;
+    
+    // Scatter radius (RGB)
+    const TSharedPtr<FJsonObject>* ScatterRadiusObj;
+    if (Payload->TryGetObjectField(TEXT("scatterRadius"), ScatterRadiusObj)) {
+        double R = 1.0, G = 0.2, B = 0.1;
+        (*ScatterRadiusObj)->TryGetNumberField(TEXT("r"), R);
+        (*ScatterRadiusObj)->TryGetNumberField(TEXT("g"), G);
+        (*ScatterRadiusObj)->TryGetNumberField(TEXT("b"), B);
+        Settings.SubsurfaceColor = FLinearColor(R, G, B);
+    }
+    
+    // Falloff color
+    const TSharedPtr<FJsonObject>* FalloffColorObj;
+    if (Payload->TryGetObjectField(TEXT("falloffColor"), FalloffColorObj)) {
+        double R = 1.0, G = 0.37, B = 0.3;
+        (*FalloffColorObj)->TryGetNumberField(TEXT("r"), R);
+        (*FalloffColorObj)->TryGetNumberField(TEXT("g"), G);
+        (*FalloffColorObj)->TryGetNumberField(TEXT("b"), B);
+        Settings.FalloffColor = FLinearColor(R, G, B);
+    }
+    
+    // World unit scale
+    double WorldUnitScale = 0.1;
+    if (Payload->TryGetNumberField(TEXT("worldUnitScale"), WorldUnitScale)) {
+        Settings.ScatterRadius = static_cast<float>(WorldUnitScale);
+    }
+    
+    // Boundary color blend
+    double BoundaryBlend = 0.5;
+    if (Payload->TryGetNumberField(TEXT("boundaryColorBlending"), BoundaryBlend)) {
+        Settings.BoundaryColorBleed = FLinearColor(BoundaryBlend, BoundaryBlend, BoundaryBlend);
+    }
+    
+    // Register with asset registry and save
+    Package->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(SSSProfile);
+    
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave) {
+        McpSafeAssetSave(SSSProfile);
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), FullPath);
+    Result->SetStringField(TEXT("name"), Name);
+    SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("SSS profile '%s' created."), *Name), Result);
     return true;
   }
 
