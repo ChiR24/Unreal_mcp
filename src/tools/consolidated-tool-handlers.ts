@@ -65,6 +65,7 @@ import { handleUtilityPluginsTools } from './handlers/utility-plugins-handlers.j
 import { handlePhysicsDestructionTools } from './handlers/physics-destruction-handlers.js';
 import { handleAccessibilityTools } from './handlers/accessibility-handlers.js';
 import { handleModdingTools } from './handlers/modding-handlers.js';
+import { handleUiTools } from './handlers/ui-handlers.js';
 
 type NormalizedToolCall = {
   name: string;
@@ -761,6 +762,9 @@ function registerDefaultHandlers() {
 
   // 63. MODDING & UGC SYSTEM (Phase 46)
   toolRegistry.register('manage_modding', async (args, tools) => await handleModdingTools(getAction(args), args, tools));
+
+  // 64. UI MANAGEMENT (Runtime widgets, viewport control)
+  toolRegistry.register('manage_ui', async (args, tools) => await handleUiTools(getAction(args), args, tools));
 
   // NOTE: configure_tools is intercepted in tool-registry.ts before reaching here
   // No registration needed - it's a pure MCP meta-tool handled by handlePipelineCall()

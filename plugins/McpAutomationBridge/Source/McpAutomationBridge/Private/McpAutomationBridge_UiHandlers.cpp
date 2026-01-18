@@ -2,6 +2,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/DateTime.h"
+#include <functional>
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "Blueprint/UserWidget.h"
@@ -14,6 +15,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
@@ -75,9 +77,23 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      UClass* WidgetClass = ResolveClassByName(WidgetPath);
+      UClass* WidgetClass = nullptr;
+      
+      // First, try to load as a Widget Blueprint (asset paths like /Game/...)
+      if (WidgetPath.StartsWith(TEXT("/Game/")) || WidgetPath.Contains(TEXT("."))) {
+        UWidgetBlueprint* WidgetBP = LoadObject<UWidgetBlueprint>(nullptr, *WidgetPath);
+        if (WidgetBP && WidgetBP->GeneratedClass) {
+          WidgetClass = WidgetBP->GeneratedClass;
+        }
+      }
+      
+      // Fallback: try ResolveClassByName for native classes (/Script/UMG.MyWidget)
+      if (!WidgetClass) {
+        WidgetClass = ResolveClassByName(WidgetPath);
+      }
+      
       if (!WidgetClass || !WidgetClass->IsChildOf(UUserWidget::StaticClass())) {
-        Message = FString::Printf(TEXT("Could not resolve valid UUserWidget class from '%s'"), *WidgetPath);
+        Message = FString::Printf(TEXT("Could not resolve valid UUserWidget class from '%s'. For Widget Blueprints, use the full asset path (e.g., /Game/UI/WBP_MyWidget). For native classes, use /Script/UMG.MyClass."), *WidgetPath);
         ErrorCode = TEXT("CLASS_NOT_FOUND");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
@@ -415,10 +431,25 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     }
   } else if (LowerSub == TEXT("create_hud")) {
     FString WidgetPath;
-     Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
-     UClass *WidgetClass = ResolveClassByName(WidgetPath);
-     if (WidgetClass && WidgetClass->IsChildOf(UUserWidget::StaticClass()) &&
-         GEngine && GEngine->GameViewport) {
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    
+    UClass* WidgetClass = nullptr;
+    
+    // First, try to load as a Widget Blueprint (asset paths like /Game/...)
+    if (WidgetPath.StartsWith(TEXT("/Game/")) || WidgetPath.Contains(TEXT("."))) {
+      UWidgetBlueprint* WidgetBP = LoadObject<UWidgetBlueprint>(nullptr, *WidgetPath);
+      if (WidgetBP && WidgetBP->GeneratedClass) {
+        WidgetClass = WidgetBP->GeneratedClass;
+      }
+    }
+    
+    // Fallback: try ResolveClassByName for native classes (/Script/UMG.MyWidget)
+    if (!WidgetClass) {
+      WidgetClass = ResolveClassByName(WidgetPath);
+    }
+    
+    if (WidgetClass && WidgetClass->IsChildOf(UUserWidget::StaticClass()) &&
+        GEngine && GEngine->GameViewport) {
       UWorld *World = GEngine->GameViewport->GetWorld();
       if (World) {
         UUserWidget *Widget = CreateWidget<UUserWidget>(World, WidgetClass);
@@ -436,8 +467,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         ErrorCode = TEXT("NO_WORLD");
       }
     } else {
-      Message =
-          FString::Printf(TEXT("Failed to load widget class: %s"), *WidgetPath);
+      Message = FString::Printf(TEXT("Failed to load widget class: %s. For Widget Blueprints, use the full asset path (e.g., /Game/UI/WBP_MyWidget)."), *WidgetPath);
       ErrorCode = TEXT("CLASS_NOT_FOUND");
     }
   } else if (LowerSub == TEXT("set_widget_text")) {
@@ -625,6 +655,193 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
         ErrorCode = TEXT("WIDGET_NOT_FOUND");
       }
+    }
+  } else if (LowerSub == TEXT("get_all_widgets")) {
+    // Get all active user widgets in the viewport
+    TArray<TSharedPtr<FJsonValue>> WidgetArray;
+    UWorld* ActiveWorld = GetActiveWorld();
+    
+    if (ActiveWorld) {
+      TArray<UUserWidget*> FoundWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+      
+      for (UUserWidget* Widget : FoundWidgets) {
+        if (Widget) {
+          TSharedPtr<FJsonObject> WidgetInfo = MakeShared<FJsonObject>();
+          WidgetInfo->SetStringField(TEXT("name"), Widget->GetName());
+          WidgetInfo->SetStringField(TEXT("class"), Widget->GetClass()->GetName());
+          WidgetInfo->SetBoolField(TEXT("isInViewport"), Widget->IsInViewport());
+          WidgetInfo->SetBoolField(TEXT("isVisible"), Widget->IsVisible());
+          WidgetArray.Add(MakeShared<FJsonValueObject>(WidgetInfo));
+        }
+      }
+    }
+    
+    // Also check GameViewport world (for PIE)
+    if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWorld()) {
+      TArray<UUserWidget*> PIEWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
+          GEngine->GameViewport->GetWorld(), PIEWidgets,
+          UUserWidget::StaticClass(), false);
+      
+      for (UUserWidget* Widget : PIEWidgets) {
+        if (Widget) {
+          TSharedPtr<FJsonObject> WidgetInfo = MakeShared<FJsonObject>();
+          WidgetInfo->SetStringField(TEXT("name"), Widget->GetName());
+          WidgetInfo->SetStringField(TEXT("class"), Widget->GetClass()->GetName());
+          WidgetInfo->SetBoolField(TEXT("isInViewport"), Widget->IsInViewport());
+          WidgetInfo->SetBoolField(TEXT("isVisible"), Widget->IsVisible());
+          WidgetInfo->SetStringField(TEXT("context"), TEXT("PIE"));
+          WidgetArray.Add(MakeShared<FJsonValueObject>(WidgetInfo));
+        }
+      }
+    }
+    
+    Resp->SetArrayField(TEXT("widgets"), WidgetArray);
+    Resp->SetNumberField(TEXT("count"), WidgetArray.Num());
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Found %d widgets"), WidgetArray.Num());
+  } else if (LowerSub == TEXT("get_widget_hierarchy")) {
+    // Get widget hierarchy for a specific widget or all widgets
+    FString Key;
+    Payload->TryGetStringField(TEXT("key"), Key);
+    
+    TArray<TSharedPtr<FJsonValue>> HierarchyArray;
+    UWorld* ActiveWorld = GetActiveWorld();
+    
+    auto BuildWidgetHierarchy = [](UWidget* Widget, int32 Depth) -> TSharedPtr<FJsonObject> {
+      TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
+      Info->SetStringField(TEXT("name"), Widget->GetName());
+      Info->SetStringField(TEXT("class"), Widget->GetClass()->GetName());
+      Info->SetNumberField(TEXT("depth"), Depth);
+      Info->SetBoolField(TEXT("isVisible"), Widget->IsVisible());
+      
+      // Get slot info if available
+      if (UPanelSlot* Slot = Widget->Slot) {
+        Info->SetStringField(TEXT("slotType"), Slot->GetClass()->GetName());
+      }
+      
+      return Info;
+    };
+    
+    std::function<void(UWidget*, int32, TArray<TSharedPtr<FJsonValue>>&)> TraverseChildren;
+    TraverseChildren = [&](UWidget* Parent, int32 Depth, TArray<TSharedPtr<FJsonValue>>& OutArray) {
+      if (!Parent) return;
+      
+      OutArray.Add(MakeShared<FJsonValueObject>(BuildWidgetHierarchy(Parent, Depth)));
+      
+      if (UPanelWidget* Panel = Cast<UPanelWidget>(Parent)) {
+        for (int32 i = 0; i < Panel->GetChildrenCount(); ++i) {
+          if (UWidget* Child = Panel->GetChildAt(i)) {
+            TraverseChildren(Child, Depth + 1, OutArray);
+          }
+        }
+      }
+    };
+    
+    if (ActiveWorld) {
+      TArray<UUserWidget*> FoundWidgets;
+      UWidgetBlueprintLibrary::GetAllWidgetsOfClass(ActiveWorld, FoundWidgets, UUserWidget::StaticClass(), false);
+      
+      for (UUserWidget* Widget : FoundWidgets) {
+        if (Widget && (Key.IsEmpty() || Widget->GetName() == Key)) {
+          TSharedPtr<FJsonObject> WidgetHierarchy = MakeShared<FJsonObject>();
+          WidgetHierarchy->SetStringField(TEXT("rootWidget"), Widget->GetName());
+          
+          TArray<TSharedPtr<FJsonValue>> Children;
+          if (Widget->WidgetTree && Widget->WidgetTree->RootWidget) {
+            TraverseChildren(Widget->WidgetTree->RootWidget, 0, Children);
+          }
+          WidgetHierarchy->SetArrayField(TEXT("children"), Children);
+          HierarchyArray.Add(MakeShared<FJsonValueObject>(WidgetHierarchy));
+          
+          if (!Key.IsEmpty()) break; // Found specific widget
+        }
+      }
+    }
+    
+    Resp->SetArrayField(TEXT("hierarchy"), HierarchyArray);
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Retrieved hierarchy for %d widget(s)"), HierarchyArray.Num());
+  } else if (LowerSub == TEXT("set_input_mode")) {
+    // Set input mode for the player controller
+    FString InputMode;
+    Payload->TryGetStringField(TEXT("inputMode"), InputMode);
+    
+    if (InputMode.IsEmpty()) {
+      Message = TEXT("inputMode required (GameOnly, UIOnly, GameAndUI)");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UWorld* World = nullptr;
+      if (GEngine && GEngine->GameViewport) {
+        World = GEngine->GameViewport->GetWorld();
+      }
+      if (!World) {
+        World = GetActiveWorld();
+      }
+      
+      if (World) {
+        APlayerController* PC = World->GetFirstPlayerController();
+        if (PC) {
+          if (InputMode.Equals(TEXT("GameOnly"), ESearchCase::IgnoreCase)) {
+            PC->SetInputMode(FInputModeGameOnly());
+            bSuccess = true;
+            Message = TEXT("Set input mode to GameOnly");
+          } else if (InputMode.Equals(TEXT("UIOnly"), ESearchCase::IgnoreCase)) {
+            PC->SetInputMode(FInputModeUIOnly());
+            bSuccess = true;
+            Message = TEXT("Set input mode to UIOnly");
+          } else if (InputMode.Equals(TEXT("GameAndUI"), ESearchCase::IgnoreCase)) {
+            PC->SetInputMode(FInputModeGameAndUI());
+            bSuccess = true;
+            Message = TEXT("Set input mode to GameAndUI");
+          } else {
+            Message = FString::Printf(TEXT("Invalid input mode: %s (use GameOnly, UIOnly, or GameAndUI)"), *InputMode);
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+          Resp->SetStringField(TEXT("inputMode"), InputMode);
+        } else {
+          Message = TEXT("No player controller found (is PIE running?)");
+          ErrorCode = TEXT("NO_PLAYER_CONTROLLER");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+      } else {
+        Message = TEXT("No world context found");
+        ErrorCode = TEXT("NO_WORLD");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    }
+  } else if (LowerSub == TEXT("show_mouse_cursor")) {
+    // Show or hide the mouse cursor
+    bool bShowCursor = true;
+    Payload->TryGetBoolField(TEXT("showCursor"), bShowCursor);
+    
+    UWorld* World = nullptr;
+    if (GEngine && GEngine->GameViewport) {
+      World = GEngine->GameViewport->GetWorld();
+    }
+    if (!World) {
+      World = GetActiveWorld();
+    }
+    
+    if (World) {
+      APlayerController* PC = World->GetFirstPlayerController();
+      if (PC) {
+        PC->bShowMouseCursor = bShowCursor;
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Mouse cursor %s"), bShowCursor ? TEXT("shown") : TEXT("hidden"));
+        Resp->SetBoolField(TEXT("showCursor"), bShowCursor);
+      } else {
+        Message = TEXT("No player controller found (is PIE running?)");
+        ErrorCode = TEXT("NO_PLAYER_CONTROLLER");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    } else {
+      Message = TEXT("No world context found");
+      ErrorCode = TEXT("NO_WORLD");
+      Resp->SetStringField(TEXT("error"), Message);
     }
   } else {
     Message = FString::Printf(
