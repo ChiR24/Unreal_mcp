@@ -1,4 +1,5 @@
 #include "Async/Async.h"
+#include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "MaterialDomain.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -864,6 +865,16 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
 /**
  * Handles asset import requests.
  *
+ * IMPORTANT: In UE 5.7+, the Interchange Framework is the default importer for
+ * FBX/glTF files. Interchange uses the TaskGraph internally for async operations.
+ * If we call ImportAssetsAutomated() synchronously from within an AsyncTask callback
+ * (which is how WebSocket messages are dispatched), we hit a TaskGraph recursion
+ * guard assertion: "++Queue(QueueIndex).RecursionGuard == 1".
+ *
+ * The fix is to defer the import to the next editor tick using GEditor->GetTimerManager(),
+ * which breaks out of the TaskGraph callback chain and allows Interchange to function
+ * correctly.
+ *
  * @param RequestId Unique request identifier.
  * @param Payload JSON payload containing 'sourcePath' and 'destinationPath'.
  * @param Socket WebSocket connection.
@@ -903,13 +914,6 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     return true;
   }
 
-  // Basic import implementation using AssetTools
-  IAssetTools &AssetTools =
-      FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-
-  TArray<FString> Files;
-  Files.Add(SourcePath);
-
   FString DestPath = FPaths::GetPath(SafeDestPath);
   FString DestName = FPaths::GetBaseFilename(SafeDestPath);
 
@@ -919,34 +923,65 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     DestName = FPaths::GetBaseFilename(SourcePath);
   }
 
-  UAutomatedAssetImportData *ImportData =
-      NewObject<UAutomatedAssetImportData>();
-  ImportData->bReplaceExisting = true;
-  ImportData->DestinationPath = DestPath;
-  ImportData->Filenames = Files;
+  // Defer the import to the next tick to avoid TaskGraph recursion issues with
+  // UE 5.7+ Interchange Framework. See issue #137.
+  // We use SetTimerForNextTick to ensure we're completely outside of any
+  // TaskGraph callback chain before invoking the import.
+  if (GEditor) {
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+    GEditor->GetTimerManager()->SetTimerForNextTick(
+        [WeakThis, RequestId, SourcePath, DestPath, DestName, Socket]() {
+          UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
+          if (!StrongThis) {
+            return;
+          }
 
-  TArray<UObject *> ImportedAssets =
-      AssetTools.ImportAssetsAutomated(ImportData);
+          IAssetTools &AssetTools =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools")
+                  .Get();
 
-  if (ImportedAssets.Num() > 0) {
-    UObject *Asset = ImportedAssets[0];
-    // Rename if needed
-    if (Asset->GetName() != DestName) {
-      FAssetRenameData RenameData(Asset, DestPath, DestName);
-      AssetTools.RenameAssets({RenameData});
-    }
+          TArray<FString> Files;
+          Files.Add(SourcePath);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("assetPath"), Asset->GetPathName());
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset imported"),
-                           Resp, FString());
+          UAutomatedAssetImportData *ImportData =
+              NewObject<UAutomatedAssetImportData>();
+          ImportData->bReplaceExisting = true;
+          ImportData->DestinationPath = DestPath;
+          ImportData->Filenames = Files;
+
+          TArray<UObject *> ImportedAssets =
+              AssetTools.ImportAssetsAutomated(ImportData);
+
+          if (ImportedAssets.Num() > 0) {
+            UObject *Asset = ImportedAssets[0];
+            // Rename if needed
+            if (Asset && Asset->GetName() != DestName) {
+              FAssetRenameData RenameData(Asset, DestPath, DestName);
+              AssetTools.RenameAssets({RenameData});
+            }
+
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("assetPath"),
+                                 Asset ? Asset->GetPathName() : TEXT(""));
+            StrongThis->SendAutomationResponse(Socket, RequestId, true,
+                                               TEXT("Asset imported"), Resp,
+                                               FString());
+          } else {
+            StrongThis->SendAutomationResponse(
+                Socket, RequestId, false,
+                FString::Printf(TEXT("Failed to import asset from '%s'"),
+                                *SourcePath),
+                nullptr, TEXT("IMPORT_FAILED"));
+          }
+        });
   } else {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("Failed to import asset from '%s'"), *SourcePath),
-        nullptr, TEXT("IMPORT_FAILED"));
+    // Fallback: GEditor not available (shouldn't happen in editor context)
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available for deferred import"),
+                           nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
   }
+
   return true;
 #else
   return false;
