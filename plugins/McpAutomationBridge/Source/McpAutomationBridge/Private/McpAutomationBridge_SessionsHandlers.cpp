@@ -1033,9 +1033,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSessionsAction(
     }
     else
     {
-        SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Unknown manage_sessions action: %s"), *SubAction), nullptr);
-        return true;  // Return true: request was handled (error response sent)
+        // Unknown sub-action - return false to allow fallthrough to other handlers
+        // This is critical: returning true would terminate the dispatch chain
+        // and prevent proper handlers from being reached
+        return false;
     }
 
     return bHandled;

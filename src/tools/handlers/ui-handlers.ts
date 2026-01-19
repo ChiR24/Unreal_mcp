@@ -18,8 +18,9 @@ export async function handleUiTools(
   tools: ITools
 ): Promise<HandlerResult> {
   // Build the payload for automation request
+  // C++ handler expects 'subAction' or 'action' field, not 'action_type'
   const payload: Record<string, unknown> = {
-    action_type: action,
+    subAction: action,
     ...args
   };
 
