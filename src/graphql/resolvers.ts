@@ -220,10 +220,15 @@ async function listAssets(
   pagination?: { offset?: number; limit?: number }
 ): Promise<{ assets: Asset[]; totalCount: number }> {
   try {
+    const safeFilter = { ...filter };
+    if (safeFilter.pathStartsWith) {
+      safeFilter.pathStartsWith = sanitizePath(safeFilter.pathStartsWith);
+    }
+
     const response = await automationBridge.sendAutomationRequest(
       'list_assets',
       {
-        filter: filter || {},
+        filter: safeFilter,
         pagination: pagination || { offset: 0, limit: 50 }
       },
       { timeoutMs: 30000 }
@@ -418,10 +423,15 @@ export const resolvers = {
     blueprints: async (_: unknown, args: ListArgs, context: GraphQLContext) => {
       const { filter, pagination } = args;
       try {
+        const safeFilter = { ...filter };
+        if (safeFilter.pathStartsWith) {
+          safeFilter.pathStartsWith = sanitizePath(safeFilter.pathStartsWith);
+        }
+
         const response = await context.automationBridge.sendAutomationRequest(
           'list_blueprints',
           {
-            filter: filter || {},
+            filter: safeFilter,
             pagination: pagination || { offset: 0, limit: 50 }
           },
           { timeoutMs: 30000 }

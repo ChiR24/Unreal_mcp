@@ -22,3 +22,8 @@
 **Vulnerability:** GraphQL resolvers (e.g., `duplicateAsset`, `moveAsset`) bypassed the `AssetTools` security layer and communicated directly with `AutomationBridge` without sanitizing input paths. This allowed path traversal (`../../`) via GraphQL mutations.
 **Learning:** Layering security in "Tools" classes is insufficient if the API layer (GraphQL resolvers) bypasses them for performance or convenience. Security must be enforced at the entry point (Resolver) or the lowest common denominator (Bridge) if possible, but definitely at the API boundary.
 **Prevention:** Enforce strict path sanitization (`sanitizePath`) in all GraphQL resolvers that accept file paths, before passing data to internal bridges.
+
+## 2026-01-02 - [GraphQL Filter Traversal via listAssets]
+**Vulnerability:** The `listAssets` helper and `blueprints` resolver accepted a `filter.pathStartsWith` argument that was passed directly to the `AutomationBridge`. Unlike explicitly named path arguments, this filter field was overlooked during sanitization, allowing directory traversal.
+**Learning:** Complex input objects (like filters) often hide dangerous fields that bypass top-level argument sanitization. Security reviews must inspect deep into input structures, especially those passed to filesystem-accessing backends.
+**Prevention:** Recursively validate or explicitly sanitize all fields within filter objects that represent paths, using `sanitizePath` before usage.
