@@ -299,6 +299,21 @@ export function ensureVector3(value: unknown, label: string): [number, number, n
   return tuple;
 }
 
+/**
+ * Sanitize a string for use in a console command argument.
+ * Replaces double quotes with single quotes to prevent breaking out of string arguments.
+ * Also removes newlines.
+ * @param input The string to sanitize
+ * @returns Sanitized string safe for console command insertion
+ */
+export function sanitizeConsoleString(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/"/g, "'") // Replace double quotes with single quotes
+    .replace(/[\r\n]+/g, ' ') // Replace newlines with spaces
+    .trim();
+}
+
 export function ensureColorRGB(value: unknown, label: string): [number, number, number] {
   return ensureVector3(value, label);
 }
