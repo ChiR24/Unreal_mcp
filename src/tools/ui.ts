@@ -3,6 +3,7 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { bestEffortInterpretedText, interpretStandardResult } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
+import { sanitizeConsoleString, sanitizeAssetName } from '../utils/validation.js';
 
 const log = new Logger('UITools');
 
@@ -266,19 +267,22 @@ export class UITools {
     }>;
   }) {
     const commands: string[] = [];
+    const safeName = sanitizeAssetName(params.name);
 
-    commands.push(`CreateMenuWidget ${params.name} ${params.menuType}`);
+    commands.push(`CreateMenuWidget ${safeName} ${params.menuType}`);
 
     if (params.buttons) {
       for (const button of params.buttons) {
         const pos = button.position || [0, 0];
-        commands.push(`AddMenuButton ${params.name} "${button.text}" ${button.action} ${pos.join(' ')}`);
+        const safeText = sanitizeConsoleString(button.text);
+        const safeAction = sanitizeAssetName(button.action);
+        commands.push(`AddMenuButton ${safeName} "${safeText}" ${safeAction} ${pos.join(' ')}`);
       }
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Menu ${params.name} created` };
+    return { success: true, message: `Menu ${safeName} created` };
   }
 
   // Set widget animation
@@ -296,23 +300,26 @@ export class UITools {
     }>;
   }) {
     const commands: string[] = [];
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeAnim = sanitizeAssetName(params.animationName);
 
-    commands.push(`CreateWidgetAnimation ${params.widgetName} ${params.animationName} ${params.duration}`);
+    commands.push(`CreateWidgetAnimation ${safeWidget} ${safeAnim} ${params.duration}`);
 
     if (params.tracks) {
       for (const track of params.tracks) {
-        commands.push(`AddAnimationTrack ${params.widgetName}.${params.animationName} ${track.componentName} ${track.property}`);
+        const safeComp = sanitizeAssetName(track.componentName);
+        commands.push(`AddAnimationTrack ${safeWidget}.${safeAnim} ${safeComp} ${track.property}`);
 
         for (const keyframe of track.keyframes) {
           const value = Array.isArray(keyframe.value) ? keyframe.value.join(' ') : keyframe.value;
-          commands.push(`AddAnimationKeyframe ${params.widgetName}.${params.animationName} ${track.componentName} ${keyframe.time} ${value}`);
+          commands.push(`AddAnimationKeyframe ${safeWidget}.${safeAnim} ${safeComp} ${keyframe.time} ${value}`);
         }
       }
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Animation ${params.animationName} created` };
+    return { success: true, message: `Animation ${safeAnim} created` };
   }
 
   // Play widget animation
@@ -324,8 +331,10 @@ export class UITools {
   }) {
     const playMode = params.playMode || 'Forward';
     const loops = params.loops ?? 1;
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeAnim = sanitizeAssetName(params.animationName);
 
-    const command = `PlayWidgetAnimation ${params.widgetName} ${params.animationName} ${playMode} ${loops}`;
+    const command = `PlayWidgetAnimation ${safeWidget} ${safeAnim} ${playMode} ${loops}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -342,25 +351,27 @@ export class UITools {
     };
   }) {
     const commands: string[] = [];
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeComp = sanitizeAssetName(params.componentName);
 
     if (params.style.backgroundColor) {
-      commands.push(`SetWidgetBackgroundColor ${params.widgetName}.${params.componentName} ${params.style.backgroundColor.join(' ')}`);
+      commands.push(`SetWidgetBackgroundColor ${safeWidget}.${safeComp} ${params.style.backgroundColor.join(' ')}`);
     }
 
     if (params.style.borderColor) {
-      commands.push(`SetWidgetBorderColor ${params.widgetName}.${params.componentName} ${params.style.borderColor.join(' ')}`);
+      commands.push(`SetWidgetBorderColor ${safeWidget}.${safeComp} ${params.style.borderColor.join(' ')}`);
     }
 
     if (params.style.borderWidth !== undefined) {
-      commands.push(`SetWidgetBorderWidth ${params.widgetName}.${params.componentName} ${params.style.borderWidth}`);
+      commands.push(`SetWidgetBorderWidth ${safeWidget}.${safeComp} ${params.style.borderWidth}`);
     }
 
     if (params.style.padding) {
-      commands.push(`SetWidgetPadding ${params.widgetName}.${params.componentName} ${params.style.padding.join(' ')}`);
+      commands.push(`SetWidgetPadding ${safeWidget}.${safeComp} ${params.style.padding.join(' ')}`);
     }
 
     if (params.style.margin) {
-      commands.push(`SetWidgetMargin ${params.widgetName}.${params.componentName} ${params.style.margin.join(' ')}`);
+      commands.push(`SetWidgetMargin ${safeWidget}.${safeComp} ${params.style.margin.join(' ')}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -375,7 +386,10 @@ export class UITools {
     eventType: 'OnClicked' | 'OnPressed' | 'OnReleased' | 'OnHovered' | 'OnUnhovered' | 'OnTextChanged' | 'OnTextCommitted' | 'OnValueChanged';
     functionName: string;
   }) {
-    const command = `BindWidgetEvent ${params.widgetName}.${params.componentName} ${params.eventType} ${params.functionName}`;
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeComp = sanitizeAssetName(params.componentName);
+    const safeFunc = sanitizeAssetName(params.functionName);
+    const command = `BindWidgetEvent ${safeWidget}.${safeComp} ${params.eventType} ${safeFunc}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -410,7 +424,10 @@ export class UITools {
     delay?: number;
   }) {
     const delay = params.delay ?? 0.5;
-    const command = `SetWidgetTooltip ${params.widgetName}.${params.componentName} "${params.text}" ${delay}`;
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeComp = sanitizeAssetName(params.componentName);
+    const safeText = sanitizeConsoleString(params.text);
+    const command = `SetWidgetTooltip ${safeWidget}.${safeComp} "${safeText}" ${delay}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -422,16 +439,20 @@ export class UITools {
     dropTargets?: string[];
   }) {
     const commands = [];
+    const safeWidget = sanitizeAssetName(params.widgetName);
+    const safeComp = sanitizeAssetName(params.componentName);
 
-    commands.push(`EnableDragDrop ${params.widgetName}.${params.componentName}`);
+    commands.push(`EnableDragDrop ${safeWidget}.${safeComp}`);
 
     if (params.dragVisual) {
-      commands.push(`SetDragVisual ${params.widgetName}.${params.componentName} ${params.dragVisual}`);
+      const safeVisual = sanitizeAssetName(params.dragVisual);
+      commands.push(`SetDragVisual ${safeWidget}.${safeComp} ${safeVisual}`);
     }
 
     if (params.dropTargets) {
       for (const target of params.dropTargets) {
-        commands.push(`AddDropTarget ${params.widgetName}.${params.componentName} ${target}`);
+        const safeTarget = sanitizeAssetName(target);
+        commands.push(`AddDropTarget ${safeWidget}.${safeComp} ${safeTarget}`);
       }
     }
 
@@ -450,8 +471,9 @@ export class UITools {
     const duration = params.duration ?? 3.0;
     const type = params.type || 'Info';
     const position = params.position || 'TopRight';
+    const safeText = sanitizeConsoleString(params.text);
 
-    const command = `ShowNotification "${params.text}" ${duration} ${type} ${position}`;
+    const command = `ShowNotification "${safeText}" ${duration} ${type} ${position}`;
     return this.bridge.executeConsoleCommand(command);
   }
 }
