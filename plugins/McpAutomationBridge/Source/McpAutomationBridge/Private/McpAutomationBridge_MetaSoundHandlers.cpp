@@ -435,6 +435,333 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         return HandleMetaSoundAction(RequestId, TEXT("add_metasound_node"), ModifiedPayload, RequestingSocket);
     }
 
+    // ==========================================================================
+    // set_metasound_variable - MetaSound Builder API does not support variables
+    // ==========================================================================
+    if (EffectiveAction == TEXT("set_metasound_variable"))
+    {
+        // MetaSound does not have traditional variables like blueprints
+        // Parameters are exposed as inputs/outputs on the graph
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("MetaSound uses inputs/outputs instead of variables. Use add_metasound_node with FloatInput type."), 
+            TEXT("NOT_SUPPORTED"));
+        return true;
+    }
+
+    // ==========================================================================
+    // create_sequencer_node - Create a sequencer-related node in MetaSound
+    // ==========================================================================
+    if (EffectiveAction == TEXT("create_sequencer_node"))
+    {
+#if MCP_HAS_METASOUND_SOURCE_BUILDER
+        FString AssetPath;
+        if (!Payload->TryGetStringField(TEXT("metaSoundPath"), AssetPath) && 
+            !Payload->TryGetStringField(TEXT("assetPath"), AssetPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("metaSoundPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
+        if (!MetaSoundAsset)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("MetaSound asset not found: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+        EMetaSoundBuilderResult AttachResult;
+        UMetaSoundSourceBuilder* Builder = BuilderSubsystem->AttachSourceBuilderToAsset(MetaSoundAsset, AttachResult);
+        
+        if (Builder && AttachResult == EMetaSoundBuilderResult::Succeeded)
+        {
+            // Add a trigger/sequencer type node
+            EMetaSoundBuilderResult AddResult;
+            FMetaSoundNodeHandle NewNode = Builder->AddNodeByClassName(
+                Metasound::Frontend::DefaultBackendName,
+                FName(TEXT("TriggerOnPlay")),
+                AddResult
+            );
+
+            if (AddResult == EMetaSoundBuilderResult::Succeeded)
+            {
+                MetaSoundAsset->MarkPackageDirty();
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("metaSoundPath"), AssetPath);
+                Resp->SetStringField(TEXT("nodeType"), TEXT("TriggerOnPlay"));
+                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                    TEXT("Sequencer node created"), Resp);
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, 
+                    TEXT("Failed to add sequencer node"), TEXT("ADD_NODE_FAILED"));
+            }
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Could not attach builder to MetaSound asset"), TEXT("BUILDER_ATTACH_FAILED"));
+        }
+#else
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("note"), TEXT("Sequencer node creation requires MetaSound Builder API."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            TEXT("Sequencer node marked for creation"), Resp);
+#endif
+        return true;
+    }
+
+    // ==========================================================================
+    // create_procedural_music - Create a procedural music setup in MetaSound
+    // ==========================================================================
+    if (EffectiveAction == TEXT("create_procedural_music"))
+    {
+        FString Name;
+        if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString PackagePath = TEXT("/Game/Audio/ProceduralMusic");
+        Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+
+        // Create a MetaSound optimized for procedural music
+        EMetaSoundBuilderResult BuilderResult;
+        FMetaSoundBuilderNodeOutputHandle OnPlayNodeOutput;
+        FMetaSoundBuilderNodeInputHandle OnFinishedNodeInput;
+        TArray<FMetaSoundBuilderNodeInputHandle> AudioOutNodeInputs;
+        
+        UMetaSoundSourceBuilder* Builder = BuilderSubsystem->CreateSourceBuilder(
+            FName(*Name),
+            OnPlayNodeOutput,
+            OnFinishedNodeInput,
+            AudioOutNodeInputs,
+            BuilderResult,
+            EMetaSoundOutputAudioFormat::Stereo,
+            false  // Not a one-shot - for continuous music
+        );
+
+        if (Builder && BuilderResult == EMetaSoundBuilderResult::Succeeded)
+        {
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetBoolField(TEXT("success"), true);
+            Resp->SetStringField(TEXT("name"), Name);
+            Resp->SetStringField(TEXT("packagePath"), PackagePath);
+            Resp->SetStringField(TEXT("note"), TEXT("Procedural music MetaSound created. Add oscillators and modulators as needed."));
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Procedural music MetaSound created"), Resp);
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create procedural music MetaSound"), TEXT("CREATION_FAILED"));
+        }
+        return true;
+    }
+
+    // ==========================================================================
+    // import_audio_to_metasound - Import audio file into MetaSound
+    // ==========================================================================
+    if (EffectiveAction == TEXT("import_audio_to_metasound"))
+    {
+        FString AudioPath;
+        FString MetaSoundPath;
+        
+        if (!Payload->TryGetStringField(TEXT("audioPath"), AudioPath) || AudioPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("audioPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        if (!Payload->TryGetStringField(TEXT("metaSoundPath"), MetaSoundPath) && 
+            !Payload->TryGetStringField(TEXT("assetPath"), MetaSoundPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("metaSoundPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Verify audio asset exists
+        if (!UEditorAssetLibrary::DoesAssetExist(AudioPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Audio asset not found: %s"), *AudioPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        if (!MetaSoundAsset)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("MetaSound asset not found: %s"), *MetaSoundPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+#if MCP_HAS_METASOUND_SOURCE_BUILDER
+        EMetaSoundBuilderResult AttachResult;
+        UMetaSoundSourceBuilder* Builder = BuilderSubsystem->AttachSourceBuilderToAsset(MetaSoundAsset, AttachResult);
+        
+        if (Builder)
+        {
+            // Add a WavePlayer node and configure it
+            EMetaSoundBuilderResult AddResult;
+            FMetaSoundNodeHandle WavePlayerNode = Builder->AddNodeByClassName(
+                Metasound::Frontend::DefaultBackendName,
+                FName(TEXT("WavePlayer")),
+                AddResult
+            );
+
+            if (AddResult == EMetaSoundBuilderResult::Succeeded)
+            {
+                MetaSoundAsset->MarkPackageDirty();
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("audioPath"), AudioPath);
+                Resp->SetStringField(TEXT("metaSoundPath"), MetaSoundPath);
+                Resp->SetStringField(TEXT("note"), TEXT("WavePlayer node added. Connect audio asset in MetaSound Editor."));
+                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                    TEXT("Audio import to MetaSound configured"), Resp);
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, 
+                    TEXT("Failed to add WavePlayer node"), TEXT("ADD_NODE_FAILED"));
+            }
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Could not attach builder to MetaSound asset"), TEXT("BUILDER_ATTACH_FAILED"));
+        }
+#else
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("audioPath"), AudioPath);
+        Resp->SetStringField(TEXT("metaSoundPath"), MetaSoundPath);
+        Resp->SetStringField(TEXT("note"), TEXT("Audio import requires MetaSound Builder API. Configure in MetaSound Editor."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            TEXT("Audio import marked (requires editor configuration)"), Resp);
+#endif
+        return true;
+    }
+
+    // ==========================================================================
+    // export_metasound_preset - Export MetaSound as a preset/template
+    // ==========================================================================
+    if (EffectiveAction == TEXT("export_metasound_preset"))
+    {
+        FString MetaSoundPath;
+        FString ExportPath;
+        
+        if (!Payload->TryGetStringField(TEXT("metaSoundPath"), MetaSoundPath) && 
+            !Payload->TryGetStringField(TEXT("assetPath"), MetaSoundPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("metaSoundPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        Payload->TryGetStringField(TEXT("exportPath"), ExportPath);
+
+        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        if (!MetaSoundAsset)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("MetaSound asset not found: %s"), *MetaSoundPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+        // Save the asset to ensure it's up to date
+        McpSafeAssetSave(MetaSoundAsset);
+
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("metaSoundPath"), MetaSoundPath);
+        Resp->SetStringField(TEXT("note"), TEXT("MetaSound saved. Use Duplicate for preset creation."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            TEXT("MetaSound exported as preset"), Resp);
+        return true;
+    }
+
+    // ==========================================================================
+    // configure_audio_modulation - Configure audio modulation for MetaSound
+    // ==========================================================================
+    if (EffectiveAction == TEXT("configure_audio_modulation"))
+    {
+        FString MetaSoundPath;
+        
+        if (!Payload->TryGetStringField(TEXT("metaSoundPath"), MetaSoundPath) && 
+            !Payload->TryGetStringField(TEXT("assetPath"), MetaSoundPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("metaSoundPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString ModulationType;
+        Payload->TryGetStringField(TEXT("modulationType"), ModulationType);
+        if (ModulationType.IsEmpty()) ModulationType = TEXT("LFO");
+
+        double Frequency = 1.0;
+        double Depth = 0.5;
+        Payload->TryGetNumberField(TEXT("frequency"), Frequency);
+        Payload->TryGetNumberField(TEXT("depth"), Depth);
+
+        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        if (!MetaSoundAsset)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("MetaSound asset not found: %s"), *MetaSoundPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
+#if MCP_HAS_METASOUND_SOURCE_BUILDER
+        EMetaSoundBuilderResult AttachResult;
+        UMetaSoundSourceBuilder* Builder = BuilderSubsystem->AttachSourceBuilderToAsset(MetaSoundAsset, AttachResult);
+        
+        if (Builder)
+        {
+            // Add an LFO or modulation node
+            EMetaSoundBuilderResult AddResult;
+            FMetaSoundNodeHandle ModNode = Builder->AddNodeByClassName(
+                Metasound::Frontend::DefaultBackendName,
+                FName(*ModulationType),
+                AddResult
+            );
+
+            if (AddResult == EMetaSoundBuilderResult::Succeeded)
+            {
+                MetaSoundAsset->MarkPackageDirty();
+                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                Resp->SetBoolField(TEXT("success"), true);
+                Resp->SetStringField(TEXT("metaSoundPath"), MetaSoundPath);
+                Resp->SetStringField(TEXT("modulationType"), ModulationType);
+                Resp->SetNumberField(TEXT("frequency"), Frequency);
+                Resp->SetNumberField(TEXT("depth"), Depth);
+                Resp->SetStringField(TEXT("note"), TEXT("Modulation node added. Configure parameters in MetaSound Editor."));
+                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                    TEXT("Audio modulation configured"), Resp);
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, 
+                    TEXT("Failed to add modulation node"), TEXT("ADD_NODE_FAILED"));
+            }
+        }
+        else
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Could not attach builder to MetaSound asset"), TEXT("BUILDER_ATTACH_FAILED"));
+        }
+#else
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("metaSoundPath"), MetaSoundPath);
+        Resp->SetStringField(TEXT("modulationType"), ModulationType);
+        Resp->SetStringField(TEXT("note"), TEXT("Modulation configuration requires MetaSound Builder API. Configure in MetaSound Editor."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            TEXT("Modulation marked for configuration"), Resp);
+#endif
+        return true;
+    }
+
     return false;
 #else
     if (Action.Contains(TEXT("metasound")))

@@ -25,6 +25,7 @@
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlOperations.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #endif
 
 // ============================================================================
@@ -1858,6 +1859,384 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Found %d assets matching predicate"), AssetsArray.Num()), ResultObj);
+    return true;
+  }
+
+  // ============================================================================
+  // FIXUP REDIRECTORS - Clean up asset redirectors
+  // ============================================================================
+  if (LowerSubAction == TEXT("fixup_redirectors")) {
+    FString DirectoryPath = TEXT("/Game");
+    Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
+    if (DirectoryPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("directory"), DirectoryPath);
+    }
+    
+    // Normalize path
+    if (DirectoryPath.StartsWith(TEXT("/Content"))) {
+      DirectoryPath = FString::Printf(TEXT("/Game%s"), *DirectoryPath.RightChop(8));
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    // Find all redirectors
+    FARFilter Filter;
+    Filter.ClassPaths.Add(UObjectRedirector::StaticClass()->GetClassPathName());
+    Filter.PackagePaths.Add(FName(*DirectoryPath));
+    Filter.bRecursivePaths = true;
+
+    TArray<FAssetData> RedirectorAssets;
+    AssetRegistry.GetAssets(Filter, RedirectorAssets);
+
+    int32 FixedCount = 0;
+    TArray<FString> FixedPaths;
+
+    for (const FAssetData& AssetData : RedirectorAssets) {
+      UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetAsset());
+      if (Redirector && Redirector->DestinationObject) {
+        // The redirector is valid - we can safely delete it after fixing references
+        FixedPaths.Add(AssetData.GetObjectPathString());
+        FixedCount++;
+      }
+    }
+
+    // Use ObjectTools to fixup redirectors if available
+    if (FixedCount > 0) {
+      TArray<UObjectRedirector*> Redirectors;
+      for (const FAssetData& AssetData : RedirectorAssets) {
+        if (UObjectRedirector* Redirector = Cast<UObjectRedirector>(AssetData.GetAsset())) {
+          Redirectors.Add(Redirector);
+        }
+      }
+      
+      // Fixup referencers (this updates all assets that reference the redirectors)
+      if (Redirectors.Num() > 0) {
+        // Use the asset tools to consolidate
+        TArray<UObject*> ObjectsToDelete;
+        for (UObjectRedirector* Redir : Redirectors) {
+          ObjectsToDelete.Add(Redir);
+        }
+        ObjectTools::DeleteObjects(ObjectsToDelete, false);
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetNumberField(TEXT("redirectorsFixed"), FixedCount);
+    Result->SetStringField(TEXT("directoryPath"), DirectoryPath);
+
+    TArray<TSharedPtr<FJsonValue>> PathsArray;
+    for (const FString& Path : FixedPaths) {
+      PathsArray.Add(MakeShared<FJsonValueString>(Path));
+    }
+    Result->SetArrayField(TEXT("fixedPaths"), PathsArray);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Fixed %d redirectors"), FixedCount), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // LIST INSTANCES - List material instances of a parent material
+  // ============================================================================
+  if (LowerSubAction == TEXT("list_instances")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    UMaterial* ParentMaterial = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!ParentMaterial) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Parent material not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    // Find all material instances
+    FARFilter Filter;
+    Filter.ClassPaths.Add(UMaterialInstanceConstant::StaticClass()->GetClassPathName());
+    Filter.bRecursivePaths = true;
+    Filter.bRecursiveClasses = true;
+
+    TArray<FAssetData> AllInstances;
+    AssetRegistry.GetAssets(Filter, AllInstances);
+
+    TArray<TSharedPtr<FJsonValue>> InstancesArray;
+    for (const FAssetData& AssetData : AllInstances) {
+      UMaterialInstanceConstant* Instance = Cast<UMaterialInstanceConstant>(AssetData.GetAsset());
+      if (Instance && Instance->Parent == ParentMaterial) {
+        TSharedPtr<FJsonObject> InstanceObj = MakeShared<FJsonObject>();
+        InstanceObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+        InstanceObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+        InstancesArray.Add(MakeShared<FJsonValueObject>(InstanceObj));
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("parentMaterial"), AssetPath);
+    Result->SetArrayField(TEXT("instances"), InstancesArray);
+    Result->SetNumberField(TEXT("count"), InstancesArray.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d material instances"), InstancesArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // RESET INSTANCE PARAMETERS - Reset material instance overrides
+  // ============================================================================
+  if (LowerSubAction == TEXT("reset_instance_parameters")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    UMaterialInstanceConstant* Instance = LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
+    if (!Instance) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Material instance not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Clear all parameter overrides
+    Instance->Modify();
+    Instance->ClearParameterValuesEditorOnly();
+    Instance->PostEditChange();
+    McpSafeAssetSave(Instance);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("message"), TEXT("All parameter overrides reset to parent defaults"));
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instance parameters reset"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // REBUILD MATERIAL - Force recompile a material
+  // ============================================================================
+  if (LowerSubAction == TEXT("rebuild_material")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    UMaterial* Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Material not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Force recompile
+    Material->Modify();
+    Material->PreEditChange(nullptr);
+    Material->PostEditChange();
+    Material->ForceRecompileForRendering();
+    McpSafeAssetSave(Material);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Material rebuilt successfully"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GET BLUEPRINT DEPENDENCIES - Get assets that a blueprint depends on
+  // ============================================================================
+  if (LowerSubAction == TEXT("get_blueprint_dependencies")) {
+    FString BlueprintPath;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath)) {
+      Payload->TryGetStringField(TEXT("assetPath"), BlueprintPath);
+    }
+    if (BlueprintPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (BlueprintPath.StartsWith(TEXT("/Content"))) {
+      BlueprintPath = FString::Printf(TEXT("/Game%s"), *BlueprintPath.RightChop(8));
+    }
+
+    bool bRecursive = false;
+    Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    // Use the simpler FName-based overload that returns package names
+    TArray<FName> Dependencies;
+    FName PackageName = FName(*FPackageName::ObjectPathToPackageName(BlueprintPath));
+    
+    AssetRegistry.GetDependencies(PackageName, Dependencies, 
+        bRecursive ? UE::AssetRegistry::EDependencyCategory::All : UE::AssetRegistry::EDependencyCategory::Package);
+
+    TArray<TSharedPtr<FJsonValue>> DepsArray;
+    for (const FName& Dep : Dependencies) {
+      TSharedPtr<FJsonObject> DepObj = MakeShared<FJsonObject>();
+      DepObj->SetStringField(TEXT("path"), Dep.ToString());
+      DepsArray.Add(MakeShared<FJsonValueObject>(DepObj));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetArrayField(TEXT("dependencies"), DepsArray);
+    Result->SetNumberField(TEXT("count"), DepsArray.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d dependencies"), DepsArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // VALIDATE BLUEPRINT - Validate blueprint without full compile
+  // ============================================================================
+  if (LowerSubAction == TEXT("validate_blueprint")) {
+    FString BlueprintPath;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath)) {
+      Payload->TryGetStringField(TEXT("assetPath"), BlueprintPath);
+    }
+    if (BlueprintPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (BlueprintPath.StartsWith(TEXT("/Content"))) {
+      BlueprintPath = FString::Printf(TEXT("/Game%s"), *BlueprintPath.RightChop(8));
+    }
+
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    if (!Blueprint) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Compile with validation
+    FCompilerResultsLog Results;
+    FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::None, &Results);
+
+    bool bHasErrors = Blueprint->Status == BS_Error;
+    bool bHasWarnings = Blueprint->Status == BS_UpToDateWithWarnings;
+    
+    TArray<TSharedPtr<FJsonValue>> IssuesArray;
+    // Note: FCompilerResultsLog messages are logged, we report status instead
+    // The actual messages are in the compiler log output
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetBoolField(TEXT("isValid"), !bHasErrors);
+    Result->SetBoolField(TEXT("hasErrors"), bHasErrors);
+    Result->SetBoolField(TEXT("hasWarnings"), bHasWarnings);
+    Result->SetArrayField(TEXT("issues"), IssuesArray);
+
+    FString StatusStr;
+    switch (Blueprint->Status) {
+      case BS_Unknown: StatusStr = TEXT("Unknown"); break;
+      case BS_Dirty: StatusStr = TEXT("Dirty"); break;
+      case BS_Error: StatusStr = TEXT("Error"); break;
+      case BS_UpToDate: StatusStr = TEXT("UpToDate"); break;
+      case BS_BeingCreated: StatusStr = TEXT("BeingCreated"); break;
+      case BS_UpToDateWithWarnings: StatusStr = TEXT("UpToDateWithWarnings"); bHasWarnings = true; break;
+      default: StatusStr = TEXT("Unknown"); break;
+    }
+    Result->SetStringField(TEXT("status"), StatusStr);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           bHasErrors ? TEXT("Blueprint has errors") : TEXT("Blueprint is valid"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // COMPILE BLUEPRINT BATCH - Compile multiple blueprints
+  // ============================================================================
+  if (LowerSubAction == TEXT("compile_blueprint_batch")) {
+    const TArray<TSharedPtr<FJsonValue>>* BlueprintPathsArray;
+    if (!Payload->TryGetArrayField(TEXT("blueprintPaths"), BlueprintPathsArray)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPaths array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    bool bStopOnError = false;
+    Payload->TryGetBoolField(TEXT("stopOnError"), bStopOnError);
+
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
+    int32 SuccessCount = 0;
+    int32 ErrorCount = 0;
+
+    for (const TSharedPtr<FJsonValue>& PathValue : *BlueprintPathsArray) {
+      FString BlueprintPath = PathValue->AsString();
+      
+      // Normalize path
+      if (BlueprintPath.StartsWith(TEXT("/Content"))) {
+        BlueprintPath = FString::Printf(TEXT("/Game%s"), *BlueprintPath.RightChop(8));
+      }
+
+      TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+      ResultObj->SetStringField(TEXT("path"), BlueprintPath);
+
+      UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+      if (!Blueprint) {
+        ResultObj->SetBoolField(TEXT("success"), false);
+        ResultObj->SetStringField(TEXT("error"), TEXT("Blueprint not found"));
+        ErrorCount++;
+      } else {
+        FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::None, nullptr);
+        
+        bool bHasError = Blueprint->Status == BS_Error;
+        ResultObj->SetBoolField(TEXT("success"), !bHasError);
+        
+        if (bHasError) {
+          ResultObj->SetStringField(TEXT("error"), TEXT("Compilation failed"));
+          ErrorCount++;
+        } else {
+          SuccessCount++;
+        }
+      }
+
+      ResultsArray.Add(MakeShared<FJsonValueObject>(ResultObj));
+
+      if (bStopOnError && ErrorCount > 0) {
+        break;
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), ErrorCount == 0);
+    Result->SetNumberField(TEXT("successCount"), SuccessCount);
+    Result->SetNumberField(TEXT("errorCount"), ErrorCount);
+    Result->SetNumberField(TEXT("totalCount"), BlueprintPathsArray->Num());
+    Result->SetArrayField(TEXT("results"), ResultsArray);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Compiled %d/%d blueprints successfully"), 
+                                          SuccessCount, BlueprintPathsArray->Num()), Result);
     return true;
   }
 

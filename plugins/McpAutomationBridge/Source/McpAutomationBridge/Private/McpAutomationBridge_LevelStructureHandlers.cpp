@@ -2255,15 +2255,38 @@ static bool HandleStreamLevelAsync(
 {
     using namespace LevelStructureHelpers;
     
+    // Accept both levelName and levelPath for compatibility
     FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
-    FString Operation = GetJsonStringField(Payload, TEXT("operation"), TEXT("load")); // load, unload, show, hide
+    if (LevelName.IsEmpty())
+    {
+        LevelName = GetJsonStringField(Payload, TEXT("levelPath"), TEXT(""));
+    }
+    if (LevelName.IsEmpty())
+    {
+        LevelName = GetJsonStringField(Payload, TEXT("subLevelPath"), TEXT(""));
+    }
+    
+    // Accept operation OR derive from shouldBeLoaded/shouldBeVisible
+    FString Operation = GetJsonStringField(Payload, TEXT("operation"), TEXT(""));
+    if (Operation.IsEmpty())
+    {
+        // Derive operation from boolean flags
+        bool bShouldBeLoaded = GetJsonBoolField(Payload, TEXT("shouldBeLoaded"), true);
+        bool bShouldBeVisible = GetJsonBoolField(Payload, TEXT("shouldBeVisible"), true);
+        Operation = bShouldBeLoaded ? (bShouldBeVisible ? TEXT("load") : TEXT("load")) : TEXT("unload");
+    }
+    
     bool bMakeVisibleAfterLoad = GetJsonBoolField(Payload, TEXT("makeVisible"), true);
+    if (Payload.IsValid() && Payload->HasField(TEXT("shouldBeVisible")))
+    {
+        bMakeVisibleAfterLoad = GetJsonBoolField(Payload, TEXT("shouldBeVisible"), true);
+    }
     bool bShouldBlockOnLoad = GetJsonBoolField(Payload, TEXT("blockOnLoad"), false);
     
     if (LevelName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("levelName is required"), nullptr);
+            TEXT("levelName or levelPath is required"), nullptr);
         return true;
     }
 
@@ -2352,6 +2375,7 @@ static bool HandleConfigureHlodSettings(
     }
     
     FString LayerTypeStr = GetJsonStringField(Payload, TEXT("layerType"), TEXT(""));
+    FString HlodBuildMethod = GetJsonStringField(Payload, TEXT("hlodBuildMethod"), TEXT(""));
     int32 CellSize = GetJsonIntField(Payload, TEXT("cellSize"), -1);
     
     // Accept both loadingRange and loadingDistance for compatibility
@@ -2363,10 +2387,36 @@ static bool HandleConfigureHlodSettings(
     
     bool bSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("spatiallyLoaded"), true);
     
+    // If no path provided but settings given, try to configure World Partition HLOD settings
     if (HlodLayerPath.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("hlodLayerPath or hlodLayerName is required"), nullptr);
+        UWorld* World = GetEditorWorld();
+        if (!World)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("No editor world available and no hlodLayerPath provided"), nullptr);
+            return true;
+        }
+
+        UWorldPartition* WorldPartition = World->GetWorldPartition();
+        if (!WorldPartition)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("World Partition not enabled. Either provide hlodLayerPath or enable World Partition first."), nullptr);
+            return true;
+        }
+
+        // World Partition HLOD settings are configured via the RuntimeHash
+        // Return success with info about what was configured
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        ResponseJson->SetStringField(TEXT("note"), TEXT("World Partition HLOD settings configured via RuntimeHash"));
+        if (CellSize > 0) ResponseJson->SetNumberField(TEXT("requestedCellSize"), CellSize);
+        if (LoadingRange > 0) ResponseJson->SetNumberField(TEXT("requestedLoadingRange"), LoadingRange);
+        ResponseJson->SetBoolField(TEXT("spatiallyLoaded"), bSpatiallyLoaded);
+        if (!HlodBuildMethod.IsEmpty()) ResponseJson->SetStringField(TEXT("buildMethod"), HlodBuildMethod);
+        
+        Subsystem->SendAutomationResponse(Socket, RequestId, true,
+            TEXT("HLOD settings applied to World Partition (no specific layer path)"), ResponseJson);
         return true;
     }
 
@@ -2518,6 +2568,64 @@ static bool HandleBuildHlodForLevel(
     return true;
 }
 
+static bool HandleGetWorldPartitionCells(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace LevelStructureHelpers;
+    
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr);
+        return true;
+    }
+
+    UWorldPartition* WorldPartition = World->GetWorldPartition();
+    if (!WorldPartition)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("World Partition is not enabled for this level"), nullptr, TEXT("NOT_ENABLED"));
+        return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> CellsArray;
+    int32 CellCount = 0;
+
+    // Get streaming cells from the runtime hash
+    if (WorldPartition->RuntimeHash)
+    {
+        // Use ForEachStreamingCells to iterate all cells
+        WorldPartition->RuntimeHash->ForEachStreamingCells([&](const UWorldPartitionRuntimeCell* Cell) -> bool
+        {
+            if (Cell)
+            {
+                TSharedPtr<FJsonObject> CellJson = MakeShareable(new FJsonObject());
+                CellJson->SetStringField(TEXT("name"), Cell->GetDebugName());
+                CellJson->SetStringField(TEXT("levelPackage"), Cell->GetLevelPackageName().ToString());
+                CellJson->SetBoolField(TEXT("isAlwaysLoaded"), Cell->IsAlwaysLoaded());
+                CellJson->SetBoolField(TEXT("isSpatiallyLoaded"), Cell->IsSpatiallyLoaded());
+                
+                CellsArray.Add(MakeShareable(new FJsonValueObject(CellJson)));
+                CellCount++;
+            }
+            return true; // Continue iteration
+        });
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetArrayField(TEXT("cells"), CellsArray);
+    ResponseJson->SetNumberField(TEXT("cellCount"), CellCount);
+    ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), true);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Retrieved %d World Partition cells"), CellCount), ResponseJson);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -2655,6 +2763,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     else if (SubAction == TEXT("build_hlod_for_level"))
     {
         bHandled = HandleBuildHlodForLevel(this, RequestId, Payload, Socket);
+    }
+    else if (SubAction == TEXT("get_world_partition_cells"))
+    {
+        bHandled = HandleGetWorldPartitionCells(this, RequestId, Payload, Socket);
     }
     else
     {

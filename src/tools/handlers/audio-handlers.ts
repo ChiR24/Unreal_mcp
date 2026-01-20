@@ -205,12 +205,34 @@ export async function handleAudioTools(
     case 'create_procedural_music':
     case 'import_audio_to_metasound':
     case 'export_metasound_preset':
-    case 'configure_audio_modulation':
+    case 'configure_audio_modulation': {
+      // Map test payload field names to C++ expected field names
+      // Tests use metaSoundName/metaSoundPath but C++ expects name/packagePath
+      const mappedArgs: Record<string, unknown> = { ...argsRecord };
+      
+      // Map metaSoundName -> name (for create_metasound)
+      if ('metaSoundName' in mappedArgs && !('name' in mappedArgs)) {
+        mappedArgs.name = mappedArgs.metaSoundName;
+        delete mappedArgs.metaSoundName;
+      }
+      
+      // Map metaSoundPath -> packagePath or assetPath (for node operations)
+      if ('metaSoundPath' in mappedArgs) {
+        if (!('packagePath' in mappedArgs)) {
+          mappedArgs.packagePath = mappedArgs.metaSoundPath;
+        }
+        if (!('assetPath' in mappedArgs)) {
+          mappedArgs.assetPath = mappedArgs.metaSoundPath;
+        }
+        delete mappedArgs.metaSoundPath;
+      }
+      
       // Route to manage_audio tool, preserving the action name in the payload
       return cleanObject(await tools.automationBridge?.sendAutomationRequest('manage_audio', {
-        ...argsRecord,
+        ...mappedArgs,
         action: action 
       }, { timeoutMs: getTimeoutMs() })) as HandlerResult;
+    }
 
     // MetaSounds Queries (A6)
     case 'list_metasound_assets': {

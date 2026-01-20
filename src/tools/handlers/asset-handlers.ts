@@ -556,8 +556,29 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const assetPath = extractString(params, 'assetPath');
         const parameterName = extractString(params, 'parameterName');
-        const parameterType = extractOptionalString(params, 'parameterType');
+        let parameterType = extractOptionalString(params, 'parameterType');
         const value = params.value;
+        
+        // Infer parameterType from value if not provided
+        if (!parameterType && value !== undefined) {
+          if (typeof value === 'number') {
+            parameterType = 'scalar';
+          } else if (typeof value === 'boolean') {
+            parameterType = 'switch';
+          } else if (Array.isArray(value) && value.length >= 3) {
+            // Arrays with 3+ elements are treated as vectors/colors
+            parameterType = 'vector';
+          } else if (typeof value === 'string') {
+            // String values are assumed to be texture paths
+            parameterType = 'texture';
+          }
+        }
+        
+        // Default to scalar if still not determined
+        if (!parameterType) {
+          parameterType = 'scalar';
+        }
+        
         const res = await executeAutomationRequest(tools, 'manage_asset', {
           subAction: 'add_material_parameter',
           assetPath,

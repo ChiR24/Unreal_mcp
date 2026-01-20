@@ -218,11 +218,26 @@ static bool HandleCreatePCGGraph(
 
     Package->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewGraph);
-    if (bSave) McpSafeAssetSave(NewGraph);
+    
+    if (bSave)
+    {
+        // Force save synchronously and ensure asset is fully registered
+        bool bSaved = McpSafeAssetSave(NewGraph);
+        if (!bSaved)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false, 
+                TEXT("PCG graph created but failed to save to disk. Asset may not persist."), nullptr, TEXT("SAVE_WARNING"));
+            return true;
+        }
+        
+        // Flush async operations to ensure asset is findable immediately
+        FlushAsyncLoading();
+    }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("graphPath"), FullPath);
     Result->SetStringField(TEXT("graphName"), GraphName);
+    Result->SetBoolField(TEXT("saved"), bSave);
     Self->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Created PCG graph: %s"), *FullPath), Result);
     return true;
 }

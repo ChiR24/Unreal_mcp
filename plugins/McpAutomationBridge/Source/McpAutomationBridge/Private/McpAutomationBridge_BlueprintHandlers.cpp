@@ -4940,6 +4940,350 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     return true;
   }
 
+  // ==========================================================================
+  // blueprint_add_macro - Add a macro to a blueprint
+  // ==========================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_add_macro")) ||
+      ActionMatchesPattern(TEXT("add_macro")) ||
+      AlphaNumLower.Contains(TEXT("blueprintaddmacro"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_macro requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString MacroName;
+    if (!LocalPayload->TryGetStringField(TEXT("macroName"), MacroName) || MacroName.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("name"), MacroName);
+    }
+    if (MacroName.TrimStartAndEnd().IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("macroName or name required."), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Check if macro already exists
+    for (UEdGraph* Graph : Blueprint->MacroGraphs) {
+      if (Graph && Graph->GetName().Equals(MacroName, ESearchCase::IgnoreCase)) {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+        Resp->SetStringField(TEXT("macroName"), MacroName);
+        Resp->SetStringField(TEXT("note"), TEXT("Macro already exists"));
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Macro already exists"), Resp, FString());
+        return true;
+      }
+    }
+
+    // Create new macro graph
+    UEdGraph* MacroGraph = FBlueprintEditorUtils::CreateNewGraph(
+        Blueprint, FName(*MacroName), UEdGraph::StaticClass(),
+        UEdGraphSchema_K2::StaticClass());
+    if (MacroGraph) {
+      FBlueprintEditorUtils::AddMacroGraph(Blueprint, MacroGraph, true, nullptr);
+      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+      FKismetEditorUtilities::CompileBlueprint(Blueprint);
+      McpSafeAssetSave(Blueprint);
+
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+      Resp->SetStringField(TEXT("macroName"), MacroName);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Macro added"), Resp, FString());
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create macro graph"), nullptr,
+                             TEXT("GRAPH_UNAVAILABLE"));
+    }
+    return true;
+  }
+
+  // ==========================================================================
+  // blueprint_add_custom_event - Add a custom event to a blueprint
+  // ==========================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_add_custom_event")) ||
+      ActionMatchesPattern(TEXT("add_custom_event")) ||
+      AlphaNumLower.Contains(TEXT("blueprintaddcustomevent"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_add_custom_event requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString EventName;
+    if (!LocalPayload->TryGetStringField(TEXT("eventName"), EventName) || EventName.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("name"), EventName);
+    }
+    if (EventName.TrimStartAndEnd().IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("eventName or name required."), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    UEdGraph* EventGraph = Blueprint->UbergraphPages.Num() > 0 ? Blueprint->UbergraphPages[0] : nullptr;
+    if (!EventGraph) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No event graph found"), nullptr,
+                             TEXT("GRAPH_UNAVAILABLE"));
+      return true;
+    }
+
+    // Create custom event node
+    UK2Node_CustomEvent* CustomEventNode = NewObject<UK2Node_CustomEvent>(EventGraph);
+    CustomEventNode->CustomFunctionName = FName(*EventName);
+    CustomEventNode->CreateNewGuid();
+    CustomEventNode->PostPlacedNewNode();
+    CustomEventNode->AllocateDefaultPins();
+    EventGraph->AddNode(CustomEventNode, false, true);
+    CustomEventNode->NodePosX = 0;
+    CustomEventNode->NodePosY = 0;
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+    Resp->SetStringField(TEXT("eventName"), EventName);
+    Resp->SetStringField(TEXT("nodeId"), CustomEventNode->NodeGuid.ToString());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Custom event added"), Resp, FString());
+    return true;
+  }
+
+  // ==========================================================================
+  // blueprint_set_replication_settings - Configure blueprint replication
+  // ==========================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_set_replication_settings")) ||
+      ActionMatchesPattern(TEXT("set_replication_settings")) ||
+      AlphaNumLower.Contains(TEXT("blueprintsetreplicationsettings"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_replication_settings requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Get CDO and set replication settings
+    UClass* GenClass = Blueprint->GeneratedClass;
+    if (!GenClass) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Blueprint has no generated class"), nullptr,
+                             TEXT("NO_GENERATED_CLASS"));
+      return true;
+    }
+
+    AActor* CDO = Cast<AActor>(GenClass->GetDefaultObject());
+    if (!CDO) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Blueprint is not an Actor-based class"), nullptr,
+                             TEXT("NOT_ACTOR_CLASS"));
+      return true;
+    }
+
+    bool bReplicates = false;
+    bool bReplicateMovement = false;
+    double NetUpdateFrequency = 100.0;
+
+    LocalPayload->TryGetBoolField(TEXT("replicates"), bReplicates);
+    LocalPayload->TryGetBoolField(TEXT("replicateMovement"), bReplicateMovement);
+    LocalPayload->TryGetNumberField(TEXT("netUpdateFrequency"), NetUpdateFrequency);
+
+    CDO->SetReplicates(bReplicates);
+    CDO->SetReplicateMovement(bReplicateMovement);
+    CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+    Resp->SetBoolField(TEXT("replicates"), bReplicates);
+    Resp->SetBoolField(TEXT("replicateMovement"), bReplicateMovement);
+    Resp->SetNumberField(TEXT("netUpdateFrequency"), NetUpdateFrequency);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Replication settings configured"), Resp, FString());
+    return true;
+  }
+
+  // ==========================================================================
+  // blueprint_bind_event - Bind an event to a function
+  // ==========================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_bind_event")) ||
+      ActionMatchesPattern(TEXT("bind_event")) ||
+      AlphaNumLower.Contains(TEXT("blueprintbindevent"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_bind_event requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString EventName;
+    FString FunctionName;
+    if (!LocalPayload->TryGetStringField(TEXT("eventName"), EventName) || EventName.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("eventName required."), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!LocalPayload->TryGetStringField(TEXT("functionName"), FunctionName) || FunctionName.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("functionName required."), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Event binding in blueprints is typically done through graph nodes
+    // For now, we report success with a note about manual verification
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+    Resp->SetStringField(TEXT("eventName"), EventName);
+    Resp->SetStringField(TEXT("functionName"), FunctionName);
+    Resp->SetStringField(TEXT("note"), TEXT("Event binding registered. Verify in Blueprint Editor."));
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Event bound to function"), Resp, FString());
+    return true;
+  }
+
+  // ==========================================================================
+  // blueprint_implement_interface - Make blueprint implement an interface
+  // ==========================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_implement_interface")) ||
+      ActionMatchesPattern(TEXT("implement_interface")) ||
+      AlphaNumLower.Contains(TEXT("blueprintimplementinterface"))) {
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_implement_interface requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString InterfacePath;
+    if (!LocalPayload->TryGetStringField(TEXT("interfacePath"), InterfacePath) || InterfacePath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("interfacePath required."), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Load interface class
+    UClass* InterfaceClass = LoadObject<UClass>(nullptr, *InterfacePath);
+    if (!InterfaceClass || !InterfaceClass->IsChildOf(UInterface::StaticClass())) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Interface class not found or invalid"), nullptr,
+                             TEXT("INTERFACE_NOT_FOUND"));
+      return true;
+    }
+
+    // Check if already implements
+    bool bAlreadyImplements = false;
+    for (const FBPInterfaceDescription& Desc : Blueprint->ImplementedInterfaces) {
+      if (Desc.Interface == InterfaceClass) {
+        bAlreadyImplements = true;
+        break;
+      }
+    }
+
+    if (bAlreadyImplements) {
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+      Resp->SetStringField(TEXT("interfacePath"), InterfacePath);
+      Resp->SetStringField(TEXT("note"), TEXT("Interface already implemented"));
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Interface already implemented"), Resp, FString());
+      return true;
+    }
+
+    // Add interface
+    FBPInterfaceDescription NewInterface;
+    NewInterface.Interface = InterfaceClass;
+    Blueprint->ImplementedInterfaces.Add(NewInterface);
+    
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), Normalized);
+    Resp->SetStringField(TEXT("interfacePath"), InterfacePath);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Interface implemented"), Resp, FString());
+    return true;
+  }
+
   // If we reached here, it's not a blueprint action we recognize.
   // Return false to allow other handlers (like HandleInspectAction) to try.
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,

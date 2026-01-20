@@ -3834,8 +3834,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     if (!FinalPath.EndsWith(TEXT(".png")) && !FinalPath.EndsWith(TEXT(".jpg")) && !FinalPath.EndsWith(TEXT(".bmp")))
       FinalPath += TEXT(".") + Format.ToLower();
     
-    FString ScreenshotCmd = FString::Printf(TEXT("HighResShot %s"), *FinalPath);
-    if (Width > 0 && Height > 0) ScreenshotCmd = FString::Printf(TEXT("HighResShot %dx%d %s"), (int32)Width, (int32)Height, *FinalPath);
+    // HighResShot requires resolution to be specified - use defaults if not provided
+    int32 FinalWidth = (Width > 0) ? (int32)Width : 1920;
+    int32 FinalHeight = (Height > 0) ? (int32)Height : 1080;
+    FString ScreenshotCmd = FString::Printf(TEXT("HighResShot %dx%d %s"), FinalWidth, FinalHeight, *FinalPath);
     
     if (GEngine) {
       GEngine->Exec(nullptr, *ScreenshotCmd);
@@ -4791,7 +4793,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     }
     FString FinalPath = FPaths::ProjectSavedDir() / TEXT("Screenshots") / Filename;
     if (!FinalPath.EndsWith(TEXT(".png"))) FinalPath += TEXT(".png");
-    FString Cmd = FString::Printf(TEXT("HighResShot %s"), *FinalPath);
+    // HighResShot requires resolution - use 1920x1080 default
+    FString Cmd = FString::Printf(TEXT("HighResShot 1920x1080 %s"), *FinalPath);
     if (GEngine) {
       GEngine->Exec(nullptr, *Cmd);
       TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
