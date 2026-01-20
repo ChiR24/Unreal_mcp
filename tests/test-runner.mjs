@@ -164,6 +164,25 @@ function evaluateExpectation(testCase, response) {
   const contentStr = contentText.toString().toLowerCase();
   const combined = `${messageStr} ${errorStr} ${contentStr}`;
 
+  // CRITICAL: NOT_IMPLEMENTED should ALWAYS fail tests unless explicitly required
+  // This check MUST run before pipe-separator matching to prevent false passes
+  const isNotImplemented = combined.includes('not implemented') || 
+    errorStr === 'not_implemented' || 
+    actualError === 'NOT_IMPLEMENTED';
+  
+  if (isNotImplemented) {
+    // Only pass if the test explicitly expects "not implemented" as the sole expectation
+    // Using "success|not implemented" is NOT acceptable - it must be "not implemented" alone
+    const explicitlyExpectsNotImplemented = lowerExpected === 'not implemented' || 
+      lowerExpected === 'not_implemented';
+    if (!explicitlyExpectsNotImplemented) {
+      return {
+        passed: false,
+        reason: `Action not implemented in C++ bridge. Response: ${actualMessage || actualError || 'NOT_IMPLEMENTED'}`
+      };
+    }
+  }
+
   // If expectation is an object with specific pattern constraints, apply them
   if (typeof expectation === 'object' && expectation !== null) {
     // If actual outcome was success, check successPattern
@@ -559,6 +578,15 @@ export async function runToolTests(toolName, testCases) {
           name: 'system_control',
           arguments: { action: 'console_command', command: `Log "---- STARTING TEST: ${cleanScenario} ----"` }
         }, 5000).catch(() => { });
+
+        // Execute beforeHook if present (e.g., start PIE for tests that require it)
+        if (testCase.beforeHook) {
+          try {
+            await callToolOnce(testCase.beforeHook, testCase.beforeHook.timeout ?? 10000);
+          } catch (hookErr) {
+            console.log(`[HOOK] beforeHook for ${cleanScenario} failed: ${hookErr.message || hookErr}`);
+          }
+        }
       } catch (e) { /* ignore */ }
 
       try {
@@ -601,6 +629,15 @@ export async function runToolTests(toolName, testCases) {
             durationMs,
             detail: reason
           });
+        }
+
+        // Execute afterHook if present (e.g., stop PIE after tests that started it)
+        if (testCase.afterHook) {
+          try {
+            await callToolOnce(testCase.afterHook, testCase.afterHook.timeout ?? 10000);
+          } catch (hookErr) {
+            console.log(`[HOOK] afterHook for ${cleanScenario} failed: ${hookErr.message || hookErr}`);
+          }
         }
 
       } catch (error) {
