@@ -145,7 +145,10 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.action = 'activate_niagara';
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
-    mutableArgs.reset = true;
+    // Use user's reset value if provided, default to true for activate
+    if (mutableArgs.reset === undefined) {
+      mutableArgs.reset = true;
+    }
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
   if (action === 'deactivate') {
@@ -158,7 +161,10 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     mutableArgs.action = 'activate_niagara';
     mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
     requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
-    mutableArgs.reset = true;
+    // Reset action defaults to reset=true, but user can override if needed
+    if (mutableArgs.reset === undefined) {
+      mutableArgs.reset = true;
+    }
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
   if (action === 'advance_simulation') {

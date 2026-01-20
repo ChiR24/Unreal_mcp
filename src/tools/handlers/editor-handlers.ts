@@ -51,17 +51,44 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     case 'start_recording': {
       // Use console command as fallback if bridge doesn't support it
       const filename = args.filename || 'TestRecording';
-      await tools.editorTools.executeConsoleCommand(`DemoRec ${filename}`);
-      return { success: true, message: `Started recording to ${filename}`, action: 'start_recording' };
+      const frameRate = typeof args.frameRate === 'number' ? args.frameRate : undefined;
+      const durationSeconds = typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
+      const metadata = args.metadata;
+      
+      // Try automation bridge first with all params
+      try {
+        const res = await executeAutomationRequest(tools, 'control_editor', {
+          action: 'start_recording',
+          filename,
+          frameRate,
+          durationSeconds,
+          metadata
+        });
+        return cleanObject(res);
+      } catch {
+        // Fallback to console command
+        await tools.editorTools.executeConsoleCommand(`DemoRec ${filename}`);
+        return { 
+          success: true, 
+          message: `Started recording to ${filename}`, 
+          action: 'start_recording',
+          filename,
+          frameRate,
+          durationSeconds
+        };
+      }
     }
     case 'stop_recording': {
       await tools.editorTools.executeConsoleCommand('DemoStop');
       return { success: true, message: 'Stopped recording', action: 'stop_recording' };
     }
     case 'step_frame': {
-      // Use console command for single frame advance
-      await tools.editorTools.executeConsoleCommand('r.SingleFrameAdvance 1');
-      return { success: true, message: 'Stepped frame', action: 'step_frame' };
+      // Support stepping multiple frames
+      const steps = typeof args.steps === 'number' && args.steps > 0 ? args.steps : 1;
+      for (let i = 0; i < steps; i++) {
+        await tools.editorTools.executeConsoleCommand('r.SingleFrameAdvance 1');
+      }
+      return { success: true, message: `Stepped ${steps} frame(s)`, action: 'step_frame', steps };
     }
     case 'create_bookmark': {
       const idx = parseInt(args.bookmarkName ?? '0') || 0;

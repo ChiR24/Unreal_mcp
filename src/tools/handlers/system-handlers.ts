@@ -112,6 +112,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     case 'create_widget': {
       const name = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
       const widgetPathRaw = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
+      const widgetType = typeof (argsTyped as Record<string, unknown>).widgetType === 'string' 
+        ? ((argsTyped as Record<string, unknown>).widgetType as string).trim() 
+        : undefined;
 
       // If name is missing but widgetPath is provided, try to extract name from path
       let effectiveName = name || `NewWidget_${Date.now()}`;
@@ -142,7 +145,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       try {
         const res = await tools.uiTools.createWidget({
           name: effectiveName,
-          type: (argsTyped as Record<string, unknown>).widgetType as string | undefined,
+          type: widgetType, // Pass widgetType to C++
           savePath: effectivePath
         });
 
@@ -483,6 +486,8 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const filenameArg = typeof (argsTyped as Record<string, unknown>).filename === 'string' 
         ? (argsTyped as Record<string, unknown>).filename as string 
         : undefined;
+      const metadata = (argsTyped as Record<string, unknown>).metadata;
+      const resolution = (argsTyped as Record<string, unknown>).resolution;
 
       if (includeMetadata) {
         const baseName = filenameArg && filenameArg.trim().length > 0
@@ -490,18 +495,24 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           : `Screenshot_${Date.now()}`;
 
         try {
-          await tools.editorTools.takeScreenshot(baseName);
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          return {
-            success: false,
-            error: 'SCREENSHOT_FAILED',
-            message: msg,
+          // Try to pass metadata to C++ screenshot handler
+          const screenshotRes = await executeAutomationRequest(tools, 'control_editor', {
+            action: 'screenshot',
+            filename: baseName,
+            resolution,
+            metadata
+          });
+          const cleanedRes = typeof screenshotRes === 'object' && screenshotRes !== null ? screenshotRes : {};
+          return cleanObject({
+            ...cleanedRes,
+            action: 'screenshot',
             filename: baseName,
             includeMetadata: true,
-            metadata: (argsTyped as Record<string, unknown>).metadata,
-            action: 'screenshot'
-          };
+            metadata
+          });
+        } catch {
+          // Fallback to standard screenshot
+          await tools.editorTools.takeScreenshot(baseName);
         }
 
         return {
@@ -509,13 +520,20 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           message: `Metadata screenshot captured: ${baseName}`,
           filename: baseName,
           includeMetadata: true,
-          metadata: (argsTyped as Record<string, unknown>).metadata,
+          metadata,
           action: 'screenshot',
           handled: true
         };
       }
 
-      return cleanObject(await tools.editorTools.takeScreenshot(filenameArg));
+      // Standard screenshot - pass all args through
+      const res = await tools.editorTools.takeScreenshot(filenameArg, resolution as string | undefined);
+      const cleanedStdRes = typeof res === 'object' && res !== null ? res : {};
+      return cleanObject({
+        ...cleanedStdRes,
+        metadata,
+        action: 'screenshot'
+      });
     }
     case 'set_resolution': {
       const parseResolution = (value: unknown): { width?: number; height?: number } => {

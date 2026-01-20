@@ -42,7 +42,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'list', 'import', 'duplicate', 'rename', 'move', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_material', 'create_material_instance', 'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
-            'nanite_rebuild_mesh',
+            'nanite_rebuild_mesh', 'bulk_rename', 'bulk_delete', 'source_control_checkout', 'source_control_submit',
             'add_material_node', 'connect_material_pins', 'remove_material_node', 'break_material_connections', 'get_material_node_details', 'rebuild_material'
           ],
           description: 'Action to perform'
@@ -63,6 +63,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         eventName: commonSchemas.eventName,
         memberClass: commonSchemas.stringProp,
         posX: commonSchemas.numberProp,
+        posY: commonSchemas.numberProp,
         newName: commonSchemas.newName,
         overwrite: commonSchemas.overwrite,
         save: commonSchemas.save,
@@ -95,7 +96,28 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         comment: commonSchemas.stringProp,
         parentNodeId: commonSchemas.nodeId,
         childNodeId: commonSchemas.nodeId,
-        maxDepth: commonSchemas.numberProp
+        maxDepth: commonSchemas.numberProp,
+        // Bulk operations (C++ TryGetStringField)
+        prefix: commonSchemas.stringProp,
+        suffix: commonSchemas.stringProp,
+        searchText: commonSchemas.stringProp,
+        replaceText: commonSchemas.stringProp,
+        paths: commonSchemas.arrayOfStrings,
+        // Source control (C++ TryGetStringField)
+        description: commonSchemas.stringProp,
+        checkoutFiles: commonSchemas.booleanProp,
+        // Bulk delete
+        showConfirmation: commonSchemas.booleanProp,
+        // Material graph operations
+        pinName: commonSchemas.pinName,
+        desc: commonSchemas.stringProp,
+        materialPath: commonSchemas.materialPath,
+        texturePath: commonSchemas.texturePath,
+        expressionClass: commonSchemas.stringProp,
+        coordinateIndex: commonSchemas.numberProp,
+        parameterType: commonSchemas.stringProp,
+        nodes: commonSchemas.arrayOfObjects,
+        tags: commonSchemas.arrayOfStrings
       },
       required: ['action']
     },
@@ -161,7 +183,52 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         save: commonSchemas.save,
         eventType: commonSchemas.stringProp,
         customEventName: commonSchemas.eventName,
-        parameters: commonSchemas.arrayOfObjects
+        parameters: commonSchemas.arrayOfObjects,
+        // Variable configuration (C++ TryGetStringField/BoolField)
+        variableType: { type: 'string', description: 'Variable type (e.g., Boolean, Float, Integer, Vector, String, Object)' },
+        defaultValue: commonSchemas.value,
+        category: commonSchemas.stringProp,
+        isReplicated: commonSchemas.booleanProp,
+        isPublic: commonSchemas.booleanProp,
+        variablePinType: commonSchemas.objectProp,
+        // Function configuration
+        functionName: commonSchemas.functionName,
+        inputs: commonSchemas.arrayOfObjects,
+        outputs: commonSchemas.arrayOfObjects,
+        // Node positioning (C++ TryGetNumberField)
+        posX: commonSchemas.numberProp,
+        posY: commonSchemas.numberProp,
+        // Event configuration
+        eventName: commonSchemas.eventName,
+        // Component/SCS configuration
+        parentComponent: commonSchemas.stringProp,
+        meshPath: commonSchemas.meshPath,
+        materialPath: commonSchemas.materialPath,
+        transform: commonSchemas.objectProp,
+        applyAndSave: commonSchemas.booleanProp,
+        // Script configuration
+        scriptName: commonSchemas.stringProp,
+        // Graph operations
+        memberClass: commonSchemas.stringProp,
+        targetClass: commonSchemas.stringProp,
+        inputAxisName: commonSchemas.stringProp,
+        inputPin: commonSchemas.pinName,
+        outputPin: commonSchemas.pinName,
+        // Compilation options
+        saveAfterCompile: commonSchemas.booleanProp,
+        // Timing/async options
+        timeoutMs: commonSchemas.numberProp,
+        waitForCompletion: commonSchemas.booleanProp,
+        waitForCompletionTimeoutMs: commonSchemas.numberProp,
+        // Parent class for blueprint creation
+        parentClass: commonSchemas.parentClass,
+        // Graph pin connections
+        fromNodeId: commonSchemas.sourceNodeId,
+        fromPin: commonSchemas.sourcePin,
+        fromPinName: commonSchemas.sourcePin,
+        toNodeId: commonSchemas.targetNodeId,
+        toPin: commonSchemas.targetPin,
+        toPinName: commonSchemas.targetPin
       },
       required: ['action']
     },

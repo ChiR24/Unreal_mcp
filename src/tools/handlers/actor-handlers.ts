@@ -243,14 +243,20 @@ const handlers: Record<string, ActorActionHandler> = {
         return result;
     },
     list: async (args, tools) => {
-        const result = await tools.actorTools.listActors() as ListActorsResult;
+        const limit = typeof args.limit === 'number' ? args.limit : 50;
+        // Pass limit to C++ handler - C++ may return totalCount for accurate remaining calculation
+        const result = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'list',
+            limit
+        }) as ListActorsResult & { totalCount?: number };
         if (result && result.actors && Array.isArray(result.actors)) {
-            const limit = typeof args.limit === 'number' ? args.limit : 50;
-            const count = result.actors.length;
-            const names = result.actors.slice(0, limit).map((a) => a.label || a.name || 'unknown').join(', ');
-            const remaining = count - limit;
-            const suffix = remaining > 0 ? `... and ${remaining} others` : '';
-            (result as Record<string, unknown>).message = `Found ${count} actors: ${names}${suffix}`;
+            const returnedCount = result.actors.length;
+            // Use totalCount from C++ if available, otherwise use returned count
+            const totalCount = typeof result.totalCount === 'number' ? result.totalCount : returnedCount;
+            const names = result.actors.map((a) => a.label || a.name || 'unknown').join(', ');
+            const remaining = totalCount - returnedCount;
+            const suffix = remaining > 0 ? `... and ${remaining} more` : '';
+            (result as Record<string, unknown>).message = `Found ${totalCount} actors: ${names}${suffix}`;
         }
         return result as Record<string, unknown>;
     },

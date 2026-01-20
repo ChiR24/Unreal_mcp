@@ -177,14 +177,25 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   }
 
   switch (animAction) {
-    case 'create_blend_space':
-      return cleanObject(await tools.animationTools.createBlendSpace({
+    case 'create_blend_space': {
+      // Use executeAutomationRequest to pass all params including flattened axis params
+      const payload = {
         name: mutableArgs.name,
         path: mutableArgs.path || mutableArgs.savePath,
+        savePath: mutableArgs.savePath || mutableArgs.path,
         skeletonPath: mutableArgs.skeletonPath,
         horizontalAxis: mutableArgs.horizontalAxis,
-        verticalAxis: mutableArgs.verticalAxis
-      }));
+        verticalAxis: mutableArgs.verticalAxis,
+        // Pass flattened axis params for C++ handler
+        minX: mutableArgs.minX,
+        maxX: mutableArgs.maxX,
+        minY: mutableArgs.minY,
+        maxY: mutableArgs.maxY,
+        subAction: 'create_blend_space'
+      };
+      const res = await executeAutomationRequest(tools, 'animation_physics', payload, 'Automation bridge not available for blend space creation');
+      return cleanObject(res) as Record<string, unknown>;
+    }
     case 'create_state_machine':
       return cleanObject(await tools.animationTools.createStateMachine({
         machineName: mutableArgs.machineName || mutableArgs.name,

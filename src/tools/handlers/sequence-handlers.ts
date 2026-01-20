@@ -308,7 +308,14 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       const newName = requireNonEmptyString(args.newName || defaultNewName, 'newName', 'Missing required parameter: newName');
       const baseDir = destDir.replace(/\/$/, '');
       const destPath = `${baseDir}/${newName}`;
-      const res = await tools.sequenceTools.duplicate({ path, destinationPath: destPath });
+      // Pass newName separately for C++ handler to use
+      const res = await executeAutomationRequest(tools, 'manage_sequence', {
+        ...args,
+        subAction: 'duplicate',
+        path,
+        destinationPath: destPath,
+        newName
+      });
       return cleanObject(res);
     }
     case 'rename': {

@@ -125,10 +125,12 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       }
     }
     case 'build_lighting': {
+      // Pass user-provided values, default to false if not specified
+      const argsRecord = args as Record<string, unknown>;
       return cleanObject(await tools.lightingTools.buildLighting({
         quality: (argsTyped.quality as string) || 'Preview',
-        buildOnlySelected: false,
-        buildReflectionCaptures: false
+        buildOnlySelected: typeof argsRecord.buildOnlySelected === 'boolean' ? argsRecord.buildOnlySelected : false,
+        buildReflectionCaptures: typeof argsRecord.buildReflectionCaptures === 'boolean' ? argsRecord.buildReflectionCaptures : false
       })) as Record<string, unknown>;
     }
     case 'export_level': {
@@ -214,6 +216,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         subAction: 'set_datalayer',
         actorPath: argsTyped.actorPath,
         dataLayerName, // Map label to name
+        dataLayerState: argsTyped.dataLayerState, // Pass validated dataLayerState to C++
         ...args
       });
       return cleanObject(res) as Record<string, unknown>;

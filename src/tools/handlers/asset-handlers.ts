@@ -326,7 +326,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(cleanRes, cleanRes.message as string);
       }
       case 'set_metadata': {
-        const res = await executeAutomationRequest(tools, 'set_metadata', args);
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', required: true },
+          { key: 'metadata', required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const metadata = params.metadata as Record<string, unknown>;
+        const res = await executeAutomationRequest(tools, 'set_metadata', { ...args, assetPath, metadata });
         return ResponseFactory.success(res, 'Metadata set successfully');
       }
       case 'validate':
@@ -355,10 +361,19 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(res, 'Report generated successfully');
       }
       case 'create_material_instance': {
+        const params = normalizeArgs(args, [
+          { key: 'name', required: true },
+          { key: 'parentMaterial', required: true },
+          { key: 'savePath', aliases: ['path'] }
+        ]);
+        const name = extractString(params, 'name');
+        const parentMaterial = extractString(params, 'parentMaterial');
+        const savePath = extractOptionalString(params, 'savePath');
+        
         const res = await executeAutomationRequest(
           tools,
           'create_material_instance',
-          args,
+          { ...args, name, parentMaterial, savePath },
           'Automation bridge not available for create_material_instance'
         ) as AssetOperationResponse;
 
@@ -486,12 +501,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
             ? argsTyped.directoryPath.trim()
             : '');
 
-        const payload: Record<string, unknown> = {};
+        // Pass all args through to C++ handler, with normalized directoryPath
+        const payload: Record<string, unknown> = { ...args };
         if (directoryRaw) {
           payload.directoryPath = directoryRaw;
-        }
-        if (typeof args.checkoutFiles === 'boolean') {
-          payload.checkoutFiles = args.checkoutFiles;
         }
 
         const res = await executeAutomationRequest(tools, 'fixup_redirectors', payload);
@@ -617,7 +630,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(res, 'Material node added successfully');
       }
       default: {
-        const res = await executeAutomationRequest(tools, action || 'manage_asset', args) as AssetOperationResponse;
+        // Pass all args through to C++ handler for unhandled actions
+        const res = await executeAutomationRequest(tools, action || 'manage_asset', { ...args, subAction: action }) as AssetOperationResponse;
         const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
         const message = typeof result.message === 'string' ? result.message : '';

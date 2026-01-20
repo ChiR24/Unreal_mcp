@@ -112,6 +112,38 @@ export interface AssetArgs extends HandlerArgs {
     parameters?: Record<string, unknown>;
     assetPaths?: string[];
     meshPath?: string;
+    // Bulk operations (C++ TryGetStringField)
+    prefix?: string;
+    suffix?: string;
+    searchText?: string;
+    replaceText?: string;
+    paths?: string[];
+    // Source control (C++ TryGetStringField)
+    description?: string;
+    checkoutFiles?: boolean;
+    // Bulk delete
+    showConfirmation?: boolean;
+    fixupRedirectors?: boolean;
+    // Material graph operations (C++ TryGetStringField/NumberField)
+    posX?: number;
+    posY?: number;
+    nodeType?: string;
+    sourceNodeId?: string;
+    targetNodeId?: string;
+    inputName?: string;
+    pinName?: string;
+    desc?: string;
+    materialPath?: string;
+    texturePath?: string;
+    expressionClass?: string;
+    coordinateIndex?: number;
+    parameterName?: string;
+    parameterType?: string;
+    nodes?: Array<Record<string, unknown>>;
+    value?: unknown;
+    // Metadata
+    metadata?: Record<string, unknown>;
+    tags?: string[];
 }
 
 // ============================================================================
@@ -149,6 +181,51 @@ export interface BlueprintArgs extends HandlerArgs {
     compile?: boolean;
     save?: boolean;
     metadata?: Record<string, unknown>;
+    // Variable configuration (C++ TryGetStringField/BoolField)
+    variableType?: string;
+    defaultValue?: unknown;
+    category?: string;
+    isReplicated?: boolean;
+    isPublic?: boolean;
+    variablePinType?: Record<string, unknown>;
+    // Function configuration
+    functionName?: string;
+    inputs?: Array<{ name: string; type: string }>;
+    outputs?: Array<{ name: string; type: string }>;
+    parameters?: Array<{ name: string; type: string }>;
+    // Rename operations
+    oldName?: string;
+    newName?: string;
+    // Node positioning
+    posX?: number;
+    posY?: number;
+    // Event configuration
+    eventName?: string;
+    // Component/SCS configuration
+    componentClass?: string;
+    parentComponent?: string;
+    meshPath?: string;
+    materialPath?: string;
+    transform?: Record<string, unknown>;
+    applyAndSave?: boolean;
+    // Script configuration
+    scriptName?: string;
+    // Graph operations
+    memberClass?: string;
+    targetClass?: string;
+    inputAxisName?: string;
+    inputPin?: string;
+    outputPin?: string;
+    // Compilation options
+    saveAfterCompile?: boolean;
+    // Timing/async options
+    timeoutMs?: number;
+    waitForCompletion?: boolean;
+    waitForCompletionTimeoutMs?: number;
+    // Parent class for blueprint creation
+    parentClass?: string;
+    // SCS operations array
+    operations?: Array<Record<string, unknown>>;
 }
 
 // ============================================================================
@@ -262,6 +339,105 @@ export interface EffectArgs extends HandlerArgs {
     parameterType?: string;
     type?: string;
     filter?: string;
+    // Debug shapes (C++ TryGetStringField)
+    shapeType?: string;
+    boxSize?: number[];
+    endLocation?: Vector3;
+    direction?: Vector3;
+    duration?: number;
+    thickness?: number;
+    length?: number;
+    angle?: number;
+    halfHeight?: number;
+    // Dynamic lights (C++ TryGetStringField/NumberField)
+    lightName?: string;
+    lightType?: string;
+    intensity?: number;
+    pulse?: { enabled?: boolean; frequency?: number };
+    attachToActor?: string;
+    // Niagara system control (C++ TryGetStringField)
+    systemName?: string;
+    actorName?: string;
+    autoDestroy?: boolean;
+    reset?: boolean;
+    deltaTime?: number;
+    steps?: number;
+    // Niagara authoring (C++ TryGetStringField)
+    savePath?: string;
+    subAction?: string;
+    assetPath?: string;
+    emitterPath?: string;
+    spawnRate?: number;
+    burstCount?: number;
+    burstTime?: number;
+    spawnPerUnit?: number;
+    lifetime?: number;
+    mass?: number;
+    // Force/velocity modules
+    forceType?: string;
+    forceStrength?: number;
+    forceVector?: Vector3;
+    velocity?: Vector3;
+    acceleration?: Vector3;
+    velocityMode?: string;
+    // Size/color modules
+    sizeMode?: string;
+    uniformSize?: number;
+    colorMode?: string;
+    // Renderer configuration
+    alignment?: string;
+    facingMode?: string;
+    sortMode?: string;
+    meshScale?: number;
+    ribbonWidth?: number;
+    // Light renderer
+    lightRadius?: number;
+    lightIntensity?: number;
+    lightColor?: number[];
+    volumetricScattering?: number;
+    lightExponent?: number;
+    affectsTranslucency?: boolean;
+    // Collision module
+    collisionMode?: string;
+    restitution?: number;
+    friction?: number;
+    dieOnCollision?: boolean;
+    // Kill module
+    killCondition?: string;
+    killBox?: number[];
+    invertKillZone?: boolean;
+    // Camera offset
+    cameraOffset?: number;
+    cameraOffsetMode?: string;
+    // Parameter binding
+    parameterValue?: unknown;
+    sourceBinding?: string;
+    // Skeletal mesh data interface
+    skeletalMeshPath?: string;
+    useWholeSkeletonOrBones?: string;
+    specificBones?: string[];
+    samplingMode?: string;
+    // Event handling
+    eventName?: string;
+    eventPayload?: Array<Record<string, unknown>>;
+    spawnOnEvent?: boolean;
+    eventSpawnCount?: number;
+    // GPU simulation
+    gpuEnabled?: boolean;
+    fixedBoundsEnabled?: boolean;
+    deterministicEnabled?: boolean;
+    fixedBounds?: number[];
+    stageName?: string;
+    stageIterationSource?: string;
+    // Graph operations (C++ TryGetStringField)
+    scriptType?: string;
+    fromNode?: string;
+    fromPin?: string;
+    toNode?: string;
+    toPin?: string;
+    nodeId?: string;
+    // Emitter properties
+    emitterProperties?: { enabled?: boolean };
 }
 
 // ============================================================================

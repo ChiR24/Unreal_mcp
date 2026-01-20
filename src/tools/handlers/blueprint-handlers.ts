@@ -121,7 +121,12 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       }
 
       const metadata = (argsTyped.metadata && typeof argsTyped.metadata === 'object') ? argsTyped.metadata : {};
-      const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath, metadata });
+      // Pass all args through to C++ handler, with resolved assetPath and metadata
+      const res = await executeAutomationRequest(tools, 'set_metadata', {
+        ...args,
+        assetPath,
+        metadata
+      });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_event': {
