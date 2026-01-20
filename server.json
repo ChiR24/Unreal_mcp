@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.ChiR24/unreal-engine-mcp",
   "description": "MCP server for Unreal Engine 5 with 17 tools for game development automation.",
-  "version": "0.5.11",
+  "version": "0.5.12",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "unreal-engine-mcp-server",
-      "version": "0.5.11",
+      "version": "0.5.12",
       "transport": {
         "type": "stdio"
       },
