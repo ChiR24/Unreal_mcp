@@ -16,7 +16,10 @@
 #include "HAL/FileManager.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
+#include "Materials/MaterialInstanceConstant.h"
 #include "UObject/ObjectRedirector.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
+#include "ObjectTools.h"
 
 #if WITH_EDITOR
 #include "ISourceControlModule.h"
@@ -311,6 +314,144 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   const FString LowerSubAction = SubAction.ToLower();
 
   // ============================================================================
+  // BP_LIST_NODE_TYPES - List available Blueprint node types
+  // Handle this directly since it doesn't require a specific blueprint
+  // ============================================================================
+  if (LowerSubAction == TEXT("bp_list_node_types") || LowerSubAction == TEXT("blueprint_list_node_types")) {
+    FString Filter;
+    Payload->TryGetStringField(TEXT("filter"), Filter);
+    
+    TArray<TSharedPtr<FJsonValue>> NodeTypesArray;
+    
+    // Return a static list of common K2Node types
+    // This avoids the need for K2Node headers which may not be included
+    TArray<TPair<FString, FString>> CommonNodeTypes = {
+      {TEXT("K2Node_CallFunction"), TEXT("Call Function")},
+      {TEXT("K2Node_IfThenElse"), TEXT("Branch (If)")},
+      {TEXT("K2Node_ForEachLoop"), TEXT("For Each Loop")},
+      {TEXT("K2Node_WhileLoop"), TEXT("While Loop")},
+      {TEXT("K2Node_DoOnce"), TEXT("Do Once")},
+      {TEXT("K2Node_Delay"), TEXT("Delay")},
+      {TEXT("K2Node_CustomEvent"), TEXT("Custom Event")},
+      {TEXT("K2Node_Event"), TEXT("Event")},
+      {TEXT("K2Node_SpawnActor"), TEXT("Spawn Actor")},
+      {TEXT("K2Node_GetActorOfClass"), TEXT("Get Actor Of Class")},
+      {TEXT("K2Node_Cast"), TEXT("Cast To")},
+      {TEXT("K2Node_MakeArray"), TEXT("Make Array")},
+      {TEXT("K2Node_MakeStruct"), TEXT("Make Struct")},
+      {TEXT("K2Node_BreakStruct"), TEXT("Break Struct")},
+      {TEXT("K2Node_Select"), TEXT("Select")},
+      {TEXT("K2Node_SwitchEnum"), TEXT("Switch on Enum")},
+      {TEXT("K2Node_SwitchInteger"), TEXT("Switch on Int")},
+      {TEXT("K2Node_SwitchString"), TEXT("Switch on String")},
+      {TEXT("K2Node_Timeline"), TEXT("Timeline")},
+      {TEXT("K2Node_VariableGet"), TEXT("Get Variable")},
+      {TEXT("K2Node_VariableSet"), TEXT("Set Variable")},
+      {TEXT("K2Node_FunctionEntry"), TEXT("Function Entry")},
+      {TEXT("K2Node_FunctionResult"), TEXT("Return Node")},
+      {TEXT("K2Node_MacroInstance"), TEXT("Macro Instance")},
+      {TEXT("K2Node_Tunnel"), TEXT("Tunnel")},
+      {TEXT("K2Node_Composite"), TEXT("Composite")},
+      {TEXT("K2Node_Knot"), TEXT("Reroute Node")},
+      {TEXT("K2Node_CommutativeAssociativeBinaryOperator"), TEXT("Math Operator")},
+      {TEXT("K2Node_PromotableOperator"), TEXT("Promotable Operator")},
+      {TEXT("K2Node_DynamicCast"), TEXT("Dynamic Cast")},
+      {TEXT("K2Node_ClassDynamicCast"), TEXT("Class Dynamic Cast")},
+      {TEXT("K2Node_GetClassDefaults"), TEXT("Get Class Defaults")},
+      {TEXT("K2Node_SetFieldsInStruct"), TEXT("Set Fields In Struct")},
+      {TEXT("K2Node_AsyncAction"), TEXT("Async Action")},
+      {TEXT("K2Node_CreateDelegate"), TEXT("Create Delegate")},
+      {TEXT("K2Node_AssignDelegate"), TEXT("Assign Delegate")},
+      {TEXT("K2Node_ClearDelegate"), TEXT("Clear Delegate")},
+      {TEXT("K2Node_ExecutionSequence"), TEXT("Sequence")},
+      {TEXT("K2Node_FlipFlop"), TEXT("Flip Flop")},
+      {TEXT("K2Node_Gate"), TEXT("Gate")},
+      {TEXT("K2Node_DoN"), TEXT("Do N")},
+      {TEXT("K2Node_ForLoop"), TEXT("For Loop")},
+      {TEXT("K2Node_ForLoopWithBreak"), TEXT("For Loop With Break")},
+      {TEXT("K2Node_InputAction"), TEXT("Input Action")},
+      {TEXT("K2Node_InputAxisEvent"), TEXT("Input Axis Event")},
+      {TEXT("K2Node_InputKey"), TEXT("Input Key")},
+      {TEXT("K2Node_InputTouch"), TEXT("Input Touch")},
+      {TEXT("K2Node_GetDataTableRow"), TEXT("Get Data Table Row")},
+      {TEXT("K2Node_GetArrayItem"), TEXT("Get Array Item")},
+      {TEXT("K2Node_SetArrayItem"), TEXT("Set Array Item")},
+      {TEXT("K2Node_Literal"), TEXT("Literal")},
+      {TEXT("K2Node_Self"), TEXT("Self Reference")},
+      {TEXT("K2Node_Message"), TEXT("Message")},
+      {TEXT("K2Node_TemporaryVariable"), TEXT("Temp Variable")}
+    };
+    
+    for (const auto& NodeType : CommonNodeTypes) {
+      // Apply filter if specified
+      if (!Filter.IsEmpty()) {
+        if (!NodeType.Key.Contains(Filter, ESearchCase::IgnoreCase) && 
+            !NodeType.Value.Contains(Filter, ESearchCase::IgnoreCase)) {
+          continue;
+        }
+      }
+      
+      TSharedPtr<FJsonObject> NodeTypeObj = MakeShared<FJsonObject>();
+      NodeTypeObj->SetStringField(TEXT("className"), NodeType.Key);
+      NodeTypeObj->SetStringField(TEXT("displayName"), NodeType.Value);
+      NodeTypeObj->SetStringField(TEXT("category"), TEXT("Blueprint"));
+      
+      NodeTypesArray.Add(MakeShared<FJsonValueObject>(NodeTypeObj));
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("nodeTypes"), NodeTypesArray);
+    Result->SetNumberField(TEXT("count"), NodeTypesArray.Num());
+    if (!Filter.IsEmpty()) {
+      Result->SetStringField(TEXT("filter"), Filter);
+    }
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+      FString::Printf(TEXT("Found %d Blueprint node types."), NodeTypesArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // ROUTE BLUEPRINT ACTIONS TO BLUEPRINT HANDLER
+  // Actions starting with "bp_" or "blueprint_" should be handled by blueprint handlers
+  // ============================================================================
+  if (LowerSubAction.StartsWith(TEXT("bp_")) || LowerSubAction.StartsWith(TEXT("blueprint_"))) {
+    // Transform "bp_" prefix to "blueprint_" for consistency with C++ handler expectations
+    FString TransformedAction = LowerSubAction;
+    if (LowerSubAction.StartsWith(TEXT("bp_"))) {
+      TransformedAction = FString::Printf(TEXT("blueprint_%s"), *LowerSubAction.RightChop(3));
+    }
+    // Forward to blueprint handler with the transformed action
+    return HandleBlueprintAction(RequestId, TransformedAction, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
+  // ROUTE MATERIAL ACTIONS TO MATERIAL HANDLER
+  // ============================================================================
+  if (LowerSubAction.StartsWith(TEXT("material_")) || 
+      LowerSubAction == TEXT("create_material") ||
+      LowerSubAction == TEXT("add_material_node") ||
+      LowerSubAction == TEXT("connect_material_pins") ||
+      LowerSubAction == TEXT("get_material_stats") ||
+      LowerSubAction == TEXT("remove_material_node") ||
+      LowerSubAction == TEXT("add_material_parameter")) {
+    // Forward to material authoring handler
+    return HandleManageMaterialAuthoringAction(RequestId, LowerSubAction, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
+  // ROUTE METASOUND ACTIONS TO METASOUND HANDLER
+  // ============================================================================
+  if (LowerSubAction.StartsWith(TEXT("metasound_")) ||
+      LowerSubAction.StartsWith(TEXT("create_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("add_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("connect_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("remove_metasound"))) {
+    // Forward to MetaSound handler (not generic audio handler)
+    return HandleMetaSoundAction(RequestId, LowerSubAction, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
   // LIST ASSETS
   // ============================================================================
   if (LowerSubAction == TEXT("list")) {
@@ -328,19 +469,45 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     bool bRecursive = true;
     Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
     
-    TArray<FString> Assets = UEditorAssetLibrary::ListAssets(Directory, bRecursive, false);
+    // Use Asset Registry for richer metadata
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    FARFilter Filter;
+    Filter.PackagePaths.Add(FName(*Directory));
+    Filter.bRecursivePaths = bRecursive;
+
+    TArray<FAssetData> AssetDataList;
+    AssetRegistry.GetAssets(Filter, AssetDataList);
+
+    // Apply limit if specified
+    int32 Limit = 0;
+    Payload->TryGetNumberField(TEXT("limit"), Limit);
+    if (Limit > 0 && AssetDataList.Num() > Limit) {
+      AssetDataList.SetNum(Limit);
+    }
     
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
-    for (const FString& AssetPath : Assets) {
-      AssetsArray.Add(MakeShared<FJsonValueString>(AssetPath));
+    TArray<TSharedPtr<FJsonValue>> FoldersArray;
+    
+    for (const FAssetData& AssetData : AssetDataList) {
+      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+      // Use 'name', 'path', 'class' lowercase to match TS expectations
+      AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+      AssetObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+      AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+      AssetObj->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
+      AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
     }
+
     Result->SetArrayField(TEXT("assets"), AssetsArray);
-    Result->SetNumberField(TEXT("count"), Assets.Num());
+    Result->SetArrayField(TEXT("folders_list"), FoldersArray);
+    Result->SetNumberField(TEXT("count"), AssetsArray.Num());
     Result->SetBoolField(TEXT("success"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           FString::Printf(TEXT("Found %d assets"), Assets.Num()), Result);
+                           FString::Printf(TEXT("Found %d assets"), AssetsArray.Num()), Result);
     return true;
   }
 
@@ -817,9 +984,889 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return true;
   }
 
+  // ============================================================================
+  // IMPORT ASSET - Imports an external file into the project
+  // ============================================================================
+  if (LowerSubAction == TEXT("import")) {
+    FString SourcePath, DestinationPath;
+    if (!Payload->TryGetStringField(TEXT("sourcePath"), SourcePath) || SourcePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("sourcePath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath) || DestinationPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("destinationPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize destination path
+    if (DestinationPath.StartsWith(TEXT("/Content"))) {
+      DestinationPath = FString::Printf(TEXT("/Game%s"), *DestinationPath.RightChop(8));
+    }
+
+    // Check if source file exists
+    if (!FPaths::FileExists(SourcePath)) {
+      SendAutomationError(RequestingSocket, RequestId, 
+                          FString::Printf(TEXT("Source file not found: %s"), *SourcePath),
+                          TEXT("FILE_NOT_FOUND"));
+      return true;
+    }
+
+    // Get asset tools for import
+    IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+    
+    // Determine destination directory and asset name
+    FString DestinationDir = FPackageName::GetLongPackagePath(DestinationPath);
+    if (DestinationDir.IsEmpty()) {
+      DestinationDir = TEXT("/Game");
+    }
+
+    // Create import task
+    TArray<FString> FilesToImport;
+    FilesToImport.Add(SourcePath);
+
+    // Import the asset(s)
+    TArray<UObject*> ImportedAssets = AssetTools.ImportAssets(FilesToImport, DestinationDir);
+
+    if (ImportedAssets.Num() > 0 && ImportedAssets[0] != nullptr) {
+      UObject* ImportedAsset = ImportedAssets[0];
+      
+      // Save the imported asset
+      bool bSave = true;
+      Payload->TryGetBoolField(TEXT("save"), bSave);
+      if (bSave) {
+        McpSafeAssetSave(ImportedAsset);
+      }
+
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetBoolField(TEXT("success"), true);
+      Result->SetStringField(TEXT("sourcePath"), SourcePath);
+      Result->SetStringField(TEXT("importedPath"), ImportedAsset->GetPathName());
+      Result->SetStringField(TEXT("assetName"), ImportedAsset->GetName());
+      Result->SetStringField(TEXT("className"), ImportedAsset->GetClass()->GetName());
+
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Asset imported successfully"), Result);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to import asset"),
+                          TEXT("IMPORT_FAILED"));
+    }
+    return true;
+  }
+
+  // ============================================================================
+  // SEARCH ASSETS - Search for assets by class or path
+  // ============================================================================
+  if (LowerSubAction == TEXT("search_assets") || LowerSubAction == TEXT("search")) {
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    FARFilter Filter;
+    
+    // Get class names to filter by
+    const TArray<TSharedPtr<FJsonValue>>* ClassNamesArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("classNames"), ClassNamesArray) && ClassNamesArray) {
+      for (const TSharedPtr<FJsonValue>& ClassValue : *ClassNamesArray) {
+        if (ClassValue.IsValid() && ClassValue->Type == EJson::String) {
+          FString ClassName = ClassValue->AsString();
+          if (!ClassName.IsEmpty()) {
+            // Try to find the class
+            UClass* FoundClass = FindObject<UClass>(nullptr, *ClassName);
+            if (!FoundClass) {
+              FoundClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
+            }
+            if (!FoundClass) {
+              FoundClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/CoreUObject.%s"), *ClassName));
+            }
+            if (FoundClass) {
+              Filter.ClassPaths.Add(FoundClass->GetClassPathName());
+            }
+          }
+        }
+      }
+    }
+
+    // Get package paths to search
+    const TArray<TSharedPtr<FJsonValue>>* PackagePathsArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsArray) && PackagePathsArray) {
+      for (const TSharedPtr<FJsonValue>& PathValue : *PackagePathsArray) {
+        if (PathValue.IsValid() && PathValue->Type == EJson::String) {
+          FString PackagePath = PathValue->AsString();
+          if (!PackagePath.IsEmpty()) {
+            // Normalize path
+            if (PackagePath.StartsWith(TEXT("/Content"))) {
+              PackagePath = FString::Printf(TEXT("/Game%s"), *PackagePath.RightChop(8));
+            }
+            Filter.PackagePaths.Add(FName(*PackagePath));
+          }
+        }
+      }
+    } else {
+      // Default to /Game
+      Filter.PackagePaths.Add(FName(TEXT("/Game")));
+    }
+
+    bool bRecursivePaths = true;
+    Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
+    Filter.bRecursivePaths = bRecursivePaths;
+
+    bool bRecursiveClasses = true;
+    Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
+    Filter.bRecursiveClasses = bRecursiveClasses;
+
+    // Get assets
+    TArray<FAssetData> AssetDataList;
+    AssetRegistry.GetAssets(Filter, AssetDataList);
+
+    // Apply limit
+    int32 Limit = 100;
+    Payload->TryGetNumberField(TEXT("limit"), Limit);
+    if (Limit > 0 && AssetDataList.Num() > Limit) {
+      AssetDataList.SetNum(Limit);
+    }
+
+    // Build result
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TArray<TSharedPtr<FJsonValue>> AssetsArray;
+
+    for (const FAssetData& AssetData : AssetDataList) {
+      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+      AssetObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+      AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+      AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+      AssetObj->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
+      AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+    }
+
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetArrayField(TEXT("assets"), AssetsArray);
+    Result->SetNumberField(TEXT("count"), AssetsArray.Num());
+    Result->SetNumberField(TEXT("total"), AssetDataList.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d assets"), AssetsArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GET DEPENDENCIES - Get asset dependencies
+  // ============================================================================
+  if (LowerSubAction == TEXT("get_dependencies")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    bool bRecursive = false;
+    Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+
+    TArray<FAssetIdentifier> Dependencies;
+    UE::AssetRegistry::EDependencyCategory Categories = 
+        UE::AssetRegistry::EDependencyCategory::Package;
+
+    if (bRecursive) {
+      TArray<FAssetIdentifier> ReferencerStack;
+      TSet<FAssetIdentifier> VisitedSet;
+      ReferencerStack.Add(FAssetIdentifier(FName(*AssetPath)));
+      
+      while (ReferencerStack.Num() > 0) {
+        FAssetIdentifier Current = ReferencerStack.Pop();
+        if (VisitedSet.Contains(Current)) continue;
+        VisitedSet.Add(Current);
+        
+        TArray<FAssetIdentifier> CurrentDeps;
+        AssetRegistry.GetDependencies(Current, CurrentDeps, Categories);
+        for (const FAssetIdentifier& Dep : CurrentDeps) {
+          if (!VisitedSet.Contains(Dep)) {
+            Dependencies.Add(Dep);
+            ReferencerStack.Add(Dep);
+          }
+        }
+      }
+    } else {
+      AssetRegistry.GetDependencies(FAssetIdentifier(FName(*AssetPath)), Dependencies, Categories);
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TArray<TSharedPtr<FJsonValue>> DepsArray;
+    for (const FAssetIdentifier& Dep : Dependencies) {
+      DepsArray.Add(MakeShared<FJsonValueString>(Dep.PackageName.ToString()));
+    }
+
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetArrayField(TEXT("dependencies"), DepsArray);
+    Result->SetNumberField(TEXT("count"), DepsArray.Num());
+    Result->SetBoolField(TEXT("recursive"), bRecursive);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d dependencies"), DepsArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // VALIDATE ASSET - Check asset for errors/warnings
+  // ============================================================================
+  if (LowerSubAction == TEXT("validate") || LowerSubAction == TEXT("validate_asset")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Asset not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load asset"),
+                          TEXT("LOAD_FAILED"));
+      return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> WarningsArray;
+    TArray<TSharedPtr<FJsonValue>> ErrorsArray;
+    bool bIsValid = true;
+
+    // Check if package is dirty (has unsaved changes)
+    UPackage* Package = Asset->GetOutermost();
+    bool bIsDirty = Package && Package->IsDirty();
+
+    // Check for redirectors
+    if (Asset->IsA<UObjectRedirector>()) {
+      TSharedPtr<FJsonObject> Warning = MakeShared<FJsonObject>();
+      Warning->SetStringField(TEXT("type"), TEXT("REDIRECTOR"));
+      Warning->SetStringField(TEXT("message"), TEXT("Asset is a redirector"));
+      WarningsArray.Add(MakeShared<FJsonValueObject>(Warning));
+    }
+
+    // Basic validation check
+    if (!Asset->IsValidLowLevel()) {
+      bIsValid = false;
+      TSharedPtr<FJsonObject> Error = MakeShared<FJsonObject>();
+      Error->SetStringField(TEXT("type"), TEXT("INVALID_OBJECT"));
+      Error->SetStringField(TEXT("message"), TEXT("Asset failed low-level validation"));
+      ErrorsArray.Add(MakeShared<FJsonValueObject>(Error));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetBoolField(TEXT("isValid"), bIsValid);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("className"), Asset->GetClass()->GetName());
+    Result->SetBoolField(TEXT("isDirty"), bIsDirty);
+    Result->SetArrayField(TEXT("warnings"), WarningsArray);
+    Result->SetArrayField(TEXT("errors"), ErrorsArray);
+    Result->SetNumberField(TEXT("warningCount"), WarningsArray.Num());
+    Result->SetNumberField(TEXT("errorCount"), ErrorsArray.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           bIsValid ? TEXT("Asset is valid") : TEXT("Asset has validation errors"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GET SOURCE CONTROL STATE
+  // ============================================================================
+  if (LowerSubAction == TEXT("get_source_control_state")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+
+    if (!ISourceControlModule::Get().IsEnabled()) {
+      Result->SetBoolField(TEXT("sourceControlEnabled"), false);
+      Result->SetStringField(TEXT("state"), TEXT("UNKNOWN"));
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Source control not enabled"), Result);
+      return true;
+    }
+
+    ISourceControlProvider& Provider = ISourceControlModule::Get().GetProvider();
+    FString FilePath = FPackageName::LongPackageNameToFilename(AssetPath, FPackageName::GetAssetPackageExtension());
+
+    FSourceControlStatePtr State = Provider.GetState(FilePath, EStateCacheUsage::Use);
+    
+    Result->SetBoolField(TEXT("sourceControlEnabled"), true);
+    if (State.IsValid()) {
+      Result->SetBoolField(TEXT("isCheckedOut"), State->IsCheckedOut());
+      Result->SetBoolField(TEXT("isCheckedOutOther"), State->IsCheckedOutOther());
+      Result->SetBoolField(TEXT("isCurrent"), State->IsCurrent());
+      Result->SetBoolField(TEXT("isSourceControlled"), State->IsSourceControlled());
+      Result->SetBoolField(TEXT("isAdded"), State->IsAdded());
+      Result->SetBoolField(TEXT("isDeleted"), State->IsDeleted());
+      Result->SetBoolField(TEXT("canCheckout"), State->CanCheckout());
+      Result->SetBoolField(TEXT("canEdit"), State->CanEdit());
+      
+      FString StateName = TEXT("UNKNOWN");
+      if (State->IsCheckedOut()) StateName = TEXT("CHECKED_OUT");
+      else if (State->IsCheckedOutOther()) StateName = TEXT("CHECKED_OUT_OTHER");
+      else if (State->IsAdded()) StateName = TEXT("ADDED");
+      else if (State->IsDeleted()) StateName = TEXT("DELETED");
+      else if (State->IsSourceControlled()) StateName = TEXT("CONTROLLED");
+      else StateName = TEXT("NOT_CONTROLLED");
+      
+      Result->SetStringField(TEXT("state"), StateName);
+    } else {
+      Result->SetStringField(TEXT("state"), TEXT("UNKNOWN"));
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Source control state retrieved"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // FIND BY TAG - Search assets by metadata tag
+  // ============================================================================
+  if (LowerSubAction == TEXT("find_by_tag")) {
+    FString Tag;
+    if (!Payload->TryGetStringField(TEXT("tag"), Tag) || Tag.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("tag required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Value;
+    Payload->TryGetStringField(TEXT("value"), Value);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    // Get all assets and filter by tag
+    TArray<FAssetData> AllAssets;
+    FARFilter Filter;
+    Filter.PackagePaths.Add(FName(TEXT("/Game")));
+    Filter.bRecursivePaths = true;
+    AssetRegistry.GetAssets(Filter, AllAssets);
+
+    TArray<TSharedPtr<FJsonValue>> MatchingAssets;
+    for (const FAssetData& AssetData : AllAssets) {
+      UObject* Asset = AssetData.GetAsset();
+      if (Asset) {
+        TMap<FName, FString> MetadataTags = UEditorAssetLibrary::GetMetadataTagValues(Asset);
+        FString* FoundValue = MetadataTags.Find(FName(*Tag));
+        if (FoundValue) {
+          bool bMatches = Value.IsEmpty() || (*FoundValue == Value);
+          if (bMatches) {
+            TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+            AssetObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+            AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+            AssetObj->SetStringField(TEXT("tagValue"), *FoundValue);
+            MatchingAssets.Add(MakeShared<FJsonValueObject>(AssetObj));
+          }
+        }
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("tag"), Tag);
+    if (!Value.IsEmpty()) {
+      Result->SetStringField(TEXT("value"), Value);
+    }
+    Result->SetArrayField(TEXT("assets"), MatchingAssets);
+    Result->SetNumberField(TEXT("count"), MatchingAssets.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d assets with tag"), MatchingAssets.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GENERATE THUMBNAIL - Create asset thumbnail
+  // ============================================================================
+  if (LowerSubAction == TEXT("generate_thumbnail") || LowerSubAction == TEXT("create_thumbnail")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Asset not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load asset"),
+                          TEXT("LOAD_FAILED"));
+      return true;
+    }
+
+    // Get thumbnail dimensions (defaults to 256x256)
+    int32 Width = 256, Height = 256;
+    Payload->TryGetNumberField(TEXT("width"), Width);
+    Payload->TryGetNumberField(TEXT("height"), Height);
+    Width = FMath::Clamp(Width, 32, 1024);
+    Height = FMath::Clamp(Height, 32, 1024);
+
+    // Request thumbnail generation/capture
+    FObjectThumbnail* Thumbnail = ThumbnailTools::GenerateThumbnailForObjectToSaveToDisk(Asset);
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), Thumbnail != nullptr);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+
+    if (Thumbnail) {
+      Result->SetBoolField(TEXT("generated"), true);
+      Result->SetNumberField(TEXT("thumbnailWidth"), Thumbnail->GetImageWidth());
+      Result->SetNumberField(TEXT("thumbnailHeight"), Thumbnail->GetImageHeight());
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Thumbnail generated successfully"), Result);
+    } else {
+      Result->SetBoolField(TEXT("generated"), false);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Thumbnail generation requested"), Result);
+    }
+    return true;
+  }
+
+  // ============================================================================
+  // CREATE MATERIAL INSTANCE
+  // ============================================================================
+  if (LowerSubAction == TEXT("create_material_instance")) {
+    FString Name, ParentMaterial, PackagePath;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("parentMaterial"), ParentMaterial) || ParentMaterial.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("parentMaterial required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+    if (PackagePath.IsEmpty()) {
+      PackagePath = TEXT("/Game");
+    }
+
+    // Normalize paths
+    if (ParentMaterial.StartsWith(TEXT("/Content"))) {
+      ParentMaterial = FString::Printf(TEXT("/Game%s"), *ParentMaterial.RightChop(8));
+    }
+    if (PackagePath.StartsWith(TEXT("/Content"))) {
+      PackagePath = FString::Printf(TEXT("/Game%s"), *PackagePath.RightChop(8));
+    }
+
+    // Load parent material
+    UMaterial* Parent = LoadObject<UMaterial>(nullptr, *ParentMaterial);
+    if (!Parent) {
+      // Try loading as material instance
+      UMaterialInstance* ParentInstance = LoadObject<UMaterialInstance>(nullptr, *ParentMaterial);
+      if (!ParentInstance) {
+        SendAutomationError(RequestingSocket, RequestId, 
+                            FString::Printf(TEXT("Parent material not found: %s"), *ParentMaterial),
+                            TEXT("PARENT_NOT_FOUND"));
+        return true;
+      }
+    }
+
+    // Create material instance package
+    FString FullPath = PackagePath / Name;
+    UPackage* Package = CreatePackage(*FullPath);
+    if (!Package) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"),
+                          TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    // Create material instance
+    UMaterialInstanceConstant* MaterialInstance = NewObject<UMaterialInstanceConstant>(
+        Package, *Name, RF_Public | RF_Standalone);
+
+    if (!MaterialInstance) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create material instance"),
+                          TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    // Set parent
+    UMaterialInterface* ParentInterface = LoadObject<UMaterialInterface>(nullptr, *ParentMaterial);
+    if (ParentInterface) {
+      MaterialInstance->SetParentEditorOnly(ParentInterface);
+    }
+
+    // Save the asset
+    McpSafeAssetSave(MaterialInstance);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("path"), FullPath);
+    Result->SetStringField(TEXT("name"), Name);
+    Result->SetStringField(TEXT("parentMaterial"), ParentMaterial);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Material instance created successfully"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GENERATE REPORT
+  // ============================================================================
+  if (LowerSubAction == TEXT("generate_report")) {
+    FString Directory;
+    Payload->TryGetStringField(TEXT("directory"), Directory);
+    if (Directory.IsEmpty()) {
+      Directory = TEXT("/Game");
+    }
+
+    // Normalize path
+    if (Directory.StartsWith(TEXT("/Content"))) {
+      Directory = FString::Printf(TEXT("/Game%s"), *Directory.RightChop(8));
+    }
+
+    FString ReportType;
+    Payload->TryGetStringField(TEXT("reportType"), ReportType);
+    if (ReportType.IsEmpty()) {
+      ReportType = TEXT("summary");
+    }
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    FARFilter Filter;
+    Filter.PackagePaths.Add(FName(*Directory));
+    Filter.bRecursivePaths = true;
+
+    TArray<FAssetData> Assets;
+    AssetRegistry.GetAssets(Filter, Assets);
+
+    // Build class distribution
+    TMap<FString, int32> ClassCounts;
+    int64 TotalSize = 0;
+    for (const FAssetData& AssetData : Assets) {
+      FString ClassName = AssetData.AssetClassPath.GetAssetName().ToString();
+      ClassCounts.FindOrAdd(ClassName)++;
+      
+      // Estimate size from package file
+      FString PackagePath = FPackageName::LongPackageNameToFilename(
+          AssetData.PackageName.ToString(), FPackageName::GetAssetPackageExtension());
+      if (FPaths::FileExists(PackagePath)) {
+        TotalSize += IFileManager::Get().FileSize(*PackagePath);
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("directory"), Directory);
+    Result->SetStringField(TEXT("reportType"), ReportType);
+    Result->SetNumberField(TEXT("totalAssets"), Assets.Num());
+    Result->SetNumberField(TEXT("totalSizeBytes"), TotalSize);
+    Result->SetStringField(TEXT("totalSizeFormatted"), 
+                           FString::Printf(TEXT("%.2f MB"), TotalSize / (1024.0 * 1024.0)));
+
+    // Add class distribution
+    TSharedPtr<FJsonObject> ClassDistribution = MakeShared<FJsonObject>();
+    for (const auto& Pair : ClassCounts) {
+      ClassDistribution->SetNumberField(Pair.Key, Pair.Value);
+    }
+    Result->SetObjectField(TEXT("classDistribution"), ClassDistribution);
+    Result->SetNumberField(TEXT("uniqueClasses"), ClassCounts.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Report generated: %d assets in %d classes"), 
+                                          Assets.Num(), ClassCounts.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GET ASSET GRAPH / ANALYZE GRAPH
+  // ============================================================================
+  if (LowerSubAction == TEXT("get_asset_graph") || LowerSubAction == TEXT("analyze_graph")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    int32 MaxDepth = 3;
+    Payload->TryGetNumberField(TEXT("maxDepth"), MaxDepth);
+    MaxDepth = FMath::Clamp(MaxDepth, 1, 10);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    // Build dependency graph using BFS
+    TArray<TSharedPtr<FJsonValue>> Nodes;
+    TArray<TSharedPtr<FJsonValue>> Edges;
+    TSet<FString> VisitedNodes;
+    TQueue<TPair<FString, int32>> Queue;
+
+    Queue.Enqueue(TPair<FString, int32>(AssetPath, 0));
+
+    while (!Queue.IsEmpty()) {
+      TPair<FString, int32> Current;
+      Queue.Dequeue(Current);
+      
+      if (VisitedNodes.Contains(Current.Key) || Current.Value > MaxDepth) {
+        continue;
+      }
+      VisitedNodes.Add(Current.Key);
+
+      // Add node
+      TSharedPtr<FJsonObject> Node = MakeShared<FJsonObject>();
+      Node->SetStringField(TEXT("id"), Current.Key);
+      Node->SetNumberField(TEXT("depth"), Current.Value);
+      Node->SetBoolField(TEXT("isRoot"), Current.Value == 0);
+      Nodes.Add(MakeShared<FJsonValueObject>(Node));
+
+      // Get dependencies
+      TArray<FAssetIdentifier> Dependencies;
+      AssetRegistry.GetDependencies(FAssetIdentifier(FName(*Current.Key)), Dependencies, 
+                                    UE::AssetRegistry::EDependencyCategory::Package);
+
+      for (const FAssetIdentifier& Dep : Dependencies) {
+        FString DepPath = Dep.PackageName.ToString();
+        
+        // Add edge
+        TSharedPtr<FJsonObject> Edge = MakeShared<FJsonObject>();
+        Edge->SetStringField(TEXT("from"), Current.Key);
+        Edge->SetStringField(TEXT("to"), DepPath);
+        Edge->SetStringField(TEXT("type"), TEXT("dependency"));
+        Edges.Add(MakeShared<FJsonValueObject>(Edge));
+
+        if (!VisitedNodes.Contains(DepPath)) {
+          Queue.Enqueue(TPair<FString, int32>(DepPath, Current.Value + 1));
+        }
+      }
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("rootAsset"), AssetPath);
+    Result->SetNumberField(TEXT("maxDepth"), MaxDepth);
+    Result->SetArrayField(TEXT("nodes"), Nodes);
+    Result->SetArrayField(TEXT("edges"), Edges);
+    Result->SetNumberField(TEXT("nodeCount"), Nodes.Num());
+    Result->SetNumberField(TEXT("edgeCount"), Edges.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Asset graph: %d nodes, %d edges"), 
+                                          Nodes.Num(), Edges.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // NANITE ENABLE/DISABLE
+  // ============================================================================
+  if (LowerSubAction == TEXT("enable_nanite_mesh") || LowerSubAction == TEXT("enable_nanite")) {
+    // Forward to dedicated handler
+    return HandleEnableNaniteMesh(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
+  // SET NANITE SETTINGS
+  // ============================================================================
+  if (LowerSubAction == TEXT("set_nanite_settings")) {
+    // Forward to dedicated handler
+    return HandleSetNaniteSettings(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
+  // GENERATE LODs
+  // ============================================================================
+  if (LowerSubAction == TEXT("generate_lods")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    int32 LODCount = 4;
+    Payload->TryGetNumberField(TEXT("lodCount"), LODCount);
+    LODCount = FMath::Clamp(LODCount, 1, 8);
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Asset not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
+    if (!StaticMesh) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Asset is not a static mesh"),
+                          TEXT("INVALID_ASSET_TYPE"));
+      return true;
+    }
+
+    // Set up LOD group settings
+    StaticMesh->SetNumSourceModels(LODCount);
+    
+    // Mark dirty and save
+    StaticMesh->MarkPackageDirty();
+    McpSafeAssetSave(StaticMesh);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetNumberField(TEXT("lodCount"), LODCount);
+    Result->SetNumberField(TEXT("currentLODCount"), StaticMesh->GetNumSourceModels());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("LODs configured: %d levels"), LODCount), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // QUERY ASSETS BY PREDICATE - Advanced asset query with filters
+  // ============================================================================
+  if (LowerSubAction == TEXT("query_assets_by_predicate")) {
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+    FARFilter Filter;
+    
+    // Get predicate type
+    FString PredicateType;
+    Payload->TryGetStringField(TEXT("predicateType"), PredicateType);
+    if (PredicateType.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("type"), PredicateType);
+    }
+    
+    // Configure filter based on predicate
+    const FString LowerPredicate = PredicateType.ToLower();
+    
+    if (LowerPredicate == TEXT("meshes") || LowerPredicate == TEXT("mesh") || LowerPredicate == TEXT("staticmesh")) {
+      UClass* MeshClass = UStaticMesh::StaticClass();
+      if (MeshClass) {
+        Filter.ClassPaths.Add(MeshClass->GetClassPathName());
+      }
+    } else if (LowerPredicate == TEXT("materials") || LowerPredicate == TEXT("material")) {
+      UClass* MatClass = UMaterial::StaticClass();
+      UClass* MIClass = UMaterialInstance::StaticClass();
+      if (MatClass) Filter.ClassPaths.Add(MatClass->GetClassPathName());
+      if (MIClass) Filter.ClassPaths.Add(MIClass->GetClassPathName());
+    } else if (LowerPredicate == TEXT("textures") || LowerPredicate == TEXT("texture")) {
+      UClass* TexClass = FindObject<UClass>(nullptr, TEXT("/Script/Engine.Texture2D"));
+      if (TexClass) Filter.ClassPaths.Add(TexClass->GetClassPathName());
+    } else if (LowerPredicate == TEXT("blueprints") || LowerPredicate == TEXT("blueprint")) {
+      UClass* BPClass = UBlueprint::StaticClass();
+      if (BPClass) Filter.ClassPaths.Add(BPClass->GetClassPathName());
+    } else if (LowerPredicate == TEXT("sounds") || LowerPredicate == TEXT("sound") || LowerPredicate == TEXT("audio")) {
+      UClass* SoundClass = FindObject<UClass>(nullptr, TEXT("/Script/Engine.SoundBase"));
+      if (SoundClass) Filter.ClassPaths.Add(SoundClass->GetClassPathName());
+    }
+    // If no predicate type or unknown, search all assets
+
+    // Get package paths
+    FString PackagePath;
+    if (Payload->TryGetStringField(TEXT("packagePath"), PackagePath) && !PackagePath.IsEmpty()) {
+      if (PackagePath.StartsWith(TEXT("/Content"))) {
+        PackagePath = FString::Printf(TEXT("/Game%s"), *PackagePath.RightChop(8));
+      }
+      Filter.PackagePaths.Add(FName(*PackagePath));
+    } else {
+      Filter.PackagePaths.Add(FName(TEXT("/Game")));
+    }
+    Filter.bRecursivePaths = true;
+    Filter.bRecursiveClasses = true;
+
+    // Get name filter
+    FString NameFilter;
+    Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
+
+    // Get assets
+    TArray<FAssetData> AssetDataList;
+    AssetRegistry.GetAssets(Filter, AssetDataList);
+
+    // Apply name filter if specified
+    if (!NameFilter.IsEmpty()) {
+      AssetDataList.RemoveAll([&NameFilter](const FAssetData& Data) {
+        return !Data.AssetName.ToString().Contains(NameFilter);
+      });
+    }
+
+    // Apply limit
+    int32 Limit = 100;
+    Payload->TryGetNumberField(TEXT("limit"), Limit);
+    if (Limit > 0 && AssetDataList.Num() > Limit) {
+      AssetDataList.SetNum(Limit);
+    }
+
+    // Build result
+    TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+    TArray<TSharedPtr<FJsonValue>> AssetsArray;
+
+    for (const FAssetData& AssetData : AssetDataList) {
+      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+      AssetObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+      AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+      AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.GetAssetName().ToString());
+      AssetObj->SetStringField(TEXT("package"), AssetData.PackageName.ToString());
+      AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+    }
+
+    ResultObj->SetBoolField(TEXT("success"), true);
+    ResultObj->SetStringField(TEXT("predicateType"), PredicateType);
+    ResultObj->SetArrayField(TEXT("assets"), AssetsArray);
+    ResultObj->SetNumberField(TEXT("count"), AssetsArray.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Found %d assets matching predicate"), AssetsArray.Num()), ResultObj);
+    return true;
+  }
+
   // If we reach here, the subAction was not recognized by this handler
-  // Return false to let other handlers try (or let the fallback error occur)
-  return false;
+  // Send an error instead of returning false to prevent fallthrough confusion
+  SendAutomationError(RequestingSocket, RequestId,
+                      FString::Printf(TEXT("Unknown manage_asset action: %s"), *LowerSubAction),
+                      TEXT("UNKNOWN_ACTION"));
+  return true;
 #else
   return false;
 #endif

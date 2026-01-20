@@ -194,11 +194,16 @@ export class AssetResources extends BaseTool implements IAssetResources {
     try {
       // Use the native C++ plugin's list action
       const normalizedDir = this.normalizeDir(dir);
-      const payload: Record<string, unknown> = { directory: normalizedDir, limit, recursive };
+      const payload: Record<string, unknown> = { 
+        directory: normalizedDir, 
+        limit, 
+        recursive,
+        subAction: 'list'  // Explicitly set subAction for C++ handler to read
+      };
       if (depth !== undefined) payload.depth = depth;
 
       const response = await this.sendAutomationRequest<AutomationResponse>(
-        'list',
+        'manage_asset',  // Use proper tool name
         payload,
         { timeoutMs: 30000 }
       );

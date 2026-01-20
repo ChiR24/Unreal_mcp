@@ -43,6 +43,12 @@
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
 #include "WorldPartition/DataLayer/WorldDataLayers.h"
 #include "WorldPartition/HLOD/HLODLayer.h"
+#if __has_include("Factories/HLODLayerFactory.h")
+#include "Factories/HLODLayerFactory.h"
+#define HAS_HLOD_LAYER_FACTORY 1
+#else
+#define HAS_HLOD_LAYER_FACTORY 0
+#endif
 #include "WorldPartition/HLOD/HLODActor.h"
 #include "Engine/LODActor.h"
 #include "LevelInstance/LevelInstanceActor.h"
@@ -628,16 +634,25 @@ static bool HandleConfigureGridSize(
     UWorldPartitionRuntimeHash* RuntimeHash = WorldPartition->RuntimeHash;
     if (!RuntimeHash)
     {
+        TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+        ErrorDetail->SetStringField(TEXT("reason"), TEXT("World Partition RuntimeHash is not initialized yet"));
+        ErrorDetail->SetStringField(TEXT("hint"), TEXT("Open the World Partition settings in the World Settings panel and configure the Runtime Hash type"));
+        ErrorDetail->SetStringField(TEXT("action"), TEXT("In World Settings -> World Partition -> Runtime Settings, set Runtime Hash to 'RuntimeSpatialHash'"));
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition RuntimeHash not available"), nullptr);
+            TEXT("World Partition RuntimeHash not available. Configure it in World Settings."), ErrorDetail);
         return true;
     }
 
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
     if (!SpatialHash)
     {
+        FString RuntimeHashType = RuntimeHash->GetClass()->GetName();
+        TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+        ErrorDetail->SetStringField(TEXT("currentHashType"), RuntimeHashType);
+        ErrorDetail->SetStringField(TEXT("requiredType"), TEXT("WorldPartitionRuntimeSpatialHash"));
+        ErrorDetail->SetStringField(TEXT("hint"), TEXT("Grid configuration requires RuntimeSpatialHash. This level uses a different hash type."));
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not using RuntimeSpatialHash. Grid configuration not applicable."), nullptr);
+            FString::Printf(TEXT("World Partition uses %s, not RuntimeSpatialHash. Grid configuration not applicable."), *RuntimeHashType), ErrorDetail);
         return true;
     }
 
@@ -1625,6 +1640,15 @@ static bool HandleAddLevelBlueprintNode(
         return true;
     }
 
+    // Check if the level is saved (unsaved levels cannot have Level Blueprints)
+    FString LevelPackageName = World->GetOutermost()->GetName();
+    if (LevelPackageName.IsEmpty() || LevelPackageName.StartsWith(TEXT("/Temp/")) || LevelPackageName.Contains(TEXT("Untitled")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Level Blueprint unavailable for unsaved levels. Please save the level first."), nullptr);
+        return true;
+    }
+
     ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(true);
     if (!LevelBP)
     {
@@ -1748,6 +1772,15 @@ static bool HandleConnectLevelBlueprintNodes(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("No editor world available"), nullptr);
+        return true;
+    }
+
+    // Check if the level is saved (unsaved levels cannot have Level Blueprints)
+    FString LevelPackageName = World->GetOutermost()->GetName();
+    if (LevelPackageName.IsEmpty() || LevelPackageName.StartsWith(TEXT("/Temp/")) || LevelPackageName.Contains(TEXT("Untitled")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Level Blueprint unavailable for unsaved levels. Please save the level first."), nullptr);
         return true;
     }
 
@@ -2144,6 +2177,347 @@ static bool HandleGetLevelStructureInfo(
     return true;
 }
 
+// ============================================================================
+// Streaming Level Status & Async Handlers (4 actions)
+// ============================================================================
+
+static bool HandleGetStreamingLevelsStatus(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    UWorld* World = GetActiveWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr);
+        return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> LevelsArray;
+    const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
+    
+    for (const ULevelStreaming* StreamingLevel : StreamingLevels)
+    {
+        if (!StreamingLevel) continue;
+        
+        TSharedPtr<FJsonObject> LevelJson = MakeShared<FJsonObject>();
+        LevelJson->SetStringField(TEXT("name"), StreamingLevel->GetWorldAssetPackageFName().ToString());
+        LevelJson->SetStringField(TEXT("packageName"), StreamingLevel->GetWorldAssetPackageName());
+        LevelJson->SetBoolField(TEXT("isLoaded"), StreamingLevel->IsLevelLoaded());
+        LevelJson->SetBoolField(TEXT("isVisible"), StreamingLevel->IsLevelVisible());
+        LevelJson->SetBoolField(TEXT("isPending"), StreamingLevel->IsStreamingStatePending());
+        LevelJson->SetBoolField(TEXT("shouldBeLoaded"), StreamingLevel->ShouldBeLoaded());
+        LevelJson->SetBoolField(TEXT("shouldBeVisible"), StreamingLevel->ShouldBeVisible());
+        
+        // Get streaming state as string
+        FString StateStr;
+        if (StreamingLevel->IsStreamingStatePending())
+        {
+            StateStr = TEXT("Pending");
+        }
+        else if (StreamingLevel->IsLevelLoaded())
+        {
+            StateStr = StreamingLevel->IsLevelVisible() ? TEXT("LoadedVisible") : TEXT("LoadedHidden");
+        }
+        else
+        {
+            StateStr = TEXT("Unloaded");
+        }
+        LevelJson->SetStringField(TEXT("state"), StateStr);
+        
+        // Get level transform if available
+        FTransform LevelTransform = StreamingLevel->LevelTransform;
+        TSharedPtr<FJsonObject> TransformJson = MakeShared<FJsonObject>();
+        TransformJson->SetNumberField(TEXT("x"), LevelTransform.GetLocation().X);
+        TransformJson->SetNumberField(TEXT("y"), LevelTransform.GetLocation().Y);
+        TransformJson->SetNumberField(TEXT("z"), LevelTransform.GetLocation().Z);
+        LevelJson->SetObjectField(TEXT("transform"), TransformJson);
+        
+        LevelsArray.Add(MakeShareable(new FJsonValueObject(LevelJson)));
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetArrayField(TEXT("streamingLevels"), LevelsArray);
+    ResponseJson->SetNumberField(TEXT("count"), LevelsArray.Num());
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Retrieved status for %d streaming levels"), LevelsArray.Num()), ResponseJson);
+    return true;
+}
+
+static bool HandleStreamLevelAsync(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace LevelStructureHelpers;
+    
+    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
+    FString Operation = GetJsonStringField(Payload, TEXT("operation"), TEXT("load")); // load, unload, show, hide
+    bool bMakeVisibleAfterLoad = GetJsonBoolField(Payload, TEXT("makeVisible"), true);
+    bool bShouldBlockOnLoad = GetJsonBoolField(Payload, TEXT("blockOnLoad"), false);
+    
+    if (LevelName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("levelName is required"), nullptr);
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr);
+        return true;
+    }
+
+    // Find the streaming level
+    ULevelStreaming* TargetLevel = nullptr;
+    for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
+    {
+        if (StreamingLevel && 
+            (StreamingLevel->GetWorldAssetPackageFName().ToString().Contains(LevelName) ||
+             StreamingLevel->GetWorldAssetPackageName().Contains(LevelName)))
+        {
+            TargetLevel = StreamingLevel;
+            break;
+        }
+    }
+
+    if (!TargetLevel)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr);
+        return true;
+    }
+
+    FString ResultMessage;
+    Operation = Operation.ToLower();
+    
+    if (Operation == TEXT("load"))
+    {
+        TargetLevel->SetShouldBeLoaded(true);
+        TargetLevel->SetShouldBeVisible(bMakeVisibleAfterLoad);
+        ResultMessage = FString::Printf(TEXT("Requested load for level: %s"), *LevelName);
+    }
+    else if (Operation == TEXT("unload"))
+    {
+        TargetLevel->SetShouldBeLoaded(false);
+        TargetLevel->SetShouldBeVisible(false);
+        ResultMessage = FString::Printf(TEXT("Requested unload for level: %s"), *LevelName);
+    }
+    else if (Operation == TEXT("show"))
+    {
+        TargetLevel->SetShouldBeVisible(true);
+        ResultMessage = FString::Printf(TEXT("Requested show for level: %s"), *LevelName);
+    }
+    else if (Operation == TEXT("hide"))
+    {
+        TargetLevel->SetShouldBeVisible(false);
+        ResultMessage = FString::Printf(TEXT("Requested hide for level: %s"), *LevelName);
+    }
+    else
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Unknown operation: %s (use load, unload, show, hide)"), *Operation), nullptr);
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("levelName"), LevelName);
+    ResponseJson->SetStringField(TEXT("operation"), Operation);
+    ResponseJson->SetBoolField(TEXT("isPending"), TargetLevel->IsStreamingStatePending());
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, ResultMessage, ResponseJson);
+    return true;
+}
+
+static bool HandleConfigureHlodSettings(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace LevelStructureHelpers;
+    
+    // Accept both hlodLayerPath and hlodLayerName for compatibility
+    FString HlodLayerPath = GetJsonStringField(Payload, TEXT("hlodLayerPath"), TEXT(""));
+    if (HlodLayerPath.IsEmpty())
+    {
+        HlodLayerPath = GetJsonStringField(Payload, TEXT("hlodLayerName"), TEXT(""));
+    }
+    
+    FString LayerTypeStr = GetJsonStringField(Payload, TEXT("layerType"), TEXT(""));
+    int32 CellSize = GetJsonIntField(Payload, TEXT("cellSize"), -1);
+    
+    // Accept both loadingRange and loadingDistance for compatibility
+    int32 LoadingRange = GetJsonIntField(Payload, TEXT("loadingRange"), -1);
+    if (LoadingRange < 0)
+    {
+        LoadingRange = GetJsonIntField(Payload, TEXT("loadingDistance"), -1);
+    }
+    
+    bool bSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("spatiallyLoaded"), true);
+    
+    if (HlodLayerPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("hlodLayerPath or hlodLayerName is required"), nullptr);
+        return true;
+    }
+
+    // Load or find the HLOD layer asset
+    UHLODLayer* HlodLayer = LoadObject<UHLODLayer>(nullptr, *HlodLayerPath);
+    if (!HlodLayer)
+    {
+        // Try to create a new one
+        IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+        
+        FString PackagePath = FPaths::GetPath(HlodLayerPath);
+        FString AssetName = FPaths::GetBaseFilename(HlodLayerPath);
+        
+#if HAS_HLOD_LAYER_FACTORY
+        UHLODLayerFactory* Factory = NewObject<UHLODLayerFactory>();
+        UObject* NewAsset = AssetTools.CreateAsset(AssetName, PackagePath, UHLODLayer::StaticClass(), Factory);
+#else
+        // Fallback without factory - use null factory which uses default
+        UObject* NewAsset = AssetTools.CreateAsset(AssetName, PackagePath, UHLODLayer::StaticClass(), nullptr);
+#endif
+        HlodLayer = Cast<UHLODLayer>(NewAsset);
+        
+        if (!HlodLayer)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Failed to create or load HLOD layer: %s"), *HlodLayerPath), nullptr);
+            return true;
+        }
+    }
+
+    // Apply settings
+    if (!LayerTypeStr.IsEmpty())
+    {
+        EHLODLayerType LayerType = EHLODLayerType::MeshMerge;
+        if (LayerTypeStr.Equals(TEXT("Instancing"), ESearchCase::IgnoreCase))
+            LayerType = EHLODLayerType::Instancing;
+        else if (LayerTypeStr.Equals(TEXT("MeshMerge"), ESearchCase::IgnoreCase))
+            LayerType = EHLODLayerType::MeshMerge;
+        else if (LayerTypeStr.Equals(TEXT("MeshSimplify"), ESearchCase::IgnoreCase))
+            LayerType = EHLODLayerType::MeshSimplify;
+        else if (LayerTypeStr.Equals(TEXT("MeshApproximate"), ESearchCase::IgnoreCase))
+            LayerType = EHLODLayerType::MeshApproximate;
+        else if (LayerTypeStr.Equals(TEXT("Custom"), ESearchCase::IgnoreCase))
+            LayerType = EHLODLayerType::Custom;
+        
+        HlodLayer->SetLayerType(LayerType);
+    }
+
+    // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded may be deprecated
+    // These streaming grid properties are now specified in the partition's settings in UE 5.7+
+    // The properties exist but setters were removed - use deprecation warning suppression
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    // In UE 5.7, these are deprecated - the streaming grid properties should be set in partition settings
+    // For now, just set the spatially loaded flag which still has a setter
+    HlodLayer->SetIsSpatiallyLoaded(bSpatiallyLoaded);
+    // Note: CellSize and LoadingRange cannot be set via API in UE 5.7 - they're read-only
+    // The user should configure these in the World Partition settings instead
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#else
+    if (CellSize > 0)
+    {
+        HlodLayer->SetCellSize(CellSize);
+    }
+    if (LoadingRange > 0)
+    {
+        HlodLayer->SetLoadingRange(LoadingRange);
+    }
+    HlodLayer->SetIsSpatiallyLoaded(bSpatiallyLoaded);
+#endif
+
+    // Save the asset
+    McpSafeAssetSave(HlodLayer);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("hlodLayerPath"), HlodLayerPath);
+    ResponseJson->SetStringField(TEXT("layerType"), LayerTypeStr.IsEmpty() ? TEXT("unchanged") : LayerTypeStr);
+    ResponseJson->SetBoolField(TEXT("spatiallyLoaded"), bSpatiallyLoaded);
+    if (CellSize > 0) ResponseJson->SetNumberField(TEXT("cellSize"), CellSize);
+    if (LoadingRange > 0) ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Configured HLOD layer: %s"), *HlodLayerPath), ResponseJson);
+    return true;
+}
+
+static bool HandleBuildHlodForLevel(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace LevelStructureHelpers;
+    
+    bool bForceRebuild = GetJsonBoolField(Payload, TEXT("forceRebuild"), false);
+    
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr);
+        return true;
+    }
+
+    // Check if World Partition is enabled
+    UWorldPartition* WorldPartition = World->GetWorldPartition();
+    if (!WorldPartition)
+    {
+        // Try legacy HLOD build for non-World Partition levels
+        // In UE5, we use console commands for HLOD building
+        if (GEditor)
+        {
+            GEditor->Exec(World, TEXT("HLODCmd BuildAll"));
+            
+            TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+            ResponseJson->SetStringField(TEXT("buildType"), TEXT("legacy"));
+            ResponseJson->SetBoolField(TEXT("forceRebuild"), bForceRebuild);
+            
+            Subsystem->SendAutomationResponse(Socket, RequestId, true,
+                TEXT("Initiated legacy HLOD build via console command"), ResponseJson);
+            return true;
+        }
+        
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No World Partition and no editor available for legacy HLOD build"), nullptr);
+        return true;
+    }
+
+    // For World Partition, we need to trigger HLOD generation
+    // This is typically done through the World Partition editor subsystem
+    if (GEditor)
+    {
+        // Execute World Partition HLOD build command
+        FString Command = bForceRebuild ? TEXT("wp.Runtime.HLOD RebuildAll") : TEXT("wp.Runtime.HLOD Build");
+        GEditor->Exec(World, *Command);
+        
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        ResponseJson->SetStringField(TEXT("buildType"), TEXT("world_partition"));
+        ResponseJson->SetBoolField(TEXT("forceRebuild"), bForceRebuild);
+        ResponseJson->SetStringField(TEXT("command"), Command);
+        
+        Subsystem->SendAutomationResponse(Socket, RequestId, true,
+            TEXT("Initiated World Partition HLOD build"), ResponseJson);
+        return true;
+    }
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("Editor not available for HLOD build"), nullptr);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -2264,6 +2638,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     else if (SubAction == TEXT("get_level_structure_info"))
     {
         bHandled = HandleGetLevelStructureInfo(this, RequestId, Payload, Socket);
+    }
+    // Streaming Level Status & Async Handlers
+    else if (SubAction == TEXT("get_streaming_levels_status"))
+    {
+        bHandled = HandleGetStreamingLevelsStatus(this, RequestId, Payload, Socket);
+    }
+    else if (SubAction == TEXT("stream_level_async"))
+    {
+        bHandled = HandleStreamLevelAsync(this, RequestId, Payload, Socket);
+    }
+    else if (SubAction == TEXT("configure_hlod_settings"))
+    {
+        bHandled = HandleConfigureHlodSettings(this, RequestId, Payload, Socket);
+    }
+    else if (SubAction == TEXT("build_hlod_for_level"))
+    {
+        bHandled = HandleBuildHlodForLevel(this, RequestId, Payload, Socket);
     }
     else
     {

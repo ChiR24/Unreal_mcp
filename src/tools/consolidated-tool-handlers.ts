@@ -140,6 +140,39 @@ function isNiagaraGraphAction(action: string): boolean {
   );
 }
 
+// Map bp_* prefixed actions (from manage_asset tests) to blueprint graph actions
+const BLUEPRINT_GRAPH_ACTION_MAP: Record<string, string> = {
+  bp_delete_node: 'delete_node',
+  bp_break_pin_links: 'break_pin_links',
+  bp_set_node_property: 'set_node_property',
+  bp_set_pin_default_value: 'set_pin_default_value',
+  bp_add_node: 'create_node',
+  bp_create_node: 'create_node',
+  bp_connect_pins: 'connect_pins',
+  bp_get_node_details: 'get_node_details',
+  bp_get_graph_details: 'get_graph_details',
+  bp_get_pin_details: 'get_pin_details',
+};
+
+// Map bp_* prefixed actions that go to manage_blueprint (not graph actions)
+const BLUEPRINT_ACTION_MAP: Record<string, string> = {
+  bp_add_macro: 'add_macro',
+  bp_add_custom_event: 'add_custom_event',
+  bp_set_replication_settings: 'set_replication_settings',
+  bp_bind_event: 'bind_event',
+  bp_implement_interface: 'implement_interface',
+  bp_add_event_dispatcher: 'add_event_dispatcher',
+  bp_create_widget_binding: 'create_widget_binding',
+};
+
+function isBlueprintAction(action: string): boolean {
+  return Object.prototype.hasOwnProperty.call(BLUEPRINT_ACTION_MAP, action);
+}
+
+function isBlueprintGraphAction(action: string): boolean {
+  return Object.prototype.hasOwnProperty.call(BLUEPRINT_GRAPH_ACTION_MAP, action);
+}
+
 function normalizeToolCall(
   name: string,
   args: Record<string, unknown>
@@ -198,6 +231,16 @@ function registerDefaultHandlers() {
     if (isBehaviorTreeGraphAction(action)) {
       const subAction = BEHAVIOR_TREE_ACTION_MAP[action] || action;
       return await handleGraphTools('manage_behavior_tree', subAction, args, tools);
+    }
+    // Route bp_* prefixed actions (from tests) to blueprint graph
+    if (isBlueprintGraphAction(action)) {
+      const subAction = BLUEPRINT_GRAPH_ACTION_MAP[action] || action;
+      return await handleGraphTools('manage_blueprint_graph', subAction, args, tools);
+    }
+    // Route bp_* prefixed actions (from tests) to blueprint handler (non-graph actions)
+    if (isBlueprintAction(action)) {
+      const subAction = BLUEPRINT_ACTION_MAP[action] || action;
+      return await handleBlueprintTools(subAction, args, tools);
     }
     return await handleAssetTools(action, args, tools);
   });

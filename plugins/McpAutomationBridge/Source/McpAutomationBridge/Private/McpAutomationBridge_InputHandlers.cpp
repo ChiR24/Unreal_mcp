@@ -44,10 +44,27 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Payload->TryGetStringField(TEXT("name"), Name);
     FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
+    
+    // Fallback: accept assetPath and split into name/path
+    if (Name.IsEmpty() || Path.IsEmpty()) {
+      FString AssetPath;
+      Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+      if (!AssetPath.IsEmpty()) {
+        // Split assetPath into path and name
+        int32 LastSlash;
+        if (AssetPath.FindLastChar('/', LastSlash)) {
+          Path = AssetPath.Left(LastSlash);
+          Name = AssetPath.Mid(LastSlash + 1);
+        } else {
+          Name = AssetPath;
+          Path = TEXT("/Game/Input");
+        }
+      }
+    }
 
     if (Name.IsEmpty() || Path.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Name and path are required."),
+                          TEXT("name and path (or assetPath) are required."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -89,10 +106,29 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Payload->TryGetStringField(TEXT("name"), Name);
     FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
+    
+    // Fallback: accept assetPath/contextPath and split into name/path
+    if (Name.IsEmpty() || Path.IsEmpty()) {
+      FString AssetPath;
+      Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+      if (AssetPath.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("contextPath"), AssetPath);
+      }
+      if (!AssetPath.IsEmpty()) {
+        int32 LastSlash;
+        if (AssetPath.FindLastChar('/', LastSlash)) {
+          Path = AssetPath.Left(LastSlash);
+          Name = AssetPath.Mid(LastSlash + 1);
+        } else {
+          Name = AssetPath;
+          Path = TEXT("/Game/Input");
+        }
+      }
+    }
 
     if (Name.IsEmpty() || Path.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Name and path are required."),
+                          TEXT("name and path (or assetPath) are required."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }

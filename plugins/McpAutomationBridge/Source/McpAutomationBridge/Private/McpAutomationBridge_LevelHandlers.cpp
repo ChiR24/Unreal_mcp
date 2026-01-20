@@ -13,6 +13,7 @@
 #include "FileHelpers.h"
 #include "LevelEditor.h"
 #include "RenderingThread.h"
+#include "Exporters/Exporter.h"
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -287,7 +288,25 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    bool bSaved = FEditorFileUtils::SaveCurrentLevel();
+    // Check if this is an unsaved/temporary level first
+    FString PackageName = World->GetOutermost()->GetName();
+    if (PackageName.Contains(TEXT("Untitled")) || PackageName.StartsWith(TEXT("/Temp/"))) {
+      TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+      ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
+      ErrorDetail->SetStringField(TEXT("reason"), TEXT("Level is unsaved/temporary. Use save_level_as with a path first."));
+      ErrorDetail->SetStringField(TEXT("hint"), TEXT("Use manage_level with action='save_as' and provide savePath"));
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Cannot save unsaved level - use save_as first"), ErrorDetail, TEXT("SAVE_FAILED"));
+      return true;
+    }
+
+    // Force cleanup before save to prevent deadlocks
+    FlushRenderingCommands();
+    GEditor->ForceGarbageCollection(true);
+    FlushRenderingCommands();
+
+    // Use McpSafeAssetSave which handles dialogs silently
+    bool bSaved = McpSafeAssetSave(World);
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("levelPath"), World->GetOutermost()->GetName());
@@ -296,21 +315,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else {
       // Provide detailed error information
       TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
-      FString PackageName = World->GetOutermost()->GetName();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
 
       FString Filename;
       FString ErrorReason = TEXT("Unknown save failure");
 
-      if (PackageName.Contains(TEXT("Untitled")) ||
-          PackageName.StartsWith(TEXT("/Temp/"))) {
-        ErrorReason = TEXT(
-            "Level is unsaved/temporary. Use save_level_as with a path first.");
-        ErrorDetail->SetStringField(
-            TEXT("hint"),
-            TEXT(
-                "Use manage_level with action='save_as' and provide savePath"));
-      } else if (FPackageName::TryConvertLongPackageNameToFilename(
+      if (FPackageName::TryConvertLongPackageNameToFilename(
                      PackageName, Filename,
                      FPackageName::GetMapPackageExtension())) {
         if (IFileManager::Get().IsReadOnly(*Filename)) {
@@ -688,16 +698,51 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // Ensure directory
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(ExportPath), true);
 
-    // FEditorFileUtils::ExportMap(WorldToExport, ExportPath); // Legacy/Removed
-    // Use SaveMap for .umap or FEditorFileUtils::SaveLevel
-    bool bSaved = FEditorFileUtils::SaveMap(WorldToExport, ExportPath);
+    // Determine export format based on path
+    bool bSaved = false;
+    FString ExportMethod;
+
+    // Check if it's a package path (starts with / but not a drive letter)
+    if (ExportPath.StartsWith(TEXT("/Game/")) || (ExportPath.StartsWith(TEXT("/")) && !ExportPath.Contains(TEXT(":"))))
+    {
+      // Package path export - use SaveMap
+      bSaved = FEditorFileUtils::SaveMap(WorldToExport, ExportPath);
+      ExportMethod = TEXT("Package SaveMap");
+    }
+    else
+    {
+      // For file system paths, use SaveMap with a temp package path then copy
+      // Generate a temp package path based on level name
+      FString LevelName = WorldToExport->GetMapName();
+      FString TempPackagePath = FString::Printf(TEXT("/Game/_Temp/%s_Export"), *LevelName);
+      
+      if (FEditorFileUtils::SaveMap(WorldToExport, TempPackagePath))
+      {
+        // Find the saved .umap file and copy to destination
+        FString TempFilePath = FPackageName::LongPackageNameToFilename(TempPackagePath, TEXT(".umap"));
+        if (FPaths::FileExists(TempFilePath))
+        {
+          bSaved = IFileManager::Get().Copy(*ExportPath, *TempFilePath) == COPY_OK;
+          // Clean up temp file
+          IFileManager::Get().Delete(*TempFilePath);
+        }
+        ExportMethod = TEXT("File system copy via SaveMap");
+      }
+      else
+      {
+        ExportMethod = TEXT("SaveMap failed");
+      }
+    }
 
     if (bSaved) {
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetStringField(TEXT("exportPath"), ExportPath);
+      Resp->SetStringField(TEXT("method"), ExportMethod);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Level exported"), nullptr);
+                             TEXT("Level exported"), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to export level - SaveMap returned false"),
+                          TEXT("Failed to export level - export returned false"),
                           TEXT("EXPORT_FAILED"));
     }
     return true;

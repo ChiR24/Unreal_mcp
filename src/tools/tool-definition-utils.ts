@@ -195,23 +195,23 @@ export const commonSchemas = {
   },
   outputWithPath: {
     success: { type: 'boolean' },
-    message: { type: 'string' },
-    error: { type: 'string' },
-    path: { type: 'string' },
-    assetPath: { type: 'string' }
+    message: { type: ['string', 'null'] },
+    error: { type: ['string', 'null'] },
+    path: { type: ['string', 'null'] },
+    assetPath: { type: ['string', 'null'] }
   },
   outputWithActor: {
     success: { type: 'boolean' },
-    message: { type: 'string' },
-    error: { type: 'string' },
-    actor: { type: 'string' },
-    actorPath: { type: 'string' }
+    message: { type: ['string', 'null'] },
+    error: { type: ['string', 'null'] },
+    actor: { type: ['string', 'object', 'null'] },
+    actorPath: { type: ['string', 'null'] }
   },
   outputWithNodeId: {
     success: { type: 'boolean' },
-    message: { type: 'string' },
-    error: { type: 'string' },
-    nodeId: { type: 'string' }
+    message: { type: ['string', 'null'] },
+    error: { type: ['string', 'null'] },
+    nodeId: { type: ['string', 'null'] }
   },
 
   // ============================================

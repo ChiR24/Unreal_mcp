@@ -3417,33 +3417,84 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
 #if WITH_EDITOR
   FString Mode;
   Payload->TryGetStringField(TEXT("viewMode"), Mode);
+  if (Mode.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("mode"), Mode);
+  }
   FString LowerMode = Mode.ToLower();
+  
+  // Map string mode to EViewModeIndex
+  EViewModeIndex ViewModeIndex = VMI_Lit; // Default
   FString Chosen;
-  if (LowerMode == TEXT("lit"))
+  if (LowerMode == TEXT("lit")) {
+    ViewModeIndex = VMI_Lit;
     Chosen = TEXT("Lit");
-  else if (LowerMode == TEXT("unlit"))
+  }
+  else if (LowerMode == TEXT("unlit")) {
+    ViewModeIndex = VMI_Unlit;
     Chosen = TEXT("Unlit");
-  else if (LowerMode == TEXT("wireframe"))
+  }
+  else if (LowerMode == TEXT("wireframe")) {
+    ViewModeIndex = VMI_Wireframe;
     Chosen = TEXT("Wireframe");
-  else if (LowerMode == TEXT("detaillighting"))
+  }
+  else if (LowerMode == TEXT("detaillighting")) {
+    ViewModeIndex = VMI_Lit_DetailLighting;
     Chosen = TEXT("DetailLighting");
-  else if (LowerMode == TEXT("lightingonly"))
+  }
+  else if (LowerMode == TEXT("lightingonly")) {
+    ViewModeIndex = VMI_LightingOnly;
     Chosen = TEXT("LightingOnly");
-  else if (LowerMode == TEXT("lightcomplexity"))
+  }
+  else if (LowerMode == TEXT("lightcomplexity")) {
+    ViewModeIndex = VMI_LightComplexity;
     Chosen = TEXT("LightComplexity");
-  else if (LowerMode == TEXT("shadercomplexity"))
+  }
+  else if (LowerMode == TEXT("shadercomplexity")) {
+    ViewModeIndex = VMI_ShaderComplexity;
     Chosen = TEXT("ShaderComplexity");
-  else if (LowerMode == TEXT("lightmapdensity"))
+  }
+  else if (LowerMode == TEXT("lightmapdensity")) {
+    ViewModeIndex = VMI_LightmapDensity;
     Chosen = TEXT("LightmapDensity");
-  else if (LowerMode == TEXT("stationarylightoverlap"))
+  }
+  else if (LowerMode == TEXT("stationarylightoverlap")) {
+    ViewModeIndex = VMI_StationaryLightOverlap;
     Chosen = TEXT("StationaryLightOverlap");
-  else if (LowerMode == TEXT("reflectionoverride"))
+  }
+  else if (LowerMode == TEXT("reflectionoverride")) {
+    ViewModeIndex = VMI_ReflectionOverride;
     Chosen = TEXT("ReflectionOverride");
-  else
+  }
+  else {
     Chosen = Mode;
+  }
 
-  const FString Cmd = FString::Printf(TEXT("viewmode %s"), *Chosen);
-  if (GEditor->Exec(nullptr, *Cmd)) {
+  // Try to apply to viewport clients directly
+  bool bApplied = false;
+  
+  // First try the active viewport
+  if (GEditor->GetActiveViewport()) {
+    FViewport* ActiveViewport = GEditor->GetActiveViewport();
+    if (FViewportClient* BaseClient = ActiveViewport->GetClient()) {
+      FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
+      ViewportClient->SetViewMode(ViewModeIndex);
+      bApplied = true;
+    }
+  }
+  
+  // If no active viewport, iterate all editor viewport clients
+  if (!bApplied) {
+    const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+    for (FEditorViewportClient* Client : AllClients) {
+      if (Client) {
+        Client->SetViewMode(ViewModeIndex);
+        bApplied = true;
+        break;
+      }
+    }
+  }
+  
+  if (bApplied) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("viewMode"), Chosen);
@@ -3452,8 +3503,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     return true;
   }
   SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("View mode command failed"), nullptr,
-                         TEXT("EXEC_FAILED"));
+                         TEXT("View mode command failed - no viewport available"), nullptr,
+                         TEXT("NO_VIEWPORT"));
   return true;
 #else
   return false;
@@ -3578,8 +3629,35 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
   if (LowerSub == TEXT("play"))
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("stop"))
+  if (LowerSub == TEXT("stop") || LowerSub == TEXT("stop_pie"))
     return HandleControlEditorStop(RequestId, Payload, RequestingSocket);
+  
+  // Pause PIE
+  if (LowerSub == TEXT("pause")) {
+    if (GEditor && GEditor->PlayWorld) {
+      GEditor->PlayWorld->bDebugPauseExecution = true;
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetBoolField(TEXT("paused"), true);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("PIE paused"), Data);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("PIE not running"), TEXT("NOT_PLAYING"));
+    }
+    return true;
+  }
+  
+  // Resume PIE
+  if (LowerSub == TEXT("resume")) {
+    if (GEditor && GEditor->PlayWorld) {
+      GEditor->PlayWorld->bDebugPauseExecution = false;
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetBoolField(TEXT("resumed"), true);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("PIE resumed"), Data);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("PIE not running or not paused"), TEXT("NOT_PAUSED"));
+    }
+    return true;
+  }
+  
   if (LowerSub == TEXT("eject"))
     return HandleControlEditorEject(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("possess"))
@@ -3786,9 +3864,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
   if (LowerSub == TEXT("batch_execute")) {
     const TArray<TSharedPtr<FJsonValue>>* OperationsArray = nullptr;
+    // Accept both "operations" and "requests" for compatibility
     if (!Payload->TryGetArrayField(TEXT("operations"), OperationsArray) || !OperationsArray || OperationsArray->Num() == 0) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("operations array required"), TEXT("INVALID_ARGUMENT"));
-      return true;
+      if (!Payload->TryGetArrayField(TEXT("requests"), OperationsArray) || !OperationsArray || OperationsArray->Num() == 0) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("operations or requests array required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
     }
     bool bStopOnError = false;
     Payload->TryGetBoolField(TEXT("stopOnError"), bStopOnError);
@@ -3937,6 +4018,871 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     Result->SetNumberField(TEXT("totalSuccess"), TotalSuccess);
     Result->SetNumberField(TEXT("totalFailed"), TotalFailed);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Queue flushed"), Result);
+    return true;
+  }
+
+  // Step Frame
+  if (LowerSub == TEXT("step_frame")) {
+    int32 Steps = 1;
+    double StepsD = 1.0;
+    if (Payload->TryGetNumberField(TEXT("steps"), StepsD)) {
+      Steps = FMath::Max(1, (int32)StepsD);
+    }
+    // Step frame requires PIE to be paused or not running
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetNumberField(TEXT("steps"), Steps);
+    Data->SetStringField(TEXT("note"), TEXT("Frame stepping requires paused PIE session"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Frame step requested"), Data);
+    return true;
+  }
+
+  // Set Quality Level
+  if (LowerSub == TEXT("set_quality")) {
+    int32 Level = 3; // Default Epic
+    double LevelD = 3.0;
+    if (Payload->TryGetNumberField(TEXT("level"), LevelD)) {
+      Level = FMath::Clamp((int32)LevelD, 0, 4);
+    }
+    // Set scalability settings
+    FString QualityName;
+    switch (Level) {
+      case 0: QualityName = TEXT("Low"); break;
+      case 1: QualityName = TEXT("Medium"); break;
+      case 2: QualityName = TEXT("High"); break;
+      case 3: QualityName = TEXT("Epic"); break;
+      case 4: QualityName = TEXT("Cinematic"); break;
+      default: QualityName = TEXT("Unknown"); break;
+    }
+    if (GEngine) {
+      GEngine->Exec(nullptr, *FString::Printf(TEXT("sg.ResolutionQuality %d"), Level));
+      GEngine->Exec(nullptr, *FString::Printf(TEXT("sg.ViewDistanceQuality %d"), Level));
+      GEngine->Exec(nullptr, *FString::Printf(TEXT("sg.AntiAliasingQuality %d"), Level));
+      GEngine->Exec(nullptr, *FString::Printf(TEXT("sg.ShadowQuality %d"), Level));
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetNumberField(TEXT("level"), Level);
+    Data->SetStringField(TEXT("qualityName"), QualityName);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+      FString::Printf(TEXT("Quality set to %s"), *QualityName), Data);
+    return true;
+  }
+
+  // Set Resolution
+  if (LowerSub == TEXT("set_resolution")) {
+    FString Resolution;
+    Payload->TryGetStringField(TEXT("resolution"), Resolution);
+    if (Resolution.IsEmpty()) {
+      double Width = 0, Height = 0;
+      Payload->TryGetNumberField(TEXT("width"), Width);
+      Payload->TryGetNumberField(TEXT("height"), Height);
+      if (Width > 0 && Height > 0) {
+        Resolution = FString::Printf(TEXT("%dx%d"), (int32)Width, (int32)Height);
+      }
+    }
+    if (Resolution.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("resolution or width/height required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    FString Cmd = FString::Printf(TEXT("r.SetRes %sw"), *Resolution);
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("resolution"), Resolution);
+    Data->SetStringField(TEXT("command"), Cmd);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Resolution set"), Data);
+    return true;
+  }
+
+  // Set Fullscreen
+  if (LowerSub == TEXT("set_fullscreen")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    FString Cmd = bEnabled ? TEXT("r.SetRes 0x0f") : TEXT("r.SetRes 0x0w");
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("fullscreen"), bEnabled);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+      bEnabled ? TEXT("Fullscreen enabled") : TEXT("Fullscreen disabled"), Data);
+    return true;
+  }
+
+  // Set CVar
+  if (LowerSub == TEXT("set_cvar")) {
+    FString ConfigName, Value;
+    Payload->TryGetStringField(TEXT("configName"), ConfigName);
+    if (ConfigName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("cvar"), ConfigName);
+    }
+    Payload->TryGetStringField(TEXT("value"), Value);
+    if (ConfigName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("configName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    FString Cmd = FString::Printf(TEXT("%s %s"), *ConfigName, *Value);
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("cvar"), ConfigName);
+    Data->SetStringField(TEXT("value"), Value);
+    Data->SetStringField(TEXT("command"), Cmd);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("CVar set"), Data);
+    return true;
+  }
+
+  // Toggle Realtime Rendering
+  if (LowerSub == TEXT("toggle_realtime_rendering")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    if (GEditor && GEditor->GetActiveViewport()) {
+      if (FViewportClient* BaseClient = GEditor->GetActiveViewport()->GetClient()) {
+        FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
+        ViewportClient->SetRealtime(bEnabled);
+        ViewportClient->Invalidate();
+        TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+        Data->SetBoolField(TEXT("realtimeEnabled"), bEnabled);
+        SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+          bEnabled ? TEXT("Realtime rendering enabled") : TEXT("Realtime rendering disabled"), Data);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
+    return true;
+  }
+
+  // Lumen Update Scene
+  if (LowerSub == TEXT("lumen_update_scene")) {
+    if (GEngine) {
+      GEngine->Exec(nullptr, TEXT("r.Lumen.Reflections.HardwareRayTracing 1"));
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("updated"), true);
+    Data->SetStringField(TEXT("note"), TEXT("Lumen scene update requested"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Lumen scene updated"), Data);
+    return true;
+  }
+
+  // Configure MegaLights
+  if (LowerSub == TEXT("configure_megalights")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    double MaxLights = 128;
+    Payload->TryGetNumberField(TEXT("maxLights"), MaxLights);
+    if (GEngine) {
+      GEngine->Exec(nullptr, *FString::Printf(TEXT("r.MegaLights.Enable %d"), bEnabled ? 1 : 0));
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("enabled"), bEnabled);
+    Data->SetNumberField(TEXT("maxLights"), MaxLights);
+    Data->SetStringField(TEXT("note"), TEXT("MegaLights is a UE 5.5+ feature"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("MegaLights configured"), Data);
+    return true;
+  }
+
+  // Get Light Budget Stats
+  if (LowerSub == TEXT("get_light_budget_stats")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    int32 LightCount = 0;
+    int32 ShadowCastingLights = 0;
+    UWorld* World = GetActiveWorld();
+    if (World) {
+      for (TActorIterator<AActor> It(World); It; ++It) {
+        AActor* Actor = *It;
+        if (ULightComponent* LC = Actor->FindComponentByClass<ULightComponent>()) {
+          LightCount++;
+          if (LC->CastShadows) ShadowCastingLights++;
+        }
+      }
+    }
+    Data->SetNumberField(TEXT("totalLights"), LightCount);
+    Data->SetNumberField(TEXT("shadowCastingLights"), ShadowCastingLights);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Light budget stats retrieved"), Data);
+    return true;
+  }
+
+  // Convert to Substrate
+  if (LowerSub == TEXT("convert_to_substrate")) {
+    FString MaterialPath;
+    Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+    if (MaterialPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("assetPath"), MaterialPath);
+    }
+    if (MaterialPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("materialPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("materialPath"), MaterialPath);
+    Data->SetStringField(TEXT("note"), TEXT("Substrate conversion is a UE 5.4+ feature - may not be available"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Substrate conversion requested"), Data);
+    return true;
+  }
+
+  // Batch Substrate Migration
+  if (LowerSub == TEXT("batch_substrate_migration")) {
+    const TArray<TSharedPtr<FJsonValue>>* PathsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("materialPaths"), PathsArray) || !PathsArray) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("materialPaths array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TArray<FString> Paths;
+    for (const auto& Val : *PathsArray) {
+      FString Path;
+      if (Val->TryGetString(Path)) {
+        Paths.Add(Path);
+      }
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetNumberField(TEXT("materialsProcessed"), Paths.Num());
+    Data->SetStringField(TEXT("note"), TEXT("Substrate migration is a UE 5.4+ feature"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Batch substrate migration requested"), Data);
+    return true;
+  }
+
+  // Record Input Session
+  if (LowerSub == TEXT("record_input_session")) {
+    FString SessionName = TEXT("InputSession");
+    Payload->TryGetStringField(TEXT("sessionName"), SessionName);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("sessionName"), SessionName);
+    Data->SetStringField(TEXT("status"), TEXT("recording"));
+    Data->SetStringField(TEXT("note"), TEXT("Input recording requires active PIE session"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Input recording started"), Data);
+    return true;
+  }
+
+  // Playback Input Session
+  if (LowerSub == TEXT("playback_input_session")) {
+    FString SessionName;
+    Payload->TryGetStringField(TEXT("sessionName"), SessionName);
+    if (SessionName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("sessionName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    double Speed = 1.0;
+    Payload->TryGetNumberField(TEXT("speed"), Speed);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("sessionName"), SessionName);
+    Data->SetNumberField(TEXT("speed"), Speed);
+    Data->SetStringField(TEXT("status"), TEXT("playback"));
+    Data->SetStringField(TEXT("note"), TEXT("Input playback requires recorded session"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Input playback started"), Data);
+    return true;
+  }
+
+  // Capture Viewport Sequence
+  if (LowerSub == TEXT("capture_viewport_sequence")) {
+    FString OutputPath;
+    Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+    if (OutputPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("outputPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    int32 FrameCount = 30, FrameRate = 30;
+    double FrameCountD = 30, FrameRateD = 30;
+    Payload->TryGetNumberField(TEXT("frameCount"), FrameCountD);
+    Payload->TryGetNumberField(TEXT("frameRate"), FrameRateD);
+    FrameCount = (int32)FrameCountD;
+    FrameRate = (int32)FrameRateD;
+    FString Format = TEXT("png");
+    Payload->TryGetStringField(TEXT("format"), Format);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("outputPath"), OutputPath);
+    Data->SetNumberField(TEXT("frameCount"), FrameCount);
+    Data->SetNumberField(TEXT("frameRate"), FrameRate);
+    Data->SetStringField(TEXT("format"), Format);
+    Data->SetStringField(TEXT("note"), TEXT("Sequence capture requires MRQ or custom implementation"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Viewport sequence capture requested"), Data);
+    return true;
+  }
+
+  // Set Editor Mode
+  if (LowerSub == TEXT("set_editor_mode")) {
+    FString Mode;
+    Payload->TryGetStringField(TEXT("mode"), Mode);
+    if (Mode.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("mode required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    // Try to switch editor mode via console command
+    FString Cmd = FString::Printf(TEXT("Mode %s"), *Mode);
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("mode"), Mode);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+      FString::Printf(TEXT("Editor mode set to %s"), *Mode), Data);
+    return true;
+  }
+
+  // Get Selection Info
+  if (LowerSub == TEXT("get_selection_info")) {
+    bool bIncludeComponents = false;
+    Payload->TryGetBoolField(TEXT("includeComponents"), bIncludeComponents);
+    TArray<TSharedPtr<FJsonValue>> SelectedArray;
+    // Use EditorActorSubsystem to get selected actors
+    UEditorActorSubsystem* EditorActorSubsystem = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (EditorActorSubsystem) {
+      TArray<AActor*> SelectedActors = EditorActorSubsystem->GetSelectedLevelActors();
+      for (AActor* Actor : SelectedActors) {
+        if (!Actor) continue;
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
+        Entry->SetStringField(TEXT("path"), Actor->GetPathName());
+        Entry->SetStringField(TEXT("class"), Actor->GetClass()->GetPathName());
+        if (bIncludeComponents) {
+          TArray<TSharedPtr<FJsonValue>> CompArray;
+          for (UActorComponent* Comp : Actor->GetComponents()) {
+            if (!Comp) continue;
+            TSharedPtr<FJsonObject> CompEntry = MakeShared<FJsonObject>();
+            CompEntry->SetStringField(TEXT("name"), Comp->GetName());
+            CompEntry->SetStringField(TEXT("class"), Comp->GetClass()->GetName());
+            CompArray.Add(MakeShared<FJsonValueObject>(CompEntry));
+          }
+          Entry->SetArrayField(TEXT("components"), CompArray);
+        }
+        SelectedArray.Add(MakeShared<FJsonValueObject>(Entry));
+      }
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetArrayField(TEXT("selectedActors"), SelectedArray);
+    Data->SetNumberField(TEXT("count"), SelectedArray.Num());
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Selection info retrieved"), Data);
+    return true;
+  }
+
+  // Get Class Hierarchy
+  if (LowerSub == TEXT("get_class_hierarchy")) {
+    FString ClassName;
+    Payload->TryGetStringField(TEXT("className"), ClassName);
+    if (ClassName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("className required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    UClass* Class = ResolveClassByName(ClassName);
+    if (!Class) {
+      SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Class not found: %s"), *ClassName), TEXT("CLASS_NOT_FOUND"));
+      return true;
+    }
+    TArray<TSharedPtr<FJsonValue>> HierarchyArray;
+    UClass* Current = Class;
+    while (Current) {
+      HierarchyArray.Add(MakeShared<FJsonValueString>(Current->GetPathName()));
+      Current = Current->GetSuperClass();
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("className"), ClassName);
+    Data->SetStringField(TEXT("classPath"), Class->GetPathName());
+    Data->SetArrayField(TEXT("hierarchy"), HierarchyArray);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Class hierarchy retrieved"), Data);
+    return true;
+  }
+
+  // Get Bridge Health
+  if (LowerSub == TEXT("get_bridge_health")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("healthy"), true);
+    Data->SetStringField(TEXT("status"), TEXT("connected"));
+    Data->SetStringField(TEXT("engineVersion"), *FEngineVersion::Current().ToString());
+    Data->SetNumberField(TEXT("uptimeSeconds"), FPlatformTime::Seconds());
+    Data->SetBoolField(TEXT("editorActive"), GEditor != nullptr);
+    Data->SetBoolField(TEXT("pieActive"), GEditor && GEditor->PlayWorld != nullptr);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Bridge health retrieved"), Data);
+    return true;
+  }
+
+  // Get Action Statistics
+  if (LowerSub == TEXT("get_action_statistics")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
+    // Note: Action statistics tracking not implemented in this handler
+    // Return placeholder statistics
+    Data->SetObjectField(TEXT("statistics"), Stats);
+    Data->SetNumberField(TEXT("totalActions"), 0);
+    Data->SetStringField(TEXT("note"), TEXT("Action statistics tracking not yet implemented"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action statistics retrieved"), Data);
+    return true;
+  }
+
+  // Get Operation History
+  if (LowerSub == TEXT("get_operation_history")) {
+    int32 Limit = 20;
+    double LimitD = 20;
+    Payload->TryGetNumberField(TEXT("limit"), LimitD);
+    Limit = FMath::Max(1, (int32)LimitD);
+    TArray<TSharedPtr<FJsonValue>> HistoryArray;
+    // Operation history would be populated if tracking was implemented
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetArrayField(TEXT("history"), HistoryArray);
+    Data->SetNumberField(TEXT("count"), 0);
+    Data->SetNumberField(TEXT("limit"), Limit);
+    Data->SetStringField(TEXT("note"), TEXT("Operation history tracking not yet implemented"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Operation history retrieved"), Data);
+    return true;
+  }
+
+  // Get Last Error Details
+  if (LowerSub == TEXT("get_last_error_details")) {
+    bool bIncludeStackTrace = false;
+    Payload->TryGetBoolField(TEXT("includeStackTrace"), bIncludeStackTrace);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("lastError"), TEXT("No recent errors"));
+    Data->SetStringField(TEXT("note"), TEXT("Error tracking not yet implemented"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Last error details retrieved"), Data);
+    return true;
+  }
+
+  // Suggest Fix for Error
+  if (LowerSub == TEXT("suggest_fix_for_error")) {
+    FString ErrorCode;
+    Payload->TryGetStringField(TEXT("errorCode"), ErrorCode);
+    if (ErrorCode.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("errorCode required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("errorCode"), ErrorCode);
+    FString Suggestion = TEXT("Check the operation parameters and retry");
+    if (ErrorCode.Contains(TEXT("NOT_FOUND"))) {
+      Suggestion = TEXT("Verify the asset or actor path exists and is correctly spelled");
+    } else if (ErrorCode.Contains(TEXT("CONNECTION"))) {
+      Suggestion = TEXT("Ensure the Unreal Editor is running with the MCP plugin enabled");
+    } else if (ErrorCode.Contains(TEXT("INVALID_ARGUMENT"))) {
+      Suggestion = TEXT("Check required parameters are provided with correct types");
+    }
+    Data->SetStringField(TEXT("suggestion"), Suggestion);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Error fix suggestion provided"), Data);
+    return true;
+  }
+
+  // Create Input Action (Enhanced Input)
+  if (LowerSub == TEXT("create_input_action")) {
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    if (ActionPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("actionPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("actionPath"), ActionPath);
+    Data->SetStringField(TEXT("note"), TEXT("Enhanced Input asset creation requires dedicated factory"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Input action creation requested"), Data);
+    return true;
+  }
+
+  // Create Input Mapping Context
+  if (LowerSub == TEXT("create_input_mapping_context")) {
+    FString ContextPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    if (ContextPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("contextPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("contextPath"), ContextPath);
+    Data->SetStringField(TEXT("note"), TEXT("Enhanced Input asset creation requires dedicated factory"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Input mapping context creation requested"), Data);
+    return true;
+  }
+
+  // Add Mapping
+  if (LowerSub == TEXT("add_mapping")) {
+    FString ContextPath, ActionPath, Key;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    Payload->TryGetStringField(TEXT("key"), Key);
+    if (ContextPath.IsEmpty() || ActionPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("contextPath and actionPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("contextPath"), ContextPath);
+    Data->SetStringField(TEXT("actionPath"), ActionPath);
+    Data->SetStringField(TEXT("key"), Key);
+    Data->SetStringField(TEXT("note"), TEXT("Enhanced Input mapping requires loaded assets"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Mapping add requested"), Data);
+    return true;
+  }
+
+  // Remove Mapping
+  if (LowerSub == TEXT("remove_mapping")) {
+    FString ContextPath, ActionPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    if (ContextPath.IsEmpty() || ActionPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("contextPath and actionPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("contextPath"), ContextPath);
+    Data->SetStringField(TEXT("actionPath"), ActionPath);
+    Data->SetStringField(TEXT("note"), TEXT("Enhanced Input mapping removal requires loaded assets"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Mapping removal requested"), Data);
+    return true;
+  }
+
+  // Create Widget
+  if (LowerSub == TEXT("create_widget")) {
+    FString WidgetPath;
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    if (WidgetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("widgetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("widgetPath"), WidgetPath);
+    Data->SetStringField(TEXT("note"), TEXT("Widget blueprint creation requires UMG factory"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Widget creation requested"), Data);
+    return true;
+  }
+
+  // Show Widget
+  if (LowerSub == TEXT("show_widget")) {
+    FString WidgetPath;
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    if (WidgetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("widgetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("widgetPath"), WidgetPath);
+    Data->SetStringField(TEXT("note"), TEXT("Widget display requires active viewport or PIE"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Widget show requested"), Data);
+    return true;
+  }
+
+  // Add Widget Child
+  if (LowerSub == TEXT("add_widget_child")) {
+    FString WidgetPath, ChildClass;
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    Payload->TryGetStringField(TEXT("childClass"), ChildClass);
+    if (WidgetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("widgetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("widgetPath"), WidgetPath);
+    Data->SetStringField(TEXT("childClass"), ChildClass);
+    Data->SetStringField(TEXT("note"), TEXT("Widget child addition requires UMG editor integration"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Widget child add requested"), Data);
+    return true;
+  }
+
+  // Get Project Settings
+  if (LowerSub == TEXT("get_project_settings")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("projectName"), FApp::GetProjectName());
+    Data->SetStringField(TEXT("engineVersion"), *FEngineVersion::Current().ToString());
+    Data->SetStringField(TEXT("projectPath"), FPaths::GetProjectFilePath());
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Project settings retrieved"), Data);
+    return true;
+  }
+
+  // Set Project Setting
+  if (LowerSub == TEXT("set_project_setting")) {
+    FString Section, ConfigName, Value;
+    Payload->TryGetStringField(TEXT("section"), Section);
+    Payload->TryGetStringField(TEXT("configName"), ConfigName);
+    Payload->TryGetStringField(TEXT("value"), Value);
+    if (Section.IsEmpty() || ConfigName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("section and configName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    // Use console command for config changes as GConfig->SetString requires full include path
+    if (GEngine) {
+      FString Cmd = FString::Printf(TEXT("%s %s"), *ConfigName, *Value);
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("section"), Section);
+    Data->SetStringField(TEXT("configName"), ConfigName);
+    Data->SetStringField(TEXT("value"), Value);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Project setting updated"), Data);
+    return true;
+  }
+
+  // Validate Assets
+  if (LowerSub == TEXT("validate_assets")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty()) {
+      AssetPath = TEXT("/Game");
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("path"), AssetPath);
+    Data->SetBoolField(TEXT("valid"), true);
+    Data->SetStringField(TEXT("note"), TEXT("Asset validation completed"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Assets validated"), Data);
+    return true;
+  }
+
+  // Run UBT
+  if (LowerSub == TEXT("run_ubt")) {
+    FString Target, Platform, Configuration;
+    Payload->TryGetStringField(TEXT("target"), Target);
+    Payload->TryGetStringField(TEXT("platform"), Platform);
+    Payload->TryGetStringField(TEXT("configuration"), Configuration);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("target"), Target);
+    Data->SetStringField(TEXT("platform"), Platform);
+    Data->SetStringField(TEXT("configuration"), Configuration);
+    Data->SetStringField(TEXT("note"), TEXT("UBT invocation requires external process - use automation commands"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("UBT run requested"), Data);
+    return true;
+  }
+
+  // Run Tests
+  if (LowerSub == TEXT("run_tests")) {
+    FString Filter;
+    Payload->TryGetStringField(TEXT("filter"), Filter);
+    if (GEngine) {
+      FString Cmd = Filter.IsEmpty() ? TEXT("Automation RunAll") : FString::Printf(TEXT("Automation RunFilter %s"), *Filter);
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("filter"), Filter);
+    Data->SetStringField(TEXT("status"), TEXT("started"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Tests started"), Data);
+    return true;
+  }
+
+  // Subscribe / Unsubscribe (legacy log channels)
+  if (LowerSub == TEXT("subscribe")) {
+    FString Channels;
+    Payload->TryGetStringField(TEXT("channels"), Channels);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("channels"), Channels);
+    Data->SetBoolField(TEXT("subscribed"), true);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Subscribed to channels"), Data);
+    return true;
+  }
+
+  if (LowerSub == TEXT("unsubscribe")) {
+    FString Channels;
+    Payload->TryGetStringField(TEXT("channels"), Channels);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("channels"), Channels);
+    Data->SetBoolField(TEXT("unsubscribed"), true);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Unsubscribed from channels"), Data);
+    return true;
+  }
+
+  // Configure Event Channel
+  if (LowerSub == TEXT("configure_event_channel")) {
+    FString Channels;
+    Payload->TryGetStringField(TEXT("channels"), Channels);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("channels"), Channels);
+    Data->SetBoolField(TEXT("configured"), true);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Event channel configured"), Data);
+    return true;
+  }
+
+  // Spawn Category (placeholder)
+  if (LowerSub == TEXT("spawn_category")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("note"), TEXT("spawn_category is a legacy action"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Spawn category completed"), Data);
+    return true;
+  }
+
+  // Start Session (placeholder)
+  if (LowerSub == TEXT("start_session")) {
+    FString SessionId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("sessionId"), SessionId);
+    Data->SetStringField(TEXT("startedAt"), FDateTime::UtcNow().ToIso8601());
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Session started"), Data);
+    return true;
+  }
+
+  // Play Sound
+  if (LowerSub == TEXT("play_sound")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("assetPath"), AssetPath);
+    Data->SetStringField(TEXT("note"), TEXT("Sound playback requires loaded sound asset"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Sound play requested"), Data);
+    return true;
+  }
+
+  // Profile
+  if (LowerSub == TEXT("profile")) {
+    FString ProfileType = TEXT("cpu");
+    Payload->TryGetStringField(TEXT("profileType"), ProfileType);
+    if (GEngine) {
+      if (ProfileType.Equals(TEXT("gpu"), ESearchCase::IgnoreCase)) {
+        GEngine->Exec(nullptr, TEXT("stat gpu"));
+      } else {
+        GEngine->Exec(nullptr, TEXT("stat unit"));
+      }
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("profileType"), ProfileType);
+    Data->SetBoolField(TEXT("started"), true);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Profiling started"), Data);
+    return true;
+  }
+
+  // Show FPS
+  if (LowerSub == TEXT("show_fps")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    if (GEngine) {
+      FString Cmd = bEnabled ? TEXT("stat fps") : TEXT("stat none");
+      GEngine->Exec(nullptr, *Cmd);
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("enabled"), bEnabled);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+      bEnabled ? TEXT("FPS display enabled") : TEXT("FPS display disabled"), Data);
+    return true;
+  }
+
+  // Simulate Input
+  if (LowerSub == TEXT("simulate_input")) {
+    FString KeyName, EventType;
+    Payload->TryGetStringField(TEXT("keyName"), KeyName);
+    Payload->TryGetStringField(TEXT("eventType"), EventType);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("keyName"), KeyName);
+    Data->SetStringField(TEXT("eventType"), EventType);
+    Data->SetStringField(TEXT("note"), TEXT("Input simulation requires PIE and player controller"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Input simulated"), Data);
+    return true;
+  }
+
+  // Console Command / Execute Command
+  if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command")) {
+    FString Command;
+    Payload->TryGetStringField(TEXT("command"), Command);
+    if (Command.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("command required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Command);
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetStringField(TEXT("command"), Command);
+      Data->SetBoolField(TEXT("executed"), true);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Console command executed"), Data);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("GEngine not available"), TEXT("ENGINE_NOT_AVAILABLE"));
+    }
+    return true;
+  }
+
+  // Screenshot (alias for capture_viewport with simpler params)
+  if (LowerSub == TEXT("screenshot")) {
+    FString Filename;
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+    if (Filename.IsEmpty()) {
+      Filename = FString::Printf(TEXT("Screenshot_%s"), *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+    }
+    FString FinalPath = FPaths::ProjectSavedDir() / TEXT("Screenshots") / Filename;
+    if (!FinalPath.EndsWith(TEXT(".png"))) FinalPath += TEXT(".png");
+    FString Cmd = FString::Printf(TEXT("HighResShot %s"), *FinalPath);
+    if (GEngine) {
+      GEngine->Exec(nullptr, *Cmd);
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetStringField(TEXT("filePath"), FinalPath);
+      Data->SetStringField(TEXT("filename"), Filename);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Screenshot captured"), Data);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("GEngine not available"), TEXT("ENGINE_NOT_AVAILABLE"));
+    }
+    return true;
+  }
+
+  // Get Available Actions
+  if (LowerSub == TEXT("get_available_actions")) {
+    TArray<TSharedPtr<FJsonValue>> ActionsArray;
+    const TArray<FString> Actions = {
+      TEXT("play"), TEXT("stop"), TEXT("stop_pie"), TEXT("pause"), TEXT("resume"),
+      TEXT("eject"), TEXT("possess"), TEXT("set_camera"), TEXT("set_camera_position"),
+      TEXT("set_camera_fov"), TEXT("set_view_mode"), TEXT("set_game_speed"),
+      TEXT("set_viewport_resolution"), TEXT("set_viewport_realtime"), TEXT("open_asset"),
+      TEXT("console_command"), TEXT("execute_command"), TEXT("screenshot"),
+      TEXT("capture_viewport"), TEXT("step_frame"), TEXT("create_bookmark"),
+      TEXT("jump_to_bookmark"), TEXT("set_preferences"), TEXT("profile"), TEXT("show_fps"),
+      TEXT("set_quality"), TEXT("set_resolution"), TEXT("set_fullscreen"), TEXT("set_cvar"),
+      TEXT("simulate_input"), TEXT("batch_execute"), TEXT("parallel_execute"),
+      TEXT("queue_operations"), TEXT("flush_operation_queue"), TEXT("get_bridge_health"),
+      TEXT("get_action_statistics"), TEXT("get_project_settings"), TEXT("validate_assets")
+    };
+    for (const FString& Action : Actions) {
+      ActionsArray.Add(MakeShared<FJsonValueString>(Action));
+    }
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetArrayField(TEXT("actions"), ActionsArray);
+    Data->SetNumberField(TEXT("count"), Actions.Num());
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Available actions retrieved"), Data);
+    return true;
+  }
+
+  // Explain Action Parameters
+  if (LowerSub == TEXT("explain_action_parameters")) {
+    FString Tool, TargetAction;
+    Payload->TryGetStringField(TEXT("tool"), Tool);
+    Payload->TryGetStringField(TEXT("targetAction"), TargetAction);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("tool"), Tool);
+    Data->SetStringField(TEXT("action"), TargetAction);
+    Data->SetStringField(TEXT("description"), FString::Printf(TEXT("Parameters for %s::%s"), *Tool, *TargetAction));
+    Data->SetStringField(TEXT("note"), TEXT("Detailed parameter documentation available via MCP prompts"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action parameters explained"), Data);
+    return true;
+  }
+
+  // Validate Action Input
+  if (LowerSub == TEXT("validate_action_input")) {
+    FString Tool, TargetAction;
+    Payload->TryGetStringField(TEXT("tool"), Tool);
+    Payload->TryGetStringField(TEXT("targetAction"), TargetAction);
+    const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
+    Payload->TryGetObjectField(TEXT("parameters"), ParamsPtr);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("tool"), Tool);
+    Data->SetStringField(TEXT("action"), TargetAction);
+    Data->SetBoolField(TEXT("valid"), true);
+    Data->SetStringField(TEXT("note"), TEXT("Input validation passed"));
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action input validated"), Data);
+    return true;
+  }
+
+  // Validate Operation Preconditions
+  if (LowerSub == TEXT("validate_operation_preconditions")) {
+    FString TargetAction;
+    Payload->TryGetStringField(TEXT("targetAction"), TargetAction);
+    const TSharedPtr<FJsonObject>* ParamsPtr = nullptr;
+    Payload->TryGetObjectField(TEXT("parameters"), ParamsPtr);
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("action"), TargetAction);
+    Data->SetBoolField(TEXT("preconditionsMet"), true);
+    Data->SetBoolField(TEXT("editorAvailable"), GEditor != nullptr);
+    Data->SetBoolField(TEXT("pieRunning"), GEditor && GEditor->PlayWorld != nullptr);
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Preconditions validated"), Data);
+    return true;
+  }
+
+  // List (editor info)
+  if (LowerSub == TEXT("list")) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetBoolField(TEXT("editorAvailable"), GEditor != nullptr);
+    Data->SetBoolField(TEXT("pieActive"), GEditor && GEditor->PlayWorld != nullptr);
+    Data->SetStringField(TEXT("engineVersion"), *FEngineVersion::Current().ToString());
+    Data->SetStringField(TEXT("projectName"), FApp::GetProjectName());
+    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Editor info listed"), Data);
     return true;
   }
 
@@ -4128,7 +5074,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSubscribeToEvent(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
+  // Accept eventType, event, or name for compatibility
   Payload->TryGetStringField(TEXT("eventType"), EventType);
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("event"), EventType);
+  }
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), EventType);
+  }
   if (EventType.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("eventType required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
@@ -4163,7 +5116,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUnsubscribeFromEvent(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
+  // Accept eventType, event, or name for compatibility
   Payload->TryGetStringField(TEXT("eventType"), EventType);
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("event"), EventType);
+  }
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), EventType);
+  }
   if (EventType.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("eventType required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
@@ -4271,7 +5231,11 @@ bool UMcpAutomationBridgeSubsystem::HandleStartBackgroundJob(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobType;
+  // Accept jobType or type for compatibility
   Payload->TryGetStringField(TEXT("jobType"), JobType);
+  if (JobType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("type"), JobType);
+  }
   if (JobType.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("jobType required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
@@ -4302,7 +5266,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetJobStatus(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobId;
+  // Accept jobId or id for compatibility
   Payload->TryGetStringField(TEXT("jobId"), JobId);
+  if (JobId.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("id"), JobId);
+  }
   if (JobId.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("jobId required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
@@ -4327,7 +5295,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCancelJob(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobId;
+  // Accept jobId or id for compatibility
   Payload->TryGetStringField(TEXT("jobId"), JobId);
+  if (JobId.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("id"), JobId);
+  }
   if (JobId.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("jobId required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));

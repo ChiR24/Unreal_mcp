@@ -1191,9 +1191,90 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material template exported to ${exportPath}`);
       }
 
+      // Material graph node actions - route to manage_material_graph
+      case 'add_material_node': {
+        // Map node type aliases to UE expression classes
+        const materialNodeAliases: Record<string, string> = {
+          'Multiply': 'MaterialExpressionMultiply',
+          'Add': 'MaterialExpressionAdd',
+          'Subtract': 'MaterialExpressionSubtract',
+          'Divide': 'MaterialExpressionDivide',
+          'Power': 'MaterialExpressionPower',
+          'Clamp': 'MaterialExpressionClamp',
+          'Constant': 'MaterialExpressionConstant',
+          'Constant2Vector': 'MaterialExpressionConstant2Vector',
+          'Constant3Vector': 'MaterialExpressionConstant3Vector',
+          'Constant4Vector': 'MaterialExpressionConstant4Vector',
+          'TextureSample': 'MaterialExpressionTextureSample',
+          'TextureCoordinate': 'MaterialExpressionTextureCoordinate',
+          'TexCoord': 'MaterialExpressionTextureCoordinate',
+          'Panner': 'MaterialExpressionPanner',
+          'Rotator': 'MaterialExpressionRotator',
+          'Lerp': 'MaterialExpressionLinearInterpolate',
+          'LinearInterpolate': 'MaterialExpressionLinearInterpolate',
+          'Sine': 'MaterialExpressionSine',
+          'Cosine': 'MaterialExpressionCosine',
+          'Append': 'MaterialExpressionAppendVector',
+          'AppendVector': 'MaterialExpressionAppendVector',
+          'ComponentMask': 'MaterialExpressionComponentMask',
+          'Fresnel': 'MaterialExpressionFresnel',
+          'Time': 'MaterialExpressionTime',
+          'ScalarParameter': 'MaterialExpressionScalarParameter',
+          'VectorParameter': 'MaterialExpressionVectorParameter',
+          'StaticSwitchParameter': 'MaterialExpressionStaticSwitchParameter',
+          'Saturate': 'MaterialExpressionSaturate',
+          'OneMinus': 'MaterialExpressionOneMinus',
+          'Floor': 'MaterialExpressionFloor',
+          'Ceil': 'MaterialExpressionCeil',
+          'Frac': 'MaterialExpressionFrac',
+          'Abs': 'MaterialExpressionAbs',
+          'Normalize': 'MaterialExpressionNormalize',
+          'DotProduct': 'MaterialExpressionDotProduct',
+          'CrossProduct': 'MaterialExpressionCrossProduct',
+          'Distance': 'MaterialExpressionDistance',
+          'BreakOutFloat3': 'MaterialExpressionBreakMaterialAttributes',
+          'MakeFloat3': 'MaterialExpressionMakeMaterialAttributes',
+        };
+
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeType', aliases: ['type'], required: true },
+          { key: 'nodeName', aliases: ['name'] },
+          { key: 'x', aliases: ['posX'] },
+          { key: 'y', aliases: ['posY'] },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        let nodeType = extractString(params, 'nodeType');
+        const nodeName = extractOptionalString(params, 'nodeName');
+        const x = extractOptionalNumber(params, 'x') ?? 0;
+        const y = extractOptionalNumber(params, 'y') ?? 0;
+
+        // Apply node type alias mapping
+        const mappedNodeType = materialNodeAliases[nodeType];
+        if (mappedNodeType) {
+          nodeType = mappedNodeType;
+        }
+
+        // Route to manage_material_graph with subAction: add_node
+        const res = (await executeAutomationRequest(tools, 'manage_material_graph', {
+          subAction: 'add_node',
+          assetPath,
+          nodeType,
+          nodeName,
+          x,
+          y,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to add material node', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Material node '${nodeType}' added`);
+      }
+
       default:
         return ResponseFactory.error(
-          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, connect_nodes, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info`,
+          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, add_material_node, connect_nodes, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info`,
           'UNKNOWN_ACTION'
         );
     }

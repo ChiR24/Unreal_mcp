@@ -431,7 +431,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const assetPath = extractString(params, 'assetPath');
         const maxDepth = extractOptionalNumber(params, 'maxDepth');
-        const res = await executeAutomationRequest(tools, 'get_asset_graph', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'analyze_graph',
           assetPath,
           maxDepth
         });
@@ -543,7 +544,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           payload.checkoutFiles = args.checkoutFiles;
         }
 
-        const res = await executeAutomationRequest(tools, 'fixup_redirectors', payload);
+        const res = await executeAutomationRequest(tools, 'manage_asset', { ...payload, subAction: 'fixup_redirectors' });
         return ResponseFactory.success(res, 'Redirectors fixed up successfully');
       }
       case 'add_material_parameter': {
@@ -557,7 +558,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const parameterName = extractString(params, 'parameterName');
         const parameterType = extractOptionalString(params, 'parameterType');
         const value = params.value;
-        const res = await executeAutomationRequest(tools, 'add_material_parameter', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'add_material_parameter',
           assetPath,
           name: parameterName,
           type: parameterType,
@@ -570,7 +572,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'list_instances', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'list_instances',
           assetPath
         });
         return ResponseFactory.success(res, 'Instances listed successfully');
@@ -580,7 +583,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'reset_instance_parameters', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'reset_instance_parameters',
           assetPath
         });
         return ResponseFactory.success(res, 'Instance parameters reset successfully');
@@ -590,7 +594,9 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'exists', {
+        // Route through manage_asset with subAction for proper C++ dispatch
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'exists',
           assetPath
         });
         return ResponseFactory.success(res, 'Asset existence check complete');
@@ -600,7 +606,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'get_material_stats', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'get_material_stats',
           assetPath
         });
         return ResponseFactory.success(res, 'Material stats retrieved');
@@ -610,7 +617,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'rebuild_material', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'rebuild_material',
           assetPath
         });
         return ResponseFactory.success(res, 'Material rebuilt successfully');
@@ -657,11 +665,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const posX = extractOptionalNumber(params, 'posX');
         const posY = extractOptionalNumber(params, 'posY');
 
-        const res = await executeAutomationRequest(tools, 'add_material_node', {
+        // Route through manage_material_graph with subAction: add_node for proper C++ dispatch
+        const res = await executeAutomationRequest(tools, 'manage_material_graph', {
+          subAction: 'add_node',
           assetPath,
           nodeType,
-          posX,
-          posY
+          x: posX,
+          y: posY
         });
         return ResponseFactory.success(res, 'Material node added successfully');
       }
@@ -670,7 +680,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const predicate = args.predicate || {};
         const limit = typeof args.limit === 'number' ? args.limit : 100;
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'query_assets_by_predicate',
+          subAction: 'query_assets_by_predicate',
           predicate,
           limit
         });
@@ -681,7 +691,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const blueprintPath = extractString(normalizeArgs(args, [{ key: 'blueprintPath', aliases: ['assetPath'], required: true }]), 'blueprintPath');
         const interfacePath = extractString(normalizeArgs(args, [{ key: 'interfacePath', required: true }]), 'interfacePath');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_implement_interface',
+          subAction: 'bp_implement_interface',
           blueprintPath,
           interfacePath
         });
@@ -699,7 +709,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const inputs = extractOptionalArray<Record<string, unknown>>(params, 'inputs');
         const outputs = extractOptionalArray<Record<string, unknown>>(params, 'outputs');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_add_macro',
+          subAction: 'bp_add_macro',
           blueprintPath,
           macroName,
           inputs,
@@ -719,7 +729,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const bindingType = extractOptionalString(params, 'bindingType');
         const functionName = extractOptionalString(params, 'functionName');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_create_widget_binding',
+          subAction: 'bp_create_widget_binding',
           blueprintPath,
           propertyName,
           bindingType,
@@ -737,7 +747,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const eventName = extractString(params, 'eventName');
         const parameters = extractOptionalArray<Record<string, unknown>>(params, 'parameters') ?? [];
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_add_custom_event',
+          subAction: 'bp_add_custom_event',
           blueprintPath,
           eventName,
           parameters
@@ -756,7 +766,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const replicateMovement = extractOptionalBoolean(params, 'replicateMovement');
         const netUpdateFrequency = extractOptionalNumber(params, 'netUpdateFrequency');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_set_replication_settings',
+          subAction: 'bp_set_replication_settings',
           blueprintPath,
           replicates,
           replicateMovement,
@@ -774,7 +784,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const dispatcherName = extractString(params, 'dispatcherName');
         const parameters = extractOptionalArray<Record<string, unknown>>(params, 'parameters') ?? [];
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_add_event_dispatcher',
+          subAction: 'bp_add_event_dispatcher',
           blueprintPath,
           dispatcherName,
           parameters
@@ -791,7 +801,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const eventName = extractString(params, 'eventName');
         const functionName = extractString(params, 'functionName');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'bp_bind_event',
+          subAction: 'bp_bind_event',
           blueprintPath,
           eventName,
           functionName
@@ -806,7 +816,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const blueprintPath = extractString(params, 'blueprintPath');
         const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'get_blueprint_dependencies',
+          subAction: 'get_blueprint_dependencies',
           blueprintPath,
           recursive
         });
@@ -818,7 +828,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const blueprintPath = extractString(params, 'blueprintPath');
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'validate_blueprint',
+          subAction: 'validate_blueprint',
           blueprintPath
         });
         return ResponseFactory.success(res, 'Blueprint validated');
@@ -834,14 +844,15 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         }
         const stopOnError = extractOptionalBoolean(params, 'stopOnError') ?? false;
         const res = await executeAutomationRequest(tools, 'manage_asset', {
-          action: 'compile_blueprint_batch',
+          subAction: 'compile_blueprint_batch',
           blueprintPaths,
           stopOnError
         });
         return ResponseFactory.success(res, 'Batch compile completed');
       }
       default: {
-        const res = await executeAutomationRequest(tools, action || 'manage_asset', args) as AssetOperationResponse;
+        // Route ALL actions through manage_asset with subAction for proper C++ dispatch
+        const res = await executeAutomationRequest(tools, 'manage_asset', { ...args, subAction: action }) as AssetOperationResponse;
         const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
         const message = typeof result.message === 'string' ? result.message : '';

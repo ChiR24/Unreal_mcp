@@ -333,6 +333,10 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   }
   FString SavePath;
   LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
+  // Also accept "path" as a fallback for "savePath" for compatibility with TS tests
+  if (SavePath.TrimStartAndEnd().IsEmpty()) {
+    LocalPayload->TryGetStringField(TEXT("path"), SavePath);
+  }
   if (SavePath.TrimStartAndEnd().IsEmpty())
     SavePath = TEXT("/Game");
   FString ParentClassSpec;

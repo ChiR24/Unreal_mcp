@@ -252,7 +252,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             }
           }
         },
-        data: commonSchemas.objectProp
+        data: { type: ['object', 'null'] }
       }
     }
   },
