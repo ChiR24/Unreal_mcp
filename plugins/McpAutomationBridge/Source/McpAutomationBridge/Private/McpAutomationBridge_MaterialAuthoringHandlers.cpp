@@ -22,6 +22,10 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
+// MaterialDomain.h is required in UE 5.5+ for EMaterialDomain enum
+#if __has_include("MaterialDomain.h")
+#include "MaterialDomain.h"
+#endif
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionAdd.h"
 #include "Materials/MaterialExpressionAppendVector.h"

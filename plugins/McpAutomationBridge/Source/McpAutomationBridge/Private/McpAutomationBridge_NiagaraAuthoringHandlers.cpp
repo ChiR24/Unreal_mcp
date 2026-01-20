@@ -162,9 +162,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
-        UNiagaraSystem* NewSystem = Cast<UNiagaraSystem>(Factory->FactoryCreateNew(
-            UNiagaraSystem::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+        // Use AssetTools for cross-version compatibility (UE 5.5+ factory linking changes)
+        IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+        UNiagaraSystem* NewSystem = Cast<UNiagaraSystem>(AssetTools.CreateAsset(Name, Path, UNiagaraSystem::StaticClass(), nullptr));
 
         if (!NewSystem)
         {

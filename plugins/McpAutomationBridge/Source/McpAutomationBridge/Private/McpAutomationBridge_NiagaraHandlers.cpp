@@ -91,20 +91,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     return true;
   }
 
-  UNiagaraSystemFactoryNew *Factory = NewObject<UNiagaraSystemFactoryNew>();
-  if (!Factory) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to create Niagara system factory"),
-                        TEXT("FACTORY_FAILED"));
-    return true;
-  }
-
   FString PackagePath = SavePath;
   FString AssetName = SystemName;
   FAssetToolsModule &AssetToolsModule =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+  // Use nullptr for factory - AssetTools will use the default factory for UNiagaraSystem
   UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-      AssetName, PackagePath, UNiagaraSystem::StaticClass(), Factory);
+      AssetName, PackagePath, UNiagaraSystem::StaticClass(), nullptr);
   UNiagaraSystem *NiagaraSystem = Cast<UNiagaraSystem>(NewAsset);
   McpSafeAssetSave(NiagaraSystem);
 
