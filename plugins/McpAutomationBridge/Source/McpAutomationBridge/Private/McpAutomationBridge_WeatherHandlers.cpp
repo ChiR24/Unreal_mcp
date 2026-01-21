@@ -590,6 +590,193 @@ bool UMcpAutomationBridgeSubsystem::HandleWeatherAction(
       ErrorCode = TEXT("ACTOR_NOT_FOUND");
     }
   }
+  // ========================================================================
+  // CONFIGURE WEATHER PRESET (Apply preset configurations)
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_weather_preset")) {
+    FString PresetName;
+    Payload->TryGetStringField(TEXT("presetName"), PresetName);
+    
+    if (PresetName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("presetName required for configure_weather_preset");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      // Define common weather presets
+      const FString LowerPreset = PresetName.ToLower();
+      int32 ComponentsConfigured = 0;
+      
+      // Apply preset by configuring wind, rain/snow, and lighting
+      if (LowerPreset == TEXT("clear") || LowerPreset == TEXT("sunny")) {
+        // Clear skies - minimal wind, no precipitation
+        for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+          if (UWindDirectionalSourceComponent* WindComp = (*It)->FindComponentByClass<UWindDirectionalSourceComponent>()) {
+            WindComp->SetStrength(0.1f);
+            WindComp->SetSpeed(50.0f);
+            ComponentsConfigured++;
+          }
+        }
+        Resp->SetStringField(TEXT("preset"), TEXT("clear"));
+        Resp->SetStringField(TEXT("description"), TEXT("Clear skies with light breeze"));
+        
+      } else if (LowerPreset == TEXT("rainy") || LowerPreset == TEXT("rain")) {
+        // Rainy - moderate wind, overcast
+        for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+          if (UWindDirectionalSourceComponent* WindComp = (*It)->FindComponentByClass<UWindDirectionalSourceComponent>()) {
+            WindComp->SetStrength(0.5f);
+            WindComp->SetSpeed(200.0f);
+            ComponentsConfigured++;
+          }
+        }
+        Resp->SetStringField(TEXT("preset"), TEXT("rainy"));
+        Resp->SetStringField(TEXT("description"), TEXT("Rainy weather with moderate wind"));
+        
+      } else if (LowerPreset == TEXT("stormy") || LowerPreset == TEXT("storm")) {
+        // Stormy - strong wind, heavy precipitation
+        for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+          if (UWindDirectionalSourceComponent* WindComp = (*It)->FindComponentByClass<UWindDirectionalSourceComponent>()) {
+            WindComp->SetStrength(1.0f);
+            WindComp->SetSpeed(500.0f);
+            WindComp->SetMinimumGustAmount(0.3f);
+            WindComp->SetMaximumGustAmount(0.8f);
+            ComponentsConfigured++;
+          }
+        }
+        Resp->SetStringField(TEXT("preset"), TEXT("stormy"));
+        Resp->SetStringField(TEXT("description"), TEXT("Stormy weather with strong gusting winds"));
+        
+      } else if (LowerPreset == TEXT("snowy") || LowerPreset == TEXT("snow")) {
+        // Snowy - light wind, cold atmosphere
+        for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+          if (UWindDirectionalSourceComponent* WindComp = (*It)->FindComponentByClass<UWindDirectionalSourceComponent>()) {
+            WindComp->SetStrength(0.3f);
+            WindComp->SetSpeed(100.0f);
+            ComponentsConfigured++;
+          }
+        }
+        Resp->SetStringField(TEXT("preset"), TEXT("snowy"));
+        Resp->SetStringField(TEXT("description"), TEXT("Snowy weather with light wind"));
+        
+      } else if (LowerPreset == TEXT("foggy") || LowerPreset == TEXT("fog")) {
+        // Foggy - minimal wind
+        for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+          if (UWindDirectionalSourceComponent* WindComp = (*It)->FindComponentByClass<UWindDirectionalSourceComponent>()) {
+            WindComp->SetStrength(0.05f);
+            WindComp->SetSpeed(20.0f);
+            ComponentsConfigured++;
+          }
+        }
+        Resp->SetStringField(TEXT("preset"), TEXT("foggy"));
+        Resp->SetStringField(TEXT("description"), TEXT("Foggy conditions with still air"));
+        
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Unknown weather preset: '%s'. Available: clear, rainy, stormy, snowy, foggy"), *PresetName);
+        ErrorCode = TEXT("UNKNOWN_PRESET");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+      
+      if (bSuccess) {
+        Message = FString::Printf(TEXT("Weather preset '%s' applied, configured %d components"), *PresetName, ComponentsConfigured);
+        Resp->SetNumberField(TEXT("componentsConfigured"), ComponentsConfigured);
+      }
+    }
+  }
+  // ========================================================================
+  // CONFIGURE WIND DIRECTIONAL (Specific wind direction settings)
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_wind_directional")) {
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    // Find or create wind directional source
+    AActor* WindActor = nullptr;
+    for (TActorIterator<AWindDirectionalSource> It(World); It; ++It) {
+      if (AWindDirectionalSource* Wind = *It) {
+        if (ActorName.IsEmpty() || Wind->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) {
+          WindActor = Wind;
+          break;
+        }
+      }
+    }
+    
+    if (!WindActor) {
+      // Spawn new WindDirectionalSource
+      UClass* WindClass = LoadClass<AActor>(nullptr, TEXT("/Script/Engine.WindDirectionalSource"));
+      if (WindClass) {
+        FVector Location(0, 0, 0);
+        const TSharedPtr<FJsonObject>* LocObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+          (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+          (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+          (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+        }
+        WindActor = SpawnActorInActiveWorld<AActor>(
+            WindClass, Location, FRotator::ZeroRotator,
+            ActorName.IsEmpty() ? TEXT("WindDirectionalSource") : *ActorName);
+      }
+    }
+    
+    if (WindActor) {
+      UWindDirectionalSourceComponent* WindComp = WindActor->FindComponentByClass<UWindDirectionalSourceComponent>();
+      if (WindComp) {
+        int32 PropertiesSet = 0;
+        
+        // Force directional type
+        WindComp->SetWindType(EWindSourceType::Directional);
+        PropertiesSet++;
+        
+        // Direction (yaw angle)
+        double Direction = 0.0;
+        if (Payload->TryGetNumberField(TEXT("direction"), Direction)) {
+          WindActor->SetActorRotation(FRotator(0, static_cast<float>(Direction), 0));
+          PropertiesSet++;
+        }
+        
+        // Strength
+        double Strength = 0.0;
+        if (Payload->TryGetNumberField(TEXT("strength"), Strength)) {
+          WindComp->SetStrength(static_cast<float>(Strength));
+          PropertiesSet++;
+        }
+        
+        // Speed
+        double Speed = 0.0;
+        if (Payload->TryGetNumberField(TEXT("speed"), Speed)) {
+          WindComp->SetSpeed(static_cast<float>(Speed));
+          PropertiesSet++;
+        }
+        
+        // Gust settings
+        double MinGust = 0.0;
+        if (Payload->TryGetNumberField(TEXT("minGustAmount"), MinGust)) {
+          WindComp->SetMinimumGustAmount(static_cast<float>(MinGust));
+          PropertiesSet++;
+        }
+        
+        double MaxGust = 0.0;
+        if (Payload->TryGetNumberField(TEXT("maxGustAmount"), MaxGust)) {
+          WindComp->SetMaximumGustAmount(static_cast<float>(MaxGust));
+          PropertiesSet++;
+        }
+        
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Wind directional configured with %d properties"), PropertiesSet);
+        Resp->SetStringField(TEXT("actorName"), WindActor->GetActorLabel());
+        Resp->SetNumberField(TEXT("propertiesSet"), PropertiesSet);
+        Resp->SetStringField(TEXT("windType"), TEXT("Directional"));
+      } else {
+        bSuccess = false;
+        Message = TEXT("WindDirectionalSourceComponent not found on actor");
+        ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("Failed to find or create WindDirectionalSource actor");
+      ErrorCode = TEXT("ACTOR_NOT_FOUND");
+    }
+  }
   else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Weather action '%s' not implemented"), *LowerSub);

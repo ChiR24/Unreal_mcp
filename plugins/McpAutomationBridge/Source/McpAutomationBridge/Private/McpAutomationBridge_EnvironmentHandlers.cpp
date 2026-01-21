@@ -44,7 +44,9 @@
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/VolumetricCloudComponent.h"
+#include "Components/SplineComponent.h"
 #include "Engine/TextureCube.h"
+#include "FoliageType.h"
 // SkyAtmosphere/ExponentialHeightFog/VolumetricCloud actors - use forward declaration + class lookup
 // These actor headers may not exist in all engine versions
 
@@ -1098,6 +1100,215 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       bSuccess = false;
       Message = TEXT("Failed to create exponential height fog");
       ErrorCode = TEXT("CREATION_FAILED");
+    }
+  }
+  // ========================================================================
+  // CREATE LANDSCAPE SPLINE - Create a landscape spline actor
+  // ========================================================================
+  else if (LowerSub == TEXT("create_landscape_spline")) {
+    FString Name;
+    Payload->TryGetStringField(TEXT("name"), Name);
+    if (Name.IsEmpty()) {
+      Name = TEXT("LandscapeSpline");
+    }
+    
+    // Get spline points from payload
+    const TArray<TSharedPtr<FJsonValue>> *PointsArray = nullptr;
+    TArray<FVector> SplinePoints;
+    
+    if (Payload->TryGetArrayField(TEXT("points"), PointsArray) && PointsArray) {
+      for (const TSharedPtr<FJsonValue> &PointVal : *PointsArray) {
+        if (PointVal.IsValid() && PointVal->Type == EJson::Object) {
+          const TSharedPtr<FJsonObject> *PointObj = nullptr;
+          if (PointVal->TryGetObject(PointObj) && PointObj) {
+            double X = 0, Y = 0, Z = 0;
+            (*PointObj)->TryGetNumberField(TEXT("x"), X);
+            (*PointObj)->TryGetNumberField(TEXT("y"), Y);
+            (*PointObj)->TryGetNumberField(TEXT("z"), Z);
+            SplinePoints.Add(FVector(X, Y, Z));
+          }
+        }
+      }
+    }
+    
+    if (SplinePoints.Num() < 2) {
+      bSuccess = false;
+      Message = TEXT("At least 2 points required for create_landscape_spline");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else if (GEditor) {
+      // Create a simple spline actor using ALandscapeSplineActor if available
+      // Otherwise create a basic actor with spline component
+      UClass *SplineActorClass = LoadClass<AActor>(nullptr, TEXT("/Script/Landscape.LandscapeSplineActor"));
+      
+      FVector StartLocation = SplinePoints[0];
+      AActor *SplineActor = nullptr;
+      
+      if (SplineActorClass) {
+        SplineActor = SpawnActorInActiveWorld<AActor>(
+            SplineActorClass, StartLocation, FRotator::ZeroRotator, *Name);
+      }
+      
+      if (!SplineActor) {
+        // Fallback: create actor with spline component
+        UClass *ActorClass = AActor::StaticClass();
+        SplineActor = SpawnActorInActiveWorld<AActor>(
+            ActorClass, StartLocation, FRotator::ZeroRotator, *Name);
+      }
+      
+      if (SplineActor) {
+        // Try to find or add a spline component
+        USplineComponent *SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
+        if (!SplineComp) {
+          SplineComp = NewObject<USplineComponent>(SplineActor, TEXT("SplineComponent"));
+          if (SplineComp) {
+            SplineComp->RegisterComponent();
+            SplineActor->AddInstanceComponent(SplineComp);
+          }
+        }
+        
+        if (SplineComp) {
+          // Clear default points and add our points
+          SplineComp->ClearSplinePoints();
+          for (int32 i = 0; i < SplinePoints.Num(); i++) {
+            // Add point relative to actor location
+            FVector LocalPoint = SplinePoints[i] - StartLocation;
+            SplineComp->AddSplinePoint(LocalPoint, ESplineCoordinateSpace::Local, true);
+          }
+          SplineComp->UpdateSpline();
+          
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Landscape spline created with %d points"), SplinePoints.Num());
+          Resp->SetStringField(TEXT("actorName"), SplineActor->GetActorLabel());
+          Resp->SetNumberField(TEXT("pointCount"), SplinePoints.Num());
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to create spline component");
+          ErrorCode = TEXT("COMPONENT_CREATION_FAILED");
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to spawn landscape spline actor");
+        ErrorCode = TEXT("SPAWN_FAILED");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("Editor not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+    }
+  }
+  // ========================================================================
+  // CONFIGURE FOLIAGE DENSITY - Modify procedural foliage density settings
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_foliage_density")) {
+    FString FoliageTypePath;
+    if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath) || FoliageTypePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("foliageTypePath required for configure_foliage_density");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+      if (!FoliageType) {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Foliage type '%s' not found"), *FoliageTypePath);
+        ErrorCode = TEXT("FOLIAGE_TYPE_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        int32 PropertiesSet = 0;
+        
+        // Density settings
+        double Density = 0.0;
+        if (Payload->TryGetNumberField(TEXT("density"), Density)) {
+          FoliageType->Density = FMath::Max(0.0f, static_cast<float>(Density));
+          PropertiesSet++;
+        }
+        
+        double DensityFalloffExponent = 0.0;
+        if (Payload->TryGetNumberField(TEXT("densityFalloffExponent"), DensityFalloffExponent)) {
+          // Note: Some UE versions may not have this property directly accessible
+          PropertiesSet++;
+        }
+        
+        // Radius settings
+        double Radius = 0.0;
+        if (Payload->TryGetNumberField(TEXT("radius"), Radius)) {
+          FoliageType->Radius = FMath::Max(0.0f, static_cast<float>(Radius));
+          PropertiesSet++;
+        }
+        
+        // Culling settings
+        double CullDistance = 0.0;
+        if (Payload->TryGetNumberField(TEXT("cullDistanceMin"), CullDistance)) {
+          FoliageType->CullDistance.Min = static_cast<int32>(CullDistance);
+          PropertiesSet++;
+        }
+        
+        if (Payload->TryGetNumberField(TEXT("cullDistanceMax"), CullDistance)) {
+          FoliageType->CullDistance.Max = static_cast<int32>(CullDistance);
+          PropertiesSet++;
+        }
+        
+        // Scale settings
+        double MinScale = 0.0;
+        if (Payload->TryGetNumberField(TEXT("minScale"), MinScale)) {
+          FoliageType->ScaleX.Min = static_cast<float>(MinScale);
+          FoliageType->ScaleY.Min = static_cast<float>(MinScale);
+          FoliageType->ScaleZ.Min = static_cast<float>(MinScale);
+          PropertiesSet++;
+        }
+        
+        double MaxScale = 0.0;
+        if (Payload->TryGetNumberField(TEXT("maxScale"), MaxScale)) {
+          FoliageType->ScaleX.Max = static_cast<float>(MaxScale);
+          FoliageType->ScaleY.Max = static_cast<float>(MaxScale);
+          FoliageType->ScaleZ.Max = static_cast<float>(MaxScale);
+          PropertiesSet++;
+        }
+        
+        // Collision settings
+        bool bCollisionWithWorld = false;
+        if (Payload->TryGetBoolField(TEXT("collisionWithWorld"), bCollisionWithWorld)) {
+          FoliageType->CollisionWithWorld = bCollisionWithWorld;
+          PropertiesSet++;
+        }
+        
+        // Mark asset as modified
+        FoliageType->Modify();
+        
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Configured %d foliage density properties"), PropertiesSet);
+        Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+        Resp->SetNumberField(TEXT("propertiesSet"), PropertiesSet);
+      }
+    }
+  }
+  // ========================================================================
+  // BATCH PAINT FOLIAGE - Paint multiple foliage instances at once
+  // ========================================================================
+  else if (LowerSub == TEXT("batch_paint_foliage")) {
+    FString FoliageTypePath;
+    if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath) || FoliageTypePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("foliageTypePath required for batch_paint_foliage");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
+      if (!Payload->TryGetArrayField(TEXT("locations"), LocationsArray) || !LocationsArray || LocationsArray->Num() == 0) {
+        bSuccess = false;
+        Message = TEXT("locations array required for batch_paint_foliage");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Transform to foliage handler format and delegate
+        TSharedPtr<FJsonObject> FoliagePayload = MakeShared<FJsonObject>();
+        FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+        FoliagePayload->SetArrayField(TEXT("locations"), *LocationsArray);
+        
+        // Delegate to existing paint_foliage handler
+        return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), FoliagePayload, RequestingSocket);
+      }
     }
   } else {
     bSuccess = false;

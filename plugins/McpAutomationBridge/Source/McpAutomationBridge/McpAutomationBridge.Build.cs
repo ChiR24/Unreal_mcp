@@ -23,7 +23,16 @@ public class McpAutomationBridge : ModuleRules
         
         // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
         // This is the most reliable workaround for C3859/C1076 errors
-        PCHUsage = PCHUsageMode.NoPCHs;
+        bool enablePch = GetBoolEnvironmentVariable("MCP_ENABLE_PCH", false);
+        if (enablePch)
+        {
+            PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+            PrivatePCHHeaderFile = "Private/McpAutomationBridgePCH.h";
+        }
+        else
+        {
+            PCHUsage = PCHUsageMode.NoPCHs;
+        }
         
         // Enable Unity builds to reduce compilation units
         bUseUnity = true;
@@ -224,7 +233,15 @@ public class McpAutomationBridge : ModuleRules
             // ============================================================================
 
             // Phase 28: Water Plugin (experimental)
-            DefineOptionalPluginMacro(EngineDir, "Water", "MCP_HAS_WATER");
+            // Water is an optional experimental plugin - link it when available
+            if (TryAddConditionalModule(Target, EngineDir, "Water", "Water"))
+            {
+                PublicDefinitions.Add("MCP_HAS_WATER_PLUGIN=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_WATER_PLUGIN=0");
+            }
 
             // Phase 30: Movie Render Pipeline (usually enabled, but still optional)
             DefineOptionalPluginMacro(EngineDir, "MovieRenderPipelineCore", "MCP_HAS_MOVIE_RENDER_PIPELINE");
@@ -465,22 +482,65 @@ public class McpAutomationBridge : ModuleRules
     /// <returns>True if directory is found within the depth limit.</returns>
     private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
     {
-        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
-        
+        if (maxDepth < 0 || string.IsNullOrEmpty(targetName) || !Directory.Exists(rootDir)) return false;
+
         try
         {
-            foreach (string subDir in Directory.GetDirectories(rootDir))
-            {
-                string dirName = Path.GetFileName(subDir);
-                if (string.Equals(dirName, targetName, StringComparison.OrdinalIgnoreCase))
-                    return true;
-                
-                if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1))
-                    return true;
-            }
+            HashSet<string> directoryIndex = GetDirectoryNameIndex(rootDir, maxDepth);
+            return directoryIndex.Contains(targetName);
         }
         catch { /* Ignore access denied errors */ }
         return false;
+    }
+
+    private static HashSet<string> GetDirectoryNameIndex(string rootDir, int maxDepth)
+    {
+        string cacheKey = string.Concat(rootDir, "|", maxDepth.ToString());
+        if (DirectoryIndexCache.TryGetValue(cacheKey, out HashSet<string> cached)) return cached;
+
+        HashSet<string> index = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (maxDepth < 0 || string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir))
+        {
+            DirectoryIndexCache[cacheKey] = index;
+            return index;
+        }
+
+        int maxDepthInclusive = maxDepth + 1;
+        Queue<(string Path, int Depth)> queue = new Queue<(string Path, int Depth)>();
+        queue.Enqueue((rootDir, 0));
+
+        while (queue.Count > 0)
+        {
+            (string currentDir, int depth) = queue.Dequeue();
+            if (depth >= maxDepthInclusive) continue;
+
+            string[] subDirs;
+            try
+            {
+                subDirs = Directory.GetDirectories(currentDir);
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (string subDir in subDirs)
+            {
+                string dirName = Path.GetFileName(subDir);
+                if (!string.IsNullOrEmpty(dirName))
+                {
+                    index.Add(dirName);
+                }
+
+                if (depth + 1 <= maxDepthInclusive)
+                {
+                    queue.Enqueue((subDir, depth + 1));
+                }
+            }
+        }
+
+        DirectoryIndexCache[cacheKey] = index;
+        return index;
     }
 
     /// <summary>
@@ -592,6 +652,27 @@ public class McpAutomationBridge : ModuleRules
         }
         catch { /* Module not available - this is expected for optional modules */ }
         return false;
+    }
+
+    private static readonly Dictionary<string, HashSet<string>> DirectoryIndexCache =
+        new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+    private static bool GetBoolEnvironmentVariable(string name, bool defaultValue)
+    {
+        try
+        {
+            string value = Environment.GetEnvironmentVariable(name);
+            if (string.IsNullOrWhiteSpace(value)) return defaultValue;
+
+            return value.Equals("1", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("true", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("yes", StringComparison.OrdinalIgnoreCase)
+                || value.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return defaultValue;
+        }
     }
 
     /// <summary>

@@ -1585,3 +1585,133 @@ bool UMcpAutomationBridgeSubsystem::HandleGetLandscapeInfo(
   return true;
 #endif
 }
+
+bool UMcpAutomationBridgeSubsystem::HandleGetTerrainHeightAt(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("get_terrain_height_at"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("get_terrain_height_at payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // Get query location
+  double X = 0.0, Y = 0.0;
+  const TSharedPtr<FJsonObject>* LocObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+    (*LocObj)->TryGetNumberField(TEXT("x"), X);
+    (*LocObj)->TryGetNumberField(TEXT("y"), Y);
+  } else {
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
+  }
+
+  FString LandscapeName;
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GetActiveWorld();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No world available"),
+                        TEXT("WORLD_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Find landscape
+  ALandscapeProxy *TargetLandscape = nullptr;
+  for (TActorIterator<ALandscapeProxy> It(World); It; ++It) {
+    ALandscapeProxy *Landscape = *It;
+    if (Landscape && (LandscapeName.IsEmpty() || 
+        Landscape->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase))) {
+      TargetLandscape = Landscape;
+      break;
+    }
+  }
+
+  if (!TargetLandscape) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No landscape found in level"),
+                        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  ULandscapeInfo *LandscapeInfo = TargetLandscape->GetLandscapeInfo();
+  if (!LandscapeInfo) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to get landscape info"),
+                        TEXT("LANDSCAPE_INFO_MISSING"));
+    return true;
+  }
+
+  // Convert world coordinates to landscape local coordinates
+  FVector WorldLocation(X, Y, 0);
+  FVector LocalPos = TargetLandscape->GetActorTransform().InverseTransformPosition(WorldLocation);
+  
+  int32 QueryX = FMath::RoundToInt(LocalPos.X);
+  int32 QueryY = FMath::RoundToInt(LocalPos.Y);
+
+  // Get landscape bounds
+  int32 MinX, MinY, MaxX, MaxY;
+  if (!LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to get landscape extent"),
+                        TEXT("LANDSCAPE_INFO_MISSING"));
+    return true;
+  }
+
+  // Clamp to bounds
+  QueryX = FMath::Clamp(QueryX, MinX, MaxX);
+  QueryY = FMath::Clamp(QueryY, MinY, MaxY);
+
+  // Read single height value
+  TArray<uint16> HeightData;
+  HeightData.SetNum(1);
+
+  FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+  LandscapeEdit.GetHeightData(QueryX, QueryY, QueryX, QueryY, HeightData.GetData(), 0);
+
+  // Convert uint16 height to world Z
+  uint16 RawHeight = HeightData[0];
+  float HeightInUnits = (static_cast<float>(RawHeight) - 32768.0f) / 128.0f;
+  float WorldZ = TargetLandscape->GetActorLocation().Z + 
+                 HeightInUnits * TargetLandscape->GetActorScale3D().Z;
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetNumberField(TEXT("height"), WorldZ);
+  Resp->SetNumberField(TEXT("rawHeight"), static_cast<double>(RawHeight));
+  
+  TSharedPtr<FJsonObject> QueryLocObj = MakeShared<FJsonObject>();
+  QueryLocObj->SetNumberField(TEXT("x"), X);
+  QueryLocObj->SetNumberField(TEXT("y"), Y);
+  QueryLocObj->SetNumberField(TEXT("z"), WorldZ);
+  Resp->SetObjectField(TEXT("location"), QueryLocObj);
+  
+  Resp->SetStringField(TEXT("landscapeName"), TargetLandscape->GetActorLabel());
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Terrain height retrieved"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("get_terrain_height_at requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}

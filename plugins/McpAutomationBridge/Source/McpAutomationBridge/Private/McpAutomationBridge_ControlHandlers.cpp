@@ -4823,8 +4823,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
       TEXT("queue_operations"), TEXT("flush_operation_queue"), TEXT("get_bridge_health"),
       TEXT("get_action_statistics"), TEXT("get_project_settings"), TEXT("validate_assets")
     };
-    for (const FString& Action : Actions) {
-      ActionsArray.Add(MakeShared<FJsonValueString>(Action));
+    for (const FString& AvailableAction : Actions) {
+      ActionsArray.Add(MakeShared<FJsonValueString>(AvailableAction));
     }
     TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
     Data->SetArrayField(TEXT("actions"), ActionsArray);
@@ -5077,13 +5077,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSubscribeToEvent(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
-  // Accept eventType, event, or name for compatibility
+  // Accept eventType, event, name, or channels for compatibility
   Payload->TryGetStringField(TEXT("eventType"), EventType);
   if (EventType.IsEmpty()) {
     Payload->TryGetStringField(TEXT("event"), EventType);
   }
   if (EventType.IsEmpty()) {
     Payload->TryGetStringField(TEXT("name"), EventType);
+  }
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("channels"), EventType);
   }
   if (EventType.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("eventType required"),
@@ -5119,13 +5122,16 @@ bool UMcpAutomationBridgeSubsystem::HandleUnsubscribeFromEvent(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
-  // Accept eventType, event, or name for compatibility
+  // Accept eventType, event, name, or channels for compatibility
   Payload->TryGetStringField(TEXT("eventType"), EventType);
   if (EventType.IsEmpty()) {
     Payload->TryGetStringField(TEXT("event"), EventType);
   }
   if (EventType.IsEmpty()) {
     Payload->TryGetStringField(TEXT("name"), EventType);
+  }
+  if (EventType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("channels"), EventType);
   }
   if (EventType.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("eventType required"),

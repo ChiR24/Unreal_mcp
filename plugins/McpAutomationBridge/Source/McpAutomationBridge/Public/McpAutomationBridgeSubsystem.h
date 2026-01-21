@@ -485,6 +485,9 @@ private:
   bool HandleGetLandscapeInfo(const FString &RequestId, const FString &Action,
                               const TSharedPtr<FJsonObject> &Payload,
                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetTerrainHeightAt(const FString &RequestId, const FString &Action,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleCreateNiagaraSystemNative(
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,

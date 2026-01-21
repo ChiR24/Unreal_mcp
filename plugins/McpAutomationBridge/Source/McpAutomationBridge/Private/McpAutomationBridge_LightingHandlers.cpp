@@ -36,23 +36,52 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString Lower = Action.ToLower();
-  if (!Lower.StartsWith(TEXT("spawn_light")) &&
-      !Lower.StartsWith(TEXT("spawn_sky_light")) &&
-      !Lower.StartsWith(TEXT("build_lighting")) &&
-      !Lower.StartsWith(TEXT("ensure_single_sky_light")) &&
-      !Lower.StartsWith(TEXT("create_lighting_enabled_level")) &&
-      !Lower.StartsWith(TEXT("create_lightmass_volume")) &&
-      !Lower.StartsWith(TEXT("setup_volumetric_fog")) &&
-      !Lower.StartsWith(TEXT("setup_global_illumination")) &&
-      !Lower.StartsWith(TEXT("configure_shadows")) &&
-      !Lower.StartsWith(TEXT("set_exposure")) &&
-      !Lower.StartsWith(TEXT("list_light_types")) &&
-      !Lower.StartsWith(TEXT("set_ambient_occlusion")) &&
-      !Lower.StartsWith(TEXT("configure_lumen_gi")) &&
-      !Lower.StartsWith(TEXT("set_lumen_reflections")) &&
-      !Lower.StartsWith(TEXT("tune_lumen_performance")) &&
-      !Lower.StartsWith(TEXT("create_lumen_volume")) &&
-      !Lower.StartsWith(TEXT("set_virtual_shadow_maps"))) {
+  
+  // Static set of all lighting/post-process actions we handle
+  static TSet<FString> LightingActions = {
+    // Core lighting
+    TEXT("spawn_light"), TEXT("spawn_sky_light"), TEXT("build_lighting"),
+    TEXT("ensure_single_sky_light"), TEXT("create_lighting_enabled_level"),
+    TEXT("create_lightmass_volume"), TEXT("setup_volumetric_fog"),
+    TEXT("setup_global_illumination"), TEXT("configure_shadows"),
+    TEXT("set_exposure"), TEXT("list_light_types"), TEXT("set_ambient_occlusion"),
+    // Lumen
+    TEXT("configure_lumen_gi"), TEXT("set_lumen_reflections"),
+    TEXT("tune_lumen_performance"), TEXT("create_lumen_volume"),
+    TEXT("set_virtual_shadow_maps"),
+    // MegaLights (5.7+)
+    TEXT("configure_megalights_scene"), TEXT("get_megalights_budget"),
+    TEXT("optimize_lights_for_megalights"),
+    // Advanced lighting
+    TEXT("configure_gi_settings"), TEXT("bake_lighting_preview"),
+    TEXT("get_light_complexity"), TEXT("configure_volumetric_fog"),
+    TEXT("create_light_batch"), TEXT("configure_shadow_settings"),
+    TEXT("validate_lighting_setup"),
+    // Post-process (merged from manage_post_process)
+    TEXT("create_post_process_volume"), TEXT("configure_pp_blend"),
+    TEXT("configure_pp_priority"), TEXT("get_post_process_settings"),
+    TEXT("configure_bloom"), TEXT("configure_dof"), TEXT("configure_motion_blur"),
+    TEXT("configure_color_grading"), TEXT("configure_white_balance"),
+    TEXT("configure_vignette"), TEXT("configure_chromatic_aberration"),
+    TEXT("configure_film_grain"), TEXT("configure_lens_flares"),
+    // Reflections
+    TEXT("create_sphere_reflection_capture"), TEXT("create_box_reflection_capture"),
+    TEXT("create_planar_reflection"), TEXT("recapture_scene"),
+    // Scene capture
+    TEXT("create_scene_capture_2d"), TEXT("create_scene_capture_cube"),
+    TEXT("capture_scene"),
+    // Light channels
+    TEXT("set_light_channel"), TEXT("set_actor_light_channel"),
+    // Ray tracing
+    TEXT("configure_ray_traced_shadows"), TEXT("configure_ray_traced_gi"),
+    TEXT("configure_ray_traced_reflections"), TEXT("configure_ray_traced_ao"),
+    TEXT("configure_path_tracing"),
+    // Lightmass settings
+    TEXT("configure_lightmass_settings"), TEXT("build_lighting_quality"),
+    TEXT("configure_indirect_lighting_cache"), TEXT("configure_volumetric_lightmap")
+  };
+  
+  if (!LightingActions.Contains(Lower)) {
     return false;
   }
 
@@ -802,6 +831,483 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Virtual Shadow Maps configured"), Resp);
+      return true;
+  }
+  // ========================================================================
+  // Forward post-process/reflection/scene-capture/ray-tracing/lightmass actions
+  // to HandlePostProcessAction by wrapping payload with action field
+  // ========================================================================
+  else if (Lower == TEXT("create_post_process_volume") ||
+           Lower == TEXT("configure_pp_blend") ||
+           Lower == TEXT("configure_pp_priority") ||
+           Lower == TEXT("get_post_process_settings") ||
+           Lower == TEXT("configure_bloom") ||
+           Lower == TEXT("configure_dof") ||
+           Lower == TEXT("configure_motion_blur") ||
+           Lower == TEXT("configure_color_grading") ||
+           Lower == TEXT("configure_white_balance") ||
+           Lower == TEXT("configure_vignette") ||
+           Lower == TEXT("configure_chromatic_aberration") ||
+           Lower == TEXT("configure_film_grain") ||
+           Lower == TEXT("configure_lens_flares") ||
+           Lower == TEXT("create_sphere_reflection_capture") ||
+           Lower == TEXT("create_box_reflection_capture") ||
+           Lower == TEXT("create_planar_reflection") ||
+           Lower == TEXT("recapture_scene") ||
+           Lower == TEXT("create_scene_capture_2d") ||
+           Lower == TEXT("create_scene_capture_cube") ||
+           Lower == TEXT("capture_scene") ||
+           Lower == TEXT("set_light_channel") ||
+           Lower == TEXT("set_actor_light_channel") ||
+           Lower == TEXT("configure_ray_traced_shadows") ||
+           Lower == TEXT("configure_ray_traced_gi") ||
+           Lower == TEXT("configure_ray_traced_reflections") ||
+           Lower == TEXT("configure_ray_traced_ao") ||
+           Lower == TEXT("configure_path_tracing") ||
+           Lower == TEXT("configure_lightmass_settings") ||
+           Lower == TEXT("build_lighting_quality") ||
+           Lower == TEXT("configure_indirect_lighting_cache") ||
+           Lower == TEXT("configure_volumetric_lightmap")) {
+      // Create a wrapper payload with "action" field for PostProcessAction handler
+      TSharedPtr<FJsonObject> WrapperPayload = MakeShared<FJsonObject>();
+      // Copy all fields from original payload
+      for (const auto& Pair : Payload->Values) {
+          WrapperPayload->SetField(Pair.Key, Pair.Value);
+      }
+      // Set the action field to the lowercase action name
+      WrapperPayload->SetStringField(TEXT("action"), Lower);
+      
+      // Delegate to PostProcessAction handler with manage_post_process action
+      return HandlePostProcessAction(RequestId, TEXT("manage_post_process"), WrapperPayload, RequestingSocket);
+  }
+  // ========================================================================
+  // MegaLights (UE 5.7+)
+  // ========================================================================
+  else if (Lower == TEXT("configure_megalights_scene")) {
+      bool bEnabled = true;
+      Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+      
+      // MegaLights is controlled via console variables in 5.7+
+      IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Enable"));
+      if (CVar) {
+          CVar->Set(bEnabled ? 1 : 0);
+      }
+      
+      double Budget = 0.0;
+      if (Payload->TryGetNumberField(TEXT("budget"), Budget)) {
+          IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+          if (BudgetCVar) {
+              BudgetCVar->Set(static_cast<int32>(Budget));
+          }
+      }
+      
+      FString Quality;
+      if (Payload->TryGetStringField(TEXT("quality"), Quality)) {
+          // Map quality presets to budget values
+          if (Quality.Equals(TEXT("Low"), ESearchCase::IgnoreCase)) {
+              IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+              if (BudgetCVar) BudgetCVar->Set(64);
+          } else if (Quality.Equals(TEXT("Medium"), ESearchCase::IgnoreCase)) {
+              IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+              if (BudgetCVar) BudgetCVar->Set(128);
+          } else if (Quality.Equals(TEXT("High"), ESearchCase::IgnoreCase)) {
+              IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+              if (BudgetCVar) BudgetCVar->Set(256);
+          } else if (Quality.Equals(TEXT("Epic"), ESearchCase::IgnoreCase)) {
+              IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+              if (BudgetCVar) BudgetCVar->Set(512);
+          }
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetBoolField(TEXT("megalightsEnabled"), bEnabled);
+      SendAutomationResponse(RequestingSocket, RequestId, true, 
+          FString::Printf(TEXT("MegaLights %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("get_megalights_budget")) {
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      
+      IConsoleVariable* EnableCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Enable"));
+      IConsoleVariable* BudgetCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.MegaLights.Budget"));
+      
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetBoolField(TEXT("megalightsEnabled"), EnableCVar ? EnableCVar->GetInt() != 0 : false);
+      Resp->SetNumberField(TEXT("budget"), BudgetCVar ? BudgetCVar->GetInt() : 0);
+      
+      // Count active lights in scene for comparison
+      int32 ActiveLightCount = 0;
+      TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+      for (AActor* Actor : AllActors) {
+          if (Actor && Actor->FindComponentByClass<ULightComponent>()) {
+              ActiveLightCount++;
+          }
+      }
+      Resp->SetNumberField(TEXT("activeLightCount"), ActiveLightCount);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MegaLights budget retrieved"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("optimize_lights_for_megalights")) {
+      double TargetBudget = 128.0;
+      Payload->TryGetNumberField(TEXT("budget"), TargetBudget);
+      
+      // Count and analyze lights
+      TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+      TArray<AActor*> LightActors;
+      for (AActor* Actor : AllActors) {
+          if (Actor && Actor->FindComponentByClass<ULightComponent>()) {
+              LightActors.Add(Actor);
+          }
+      }
+      
+      int32 CurrentCount = LightActors.Num();
+      int32 OptimizedCount = 0;
+      
+      // If over budget, suggest optimizations (don't auto-modify)
+      TArray<TSharedPtr<FJsonValue>> Suggestions;
+      if (CurrentCount > TargetBudget) {
+          TSharedPtr<FJsonObject> Suggestion = MakeShared<FJsonObject>();
+          Suggestion->SetStringField(TEXT("type"), TEXT("reduce_light_count"));
+          Suggestion->SetStringField(TEXT("message"), 
+              FString::Printf(TEXT("Scene has %d lights, exceeds budget of %d. Consider merging or removing lights."), 
+                  CurrentCount, static_cast<int32>(TargetBudget)));
+          Suggestions.Add(MakeShared<FJsonValueObject>(Suggestion));
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetNumberField(TEXT("currentLightCount"), CurrentCount);
+      Resp->SetNumberField(TEXT("targetBudget"), TargetBudget);
+      Resp->SetArrayField(TEXT("suggestions"), Suggestions);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MegaLights optimization analysis complete"), Resp);
+      return true;
+  }
+  // ========================================================================
+  // Advanced Lighting Actions
+  // ========================================================================
+  else if (Lower == TEXT("configure_gi_settings")) {
+      FString Method;
+      if (Payload->TryGetStringField(TEXT("method"), Method)) {
+          // Normalize method name to lowercase for comparison
+          FString MethodLower = Method.ToLower();
+          if (MethodLower == TEXT("lumen") || MethodLower == TEXT("lumengi")) {
+              IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+              if (CVar) CVar->Set(1);
+          } else if (MethodLower == TEXT("screenspace") || MethodLower == TEXT("ssgi")) {
+              IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+              if (CVar) CVar->Set(2);
+          } else if (MethodLower == TEXT("raytraced")) {
+              IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+              if (CVar) CVar->Set(3);
+          } else if (MethodLower == TEXT("none") || MethodLower == TEXT("baked")) {
+              IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+              if (CVar) CVar->Set(0);
+          }
+      }
+      
+      double Bounces = 0.0;
+      if (Payload->TryGetNumberField(TEXT("bounces"), Bounces)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.MaxReflectionBounces"));
+          if (CVar) CVar->Set(static_cast<int32>(Bounces));
+      }
+      
+      double IndirectIntensity = 0.0;
+      if (Payload->TryGetNumberField(TEXT("indirectLightingIntensity"), IndirectIntensity)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.IndirectLightingIntensity"));
+          if (CVar) CVar->Set(static_cast<float>(IndirectIntensity));
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("GI settings configured"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("bake_lighting_preview")) {
+      FString Quality;
+      Payload->TryGetStringField(TEXT("quality"), Quality);
+      
+      bool bPreview = true;
+      Payload->TryGetBoolField(TEXT("preview"), bPreview);
+      
+      if (GEditor && GetActiveWorld()) {
+          FString Command = bPreview ? TEXT("BUILD LIGHTING QUALITY=Preview") : TEXT("BUILD LIGHTING");
+          GEditor->Exec(GetActiveWorld(), *Command);
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetBoolField(TEXT("preview"), bPreview);
+      SendAutomationResponse(RequestingSocket, RequestId, true, 
+          bPreview ? TEXT("Preview lighting build started") : TEXT("Lighting build started"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("get_light_complexity")) {
+      // Analyze lighting complexity in the scene
+      TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+      
+      int32 TotalLights = 0;
+      int32 StaticLights = 0;
+      int32 StationaryLights = 0;
+      int32 MovableLights = 0;
+      int32 ShadowCastingLights = 0;
+      
+      for (AActor* Actor : AllActors) {
+          if (!Actor) continue;
+          ULightComponent* LightComp = Actor->FindComponentByClass<ULightComponent>();
+          if (LightComp) {
+              TotalLights++;
+              if (LightComp->CastShadows) ShadowCastingLights++;
+              switch (LightComp->Mobility) {
+                  case EComponentMobility::Static: StaticLights++; break;
+                  case EComponentMobility::Stationary: StationaryLights++; break;
+                  case EComponentMobility::Movable: MovableLights++; break;
+              }
+          }
+      }
+      
+      // Calculate complexity score (rough heuristic)
+      int32 ComplexityScore = StaticLights * 1 + StationaryLights * 2 + MovableLights * 4 + ShadowCastingLights * 3;
+      FString ComplexityLevel = TEXT("Low");
+      if (ComplexityScore > 100) ComplexityLevel = TEXT("High");
+      else if (ComplexityScore > 50) ComplexityLevel = TEXT("Medium");
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetNumberField(TEXT("totalLights"), TotalLights);
+      Resp->SetNumberField(TEXT("staticLights"), StaticLights);
+      Resp->SetNumberField(TEXT("stationaryLights"), StationaryLights);
+      Resp->SetNumberField(TEXT("movableLights"), MovableLights);
+      Resp->SetNumberField(TEXT("shadowCastingLights"), ShadowCastingLights);
+      Resp->SetNumberField(TEXT("complexityScore"), ComplexityScore);
+      Resp->SetStringField(TEXT("complexityLevel"), ComplexityLevel);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Light complexity analyzed"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("configure_volumetric_fog")) {
+      // More advanced volumetric fog configuration
+      bool bEnabled = true;
+      Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+      
+      IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.VolumetricFog"));
+      if (CVar) CVar->Set(bEnabled ? 1 : 0);
+      
+      // Find or create fog actor
+      AExponentialHeightFog* FogActor = nullptr;
+      TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+      for (AActor* Actor : AllActors) {
+          if (Actor && Actor->IsA<AExponentialHeightFog>()) {
+              FogActor = Cast<AExponentialHeightFog>(Actor);
+              break;
+          }
+      }
+      
+      if (!FogActor && bEnabled) {
+          FogActor = Cast<AExponentialHeightFog>(SpawnActorInActiveWorld<AActor>(
+              AExponentialHeightFog::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator));
+      }
+      
+      if (FogActor && FogActor->GetComponent()) {
+          UExponentialHeightFogComponent* FogComp = FogActor->GetComponent();
+          FogComp->bEnableVolumetricFog = bEnabled;
+          
+          double Density = 0.0;
+          if (Payload->TryGetNumberField(TEXT("density"), Density)) {
+              FogComp->FogDensity = static_cast<float>(Density);
+          }
+          
+          double ViewDistance = 0.0;
+          if (Payload->TryGetNumberField(TEXT("viewDistance"), ViewDistance)) {
+              FogComp->VolumetricFogDistance = static_cast<float>(ViewDistance);
+          }
+          
+          double ScatteringIntensity = 0.0;
+          if (Payload->TryGetNumberField(TEXT("scatteringIntensity"), ScatteringIntensity)) {
+              FogComp->VolumetricFogScatteringDistribution = static_cast<float>(ScatteringIntensity);
+          }
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetBoolField(TEXT("enabled"), bEnabled);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Volumetric fog configured"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("create_light_batch")) {
+      const TArray<TSharedPtr<FJsonValue>>* LightsArray = nullptr;
+      if (!Payload->TryGetArrayField(TEXT("lights"), LightsArray) || !LightsArray) {
+          SendAutomationError(RequestingSocket, RequestId, TEXT("lights array required"), TEXT("INVALID_ARGUMENT"));
+          return true;
+      }
+      
+      TArray<TSharedPtr<FJsonValue>> CreatedLights;
+      int32 SuccessCount = 0;
+      int32 FailCount = 0;
+      
+      for (const TSharedPtr<FJsonValue>& LightVal : *LightsArray) {
+          const TSharedPtr<FJsonObject>* LightObj = nullptr;
+          if (!LightVal->TryGetObject(LightObj) || !LightObj) continue;
+          
+          FString LightType = TEXT("PointLight");
+          (*LightObj)->TryGetStringField(TEXT("type"), LightType);
+          
+          FVector Location = FVector::ZeroVector;
+          const TSharedPtr<FJsonObject>* LocObj = nullptr;
+          if ((*LightObj)->TryGetObjectField(TEXT("location"), LocObj)) {
+              Location.X = (*LocObj)->GetNumberField(TEXT("x"));
+              Location.Y = (*LocObj)->GetNumberField(TEXT("y"));
+              Location.Z = (*LocObj)->GetNumberField(TEXT("z"));
+          }
+          
+          UClass* LightClass = ResolveUClass(LightType);
+          if (!LightClass) LightClass = ResolveUClass(TEXT("A") + LightType);
+          if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass())) {
+              FailCount++;
+              continue;
+          }
+          
+          FActorSpawnParameters SpawnParams;
+          SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+          AActor* NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location, nullptr, SpawnParams);
+          
+          if (NewLight) {
+              FString Name;
+              if ((*LightObj)->TryGetStringField(TEXT("name"), Name)) {
+                  NewLight->SetActorLabel(Name);
+              }
+              
+              if (ULightComponent* LightComp = NewLight->FindComponentByClass<ULightComponent>()) {
+                  LightComp->SetMobility(EComponentMobility::Movable);
+                  
+                  double Intensity = 0.0;
+                  if ((*LightObj)->TryGetNumberField(TEXT("intensity"), Intensity)) {
+                      LightComp->SetIntensity(static_cast<float>(Intensity));
+                  }
+              }
+              
+              TSharedPtr<FJsonObject> CreatedInfo = MakeShared<FJsonObject>();
+              CreatedInfo->SetStringField(TEXT("name"), NewLight->GetActorLabel());
+              CreatedInfo->SetStringField(TEXT("type"), LightType);
+              CreatedLights.Add(MakeShared<FJsonValueObject>(CreatedInfo));
+              SuccessCount++;
+          } else {
+              FailCount++;
+          }
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), FailCount == 0);
+      Resp->SetNumberField(TEXT("created"), SuccessCount);
+      Resp->SetNumberField(TEXT("failed"), FailCount);
+      Resp->SetArrayField(TEXT("lights"), CreatedLights);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true, 
+          FString::Printf(TEXT("Created %d lights (%d failed)"), SuccessCount, FailCount), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("configure_shadow_settings")) {
+      FString ShadowQuality;
+      if (Payload->TryGetStringField(TEXT("shadowQuality"), ShadowQuality)) {
+          TMap<FString, int32> QualityMap;
+          QualityMap.Add(TEXT("low"), 0);
+          QualityMap.Add(TEXT("medium"), 1);
+          QualityMap.Add(TEXT("high"), 2);
+          QualityMap.Add(TEXT("epic"), 3);
+          
+          const int32* QualityVal = QualityMap.Find(ShadowQuality.ToLower());
+          if (QualityVal) {
+              IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ShadowQuality"));
+              if (CVar) CVar->Set(*QualityVal);
+          }
+      }
+      
+      bool bCascaded = false;
+      if (Payload->TryGetBoolField(TEXT("cascadedShadows"), bCascaded)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.CSM.MaxCascades"));
+          if (CVar) CVar->Set(bCascaded ? 4 : 1);
+      }
+      
+      double ShadowBias = 0.0;
+      if (Payload->TryGetNumberField(TEXT("shadowBias"), ShadowBias)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.DepthBias"));
+          if (CVar) CVar->Set(static_cast<float>(ShadowBias));
+      }
+      
+      bool bContactShadows = false;
+      if (Payload->TryGetBoolField(TEXT("contactShadows"), bContactShadows)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ContactShadows"));
+          if (CVar) CVar->Set(bContactShadows ? 1 : 0);
+      }
+      
+      bool bRayTracedShadows = false;
+      if (Payload->TryGetBoolField(TEXT("rayTracedShadows"), bRayTracedShadows)) {
+          IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RayTracing.Shadows"));
+          if (CVar) CVar->Set(bRayTracedShadows ? 1 : 0);
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Shadow settings configured"), Resp);
+      return true;
+  }
+  else if (Lower == TEXT("validate_lighting_setup")) {
+      bool bValidatePerformance = true;
+      bool bValidateOverlap = true;
+      bool bValidateShadows = true;
+      Payload->TryGetBoolField(TEXT("validatePerformance"), bValidatePerformance);
+      Payload->TryGetBoolField(TEXT("validateOverlap"), bValidateOverlap);
+      Payload->TryGetBoolField(TEXT("validateShadows"), bValidateShadows);
+      
+      TArray<TSharedPtr<FJsonValue>> Issues;
+      TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
+      
+      int32 TotalLights = 0;
+      int32 MovableShadowLights = 0;
+      int32 OverlappingLights = 0;
+      
+      for (AActor* Actor : AllActors) {
+          if (!Actor) continue;
+          ULightComponent* LightComp = Actor->FindComponentByClass<ULightComponent>();
+          if (!LightComp) continue;
+          
+          TotalLights++;
+          
+          // Check for movable shadow-casting lights (expensive)
+          if (bValidatePerformance && LightComp->Mobility == EComponentMobility::Movable && LightComp->CastShadows) {
+              MovableShadowLights++;
+              if (MovableShadowLights > 4) {
+                  TSharedPtr<FJsonObject> Issue = MakeShared<FJsonObject>();
+                  Issue->SetStringField(TEXT("type"), TEXT("performance"));
+                  Issue->SetStringField(TEXT("severity"), TEXT("warning"));
+                  Issue->SetStringField(TEXT("message"), 
+                      FString::Printf(TEXT("Light '%s' is movable with shadows - consider making stationary"), *Actor->GetActorLabel()));
+                  Issue->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+                  Issues.Add(MakeShared<FJsonValueObject>(Issue));
+              }
+          }
+      }
+      
+      // Performance summary
+      if (bValidatePerformance && TotalLights > 100) {
+          TSharedPtr<FJsonObject> Issue = MakeShared<FJsonObject>();
+          Issue->SetStringField(TEXT("type"), TEXT("performance"));
+          Issue->SetStringField(TEXT("severity"), TEXT("warning"));
+          Issue->SetStringField(TEXT("message"), 
+              FString::Printf(TEXT("High light count (%d) may impact performance. Consider using MegaLights or reducing count."), TotalLights));
+          Issues.Add(MakeShared<FJsonValueObject>(Issue));
+      }
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetNumberField(TEXT("totalLights"), TotalLights);
+      Resp->SetNumberField(TEXT("issueCount"), Issues.Num());
+      Resp->SetArrayField(TEXT("issues"), Issues);
+      Resp->SetBoolField(TEXT("valid"), Issues.Num() == 0);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting validation complete"), Resp);
       return true;
   }
 

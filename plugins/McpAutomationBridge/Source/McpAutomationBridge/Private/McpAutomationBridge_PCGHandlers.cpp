@@ -1083,6 +1083,7 @@ static bool HandleSetPCGPartitionGridSize(
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 GridSize = GetJsonIntField(Payload, TEXT("gridSize"), 25600);
+    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
     
     UWorld* World = GetActiveWorld();
     if (!World)
@@ -1094,17 +1095,44 @@ static bool HandleSetPCGPartitionGridSize(
     UPCGComponent* PCGComp = nullptr;
     AActor* TargetActor = nullptr;
     
-    TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
-    if (TargetActor)
+    // If actor name provided, look for that specific actor
+    if (!ActorName.IsEmpty())
     {
-        PCGComp = TargetActor->FindComponentByClass<UPCGComponent>();
+        TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
+        if (TargetActor)
+        {
+            PCGComp = TargetActor->FindComponentByClass<UPCGComponent>();
+        }
+    }
+    
+    // If no actor name or actor not found, search for first PCG component in level
+    if (!PCGComp)
+    {
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            AActor* Actor = *It;
+            if (Actor)
+            {
+                PCGComp = Actor->FindComponentByClass<UPCGComponent>();
+                if (PCGComp)
+                {
+                    TargetActor = Actor;
+                    break;
+                }
+            }
+        }
     }
     
     if (!PCGComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No PCG component found"), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationResponse(Socket, RequestId, false, 
+            TEXT("No PCG component found in level. Add a PCG Volume or actor with PCGComponent first."), 
+            nullptr, TEXT("NOT_FOUND"));
         return true;
     }
+    
+    // Configure partitioning on the component
+    PCGComp->SetIsPartitioned(bEnabled);
     
     // Grid size is set on the graph via HiGen settings
     UPCGGraph* PCGGraph = PCGComp->GetGraph();
@@ -1116,6 +1144,8 @@ static bool HandleSetPCGPartitionGridSize(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), TargetActor ? TargetActor->GetActorLabel() : ActorName);
     Result->SetNumberField(TEXT("gridSize"), GridSize);
+    Result->SetBoolField(TEXT("partitioningEnabled"), bEnabled);
+    Result->SetStringField(TEXT("note"), TEXT("Partitioning configured. Grid size is managed at project/World Partition level."));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Partition grid size configured"), Result);
     return true;
 }

@@ -628,12 +628,13 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     case 'read_log':
       return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>)) as HandlerResult;
     case 'batch_execute': {
-      const requests = (argsTyped as Record<string, unknown>).requests;
+      // Accept both 'requests' and 'operations' for compatibility
+      const requests = (argsTyped as Record<string, unknown>).requests ?? (argsTyped as Record<string, unknown>).operations;
       if (!Array.isArray(requests)) {
         return {
           success: false,
           error: 'INVALID_ARGUMENT',
-          message: 'requests must be an array',
+          message: 'requests or operations array is required',
           action: 'batch_execute'
         };
       }
@@ -644,7 +645,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     // PHASE 4.1: EVENT PUSH SYSTEM
     // =========================================================================
     case 'subscribe_to_event': {
-      const eventType = (argsTyped as Record<string, unknown>).eventType as string;
+      // Accept eventType, event, name, or channels for compatibility
+      const eventType = (argsTyped as Record<string, unknown>).eventType as string
+        ?? (argsTyped as Record<string, unknown>).event as string
+        ?? (argsTyped as Record<string, unknown>).name as string
+        ?? (argsTyped as Record<string, unknown>).channels as string;
       if (!eventType) {
         return {
           success: false,
@@ -656,7 +661,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'subscribe_to_event', eventType }, 'Automation bridge not available')) as HandlerResult;
     }
     case 'unsubscribe_from_event': {
-      const eventType = (argsTyped as Record<string, unknown>).eventType as string;
+      // Accept eventType, event, name, or channels for compatibility
+      const eventType = (argsTyped as Record<string, unknown>).eventType as string
+        ?? (argsTyped as Record<string, unknown>).event as string
+        ?? (argsTyped as Record<string, unknown>).name as string
+        ?? (argsTyped as Record<string, unknown>).channels as string;
       if (!eventType) {
         return {
           success: false,
@@ -684,7 +693,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     // PHASE 4.3: BACKGROUND JOB MANAGEMENT
     // =========================================================================
     case 'start_background_job': {
-      const jobType = (argsTyped as Record<string, unknown>).jobType as string;
+      // Accept jobType or type for compatibility
+      const jobType = (argsTyped as Record<string, unknown>).jobType as string
+        ?? (argsTyped as Record<string, unknown>).type as string;
       if (!jobType) {
         return {
           success: false,
@@ -696,7 +707,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'start_background_job', jobType, ...(argsTyped as Record<string, unknown>) }, 'Automation bridge not available')) as HandlerResult;
     }
     case 'get_job_status': {
-      const jobId = (argsTyped as Record<string, unknown>).jobId as string;
+      // Accept jobId or id for compatibility
+      const jobId = (argsTyped as Record<string, unknown>).jobId as string
+        ?? (argsTyped as Record<string, unknown>).id as string;
       if (!jobId) {
         return {
           success: false,
@@ -708,7 +721,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       return cleanObject(await executeAutomationRequest(tools, 'control_editor', { action: 'get_job_status', jobId }, 'Automation bridge not available')) as HandlerResult;
     }
     case 'cancel_job': {
-      const jobId = (argsTyped as Record<string, unknown>).jobId as string;
+      // Accept jobId or id for compatibility
+      const jobId = (argsTyped as Record<string, unknown>).jobId as string
+        ?? (argsTyped as Record<string, unknown>).id as string;
       if (!jobId) {
         return {
           success: false,

@@ -132,6 +132,151 @@
     {
       "Name": "AnimationLocomotionLibrary",
       "Enabled": true
+    },
+    {
+      "Name": "Water",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MovieRenderPipeline",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosVehiclesPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosFlesh",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "HairStrands",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Mutable",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "USDImporter",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AlembicImporter",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GLTFExporter",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "DatasmithImporter",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SpeedTree",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BinkMediaPlayer",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "LiveLink",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "nDisplay",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Composure",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OpenColorIO",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "RemoteControl",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "DMX",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OSC",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MIDIDevice",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OpenXR",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AugmentedReality",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MLDeformerFramework",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimationModifiers",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SkeletalMeshModelingTools",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosNiagara",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GeometryCollectionPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "FieldSystemPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MediaCompositing",
+      "Enabled": true,
+      "Optional": true
     }
   ]
 }

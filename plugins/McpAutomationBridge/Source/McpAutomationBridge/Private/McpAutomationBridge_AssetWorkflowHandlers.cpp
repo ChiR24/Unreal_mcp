@@ -1716,11 +1716,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // GENERATE LODs
   // ============================================================================
   if (LowerSubAction == TEXT("generate_lods")) {
+    // Accept both assetPath and meshPath for flexibility
     FString AssetPath;
     if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
+      // Fallback to meshPath if assetPath not provided
+      if (!Payload->TryGetStringField(TEXT("meshPath"), AssetPath) || AssetPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath or meshPath required"),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
     }
 
     // Normalize path
@@ -2791,9 +2795,37 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return true;
   }
 
+  // Accept multiple parameter names for flexibility: assetPath, meshPath, landscapeName
   FString AssetPath;
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+  FString MeshPath;
+  FString LandscapeName;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+  
+  // Prefer assetPath, fall back to meshPath
+  if (AssetPath.IsEmpty() && !MeshPath.IsEmpty()) {
+    AssetPath = MeshPath;
+  }
+  
+  // If landscapeName provided (from build_environment tool), find landscape actor
+  // and return success since landscapes don't use traditional LOD generation
+  if (!LandscapeName.IsEmpty() && AssetPath.IsEmpty()) {
+    // Landscape LODs are handled differently - they use Landscape LOD settings, not static mesh LODs
+    // Return success with info about landscape LOD configuration
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("landscapeName"), LandscapeName);
+    Result->SetStringField(TEXT("message"), TEXT("Landscape LODs are configured via Landscape component LOD settings, not static mesh LOD generation. Use sculpt_landscape or modify_heightmap for terrain modifications."));
+    Result->SetStringField(TEXT("hint"), TEXT("Landscape LOD levels are automatic based on viewing distance. Configure LandscapeLODBias on the Landscape component if needed."));
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Landscape LOD info provided"), Result);
+    return true;
+  }
+  
+  if (AssetPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath, meshPath, or landscapeName required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }

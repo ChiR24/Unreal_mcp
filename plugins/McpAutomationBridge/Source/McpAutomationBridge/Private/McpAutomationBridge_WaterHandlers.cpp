@@ -1133,6 +1133,177 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       }
     }
   }
+  // ========================================================================
+  // CONFIGURE OCEAN WAVES - Phase 28 Extended (Configure wave parameters on ocean water bodies)
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_ocean_waves")) {
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    if (ActorName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("actorName required for configure_ocean_waves");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      // Use optimized TActorIterator-based lookup
+      UWorld* World = GetActiveWorld();
+      AWaterBody* WaterActor = Cast<AWaterBody>(Self->FindActorCached(FName(*ActorName)));
+
+      if (WaterActor) {
+        UWaterBodyOceanComponent *OceanComp = WaterActor->FindComponentByClass<UWaterBodyOceanComponent>();
+        if (OceanComp) {
+          UWaterBodyComponent *WaterComp = OceanComp;
+          UWaterWavesBase *WaterWaves = WaterComp->GetWaterWaves();
+          
+          int32 PropertiesSet = 0;
+          
+          if (WaterWaves) {
+            if (UGerstnerWaterWaves *GerstnerWaves = Cast<UGerstnerWaterWaves>(WaterWaves)) {
+              UGerstnerWaterWaveGeneratorBase *Generator = GerstnerWaves->GerstnerWaveGenerator;
+              if (Generator) {
+                if (UGerstnerWaterWaveGeneratorSimple *SimpleGen = Cast<UGerstnerWaterWaveGeneratorSimple>(Generator)) {
+                  // Wave count
+                  double NumWaves = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("numWaves"), NumWaves)) {
+                    SimpleGen->NumWaves = FMath::Clamp(static_cast<int32>(NumWaves), 1, 128);
+                    PropertiesSet++;
+                  }
+                  
+                  // Wavelength range
+                  double MinWavelength = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("minWavelength"), MinWavelength)) {
+                    SimpleGen->MinWavelength = FMath::Max(0.0f, static_cast<float>(MinWavelength));
+                    PropertiesSet++;
+                  }
+                  
+                  double MaxWavelength = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("maxWavelength"), MaxWavelength)) {
+                    SimpleGen->MaxWavelength = FMath::Max(0.0f, static_cast<float>(MaxWavelength));
+                    PropertiesSet++;
+                  }
+                  
+                  // Amplitude range  
+                  double MinAmplitude = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("minAmplitude"), MinAmplitude)) {
+                    SimpleGen->MinAmplitude = FMath::Max(0.0001f, static_cast<float>(MinAmplitude));
+                    PropertiesSet++;
+                  }
+                  
+                  double MaxAmplitude = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("maxAmplitude"), MaxAmplitude)) {
+                    SimpleGen->MaxAmplitude = FMath::Max(0.0001f, static_cast<float>(MaxAmplitude));
+                    PropertiesSet++;
+                  }
+                  
+                  // Wind direction
+                  double WindAngle = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("windAngle"), WindAngle)) {
+                    SimpleGen->WindAngleDeg = FMath::Clamp(static_cast<float>(WindAngle), -180.0f, 180.0f);
+                    PropertiesSet++;
+                  }
+                  
+                  // Wave steepness
+                  double SmallWaveSteepness = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("smallWaveSteepness"), SmallWaveSteepness)) {
+                    SimpleGen->SmallWaveSteepness = FMath::Clamp(static_cast<float>(SmallWaveSteepness), 0.0f, 1.0f);
+                    PropertiesSet++;
+                  }
+                  
+                  double LargeWaveSteepness = 0.0;
+                  if (Payload->TryGetNumberField(TEXT("largeWaveSteepness"), LargeWaveSteepness)) {
+                    SimpleGen->LargeWaveSteepness = FMath::Clamp(static_cast<float>(LargeWaveSteepness), 0.0f, 1.0f);
+                    PropertiesSet++;
+                  }
+                  
+                  // Mark the wave asset as modified
+                  GerstnerWaves->Modify();
+                  
+                  bSuccess = true;
+                  Message = FString::Printf(TEXT("Configured %d ocean wave properties"), PropertiesSet);
+                  Resp->SetStringField(TEXT("actorName"), WaterActor->GetActorLabel());
+                  Resp->SetNumberField(TEXT("propertiesSet"), PropertiesSet);
+                  Resp->SetStringField(TEXT("generatorType"), TEXT("Simple"));
+                } else {
+                  bSuccess = true;
+                  Message = TEXT("Wave generator is Spectrum type - limited configuration available");
+                  Resp->SetStringField(TEXT("generatorType"), Generator->GetClass()->GetName());
+                }
+              } else {
+                bSuccess = false;
+                Message = TEXT("No wave generator found on GerstnerWaterWaves");
+                ErrorCode = TEXT("GENERATOR_NOT_FOUND");
+              }
+            } else {
+              bSuccess = true;
+              Message = TEXT("Water waves found but not Gerstner type");
+              Resp->SetStringField(TEXT("waveType"), WaterWaves->GetClass()->GetName());
+            }
+          } else {
+            bSuccess = false;
+            Message = TEXT("No water waves configured on this water body");
+            ErrorCode = TEXT("WAVES_NOT_FOUND");
+          }
+        } else {
+          bSuccess = false;
+          Message = TEXT("Actor is not a WaterBodyOcean - ocean wave configuration only available for oceans");
+          ErrorCode = TEXT("WRONG_WATER_TYPE");
+        }
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Water body actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // QUERY WATER BODIES - Alias for list_water_bodies for semantic consistency
+  // ========================================================================
+  else if (LowerSub == TEXT("query_water_bodies")) {
+    // Reuse list_water_bodies logic
+    TArray<TSharedPtr<FJsonValue>> WaterBodies;
+    
+    for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+      if (!Actor) continue;
+      
+      UWaterBodyComponent *WaterComp = Actor->FindComponentByClass<UWaterBodyComponent>();
+      if (WaterComp) {
+        TSharedPtr<FJsonObject> WaterInfo = MakeShared<FJsonObject>();
+        WaterInfo->SetStringField(TEXT("name"), Actor->GetActorLabel());
+        WaterInfo->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+        
+        EWaterBodyType WaterType = WaterComp->GetWaterBodyType();
+        FString TypeName;
+        switch (WaterType) {
+          case EWaterBodyType::Ocean: TypeName = TEXT("Ocean"); break;
+          case EWaterBodyType::Lake: TypeName = TEXT("Lake"); break;
+          case EWaterBodyType::River: TypeName = TEXT("River"); break;
+          case EWaterBodyType::Transition: TypeName = TEXT("Transition"); break;
+          default: TypeName = TEXT("Unknown"); break;
+        }
+        WaterInfo->SetStringField(TEXT("type"), TypeName);
+        
+        FVector Loc = Actor->GetActorLocation();
+        TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+        LocObj->SetNumberField(TEXT("x"), Loc.X);
+        LocObj->SetNumberField(TEXT("y"), Loc.Y);
+        LocObj->SetNumberField(TEXT("z"), Loc.Z);
+        WaterInfo->SetObjectField(TEXT("location"), LocObj);
+        
+        // Additional info for query
+        WaterInfo->SetBoolField(TEXT("supportsWaves"), WaterComp->IsWaveSupported());
+        WaterInfo->SetBoolField(TEXT("hasWaves"), WaterComp->HasWaves());
+        WaterInfo->SetNumberField(TEXT("channelDepth"), WaterComp->GetChannelDepth());
+        
+        WaterBodies.Add(MakeShared<FJsonValueObject>(WaterInfo));
+      }
+    }
+
+    Resp->SetArrayField(TEXT("waterBodies"), WaterBodies);
+    Resp->SetNumberField(TEXT("count"), WaterBodies.Num());
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Found %d water bodies"), WaterBodies.Num());
+  }
   else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Water action '%s' not implemented"), *LowerSub);

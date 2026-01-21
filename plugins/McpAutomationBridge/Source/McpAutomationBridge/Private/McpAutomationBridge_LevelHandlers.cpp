@@ -158,7 +158,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else if (LowerSub == TEXT("export_level")) {
       EffectiveAction = TEXT("export_level");
     } else if (LowerSub == TEXT("import_level")) {
-    } else if (LowerSub == TEXT("import_level")) {
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {
       EffectiveAction = TEXT("add_sublevel");

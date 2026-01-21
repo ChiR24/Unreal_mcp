@@ -170,7 +170,11 @@ export class MessageHandler {
                     'create_effect',
                     'build_environment',
                     'system_control',
-                    'manage_ui'
+                    'manage_ui',
+                    'manage_weather',
+                    'manage_water',
+                    'manage_landscape',
+                    'manage_foliage'
                 ]);
 
                 if (consolidatedToolActions.has(expected) && got !== expected) {
