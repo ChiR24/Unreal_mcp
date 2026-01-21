@@ -2,6 +2,7 @@ using UnrealBuildTool;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Reflection;
 
 public class McpAutomationBridge : ModuleRules
 {
@@ -43,22 +44,20 @@ public class McpAutomationBridge : ModuleRules
         // This reduces number of compiler invocations, preventing memory exhaustion
         NumIncludedBytesPerUnityCPPOverride = 2048 * 1024;
         
-        // Disable Adaptive Unity to prevent files from being excluded from unity builds
-        // bUseAdaptiveUnityBuild was removed in UE 5.7, use reflection to set it safely
-        try
+        // Adaptive Unity toggles (reflection-safe across UE 5.x)
+        TrySetBoolMember(this, "bUseAdaptiveUnityBuild", false);
+        TrySetBoolMember(this, "bMergeUnityFiles", true);
+        TrySetBoolMember(this, "bFasterWithoutUnity", false);
+
+        bool enableAdaptiveUnityTarget = GetBoolEnvironmentVariable("MCP_ENABLE_ADAPTIVE_UNITY", false);
+        if (!enableAdaptiveUnityTarget)
         {
-            var prop = GetType().GetProperty("bUseAdaptiveUnityBuild");
-            if (prop != null) { prop.SetValue(this, false); }
+            TrySetBoolMember(Target, "bUseAdaptiveUnityBuild", false);
+            TrySetBoolMember(Target, "bUseUnityBuild", true);
+            TrySetBoolMember(Target, "bAdaptiveUnityDisablesPCH", false);
+            TrySetBoolMember(Target, "bAdaptiveUnityDisablesOptimizations", false);
+            TrySetBoolMember(Target, "bAdaptiveUnityCreatesDedicatedPCH", false);
         }
-        catch { /* Property doesn't exist in this UE version */ }
-        
-        // bMergeUnityFiles was also removed in UE 5.7
-        try
-        {
-            var prop = GetType().GetProperty("bMergeUnityFiles");
-            if (prop != null) { prop.SetValue(this, true); }
-        }
-        catch { /* Property doesn't exist in this UE version */ }
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
@@ -673,6 +672,33 @@ public class McpAutomationBridge : ModuleRules
         {
             return defaultValue;
         }
+    }
+
+    private static void TrySetBoolMember(object target, string memberName, bool value)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(memberName)) return;
+
+        try
+        {
+            Type targetType = target.GetType();
+            PropertyInfo prop = targetType.GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null && prop.PropertyType == typeof(bool))
+            {
+                MethodInfo setter = prop.GetSetMethod(true);
+                if (setter != null)
+                {
+                    setter.Invoke(target, new object[] { value });
+                    return;
+                }
+            }
+
+            FieldInfo field = targetType.GetField(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field != null && field.FieldType == typeof(bool))
+            {
+                field.SetValue(target, value);
+            }
+        }
+        catch { /* Ignore reflection failures */ }
     }
 
     /// <summary>

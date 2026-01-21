@@ -41,6 +41,13 @@
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
+
+// Spline includes (Phase 54: Merged from manage_splines)
+#include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Materials/MaterialInterface.h"
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpVolumeHandlers, Log, All);
@@ -247,6 +254,19 @@ namespace VolumeHelpers
 }
 
 // ============================================================================
+// Import VolumeHelpers functions into file scope (AFTER namespace closes)
+// This is safe for unity builds because these names are unique to VolumeHelpers
+// ============================================================================
+#if WITH_EDITOR
+using VolumeHelpers::GetEditorWorld;
+using VolumeHelpers::GetVectorFromPayload;
+using VolumeHelpers::GetRotatorFromPayload;
+using VolumeHelpers::CreateBoxBrushForVolume;
+using VolumeHelpers::FindVolumeByName;
+using VolumeHelpers::SpawnVolumeActor;
+#endif
+
+// ============================================================================
 // Trigger Volume Handlers (4 actions)
 // ============================================================================
 
@@ -258,7 +278,8 @@ static bool HandleCreateTriggerVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -296,7 +317,8 @@ static bool HandleCreateTriggerBox(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerBox"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -338,7 +360,8 @@ static bool HandleCreateTriggerSphere(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerSphere"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -385,7 +408,8 @@ static bool HandleCreateTriggerCapsule(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerCapsule"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -438,7 +462,8 @@ static bool HandleCreateBlockingVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("BlockingVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -476,7 +501,8 @@ static bool HandleCreateKillZVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("KillZVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -514,7 +540,8 @@ static bool HandleCreatePainCausingVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PainCausingVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -560,7 +587,8 @@ static bool HandleCreatePhysicsVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PhysicsVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -612,7 +640,8 @@ static bool HandleCreateAudioVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("AudioVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -655,7 +684,8 @@ static bool HandleCreateReverbVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("ReverbVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -710,7 +740,8 @@ static bool HandleCreateCullDistanceVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CullDistanceVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -772,7 +803,8 @@ static bool HandleCreatePrecomputedVisibilityVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PrecomputedVisibilityVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -810,7 +842,8 @@ static bool HandleCreateLightmassImportanceVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("LightmassImportanceVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -848,7 +881,8 @@ static bool HandleCreateNavMeshBoundsVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavMeshBoundsVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -886,7 +920,8 @@ static bool HandleCreateNavModifierVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavModifierVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -924,7 +959,8 @@ static bool HandleCreateCameraBlockingVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CameraBlockingVolume"));
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
@@ -966,7 +1002,8 @@ static bool HandleSetVolumeExtent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     FVector NewExtent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
@@ -1025,7 +1062,8 @@ static bool HandleSetVolumeProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
 
@@ -1151,7 +1189,8 @@ static bool HandleGetVolumesInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace VolumeHelpers;
+    // NOTE: Do NOT use 'using namespace VolumeHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
 
     FString Filter = GetJsonStringField(Payload, TEXT("filter"), TEXT(""));
     FString VolumeType = GetJsonStringField(Payload, TEXT("volumeType"), TEXT(""));
@@ -1279,6 +1318,7 @@ static bool HandleGetVolumesInfo(
     return true;
 }
 
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -1384,6 +1424,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("get_volumes_info"))
     {
         return HandleGetVolumesInfo(this, RequestId, Payload, Socket);
+    }
+
+    // ========================================================================
+    // Spline Actions - Forward to HandleManageSplinesAction (SplineHandlers.cpp)
+    // ========================================================================
+    if (SubAction.StartsWith(TEXT("create_spline")) ||
+        SubAction.StartsWith(TEXT("add_spline")) ||
+        SubAction.StartsWith(TEXT("remove_spline")) ||
+        SubAction.StartsWith(TEXT("set_spline")) ||
+        SubAction.StartsWith(TEXT("configure_spline")) ||
+        SubAction.StartsWith(TEXT("scatter_meshes")) ||
+        SubAction.StartsWith(TEXT("configure_mesh")) ||
+        SubAction == TEXT("get_splines_info") ||
+        SubAction == TEXT("create_road_spline") ||
+        SubAction == TEXT("create_river_spline") ||
+        SubAction == TEXT("create_fence_spline") ||
+        SubAction == TEXT("create_wall_spline") ||
+        SubAction == TEXT("create_cable_spline") ||
+        SubAction == TEXT("create_pipe_spline"))
+    {
+        // Forward to spline handler (implemented in McpAutomationBridge_SplineHandlers.cpp)
+        return HandleManageSplinesAction(RequestId, TEXT("manage_splines"), Payload, Socket);
     }
 
     // Unknown action

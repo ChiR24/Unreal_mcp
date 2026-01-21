@@ -51,8 +51,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpPCGHandlers, Log, All);
 #if WITH_EDITOR
 
 // ============================================================================
-// JSON Helper Functions
+// JSON Helper Functions (file-specific namespace for unity build ODR safety)
 // ============================================================================
+namespace PCGHelpers {
 
 static FString GetJsonStringField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""))
 {
@@ -98,13 +99,6 @@ static int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
     return Default;
 }
 
-// ============================================================================
-// Helper: O(N) Actor Lookup by Name/Label
-// ============================================================================
-namespace {
-  // FindPCGActorByNameOrLabel removed (replaced by FindActorCached)
-}
-
 static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
 {
     if (!Payload.IsValid()) return Default;
@@ -134,6 +128,10 @@ static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, cons
     }
     return Default;
 }
+
+} // namespace PCGHelpers
+// NOTE: Do NOT use 'using namespace PCGHelpers;' - causes ODR violations in unity builds
+// All calls must be fully qualified: PCGHelpers::GetJsonStringField(...)
 
 #if MCP_HAS_PCG
 
@@ -182,8 +180,8 @@ static void SetNodePosition(UPCGNode* Node, const TSharedPtr<FJsonObject>& Paylo
     const TSharedPtr<FJsonObject>* PosObj;
     if (Payload->TryGetObjectField(TEXT("nodePosition"), PosObj) && PosObj->IsValid())
     {
-        Node->PositionX = GetJsonIntField(*PosObj, TEXT("x"), 0);
-        Node->PositionY = GetJsonIntField(*PosObj, TEXT("y"), 0);
+        Node->PositionX = PCGHelpers::GetJsonIntField(*PosObj, TEXT("x"), 0);
+        Node->PositionY = PCGHelpers::GetJsonIntField(*PosObj, TEXT("y"), 0);
     }
 }
 
@@ -195,9 +193,9 @@ static bool HandleCreatePCGGraph(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphName = GetJsonStringField(Payload, TEXT("graphName"), TEXT("NewPCGGraph"));
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"), TEXT("/Game/PCG"));
-    bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+    FString GraphName = PCGHelpers::GetJsonStringField(Payload, TEXT("graphName"), TEXT("NewPCGGraph"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"), TEXT("/Game/PCG"));
+    bool bSave = PCGHelpers::GetJsonBoolField(Payload, TEXT("save"), true);
 
     if (!GraphPath.StartsWith(TEXT("/"))) GraphPath = TEXT("/Game/") + GraphPath;
     FString FullPath = GraphPath / GraphName;
@@ -246,8 +244,8 @@ static bool HandleCreatePCGSubgraph(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ParentGraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString SubgraphName = GetJsonStringField(Payload, TEXT("subgraphName"), TEXT("Subgraph"));
+    FString ParentGraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString SubgraphName = PCGHelpers::GetJsonStringField(Payload, TEXT("subgraphName"), TEXT("Subgraph"));
     
     if (ParentGraphPath.IsEmpty())
     {
@@ -292,8 +290,8 @@ static bool HandleAddPCGNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString NodeClass = GetJsonStringField(Payload, TEXT("nodeClass"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString NodeClass = PCGHelpers::GetJsonStringField(Payload, TEXT("nodeClass"));
 
     if (GraphPath.IsEmpty() || NodeClass.IsEmpty())
     {
@@ -334,11 +332,11 @@ static bool HandleConnectPCGPins(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString SourceNodeId = GetJsonStringField(Payload, TEXT("sourceNodeId"));
-    FString SourcePinName = GetJsonStringField(Payload, TEXT("sourcePinName"), TEXT("Out"));
-    FString TargetNodeId = GetJsonStringField(Payload, TEXT("targetNodeId"));
-    FString TargetPinName = GetJsonStringField(Payload, TEXT("targetPinName"), TEXT("In"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString SourceNodeId = PCGHelpers::GetJsonStringField(Payload, TEXT("sourceNodeId"));
+    FString SourcePinName = PCGHelpers::GetJsonStringField(Payload, TEXT("sourcePinName"), TEXT("Out"));
+    FString TargetNodeId = PCGHelpers::GetJsonStringField(Payload, TEXT("targetNodeId"));
+    FString TargetPinName = PCGHelpers::GetJsonStringField(Payload, TEXT("targetPinName"), TEXT("In"));
 
     if (GraphPath.IsEmpty() || SourceNodeId.IsEmpty() || TargetNodeId.IsEmpty())
     {
@@ -375,8 +373,8 @@ static bool HandleSetPCGNodeSettings(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString NodeId = GetJsonStringField(Payload, TEXT("nodeId"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString NodeId = PCGHelpers::GetJsonStringField(Payload, TEXT("nodeId"));
     
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     UPCGNode* Node = Graph ? FindNodeById(Graph, NodeId) : nullptr;
@@ -439,7 +437,7 @@ static bool HandleAddLandscapeDataNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -461,7 +459,7 @@ static bool HandleAddSplineDataNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -483,7 +481,7 @@ static bool HandleAddVolumeDataNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -505,7 +503,7 @@ static bool HandleAddActorDataNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -515,7 +513,7 @@ static bool HandleAddActorDataNode(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create actor data settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    FString Mode = GetJsonStringField(Payload, TEXT("mode"), TEXT("ParseActorComponents"));
+    FString Mode = PCGHelpers::GetJsonStringField(Payload, TEXT("mode"), TEXT("ParseActorComponents"));
     if (Mode == TEXT("GetSinglePoint")) Settings->Mode = EPCGGetDataFromActorMode::GetSinglePoint;
     else if (Mode == TEXT("GetActorReference")) Settings->Mode = EPCGGetDataFromActorMode::GetActorReference;
     else Settings->Mode = EPCGGetDataFromActorMode::ParseActorComponents;
@@ -531,7 +529,7 @@ static bool HandleAddTextureDataNode(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -556,7 +554,7 @@ static bool HandleAddSurfaceSampler(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -567,10 +565,10 @@ static bool HandleAddSurfaceSampler(
         return true;
     }
     Settings->PointsPerSquaredMeter = static_cast<float>(GetJsonNumberField(Payload, TEXT("pointsPerSquaredMeter"), 0.1));
-    Settings->PointExtents = GetJsonVectorField(Payload, TEXT("pointExtents"), FVector(50.0f));
+    Settings->PointExtents = PCGHelpers::GetJsonVectorField(Payload, TEXT("pointExtents"), FVector(50.0f));
     Settings->Looseness = static_cast<float>(GetJsonNumberField(Payload, TEXT("looseness"), 1.0));
-    Settings->bUnbounded = GetJsonBoolField(Payload, TEXT("unbounded"), false);
-    Settings->bApplyDensityToPoints = GetJsonBoolField(Payload, TEXT("applyDensityToPoints"), true);
+    Settings->bUnbounded = PCGHelpers::GetJsonBoolField(Payload, TEXT("unbounded"), false);
+    Settings->bApplyDensityToPoints = PCGHelpers::GetJsonBoolField(Payload, TEXT("applyDensityToPoints"), true);
     Settings->PointSteepness = static_cast<float>(GetJsonNumberField(Payload, TEXT("pointSteepness"), 0.5));
     
     UPCGNode* Node = Graph->AddNode(Settings);
@@ -584,7 +582,7 @@ static bool HandleAddMeshSampler(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -594,7 +592,7 @@ static bool HandleAddMeshSampler(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create mesh sampler settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"), TEXT(""));
+    FString MeshPath = PCGHelpers::GetJsonStringField(Payload, TEXT("meshPath"), TEXT(""));
     if (!MeshPath.IsEmpty()) Settings->StaticMesh = TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(MeshPath));
     Settings->MeshPathAttributeName = FName(*GetJsonStringField(Payload, TEXT("meshAttributeName"), TEXT("MeshPath")));
     
@@ -609,7 +607,7 @@ static bool HandleAddSplineSampler(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -619,20 +617,20 @@ static bool HandleAddSplineSampler(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create spline sampler settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    FString DimStr = GetJsonStringField(Payload, TEXT("dimension"), TEXT("OnSpline"));
+    FString DimStr = PCGHelpers::GetJsonStringField(Payload, TEXT("dimension"), TEXT("OnSpline"));
     if (DimStr == TEXT("OnHorizontal")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnHorizontal;
     else if (DimStr == TEXT("OnVertical")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnVertical;
     else if (DimStr == TEXT("OnVolume")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnVolume;
     else if (DimStr == TEXT("OnInterior")) Settings->SamplerParams.Dimension = EPCGSplineSamplingDimension::OnInterior;
     
-    FString ModeStr = GetJsonStringField(Payload, TEXT("mode"), TEXT("Subdivision"));
+    FString ModeStr = PCGHelpers::GetJsonStringField(Payload, TEXT("mode"), TEXT("Subdivision"));
     if (ModeStr == TEXT("Distance")) Settings->SamplerParams.Mode = EPCGSplineSamplingMode::Distance;
     else if (ModeStr == TEXT("NumberOfSamples")) Settings->SamplerParams.Mode = EPCGSplineSamplingMode::NumberOfSamples;
     
-    Settings->SamplerParams.SubdivisionsPerSegment = GetJsonIntField(Payload, TEXT("subdivisionsPerSegment"), 1);
+    Settings->SamplerParams.SubdivisionsPerSegment = PCGHelpers::GetJsonIntField(Payload, TEXT("subdivisionsPerSegment"), 1);
     Settings->SamplerParams.DistanceIncrement = static_cast<float>(GetJsonNumberField(Payload, TEXT("distanceIncrement"), 100.0));
-    Settings->SamplerParams.NumSamples = GetJsonIntField(Payload, TEXT("numSamples"), 8);
-    Settings->SamplerParams.bUnbounded = GetJsonBoolField(Payload, TEXT("unbounded"), false);
+    Settings->SamplerParams.NumSamples = PCGHelpers::GetJsonIntField(Payload, TEXT("numSamples"), 8);
+    Settings->SamplerParams.bUnbounded = PCGHelpers::GetJsonBoolField(Payload, TEXT("unbounded"), false);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -645,7 +643,7 @@ static bool HandleAddVolumeSampler(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -655,8 +653,8 @@ static bool HandleAddVolumeSampler(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create volume sampler settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    Settings->VoxelSize = GetJsonVectorField(Payload, TEXT("voxelSize"), FVector(100.0));
-    Settings->bUnbounded = GetJsonBoolField(Payload, TEXT("unbounded"), false);
+    Settings->VoxelSize = PCGHelpers::GetJsonVectorField(Payload, TEXT("voxelSize"), FVector(100.0));
+    Settings->bUnbounded = PCGHelpers::GetJsonBoolField(Payload, TEXT("unbounded"), false);
     Settings->PointSteepness = static_cast<float>(GetJsonNumberField(Payload, TEXT("pointSteepness"), 0.5));
     
     UPCGNode* Node = Graph->AddNode(Settings);
@@ -674,7 +672,7 @@ static bool HandleAddBoundsModifier(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -695,7 +693,7 @@ static bool HandleAddDensityFilter(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -707,7 +705,7 @@ static bool HandleAddDensityFilter(
     }
     Settings->LowerBound = static_cast<float>(GetJsonNumberField(Payload, TEXT("lowerBound"), 0.5));
     Settings->UpperBound = static_cast<float>(GetJsonNumberField(Payload, TEXT("upperBound"), 1.0));
-    Settings->bInvertFilter = GetJsonBoolField(Payload, TEXT("invertFilter"), false);
+    Settings->bInvertFilter = PCGHelpers::GetJsonBoolField(Payload, TEXT("invertFilter"), false);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -724,7 +722,7 @@ static bool HandleAddHeightFilter(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -745,7 +743,7 @@ static bool HandleAddSlopeFilter(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -761,7 +759,7 @@ static bool HandleAddDistanceFilter(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -782,7 +780,7 @@ static bool HandleAddBoundsFilter(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -803,7 +801,7 @@ static bool HandleAddSelfPruning(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -813,14 +811,14 @@ static bool HandleAddSelfPruning(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create self pruning settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    FString PruningType = GetJsonStringField(Payload, TEXT("pruningType"), TEXT("LargeToSmall"));
+    FString PruningType = PCGHelpers::GetJsonStringField(Payload, TEXT("pruningType"), TEXT("LargeToSmall"));
     if (PruningType == TEXT("SmallToLarge")) Settings->Parameters.PruningType = EPCGSelfPruningType::SmallToLarge;
     else if (PruningType == TEXT("AllEqual")) Settings->Parameters.PruningType = EPCGSelfPruningType::AllEqual;
     else if (PruningType == TEXT("None")) Settings->Parameters.PruningType = EPCGSelfPruningType::None;
     else if (PruningType == TEXT("RemoveDuplicates")) Settings->Parameters.PruningType = EPCGSelfPruningType::RemoveDuplicates;
     
     Settings->Parameters.RadiusSimilarityFactor = static_cast<float>(GetJsonNumberField(Payload, TEXT("radiusSimilarityFactor"), 0.25));
-    Settings->Parameters.bRandomizedPruning = GetJsonBoolField(Payload, TEXT("randomizedPruning"), true);
+    Settings->Parameters.bRandomizedPruning = PCGHelpers::GetJsonBoolField(Payload, TEXT("randomizedPruning"), true);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -837,7 +835,7 @@ static bool HandleAddTransformPoints(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -847,16 +845,16 @@ static bool HandleAddTransformPoints(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create transform points settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    Settings->OffsetMin = GetJsonVectorField(Payload, TEXT("offsetMin"), FVector::ZeroVector);
-    Settings->OffsetMax = GetJsonVectorField(Payload, TEXT("offsetMax"), FVector::ZeroVector);
-    Settings->bAbsoluteOffset = GetJsonBoolField(Payload, TEXT("absoluteOffset"), false);
-    Settings->RotationMin = GetJsonRotatorField(Payload, TEXT("rotationMin"), FRotator::ZeroRotator);
-    Settings->RotationMax = GetJsonRotatorField(Payload, TEXT("rotationMax"), FRotator::ZeroRotator);
-    Settings->bAbsoluteRotation = GetJsonBoolField(Payload, TEXT("absoluteRotation"), false);
-    Settings->ScaleMin = GetJsonVectorField(Payload, TEXT("scaleMin"), FVector::OneVector);
-    Settings->ScaleMax = GetJsonVectorField(Payload, TEXT("scaleMax"), FVector::OneVector);
-    Settings->bAbsoluteScale = GetJsonBoolField(Payload, TEXT("absoluteScale"), false);
-    Settings->bUniformScale = GetJsonBoolField(Payload, TEXT("uniformScale"), true);
+    Settings->OffsetMin = PCGHelpers::GetJsonVectorField(Payload, TEXT("offsetMin"), FVector::ZeroVector);
+    Settings->OffsetMax = PCGHelpers::GetJsonVectorField(Payload, TEXT("offsetMax"), FVector::ZeroVector);
+    Settings->bAbsoluteOffset = PCGHelpers::GetJsonBoolField(Payload, TEXT("absoluteOffset"), false);
+    Settings->RotationMin = PCGHelpers::GetJsonRotatorField(Payload, TEXT("rotationMin"), FRotator::ZeroRotator);
+    Settings->RotationMax = PCGHelpers::GetJsonRotatorField(Payload, TEXT("rotationMax"), FRotator::ZeroRotator);
+    Settings->bAbsoluteRotation = PCGHelpers::GetJsonBoolField(Payload, TEXT("absoluteRotation"), false);
+    Settings->ScaleMin = PCGHelpers::GetJsonVectorField(Payload, TEXT("scaleMin"), FVector::OneVector);
+    Settings->ScaleMax = PCGHelpers::GetJsonVectorField(Payload, TEXT("scaleMax"), FVector::OneVector);
+    Settings->bAbsoluteScale = PCGHelpers::GetJsonBoolField(Payload, TEXT("absoluteScale"), false);
+    Settings->bUniformScale = PCGHelpers::GetJsonBoolField(Payload, TEXT("uniformScale"), true);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -869,7 +867,7 @@ static bool HandleAddProjectToSurface(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -879,8 +877,8 @@ static bool HandleAddProjectToSurface(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create projection settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    Settings->bForceCollapseToPoint = GetJsonBoolField(Payload, TEXT("forceCollapseToPoint"), false);
-    Settings->bKeepZeroDensityPoints = GetJsonBoolField(Payload, TEXT("keepZeroDensityPoints"), false);
+    Settings->bForceCollapseToPoint = PCGHelpers::GetJsonBoolField(Payload, TEXT("forceCollapseToPoint"), false);
+    Settings->bKeepZeroDensityPoints = PCGHelpers::GetJsonBoolField(Payload, TEXT("keepZeroDensityPoints"), false);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -893,7 +891,7 @@ static bool HandleAddCopyPoints(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -914,7 +912,7 @@ static bool HandleAddMergePoints(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -924,7 +922,7 @@ static bool HandleAddMergePoints(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create merge settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    Settings->bMergeMetadata = GetJsonBoolField(Payload, TEXT("mergeMetadata"), true);
+    Settings->bMergeMetadata = PCGHelpers::GetJsonBoolField(Payload, TEXT("mergeMetadata"), true);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -941,7 +939,7 @@ static bool HandleAddStaticMeshSpawner(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -951,9 +949,9 @@ static bool HandleAddStaticMeshSpawner(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create static mesh spawner settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    Settings->bApplyMeshBoundsToPoints = GetJsonBoolField(Payload, TEXT("applyMeshBoundsToPoints"), true);
-    Settings->bSynchronousLoad = GetJsonBoolField(Payload, TEXT("synchronousLoad"), false);
-    FString OutAttr = GetJsonStringField(Payload, TEXT("outAttributeName"), TEXT(""));
+    Settings->bApplyMeshBoundsToPoints = PCGHelpers::GetJsonBoolField(Payload, TEXT("applyMeshBoundsToPoints"), true);
+    Settings->bSynchronousLoad = PCGHelpers::GetJsonBoolField(Payload, TEXT("synchronousLoad"), false);
+    FString OutAttr = PCGHelpers::GetJsonStringField(Payload, TEXT("outAttributeName"), TEXT(""));
     if (!OutAttr.IsEmpty()) Settings->OutAttributeName = FName(*OutAttr);
     
     UPCGNode* Node = Graph->AddNode(Settings);
@@ -967,7 +965,7 @@ static bool HandleAddActorSpawner(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -977,14 +975,14 @@ static bool HandleAddActorSpawner(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create actor spawner settings"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
-    FString Option = GetJsonStringField(Payload, TEXT("option"), TEXT("NoMerging"));
+    FString Option = PCGHelpers::GetJsonStringField(Payload, TEXT("option"), TEXT("NoMerging"));
     if (Option == TEXT("CollapseActors")) Settings->Option = EPCGSpawnActorOption::CollapseActors;
     else if (Option == TEXT("MergePCGOnly")) Settings->Option = EPCGSpawnActorOption::MergePCGOnly;
     else Settings->Option = EPCGSpawnActorOption::NoMerging;
     
-    Settings->bForceDisableActorParsing = GetJsonBoolField(Payload, TEXT("forceDisableActorParsing"), true);
-    Settings->bInheritActorTags = GetJsonBoolField(Payload, TEXT("inheritActorTags"), false);
-    Settings->bWarnOnIdenticalSpawn = GetJsonBoolField(Payload, TEXT("warnOnIdenticalSpawn"), true);
+    Settings->bForceDisableActorParsing = PCGHelpers::GetJsonBoolField(Payload, TEXT("forceDisableActorParsing"), true);
+    Settings->bInheritActorTags = PCGHelpers::GetJsonBoolField(Payload, TEXT("inheritActorTags"), false);
+    Settings->bWarnOnIdenticalSpawn = PCGHelpers::GetJsonBoolField(Payload, TEXT("warnOnIdenticalSpawn"), true);
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
@@ -997,7 +995,7 @@ static bool HandleAddSplineSpawner(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -1024,9 +1022,9 @@ static bool HandleExecutePCGGraph(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-    bool bForce = GetJsonBoolField(Payload, TEXT("bForce"), true);
+    FString ActorName = PCGHelpers::GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = PCGHelpers::GetJsonStringField(Payload, TEXT("componentName"));
+    bool bForce = PCGHelpers::GetJsonBoolField(Payload, TEXT("bForce"), true);
 
     UWorld* World = GetActiveWorld();
     if (!World)
@@ -1081,9 +1079,9 @@ static bool HandleSetPCGPartitionGridSize(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 GridSize = GetJsonIntField(Payload, TEXT("gridSize"), 25600);
-    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+    FString ActorName = PCGHelpers::GetJsonStringField(Payload, TEXT("actorName"));
+    int32 GridSize = PCGHelpers::GetJsonIntField(Payload, TEXT("gridSize"), 25600);
+    bool bEnabled = PCGHelpers::GetJsonBoolField(Payload, TEXT("enabled"), true);
     
     UWorld* World = GetActiveWorld();
     if (!World)
@@ -1158,7 +1156,7 @@ static bool HandleCreateBiomeRules(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -1197,7 +1195,7 @@ static bool HandleBlendBiomes(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
@@ -1213,7 +1211,7 @@ static bool HandleBlendBiomes(
     }
     
     // Optionally create the inner graph if requested
-    FString BlendGraphName = GetJsonStringField(Payload, TEXT("blendName"), TEXT("BiomeBlend"));
+    FString BlendGraphName = PCGHelpers::GetJsonStringField(Payload, TEXT("blendName"), TEXT("BiomeBlend"));
     UPCGGraph* BlendGraph = NewObject<UPCGGraph>(SubgraphSettings, *BlendGraphName);
     SubgraphSettings->SetSubgraph(BlendGraph);
     
@@ -1228,7 +1226,7 @@ static bool HandleExportPCGToStatic(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ActorName = PCGHelpers::GetJsonStringField(Payload, TEXT("actorName"));
     
     AActor* TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
     UPCGComponent* PCGComp = TargetActor ? TargetActor->FindComponentByClass<UPCGComponent>() : nullptr;
@@ -1259,8 +1257,8 @@ static bool HandleImportPCGPreset(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString PresetPath = GetJsonStringField(Payload, TEXT("presetPath")); // Graph path
+    FString ActorName = PCGHelpers::GetJsonStringField(Payload, TEXT("actorName"));
+    FString PresetPath = PCGHelpers::GetJsonStringField(Payload, TEXT("presetPath")); // Graph path
     
     AActor* TargetActor = Cast<AActor>(Self->FindActorCached(FName(*ActorName)));
     if (!TargetActor)
@@ -1297,9 +1295,9 @@ static bool HandleDebugPCGExecution(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString NodeId = GetJsonStringField(Payload, TEXT("nodeId")); // Optional
-    bool bEnableDebug = GetJsonBoolField(Payload, TEXT("enable"), true);
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString NodeId = PCGHelpers::GetJsonStringField(Payload, TEXT("nodeId")); // Optional
+    bool bEnableDebug = PCGHelpers::GetJsonBoolField(Payload, TEXT("enable"), true);
     
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
@@ -1347,8 +1345,8 @@ static bool HandleEnablePCGGpuProcessing(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    bool bEnableGPU = GetJsonBoolField(Payload, TEXT("enable"), true);
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    bool bEnableGPU = PCGHelpers::GetJsonBoolField(Payload, TEXT("enable"), true);
     
     if (GraphPath.IsEmpty())
     {
@@ -1398,10 +1396,10 @@ static bool HandleConfigurePCGModeBrush(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    FString BrushMode = GetJsonStringField(Payload, TEXT("brushMode"), TEXT("stamp")); // stamp, paint, erase
-    float BrushSize = GetJsonNumberField(Payload, TEXT("brushSize"), 500.0f);
-    float BrushFalloff = GetJsonNumberField(Payload, TEXT("brushFalloff"), 0.5f);
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    FString BrushMode = PCGHelpers::GetJsonStringField(Payload, TEXT("brushMode"), TEXT("stamp")); // stamp, paint, erase
+    float BrushSize = PCGHelpers::GetJsonNumberField(Payload, TEXT("brushSize"), 500.0f);
+    float BrushFalloff = PCGHelpers::GetJsonNumberField(Payload, TEXT("brushFalloff"), 0.5f);
     
     if (GraphPath.IsEmpty())
     {
@@ -1443,9 +1441,9 @@ static bool HandleGetPCGInfo(
     UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString GraphPath = GetJsonStringField(Payload, TEXT("graphPath"));
-    bool bIncludeNodes = GetJsonBoolField(Payload, TEXT("includeNodes"), true);
-    bool bIncludeConnections = GetJsonBoolField(Payload, TEXT("includeConnections"), true);
+    FString GraphPath = PCGHelpers::GetJsonStringField(Payload, TEXT("graphPath"));
+    bool bIncludeNodes = PCGHelpers::GetJsonBoolField(Payload, TEXT("includeNodes"), true);
+    bool bIncludeConnections = PCGHelpers::GetJsonBoolField(Payload, TEXT("includeConnections"), true);
 
     if (GraphPath.IsEmpty())
     {
@@ -1561,7 +1559,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
 {
 #if WITH_EDITOR
 #if MCP_HAS_PCG
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    FString SubAction = PCGHelpers::GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
     
     UE_LOG(LogMcpPCGHandlers, Verbose, TEXT("HandleManagePCGAction: SubAction=%s"), *SubAction);
 

@@ -83,3 +83,5 @@ private:
 };
 
 IMPLEMENT_MODULE(FMcpAutomationBridgeModule, McpAutomationBridge)
+
+#undef LOCTEXT_NAMESPACE

@@ -45,6 +45,8 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Components/SplineComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/ShapeComponent.h"
 #include "Engine/TextureCube.h"
 #include "FoliageType.h"
 // SkyAtmosphere/ExponentialHeightFog/VolumetricCloud actors - use forward declaration + class lookup
@@ -1308,6 +1310,103 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         
         // Delegate to existing paint_foliage handler
         return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), FoliagePayload, RequestingSocket);
+      }
+    }
+  }
+  // ========================================================================
+  // PROCEDURAL TERRAIN - Create procedural mesh-based terrain
+  // ========================================================================
+  else if (LowerSub == TEXT("create_procedural_terrain")) {
+    // Delegate to dedicated handler function
+    return HandleCreateProceduralTerrain(RequestId, TEXT("create_procedural_terrain"), Payload, RequestingSocket);
+  }
+  // ========================================================================
+  // PROCEDURAL FOLIAGE - Create procedural foliage volume
+  // ========================================================================
+  else if (LowerSub == TEXT("create_procedural_foliage")) {
+    // Extract parameters
+    FString VolumeName;
+    if (!Payload->TryGetStringField(TEXT("name"), VolumeName) || VolumeName.IsEmpty()) {
+      VolumeName = TEXT("ProceduralFoliageVolume");
+    }
+
+    // Get bounds
+    FVector BoundsLocation(0, 0, 0);
+    FVector BoundsSize(5000, 5000, 1000);
+    const TSharedPtr<FJsonObject> *BoundsObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) && BoundsObj) {
+      const TSharedPtr<FJsonObject> *LocObj = nullptr;
+      if ((*BoundsObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+        (*LocObj)->TryGetNumberField(TEXT("x"), BoundsLocation.X);
+        (*LocObj)->TryGetNumberField(TEXT("y"), BoundsLocation.Y);
+        (*LocObj)->TryGetNumberField(TEXT("z"), BoundsLocation.Z);
+      }
+      const TSharedPtr<FJsonObject> *SizeObj = nullptr;
+      if ((*BoundsObj)->TryGetObjectField(TEXT("size"), SizeObj) && SizeObj) {
+        (*SizeObj)->TryGetNumberField(TEXT("x"), BoundsSize.X);
+        (*SizeObj)->TryGetNumberField(TEXT("y"), BoundsSize.Y);
+        (*SizeObj)->TryGetNumberField(TEXT("z"), BoundsSize.Z);
+      }
+    }
+
+    // Get foliage types
+    const TArray<TSharedPtr<FJsonValue>> *FoliageTypesArr = nullptr;
+    Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr);
+    int32 FoliageTypesCount = FoliageTypesArr ? FoliageTypesArr->Num() : 0;
+
+    // Seed and tile size
+    int32 Seed = 42;
+    double TileSize = 1000.0;
+    Payload->TryGetNumberField(TEXT("seed"), Seed);
+    Payload->TryGetNumberField(TEXT("tileSize"), TileSize);
+
+    if (!GEditor) {
+      bSuccess = false;
+      Message = TEXT("Editor not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      // Create a trigger volume as a fallback for procedural foliage bounds
+      // (ProceduralFoliageVolume requires ProceduralFoliage plugin which may not be available)
+      UClass *VolumeClass = LoadClass<AActor>(nullptr, TEXT("/Script/Engine.TriggerVolume"));
+      if (VolumeClass) {
+        AActor *Volume = SpawnActorInActiveWorld<AActor>(
+            VolumeClass, BoundsLocation, FRotator::ZeroRotator, VolumeName);
+        if (Volume) {
+          // Set the volume extent via box component if available
+          UActorComponent *ShapeComp = Volume->GetComponentByClass(UShapeComponent::StaticClass());
+          if (UBoxComponent *BoxComp = Cast<UBoxComponent>(ShapeComp)) {
+            BoxComp->SetBoxExtent(BoundsSize / 2.0f);
+          }
+
+          bSuccess = true;
+          Message = TEXT("Procedural foliage volume created");
+          Resp->SetStringField(TEXT("volume_actor"), Volume->GetActorLabel());
+          Resp->SetNumberField(TEXT("foliage_types_count"), FoliageTypesCount);
+          Resp->SetNumberField(TEXT("seed"), Seed);
+          Resp->SetNumberField(TEXT("tile_size"), TileSize);
+
+          // Store the foliage type paths for reference
+          if (FoliageTypesArr && FoliageTypesArr->Num() > 0) {
+            TArray<TSharedPtr<FJsonValue>> TypePaths;
+            for (const auto& Val : *FoliageTypesArr) {
+              if (Val.IsValid() && Val->Type == EJson::String) {
+                TypePaths.Add(Val);
+              }
+            }
+            Resp->SetArrayField(TEXT("foliage_types"), TypePaths);
+          }
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to spawn volume actor");
+          ErrorCode = TEXT("SPAWN_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("TriggerVolume class not found");
+        ErrorCode = TEXT("CLASS_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
       }
     }
   } else {

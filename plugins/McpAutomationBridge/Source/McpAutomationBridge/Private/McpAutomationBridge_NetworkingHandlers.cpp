@@ -196,7 +196,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    using namespace NetworkingHelpers;
+    // NOTE: Do NOT use 'using namespace NetworkingHelpers;' - causes ODR violations in unity builds
+    // Calls are qualified with NetworkingHelpers::
 
     // Only handle manage_networking action
     if (Action != TEXT("manage_networking"))
@@ -205,7 +206,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     }
 
     // Get subAction from payload
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = NetworkingHelpers::GetStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SubAction = Action;
@@ -221,9 +222,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_property_replicated"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-        bool bReplicated = GetBoolField(Payload, TEXT("replicated"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString PropertyName = NetworkingHelpers::GetStringField(Payload, TEXT("propertyName"));
+        bool bReplicated = NetworkingHelpers::GetBoolField(Payload, TEXT("replicated"), true);
 
         if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty())
         {
@@ -231,7 +232,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -278,9 +279,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_replication_condition"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-        FString Condition = GetStringField(Payload, TEXT("condition"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString PropertyName = NetworkingHelpers::GetStringField(Payload, TEXT("propertyName"));
+        FString Condition = NetworkingHelpers::GetStringField(Payload, TEXT("condition"));
 
         if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || Condition.IsEmpty())
         {
@@ -288,14 +289,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ELifetimeCondition LifetimeCondition = GetReplicationCondition(Condition);
+        ELifetimeCondition LifetimeCondition = NetworkingHelpers::GetReplicationCondition(Condition);
 
         // Find the variable description and set its replication condition
         bool bFound = false;
@@ -330,9 +331,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_net_update_frequency"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        double NetUpdateFrequency = GetNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
-        double MinNetUpdateFrequency = GetNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        double NetUpdateFrequency = NetworkingHelpers::GetNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
+        double MinNetUpdateFrequency = NetworkingHelpers::GetNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -340,7 +341,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -366,8 +367,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_net_priority"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        double NetPriority = GetNumberField(Payload, TEXT("netPriority"), 1.0);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        double NetPriority = NetworkingHelpers::GetNumberField(Payload, TEXT("netPriority"), 1.0);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -375,7 +376,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -399,8 +400,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_net_dormancy"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString Dormancy = GetStringField(Payload, TEXT("dormancy"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString Dormancy = NetworkingHelpers::GetStringField(Payload, TEXT("dormancy"));
 
         if (BlueprintPath.IsEmpty() || Dormancy.IsEmpty())
         {
@@ -408,14 +409,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
             return true;
         }
 
-        ENetDormancy NetDormancy = GetNetDormancy(Dormancy);
+        ENetDormancy NetDormancy = NetworkingHelpers::GetNetDormancy(Dormancy);
         AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
         if (CDO)
         {
@@ -433,10 +434,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_replication_graph"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bSpatiallyLoaded = GetBoolField(Payload, TEXT("spatiallyLoaded"), false);
-        bool bNetLoadOnClient = GetBoolField(Payload, TEXT("netLoadOnClient"), true);
-        FString ReplicationPolicy = GetStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bSpatiallyLoaded = NetworkingHelpers::GetBoolField(Payload, TEXT("spatiallyLoaded"), false);
+        bool bNetLoadOnClient = NetworkingHelpers::GetBoolField(Payload, TEXT("netLoadOnClient"), true);
+        FString ReplicationPolicy = NetworkingHelpers::GetStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
 
         if (BlueprintPath.IsEmpty())
         {
@@ -444,7 +445,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -486,10 +487,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("create_rpc_function"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"));
-        FString RpcType = GetStringField(Payload, TEXT("rpcType")); // Server, Client, NetMulticast
-        bool bReliable = GetBoolField(Payload, TEXT("reliable"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString FunctionName = NetworkingHelpers::GetStringField(Payload, TEXT("functionName"));
+        FString RpcType = NetworkingHelpers::GetStringField(Payload, TEXT("rpcType")); // Server, Client, NetMulticast
+        bool bReliable = NetworkingHelpers::GetBoolField(Payload, TEXT("reliable"), true);
 
         if (BlueprintPath.IsEmpty() || FunctionName.IsEmpty() || RpcType.IsEmpty())
         {
@@ -497,7 +498,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -569,9 +570,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_rpc_validation"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"));
-        bool bWithValidation = GetBoolField(Payload, TEXT("withValidation"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString FunctionName = NetworkingHelpers::GetStringField(Payload, TEXT("functionName"));
+        bool bWithValidation = NetworkingHelpers::GetBoolField(Payload, TEXT("withValidation"), true);
 
         if (BlueprintPath.IsEmpty() || FunctionName.IsEmpty())
         {
@@ -579,7 +580,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -641,9 +642,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_rpc_reliability"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"));
-        bool bReliable = GetBoolField(Payload, TEXT("reliable"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString FunctionName = NetworkingHelpers::GetStringField(Payload, TEXT("functionName"));
+        bool bReliable = NetworkingHelpers::GetBoolField(Payload, TEXT("reliable"), true);
 
         if (BlueprintPath.IsEmpty() || FunctionName.IsEmpty())
         {
@@ -651,7 +652,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -717,8 +718,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_owner"))
     {
-        FString ActorName = GetStringField(Payload, TEXT("actorName"));
-        FString OwnerActorName = GetStringField(Payload, TEXT("ownerActorName"));
+        FString ActorName = NetworkingHelpers::GetStringField(Payload, TEXT("actorName"));
+        FString OwnerActorName = NetworkingHelpers::GetStringField(Payload, TEXT("ownerActorName"));
 
         if (ActorName.IsEmpty())
         {
@@ -758,8 +759,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_autonomous_proxy"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bIsAutonomousProxy = GetBoolField(Payload, TEXT("isAutonomousProxy"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bIsAutonomousProxy = NetworkingHelpers::GetBoolField(Payload, TEXT("isAutonomousProxy"), true);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -767,7 +768,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -810,7 +811,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("check_has_authority"))
     {
-        FString ActorName = GetStringField(Payload, TEXT("actorName"));
+        FString ActorName = NetworkingHelpers::GetStringField(Payload, TEXT("actorName"));
 
         if (ActorName.IsEmpty())
         {
@@ -838,14 +839,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("hasAuthority"), bHasAuthority);
-        ResultJson->SetStringField(TEXT("role"), NetRoleToString(Role));
+        ResultJson->SetStringField(TEXT("role"), NetworkingHelpers::NetRoleToString(Role));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Authority checked"), ResultJson);
         return true;
     }
 
     if (SubAction == TEXT("check_is_locally_controlled"))
     {
-        FString ActorName = GetStringField(Payload, TEXT("actorName"));
+        FString ActorName = NetworkingHelpers::GetStringField(Payload, TEXT("actorName"));
 
         if (ActorName.IsEmpty())
         {
@@ -892,9 +893,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_net_cull_distance"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        double NetCullDistanceSquared = GetNumberField(Payload, TEXT("netCullDistanceSquared"), 225000000.0);
-        bool bUseOwnerNetRelevancy = GetBoolField(Payload, TEXT("useOwnerNetRelevancy"), false);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        double NetCullDistanceSquared = NetworkingHelpers::GetNumberField(Payload, TEXT("netCullDistanceSquared"), 225000000.0);
+        bool bUseOwnerNetRelevancy = NetworkingHelpers::GetBoolField(Payload, TEXT("useOwnerNetRelevancy"), false);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -902,7 +903,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -927,8 +928,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_always_relevant"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bAlwaysRelevant = GetBoolField(Payload, TEXT("alwaysRelevant"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bAlwaysRelevant = NetworkingHelpers::GetBoolField(Payload, TEXT("alwaysRelevant"), true);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -936,7 +937,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -960,8 +961,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_only_relevant_to_owner"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bOnlyRelevantToOwner = GetBoolField(Payload, TEXT("onlyRelevantToOwner"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bOnlyRelevantToOwner = NetworkingHelpers::GetBoolField(Payload, TEXT("onlyRelevantToOwner"), true);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -969,7 +970,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -997,9 +998,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_net_serialization"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString StructName = GetStringField(Payload, TEXT("structName"));
-        bool bCustomSerialization = GetBoolField(Payload, TEXT("customSerialization"), false);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString StructName = NetworkingHelpers::GetStringField(Payload, TEXT("structName"));
+        bool bCustomSerialization = NetworkingHelpers::GetBoolField(Payload, TEXT("customSerialization"), false);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1007,7 +1008,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1039,9 +1040,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_replicated_using"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-        FString RepNotifyFunc = GetStringField(Payload, TEXT("repNotifyFunc"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString PropertyName = NetworkingHelpers::GetStringField(Payload, TEXT("propertyName"));
+        FString RepNotifyFunc = NetworkingHelpers::GetStringField(Payload, TEXT("repNotifyFunc"));
 
         if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || RepNotifyFunc.IsEmpty())
         {
@@ -1049,7 +1050,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1088,8 +1089,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_push_model"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bUsePushModel = GetBoolField(Payload, TEXT("usePushModel"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bUsePushModel = NetworkingHelpers::GetBoolField(Payload, TEXT("usePushModel"), true);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1097,7 +1098,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1145,9 +1146,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_client_prediction"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bEnablePrediction = GetBoolField(Payload, TEXT("enablePrediction"), true);
-        double PredictionThreshold = GetNumberField(Payload, TEXT("predictionThreshold"), 0.1);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bEnablePrediction = NetworkingHelpers::GetBoolField(Payload, TEXT("enablePrediction"), true);
+        double PredictionThreshold = NetworkingHelpers::GetNumberField(Payload, TEXT("predictionThreshold"), 0.1);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1155,7 +1156,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1193,9 +1194,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_server_correction"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        double CorrectionThreshold = GetNumberField(Payload, TEXT("correctionThreshold"), 1.0);
-        double SmoothingRate = GetNumberField(Payload, TEXT("smoothingRate"), 0.5);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        double CorrectionThreshold = NetworkingHelpers::GetNumberField(Payload, TEXT("correctionThreshold"), 1.0);
+        double SmoothingRate = NetworkingHelpers::GetNumberField(Payload, TEXT("smoothingRate"), 0.5);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1203,7 +1204,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1236,9 +1237,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("add_network_prediction_data"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString DataType = GetStringField(Payload, TEXT("dataType"));
-        FString VariableName = GetStringField(Payload, TEXT("variableName"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString DataType = NetworkingHelpers::GetStringField(Payload, TEXT("dataType"));
+        FString VariableName = NetworkingHelpers::GetStringField(Payload, TEXT("variableName"));
 
         if (BlueprintPath.IsEmpty() || DataType.IsEmpty())
         {
@@ -1246,7 +1247,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1311,10 +1312,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_movement_prediction"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString NetworkSmoothingMode = GetStringField(Payload, TEXT("networkSmoothingMode"), TEXT("Exponential"));
-        double NetworkMaxSmoothUpdateDistance = GetNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
-        double NetworkNoSmoothUpdateDistance = GetNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString NetworkSmoothingMode = NetworkingHelpers::GetStringField(Payload, TEXT("networkSmoothingMode"), TEXT("Exponential"));
+        double NetworkMaxSmoothUpdateDistance = NetworkingHelpers::GetNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
+        double NetworkNoSmoothUpdateDistance = NetworkingHelpers::GetNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1322,7 +1323,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1353,9 +1354,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_net_driver"))
     {
-        double MaxClientRate = GetNumberField(Payload, TEXT("maxClientRate"), 15000.0);
-        double MaxInternetClientRate = GetNumberField(Payload, TEXT("maxInternetClientRate"), 10000.0);
-        double NetServerMaxTickRate = GetNumberField(Payload, TEXT("netServerMaxTickRate"), 30.0);
+        double MaxClientRate = NetworkingHelpers::GetNumberField(Payload, TEXT("maxClientRate"), 15000.0);
+        double MaxInternetClientRate = NetworkingHelpers::GetNumberField(Payload, TEXT("maxInternetClientRate"), 10000.0);
+        double NetServerMaxTickRate = NetworkingHelpers::GetNumberField(Payload, TEXT("netServerMaxTickRate"), 30.0);
 
         UWorld* World = GetActiveWorld();
         bool bConfigApplied = false;
@@ -1392,8 +1393,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("set_net_role"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString Role = GetStringField(Payload, TEXT("role"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString Role = NetworkingHelpers::GetStringField(Payload, TEXT("role"));
 
         if (BlueprintPath.IsEmpty() || Role.IsEmpty())
         {
@@ -1401,7 +1402,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1409,7 +1410,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         }
 
         AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
-        ENetRole NetRole = GetNetRole(Role);
+        ENetRole NetRole = NetworkingHelpers::GetNetRole(Role);
         
         if (CDO)
         {
@@ -1442,8 +1443,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("configure_replicated_movement"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        bool bReplicateMovement = GetBoolField(Payload, TEXT("replicateMovement"), true);
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        bool bReplicateMovement = NetworkingHelpers::GetBoolField(Payload, TEXT("replicateMovement"), true);
 
         if (BlueprintPath.IsEmpty())
         {
@@ -1451,7 +1452,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1479,14 +1480,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     if (SubAction == TEXT("get_networking_info"))
     {
-        FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-        FString ActorName = GetStringField(Payload, TEXT("actorName"));
+        FString BlueprintPath = NetworkingHelpers::GetStringField(Payload, TEXT("blueprintPath"));
+        FString ActorName = NetworkingHelpers::GetStringField(Payload, TEXT("actorName"));
 
         TSharedPtr<FJsonObject> NetworkingInfo = MakeShareable(new FJsonObject());
 
         if (!BlueprintPath.IsEmpty())
         {
-            UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+            UBlueprint* Blueprint = NetworkingHelpers::LoadBlueprintFromPath(BlueprintPath);
             if (!Blueprint)
             {
                 SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
@@ -1502,7 +1503,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), CDO->GetNetUpdateFrequency());
                 NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), CDO->GetMinNetUpdateFrequency());
                 NetworkingInfo->SetNumberField(TEXT("netPriority"), CDO->NetPriority);
-                NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(CDO->NetDormancy));
+                NetworkingInfo->SetStringField(TEXT("netDormancy"), NetworkingHelpers::NetDormancyToString(CDO->NetDormancy));
                 NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->GetNetCullDistanceSquared());
             }
         }
@@ -1529,10 +1530,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->GetNetUpdateFrequency());
             NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->GetMinNetUpdateFrequency());
             NetworkingInfo->SetNumberField(TEXT("netPriority"), Actor->NetPriority);
-            NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(Actor->NetDormancy));
+            NetworkingInfo->SetStringField(TEXT("netDormancy"), NetworkingHelpers::NetDormancyToString(Actor->NetDormancy));
             NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->GetNetCullDistanceSquared());
-            NetworkingInfo->SetStringField(TEXT("role"), NetRoleToString(Actor->GetLocalRole()));
-            NetworkingInfo->SetStringField(TEXT("remoteRole"), NetRoleToString(Actor->GetRemoteRole()));
+            NetworkingInfo->SetStringField(TEXT("role"), NetworkingHelpers::NetRoleToString(Actor->GetLocalRole()));
+            NetworkingInfo->SetStringField(TEXT("remoteRole"), NetworkingHelpers::NetRoleToString(Actor->GetRemoteRole()));
             NetworkingInfo->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
         }
         else

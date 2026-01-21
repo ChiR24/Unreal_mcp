@@ -142,17 +142,15 @@ static bool HandleConfigureLocalSessionSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
     // Extract session settings from payload
-    FString SessionName = GetStringField(Payload, TEXT("sessionName"), TEXT("DefaultSession"));
-    int32 MaxPlayers = static_cast<int32>(GetNumberField(Payload, TEXT("maxPlayers"), 4.0));
-    bool bIsLANMatch = GetBoolField(Payload, TEXT("bIsLANMatch"), false);
-    bool bAllowJoinInProgress = GetBoolField(Payload, TEXT("bAllowJoinInProgress"), true);
-    bool bAllowInvites = GetBoolField(Payload, TEXT("bAllowInvites"), true);
-    bool bUsesPresence = GetBoolField(Payload, TEXT("bUsesPresence"), true);
-    bool bUseLobbiesIfAvailable = GetBoolField(Payload, TEXT("bUseLobbiesIfAvailable"), true);
-    bool bShouldAdvertise = GetBoolField(Payload, TEXT("bShouldAdvertise"), true);
+    FString SessionName = SessionsHelpers::GetStringField(Payload, TEXT("sessionName"), TEXT("DefaultSession"));
+    int32 MaxPlayers = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("maxPlayers"), 4.0));
+    bool bIsLANMatch = SessionsHelpers::GetBoolField(Payload, TEXT("bIsLANMatch"), false);
+    bool bAllowJoinInProgress = SessionsHelpers::GetBoolField(Payload, TEXT("bAllowJoinInProgress"), true);
+    bool bAllowInvites = SessionsHelpers::GetBoolField(Payload, TEXT("bAllowInvites"), true);
+    bool bUsesPresence = SessionsHelpers::GetBoolField(Payload, TEXT("bUsesPresence"), true);
+    bool bUseLobbiesIfAvailable = SessionsHelpers::GetBoolField(Payload, TEXT("bUseLobbiesIfAvailable"), true);
+    bool bShouldAdvertise = SessionsHelpers::GetBoolField(Payload, TEXT("bShouldAdvertise"), true);
 
     // Build response with session configuration
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
@@ -178,9 +176,7 @@ static bool HandleConfigureSessionInterface(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString InterfaceType = GetStringField(Payload, TEXT("interfaceType"), TEXT("Default"));
+    FString InterfaceType = SessionsHelpers::GetStringField(Payload, TEXT("interfaceType"), TEXT("Default"));
 
     // Validate interface type
     TArray<FString> ValidTypes = { TEXT("Default"), TEXT("LAN"), TEXT("Null") };
@@ -210,10 +206,8 @@ static bool HandleConfigureSplitScreen(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    bool bEnabled = GetBoolField(Payload, TEXT("enabled"), true);
-    FString SplitScreenType = GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
+    bool bEnabled = SessionsHelpers::GetBoolField(Payload, TEXT("enabled"), true);
+    FString SplitScreenType = SessionsHelpers::GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
     bool bVerticalSplit = SplitScreenType.Contains(TEXT("Vertical"));
     bool bSuccess = false;
     FString StatusMessage;
@@ -244,7 +238,7 @@ static bool HandleConfigureSplitScreen(
     }
     
     // Additionally, we can configure the GameViewportClient if in PIE
-    UGameInstance* GI = GetGameInstance();
+    UGameInstance* GI = SessionsHelpers::GetGameInstance();
     if (GI)
     {
         // The actual split-screen layout is controlled by UGameViewportClient
@@ -278,9 +272,7 @@ static bool HandleSetSplitScreenType(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString SplitScreenType = GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
+    FString SplitScreenType = SessionsHelpers::GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
 
     // Validate split screen type
     TArray<FString> ValidTypes = {
@@ -313,11 +305,9 @@ static bool HandleAddLocalPlayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
+    int32 ControllerId = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("controllerId"), -1));
 
-    int32 ControllerId = static_cast<int32>(GetNumberField(Payload, TEXT("controllerId"), -1));
-
-    UGameInstance* GI = GetGameInstance();
+    UGameInstance* GI = SessionsHelpers::GetGameInstance();
     if (!GI)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -356,11 +346,9 @@ static bool HandleRemoveLocalPlayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
+    int32 PlayerIndex = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("playerIndex"), -1));
 
-    int32 PlayerIndex = static_cast<int32>(GetNumberField(Payload, TEXT("playerIndex"), -1));
-
-    UGameInstance* GI = GetGameInstance();
+    UGameInstance* GI = SessionsHelpers::GetGameInstance();
     if (!GI)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -376,7 +364,7 @@ static bool HandleRemoveLocalPlayer(
         return true;  // Return true: request was handled (error response sent)
     }
 
-    ULocalPlayer* Player = GetLocalPlayerByIndex(PlayerIndex);
+    ULocalPlayer* Player = SessionsHelpers::GetLocalPlayerByIndex(PlayerIndex);
     if (!Player)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -407,11 +395,9 @@ static bool HandleConfigureLanPlay(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    bool bEnabled = GetBoolField(Payload, TEXT("enabled"), true);
-    int32 ServerPort = static_cast<int32>(GetNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
+    bool bEnabled = SessionsHelpers::GetBoolField(Payload, TEXT("enabled"), true);
+    int32 ServerPort = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("serverPort"), 7777));
+    FString ServerPassword = SessionsHelpers::GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
@@ -433,13 +419,11 @@ static bool HandleHostLanServer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString ServerName = GetStringField(Payload, TEXT("serverName"), TEXT("LAN Server"));
-    FString MapName = GetStringField(Payload, TEXT("mapName"), TEXT(""));
-    int32 MaxPlayers = static_cast<int32>(GetNumberField(Payload, TEXT("maxPlayers"), 4));
-    FString TravelOptions = GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
-    bool bExecuteTravel = GetBoolField(Payload, TEXT("executeTravel"), false);
+    FString ServerName = SessionsHelpers::GetStringField(Payload, TEXT("serverName"), TEXT("LAN Server"));
+    FString MapName = SessionsHelpers::GetStringField(Payload, TEXT("mapName"), TEXT(""));
+    int32 MaxPlayers = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("maxPlayers"), 4));
+    FString TravelOptions = SessionsHelpers::GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
+    bool bExecuteTravel = SessionsHelpers::GetBoolField(Payload, TEXT("executeTravel"), false);
 
     if (MapName.IsEmpty())
     {
@@ -517,12 +501,10 @@ static bool HandleJoinLanServer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString ServerAddress = GetStringField(Payload, TEXT("serverAddress"), TEXT(""));
-    int32 ServerPort = static_cast<int32>(GetNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
-    FString TravelOptions = GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
+    FString ServerAddress = SessionsHelpers::GetStringField(Payload, TEXT("serverAddress"), TEXT(""));
+    int32 ServerPort = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("serverPort"), 7777));
+    FString ServerPassword = SessionsHelpers::GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
+    FString TravelOptions = SessionsHelpers::GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
 
     if (ServerAddress.IsEmpty())
     {
@@ -561,9 +543,7 @@ static bool HandleEnableVoiceChat(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    bool bEnabled = GetBoolField(Payload, TEXT("voiceEnabled"), true);
+    bool bEnabled = SessionsHelpers::GetBoolField(Payload, TEXT("voiceEnabled"), true);
     bool bSuccess = false;
     FString StatusMessage;
 
@@ -663,9 +643,7 @@ static bool HandleConfigureVoiceSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    TSharedPtr<FJsonObject> VoiceSettings = GetObjectField(Payload, TEXT("voiceSettings"));
+    TSharedPtr<FJsonObject> VoiceSettings = SessionsHelpers::GetObjectField(Payload, TEXT("voiceSettings"));
     
     double Volume = 1.0;
     double NoiseGateThreshold = 0.01;
@@ -675,11 +653,11 @@ static bool HandleConfigureVoiceSettings(
 
     if (VoiceSettings.IsValid())
     {
-        Volume = FMath::Clamp(GetNumberField(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
-        NoiseGateThreshold = GetNumberField(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
-        bNoiseSuppression = GetBoolField(VoiceSettings, TEXT("noiseSuppression"), true);
-        bEchoCancellation = GetBoolField(VoiceSettings, TEXT("echoCancellation"), true);
-        SampleRate = static_cast<int32>(GetNumberField(VoiceSettings, TEXT("sampleRate"), 16000));
+        Volume = FMath::Clamp(SessionsHelpers::GetNumberField(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
+        NoiseGateThreshold = SessionsHelpers::GetNumberField(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
+        bNoiseSuppression = SessionsHelpers::GetBoolField(VoiceSettings, TEXT("noiseSuppression"), true);
+        bEchoCancellation = SessionsHelpers::GetBoolField(VoiceSettings, TEXT("echoCancellation"), true);
+        SampleRate = static_cast<int32>(SessionsHelpers::GetNumberField(VoiceSettings, TEXT("sampleRate"), 16000));
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
@@ -703,10 +681,8 @@ static bool HandleSetVoiceChannel(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString ChannelName = GetStringField(Payload, TEXT("channelName"), TEXT("Default"));
-    FString ChannelType = GetStringField(Payload, TEXT("channelType"), TEXT("Global"));
+    FString ChannelName = SessionsHelpers::GetStringField(Payload, TEXT("channelName"), TEXT("Default"));
+    FString ChannelType = SessionsHelpers::GetStringField(Payload, TEXT("channelType"), TEXT("Global"));
 
     // Validate channel type
     TArray<FString> ValidTypes = { TEXT("Team"), TEXT("Global"), TEXT("Proximity"), TEXT("Party") };
@@ -732,13 +708,11 @@ static bool HandleMutePlayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    FString PlayerName = GetStringField(Payload, TEXT("playerName"), TEXT(""));
-    FString TargetPlayerId = GetStringField(Payload, TEXT("targetPlayerId"), TEXT(""));
-    bool bMuted = GetBoolField(Payload, TEXT("muted"), true);
-    int32 LocalPlayerNum = static_cast<int32>(GetNumberField(Payload, TEXT("localPlayerNum"), 0));
-    bool bSystemWide = GetBoolField(Payload, TEXT("systemWide"), false);
+    FString PlayerName = SessionsHelpers::GetStringField(Payload, TEXT("playerName"), TEXT(""));
+    FString TargetPlayerId = SessionsHelpers::GetStringField(Payload, TEXT("targetPlayerId"), TEXT(""));
+    bool bMuted = SessionsHelpers::GetBoolField(Payload, TEXT("muted"), true);
+    int32 LocalPlayerNum = static_cast<int32>(SessionsHelpers::GetNumberField(Payload, TEXT("localPlayerNum"), 0));
+    bool bSystemWide = SessionsHelpers::GetBoolField(Payload, TEXT("systemWide"), false);
 
     if (PlayerName.IsEmpty() && TargetPlayerId.IsEmpty())
     {
@@ -848,10 +822,8 @@ static bool HandleSetVoiceAttenuation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    double AttenuationRadius = GetNumberField(Payload, TEXT("attenuationRadius"), 2000.0);
-    double AttenuationFalloff = GetNumberField(Payload, TEXT("attenuationFalloff"), 1.0);
+    double AttenuationRadius = SessionsHelpers::GetNumberField(Payload, TEXT("attenuationRadius"), 2000.0);
+    double AttenuationFalloff = SessionsHelpers::GetNumberField(Payload, TEXT("attenuationFalloff"), 1.0);
 
     // Clamp values to reasonable ranges
     AttenuationRadius = FMath::Max(AttenuationRadius, 0.0);
@@ -874,10 +846,8 @@ static bool HandleConfigurePushToTalk(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    bool bPushToTalkEnabled = GetBoolField(Payload, TEXT("pushToTalkEnabled"), false);
-    FString PushToTalkKey = GetStringField(Payload, TEXT("pushToTalkKey"), TEXT("V"));
+    bool bPushToTalkEnabled = SessionsHelpers::GetBoolField(Payload, TEXT("pushToTalkEnabled"), false);
+    FString PushToTalkKey = SessionsHelpers::GetStringField(Payload, TEXT("pushToTalkKey"), TEXT("V"));
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetBoolField(TEXT("pushToTalkEnabled"), bPushToTalkEnabled);
@@ -901,13 +871,11 @@ static bool HandleGetSessionsInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     TSharedPtr<FJsonObject> SessionsInfo = MakeShareable(new FJsonObject());
 
     // Get local player count
-    int32 LocalPlayerCount = GetLocalPlayerCount();
+    int32 LocalPlayerCount = SessionsHelpers::GetLocalPlayerCount();
     SessionsInfo->SetNumberField(TEXT("localPlayerCount"), LocalPlayerCount);
 
     // Check if we're in a PIE session

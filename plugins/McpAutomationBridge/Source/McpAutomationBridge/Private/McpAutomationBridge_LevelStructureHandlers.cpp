@@ -134,7 +134,8 @@ static bool HandleCreateLevel(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h: GetJsonStringField, GetJsonBoolField, GetJsonNumberField, GetJsonIntField
 
     FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT("NewLevel"));
     FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"), TEXT("/Game/Maps"));
@@ -219,13 +220,13 @@ static bool HandleCreateSublevel(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
 
     FString SublevelName = GetJsonStringField(Payload, TEXT("sublevelName"), TEXT("Sublevel"));
     FString SublevelPath = GetJsonStringField(Payload, TEXT("sublevelPath"), TEXT(""));
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -292,7 +293,7 @@ static bool HandleConfigureLevelStreaming(
     bool bShouldBlockOnLoad = GetJsonBoolField(Payload, TEXT("bShouldBlockOnLoad"), false);
     bool bDisableDistanceStreaming = GetJsonBoolField(Payload, TEXT("bDisableDistanceStreaming"), false);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -348,7 +349,7 @@ static bool HandleSetStreamingDistance(
     FVector VolumeLocation = VolumeLocationJson.IsValid() ? GetVectorFromJson(VolumeLocationJson) : FVector::ZeroVector;
     bool bCreateVolume = GetJsonBoolField(Payload, TEXT("createVolume"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -496,7 +497,7 @@ static bool HandleConfigureLevelBounds(
     FVector BoundsExtent = GetVectorFromJson(GetObjectField(Payload, TEXT("boundsExtent")), FVector(10000.0));
     bool bAutoCalculateBounds = GetJsonBoolField(Payload, TEXT("bAutoCalculateBounds"), false);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -561,7 +562,7 @@ static bool HandleEnableWorldPartition(
 
     bool bEnable = GetJsonBoolField(Payload, TEXT("bEnableWorldPartition"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -614,7 +615,7 @@ static bool HandleConfigureGridSize(
     int32 Priority = GetJsonIntField(Payload, TEXT("priority"), 0);
     bool bCreateIfMissing = GetJsonBoolField(Payload, TEXT("createIfMissing"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -833,7 +834,7 @@ static bool HandleCreateDataLayer(
     FString DataLayerType = GetJsonStringField(Payload, TEXT("dataLayerType"), TEXT("Runtime"));
     bool bIsPrivate = GetJsonBoolField(Payload, TEXT("bIsPrivate"), false);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -962,7 +963,7 @@ static bool HandleAssignActorToDataLayer(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1157,7 +1158,7 @@ static bool HandleCreateMinimapVolume(
     FVector VolumeLocation = GetVectorFromJson(GetObjectField(Payload, TEXT("volumeLocation")));
     FVector VolumeExtent = GetVectorFromJson(GetObjectField(Payload, TEXT("volumeExtent")), FVector(10000.0));
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1240,7 +1241,7 @@ static bool HandleConfigureWorldPartition(
     float DefaultLoadingRange = static_cast<float>(GetJsonNumberField(Payload, TEXT("loadingRange"), 25600.0));
     bool bEnableStreaming = GetJsonBoolField(Payload, TEXT("enableStreaming"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1281,7 +1282,7 @@ static bool HandleCreateStreamingVolume(
     FVector VolumeExtent = GetVectorFromJson(GetObjectField(Payload, TEXT("streamingVolumeExtent")), FVector(5000.0));
     FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("Loading"));
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1360,7 +1361,7 @@ static bool HandleConfigureLargeWorldCoordinates(
 
     bool bEnableLargeWorlds = GetJsonBoolField(Payload, TEXT("enableLargeWorlds"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1401,7 +1402,7 @@ static bool HandleCreateWorldPartitionCell(
     FVector CellLocation = GetVectorFromJson(GetObjectField(Payload, TEXT("location")));
     int32 CellSize = GetJsonIntField(Payload, TEXT("runtimeCellSize"), 12800);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1445,7 +1446,7 @@ static bool HandleConfigureRuntimeLoading(
     bool bBlockOnSlowStreaming = GetJsonBoolField(Payload, TEXT("blockOnSlowStreaming"), false);
     int32 Priority = GetJsonIntField(Payload, TEXT("priority"), 0);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1494,7 +1495,7 @@ static bool HandleConfigureWorldSettings(
     double WorldGravityZ = GetJsonNumberField(Payload, TEXT("worldGravityZ"), -980.0);
     bool bEnableWorldBoundsCheck = GetJsonBoolField(Payload, TEXT("enableWorldBoundsCheck"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1553,7 +1554,7 @@ static bool HandleOpenLevelBlueprint(
 {
     using namespace LevelStructureHelpers;
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1624,7 +1625,7 @@ static bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1767,7 +1768,7 @@ static bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1896,7 +1897,7 @@ static bool HandleCreateLevelInstance(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -1965,7 +1966,7 @@ static bool HandleCreatePackedLevelActor(
     bool bPackBlueprints = GetJsonBoolField(Payload, TEXT("bPackBlueprints"), true);
     bool bPackStaticMeshes = GetJsonBoolField(Payload, TEXT("bPackStaticMeshes"), true);
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -2017,7 +2018,7 @@ static bool HandleGetLevelStructureInfo(
 {
     using namespace LevelStructureHelpers;
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -2253,7 +2254,8 @@ static bool HandleStreamLevelAsync(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
+    // Uses consolidated helpers from McpAutomationBridgeHelpers.h
     
     // Accept both levelName and levelPath for compatibility
     FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
@@ -2290,7 +2292,7 @@ static bool HandleStreamLevelAsync(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -2365,7 +2367,7 @@ static bool HandleConfigureHlodSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
     
     // Accept both hlodLayerPath and hlodLayerName for compatibility
     FString HlodLayerPath = GetJsonStringField(Payload, TEXT("hlodLayerPath"), TEXT(""));
@@ -2390,7 +2392,7 @@ static bool HandleConfigureHlodSettings(
     // If no path provided but settings given, try to configure World Partition HLOD settings
     if (HlodLayerPath.IsEmpty())
     {
-        UWorld* World = GetEditorWorld();
+        UWorld* World = GetActiveWorld();
         if (!World)
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -2509,11 +2511,11 @@ static bool HandleBuildHlodForLevel(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
     
     bool bForceRebuild = GetJsonBoolField(Payload, TEXT("forceRebuild"), false);
     
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -2574,9 +2576,9 @@ static bool HandleGetWorldPartitionCells(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace LevelStructureHelpers;
+    // NOTE: Do NOT use 'using namespace LevelStructureHelpers;' - causes ODR violations in unity builds
     
-    UWorld* World = GetEditorWorld();
+    UWorld* World = GetActiveWorld();
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,

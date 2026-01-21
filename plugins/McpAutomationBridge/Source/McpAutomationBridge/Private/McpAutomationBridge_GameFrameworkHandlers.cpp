@@ -293,7 +293,7 @@ namespace GameFrameworkHelpers
         }
 
         // Try loading Blueprint asset and getting its generated class
-        UBlueprint* BP = LoadBlueprintFromPath(ClassPath);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(ClassPath);
         if (BP && BP->GeneratedClass)
         {
             return BP->GeneratedClass;
@@ -389,7 +389,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Game framework handlers require editor build."), TEXT("EDITOR_ONLY"));
     return true;
 #else
-    using namespace GameFrameworkHelpers;
+    // NOTE: Do NOT use 'using namespace GameFrameworkHelpers;' at file scope - causes ODR violations in unity builds
+    // Calls inside functions are qualified with GameFrameworkHelpers::
 
     if (!Payload.IsValid())
     {
@@ -397,7 +398,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         return true;
     }
 
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = GameFrameworkHelpers::GetStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
@@ -407,15 +408,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
     UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("HandleManageGameFrameworkAction: subAction=%s"), *SubAction);
 
     // Common parameters
-    FString Name = GetStringField(Payload, TEXT("name"));
-    FString Path = GetStringField(Payload, TEXT("path"), TEXT("/Game"));
-    bool bSave = GetBoolField(Payload, TEXT("save"), false);
+    FString Name = GameFrameworkHelpers::GetStringField(Payload, TEXT("name"));
+    FString Path = GameFrameworkHelpers::GetStringField(Payload, TEXT("path"), TEXT("/Game"));
+    bool bSave = GameFrameworkHelpers::GetBoolField(Payload, TEXT("save"), false);
     
     // Support both gameModeBlueprint and blueprintPath as aliases
-    FString GameModeBlueprint = GetStringField(Payload, TEXT("gameModeBlueprint"));
+    FString GameModeBlueprint = GameFrameworkHelpers::GetStringField(Payload, TEXT("gameModeBlueprint"));
     if (GameModeBlueprint.IsEmpty())
     {
-        GameModeBlueprint = GetStringField(Payload, TEXT("blueprintPath"));
+        GameModeBlueprint = GameFrameworkHelpers::GetStringField(Payload, TEXT("blueprintPath"));
     }
     FString BlueprintPath = GameModeBlueprint; // Keep in sync for configure_player_start
 
@@ -431,8 +432,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? AGameModeBase::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? AGameModeBase::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -440,7 +441,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -449,23 +450,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         // Set initial class defaults if provided
-        FString DefaultPawnClass = GetStringField(Payload, TEXT("defaultPawnClass"));
+        FString DefaultPawnClass = GameFrameworkHelpers::GetStringField(Payload, TEXT("defaultPawnClass"));
         if (!DefaultPawnClass.IsEmpty())
         {
-            UClass* PawnClass = LoadClassFromPath(DefaultPawnClass);
+            UClass* PawnClass = GameFrameworkHelpers::LoadClassFromPath(DefaultPawnClass);
             if (PawnClass)
             {
-                SetClassProperty(BP, TEXT("DefaultPawnClass"), PawnClass, Error);
+                GameFrameworkHelpers::SetClassProperty(BP, TEXT("DefaultPawnClass"), PawnClass, Error);
             }
         }
 
-        FString PlayerControllerClass = GetStringField(Payload, TEXT("playerControllerClass"));
+        FString PlayerControllerClass = GameFrameworkHelpers::GetStringField(Payload, TEXT("playerControllerClass"));
         if (!PlayerControllerClass.IsEmpty())
         {
-            UClass* PCClass = LoadClassFromPath(PlayerControllerClass);
+            UClass* PCClass = GameFrameworkHelpers::LoadClassFromPath(PlayerControllerClass);
             if (PCClass)
             {
-                SetClassProperty(BP, TEXT("PlayerControllerClass"), PCClass, Error);
+                GameFrameworkHelpers::SetClassProperty(BP, TEXT("PlayerControllerClass"), PCClass, Error);
             }
         }
 
@@ -489,8 +490,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? AGameStateBase::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? AGameStateBase::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -498,7 +499,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -526,8 +527,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? APlayerController::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? APlayerController::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -535,7 +536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -563,8 +564,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? APlayerState::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? APlayerState::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -572,7 +573,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -600,8 +601,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? UGameInstance::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? UGameInstance::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -609,7 +610,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -637,8 +638,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString ParentClassPath = GetStringField(Payload, TEXT("parentClass"));
-        UClass* ParentClass = ParentClassPath.IsEmpty() ? AHUD::StaticClass() : LoadClassFromPath(ParentClassPath);
+        FString ParentClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("parentClass"));
+        UClass* ParentClass = ParentClassPath.IsEmpty() ? AHUD::StaticClass() : GameFrameworkHelpers::LoadClassFromPath(ParentClassPath);
         
         if (!ParentClass)
         {
@@ -646,7 +647,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        UBlueprint* BP = CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
+        UBlueprint* BP = GameFrameworkHelpers::CreateGameFrameworkBlueprint(Path, Name, ParentClass, Error);
         
         if (!BP)
         {
@@ -680,10 +681,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         // Support both pawnClass and defaultPawnClass as aliases
-        FString PawnClassPath = GetStringField(Payload, TEXT("pawnClass"));
+        FString PawnClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("pawnClass"));
         if (PawnClassPath.IsEmpty())
         {
-            PawnClassPath = GetStringField(Payload, TEXT("defaultPawnClass"));
+            PawnClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("defaultPawnClass"));
         }
         if (PawnClassPath.IsEmpty())
         {
@@ -691,14 +692,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        UClass* PawnClass = LoadClassFromPath(PawnClassPath);
+        UClass* PawnClass = GameFrameworkHelpers::LoadClassFromPath(PawnClassPath);
         if (!PawnClass)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load pawn class: %s"), *PawnClassPath), TEXT("NOT_FOUND"));
@@ -706,7 +707,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        if (!SetClassProperty(BP, TEXT("DefaultPawnClass"), PawnClass, Error))
+        if (!GameFrameworkHelpers::SetClassProperty(BP, TEXT("DefaultPawnClass"), PawnClass, Error))
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SET_PROPERTY_FAILED"));
             return true;
@@ -734,21 +735,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString PCClassPath = GetStringField(Payload, TEXT("playerControllerClass"));
+        FString PCClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("playerControllerClass"));
         if (PCClassPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'playerControllerClass'."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        UClass* PCClass = LoadClassFromPath(PCClassPath);
+        UClass* PCClass = GameFrameworkHelpers::LoadClassFromPath(PCClassPath);
         if (!PCClass)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load PlayerController class: %s"), *PCClassPath), TEXT("NOT_FOUND"));
@@ -756,7 +757,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        if (!SetClassProperty(BP, TEXT("PlayerControllerClass"), PCClass, Error))
+        if (!GameFrameworkHelpers::SetClassProperty(BP, TEXT("PlayerControllerClass"), PCClass, Error))
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SET_PROPERTY_FAILED"));
             return true;
@@ -784,21 +785,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString GSClassPath = GetStringField(Payload, TEXT("gameStateClass"));
+        FString GSClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("gameStateClass"));
         if (GSClassPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'gameStateClass'."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        UClass* GSClass = LoadClassFromPath(GSClassPath);
+        UClass* GSClass = GameFrameworkHelpers::LoadClassFromPath(GSClassPath);
         if (!GSClass)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameState class: %s"), *GSClassPath), TEXT("NOT_FOUND"));
@@ -806,7 +807,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        if (!SetClassProperty(BP, TEXT("GameStateClass"), GSClass, Error))
+        if (!GameFrameworkHelpers::SetClassProperty(BP, TEXT("GameStateClass"), GSClass, Error))
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SET_PROPERTY_FAILED"));
             return true;
@@ -834,21 +835,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FString PSClassPath = GetStringField(Payload, TEXT("playerStateClass"));
+        FString PSClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("playerStateClass"));
         if (PSClassPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'playerStateClass'."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        UClass* PSClass = LoadClassFromPath(PSClassPath);
+        UClass* PSClass = GameFrameworkHelpers::LoadClassFromPath(PSClassPath);
         if (!PSClass)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load PlayerState class: %s"), *PSClassPath), TEXT("NOT_FOUND"));
@@ -856,7 +857,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         FString Error;
-        if (!SetClassProperty(BP, TEXT("PlayerStateClass"), PSClass, Error))
+        if (!GameFrameworkHelpers::SetClassProperty(BP, TEXT("PlayerStateClass"), PSClass, Error))
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SET_PROPERTY_FAILED"));
             return true;
@@ -884,7 +885,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP || !BP->GeneratedClass)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
@@ -909,7 +910,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             FBoolProperty* Prop = CastField<FBoolProperty>(BP->GeneratedClass->FindPropertyByName(TEXT("bDelayedStart")));
             if (Prop)
             {
-                Prop->SetPropertyValue_InContainer(CDO, GetBoolField(Payload, TEXT("bDelayedStart")));
+                Prop->SetPropertyValue_InContainer(CDO, GameFrameworkHelpers::GetBoolField(Payload, TEXT("bDelayedStart")));
                 bModified = true;
             }
         }
@@ -951,7 +952,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
@@ -959,7 +960,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
 
         // Parse match states array
-        const TArray<TSharedPtr<FJsonValue>>* StatesArray = GetArrayField(Payload, TEXT("states"));
+        const TArray<TSharedPtr<FJsonValue>>* StatesArray = GameFrameworkHelpers::GetArrayField(Payload, TEXT("states"));
         TArray<FString> StateNames;
         if (StatesArray)
         {
@@ -976,42 +977,42 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // Add CurrentMatchState as byte (for use with custom enum or simple state index)
-        FEdGraphPinType BytePinType = MakeBytePinType();
-        if (AddBlueprintVariable(BP, TEXT("CurrentMatchState"), BytePinType, TEXT("Match Flow")))
+        FEdGraphPinType BytePinType = GameFrameworkHelpers::MakeBytePinType();
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("CurrentMatchState"), BytePinType, TEXT("Match Flow")))
         {
-            SetVariableDefaultValue(BP, TEXT("CurrentMatchState"), TEXT("0"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("CurrentMatchState"), TEXT("0"));
             VarsAdded++;
         }
 
         // Add MatchStateNames array as Name array for state name lookup
-        FEdGraphPinType NamePinType = MakeNamePinType();
+        FEdGraphPinType NamePinType = GameFrameworkHelpers::MakeNamePinType();
         NamePinType.ContainerType = EPinContainerType::Array;
-        if (AddBlueprintVariable(BP, TEXT("MatchStateNames"), NamePinType, TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchStateNames"), NamePinType, TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add PreviousMatchState for state change detection
-        if (AddBlueprintVariable(BP, TEXT("PreviousMatchState"), MakeBytePinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("PreviousMatchState"), GameFrameworkHelpers::MakeBytePinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add bMatchInProgress bool
-        if (AddBlueprintVariable(BP, TEXT("bMatchInProgress"), MakeBoolPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bMatchInProgress"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Match Flow")))
         {
-            SetVariableDefaultValue(BP, TEXT("bMatchInProgress"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bMatchInProgress"), TEXT("false"));
             VarsAdded++;
         }
 
         // Add MatchStartTime float
-        if (AddBlueprintVariable(BP, TEXT("MatchStartTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchStartTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add MatchElapsedTime float
-        if (AddBlueprintVariable(BP, TEXT("MatchElapsedTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchElapsedTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
@@ -1050,16 +1051,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        int32 NumRounds = static_cast<int32>(GetNumberField(Payload, TEXT("numRounds"), 0));
-        double RoundTime = GetNumberField(Payload, TEXT("roundTime"), 0);
-        double IntermissionTime = GetNumberField(Payload, TEXT("intermissionTime"), 0);
+        int32 NumRounds = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("numRounds"), 0));
+        double RoundTime = GameFrameworkHelpers::GetNumberField(Payload, TEXT("roundTime"), 0);
+        double IntermissionTime = GameFrameworkHelpers::GetNumberField(Payload, TEXT("intermissionTime"), 0);
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring round system: rounds=%d, roundTime=%.1f, intermission=%.1f"), 
                NumRounds, RoundTime, IntermissionTime);
@@ -1068,50 +1069,50 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // NumRounds (int) - total rounds in match
-        if (AddBlueprintVariable(BP, TEXT("NumRounds"), MakeIntPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("NumRounds"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("NumRounds"), FString::FromInt(NumRounds));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("NumRounds"), FString::FromInt(NumRounds));
             VarsAdded++;
         }
 
         // CurrentRound (int) - current round number
-        if (AddBlueprintVariable(BP, TEXT("CurrentRound"), MakeIntPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("CurrentRound"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("CurrentRound"), TEXT("0"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("CurrentRound"), TEXT("0"));
             VarsAdded++;
         }
 
         // RoundTime (float) - duration of each round in seconds
-        if (AddBlueprintVariable(BP, TEXT("RoundTime"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RoundTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("RoundTime"), FString::SanitizeFloat(RoundTime));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RoundTime"), FString::SanitizeFloat(RoundTime));
             VarsAdded++;
         }
 
         // RoundTimeRemaining (float) - time left in current round
-        if (AddBlueprintVariable(BP, TEXT("RoundTimeRemaining"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RoundTimeRemaining"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
             VarsAdded++;
         }
 
         // IntermissionTime (float) - time between rounds
-        if (AddBlueprintVariable(BP, TEXT("IntermissionTime"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("IntermissionTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("IntermissionTime"), FString::SanitizeFloat(IntermissionTime));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("IntermissionTime"), FString::SanitizeFloat(IntermissionTime));
             VarsAdded++;
         }
 
         // bIsInIntermission (bool) - whether we're between rounds
-        if (AddBlueprintVariable(BP, TEXT("bIsInIntermission"), MakeBoolPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bIsInIntermission"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bIsInIntermission"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bIsInIntermission"), TEXT("false"));
             VarsAdded++;
         }
 
         // bRoundInProgress (bool) - whether a round is active
-        if (AddBlueprintVariable(BP, TEXT("bRoundInProgress"), MakeBoolPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bRoundInProgress"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bRoundInProgress"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bRoundInProgress"), TEXT("false"));
             VarsAdded++;
         }
 
@@ -1146,17 +1147,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        int32 NumTeams = static_cast<int32>(GetNumberField(Payload, TEXT("numTeams"), 2));
-        int32 TeamSize = static_cast<int32>(GetNumberField(Payload, TEXT("teamSize"), 0));
-        bool bAutoBalance = GetBoolField(Payload, TEXT("autoBalance"), true);
-        bool bFriendlyFire = GetBoolField(Payload, TEXT("friendlyFire"), false);
+        int32 NumTeams = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("numTeams"), 2));
+        int32 TeamSize = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("teamSize"), 0));
+        bool bAutoBalance = GameFrameworkHelpers::GetBoolField(Payload, TEXT("autoBalance"), true);
+        bool bFriendlyFire = GameFrameworkHelpers::GetBoolField(Payload, TEXT("friendlyFire"), false);
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring team system: teams=%d, size=%d, autoBalance=%d, friendlyFire=%d"), 
                NumTeams, TeamSize, bAutoBalance, bFriendlyFire);
@@ -1165,43 +1166,43 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // NumTeams (int) - number of teams in the game
-        if (AddBlueprintVariable(BP, TEXT("NumTeams"), MakeIntPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("NumTeams"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("NumTeams"), FString::FromInt(NumTeams));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("NumTeams"), FString::FromInt(NumTeams));
             VarsAdded++;
         }
 
         // MaxTeamSize (int) - maximum players per team
-        if (AddBlueprintVariable(BP, TEXT("MaxTeamSize"), MakeIntPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MaxTeamSize"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("MaxTeamSize"), FString::FromInt(TeamSize));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("MaxTeamSize"), FString::FromInt(TeamSize));
             VarsAdded++;
         }
 
         // bAutoBalance (bool) - whether to auto-balance teams
-        if (AddBlueprintVariable(BP, TEXT("bAutoBalance"), MakeBoolPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bAutoBalance"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bAutoBalance"), bAutoBalance ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bAutoBalance"), bAutoBalance ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // bFriendlyFire (bool) - whether friendly fire is enabled
-        if (AddBlueprintVariable(BP, TEXT("bFriendlyFire"), MakeBoolPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bFriendlyFire"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bFriendlyFire"), bFriendlyFire ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bFriendlyFire"), bFriendlyFire ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // TeamScores (int array) - scores for each team
-        FEdGraphPinType IntArrayPinType = MakeIntPinType();
+        FEdGraphPinType IntArrayPinType = GameFrameworkHelpers::MakeIntPinType();
         IntArrayPinType.ContainerType = EPinContainerType::Array;
-        if (AddBlueprintVariable(BP, TEXT("TeamScores"), IntArrayPinType, TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("TeamScores"), IntArrayPinType, TEXT("Team System")))
         {
             VarsAdded++;
         }
 
         // TeamPlayerCounts (int array) - player count per team
-        if (AddBlueprintVariable(BP, TEXT("TeamPlayerCounts"), IntArrayPinType, TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("TeamPlayerCounts"), IntArrayPinType, TEXT("Team System")))
         {
             VarsAdded++;
         }
@@ -1238,16 +1239,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        double ScorePerKill = GetNumberField(Payload, TEXT("scorePerKill"), 100);
-        double ScorePerObjective = GetNumberField(Payload, TEXT("scorePerObjective"), 500);
-        double ScorePerAssist = GetNumberField(Payload, TEXT("scorePerAssist"), 50);
+        double ScorePerKill = GameFrameworkHelpers::GetNumberField(Payload, TEXT("scorePerKill"), 100);
+        double ScorePerObjective = GameFrameworkHelpers::GetNumberField(Payload, TEXT("scorePerObjective"), 500);
+        double ScorePerAssist = GameFrameworkHelpers::GetNumberField(Payload, TEXT("scorePerAssist"), 50);
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring scoring: kill=%.0f, objective=%.0f, assist=%.0f"), 
                ScorePerKill, ScorePerObjective, ScorePerAssist);
@@ -1256,39 +1257,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // ScorePerKill (int) - points awarded per kill
-        if (AddBlueprintVariable(BP, TEXT("ScorePerKill"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerKill"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerKill"), FString::FromInt(static_cast<int32>(ScorePerKill)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerKill"), FString::FromInt(static_cast<int32>(ScorePerKill)));
             VarsAdded++;
         }
 
         // ScorePerObjective (int) - points awarded per objective completion
-        if (AddBlueprintVariable(BP, TEXT("ScorePerObjective"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerObjective"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerObjective"), FString::FromInt(static_cast<int32>(ScorePerObjective)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerObjective"), FString::FromInt(static_cast<int32>(ScorePerObjective)));
             VarsAdded++;
         }
 
         // ScorePerAssist (int) - points awarded per assist
-        if (AddBlueprintVariable(BP, TEXT("ScorePerAssist"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerAssist"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerAssist"), FString::FromInt(static_cast<int32>(ScorePerAssist)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerAssist"), FString::FromInt(static_cast<int32>(ScorePerAssist)));
             VarsAdded++;
         }
 
         // WinScore (int) - score needed to win
-        double WinScore = GetNumberField(Payload, TEXT("winScore"), 0);
-        if (AddBlueprintVariable(BP, TEXT("WinScore"), MakeIntPinType(), TEXT("Scoring System")))
+        double WinScore = GameFrameworkHelpers::GetNumberField(Payload, TEXT("winScore"), 0);
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("WinScore"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("WinScore"), FString::FromInt(static_cast<int32>(WinScore)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("WinScore"), FString::FromInt(static_cast<int32>(WinScore)));
             VarsAdded++;
         }
 
         // ScorePerDeath (int) - penalty for dying (usually negative or 0)
-        double ScorePerDeath = GetNumberField(Payload, TEXT("scorePerDeath"), 0);
-        if (AddBlueprintVariable(BP, TEXT("ScorePerDeath"), MakeIntPinType(), TEXT("Scoring System")))
+        double ScorePerDeath = GameFrameworkHelpers::GetNumberField(Payload, TEXT("scorePerDeath"), 0);
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerDeath"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerDeath"), FString::FromInt(static_cast<int32>(ScorePerDeath)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerDeath"), FString::FromInt(static_cast<int32>(ScorePerDeath)));
             VarsAdded++;
         }
 
@@ -1325,16 +1326,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        FString SpawnMethod = GetStringField(Payload, TEXT("spawnSelectionMethod"), TEXT("Random"));
-        double RespawnDelay = GetNumberField(Payload, TEXT("respawnDelay"), 5.0);
-        bool bUsePlayerStarts = GetBoolField(Payload, TEXT("usePlayerStarts"), true);
+        FString SpawnMethod = GameFrameworkHelpers::GetStringField(Payload, TEXT("spawnSelectionMethod"), TEXT("Random"));
+        double RespawnDelay = GameFrameworkHelpers::GetNumberField(Payload, TEXT("respawnDelay"), 5.0);
+        bool bUsePlayerStarts = GameFrameworkHelpers::GetBoolField(Payload, TEXT("usePlayerStarts"), true);
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configuring spawn system: method=%s, delay=%.1f, usePlayerStarts=%d"), 
                *SpawnMethod, RespawnDelay, bUsePlayerStarts);
@@ -1343,39 +1344,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // SpawnSelectionMethod (Name) - how spawn points are selected
-        if (AddBlueprintVariable(BP, TEXT("SpawnSelectionMethod"), MakeNamePinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("SpawnSelectionMethod"), GameFrameworkHelpers::MakeNamePinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("SpawnSelectionMethod"), SpawnMethod);
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("SpawnSelectionMethod"), SpawnMethod);
             VarsAdded++;
         }
 
         // RespawnDelay (float) - time before respawn
-        if (AddBlueprintVariable(BP, TEXT("RespawnDelay"), MakeFloatPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnDelay"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnDelay"), FString::SanitizeFloat(RespawnDelay));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnDelay"), FString::SanitizeFloat(RespawnDelay));
             VarsAdded++;
         }
 
         // bUsePlayerStarts (bool) - whether to use PlayerStart actors
-        if (AddBlueprintVariable(BP, TEXT("bUsePlayerStarts"), MakeBoolPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bUsePlayerStarts"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bUsePlayerStarts"), bUsePlayerStarts ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bUsePlayerStarts"), bUsePlayerStarts ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // bCanRespawn (bool) - whether respawning is enabled
-        bool bCanRespawn = GetBoolField(Payload, TEXT("canRespawn"), true);
-        if (AddBlueprintVariable(BP, TEXT("bCanRespawn"), MakeBoolPinType(), TEXT("Spawn System")))
+        bool bCanRespawn = GameFrameworkHelpers::GetBoolField(Payload, TEXT("canRespawn"), true);
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bCanRespawn"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bCanRespawn"), bCanRespawn ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bCanRespawn"), bCanRespawn ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // MaxRespawns (int) - maximum respawns per player (-1 for unlimited)
-        int32 MaxRespawns = static_cast<int32>(GetNumberField(Payload, TEXT("maxRespawns"), -1));
-        if (AddBlueprintVariable(BP, TEXT("MaxRespawns"), MakeIntPinType(), TEXT("Spawn System")))
+        int32 MaxRespawns = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("maxRespawns"), -1));
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MaxRespawns"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("MaxRespawns"), FString::FromInt(MaxRespawns));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("MaxRespawns"), FString::FromInt(MaxRespawns));
             VarsAdded++;
         }
 
@@ -1437,22 +1438,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         // This typically works on PlayerStart actors in a level, not blueprints
         // For now, we'll handle it as a configuration helper
         
-        TSharedPtr<FJsonObject> LocationObj = GetObjectField(Payload, TEXT("location"));
-        TSharedPtr<FJsonObject> RotationObj = GetObjectField(Payload, TEXT("rotation"));
-        int32 TeamIndex = static_cast<int32>(GetNumberField(Payload, TEXT("teamIndex"), 0));
-        bool bPlayerOnly = GetBoolField(Payload, TEXT("bPlayerOnly"), false);
+        TSharedPtr<FJsonObject> LocationObj = GameFrameworkHelpers::GetObjectField(Payload, TEXT("location"));
+        TSharedPtr<FJsonObject> RotationObj = GameFrameworkHelpers::GetObjectField(Payload, TEXT("rotation"));
+        int32 TeamIndex = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("teamIndex"), 0));
+        bool bPlayerOnly = GameFrameworkHelpers::GetBoolField(Payload, TEXT("bPlayerOnly"), false);
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Configure PlayerStart: path=%s, teamIndex=%d, playerOnly=%d"), 
                *BlueprintPath, TeamIndex, bPlayerOnly);
 
         // Get the PlayerStart actor name to configure
-        FString PlayerStartName = GetStringField(Payload, TEXT("playerStartName"));
+        FString PlayerStartName = GameFrameworkHelpers::GetStringField(Payload, TEXT("playerStartName"));
         if (PlayerStartName.IsEmpty())
         {
-            PlayerStartName = GetStringField(Payload, TEXT("actorName"));
+            PlayerStartName = GameFrameworkHelpers::GetStringField(Payload, TEXT("actorName"));
         }
 
-        FString PlayerStartTag = GetStringField(Payload, TEXT("playerStartTag"));
+        FString PlayerStartTag = GameFrameworkHelpers::GetStringField(Payload, TEXT("playerStartTag"));
         
         // Build the tag if not explicitly provided
         if (PlayerStartTag.IsEmpty() && TeamIndex > 0)
@@ -1528,18 +1529,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        double RespawnDelay = GetNumberField(Payload, TEXT("respawnDelay"), 5.0);
-        FString RespawnLocation = GetStringField(Payload, TEXT("respawnLocation"), TEXT("PlayerStart"));
+        double RespawnDelay = GameFrameworkHelpers::GetNumberField(Payload, TEXT("respawnDelay"), 5.0);
+        FString RespawnLocation = GameFrameworkHelpers::GetStringField(Payload, TEXT("respawnLocation"), TEXT("PlayerStart"));
 
-        bool bForceRespawn = GetBoolField(Payload, TEXT("forceRespawn"), true);
-        int32 RespawnLives = static_cast<int32>(GetNumberField(Payload, TEXT("respawnLives"), -1));
+        bool bForceRespawn = GameFrameworkHelpers::GetBoolField(Payload, TEXT("forceRespawn"), true);
+        int32 RespawnLives = static_cast<int32>(GameFrameworkHelpers::GetNumberField(Payload, TEXT("respawnLives"), -1));
 
         UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("Setting respawn rules: delay=%.1f, location=%s, force=%d, lives=%d"), 
                RespawnDelay, *RespawnLocation, bForceRespawn, RespawnLives);
@@ -1570,23 +1571,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // RespawnLocation (Name) - where players respawn
-        if (AddBlueprintVariable(BP, TEXT("RespawnLocation"), MakeNamePinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnLocation"), GameFrameworkHelpers::MakeNamePinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnLocation"), RespawnLocation);
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnLocation"), RespawnLocation);
             VarsAdded++;
         }
 
         // bForceRespawn (bool) - whether respawn is forced or optional
-        if (AddBlueprintVariable(BP, TEXT("bForceRespawn"), MakeBoolPinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bForceRespawn"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("bForceRespawn"), bForceRespawn ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bForceRespawn"), bForceRespawn ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // RespawnLives (int) - number of lives (-1 for unlimited)
-        if (AddBlueprintVariable(BP, TEXT("RespawnLives"), MakeIntPinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnLives"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnLives"), FString::FromInt(RespawnLives));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnLives"), FString::FromInt(RespawnLives));
             VarsAdded++;
         }
 
@@ -1622,25 +1623,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+        UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
         if (!BP)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load GameMode: %s"), *GameModeBlueprint), TEXT("NOT_FOUND"));
             return true;
         }
 
-        FString SpectatorClassPath = GetStringField(Payload, TEXT("spectatorClass"));
-        bool bAllowSpectating = GetBoolField(Payload, TEXT("allowSpectating"), true);
-        FString ViewMode = GetStringField(Payload, TEXT("spectatorViewMode"), TEXT("FreeCam"));
+        FString SpectatorClassPath = GameFrameworkHelpers::GetStringField(Payload, TEXT("spectatorClass"));
+        bool bAllowSpectating = GameFrameworkHelpers::GetBoolField(Payload, TEXT("allowSpectating"), true);
+        FString ViewMode = GameFrameworkHelpers::GetStringField(Payload, TEXT("spectatorViewMode"), TEXT("FreeCam"));
 
         // Set spectator class if provided
         if (!SpectatorClassPath.IsEmpty())
         {
-            UClass* SpectatorClass = LoadClassFromPath(SpectatorClassPath);
+            UClass* SpectatorClass = GameFrameworkHelpers::LoadClassFromPath(SpectatorClassPath);
             if (SpectatorClass)
             {
                 FString Error;
-                SetClassProperty(BP, TEXT("SpectatorClass"), SpectatorClass, Error);
+                GameFrameworkHelpers::SetClassProperty(BP, TEXT("SpectatorClass"), SpectatorClass, Error);
             }
         }
 
@@ -1674,7 +1675,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         // If a specific GameMode blueprint is provided, query it
         if (!GameModeBlueprint.IsEmpty())
         {
-            UBlueprint* BP = LoadBlueprintFromPath(GameModeBlueprint);
+            UBlueprint* BP = GameFrameworkHelpers::LoadBlueprintFromPath(GameModeBlueprint);
             if (BP && BP->GeneratedClass)
             {
                 UObject* CDO = BP->GeneratedClass->GetDefaultObject();

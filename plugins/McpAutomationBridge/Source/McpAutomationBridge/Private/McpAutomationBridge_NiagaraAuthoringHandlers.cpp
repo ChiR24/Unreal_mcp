@@ -79,28 +79,32 @@
 #define GetNumberField GetJsonNumberField
 #define GetBoolField GetJsonBoolField
 
-// Helper to get FVector from JSON object
-static FVector GetVectorFromJson(const TSharedPtr<FJsonObject>& Obj)
+// Niagara-specific helpers in a dedicated namespace to avoid ODR conflicts
+namespace NiagaraAuthoringHelpers
 {
-    if (!Obj.IsValid()) return FVector::ZeroVector;
-    return FVector(
-        GetNumberField(Obj, TEXT("x"), 0.0),
-        GetNumberField(Obj, TEXT("y"), 0.0),
-        GetNumberField(Obj, TEXT("z"), 0.0)
-    );
-}
+    // Helper to get FVector from JSON object
+    static FVector GetVectorFromJson(const TSharedPtr<FJsonObject>& Obj)
+    {
+        if (!Obj.IsValid()) return FVector::ZeroVector;
+        return FVector(
+            GetNumberField(Obj, TEXT("x"), 0.0),
+            GetNumberField(Obj, TEXT("y"), 0.0),
+            GetNumberField(Obj, TEXT("z"), 0.0)
+        );
+    }
 
-// Helper to get FLinearColor from JSON object
-static FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& Obj)
-{
-    if (!Obj.IsValid()) return FLinearColor::White;
-    return FLinearColor(
-        static_cast<float>(GetNumberField(Obj, TEXT("r"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("g"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("b"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("a"), 1.0))
-    );
-}
+    // Helper to get FLinearColor from JSON object
+    static FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& Obj)
+    {
+        if (!Obj.IsValid()) return FLinearColor::White;
+        return FLinearColor(
+            static_cast<float>(GetNumberField(Obj, TEXT("r"), 1.0)),
+            static_cast<float>(GetNumberField(Obj, TEXT("g"), 1.0)),
+            static_cast<float>(GetNumberField(Obj, TEXT("b"), 1.0)),
+            static_cast<float>(GetNumberField(Obj, TEXT("a"), 1.0))
+        );
+    }
+} // namespace NiagaraAuthoringHelpers
 
 
 bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
@@ -676,7 +680,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FVector ForceVector = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("forceVector"), ForceVectorObj))
         {
-            ForceVector = GetVectorFromJson(*ForceVectorObj);
+            ForceVector = NiagaraAuthoringHelpers::GetVectorFromJson(*ForceVectorObj);
         }
 
         // Determine the module path based on force type
@@ -762,7 +766,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FVector Velocity = FVector(0, 0, 100);
         if (Payload->TryGetObjectField(TEXT("velocity"), VelObj))
         {
-            Velocity = GetVectorFromJson(*VelObj);
+            Velocity = NiagaraAuthoringHelpers::GetVectorFromJson(*VelObj);
         }
 
         FString VelocityMode = GetStringField(Payload, TEXT("velocityMode"), TEXT("Linear"));
@@ -833,7 +837,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FVector Acceleration = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("acceleration"), AccelObj))
         {
-            Acceleration = GetVectorFromJson(*AccelObj);
+            Acceleration = NiagaraAuthoringHelpers::GetVectorFromJson(*AccelObj);
         }
 
         // Use the Acceleration Force module from Niagara's built-in modules
@@ -956,7 +960,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FLinearColor Color = FLinearColor::White;
         if (Payload->TryGetObjectField(TEXT("color"), ColorObj))
         {
-            Color = GetColorFromJson(*ColorObj);
+            Color = NiagaraAuthoringHelpers::GetColorFromJson(*ColorObj);
         }
 
         FString ColorMode = GetStringField(Payload, TEXT("colorMode"), TEXT("Direct"));
@@ -1606,7 +1610,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             const TSharedPtr<FJsonObject>* ValObj;
             if (Payload->TryGetObjectField(TEXT("parameterValue"), ValObj))
             {
-                FVector Vec = GetVectorFromJson(*ValObj);
+                FVector Vec = NiagaraAuthoringHelpers::GetVectorFromJson(*ValObj);
                 UserStore.SetParameterValue(Vec, VecVar);
             }
         }
@@ -2646,3 +2650,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     return true;
 #endif
 }
+
+// Unity build safety: clean up local macros to prevent leaking into subsequent translation units
+#undef GetStringField
+#undef GetNumberField
+#undef GetBoolField

@@ -22,11 +22,6 @@
 #include "NiagaraDataInterface.h"
 #endif
 
-// Use consolidated JSON helpers
-#define GetStringField GetJsonStringField
-#define GetNumberField GetJsonNumberField
-#define GetBoolField GetJsonBoolField
-
 bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
     const FString& RequestId,
     const FString& Action,
@@ -45,7 +40,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
         return true;
     }
 
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
@@ -53,7 +48,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
     }
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    bool bSave = GetBoolField(Payload, TEXT("save"), true);
+    bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
     // =========================================================================
     // Helpers
@@ -113,8 +108,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
 
     if (SubAction == TEXT("create_niagara_module"))
     {
-        FString Name = GetStringField(Payload, TEXT("name"));
-        FString Path = GetStringField(Payload, TEXT("path"), TEXT("/Game/VFX/Modules"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/VFX/Modules"));
         
         if (Name.IsEmpty())
         {
@@ -150,10 +145,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
 
     if (SubAction == TEXT("add_niagara_script"))
     {
-        FString SystemPath = GetStringField(Payload, TEXT("systemPath"));
-        FString EmitterName = GetStringField(Payload, TEXT("emitterName"));
-        FString ModulePath = GetStringField(Payload, TEXT("modulePath"));
-        FString Stage = GetStringField(Payload, TEXT("stage"), TEXT("Update")); // Spawn, Update, Event, Simulation
+        FString SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
+        FString EmitterName = GetJsonStringField(Payload, TEXT("emitterName"));
+        FString ModulePath = GetJsonStringField(Payload, TEXT("modulePath"));
+        FString Stage = GetJsonStringField(Payload, TEXT("stage"), TEXT("Update")); // Spawn, Update, Event, Simulation
 
         if (SystemPath.IsEmpty() || EmitterName.IsEmpty() || ModulePath.IsEmpty())
         {
@@ -195,9 +190,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
     if (SubAction == TEXT("add_data_interface"))
     {
         // Generic add data interface by class name
-        FString SystemPath = GetStringField(Payload, TEXT("systemPath"));
-        FString ClassName = GetStringField(Payload, TEXT("className")); // e.g. "NiagaraDataInterfaceCurve"
-        FString ParamName = GetStringField(Payload, TEXT("parameterName"));
+        FString SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
+        FString ClassName = GetJsonStringField(Payload, TEXT("className")); // e.g. "NiagaraDataInterfaceCurve"
+        FString ParamName = GetJsonStringField(Payload, TEXT("parameterName"));
 
         if (SystemPath.IsEmpty() || ClassName.IsEmpty())
         {
@@ -278,9 +273,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
         // This typically involves adding Grid2D/3D collections and solvers
         // For MCP, we'll implement this by adding the standard Fluid modules
         
-        FString SystemPath = GetStringField(Payload, TEXT("systemPath"));
-        FString EmitterName = GetStringField(Payload, TEXT("emitterName"));
-        FString FluidType = GetStringField(Payload, TEXT("fluidType"), TEXT("2D")); // 2D or 3D
+        FString SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
+        FString EmitterName = GetJsonStringField(Payload, TEXT("emitterName"));
+        FString FluidType = GetJsonStringField(Payload, TEXT("fluidType"), TEXT("2D")); // 2D or 3D
 
         if (SystemPath.IsEmpty() || EmitterName.IsEmpty())
         {
@@ -332,8 +327,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
     if (SubAction == TEXT("add_chaos_integration"))
     {
         // Adds Chaos Destruction Data Interface or Listeners
-        FString SystemPath = GetStringField(Payload, TEXT("systemPath"));
-        FString ParamName = GetStringField(Payload, TEXT("parameterName"), TEXT("ChaosDestruction"));
+        FString SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
+        FString ParamName = GetJsonStringField(Payload, TEXT("parameterName"), TEXT("ChaosDestruction"));
 
         if (SystemPath.IsEmpty())
         {

@@ -33,7 +33,11 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpNavigationHandlers, Log, All);
 
 #if WITH_EDITOR
 
-// Helper to get string field from JSON
+// ============================================================================
+// JSON Helper Functions (file-specific namespace for unity build ODR safety)
+// ============================================================================
+namespace NavHelpers {
+
 static FString GetJsonStringField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""))
 {
     if (!Payload.IsValid()) return Default;
@@ -45,7 +49,6 @@ static FString GetJsonStringField(const TSharedPtr<FJsonObject>& Payload, const 
     return Default;
 }
 
-// Helper to get number field from JSON
 static double GetJsonNumberField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default = 0.0)
 {
     if (!Payload.IsValid()) return Default;
@@ -57,7 +60,6 @@ static double GetJsonNumberField(const TSharedPtr<FJsonObject>& Payload, const T
     return Default;
 }
 
-// Helper to get bool field from JSON
 static bool GetJsonBoolField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default = false)
 {
     if (!Payload.IsValid()) return Default;
@@ -69,7 +71,6 @@ static bool GetJsonBoolField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
     return Default;
 }
 
-// Helper to get FVector from JSON object field
 static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
 {
     if (!Payload.IsValid()) return Default;
@@ -85,7 +86,6 @@ static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const 
     return Default;
 }
 
-// Helper to get FRotator from JSON object field
 static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default = FRotator::ZeroRotator)
 {
     if (!Payload.IsValid()) return Default;
@@ -100,6 +100,10 @@ static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, cons
     }
     return Default;
 }
+
+} // namespace NavHelpers
+// NOTE: Do NOT use 'using namespace NavHelpers;' - causes ODR violations in unity builds
+// All calls must be fully qualified: NavHelpers::GetJsonStringField(...)
 
 // ============================================================================
 // NavMesh Configuration Handlers
@@ -140,25 +144,25 @@ static bool HandleConfigureNavMeshSettings(
 
     if (Payload->HasField(TEXT("tileSizeUU")))
     {
-        NavMesh->TileSizeUU = GetJsonNumberField(Payload, TEXT("tileSizeUU"), 1000.0f);
+        NavMesh->TileSizeUU = NavHelpers::GetJsonNumberField(Payload, TEXT("tileSizeUU"), 1000.0f);
         bModified = true;
     }
 
     if (Payload->HasField(TEXT("minRegionArea")))
     {
-        NavMesh->MinRegionArea = GetJsonNumberField(Payload, TEXT("minRegionArea"), 0.0f);
+        NavMesh->MinRegionArea = NavHelpers::GetJsonNumberField(Payload, TEXT("minRegionArea"), 0.0f);
         bModified = true;
     }
 
     if (Payload->HasField(TEXT("mergeRegionSize")))
     {
-        NavMesh->MergeRegionSize = GetJsonNumberField(Payload, TEXT("mergeRegionSize"), 400.0f);
+        NavMesh->MergeRegionSize = NavHelpers::GetJsonNumberField(Payload, TEXT("mergeRegionSize"), 400.0f);
         bModified = true;
     }
 
     if (Payload->HasField(TEXT("maxSimplificationError")))
     {
-        NavMesh->MaxSimplificationError = GetJsonNumberField(Payload, TEXT("maxSimplificationError"), 1.3f);
+        NavMesh->MaxSimplificationError = NavHelpers::GetJsonNumberField(Payload, TEXT("maxSimplificationError"), 1.3f);
         bModified = true;
     }
 
@@ -172,17 +176,17 @@ static bool HandleConfigureNavMeshSettings(
         
         if (Payload->HasField(TEXT("cellSize")))
         {
-            DefaultParams.CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
+            DefaultParams.CellSize = NavHelpers::GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("cellHeight")))
         {
-            DefaultParams.CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
+            DefaultParams.CellHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("agentStepHeight")))
         {
-            DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
+            DefaultParams.AgentMaxStepHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
             bModified = true;
         }
 #else
@@ -190,17 +194,17 @@ static bool HandleConfigureNavMeshSettings(
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
         if (Payload->HasField(TEXT("cellSize")))
         {
-            NavMesh->CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
+            NavMesh->CellSize = NavHelpers::GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("cellHeight")))
         {
-            NavMesh->CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
+            NavMesh->CellHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("agentStepHeight")))
         {
-            NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
+            NavMesh->AgentMaxStepHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
             bModified = true;
         }
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
@@ -257,19 +261,19 @@ static bool HandleSetNavAgentProperties(
 
     if (Payload->HasField(TEXT("agentRadius")))
     {
-        NavMesh->AgentRadius = GetJsonNumberField(Payload, TEXT("agentRadius"), 35.0f);
+        NavMesh->AgentRadius = NavHelpers::GetJsonNumberField(Payload, TEXT("agentRadius"), 35.0f);
         bModified = true;
     }
 
     if (Payload->HasField(TEXT("agentHeight")))
     {
-        NavMesh->AgentHeight = GetJsonNumberField(Payload, TEXT("agentHeight"), 144.0f);
+        NavMesh->AgentHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("agentHeight"), 144.0f);
         bModified = true;
     }
 
     if (Payload->HasField(TEXT("agentMaxSlope")))
     {
-        NavMesh->AgentMaxSlope = GetJsonNumberField(Payload, TEXT("agentMaxSlope"), 44.0f);
+        NavMesh->AgentMaxSlope = NavHelpers::GetJsonNumberField(Payload, TEXT("agentMaxSlope"), 44.0f);
         bModified = true;
     }
 
@@ -278,10 +282,10 @@ static bool HandleSetNavAgentProperties(
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
+        DefaultParams.AgentMaxStepHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
 #else
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
+        NavMesh->AgentMaxStepHeight = NavHelpers::GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
         bModified = true;
@@ -345,10 +349,10 @@ static bool HandleCreateNavModifierComponent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("NavModifier"));
-    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
-    FVector FailsafeExtent = GetJsonVectorField(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
+    FString BlueprintPath = NavHelpers::GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString ComponentName = NavHelpers::GetJsonStringField(Payload, TEXT("componentName"), TEXT("NavModifier"));
+    FString AreaClassPath = NavHelpers::GetJsonStringField(Payload, TEXT("areaClass"));
+    FVector FailsafeExtent = NavHelpers::GetJsonVectorField(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
 
     if (BlueprintPath.IsEmpty())
     {
@@ -438,9 +442,9 @@ static bool HandleSetNavAreaClass(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = NavHelpers::GetJsonStringField(Payload, TEXT("componentName"));
+    FString AreaClassPath = NavHelpers::GetJsonStringField(Payload, TEXT("areaClass"));
 
     if (ActorName.IsEmpty() || AreaClassPath.IsEmpty())
     {
@@ -541,9 +545,9 @@ static bool HandleConfigureNavAreaCost(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
-    double AreaCost = GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
-    double FixedCost = GetJsonNumberField(Payload, TEXT("fixedAreaEnteringCost"), 0.0);
+    FString AreaClassPath = NavHelpers::GetJsonStringField(Payload, TEXT("areaClass"));
+    double AreaCost = NavHelpers::GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
+    double FixedCost = NavHelpers::GetJsonNumberField(Payload, TEXT("fixedAreaEnteringCost"), 0.0);
 
     if (AreaClassPath.IsEmpty())
     {
@@ -601,11 +605,11 @@ static bool HandleCreateNavLinkProxy(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("NavLinkProxy"));
-    FVector Location = GetJsonVectorField(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("rotation"));
-    FVector StartPoint = GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
-    FVector EndPoint = GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"), TEXT("NavLinkProxy"));
+    FVector Location = NavHelpers::GetJsonVectorField(Payload, TEXT("location"));
+    FRotator Rotation = NavHelpers::GetJsonRotatorField(Payload, TEXT("rotation"));
+    FVector StartPoint = NavHelpers::GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
+    FVector EndPoint = NavHelpers::GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
     UWorld* World = GetActiveWorld();
     if (!World)
@@ -636,7 +640,7 @@ static bool HandleCreateNavLinkProxy(
     NewLink.Right = EndPoint;
     
     // Parse direction
-    FString DirectionStr = GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
+    FString DirectionStr = NavHelpers::GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
     if (DirectionStr == TEXT("LeftToRight"))
     {
         NewLink.Direction = ENavLinkDirection::LeftToRight;
@@ -670,7 +674,7 @@ static bool HandleConfigureNavLink(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"));
     
     if (ActorName.IsEmpty())
     {
@@ -719,17 +723,17 @@ static bool HandleConfigureNavLink(
 
         if (Payload->HasField(TEXT("startPoint")))
         {
-            Link.Left = GetJsonVectorField(Payload, TEXT("startPoint"));
+            Link.Left = NavHelpers::GetJsonVectorField(Payload, TEXT("startPoint"));
             bModified = true;
         }
         if (Payload->HasField(TEXT("endPoint")))
         {
-            Link.Right = GetJsonVectorField(Payload, TEXT("endPoint"));
+            Link.Right = NavHelpers::GetJsonVectorField(Payload, TEXT("endPoint"));
             bModified = true;
         }
         if (Payload->HasField(TEXT("direction")))
         {
-            FString DirectionStr = GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
+            FString DirectionStr = NavHelpers::GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
             if (DirectionStr == TEXT("LeftToRight"))
             {
                 Link.Direction = ENavLinkDirection::LeftToRight;
@@ -746,7 +750,7 @@ static bool HandleConfigureNavLink(
         }
         if (Payload->HasField(TEXT("snapRadius")))
         {
-            Link.SnapRadius = GetJsonNumberField(Payload, TEXT("snapRadius"), 30.0f);
+            Link.SnapRadius = NavHelpers::GetJsonNumberField(Payload, TEXT("snapRadius"), 30.0f);
             bModified = true;
         }
     }
@@ -771,8 +775,8 @@ static bool HandleSetNavLinkType(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString LinkType = GetJsonStringField(Payload, TEXT("linkType"), TEXT("simple"));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"));
+    FString LinkType = NavHelpers::GetJsonStringField(Payload, TEXT("linkType"), TEXT("simple"));
 
     if (ActorName.IsEmpty())
     {
@@ -839,11 +843,11 @@ static bool HandleCreateSmartLink(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SmartNavLink"));
-    FVector Location = GetJsonVectorField(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("rotation"));
-    FVector StartPoint = GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
-    FVector EndPoint = GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"), TEXT("SmartNavLink"));
+    FVector Location = NavHelpers::GetJsonVectorField(Payload, TEXT("location"));
+    FRotator Rotation = NavHelpers::GetJsonRotatorField(Payload, TEXT("rotation"));
+    FVector StartPoint = NavHelpers::GetJsonVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
+    FVector EndPoint = NavHelpers::GetJsonVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
     UWorld* World = GetActiveWorld();
     if (!World)
@@ -874,7 +878,7 @@ static bool HandleCreateSmartLink(
     if (SmartComp)
     {
         // Parse direction
-        FString DirectionStr = GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
+        FString DirectionStr = NavHelpers::GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"));
         ENavLinkDirection::Type Direction = ENavLinkDirection::BothWays;
         if (DirectionStr == TEXT("LeftToRight"))
         {
@@ -907,7 +911,7 @@ static bool HandleConfigureSmartLinkBehavior(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ActorName = NavHelpers::GetJsonStringField(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -962,7 +966,7 @@ static bool HandleConfigureSmartLinkBehavior(
     // Set enabled area class
     if (Payload->HasField(TEXT("enabledAreaClass")))
     {
-        FString AreaClassPath = GetJsonStringField(Payload, TEXT("enabledAreaClass"));
+        FString AreaClassPath = NavHelpers::GetJsonStringField(Payload, TEXT("enabledAreaClass"));
         UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
         if (AreaClass)
         {
@@ -974,7 +978,7 @@ static bool HandleConfigureSmartLinkBehavior(
     // Set disabled area class
     if (Payload->HasField(TEXT("disabledAreaClass")))
     {
-        FString AreaClassPath = GetJsonStringField(Payload, TEXT("disabledAreaClass"));
+        FString AreaClassPath = NavHelpers::GetJsonStringField(Payload, TEXT("disabledAreaClass"));
         UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
         if (AreaClass)
         {
@@ -986,8 +990,8 @@ static bool HandleConfigureSmartLinkBehavior(
     // Configure broadcast settings
     if (Payload->HasField(TEXT("broadcastRadius")) || Payload->HasField(TEXT("broadcastInterval")))
     {
-        float Radius = GetJsonNumberField(Payload, TEXT("broadcastRadius"), 1000.0f);
-        float Interval = GetJsonNumberField(Payload, TEXT("broadcastInterval"), 0.0f);
+        float Radius = NavHelpers::GetJsonNumberField(Payload, TEXT("broadcastRadius"), 1000.0f);
+        float Interval = NavHelpers::GetJsonNumberField(Payload, TEXT("broadcastInterval"), 0.0f);
         SmartComp->SetBroadcastData(Radius, ECC_Pawn, Interval);
         bModified = true;
     }
@@ -995,10 +999,10 @@ static bool HandleConfigureSmartLinkBehavior(
     // Configure obstacle
     if (GetJsonBoolField(Payload, TEXT("bCreateBoxObstacle"), false))
     {
-        FString ObstacleAreaPath = GetJsonStringField(Payload, TEXT("obstacleAreaClass"), TEXT("/Script/NavigationSystem.NavArea_Null"));
+        FString ObstacleAreaPath = NavHelpers::GetJsonStringField(Payload, TEXT("obstacleAreaClass"), TEXT("/Script/NavigationSystem.NavArea_Null"));
         UClass* ObstacleArea = LoadClass<UNavArea>(nullptr, *ObstacleAreaPath);
-        FVector Extent = GetJsonVectorField(Payload, TEXT("obstacleExtent"), FVector(100, 100, 100));
-        FVector Offset = GetJsonVectorField(Payload, TEXT("obstacleOffset"));
+        FVector Extent = NavHelpers::GetJsonVectorField(Payload, TEXT("obstacleExtent"), FVector(100, 100, 100));
+        FVector Offset = NavHelpers::GetJsonVectorField(Payload, TEXT("obstacleOffset"));
         
         if (ObstacleArea)
         {
@@ -1109,7 +1113,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    FString SubAction = NavHelpers::GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
     
     UE_LOG(LogMcpNavigationHandlers, Verbose, TEXT("HandleManageNavigationAction: SubAction=%s"), *SubAction);
 

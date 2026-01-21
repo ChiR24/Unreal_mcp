@@ -361,6 +361,17 @@ inline TSharedPtr<FJsonObject> MakeFeatureUnavailableResponse(const FString& Fea
 }
 #endif
 
+// Unity build safety: prevent leaked helper macros from earlier translation units.
+#ifdef GetStringField
+#undef GetStringField
+#endif
+#ifdef GetNumberField
+#undef GetNumberField
+#endif
+#ifdef GetBoolField
+#undef GetBoolField
+#endif
+
 #if WITH_EDITOR
 // Resolve a UClass by a variety of heuristics: try full path lookup, attempt
 // to load an asset by path (UBlueprint or UClass), then fall back to scanning

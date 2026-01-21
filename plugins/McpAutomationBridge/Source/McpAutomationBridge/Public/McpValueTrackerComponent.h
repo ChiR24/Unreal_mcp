@@ -6,16 +6,13 @@
 #include "Components/ActorComponent.h"
 #include "McpValueTrackerComponent.generated.h"
 
-// Forward declarations
-struct FMcpValueThreshold;
-
 // Delegate for value change notifications
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnMcpValueChanged, const FString&, TrackerKey, float, OldValue, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMcpThresholdCrossed, const FString&, TrackerKey, float, Threshold);
 
 // Threshold struct for value triggers
 USTRUCT(BlueprintType)
-struct FMcpValueThreshold
+struct MCPAUTOMATIONBRIDGE_API FMcpValueThreshold
 {
     GENERATED_BODY()
 
