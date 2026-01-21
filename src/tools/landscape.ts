@@ -1,7 +1,7 @@
 // Landscape tools for Unreal Engine with UE 5.6 World Partition support
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
-import { ensureVector3 } from '../utils/validation.js';
+import { ensureVector3, sanitizeAssetName, sanitizePath } from '../utils/validation.js';
 import { wasmIntegration } from '../wasm/index.js';
 import { ILandscapeTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { Logger } from '../utils/logger.js';
@@ -394,24 +394,26 @@ export class LandscapeTools implements ILandscapeTools {
     randomRotation?: boolean;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeLandscape = sanitizeAssetName(params.landscapeName);
+    const safeGrass = sanitizePath(params.grassType);
 
-    commands.push(`CreateLandscapeGrass ${params.landscapeName} ${params.grassType}`);
+    commands.push(`CreateLandscapeGrass ${safeLandscape} ${safeGrass}`);
 
     if (params.density !== undefined) {
-      commands.push(`SetGrassDensity ${params.grassType} ${params.density}`);
+      commands.push(`SetGrassDensity ${safeGrass} ${params.density}`);
     }
 
     if (params.minScale !== undefined && params.maxScale !== undefined) {
-      commands.push(`SetGrassScale ${params.grassType} ${params.minScale} ${params.maxScale}`);
+      commands.push(`SetGrassScale ${safeGrass} ${params.minScale} ${params.maxScale}`);
     }
 
     if (params.randomRotation !== undefined) {
-      commands.push(`SetGrassRandomRotation ${params.grassType} ${params.randomRotation}`);
+      commands.push(`SetGrassRandomRotation ${safeGrass} ${params.randomRotation}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Grass type ${params.grassType} created on landscape` };
+    return { success: true, message: `Grass type ${safeGrass} created on landscape` };
   }
 
   // Landscape collision
@@ -421,16 +423,17 @@ export class LandscapeTools implements ILandscapeTools {
     simpleCollision?: boolean;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeLandscape = sanitizeAssetName(params.landscapeName);
 
     if (params.collisionMipLevel !== undefined) {
-      commands.push(`SetLandscapeCollisionMipLevel ${params.landscapeName} ${params.collisionMipLevel}`);
+      commands.push(`SetLandscapeCollisionMipLevel ${safeLandscape} ${params.collisionMipLevel}`);
     }
 
     if (params.simpleCollision !== undefined) {
-      commands.push(`SetLandscapeSimpleCollision ${params.landscapeName} ${params.simpleCollision}`);
+      commands.push(`SetLandscapeSimpleCollision ${safeLandscape} ${params.simpleCollision}`);
     }
 
-    commands.push(`UpdateLandscapeCollision ${params.landscapeName}`);
+    commands.push(`UpdateLandscapeCollision ${safeLandscape}`);
 
     await this.bridge.executeConsoleCommands(commands);
 
@@ -444,6 +447,7 @@ export class LandscapeTools implements ILandscapeTools {
     preserveDetails?: boolean;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeLandscape = sanitizeAssetName(params.landscapeName);
 
     if (params.targetTriangleCount !== undefined) {
       commands.push(`SetRetopologizeTarget ${params.targetTriangleCount}`);
@@ -453,7 +457,7 @@ export class LandscapeTools implements ILandscapeTools {
       commands.push(`SetRetopologizePreserveDetails ${params.preserveDetails}`);
     }
 
-    commands.push(`RetopologizeLandscape ${params.landscapeName}`);
+    commands.push(`RetopologizeLandscape ${safeLandscape}`);
 
     await this.bridge.executeConsoleCommands(commands);
 
@@ -471,8 +475,10 @@ export class LandscapeTools implements ILandscapeTools {
     const loc = params.location || [0, 0, 0];
     const size = params.size || [1000, 1000];
     const depth = params.depth || 100;
+    const safeName = sanitizeAssetName(params.name);
+    const safeType = sanitizeAssetName(params.type);
 
-    const command = `CreateWaterBody ${params.type} ${params.name} ${loc.join(' ')} ${size.join(' ')} ${depth}`;
+    const command = `CreateWaterBody ${safeType} ${safeName} ${loc.join(' ')} ${size.join(' ')} ${depth}`;
 
     return this.bridge.executeConsoleCommand(command);
   }
@@ -529,11 +535,13 @@ export class LandscapeTools implements ILandscapeTools {
       // Use console commands for data layer management
       if (params.operation === 'set' || params.operation === 'add') {
         for (const layerName of params.dataLayerNames) {
-          commands.push(`wp.Runtime.SetDataLayerRuntimeState Loaded ${layerName}`);
+          const safeLayer = sanitizeAssetName(layerName);
+          commands.push(`wp.Runtime.SetDataLayerRuntimeState Loaded ${safeLayer}`);
         }
       } else if (params.operation === 'remove') {
         for (const layerName of params.dataLayerNames) {
-          commands.push(`wp.Runtime.SetDataLayerRuntimeState Unloaded ${layerName}`);
+          const safeLayer = sanitizeAssetName(layerName);
+          commands.push(`wp.Runtime.SetDataLayerRuntimeState Unloaded ${safeLayer}`);
         }
       }
 
