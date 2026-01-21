@@ -23,6 +23,6 @@ jobs:
     steps:
     - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
       with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: '👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.'
-        pr-message: '👋 Thanks for your first Pull Request! We love contributions. Please ensure you have signed off your commits and followed the contribution guidelines.'
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        issue_message: '👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.'
+        pr_message: '👋 Thanks for your first Pull Request! We love contributions. Please ensure you have signed off your commits and followed the contribution guidelines.'
