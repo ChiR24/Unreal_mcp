@@ -40,7 +40,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
   // Static set of all lighting/post-process actions we handle
   static TSet<FString> LightingActions = {
     // Core lighting
-    TEXT("spawn_light"), TEXT("spawn_sky_light"), TEXT("build_lighting"),
+    TEXT("spawn_light"), TEXT("create_light"), TEXT("create_dynamic_light"),
+    TEXT("spawn_sky_light"), TEXT("create_sky_light"), TEXT("build_lighting"),
     TEXT("ensure_single_sky_light"), TEXT("create_lighting_enabled_level"),
     TEXT("create_lightmass_volume"), TEXT("setup_volumetric_fog"),
     TEXT("setup_global_illumination"), TEXT("configure_shadows"),
@@ -135,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     return true;
   }
 
-  if (Lower == TEXT("spawn_light")) {
+  if (Lower == TEXT("spawn_light") || Lower == TEXT("create_light") || Lower == TEXT("create_dynamic_light")) {
     FString LightClassStr;
     if (!Payload->TryGetStringField(TEXT("lightClass"), LightClassStr) ||
         LightClassStr.IsEmpty()) {
@@ -299,7 +300,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Light spawned"), Resp);
     return true;
-  } else if (Lower == TEXT("spawn_sky_light")) {
+  } else if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light")) {
     AActor *SkyLight = SpawnActorInActiveWorld<AActor>(
         ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
     if (!SkyLight) {

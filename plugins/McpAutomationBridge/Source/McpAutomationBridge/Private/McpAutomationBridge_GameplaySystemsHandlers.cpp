@@ -1806,6 +1806,628 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameplaySystemsAction(
     Message = TEXT("Retrieved gameplay systems info");
   }
   
+  // ==================== WAVE 3.41-3.50: ADDITIONAL GAMEPLAY ACTIONS ====================
+  
+  // 3.41: Create linked objectives chain
+  else if (LowerSub == TEXT("create_objective_chain")) {
+    const TArray<TSharedPtr<FJsonValue>>* ObjectiveIdsArray;
+    if (!Payload->TryGetArrayField(TEXT("objectiveIds"), ObjectiveIdsArray) || ObjectiveIdsArray->Num() == 0) {
+      bSuccess = false;
+      Message = TEXT("objectiveIds array required and cannot be empty");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      FString ChainType = TEXT("Sequential");
+      Payload->TryGetStringField(TEXT("chainType"), ChainType);
+      bool bFailOnAnyFail = false;
+      Payload->TryGetBoolField(TEXT("failOnAnyFail"), bFailOnAnyFail);
+      FString Description;
+      Payload->TryGetStringField(TEXT("description"), Description);
+      
+      // Create a chain actor to represent the objective chain
+      FString ChainId = FGuid::NewGuid().ToString().Left(8);
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = *FString::Printf(TEXT("ObjectiveChain_%s"), *ChainId);
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      
+      AActor* ChainActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+      if (ChainActor) {
+        ChainActor->SetActorLabel(*FString::Printf(TEXT("ObjectiveChain_%s"), *ChainId));
+        ChainActor->Tags.Add(TEXT("ObjectiveChain"));
+        ChainActor->Tags.Add(*FString::Printf(TEXT("ChainId:%s"), *ChainId));
+        ChainActor->Tags.Add(*FString::Printf(TEXT("ChainType:%s"), *ChainType));
+        ChainActor->Tags.Add(*FString::Printf(TEXT("FailOnAnyFail:%s"), bFailOnAnyFail ? TEXT("true") : TEXT("false")));
+        ChainActor->SetActorHiddenInGame(true);
+        
+        // Link each objective to this chain
+        TArray<FString> LinkedObjectives;
+        for (int32 i = 0; i < ObjectiveIdsArray->Num(); i++) {
+          FString ObjId = (*ObjectiveIdsArray)[i]->AsString();
+          ChainActor->Tags.Add(*FString::Printf(TEXT("Objective_%d:%s"), i, *ObjId));
+          LinkedObjectives.Add(ObjId);
+        }
+        
+        TArray<TSharedPtr<FJsonValue>> LinkedArray;
+        for (const FString& Id : LinkedObjectives) {
+          LinkedArray.Add(MakeShared<FJsonValueString>(Id));
+        }
+        
+        Resp->SetStringField(TEXT("chainId"), ChainId);
+        Resp->SetStringField(TEXT("chainType"), ChainType);
+        Resp->SetArrayField(TEXT("linkedObjectives"), LinkedArray);
+        Resp->SetNumberField(TEXT("objectiveCount"), LinkedObjectives.Num());
+        Message = FString::Printf(TEXT("Created objective chain '%s' with %d objectives"), *ChainId, LinkedObjectives.Num());
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to create objective chain actor");
+        ErrorCode = TEXT("CREATE_FAILED");
+      }
+    }
+  }
+  
+  // 3.42: Configure checkpoint save data
+  else if (LowerSub == TEXT("configure_checkpoint_data")) {
+    FString CheckpointId;
+    Payload->TryGetStringField(TEXT("checkpointId"), CheckpointId);
+    if (CheckpointId.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("checkpointId required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bool bSavePlayerState = true;
+      Payload->TryGetBoolField(TEXT("savePlayerState"), bSavePlayerState);
+      bool bSaveActorStates = true;
+      Payload->TryGetBoolField(TEXT("saveActorStates"), bSaveActorStates);
+      bool bSaveWorldState = true;
+      Payload->TryGetBoolField(TEXT("saveWorldState"), bSaveWorldState);
+      
+      // Find checkpoint actor and configure it
+      AActor* CheckpointActor = nullptr;
+      for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->Tags.Contains(TEXT("Checkpoint"))) {
+          for (const FName& Tag : It->Tags) {
+            if (Tag.ToString().StartsWith(TEXT("CheckpointId:"))) {
+              FString Id = Tag.ToString().RightChop(13);
+              if (Id == CheckpointId) {
+                CheckpointActor = *It;
+                break;
+              }
+            }
+          }
+        }
+        if (CheckpointActor) break;
+      }
+      
+      if (CheckpointActor) {
+        // Update checkpoint configuration
+        CheckpointActor->Tags.Add(*FString::Printf(TEXT("SavePlayerState:%s"), bSavePlayerState ? TEXT("true") : TEXT("false")));
+        CheckpointActor->Tags.Add(*FString::Printf(TEXT("SaveActorStates:%s"), bSaveActorStates ? TEXT("true") : TEXT("false")));
+        CheckpointActor->Tags.Add(*FString::Printf(TEXT("SaveWorldState:%s"), bSaveWorldState ? TEXT("true") : TEXT("false")));
+        
+        // Handle actor filter
+        const TArray<TSharedPtr<FJsonValue>>* ActorFilterArray;
+        if (Payload->TryGetArrayField(TEXT("actorFilter"), ActorFilterArray)) {
+          for (int32 i = 0; i < ActorFilterArray->Num(); i++) {
+            FString FilterTag = (*ActorFilterArray)[i]->AsString();
+            CheckpointActor->Tags.Add(*FString::Printf(TEXT("ActorFilter_%d:%s"), i, *FilterTag));
+          }
+        }
+        
+        Resp->SetStringField(TEXT("checkpointId"), CheckpointId);
+        Resp->SetBoolField(TEXT("savePlayerState"), bSavePlayerState);
+        Resp->SetBoolField(TEXT("saveActorStates"), bSaveActorStates);
+        Resp->SetBoolField(TEXT("saveWorldState"), bSaveWorldState);
+        Message = FString::Printf(TEXT("Configured checkpoint data for '%s'"), *CheckpointId);
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Checkpoint '%s' not found"), *CheckpointId);
+        ErrorCode = TEXT("CHECKPOINT_NOT_FOUND");
+      }
+    }
+  }
+  
+  // 3.43: Create dialogue tree node
+  else if (LowerSub == TEXT("create_dialogue_node")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    FString NodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    
+    if (AssetPath.IsEmpty() || NodeId.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("assetPath and nodeId required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      FString NodeType = TEXT("Speech");
+      Payload->TryGetStringField(TEXT("nodeType"), NodeType);
+      FString SpeakerId;
+      Payload->TryGetStringField(TEXT("speakerId"), SpeakerId);
+      FString Text;
+      Payload->TryGetStringField(TEXT("text"), Text);
+      FString AudioAsset;
+      Payload->TryGetStringField(TEXT("audioAsset"), AudioAsset);
+      double Duration = 0.0;
+      Payload->TryGetNumberField(TEXT("duration"), Duration);
+      FString NextNodeId;
+      Payload->TryGetStringField(TEXT("nextNodeId"), NextNodeId);
+      
+      // Load or create the dialogue data asset
+      UDataAsset* DialogueAsset = LoadObject<UDataAsset>(nullptr, *AssetPath);
+      if (!DialogueAsset) {
+        // Create new dialogue asset if not found
+        FString PackageName = AssetPath;
+        FString AssetName = FPackageName::GetShortName(AssetPath);
+        
+        UPackage* Package = CreatePackage(*PackageName);
+        if (Package) {
+          DialogueAsset = NewObject<UDataAsset>(Package, *AssetName, RF_Public | RF_Standalone);
+          if (DialogueAsset) {
+            DialogueAsset->MarkPackageDirty();
+            FAssetRegistryModule::AssetCreated(DialogueAsset);
+          }
+        }
+      }
+      
+      if (DialogueAsset) {
+        // Store dialogue node in world actor for runtime access
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Name = *FString::Printf(TEXT("DialogueNode_%s_%s"), *FPackageName::GetShortName(AssetPath), *NodeId);
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        
+        AActor* NodeActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        if (NodeActor) {
+          NodeActor->SetActorLabel(*FString::Printf(TEXT("DialogueNode_%s"), *NodeId));
+          NodeActor->Tags.Add(TEXT("DialogueNode"));
+          NodeActor->Tags.Add(*FString::Printf(TEXT("NodeId:%s"), *NodeId));
+          NodeActor->Tags.Add(*FString::Printf(TEXT("NodeType:%s"), *NodeType));
+          NodeActor->Tags.Add(*FString::Printf(TEXT("AssetPath:%s"), *AssetPath));
+          if (!SpeakerId.IsEmpty()) {
+            NodeActor->Tags.Add(*FString::Printf(TEXT("SpeakerId:%s"), *SpeakerId));
+          }
+          if (!NextNodeId.IsEmpty()) {
+            NodeActor->Tags.Add(*FString::Printf(TEXT("NextNodeId:%s"), *NextNodeId));
+          }
+          NodeActor->SetActorHiddenInGame(true);
+          
+          // Handle choices array
+          const TArray<TSharedPtr<FJsonValue>>* ChoicesArray;
+          if (Payload->TryGetArrayField(TEXT("choices"), ChoicesArray)) {
+            for (int32 i = 0; i < ChoicesArray->Num(); i++) {
+              const TSharedPtr<FJsonObject>* ChoiceObj;
+              if ((*ChoicesArray)[i]->TryGetObject(ChoiceObj)) {
+                FString ChoiceText;
+                FString ChoiceNextNode;
+                (*ChoiceObj)->TryGetStringField(TEXT("text"), ChoiceText);
+                (*ChoiceObj)->TryGetStringField(TEXT("nextNodeId"), ChoiceNextNode);
+                NodeActor->Tags.Add(*FString::Printf(TEXT("Choice_%d:%s|%s"), i, *ChoiceText, *ChoiceNextNode));
+              }
+            }
+          }
+          
+          Resp->SetStringField(TEXT("nodeId"), NodeId);
+          Resp->SetStringField(TEXT("nodeType"), NodeType);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("speakerId"), SpeakerId);
+          Resp->SetNumberField(TEXT("duration"), Duration);
+          Message = FString::Printf(TEXT("Created dialogue node '%s' of type '%s'"), *NodeId, *NodeType);
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to create dialogue node actor");
+          ErrorCode = TEXT("CREATE_FAILED");
+        }
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Failed to create/load dialogue asset '%s'"), *AssetPath);
+        ErrorCode = TEXT("ASSET_FAILED");
+      }
+    }
+  }
+  
+  // 3.44: Configure targeting priorities
+  else if (LowerSub == TEXT("configure_targeting_priority")) {
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    if (ActorName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
+      if (!TargetActor) {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        FString PreferredTargetType;
+        Payload->TryGetStringField(TEXT("preferredTargetType"), PreferredTargetType);
+        
+        // Remove old targeting priority tags
+        TargetActor->Tags.RemoveAll([](const FName& Tag) {
+          return Tag.ToString().StartsWith(TEXT("TargetPriority_")) || 
+                 Tag.ToString().StartsWith(TEXT("IgnoreTag_")) ||
+                 Tag.ToString().StartsWith(TEXT("PreferredTarget:"));
+        });
+        
+        // Add target priorities
+        const TArray<TSharedPtr<FJsonValue>>* PrioritiesArray;
+        if (Payload->TryGetArrayField(TEXT("targetPriorities"), PrioritiesArray)) {
+          for (int32 i = 0; i < PrioritiesArray->Num(); i++) {
+            const TSharedPtr<FJsonObject>* PriorityObj;
+            if ((*PrioritiesArray)[i]->TryGetObject(PriorityObj)) {
+              FString TargetClass;
+              double Priority = 1.0;
+              (*PriorityObj)->TryGetStringField(TEXT("class"), TargetClass);
+              (*PriorityObj)->TryGetNumberField(TEXT("priority"), Priority);
+              TargetActor->Tags.Add(*FString::Printf(TEXT("TargetPriority_%d:%s|%.2f"), i, *TargetClass, Priority));
+            }
+          }
+        }
+        
+        // Add ignore tags
+        const TArray<TSharedPtr<FJsonValue>>* IgnoreTagsArray;
+        if (Payload->TryGetArrayField(TEXT("ignoreTags"), IgnoreTagsArray)) {
+          for (int32 i = 0; i < IgnoreTagsArray->Num(); i++) {
+            FString IgnoreTag = (*IgnoreTagsArray)[i]->AsString();
+            TargetActor->Tags.Add(*FString::Printf(TEXT("IgnoreTag_%d:%s"), i, *IgnoreTag));
+          }
+        }
+        
+        if (!PreferredTargetType.IsEmpty()) {
+          TargetActor->Tags.Add(*FString::Printf(TEXT("PreferredTarget:%s"), *PreferredTargetType));
+        }
+        
+        Resp->SetStringField(TEXT("actorName"), ActorName);
+        Resp->SetStringField(TEXT("preferredTargetType"), PreferredTargetType);
+        Message = FString::Printf(TEXT("Configured targeting priorities for actor '%s'"), *ActorName);
+      }
+    }
+  }
+  
+  // 3.46: Add/modify localization entry
+  else if (LowerSub == TEXT("configure_localization_entry")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    FString Key;
+    Payload->TryGetStringField(TEXT("key"), Key);
+    
+    if (AssetPath.IsEmpty() || Key.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("assetPath and key required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      FString SourceString;
+      Payload->TryGetStringField(TEXT("sourceString"), SourceString);
+      FString Namespace = TEXT("Game");
+      Payload->TryGetStringField(TEXT("namespace"), Namespace);
+      FString Culture = TEXT("en");
+      Payload->TryGetStringField(TEXT("culture"), Culture);
+      FString Comment;
+      Payload->TryGetStringField(TEXT("comment"), Comment);
+      bool bSave = true;
+      Payload->TryGetBoolField(TEXT("save"), bSave);
+      
+      // Try to load or create string table
+      UStringTable* StringTable = LoadObject<UStringTable>(nullptr, *AssetPath);
+      if (!StringTable) {
+        // Create new string table
+        FString PackageName = AssetPath;
+        FString AssetName = FPackageName::GetShortName(AssetPath);
+        
+        UPackage* Package = CreatePackage(*PackageName);
+        if (Package) {
+          StringTable = NewObject<UStringTable>(Package, *AssetName, RF_Public | RF_Standalone);
+          if (StringTable) {
+            StringTable->MarkPackageDirty();
+            FAssetRegistryModule::AssetCreated(StringTable);
+          }
+        }
+      }
+      
+      if (StringTable) {
+        // Add or update the entry
+        FStringTableRef TableRef = StringTable->GetMutableStringTable();
+        TableRef->SetSourceString(Key, SourceString);
+        
+        StringTable->MarkPackageDirty();
+        
+        if (bSave) {
+          McpSafeAssetSave(StringTable);
+        }
+        
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("key"), Key);
+        Resp->SetStringField(TEXT("sourceString"), SourceString);
+        Resp->SetStringField(TEXT("namespace"), Namespace);
+        Resp->SetStringField(TEXT("culture"), Culture);
+        Message = FString::Printf(TEXT("Added localization entry '%s' to '%s'"), *Key, *AssetPath);
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Failed to create/load string table '%s'"), *AssetPath);
+        ErrorCode = TEXT("ASSET_FAILED");
+      }
+    }
+  }
+  
+  // 3.47: Create quest stage
+  else if (LowerSub == TEXT("create_quest_stage")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    FString StageId;
+    Payload->TryGetStringField(TEXT("stageId"), StageId);
+    
+    if (AssetPath.IsEmpty() || StageId.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("assetPath and stageId required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      FString StageName;
+      Payload->TryGetStringField(TEXT("stageName"), StageName);
+      FString Description;
+      Payload->TryGetStringField(TEXT("description"), Description);
+      FString StageType = TEXT("Progress");
+      Payload->TryGetStringField(TEXT("stageType"), StageType);
+      bool bSave = true;
+      Payload->TryGetBoolField(TEXT("save"), bSave);
+      
+      // Create stage actor in world
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = *FString::Printf(TEXT("QuestStage_%s_%s"), *FPackageName::GetShortName(AssetPath), *StageId);
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      
+      AActor* StageActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+      if (StageActor) {
+        StageActor->SetActorLabel(*FString::Printf(TEXT("QuestStage_%s"), *StageId));
+        StageActor->Tags.Add(TEXT("QuestStage"));
+        StageActor->Tags.Add(*FString::Printf(TEXT("StageId:%s"), *StageId));
+        StageActor->Tags.Add(*FString::Printf(TEXT("AssetPath:%s"), *AssetPath));
+        StageActor->Tags.Add(*FString::Printf(TEXT("StageType:%s"), *StageType));
+        if (!StageName.IsEmpty()) {
+          StageActor->Tags.Add(*FString::Printf(TEXT("StageName:%s"), *StageName));
+        }
+        StageActor->SetActorHiddenInGame(true);
+        
+        // Add next stage links
+        const TArray<TSharedPtr<FJsonValue>>* NextStageIdsArray;
+        if (Payload->TryGetArrayField(TEXT("nextStageIds"), NextStageIdsArray)) {
+          for (int32 i = 0; i < NextStageIdsArray->Num(); i++) {
+            FString NextStageId = (*NextStageIdsArray)[i]->AsString();
+            StageActor->Tags.Add(*FString::Printf(TEXT("NextStage_%d:%s"), i, *NextStageId));
+          }
+        }
+        
+        // Add stage objectives
+        const TArray<TSharedPtr<FJsonValue>>* ObjectivesArray;
+        if (Payload->TryGetArrayField(TEXT("stageObjectives"), ObjectivesArray)) {
+          for (int32 i = 0; i < ObjectivesArray->Num(); i++) {
+            FString ObjectiveId = (*ObjectivesArray)[i]->AsString();
+            StageActor->Tags.Add(*FString::Printf(TEXT("StageObjective_%d:%s"), i, *ObjectiveId));
+          }
+        }
+        
+        Resp->SetStringField(TEXT("stageId"), StageId);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("stageType"), StageType);
+        Resp->SetStringField(TEXT("stageName"), StageName);
+        Message = FString::Printf(TEXT("Created quest stage '%s'"), *StageId);
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to create quest stage actor");
+        ErrorCode = TEXT("CREATE_FAILED");
+      }
+    }
+  }
+  
+  // 3.48: Configure minimap display
+  else if (LowerSub == TEXT("configure_minimap_icon")) {
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    if (ActorName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      AActor* TargetActor = FindActorByLabelOrName<AActor>(ActorName);
+      if (!TargetActor) {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        FString IconTexture;
+        Payload->TryGetStringField(TEXT("iconTexture"), IconTexture);
+        if (IconTexture.IsEmpty()) {
+          Payload->TryGetStringField(TEXT("iconPath"), IconTexture);
+        }
+        double IconSize = 32.0;
+        Payload->TryGetNumberField(TEXT("iconSize"), IconSize);
+        bool bRotateWithActor = true;
+        Payload->TryGetBoolField(TEXT("rotateWithActor"), bRotateWithActor);
+        bool bVisibleOnMinimap = true;
+        Payload->TryGetBoolField(TEXT("visibleOnMinimap"), bVisibleOnMinimap);
+        int32 MinimapLayer = 0;
+        double MinimapLayerD = 0;
+        if (Payload->TryGetNumberField(TEXT("minimapLayer"), MinimapLayerD)) {
+          MinimapLayer = (int32)MinimapLayerD;
+        }
+        
+        // Extract color
+        FLinearColor IconColor = FLinearColor::White;
+        const TSharedPtr<FJsonObject>* ColorObj;
+        if (Payload->TryGetObjectField(TEXT("color"), ColorObj)) {
+          (*ColorObj)->TryGetNumberField(TEXT("r"), IconColor.R);
+          (*ColorObj)->TryGetNumberField(TEXT("g"), IconColor.G);
+          (*ColorObj)->TryGetNumberField(TEXT("b"), IconColor.B);
+          (*ColorObj)->TryGetNumberField(TEXT("a"), IconColor.A);
+        }
+        
+        // Remove old minimap tags
+        TargetActor->Tags.RemoveAll([](const FName& Tag) {
+          return Tag.ToString().StartsWith(TEXT("Minimap_"));
+        });
+        
+        // Add minimap configuration tags
+        TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Visible:%s"), bVisibleOnMinimap ? TEXT("true") : TEXT("false")));
+        TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Size:%.1f"), IconSize));
+        TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Rotate:%s"), bRotateWithActor ? TEXT("true") : TEXT("false")));
+        TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Layer:%d"), MinimapLayer));
+        TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Color:%.2f,%.2f,%.2f,%.2f"), IconColor.R, IconColor.G, IconColor.B, IconColor.A));
+        if (!IconTexture.IsEmpty()) {
+          TargetActor->Tags.Add(*FString::Printf(TEXT("Minimap_Icon:%s"), *IconTexture));
+        }
+        
+        Resp->SetStringField(TEXT("actorName"), ActorName);
+        Resp->SetBoolField(TEXT("visibleOnMinimap"), bVisibleOnMinimap);
+        Resp->SetNumberField(TEXT("iconSize"), IconSize);
+        Resp->SetNumberField(TEXT("minimapLayer"), MinimapLayer);
+        Message = FString::Printf(TEXT("Configured minimap icon for actor '%s'"), *ActorName);
+      }
+    }
+  }
+  
+  // 3.49: Set global game state value
+  else if (LowerSub == TEXT("set_game_state")) {
+    FString StateKey;
+    Payload->TryGetStringField(TEXT("stateKey"), StateKey);
+    
+    if (StateKey.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("stateKey required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bool bPersistent = false;
+      Payload->TryGetBoolField(TEXT("persistent"), bPersistent);
+      bool bReplicated = false;
+      Payload->TryGetBoolField(TEXT("replicated"), bReplicated);
+      
+      // Store state in a game state holder actor
+      AActor* StateHolderActor = nullptr;
+      for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->Tags.Contains(TEXT("GameStateHolder"))) {
+          StateHolderActor = *It;
+          break;
+        }
+      }
+      
+      // Create state holder if it doesn't exist
+      if (!StateHolderActor) {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Name = TEXT("GameStateHolder");
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        
+        StateHolderActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        if (StateHolderActor) {
+          StateHolderActor->SetActorLabel(TEXT("GameStateHolder"));
+          StateHolderActor->Tags.Add(TEXT("GameStateHolder"));
+          StateHolderActor->SetActorHiddenInGame(true);
+        }
+      }
+      
+      if (StateHolderActor) {
+        // Remove old state with this key
+        StateHolderActor->Tags.RemoveAll([&StateKey](const FName& Tag) {
+          return Tag.ToString().StartsWith(FString::Printf(TEXT("State_%s:"), *StateKey));
+        });
+        
+        // Get state value (can be string, number, or bool)
+        FString StateValueStr;
+        double StateValueNum = 0.0;
+        bool StateValueBool = false;
+        FString ValueType = TEXT("string");
+        
+        if (Payload->TryGetStringField(TEXT("stateValue"), StateValueStr)) {
+          ValueType = TEXT("string");
+        } else if (Payload->TryGetNumberField(TEXT("stateValue"), StateValueNum)) {
+          StateValueStr = FString::Printf(TEXT("%.6f"), StateValueNum);
+          ValueType = TEXT("number");
+        } else if (Payload->TryGetBoolField(TEXT("stateValue"), StateValueBool)) {
+          StateValueStr = StateValueBool ? TEXT("true") : TEXT("false");
+          ValueType = TEXT("bool");
+        }
+        
+        // Add new state
+        StateHolderActor->Tags.Add(*FString::Printf(TEXT("State_%s:%s|%s|%s|%s"), 
+          *StateKey, *StateValueStr, *ValueType,
+          bPersistent ? TEXT("p") : TEXT(""),
+          bReplicated ? TEXT("r") : TEXT("")));
+        
+        Resp->SetStringField(TEXT("stateKey"), StateKey);
+        Resp->SetStringField(TEXT("stateValue"), StateValueStr);
+        Resp->SetStringField(TEXT("valueType"), ValueType);
+        Resp->SetBoolField(TEXT("persistent"), bPersistent);
+        Resp->SetBoolField(TEXT("replicated"), bReplicated);
+        Message = FString::Printf(TEXT("Set game state '%s' = '%s'"), *StateKey, *StateValueStr);
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to create game state holder");
+        ErrorCode = TEXT("CREATE_FAILED");
+      }
+    }
+  }
+  
+  // 3.50: Configure save system settings
+  else if (LowerSub == TEXT("configure_save_system")) {
+    FString SaveSystemType = TEXT("Slot");
+    Payload->TryGetStringField(TEXT("saveSystemType"), SaveSystemType);
+    int32 MaxSaveSlots = 10;
+    double MaxSaveSlotsD = 10.0;
+    if (Payload->TryGetNumberField(TEXT("maxSaveSlots"), MaxSaveSlotsD)) {
+      MaxSaveSlots = FMath::Clamp((int32)MaxSaveSlotsD, 1, 999);
+    }
+    double AutoSaveInterval = 0.0;
+    Payload->TryGetNumberField(TEXT("autoSaveInterval"), AutoSaveInterval);
+    bool bCompressSaves = true;
+    Payload->TryGetBoolField(TEXT("compressSaves"), bCompressSaves);
+    bool bEncryptSaves = false;
+    Payload->TryGetBoolField(TEXT("encryptSaves"), bEncryptSaves);
+    
+    // Create or update save system config actor
+    AActor* SaveConfigActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      if (It->Tags.Contains(TEXT("SaveSystemConfig"))) {
+        SaveConfigActor = *It;
+        break;
+      }
+    }
+    
+    if (!SaveConfigActor) {
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = TEXT("SaveSystemConfig");
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      
+      SaveConfigActor = World->SpawnActor<AActor>(AActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+      if (SaveConfigActor) {
+        SaveConfigActor->SetActorLabel(TEXT("SaveSystemConfig"));
+        SaveConfigActor->Tags.Add(TEXT("SaveSystemConfig"));
+        SaveConfigActor->SetActorHiddenInGame(true);
+      }
+    }
+    
+    if (SaveConfigActor) {
+      // Clear old config tags
+      SaveConfigActor->Tags.RemoveAll([](const FName& Tag) {
+        return Tag.ToString().StartsWith(TEXT("SaveConfig_"));
+      });
+      
+      // Add new config
+      SaveConfigActor->Tags.Add(*FString::Printf(TEXT("SaveConfig_Type:%s"), *SaveSystemType));
+      SaveConfigActor->Tags.Add(*FString::Printf(TEXT("SaveConfig_MaxSlots:%d"), MaxSaveSlots));
+      SaveConfigActor->Tags.Add(*FString::Printf(TEXT("SaveConfig_AutoSave:%.1f"), AutoSaveInterval));
+      SaveConfigActor->Tags.Add(*FString::Printf(TEXT("SaveConfig_Compress:%s"), bCompressSaves ? TEXT("true") : TEXT("false")));
+      SaveConfigActor->Tags.Add(*FString::Printf(TEXT("SaveConfig_Encrypt:%s"), bEncryptSaves ? TEXT("true") : TEXT("false")));
+      
+      Resp->SetStringField(TEXT("saveSystemType"), SaveSystemType);
+      Resp->SetNumberField(TEXT("maxSaveSlots"), MaxSaveSlots);
+      Resp->SetNumberField(TEXT("autoSaveInterval"), AutoSaveInterval);
+      Resp->SetBoolField(TEXT("compressSaves"), bCompressSaves);
+      Resp->SetBoolField(TEXT("encryptSaves"), bEncryptSaves);
+      Message = FString::Printf(TEXT("Configured save system: %s with %d slots"), *SaveSystemType, MaxSaveSlots);
+    } else {
+      bSuccess = false;
+      Message = TEXT("Failed to create save system config");
+      ErrorCode = TEXT("CREATE_FAILED");
+    }
+  }
+  
   else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Unknown gameplay systems action: '%s'"), *LowerSub);

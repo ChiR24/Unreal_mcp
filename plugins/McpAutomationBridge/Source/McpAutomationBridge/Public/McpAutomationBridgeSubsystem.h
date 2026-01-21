@@ -1263,8 +1263,17 @@ private:
                                        const TSharedPtr<FJsonObject> &Payload,
                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlActorReplaceClass(const FString &RequestId,
-                                      const TSharedPtr<FJsonObject> &Payload,
-                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+                                       const TSharedPtr<FJsonObject> &Payload,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorBatchTransform(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorCloneComponentHierarchy(const FString &RequestId,
+                                                  const TSharedPtr<FJsonObject> &Payload,
+                                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorDeserializeState(const FString &RequestId,
+                                          const TSharedPtr<FJsonObject> &Payload,
+                                          TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control Editor Subhandlers
   bool HandleControlEditorPlay(const FString &RequestId,

@@ -447,7 +447,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
       LowerSubAction.StartsWith(TEXT("create_metasound")) ||
       LowerSubAction.StartsWith(TEXT("add_metasound")) ||
       LowerSubAction.StartsWith(TEXT("connect_metasound")) ||
-      LowerSubAction.StartsWith(TEXT("remove_metasound"))) {
+      LowerSubAction.StartsWith(TEXT("remove_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("set_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("import_audio_to_metasound")) ||
+      LowerSubAction.StartsWith(TEXT("export_metasound")) ||
+      LowerSubAction == TEXT("create_oscillator") ||
+      LowerSubAction == TEXT("create_envelope") ||
+      LowerSubAction == TEXT("create_filter") ||
+      LowerSubAction == TEXT("create_sequencer_node") ||
+      LowerSubAction == TEXT("create_procedural_music") ||
+      LowerSubAction == TEXT("configure_audio_modulation")) {
     // Forward to MetaSound handler (not generic audio handler)
     return HandleMetaSoundAction(RequestId, LowerSubAction, Payload, RequestingSocket);
   }
@@ -696,7 +705,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // ============================================================================
   // DELETE ASSET(S) - Supports both singular assetPath and array assetPaths
   // ============================================================================
-  if (LowerSubAction == TEXT("delete")) {
+  if (LowerSubAction == TEXT("delete") || LowerSubAction == TEXT("delete_asset") || LowerSubAction == TEXT("delete_assets")) {
     TArray<FString> PathsToDelete;
     
     // First try singular assetPath
@@ -1699,7 +1708,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // ============================================================================
   // NANITE ENABLE/DISABLE
   // ============================================================================
-  if (LowerSubAction == TEXT("enable_nanite_mesh") || LowerSubAction == TEXT("enable_nanite")) {
+  if (LowerSubAction == TEXT("enable_nanite_mesh") || LowerSubAction == TEXT("enable_nanite") || LowerSubAction == TEXT("convert_to_nanite")) {
     // Forward to dedicated handler
     return HandleEnableNaniteMesh(RequestId, Action, Payload, RequestingSocket);
   }
@@ -1707,7 +1716,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // ============================================================================
   // SET NANITE SETTINGS
   // ============================================================================
-  if (LowerSubAction == TEXT("set_nanite_settings")) {
+  if (LowerSubAction == TEXT("set_nanite_settings") || LowerSubAction == TEXT("configure_nanite_settings")) {
     // Forward to dedicated handler
     return HandleSetNaniteSettings(RequestId, Action, Payload, RequestingSocket);
   }
@@ -2241,6 +2250,297 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Compiled %d/%d blueprints successfully"), 
                                           SuccessCount, BlueprintPathsArray->Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // BATCH NANITE CONVERT - Enable Nanite on multiple meshes
+  // ============================================================================
+  if (LowerSubAction == TEXT("batch_nanite_convert")) {
+    const TArray<TSharedPtr<FJsonValue>>* AssetPathsArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) || !AssetPathsArray) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPaths array required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    int32 SuccessCount = 0;
+    int32 ErrorCount = 0;
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
+
+    for (const TSharedPtr<FJsonValue>& PathValue : *AssetPathsArray) {
+      FString AssetPath = PathValue->AsString();
+      if (AssetPath.StartsWith(TEXT("/Content"))) {
+        AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+      }
+
+      TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+      ResultObj->SetStringField(TEXT("path"), AssetPath);
+
+      UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
+      if (StaticMesh) {
+#if ENGINE_MAJOR_VERSION >= 5
+        FStaticMeshSourceModel& LOD0 = StaticMesh->GetSourceModel(0);
+        LOD0.BuildSettings.bGenerateNaniteData = true;
+        StaticMesh->NaniteSettings.bEnabled = true;
+        StaticMesh->MarkPackageDirty();
+        McpSafeAssetSave(StaticMesh);
+        ResultObj->SetBoolField(TEXT("success"), true);
+        SuccessCount++;
+#else
+        ResultObj->SetBoolField(TEXT("success"), false);
+        ResultObj->SetStringField(TEXT("error"), TEXT("Nanite requires UE5+"));
+        ErrorCount++;
+#endif
+      } else {
+        ResultObj->SetBoolField(TEXT("success"), false);
+        ResultObj->SetStringField(TEXT("error"), TEXT("Asset not found or not a static mesh"));
+        ErrorCount++;
+      }
+      ResultsArray.Add(MakeShared<FJsonValueObject>(ResultObj));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), ErrorCount == 0);
+    Result->SetNumberField(TEXT("successCount"), SuccessCount);
+    Result->SetNumberField(TEXT("errorCount"), ErrorCount);
+    Result->SetArrayField(TEXT("results"), ResultsArray);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Nanite enabled on %d/%d meshes"), SuccessCount, AssetPathsArray->Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // NANITE REBUILD MESH - Force rebuild of Nanite mesh data
+  // ============================================================================
+  if (LowerSubAction == TEXT("nanite_rebuild_mesh")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+
+    UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
+    if (!StaticMesh) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Static mesh not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+#if ENGINE_MAJOR_VERSION >= 5
+    // Force regeneration of Nanite data
+    StaticMesh->NaniteSettings.bEnabled = true;
+    StaticMesh->Build(true);  // Force rebuild
+    StaticMesh->MarkPackageDirty();
+    McpSafeAssetSave(StaticMesh);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("naniteEnabled"), StaticMesh->NaniteSettings.bEnabled);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nanite mesh rebuilt"), Result);
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Nanite requires UE5+"), TEXT("NOT_SUPPORTED"));
+#endif
+    return true;
+  }
+
+  // ============================================================================
+  // CREATE RENDER TARGET - Create a render target texture asset
+  // ============================================================================
+  if (LowerSubAction == TEXT("create_render_target")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString PackagePath = TEXT("/Game/RenderTargets");
+    Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+
+    int32 Width = 1024;
+    int32 Height = 1024;
+    Payload->TryGetNumberField(TEXT("width"), Width);
+    Payload->TryGetNumberField(TEXT("height"), Height);
+    Width = FMath::Clamp(Width, 1, 8192);
+    Height = FMath::Clamp(Height, 1, 8192);
+
+    FString FormatStr;
+    Payload->TryGetStringField(TEXT("format"), FormatStr);
+    ETextureRenderTargetFormat Format = RTF_RGBA16f;
+    if (FormatStr == TEXT("RGBA8")) Format = RTF_RGBA8;
+    else if (FormatStr == TEXT("RGBA16f")) Format = RTF_RGBA16f;
+    else if (FormatStr == TEXT("RGBA32f")) Format = RTF_RGBA32f;
+    else if (FormatStr == TEXT("R16f")) Format = RTF_R16f;
+    else if (FormatStr == TEXT("R32f")) Format = RTF_R32f;
+
+    // Create the package
+    FString PackageName = FPaths::Combine(PackagePath, Name);
+    UPackage* Package = CreatePackage(*PackageName);
+    if (!Package) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+      return true;
+    }
+
+    UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(Package, FName(*Name), RF_Public | RF_Standalone);
+    if (!RenderTarget) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create render target"), TEXT("CREATION_ERROR"));
+      return true;
+    }
+
+    RenderTarget->InitAutoFormat(Width, Height);
+    RenderTarget->RenderTargetFormat = Format;
+    RenderTarget->UpdateResourceImmediate(true);
+    RenderTarget->MarkPackageDirty();
+    
+    // Register with Asset Registry
+    FAssetRegistryModule::AssetCreated(RenderTarget);
+    McpSafeAssetSave(RenderTarget);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("path"), RenderTarget->GetPathName());
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+    Result->SetStringField(TEXT("format"), FormatStr.IsEmpty() ? TEXT("RGBA16f") : FormatStr);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Render target created"), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // GET MATERIAL NODE DETAILS - Get information about material expression nodes
+  // ============================================================================
+  if (LowerSubAction == TEXT("get_material_node_details")) {
+    FString MaterialPath;
+    if (!Payload->TryGetStringField(TEXT("materialPath"), MaterialPath) && 
+        !Payload->TryGetStringField(TEXT("assetPath"), MaterialPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("materialPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (MaterialPath.StartsWith(TEXT("/Content"))) {
+      MaterialPath = FString::Printf(TEXT("/Game%s"), *MaterialPath.RightChop(8));
+    }
+
+    UMaterial* Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
+    if (!Material) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Material not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    TArray<TSharedPtr<FJsonValue>> NodesArray;
+    for (UMaterialExpression* Expression : Material->GetExpressions()) {
+      if (!Expression) continue;
+
+      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      NodeObj->SetStringField(TEXT("name"), Expression->GetName());
+      NodeObj->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
+      NodeObj->SetStringField(TEXT("description"), Expression->GetDescription());
+      NodeObj->SetNumberField(TEXT("positionX"), Expression->MaterialExpressionEditorX);
+      NodeObj->SetNumberField(TEXT("positionY"), Expression->MaterialExpressionEditorY);
+
+      // Get input pins
+      TArray<TSharedPtr<FJsonValue>> InputsArray;
+      TArray<FExpressionInput*> Inputs = Expression->GetInputs();
+      for (int32 i = 0; i < Inputs.Num(); i++) {
+        if (FExpressionInput* Input = Inputs[i]) {
+          TSharedPtr<FJsonObject> InputObj = MakeShared<FJsonObject>();
+          InputObj->SetStringField(TEXT("name"), Expression->GetInputName(i).ToString());
+          InputObj->SetBoolField(TEXT("connected"), Input->Expression != nullptr);
+          InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
+        }
+      }
+      NodeObj->SetArrayField(TEXT("inputs"), InputsArray);
+
+      // Get outputs count
+      NodeObj->SetNumberField(TEXT("outputCount"), Expression->GetOutputs().Num());
+
+      NodesArray.Add(MakeShared<FJsonValueObject>(NodeObj));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("materialPath"), MaterialPath);
+    Result->SetNumberField(TEXT("nodeCount"), NodesArray.Num());
+    Result->SetArrayField(TEXT("nodes"), NodesArray);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+                           FString::Printf(TEXT("Material has %d nodes"), NodesArray.Num()), Result);
+    return true;
+  }
+
+  // ============================================================================
+  // BREAK MATERIAL CONNECTIONS - Disconnect material expression pins
+  // ============================================================================
+  if (LowerSubAction == TEXT("break_material_connections")) {
+    FString MaterialPath;
+    if (!Payload->TryGetStringField(TEXT("materialPath"), MaterialPath) && 
+        !Payload->TryGetStringField(TEXT("assetPath"), MaterialPath)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("materialPath required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (MaterialPath.StartsWith(TEXT("/Content"))) {
+      MaterialPath = FString::Printf(TEXT("/Game%s"), *MaterialPath.RightChop(8));
+    }
+
+    FString NodeName;
+    if (!Payload->TryGetStringField(TEXT("nodeName"), NodeName) && 
+        !Payload->TryGetStringField(TEXT("expressionName"), NodeName)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial* Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
+    if (!Material) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Material not found"), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Find the expression by name
+    UMaterialExpression* TargetExpression = nullptr;
+    for (UMaterialExpression* Expression : Material->GetExpressions()) {
+      if (Expression && Expression->GetName() == NodeName) {
+        TargetExpression = Expression;
+        break;
+      }
+    }
+
+    if (!TargetExpression) {
+      SendAutomationError(RequestingSocket, RequestId, 
+                          FString::Printf(TEXT("Expression '%s' not found"), *NodeName), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+
+    // Break all input connections on this node
+    int32 BrokenCount = 0;
+    TArray<FExpressionInput*> Inputs = TargetExpression->GetInputs();
+    for (FExpressionInput* Input : Inputs) {
+      if (Input && Input->Expression) {
+        Input->Expression = nullptr;
+        Input->OutputIndex = 0;
+        BrokenCount++;
+      }
+    }
+
+    Material->PreEditChange(nullptr);
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+    McpSafeAssetSave(Material);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("materialPath"), MaterialPath);
+    Result->SetStringField(TEXT("nodeName"), NodeName);
+    Result->SetNumberField(TEXT("connectionsBroken"), BrokenCount);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+                           FString::Printf(TEXT("Broke %d connections on '%s'"), BrokenCount, *NodeName), Result);
     return true;
   }
 
@@ -2881,6 +3181,174 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          FString::Printf(TEXT("LOD settings configured (%d LODs)"), NumLODs), Result);
+  return true;
+#else
+  return false;
+#endif
+}
+
+// ============================================================================
+// DELETE ASSET HANDLERS
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteAsset(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Payload required"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString AssetPath;
+  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+    if (!Payload->TryGetStringField(TEXT("path"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
+
+  // Normalize path
+  if (AssetPath.StartsWith(TEXT("/Content"))) {
+    AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+  }
+  AssetPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    // Asset doesn't exist - that's success (idempotent delete)
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("alreadyDeleted"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Asset already deleted"), Result);
+    return true;
+  }
+
+  // Delete the asset using ObjectTools
+  UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  if (!Asset) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load asset for deletion"),
+                        TEXT("LOAD_FAILED"));
+    return true;
+  }
+
+  TArray<UObject*> ObjectsToDelete;
+  ObjectsToDelete.Add(Asset);
+  
+  // Check for force delete option
+  bool bForceDelete = false;
+  Payload->TryGetBoolField(TEXT("force"), bForceDelete);
+
+  int32 DeletedCount = 0;
+  if (bForceDelete) {
+    DeletedCount = ObjectTools::ForceDeleteObjects(ObjectsToDelete, false);
+  } else {
+    DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, true);
+  }
+
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  Result->SetBoolField(TEXT("success"), DeletedCount > 0);
+  Result->SetStringField(TEXT("assetPath"), AssetPath);
+  Result->SetNumberField(TEXT("deletedCount"), DeletedCount);
+
+  if (DeletedCount > 0) {
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Asset deleted"), Result);
+  } else {
+    Result->SetStringField(TEXT("message"), TEXT("Asset could not be deleted. It may have references."));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Failed to delete asset"), Result, TEXT("DELETE_FAILED"));
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Payload required"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  const TArray<TSharedPtr<FJsonValue>>* AssetPathsArray = nullptr;
+  if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) || !AssetPathsArray) {
+    if (!Payload->TryGetArrayField(TEXT("paths"), AssetPathsArray) || !AssetPathsArray) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("assetPaths array required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
+
+  bool bForceDelete = false;
+  Payload->TryGetBoolField(TEXT("force"), bForceDelete);
+
+  TArray<UObject*> ObjectsToDelete;
+  TArray<FString> NotFoundPaths;
+  TArray<FString> ProcessedPaths;
+
+  for (const TSharedPtr<FJsonValue>& Value : *AssetPathsArray) {
+    FString AssetPath = Value->AsString();
+    if (AssetPath.IsEmpty()) continue;
+
+    // Normalize path
+    if (AssetPath.StartsWith(TEXT("/Content"))) {
+      AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+    }
+    AssetPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      NotFoundPaths.Add(AssetPath);
+      continue;
+    }
+
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (Asset) {
+      ObjectsToDelete.Add(Asset);
+      ProcessedPaths.Add(AssetPath);
+    }
+  }
+
+  int32 DeletedCount = 0;
+  if (ObjectsToDelete.Num() > 0) {
+    if (bForceDelete) {
+      DeletedCount = ObjectTools::ForceDeleteObjects(ObjectsToDelete, false);
+    } else {
+      DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, true);
+    }
+  }
+
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  Result->SetBoolField(TEXT("success"), true);
+  Result->SetNumberField(TEXT("deletedCount"), DeletedCount);
+  Result->SetNumberField(TEXT("requestedCount"), AssetPathsArray->Num());
+  Result->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+
+  TArray<TSharedPtr<FJsonValue>> DeletedArray;
+  for (int32 i = 0; i < FMath::Min(DeletedCount, ProcessedPaths.Num()); ++i) {
+    DeletedArray.Add(MakeShared<FJsonValueString>(ProcessedPaths[i]));
+  }
+  Result->SetArrayField(TEXT("deletedPaths"), DeletedArray);
+
+  if (NotFoundPaths.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> NotFoundArray;
+    for (const FString& Path : NotFoundPaths) {
+      NotFoundArray.Add(MakeShared<FJsonValueString>(Path));
+    }
+    Result->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+  }
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         FString::Printf(TEXT("Deleted %d assets"), DeletedCount), Result);
   return true;
 #else
   return false;

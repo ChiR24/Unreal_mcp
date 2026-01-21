@@ -2770,6 +2770,113 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     {
         bHandled = HandleGetWorldPartitionCells(this, RequestId, Payload, Socket);
     }
+    // =========================================================================
+    // Level Metadata & Validation
+    // =========================================================================
+    else if (SubAction == TEXT("get_summary"))
+    {
+        // Get summary information about the current level
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        UWorld* World = GetActiveWorld();
+        if (World) {
+            Result->SetStringField(TEXT("levelName"), World->GetMapName());
+            Result->SetStringField(TEXT("levelPath"), World->GetPathName());
+            Result->SetNumberField(TEXT("actorCount"), World->GetActorCount());
+            
+            // Count various actor types
+            int32 StaticMeshCount = 0, LightCount = 0, VolumeCount = 0;
+            for (TActorIterator<AActor> It(World); It; ++It) {
+                if (It->IsA(AStaticMeshActor::StaticClass())) StaticMeshCount++;
+                else if (It->IsA(ALight::StaticClass())) LightCount++;
+                else if (It->IsA(AVolume::StaticClass())) VolumeCount++;
+            }
+            Result->SetNumberField(TEXT("staticMeshCount"), StaticMeshCount);
+            Result->SetNumberField(TEXT("lightCount"), LightCount);
+            Result->SetNumberField(TEXT("volumeCount"), VolumeCount);
+            
+            Result->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Level summary retrieved"), Result);
+        } else {
+            SendAutomationError(Socket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+        }
+        bHandled = true;
+    }
+    else if (SubAction == TEXT("set_metadata"))
+    {
+        // Set custom metadata on the level
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        FString Key, Value;
+        Payload->TryGetStringField(TEXT("key"), Key);
+        Payload->TryGetStringField(TEXT("value"), Value);
+        
+        if (Key.IsEmpty()) {
+            SendAutomationError(Socket, RequestId, TEXT("key required for set_metadata"), TEXT("INVALID_ARGUMENT"));
+            bHandled = true;
+        } else {
+            UWorld* World = GetActiveWorld();
+            if (World && World->GetWorldSettings()) {
+                // Store metadata as tags or in custom properties
+                World->GetWorldSettings()->Tags.AddUnique(*FString::Printf(TEXT("MCP_%s=%s"), *Key, *Value));
+                World->MarkPackageDirty();
+                
+                Result->SetBoolField(TEXT("success"), true);
+                Result->SetStringField(TEXT("key"), Key);
+                Result->SetStringField(TEXT("value"), Value);
+                SendAutomationResponse(Socket, RequestId, true, TEXT("Metadata set"), Result);
+            } else {
+                SendAutomationError(Socket, RequestId, TEXT("No active world or world settings"), TEXT("NO_WORLD"));
+            }
+            bHandled = true;
+        }
+    }
+    else if (SubAction == TEXT("validate_level"))
+    {
+        // Validate the current level for common issues
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TArray<TSharedPtr<FJsonValue>> WarningsArray, ErrorsArray;
+        bool bValid = true;
+        
+        UWorld* World = GetActiveWorld();
+        if (World) {
+            // Check for common issues
+            int32 InvalidActors = 0;
+            int32 OverlappingActors = 0;
+            
+            for (TActorIterator<AActor> It(World); It; ++It) {
+                AActor* Actor = *It;
+                if (!Actor) continue;
+                
+                // Check for actors at origin (common mistake)
+                if (Actor->GetActorLocation().IsNearlyZero() && !Actor->IsA(AWorldSettings::StaticClass())) {
+                    TSharedPtr<FJsonObject> Warning = MakeShared<FJsonObject>();
+                    Warning->SetStringField(TEXT("type"), TEXT("ACTOR_AT_ORIGIN"));
+                    Warning->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+                    WarningsArray.Add(MakeShared<FJsonValueObject>(Warning));
+                }
+                
+                // Check for null root component
+                if (!Actor->GetRootComponent()) {
+                    TSharedPtr<FJsonObject> Error = MakeShared<FJsonObject>();
+                    Error->SetStringField(TEXT("type"), TEXT("NULL_ROOT_COMPONENT"));
+                    Error->SetStringField(TEXT("actor"), Actor->GetActorLabel());
+                    ErrorsArray.Add(MakeShared<FJsonValueObject>(Error));
+                    InvalidActors++;
+                    bValid = false;
+                }
+            }
+            
+            Result->SetBoolField(TEXT("valid"), bValid);
+            Result->SetNumberField(TEXT("warningCount"), WarningsArray.Num());
+            Result->SetNumberField(TEXT("errorCount"), ErrorsArray.Num());
+            Result->SetArrayField(TEXT("warnings"), WarningsArray);
+            Result->SetArrayField(TEXT("errors"), ErrorsArray);
+            Result->SetBoolField(TEXT("success"), true);
+            SendAutomationResponse(Socket, RequestId, true, TEXT("Level validated"), Result);
+        } else {
+            SendAutomationError(Socket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+        }
+        bHandled = true;
+    }
     else
     {
         SendAutomationResponse(Socket, RequestId, false,

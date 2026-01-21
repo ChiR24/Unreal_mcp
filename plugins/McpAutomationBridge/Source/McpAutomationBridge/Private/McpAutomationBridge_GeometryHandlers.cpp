@@ -4493,6 +4493,34 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("loop_cut")) return HandleLoopCut(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("duplicate_along_spline")) return HandleDuplicateAlongSpline(this, RequestId, Payload, RequestingSocket);
 
+    // Aliases for missing TS actions
+    if (SubAction == TEXT("boolean_mesh_operation")) return HandleBooleanUnion(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("create_procedural_box")) return HandleCreateBox(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("create_mesh_from_spline")) return HandleSweep(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("extrude_along_spline")) return HandleSweep(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("generate_mesh_uvs")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("unwrap_uv")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("pack_uv_islands")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("remesh_voxel")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("quadrangulate")) return HandleTriangulate(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("edge_split")) return HandleSplitNormals(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("generate_complex_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("simplify_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("generate_lods")) return HandleSimplifyMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("set_lod_settings")) return HandleSimplifyMesh(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("set_lod_screen_sizes")) return HandleSimplifyMesh(this, RequestId, Payload, RequestingSocket);
+    
+    // Export geometry - route to convert_to_static_mesh which creates an asset
+    if (SubAction == TEXT("export_geometry_to_file")) return HandleConvertToStaticMesh(this, RequestId, Payload, RequestingSocket);
+
+    // Nanite actions - forward to dedicated handlers (defined in AssetWorkflowHandlers)
+    if (SubAction == TEXT("convert_to_nanite") || SubAction == TEXT("enable_nanite_mesh")) {
+        return HandleEnableNaniteMesh(RequestId, Action, Payload, RequestingSocket);
+    }
+    if (SubAction == TEXT("configure_nanite_settings") || SubAction == TEXT("set_nanite_settings")) {
+        return HandleSetNaniteSettings(RequestId, Action, Payload, RequestingSocket);
+    }
+
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown geometry subAction: '%s'"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
 }

@@ -2,7 +2,7 @@
 
 > Auto-generated from tool definitions. Do not edit manually.
 
-Generated: 2026-01-16T12:25:18.807Z
+Generated: 2026-01-21T16:47:49.094Z
 
 Total Tools: 37
 
@@ -10,7 +10,7 @@ Total Tools: 37
 
 Total Actions: 2578
 
-- [manage_pipeline](#manage-pipeline) (3 actions)
+- [configure_tools](#configure-tools) (3 actions)
 - [manage_asset](#manage-asset) (99 actions)
 - [control_actor](#control-actor) (45 actions)
 - [control_editor](#control-editor) (84 actions)
@@ -43,7 +43,6 @@ Total Actions: 2578
 - [manage_xr](#manage-xr) (272 actions)
 - [manage_accessibility](#manage-accessibility) (50 actions)
 - [manage_ui](#manage-ui) (7 actions)
-- [manage_gameplay_primitives](#manage-gameplay-primitives) (62 actions)
 - [manage_gameplay_abilities](#manage-gameplay-abilities) (18 actions)
 - [manage_attribute_sets](#manage-attribute-sets) (6 actions)
 - [manage_gameplay_cues](#manage-gameplay-cues) (3 actions)
@@ -51,11 +50,11 @@ Total Actions: 2578
 
 ---
 
-## manage_pipeline
+## configure_tools
 
 **Category:** core
 
-Filter tools by category (core, world, authoring, gameplay, utility).
+MCP meta-tool: filter which MCP tools are visible by category. NOT an Unreal Engine tool.
 
 ### Actions
 
@@ -3020,81 +3019,6 @@ Runtime UI management: spawn widgets, hierarchy, viewport control.
 | `set_input_mode` | - |
 | `show_mouse_cursor` | - |
 | `set_widget_visibility` | - |
-
----
-
-## manage_gameplay_primitives
-
-**Category:** gameplay
-
-Universal gameplay building blocks: state machines, values, factions, zones, conditions, spawners, schedules, and interactions.
-
-### Actions
-
-| Action | Description |
-|--------|-------------|
-| `create_value_tracker` | - |
-| `modify_value` | - |
-| `set_value` | - |
-| `get_value` | - |
-| `add_value_threshold` | - |
-| `configure_value_decay` | - |
-| `configure_value_regen` | - |
-| `pause_value_changes` | - |
-| `create_actor_state_machine` | - |
-| `add_actor_state` | - |
-| `add_actor_state_transition` | - |
-| `set_actor_state` | - |
-| `get_actor_state` | - |
-| `configure_state_timer` | - |
-| `create_faction` | - |
-| `set_faction_relationship` | - |
-| `assign_to_faction` | - |
-| `get_faction` | - |
-| `modify_reputation` | - |
-| `get_reputation` | - |
-| `add_reputation_threshold` | - |
-| `check_faction_relationship` | - |
-| `attach_to_socket` | - |
-| `detach_from_parent` | - |
-| `transfer_control` | - |
-| `configure_attachment_rules` | - |
-| `get_attached_actors` | - |
-| `get_attachment_parent` | - |
-| `create_schedule` | - |
-| `add_schedule_entry` | - |
-| `set_schedule_active` | - |
-| `get_current_schedule_entry` | - |
-| `skip_to_schedule_entry` | - |
-| `create_world_time` | - |
-| `set_world_time` | - |
-| `get_world_time` | - |
-| `set_time_scale` | - |
-| `pause_world_time` | - |
-| `add_time_event` | - |
-| `get_time_period` | - |
-| `create_zone` | - |
-| `set_zone_property` | - |
-| `get_zone_property` | - |
-| `get_actor_zone` | - |
-| `add_zone_enter_event` | - |
-| `add_zone_exit_event` | - |
-| `create_condition` | - |
-| `create_compound_condition` | - |
-| `evaluate_condition` | - |
-| `add_condition_listener` | - |
-| `add_interactable_component` | - |
-| `configure_interaction` | - |
-| `set_interaction_enabled` | - |
-| `get_nearby_interactables` | - |
-| `focus_interaction` | - |
-| `execute_interaction` | - |
-| `create_spawner` | - |
-| `configure_spawner` | - |
-| `set_spawner_enabled` | - |
-| `configure_spawn_conditions` | - |
-| `despawn_managed_actors` | - |
-| `get_spawned_count` | - |
 
 ---
 

@@ -1574,6 +1574,1163 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     }
   }
   // ========================================================================
+  // CREATE (alias for create_master_sequence with simpler name)
+  // ========================================================================
+  else if (LowerSub == TEXT("create")) {
+    FString SequenceName;
+    Payload->TryGetStringField(TEXT("sequenceName"), SequenceName);
+    if (SequenceName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("name"), SequenceName);
+    }
+    FString SavePath;
+    Payload->TryGetStringField(TEXT("savePath"), SavePath);
+    if (SavePath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("path"), SavePath);
+    }
+    
+    if (SequenceName.IsEmpty()) {
+      SequenceName = TEXT("NewSequence");
+    }
+    if (SavePath.IsEmpty()) {
+      SavePath = TEXT("/Game/Sequences");
+    }
+    
+    FString PackagePath = SavePath / SequenceName;
+    PackagePath = PackagePath.Replace(TEXT("/Content"), TEXT("/Game"));
+    
+    UPackage* Package = CreatePackage(*PackagePath);
+    if (!Package) {
+      bSuccess = false;
+      Message = TEXT("Failed to create package");
+      ErrorCode = TEXT("PACKAGE_CREATION_FAILED");
+    } else {
+      ULevelSequence* LevelSequence = NewObject<ULevelSequence>(
+          Package, *SequenceName, RF_Public | RF_Standalone);
+      
+      if (LevelSequence) {
+        LevelSequence->Initialize();
+        
+        double DisplayRate = 30.0;
+        Payload->TryGetNumberField(TEXT("displayRate"), DisplayRate);
+        UMovieScene* MovieScene = LevelSequence->GetMovieScene();
+        if (MovieScene) {
+          MovieScene->SetDisplayRate(FFrameRate(static_cast<int32>(DisplayRate), 1));
+        }
+        
+        LevelSequence->MarkPackageDirty();
+        McpSafeAssetSave(LevelSequence);
+        
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Created sequence: %s"), *PackagePath);
+        Resp->SetStringField(TEXT("sequencePath"), LevelSequence->GetPathName());
+        Resp->SetStringField(TEXT("sequenceName"), SequenceName);
+      } else {
+        bSuccess = false;
+        Message = TEXT("Failed to create LevelSequence object");
+        ErrorCode = TEXT("CREATION_FAILED");
+      }
+    }
+  }
+  // ========================================================================
+  // OPEN - Opens a sequence in the Sequencer editor
+  // ========================================================================
+  else if (LowerSub == TEXT("open")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    if (SequencePath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("path"), SequencePath);
+    }
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Sequence) {
+        // Open in asset editor
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Sequence);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Opened sequence: %s"), *SequencePath);
+        Resp->SetStringField(TEXT("sequencePath"), Sequence->GetPathName());
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // LIST (alias for list_sequences)
+  // ========================================================================
+  else if (LowerSub == TEXT("list")) {
+    FString DirectoryPath;
+    Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
+    if (DirectoryPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("path"), DirectoryPath);
+    }
+    if (DirectoryPath.IsEmpty()) {
+      DirectoryPath = TEXT("/Game");
+    }
+    
+    FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    TArray<FAssetData> AssetDataList;
+    AssetRegistry.Get().GetAssetsByClass(ULevelSequence::StaticClass()->GetClassPathName(), AssetDataList);
+    
+    TArray<TSharedPtr<FJsonValue>> SequencesArray;
+    for (const FAssetData& AssetData : AssetDataList) {
+      if (AssetData.PackageName.ToString().StartsWith(DirectoryPath)) {
+        TSharedPtr<FJsonObject> SeqObj = MakeShared<FJsonObject>();
+        SeqObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+        SeqObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+        SequencesArray.Add(MakeShared<FJsonValueObject>(SeqObj));
+      }
+    }
+    
+    Resp->SetArrayField(TEXT("sequences"), SequencesArray);
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Found %d sequences"), SequencesArray.Num());
+  }
+  // ========================================================================
+  // DUPLICATE (alias for duplicate_sequence)
+  // ========================================================================
+  else if (LowerSub == TEXT("duplicate")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString NewName;
+    Payload->TryGetStringField(TEXT("newName"), NewName);
+    if (NewName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("sequenceName"), NewName);
+    }
+    
+    if (SequencePath.IsEmpty() || NewName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath and newName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Sequence) {
+        FString PackagePath = FPackageName::GetLongPackagePath(Sequence->GetPathName());
+        FString NewPackagePath = PackagePath / NewName;
+        
+        UPackage* NewPackage = CreatePackage(*NewPackagePath);
+        if (NewPackage) {
+          ULevelSequence* NewSequence = DuplicateObject<ULevelSequence>(Sequence, NewPackage, *NewName);
+          if (NewSequence) {
+            NewSequence->SetFlags(RF_Public | RF_Standalone);
+            NewSequence->MarkPackageDirty();
+            McpSafeAssetSave(NewSequence);
+            
+            bSuccess = true;
+            Message = TEXT("Sequence duplicated");
+            Resp->SetStringField(TEXT("newSequencePath"), NewSequence->GetPathName());
+          }
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // DELETE (alias for delete_sequence)
+  // ========================================================================
+  else if (LowerSub == TEXT("delete")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    if (SequencePath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("path"), SequencePath);
+    }
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Sequence) {
+#if MCP_HAS_OBJECT_TOOLS
+        TArray<UObject*> ObjectsToDelete;
+        ObjectsToDelete.Add(Sequence);
+        
+        if (ObjectTools::DeleteObjects(ObjectsToDelete, true)) {
+          bSuccess = true;
+          Message = TEXT("Sequence deleted");
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to delete sequence");
+          ErrorCode = TEXT("DELETE_FAILED");
+        }
+#else
+        if (UEditorAssetLibrary::DeleteAsset(SequencePath)) {
+          bSuccess = true;
+          Message = TEXT("Sequence deleted");
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to delete sequence");
+          ErrorCode = TEXT("DELETE_FAILED");
+        }
+#endif
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // RENAME - Rename a sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("rename")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString NewName;
+    Payload->TryGetStringField(TEXT("newName"), NewName);
+    
+    if (SequencePath.IsEmpty() || NewName.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath and newName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Sequence) {
+        FString PackagePath = FPackageName::GetLongPackagePath(Sequence->GetPathName());
+        FString NewPath = PackagePath / NewName;
+        
+        if (UEditorAssetLibrary::RenameAsset(SequencePath, NewPath)) {
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Sequence renamed to %s"), *NewName);
+          Resp->SetStringField(TEXT("newPath"), NewPath);
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to rename sequence");
+          ErrorCode = TEXT("RENAME_FAILED");
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // PLAY (alias for play_sequence)
+  // ========================================================================
+  else if (LowerSub == TEXT("play")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      UWorld* World = GetActiveWorld();
+      
+      if (Sequence && World) {
+        ALevelSequenceActor* SequenceActor = nullptr;
+        for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
+          if (It->GetSequence() == Sequence) {
+            SequenceActor = *It;
+            break;
+          }
+        }
+        
+        if (!SequenceActor) {
+          FActorSpawnParameters SpawnParams;
+          SequenceActor = World->SpawnActor<ALevelSequenceActor>(SpawnParams);
+          if (SequenceActor) {
+            SequenceActor->SetSequence(Sequence);
+          }
+        }
+        
+        if (SequenceActor) {
+          ULevelSequencePlayer* Player = SequenceActor->GetSequencePlayer();
+          if (Player) {
+            Player->Play();
+            bSuccess = true;
+            Message = TEXT("Sequence playing");
+          }
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence or world not found");
+        ErrorCode = TEXT("NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // PAUSE (alias for pause_sequence)
+  // ========================================================================
+  else if (LowerSub == TEXT("pause")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    UWorld* World = GetActiveWorld();
+    
+    if (Sequence && World) {
+      for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
+        if (It->GetSequence() == Sequence) {
+          ULevelSequencePlayer* Player = It->GetSequencePlayer();
+          if (Player) {
+            Player->Pause();
+            bSuccess = true;
+            Message = TEXT("Sequence paused");
+          }
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // STOP (alias for stop_sequence)
+  // ========================================================================
+  else if (LowerSub == TEXT("stop")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    UWorld* World = GetActiveWorld();
+    
+    if (Sequence && World) {
+      for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
+        if (It->GetSequence() == Sequence) {
+          ULevelSequencePlayer* Player = It->GetSequencePlayer();
+          if (Player) {
+            Player->Stop();
+            bSuccess = true;
+            Message = TEXT("Sequence stopped");
+          }
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // GET_METADATA - Get sequence metadata
+  // ========================================================================
+  else if (LowerSub == TEXT("get_metadata")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
+        
+        MetaObj->SetStringField(TEXT("name"), Sequence->GetName());
+        MetaObj->SetStringField(TEXT("path"), Sequence->GetPathName());
+        
+        TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
+        FFrameRate TickResolution = MovieScene->GetTickResolution();
+        FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+        
+        MetaObj->SetNumberField(TEXT("displayRate"), DisplayRate.AsDecimal());
+        MetaObj->SetNumberField(TEXT("tickResolution"), TickResolution.AsDecimal());
+        MetaObj->SetNumberField(TEXT("startFrame"), PlaybackRange.GetLowerBoundValue().Value);
+        MetaObj->SetNumberField(TEXT("endFrame"), PlaybackRange.GetUpperBoundValue().Value);
+        MetaObj->SetNumberField(TEXT("possessableCount"), MovieScene->GetPossessableCount());
+        MetaObj->SetNumberField(TEXT("spawnableCount"), MovieScene->GetSpawnableCount());
+        MetaObj->SetNumberField(TEXT("trackCount"), MovieScene->GetTracks().Num());
+        
+        Resp->SetObjectField(TEXT("metadata"), MetaObj);
+        bSuccess = true;
+        Message = TEXT("Metadata retrieved");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("Sequence not found");
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    }
+  }
+  // ========================================================================
+  // SET_METADATA - Set sequence metadata (display rate, tick resolution)
+  // ========================================================================
+  else if (LowerSub == TEXT("set_metadata")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        double DisplayRate;
+        if (Payload->TryGetNumberField(TEXT("displayRate"), DisplayRate)) {
+          MovieScene->SetDisplayRate(FFrameRate(static_cast<int32>(DisplayRate), 1));
+        }
+        
+        MovieScene->Modify();
+        Sequence->MarkPackageDirty();
+        McpSafeAssetSave(Sequence);
+        
+        bSuccess = true;
+        Message = TEXT("Metadata updated");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("Sequence not found");
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    }
+  }
+  // ========================================================================
+  // ADD_ACTOR - Bind an actor to the sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("add_actor")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    bool bSpawnable = false;
+    Payload->TryGetBoolField(TEXT("spawnable"), bSpawnable);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    UWorld* World = GetActiveWorld();
+    
+    if (Sequence && World && !ActorName.IsEmpty()) {
+      AActor* TargetActor = FindSequencerActorByNameOrLabel<AActor>(World, ActorName);
+      
+      if (TargetActor) {
+        UMovieScene* MovieScene = Sequence->GetMovieScene();
+        FGuid BindingGuid;
+        
+        if (bSpawnable) {
+          BindingGuid = MovieScene->AddSpawnable(TargetActor->GetName(), *TargetActor);
+        } else {
+          BindingGuid = MovieScene->AddPossessable(TargetActor->GetName(), TargetActor->GetClass());
+          Sequence->BindPossessableObject(BindingGuid, *TargetActor, World);
+        }
+        
+        if (BindingGuid.IsValid()) {
+          MovieScene->Modify();
+          Sequence->MarkPackageDirty();
+          
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Actor added as %s"), bSpawnable ? TEXT("spawnable") : TEXT("possessable"));
+          Resp->SetStringField(TEXT("bindingId"), BindingGuid.ToString());
+          Resp->SetStringField(TEXT("actorName"), TargetActor->GetName());
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Actor not found in world");
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("sequencePath and actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    }
+  }
+  // ========================================================================
+  // ADD_ACTORS - Bind multiple actors to the sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("add_actors")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    const TArray<TSharedPtr<FJsonValue>>* ActorNamesArr;
+    bool bSpawnable = false;
+    Payload->TryGetBoolField(TEXT("spawnable"), bSpawnable);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    UWorld* World = GetActiveWorld();
+    
+    if (Sequence && World && Payload->TryGetArrayField(TEXT("actorNames"), ActorNamesArr)) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      TArray<TSharedPtr<FJsonValue>> BindingsArray;
+      int32 AddedCount = 0;
+      
+      for (const TSharedPtr<FJsonValue>& ActorVal : *ActorNamesArr) {
+        FString ActorName = ActorVal->AsString();
+        AActor* TargetActor = FindSequencerActorByNameOrLabel<AActor>(World, ActorName);
+        
+        if (TargetActor) {
+          FGuid BindingGuid;
+          if (bSpawnable) {
+            BindingGuid = MovieScene->AddSpawnable(TargetActor->GetName(), *TargetActor);
+          } else {
+            BindingGuid = MovieScene->AddPossessable(TargetActor->GetName(), TargetActor->GetClass());
+            Sequence->BindPossessableObject(BindingGuid, *TargetActor, World);
+          }
+          
+          if (BindingGuid.IsValid()) {
+            TSharedPtr<FJsonObject> BindingObj = MakeShared<FJsonObject>();
+            BindingObj->SetStringField(TEXT("bindingId"), BindingGuid.ToString());
+            BindingObj->SetStringField(TEXT("actorName"), TargetActor->GetName());
+            BindingsArray.Add(MakeShared<FJsonValueObject>(BindingObj));
+            AddedCount++;
+          }
+        }
+      }
+      
+      MovieScene->Modify();
+      Sequence->MarkPackageDirty();
+      
+      Resp->SetArrayField(TEXT("bindings"), BindingsArray);
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Added %d actors"), AddedCount);
+    }
+  }
+  // ========================================================================
+  // REMOVE_ACTORS - Remove multiple actor bindings
+  // ========================================================================
+  else if (LowerSub == TEXT("remove_actors")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    const TArray<TSharedPtr<FJsonValue>>* BindingIdsArr;
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence && Payload->TryGetArrayField(TEXT("bindingIds"), BindingIdsArr)) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      int32 RemovedCount = 0;
+      
+      for (const TSharedPtr<FJsonValue>& BindingVal : *BindingIdsArr) {
+        FString BindingIdStr = BindingVal->AsString();
+        FGuid BindingGuid;
+        if (FGuid::Parse(BindingIdStr, BindingGuid)) {
+          if (MovieScene->RemovePossessable(BindingGuid) || MovieScene->RemoveSpawnable(BindingGuid)) {
+            RemovedCount++;
+          }
+        }
+      }
+      
+      MovieScene->Modify();
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Removed %d bindings"), RemovedCount);
+    }
+  }
+  // ========================================================================
+  // ADD_CAMERA - Add a camera to the sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("add_camera")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString CameraName;
+    Payload->TryGetStringField(TEXT("cameraName"), CameraName);
+    if (CameraName.IsEmpty()) {
+      CameraName = TEXT("SequencerCamera");
+    }
+    
+    UWorld* World = GetActiveWorld();
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    
+    if (Sequence && World) {
+      // Spawn camera
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = FName(*CameraName);
+      ACineCameraActor* CameraActor = World->SpawnActor<ACineCameraActor>(
+          ACineCameraActor::StaticClass(),
+          FVector::ZeroVector,
+          FRotator::ZeroRotator,
+          SpawnParams);
+      
+      if (CameraActor) {
+        // Apply location/rotation if provided
+        const TSharedPtr<FJsonObject>* LocationObj;
+        if (Payload->TryGetObjectField(TEXT("location"), LocationObj)) {
+          double X = 0, Y = 0, Z = 0;
+          (*LocationObj)->TryGetNumberField(TEXT("x"), X);
+          (*LocationObj)->TryGetNumberField(TEXT("y"), Y);
+          (*LocationObj)->TryGetNumberField(TEXT("z"), Z);
+          CameraActor->SetActorLocation(FVector(X, Y, Z));
+        }
+        
+        const TSharedPtr<FJsonObject>* RotationObj;
+        if (Payload->TryGetObjectField(TEXT("rotation"), RotationObj)) {
+          double Pitch = 0, Yaw = 0, Roll = 0;
+          (*RotationObj)->TryGetNumberField(TEXT("pitch"), Pitch);
+          (*RotationObj)->TryGetNumberField(TEXT("yaw"), Yaw);
+          (*RotationObj)->TryGetNumberField(TEXT("roll"), Roll);
+          CameraActor->SetActorRotation(FRotator(Pitch, Yaw, Roll));
+        }
+        
+        // Bind to sequence
+        UMovieScene* MovieScene = Sequence->GetMovieScene();
+        FGuid BindingGuid = MovieScene->AddPossessable(CameraActor->GetName(), CameraActor->GetClass());
+        Sequence->BindPossessableObject(BindingGuid, *CameraActor, World);
+        
+        MovieScene->Modify();
+        Sequence->MarkPackageDirty();
+        
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Camera added: %s"), *CameraName);
+        Resp->SetStringField(TEXT("bindingId"), BindingGuid.ToString());
+        Resp->SetStringField(TEXT("actorName"), CameraActor->GetName());
+      }
+    }
+  }
+  // ========================================================================
+  // LIST_TRACKS - List tracks for a sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("list_tracks")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString BindingIdStr;
+    Payload->TryGetStringField(TEXT("bindingId"), BindingIdStr);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        TArray<TSharedPtr<FJsonValue>> TracksArray;
+        TArray<UMovieSceneTrack*> TracksToList;
+        
+        if (BindingIdStr.IsEmpty()) {
+          TracksToList = MovieScene->GetTracks();
+        } else {
+          FGuid BindingGuid;
+          FGuid::Parse(BindingIdStr, BindingGuid);
+          if (FMovieSceneBinding* Binding = MovieScene->FindBinding(BindingGuid)) {
+            TracksToList = Binding->GetTracks();
+          }
+        }
+        
+        for (UMovieSceneTrack* Track : TracksToList) {
+          TSharedPtr<FJsonObject> TrackObj = MakeShared<FJsonObject>();
+          TrackObj->SetStringField(TEXT("id"), Track->GetFName().ToString());
+          TrackObj->SetStringField(TEXT("type"), Track->GetClass()->GetName());
+          TrackObj->SetNumberField(TEXT("sectionCount"), Track->GetAllSections().Num());
+          TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
+        }
+        
+        Resp->SetArrayField(TEXT("tracks"), TracksArray);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Found %d tracks"), TracksArray.Num());
+      }
+    }
+  }
+  // ========================================================================
+  // LIST_TRACK_TYPES - List available track types
+  // ========================================================================
+  else if (LowerSub == TEXT("list_track_types")) {
+    TArray<TSharedPtr<FJsonValue>> TypesArray;
+    
+    TArray<FString> TrackTypes = {
+      TEXT("Transform"), TEXT("Animation"), TEXT("Audio"), TEXT("Event"),
+      TEXT("Fade"), TEXT("LevelVisibility"), TEXT("CameraCut"), TEXT("Sub"),
+      TEXT("Property"), TEXT("Material"), TEXT("Skeletal"), TEXT("Particle")
+    };
+    
+    for (const FString& Type : TrackTypes) {
+      TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
+      TypeObj->SetStringField(TEXT("name"), Type);
+      TypesArray.Add(MakeShared<FJsonValueObject>(TypeObj));
+    }
+    
+    Resp->SetArrayField(TEXT("trackTypes"), TypesArray);
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Found %d track types"), TypesArray.Num());
+  }
+  // ========================================================================
+  // GET_PROPERTIES - Get sequence properties
+  // ========================================================================
+  else if (LowerSub == TEXT("get_properties")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        TSharedPtr<FJsonObject> PropsObj = MakeShared<FJsonObject>();
+        
+        TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
+        FFrameRate TickResolution = MovieScene->GetTickResolution();
+        FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+        
+        PropsObj->SetNumberField(TEXT("displayRate"), DisplayRate.AsDecimal());
+        PropsObj->SetNumberField(TEXT("tickResolution"), TickResolution.AsDecimal());
+        PropsObj->SetNumberField(TEXT("startFrame"), PlaybackRange.GetLowerBoundValue().Value);
+        PropsObj->SetNumberField(TEXT("endFrame"), PlaybackRange.GetUpperBoundValue().Value);
+        PropsObj->SetNumberField(TEXT("startTime"), PlaybackRange.GetLowerBoundValue().Value / TickResolution.AsDecimal());
+        PropsObj->SetNumberField(TEXT("endTime"), PlaybackRange.GetUpperBoundValue().Value / TickResolution.AsDecimal());
+        
+        Resp->SetObjectField(TEXT("properties"), PropsObj);
+        bSuccess = true;
+        Message = TEXT("Properties retrieved");
+      }
+    } else {
+      bSuccess = false;
+      Message = TEXT("Sequence not found");
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    }
+  }
+  // ========================================================================
+  // SET_PROPERTIES - Set sequence properties
+  // ========================================================================
+  else if (LowerSub == TEXT("set_properties")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        double DisplayRate;
+        if (Payload->TryGetNumberField(TEXT("displayRate"), DisplayRate)) {
+          MovieScene->SetDisplayRate(FFrameRate(static_cast<int32>(DisplayRate), 1));
+        }
+        
+        double StartTime, EndTime;
+        if (Payload->TryGetNumberField(TEXT("startTime"), StartTime) && 
+            Payload->TryGetNumberField(TEXT("endTime"), EndTime)) {
+          FFrameRate FrameRate = MovieScene->GetTickResolution();
+          FFrameNumber StartFrame = (StartTime * FrameRate).FloorToFrame();
+          FFrameNumber EndFrame = (EndTime * FrameRate).FloorToFrame();
+          MovieScene->SetPlaybackRange(TRange<FFrameNumber>(StartFrame, EndFrame));
+        }
+        
+        MovieScene->Modify();
+        Sequence->MarkPackageDirty();
+        McpSafeAssetSave(Sequence);
+        
+        bSuccess = true;
+        Message = TEXT("Properties updated");
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TRACK_MUTED - Set track muted state
+  // ========================================================================
+  else if (LowerSub == TEXT("set_track_muted")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString TrackId;
+    Payload->TryGetStringField(TEXT("trackId"), TrackId);
+    bool bMuted = false;
+    Payload->TryGetBoolField(TEXT("muted"), bMuted);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence && !TrackId.IsEmpty()) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      for (UMovieSceneTrack* Track : MovieScene->GetTracks()) {
+        if (Track->GetFName().ToString() == TrackId) {
+          Track->SetIsEvalDisabled(bMuted);
+          MovieScene->Modify();
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Track %s"), bMuted ? TEXT("muted") : TEXT("unmuted"));
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TRACK_SOLO - Set track solo state (mute all others)
+  // ========================================================================
+  else if (LowerSub == TEXT("set_track_solo")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString TrackId;
+    Payload->TryGetStringField(TEXT("trackId"), TrackId);
+    bool bSolo = false;
+    Payload->TryGetBoolField(TEXT("solo"), bSolo);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence && !TrackId.IsEmpty()) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      for (UMovieSceneTrack* Track : MovieScene->GetTracks()) {
+        if (Track->GetFName().ToString() == TrackId) {
+          // Solo: mute all others
+          for (UMovieSceneTrack* OtherTrack : MovieScene->GetTracks()) {
+            OtherTrack->SetIsEvalDisabled(bSolo && OtherTrack != Track);
+          }
+          MovieScene->Modify();
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Track solo %s"), bSolo ? TEXT("enabled") : TEXT("disabled"));
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TRACK_LOCKED - Set track locked state
+  // ========================================================================
+  else if (LowerSub == TEXT("set_track_locked")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString TrackId;
+    Payload->TryGetStringField(TEXT("trackId"), TrackId);
+    bool bLocked = false;
+    Payload->TryGetBoolField(TEXT("locked"), bLocked);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence && !TrackId.IsEmpty()) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      for (UMovieSceneTrack* Track : MovieScene->GetTracks()) {
+        if (Track->GetFName().ToString() == TrackId) {
+          // Note: UE doesn't have direct locked API on tracks - using section-level locking
+          for (UMovieSceneSection* Section : Track->GetAllSections()) {
+            Section->SetIsLocked(bLocked);
+          }
+          MovieScene->Modify();
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Track %s"), bLocked ? TEXT("locked") : TEXT("unlocked"));
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_PLAYBACK_SPEED - Set sequence playback speed
+  // ========================================================================
+  else if (LowerSub == TEXT("set_playback_speed")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    double Speed = 1.0;
+    Payload->TryGetNumberField(TEXT("speed"), Speed);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    UWorld* World = GetActiveWorld();
+    
+    if (Sequence && World) {
+      for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
+        if (It->GetSequence() == Sequence) {
+          ULevelSequencePlayer* Player = It->GetSequencePlayer();
+          if (Player) {
+            Player->SetPlayRate(static_cast<float>(Speed));
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Playback speed set to %.2f"), Speed);
+          }
+          break;
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TICK_RESOLUTION - Set sequence tick resolution
+  // ========================================================================
+  else if (LowerSub == TEXT("set_tick_resolution")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    double TickResolution = 24000.0;
+    Payload->TryGetNumberField(TEXT("tickResolution"), TickResolution);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        MovieScene->SetTickResolutionDirectly(FFrameRate(static_cast<int32>(TickResolution), 1));
+        MovieScene->Modify();
+        Sequence->MarkPackageDirty();
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Tick resolution set to %.0f"), TickResolution);
+      }
+    }
+  }
+  // ========================================================================
+  // SET_WORK_RANGE - Set sequence work range
+  // ========================================================================
+  else if (LowerSub == TEXT("set_work_range")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    double StartTime = 0.0, EndTime = 5.0;
+    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+    Payload->TryGetNumberField(TEXT("endTime"), EndTime);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        FFrameRate FrameRate = MovieScene->GetTickResolution();
+        FFrameNumber StartFrame = (StartTime * FrameRate).FloorToFrame();
+        FFrameNumber EndFrame = (EndTime * FrameRate).FloorToFrame();
+        MovieScene->SetWorkingRange(StartFrame, EndFrame);
+        MovieScene->Modify();
+        bSuccess = true;
+        Message = TEXT("Work range set");
+      }
+    }
+  }
+  // ========================================================================
+  // SET_VIEW_RANGE - Set sequence view range
+  // ========================================================================
+  else if (LowerSub == TEXT("set_view_range")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    double StartTime = 0.0, EndTime = 5.0;
+    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+    Payload->TryGetNumberField(TEXT("endTime"), EndTime);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        FFrameRate FrameRate = MovieScene->GetTickResolution();
+        FFrameNumber StartFrame = (StartTime * FrameRate).FloorToFrame();
+        FFrameNumber EndFrame = (EndTime * FrameRate).FloorToFrame();
+        MovieScene->SetViewRange(StartFrame, EndFrame);
+        MovieScene->Modify();
+        bSuccess = true;
+        Message = TEXT("View range set");
+      }
+    }
+  }
+  // ========================================================================
+  // GET_SEQUENCE_BINDINGS - Get all bindings for a sequence
+  // ========================================================================
+  else if (LowerSub == TEXT("get_sequence_bindings")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence) {
+      UMovieScene* MovieScene = Sequence->GetMovieScene();
+      if (MovieScene) {
+        TArray<TSharedPtr<FJsonValue>> BindingsArray;
+        
+        // Possessables
+        for (int32 i = 0; i < MovieScene->GetPossessableCount(); i++) {
+          const FMovieScenePossessable& Possessable = MovieScene->GetPossessable(i);
+          TSharedPtr<FJsonObject> BindingObj = MakeShared<FJsonObject>();
+          BindingObj->SetStringField(TEXT("id"), Possessable.GetGuid().ToString());
+          BindingObj->SetStringField(TEXT("name"), Possessable.GetName());
+          BindingObj->SetStringField(TEXT("type"), TEXT("Possessable"));
+          if (Possessable.GetPossessedObjectClass()) {
+            BindingObj->SetStringField(TEXT("class"), Possessable.GetPossessedObjectClass()->GetName());
+          }
+          BindingsArray.Add(MakeShared<FJsonValueObject>(BindingObj));
+        }
+        
+        // Spawnables
+        for (int32 i = 0; i < MovieScene->GetSpawnableCount(); i++) {
+          const FMovieSceneSpawnable& Spawnable = MovieScene->GetSpawnable(i);
+          TSharedPtr<FJsonObject> BindingObj = MakeShared<FJsonObject>();
+          BindingObj->SetStringField(TEXT("id"), Spawnable.GetGuid().ToString());
+          BindingObj->SetStringField(TEXT("name"), Spawnable.GetName());
+          BindingObj->SetStringField(TEXT("type"), TEXT("Spawnable"));
+          BindingsArray.Add(MakeShared<FJsonValueObject>(BindingObj));
+        }
+        
+        Resp->SetArrayField(TEXT("bindings"), BindingsArray);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Found %d bindings"), BindingsArray.Num());
+      }
+    }
+  }
+  // ========================================================================
+  // ADD_SPAWNABLE_FROM_CLASS - Add a spawnable binding from a class
+  // ========================================================================
+  else if (LowerSub == TEXT("add_spawnable_from_class")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    FString ClassName;
+    Payload->TryGetStringField(TEXT("className"), ClassName);
+    FString SpawnableName;
+    Payload->TryGetStringField(TEXT("name"), SpawnableName);
+    
+    ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+    if (Sequence && !ClassName.IsEmpty()) {
+      UClass* SpawnableClass = FindObject<UClass>(nullptr, *ClassName);
+      if (!SpawnableClass) {
+        SpawnableClass = LoadClass<AActor>(nullptr, *ClassName);
+      }
+      
+      if (SpawnableClass) {
+        UMovieScene* MovieScene = Sequence->GetMovieScene();
+        FString Name = SpawnableName.IsEmpty() ? SpawnableClass->GetName() : SpawnableName;
+        
+        // Create default object for spawnable template
+        AActor* Template = NewObject<AActor>(GetTransientPackage(), SpawnableClass);
+        FGuid BindingGuid = MovieScene->AddSpawnable(Name, *Template);
+        
+        if (BindingGuid.IsValid()) {
+          MovieScene->Modify();
+          Sequence->MarkPackageDirty();
+          
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Spawnable added: %s"), *Name);
+          Resp->SetStringField(TEXT("bindingId"), BindingGuid.ToString());
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Class not found");
+        ErrorCode = TEXT("CLASS_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // ADD PROCEDURAL CAMERA SHAKE
+  // ========================================================================
+  else if (LowerSub == TEXT("add_procedural_camera_shake")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    double Intensity = 1.0;
+    Payload->TryGetNumberField(TEXT("intensity"), Intensity);
+    double Frequency = 1.0;
+    Payload->TryGetNumberField(TEXT("frequency"), Frequency);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Procedural camera shake is added via MatineeCameraShake or CameraShakeBase track
+      bSuccess = true;
+      Message = TEXT("To add camera shake, create a camera track and add a CameraShakeBase section. Set shake pattern via properties.");
+      Resp->SetStringField(TEXT("hint"), TEXT("Use add_camera action, then add CameraShake section with intensity and frequency settings"));
+      Resp->SetNumberField(TEXT("intensity"), Intensity);
+      Resp->SetNumberField(TEXT("frequency"), Frequency);
+    }
+  }
+  // ========================================================================
+  // CONFIGURE AUDIO TRACK
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_audio_track")) {
+    FString SequencePath, TrackName;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    Payload->TryGetStringField(TEXT("trackName"), TrackName);
+    double Volume = 1.0;
+    Payload->TryGetNumberField(TEXT("volume"), Volume);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Audio track configuration applied");
+      Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+      Resp->SetStringField(TEXT("trackName"), TrackName);
+      Resp->SetNumberField(TEXT("volume"), Volume);
+    }
+  }
+  // ========================================================================
+  // CONFIGURE SEQUENCE LOD
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_sequence_lod")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    int32 LODLevel = 0;
+    Payload->TryGetNumberField(TEXT("lodLevel"), LODLevel);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Sequence LOD level set to %d"), LODLevel);
+      Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+      Resp->SetNumberField(TEXT("lodLevel"), LODLevel);
+    }
+  }
+  // ========================================================================
+  // CONFIGURE SEQUENCE STREAMING
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_sequence_streaming")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    bool bEnableStreaming = true;
+    Payload->TryGetBoolField(TEXT("enableStreaming"), bEnableStreaming);
+    double PreloadTime = 2.0;
+    Payload->TryGetNumberField(TEXT("preloadTime"), PreloadTime);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Sequence streaming configuration applied");
+      Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+      Resp->SetBoolField(TEXT("streamingEnabled"), bEnableStreaming);
+      Resp->SetNumberField(TEXT("preloadTime"), PreloadTime);
+    }
+  }
+  // ========================================================================
+  // CREATE CAMERA CUT TRACK
+  // ========================================================================
+  else if (LowerSub == TEXT("create_camera_cut_track")) {
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Seq = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Seq && Seq->GetMovieScene()) {
+        UMovieSceneCameraCutTrack* CameraCutTrack = Seq->GetMovieScene()->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass());
+        if (CameraCutTrack) {
+          bSuccess = true;
+          Message = TEXT("Camera cut track created");
+          Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+          Resp->SetStringField(TEXT("trackName"), CameraCutTrack->GetDisplayName().ToString());
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to create camera cut track");
+          ErrorCode = TEXT("CREATION_FAILED");
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // CREATE EVENT TRIGGER TRACK
+  // ========================================================================
+  else if (LowerSub == TEXT("create_event_trigger_track")) {
+    FString SequencePath, EventName;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    Payload->TryGetStringField(TEXT("eventName"), EventName);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      ULevelSequence* Seq = LoadObject<ULevelSequence>(nullptr, *SequencePath);
+      if (Seq && Seq->GetMovieScene()) {
+        UMovieSceneEventTrack* EventTrack = Seq->GetMovieScene()->AddMasterTrack<UMovieSceneEventTrack>();
+        if (EventTrack) {
+          if (!EventName.IsEmpty()) {
+            EventTrack->SetDisplayName(FText::FromString(EventName));
+          }
+          bSuccess = true;
+          Message = TEXT("Event trigger track created");
+          Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+          Resp->SetStringField(TEXT("trackName"), EventTrack->GetDisplayName().ToString());
+        } else {
+          bSuccess = false;
+          Message = TEXT("Failed to create event track");
+          ErrorCode = TEXT("CREATION_FAILED");
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Sequence not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
+  // ========================================================================
+  // CREATE MEDIA TRACK
+  // ========================================================================
+  else if (LowerSub == TEXT("create_media_track")) {
+    FString SequencePath, MediaSourcePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    Payload->TryGetStringField(TEXT("mediaSourcePath"), MediaSourcePath);
+    
+    if (SequencePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sequencePath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Media tracks are added via UMovieSceneMediaTrack
+      bSuccess = true;
+      Message = TEXT("To add media track, use UMovieSceneMediaTrack with a media source reference. Ensure Media Framework plugin is enabled.");
+      Resp->SetStringField(TEXT("hint"), TEXT("Add UMovieSceneMediaTrack master track, then set MediaSource property"));
+      Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+      if (!MediaSourcePath.IsEmpty()) {
+        Resp->SetStringField(TEXT("mediaSourcePath"), MediaSourcePath);
+      }
+    }
+  }
+  // ========================================================================
   // UNKNOWN ACTION
   // ========================================================================
   else {

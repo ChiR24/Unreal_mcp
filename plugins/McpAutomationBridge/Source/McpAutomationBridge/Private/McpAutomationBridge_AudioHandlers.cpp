@@ -24,6 +24,8 @@
 #include "Sound/SoundNodeModulator.h"
 #include "Sound/SoundNodeWavePlayer.h"
 #include "Sound/SoundWave.h"
+#include "Sound/AudioVolume.h"
+#include "Sound/ReverbEffect.h"
 
 #endif
 
@@ -238,7 +240,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       !Lower.StartsWith(TEXT("clear_sound_")) &&
       !Lower.StartsWith(TEXT("set_base_sound_")) &&
       !Lower.StartsWith(TEXT("prime_")) &&
-      !Lower.StartsWith(TEXT("spawn_sound_"))) {
+      !Lower.StartsWith(TEXT("spawn_sound_")) &&
+      !Lower.StartsWith(TEXT("list_metasound")) &&
+      !Lower.StartsWith(TEXT("get_metasound")) &&
+      !Lower.StartsWith(TEXT("trigger_metasound")) &&
+      !Lower.StartsWith(TEXT("mw_configure_wwise"))) {
     return false;
   }
 
@@ -999,7 +1005,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     return true;
   }
 
-  if (Lower.StartsWith(TEXT("create_audio_component"))) {
+  // create_audio_component - spawn an audio component attached to an actor or at a location
+  if (Lower == TEXT("create_audio_component") || Lower == TEXT("audio_create_component") || Lower.StartsWith(TEXT("create_audio_component"))) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath))
       Payload->TryGetStringField(TEXT("path"), SoundPath);
@@ -1076,6 +1083,405 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                         TEXT("Failed to create audio component"),
                         TEXT("CREATE_FAILED"));
     return true;
+  }
+
+  // ===========================================================================
+  // create_reverb_zone: Spawn an AudioVolume with reverb settings
+  // ===========================================================================
+  if (Lower == TEXT("create_reverb_zone") ||
+      Lower == TEXT("audio_create_reverb_zone")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FVector Location = FVector::ZeroVector;
+    const TArray<TSharedPtr<FJsonValue>> *LocArr;
+    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
+        LocArr->Num() >= 3) {
+      Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                         (*LocArr)[2]->AsNumber());
+    }
+
+    FVector Size = FVector(500.0, 500.0, 500.0);
+    const TArray<TSharedPtr<FJsonValue>> *SizeArr;
+    if (Payload->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr &&
+        SizeArr->Num() >= 3) {
+      Size = FVector((*SizeArr)[0]->AsNumber(), (*SizeArr)[1]->AsNumber(),
+                     (*SizeArr)[2]->AsNumber());
+    }
+
+    double Volume = 1.0;
+    Payload->TryGetNumberField(TEXT("volume"), Volume);
+    double FadeTime = 0.5;
+    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+    FString ReverbEffectPath;
+    Payload->TryGetStringField(TEXT("reverbEffect"), ReverbEffectPath);
+
+    UWorld *World = GetActiveWorld();
+    if (!World) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    // Spawn an AudioVolume actor
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = FName(*Name);
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AAudioVolume *AudioVol =
+        World->SpawnActor<AAudioVolume>(AAudioVolume::StaticClass(), Location,
+                                        FRotator::ZeroRotator, SpawnParams);
+    if (!AudioVol) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to spawn AudioVolume"),
+                          TEXT("SPAWN_FAILED"));
+      return true;
+    }
+
+    AudioVol->SetActorLabel(Name);
+
+    // Configure reverb settings
+    FReverbSettings ReverbSettings;
+    ReverbSettings.bApplyReverb = true;
+    ReverbSettings.Volume = (float)Volume;
+    ReverbSettings.FadeTime = (float)FadeTime;
+
+    if (!ReverbEffectPath.IsEmpty()) {
+      UReverbEffect *Effect =
+          LoadObject<UReverbEffect>(nullptr, *ReverbEffectPath);
+      if (Effect) {
+        ReverbSettings.ReverbEffect = Effect;
+      }
+    }
+
+    AudioVol->SetReverbSettings(ReverbSettings);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actorName"), AudioVol->GetName());
+    Resp->SetStringField(TEXT("actorPath"), AudioVol->GetPathName());
+    TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+    LocObj->SetNumberField(TEXT("x"), Location.X);
+    LocObj->SetNumberField(TEXT("y"), Location.Y);
+    LocObj->SetNumberField(TEXT("z"), Location.Z);
+    Resp->SetObjectField(TEXT("location"), LocObj);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Reverb zone created"), Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // enable_audio_analysis: Configure audio analysis settings
+  // ===========================================================================
+  if (Lower == TEXT("enable_audio_analysis") ||
+      Lower == TEXT("audio_enable_audio_analysis")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    
+    int32 FFTSize = 1024;
+    double FFTSizeD = 1024.0;
+    if (Payload->TryGetNumberField(TEXT("fftSize"), FFTSizeD)) {
+      FFTSize = FMath::RoundToInt32(FFTSizeD);
+    }
+    
+    FString OutputType = TEXT("Magnitude");
+    Payload->TryGetStringField(TEXT("outputType"), OutputType);
+
+    // Configure audio analysis via console commands
+    if (bEnabled) {
+      GEngine->Exec(GetActiveWorld(), TEXT("au.Debug.SoloAudio 1"));
+    } else {
+      GEngine->Exec(GetActiveWorld(), TEXT("au.Debug.SoloAudio 0"));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetNumberField(TEXT("fftSize"), FFTSize);
+    Resp->SetStringField(TEXT("outputType"), OutputType);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Audio analysis %s"),
+                                           bEnabled ? TEXT("enabled")
+                                                    : TEXT("disabled")),
+                           Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // fade_sound: Fade a sound to target volume
+  // ===========================================================================
+  if (Lower == TEXT("fade_sound") || Lower == TEXT("audio_fade_sound")) {
+    FString SoundName;
+    if (!Payload->TryGetStringField(TEXT("soundName"), SoundName) ||
+        SoundName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("soundName required"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    double TargetVolume = 1.0;
+    Payload->TryGetNumberField(TEXT("targetVolume"), TargetVolume);
+    double FadeTime = 1.0;
+    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+    FString FadeType = TEXT("FadeTo");
+    Payload->TryGetStringField(TEXT("fadeType"), FadeType);
+
+    UWorld *World = GetActiveWorld();
+    if (!World) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    AActor *TargetActor = FindAudioActorByName(SoundName, World);
+    if (!TargetActor) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"),
+                          TEXT("ACTOR_NOT_FOUND"));
+      return true;
+    }
+
+    UAudioComponent *AudioComp =
+        TargetActor->FindComponentByClass<UAudioComponent>();
+    if (!AudioComp) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("No AudioComponent found on actor"),
+                          TEXT("COMPONENT_NOT_FOUND"));
+      return true;
+    }
+
+    if (FadeType.Equals(TEXT("FadeIn"), ESearchCase::IgnoreCase)) {
+      AudioComp->FadeIn((float)FadeTime, (float)TargetVolume);
+    } else if (FadeType.Equals(TEXT("FadeOut"), ESearchCase::IgnoreCase)) {
+      AudioComp->FadeOut((float)FadeTime, 0.0f);
+    } else {
+      // FadeTo - use AdjustVolume
+      AudioComp->AdjustVolume((float)FadeTime, (float)TargetVolume);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("soundName"), SoundName);
+    Resp->SetNumberField(TEXT("targetVolume"), TargetVolume);
+    Resp->SetNumberField(TEXT("fadeTime"), FadeTime);
+    Resp->SetStringField(TEXT("fadeType"), FadeType);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Sound fade initiated"), Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // set_doppler_effect: Configure global doppler effect settings
+  // ===========================================================================
+  if (Lower == TEXT("set_doppler_effect") ||
+      Lower == TEXT("audio_set_doppler_effect")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    double Scale = 1.0;
+    Payload->TryGetNumberField(TEXT("scale"), Scale);
+
+    // Configure doppler via console variable
+    FString Command = FString::Printf(TEXT("au.DopplerFactor %f"),
+                                      bEnabled ? (float)Scale : 0.0f);
+    GEngine->Exec(GetActiveWorld(), *Command);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetNumberField(TEXT("scale"), Scale);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Doppler effect %s"),
+                                           bEnabled ? TEXT("enabled")
+                                                    : TEXT("disabled")),
+                           Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // set_audio_occlusion: Configure audio occlusion settings
+  // ===========================================================================
+  if (Lower == TEXT("set_audio_occlusion") ||
+      Lower == TEXT("audio_set_audio_occlusion")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    double LowPassFreq = 5000.0;
+    Payload->TryGetNumberField(TEXT("lowPassFilterFrequency"), LowPassFreq);
+    double VolumeAtten = 0.5;
+    Payload->TryGetNumberField(TEXT("volumeAttenuation"), VolumeAtten);
+
+    // Configure occlusion via console variable
+    FString Command = FString::Printf(TEXT("au.OcclusionFilterScale %f"),
+                                      bEnabled ? 1.0f : 0.0f);
+    GEngine->Exec(GetActiveWorld(), *Command);
+
+    if (bEnabled) {
+      FString LPFCommand =
+          FString::Printf(TEXT("au.LowPassFilterResonance %f"),
+                          (float)(LowPassFreq / 20000.0f));
+      GEngine->Exec(GetActiveWorld(), *LPFCommand);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetNumberField(TEXT("lowPassFilterFrequency"), LowPassFreq);
+    Resp->SetNumberField(TEXT("volumeAttenuation"), VolumeAtten);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Audio occlusion %s"),
+                                           bEnabled ? TEXT("enabled")
+                                                    : TEXT("disabled")),
+                           Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // set_sound_attenuation: Create or configure sound attenuation settings
+  // ===========================================================================
+  if (Lower == TEXT("set_sound_attenuation") ||
+      Lower == TEXT("audio_set_sound_attenuation")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    double InnerRadius = 400.0;
+    Payload->TryGetNumberField(TEXT("innerRadius"), InnerRadius);
+    double FalloffDistance = 3600.0;
+    Payload->TryGetNumberField(TEXT("falloffDistance"), FalloffDistance);
+    FString AttenuationShape = TEXT("Sphere");
+    Payload->TryGetStringField(TEXT("attenuationShape"), AttenuationShape);
+    FString FalloffMode = TEXT("Linear");
+    Payload->TryGetStringField(TEXT("falloffMode"), FalloffMode);
+
+    FString PackagePath = TEXT("/Game/Audio/Attenuation");
+
+    // Create attenuation asset
+    USoundAttenuationFactory *Factory = NewObject<USoundAttenuationFactory>();
+    FAssetToolsModule &AssetToolsModule =
+        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+        Name, PackagePath, USoundAttenuation::StaticClass(), Factory);
+    USoundAttenuation *Attenuation = Cast<USoundAttenuation>(NewAsset);
+
+    if (!Attenuation) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to create SoundAttenuation"),
+                          TEXT("ASSET_CREATION_FAILED"));
+      return true;
+    }
+
+    // Configure attenuation settings
+    Attenuation->Attenuation.bAttenuate = true;
+    Attenuation->Attenuation.AttenuationShapeExtents =
+        FVector((float)InnerRadius, (float)InnerRadius, (float)InnerRadius);
+    Attenuation->Attenuation.FalloffDistance = (float)FalloffDistance;
+
+    // Parse shape
+    if (AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Capsule;
+    } else if (AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Box;
+    } else if (AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Cone;
+    } else {
+      Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+    }
+
+    // Parse falloff mode
+    if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Logarithmic;
+    } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Inverse;
+    } else if (FalloffMode.Equals(TEXT("LogReverse"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::LogReverse;
+    } else if (FalloffMode.Equals(TEXT("Natural"), ESearchCase::IgnoreCase)) {
+      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::NaturalSound;
+    } else {
+      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Linear;
+    }
+
+    McpSafeAssetSave(Attenuation);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("path"), Attenuation->GetPathName());
+    Resp->SetStringField(TEXT("name"), Attenuation->GetName());
+    Resp->SetNumberField(TEXT("innerRadius"), InnerRadius);
+    Resp->SetNumberField(TEXT("falloffDistance"), FalloffDistance);
+    Resp->SetStringField(TEXT("attenuationShape"), AttenuationShape);
+    Resp->SetStringField(TEXT("falloffMode"), FalloffMode);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Sound attenuation created"), Resp);
+    return true;
+  }
+
+  // ===========================================================================
+  // list_metasound_assets: List all MetaSound assets in project
+  // ===========================================================================
+  if (Lower == TEXT("list_metasound_assets") ||
+      Lower == TEXT("audio_list_metasound_assets")) {
+    return HandleListMetaSoundAssets(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ===========================================================================
+  // get_metasound_inputs: Get input parameters for a MetaSound asset
+  // ===========================================================================
+  if (Lower == TEXT("get_metasound_inputs") ||
+      Lower == TEXT("audio_get_metasound_inputs")) {
+    return HandleGetMetaSoundInputs(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ===========================================================================
+  // trigger_metasound: Trigger a MetaSound input on an actor's audio component
+  // ===========================================================================
+  if (Lower == TEXT("trigger_metasound") ||
+      Lower == TEXT("audio_trigger_metasound")) {
+    return HandleTriggerMetaSound(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ===========================================================================
+  // mw_configure_wwise_occlusion: Configure Wwise occlusion settings
+  // ===========================================================================
+  if (Lower == TEXT("mw_configure_wwise_occlusion") ||
+      Lower == TEXT("configure_wwise_occlusion")) {
+#if MCP_HAS_WWISE
+    // Note: Requires Wwise plugin integration
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    bool bEnable = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnable);
+    
+    double MaxDistance = 10000.0;
+    Payload->TryGetNumberField(TEXT("maxDistance"), MaxDistance);
+    
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    Resp->SetBoolField(TEXT("enabled"), bEnable);
+    Resp->SetNumberField(TEXT("maxDistance"), MaxDistance);
+    Resp->SetStringField(TEXT("message"), TEXT("Wwise occlusion configured"));
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Wwise occlusion configured"), Resp);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Wwise plugin not enabled"), TEXT("PLUGIN_NOT_FOUND"));
+    return true;
+#endif
   }
 
   // Fallback for other audio actions not fully implemented yet

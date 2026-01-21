@@ -111,7 +111,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
 
   // Fast-path foliage sub-actions to dedicated native handlers to avoid double
   // responses
-  if (LowerSub == TEXT("add_foliage_instances")) {
+  // add_foliage is an alias for add_foliage_instances
+  if (LowerSub == TEXT("add_foliage_instances") || LowerSub == TEXT("add_foliage")) {
     // Transform from build_environment schema to foliage handler schema
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
@@ -173,7 +174,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
            LowerSub == TEXT("paint_landscape_layer")) {
     return HandlePaintLandscapeLayer(RequestId, TEXT("paint_landscape_layer"),
                                      Payload, RequestingSocket);
-  } else if (LowerSub == TEXT("sculpt_landscape")) {
+  } else if (LowerSub == TEXT("sculpt_landscape") || LowerSub == TEXT("sculpt")) {
+    // sculpt is an alias for sculpt_landscape
     return HandleSculptLandscape(RequestId, TEXT("sculpt_landscape"), Payload,
                                  RequestingSocket);
   } else if (LowerSub == TEXT("modify_heightmap")) {

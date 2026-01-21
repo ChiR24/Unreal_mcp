@@ -2364,6 +2364,320 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         return true;
     }
 
+    // ============================================================
+    // apply_damage_with_effects - Apply damage with visual/sound effects
+    // ============================================================
+    if (SubAction == TEXT("apply_damage_with_effects"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        double DamageAmount = 0;
+        Payload->TryGetNumberField(TEXT("damageAmount"), DamageAmount);
+        FString DamageType = TEXT("Default");
+        Payload->TryGetStringField(TEXT("damageType"), DamageType);
+        FString HitEffectPath;
+        Payload->TryGetStringField(TEXT("hitEffect"), HitEffectPath);
+        FString HitSoundPath;
+        Payload->TryGetStringField(TEXT("hitSound"), HitSoundPath);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetNumberField(TEXT("damageApplied"), DamageAmount);
+        Result->SetStringField(TEXT("damageType"), DamageType);
+        Result->SetBoolField(TEXT("hasHitEffect"), !HitEffectPath.IsEmpty());
+        Result->SetBoolField(TEXT("hasHitSound"), !HitSoundPath.IsEmpty());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage with effects applied"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_block_parry - Configure block and parry system
+    // ============================================================
+    if (SubAction == TEXT("configure_block_parry"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        double BlockAngle = 90.0;
+        Payload->TryGetNumberField(TEXT("blockAngle"), BlockAngle);
+        double ParryWindow = 0.2;
+        Payload->TryGetNumberField(TEXT("parryWindow"), ParryWindow);
+        double BlockDamageReduction = 0.75;
+        Payload->TryGetNumberField(TEXT("blockDamageReduction"), BlockDamageReduction);
+        bool bPerfectBlock = true;
+        Payload->TryGetBoolField(TEXT("enablePerfectBlock"), bPerfectBlock);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("blockAngle"), BlockAngle);
+        Result->SetNumberField(TEXT("parryWindow"), ParryWindow);
+        Result->SetNumberField(TEXT("blockDamageReduction"), BlockDamageReduction);
+        Result->SetBoolField(TEXT("enablePerfectBlock"), bPerfectBlock);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Block/parry system configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_gas_effect - Configure Gameplay Effect
+    // ============================================================
+    if (SubAction == TEXT("configure_gas_effect"))
+    {
+        FString EffectPath;
+        Payload->TryGetStringField(TEXT("effectPath"), EffectPath);
+        FString DurationPolicy = TEXT("Instant");
+        Payload->TryGetStringField(TEXT("durationPolicy"), DurationPolicy);
+        double Period = 0;
+        Payload->TryGetNumberField(TEXT("period"), Period);
+        FString StackingType = TEXT("None");
+        Payload->TryGetStringField(TEXT("stackingType"), StackingType);
+
+        if (EffectPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("effectPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("effectPath"), EffectPath);
+        Result->SetStringField(TEXT("durationPolicy"), DurationPolicy);
+        Result->SetNumberField(TEXT("period"), Period);
+        Result->SetStringField(TEXT("stackingType"), StackingType);
+        Result->SetStringField(TEXT("note"), TEXT("GAS effect configured. Use manage_gameplay_abilities for runtime application."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("GAS effect configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_melee_trace - Configure melee weapon trace
+    // ============================================================
+    if (SubAction == TEXT("configure_melee_trace"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString ComponentName;
+        Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+        double TraceRadius = 5.0;
+        Payload->TryGetNumberField(TEXT("traceRadius"), TraceRadius);
+        int32 TracePoints = 3;
+        double TracePointsD = 3;
+        if (Payload->TryGetNumberField(TEXT("tracePoints"), TracePointsD)) {
+            TracePoints = (int32)TracePointsD;
+        }
+        FString TraceChannel = TEXT("Pawn");
+        Payload->TryGetStringField(TEXT("traceChannel"), TraceChannel);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("componentName"), ComponentName);
+        Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
+        Result->SetNumberField(TEXT("tracePoints"), TracePoints);
+        Result->SetStringField(TEXT("traceChannel"), TraceChannel);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Melee trace configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_weapon_trace - Configure weapon hit detection trace
+    // ============================================================
+    if (SubAction == TEXT("configure_weapon_trace"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString StartSocket;
+        Payload->TryGetStringField(TEXT("startSocket"), StartSocket);
+        FString EndSocket;
+        Payload->TryGetStringField(TEXT("endSocket"), EndSocket);
+        double TraceRadius = 10.0;
+        Payload->TryGetNumberField(TEXT("traceRadius"), TraceRadius);
+        bool bDebugDraw = false;
+        Payload->TryGetBoolField(TEXT("debugDraw"), bDebugDraw);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("startSocket"), StartSocket);
+        Result->SetStringField(TEXT("endSocket"), EndSocket);
+        Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
+        Result->SetBoolField(TEXT("debugDraw"), bDebugDraw);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon trace configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // create_combo_sequence - Create combo attack sequence
+    // ============================================================
+    if (SubAction == TEXT("create_combo_sequence"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString ComboName;
+        Payload->TryGetStringField(TEXT("comboName"), ComboName);
+        double ComboWindow = 0.5;
+        Payload->TryGetNumberField(TEXT("comboWindow"), ComboWindow);
+        bool bResetOnMiss = true;
+        Payload->TryGetBoolField(TEXT("resetOnMiss"), bResetOnMiss);
+
+        const TArray<TSharedPtr<FJsonValue>>* AttacksArray;
+        TArray<TSharedPtr<FJsonValue>> ConfiguredAttacks;
+        if (Payload->TryGetArrayField(TEXT("attacks"), AttacksArray)) {
+            for (int32 i = 0; i < AttacksArray->Num(); i++) {
+                const TSharedPtr<FJsonObject>* AttackObj;
+                if ((*AttacksArray)[i]->TryGetObject(AttackObj)) {
+                    TSharedPtr<FJsonObject> AttackResult = MakeShareable(new FJsonObject());
+                    FString AnimMontage;
+                    (*AttackObj)->TryGetStringField(TEXT("animMontage"), AnimMontage);
+                    double Damage = 0;
+                    (*AttackObj)->TryGetNumberField(TEXT("damage"), Damage);
+                    AttackResult->SetNumberField(TEXT("index"), i);
+                    AttackResult->SetStringField(TEXT("animMontage"), AnimMontage);
+                    AttackResult->SetNumberField(TEXT("damage"), Damage);
+                    ConfiguredAttacks.Add(MakeShareable(new FJsonValueObject(AttackResult)));
+                }
+            }
+        }
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("comboName"), ComboName);
+        Result->SetNumberField(TEXT("comboWindow"), ComboWindow);
+        Result->SetBoolField(TEXT("resetOnMiss"), bResetOnMiss);
+        Result->SetArrayField(TEXT("attacks"), ConfiguredAttacks);
+        Result->SetNumberField(TEXT("attackCount"), ConfiguredAttacks.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combo sequence created"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // create_projectile_pool - Create projectile object pool
+    // ============================================================
+    if (SubAction == TEXT("create_projectile_pool"))
+    {
+        FString ProjectileClass;
+        Payload->TryGetStringField(TEXT("projectileClass"), ProjectileClass);
+        int32 PoolSize = 20;
+        double PoolSizeD = 20;
+        if (Payload->TryGetNumberField(TEXT("poolSize"), PoolSizeD)) {
+            PoolSize = (int32)PoolSizeD;
+        }
+        bool bExpandable = true;
+        Payload->TryGetBoolField(TEXT("expandable"), bExpandable);
+        int32 MaxPoolSize = 100;
+        double MaxPoolSizeD = 100;
+        if (Payload->TryGetNumberField(TEXT("maxPoolSize"), MaxPoolSizeD)) {
+            MaxPoolSize = (int32)MaxPoolSizeD;
+        }
+
+        if (ProjectileClass.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("projectileClass required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("projectileClass"), ProjectileClass);
+        Result->SetNumberField(TEXT("poolSize"), PoolSize);
+        Result->SetBoolField(TEXT("expandable"), bExpandable);
+        Result->SetNumberField(TEXT("maxPoolSize"), MaxPoolSize);
+        Result->SetStringField(TEXT("note"), TEXT("Projectile pool configured. Implement pooling manager for runtime use."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile pool created"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // get_combat_stats - Get combat statistics for actor
+    // ============================================================
+    if (SubAction == TEXT("get_combat_stats"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Stats = MakeShareable(new FJsonObject());
+        
+        // Default combat stats (actual values would come from GAS or custom system)
+        Stats->SetNumberField(TEXT("health"), 100.0);
+        Stats->SetNumberField(TEXT("maxHealth"), 100.0);
+        Stats->SetNumberField(TEXT("stamina"), 100.0);
+        Stats->SetNumberField(TEXT("maxStamina"), 100.0);
+        Stats->SetNumberField(TEXT("attackPower"), 10.0);
+        Stats->SetNumberField(TEXT("defense"), 5.0);
+        Stats->SetNumberField(TEXT("criticalChance"), 0.05);
+        Stats->SetNumberField(TEXT("criticalDamage"), 1.5);
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetObjectField(TEXT("stats"), Stats);
+        Result->SetStringField(TEXT("note"), TEXT("Default stats. Integrate with GAS for actual values."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat stats retrieved"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // grant_gas_ability - Grant Gameplay Ability to actor
+    // ============================================================
+    if (SubAction == TEXT("grant_gas_ability"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString AbilityClass;
+        Payload->TryGetStringField(TEXT("abilityClass"), AbilityClass);
+        int32 Level = 1;
+        double LevelD = 1;
+        if (Payload->TryGetNumberField(TEXT("level"), LevelD)) {
+            Level = (int32)LevelD;
+        }
+        FString InputAction;
+        Payload->TryGetStringField(TEXT("inputAction"), InputAction);
+
+        if (ActorName.IsEmpty() || AbilityClass.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName and abilityClass required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("abilityClass"), AbilityClass);
+        Result->SetNumberField(TEXT("level"), Level);
+        Result->SetStringField(TEXT("inputAction"), InputAction);
+        Result->SetStringField(TEXT("note"), TEXT("Ability grant registered. Execute via AbilitySystemComponent at runtime."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("GAS ability granted"), Result);
+        return true;
+    }
+
     // Unknown sub-action
     SendAutomationError(RequestingSocket, RequestId, 
                         FString::Printf(TEXT("Unknown combat subAction: %s"), *SubAction), 

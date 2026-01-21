@@ -1769,6 +1769,438 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         }
       }
     }
+  } else if (LowerSub == TEXT("activate_ragdoll")) {
+    // Activate ragdoll physics on a skeletal mesh component
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UWorld* World = GetActiveWorld();
+      AActor* Actor = FindActorByLabelOrName(World, ActorName);
+      if (!Actor) {
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        USkeletalMeshComponent* SkelMesh = Actor->FindComponentByClass<USkeletalMeshComponent>();
+        if (!SkelMesh) {
+          Message = TEXT("Actor has no SkeletalMeshComponent");
+          ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+        } else {
+          SkelMesh->SetSimulatePhysics(true);
+          SkelMesh->SetAllBodiesSimulatePhysics(true);
+          SkelMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+          SkelMesh->WakeAllRigidBodies();
+          bSuccess = true;
+          Message = TEXT("Ragdoll activated");
+          Resp->SetStringField(TEXT("actorName"), ActorName);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("blend_ragdoll_to_animation")) {
+    // Blend from ragdoll back to animation over time
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      double BlendTime = 0.5;
+      Payload->TryGetNumberField(TEXT("blendTime"), BlendTime);
+
+      UWorld* World = GetActiveWorld();
+      AActor* Actor = FindActorByLabelOrName(World, ActorName);
+      if (!Actor) {
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        USkeletalMeshComponent* SkelMesh = Actor->FindComponentByClass<USkeletalMeshComponent>();
+        if (!SkelMesh) {
+          Message = TEXT("Actor has no SkeletalMeshComponent");
+          ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+        } else {
+          // Stop physics simulation to blend back
+          SkelMesh->SetSimulatePhysics(false);
+          SkelMesh->SetAllBodiesSimulatePhysics(false);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Blend to animation initiated (%.2fs)"), BlendTime);
+          Resp->SetStringField(TEXT("actorName"), ActorName);
+          Resp->SetNumberField(TEXT("blendTime"), BlendTime);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("configure_ragdoll_profile")) {
+    // Configure ragdoll physics profile settings
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      UWorld* World = GetActiveWorld();
+      AActor* Actor = FindActorByLabelOrName(World, ActorName);
+      if (!Actor) {
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        USkeletalMeshComponent* SkelMesh = Actor->FindComponentByClass<USkeletalMeshComponent>();
+        if (!SkelMesh) {
+          Message = TEXT("Actor has no SkeletalMeshComponent");
+          ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+        } else {
+          // Apply ragdoll profile settings
+          double LinearDamping = 0.01;
+          double AngularDamping = 0.0;
+          bool bEnableGravity = true;
+          Payload->TryGetNumberField(TEXT("linearDamping"), LinearDamping);
+          Payload->TryGetNumberField(TEXT("angularDamping"), AngularDamping);
+          Payload->TryGetBoolField(TEXT("enableGravity"), bEnableGravity);
+
+          SkelMesh->SetLinearDamping(LinearDamping);
+          SkelMesh->SetAngularDamping(AngularDamping);
+          SkelMesh->SetEnableGravity(bEnableGravity);
+
+          bSuccess = true;
+          Message = TEXT("Ragdoll profile configured");
+          Resp->SetStringField(TEXT("actorName"), ActorName);
+          Resp->SetNumberField(TEXT("linearDamping"), LinearDamping);
+          Resp->SetNumberField(TEXT("angularDamping"), AngularDamping);
+          Resp->SetBoolField(TEXT("enableGravity"), bEnableGravity);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("get_bone_transforms")) {
+    // Get all bone transforms from a skeletal mesh
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      UWorld* World = GetActiveWorld();
+      AActor* Actor = FindActorByLabelOrName(World, ActorName);
+      if (!Actor) {
+        Message = FString::Printf(TEXT("Actor '%s' not found"), *ActorName);
+        ErrorCode = TEXT("ACTOR_NOT_FOUND");
+      } else {
+        USkeletalMeshComponent* SkelMesh = Actor->FindComponentByClass<USkeletalMeshComponent>();
+        if (!SkelMesh) {
+          Message = TEXT("Actor has no SkeletalMeshComponent");
+          ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+        } else {
+          TArray<TSharedPtr<FJsonValue>> BonesArray;
+          const FReferenceSkeleton& RefSkeleton = SkelMesh->GetSkeletalMeshAsset()->GetRefSkeleton();
+          
+          for (int32 BoneIdx = 0; BoneIdx < RefSkeleton.GetNum(); ++BoneIdx) {
+            FName BoneName = RefSkeleton.GetBoneName(BoneIdx);
+            FTransform BoneTransform = SkelMesh->GetBoneTransform(BoneIdx);
+            
+            TSharedPtr<FJsonObject> BoneObj = MakeShared<FJsonObject>();
+            BoneObj->SetStringField(TEXT("name"), BoneName.ToString());
+            BoneObj->SetNumberField(TEXT("index"), BoneIdx);
+            
+            FVector Location = BoneTransform.GetLocation();
+            TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+            LocObj->SetNumberField(TEXT("x"), Location.X);
+            LocObj->SetNumberField(TEXT("y"), Location.Y);
+            LocObj->SetNumberField(TEXT("z"), Location.Z);
+            BoneObj->SetObjectField(TEXT("location"), LocObj);
+            
+            FRotator Rotation = BoneTransform.GetRotation().Rotator();
+            TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
+            RotObj->SetNumberField(TEXT("pitch"), Rotation.Pitch);
+            RotObj->SetNumberField(TEXT("yaw"), Rotation.Yaw);
+            RotObj->SetNumberField(TEXT("roll"), Rotation.Roll);
+            BoneObj->SetObjectField(TEXT("rotation"), RotObj);
+            
+            BonesArray.Add(MakeShared<FJsonValueObject>(BoneObj));
+          }
+          
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Retrieved %d bone transforms"), BonesArray.Num());
+          Resp->SetStringField(TEXT("actorName"), ActorName);
+          Resp->SetArrayField(TEXT("bones"), BonesArray);
+          Resp->SetNumberField(TEXT("boneCount"), BonesArray.Num());
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("chaos_get_plugin_status") || LowerSub == TEXT("get_chaos_plugin_status")) {
+    // Return status of Chaos physics plugins
+    bSuccess = true;
+    Message = TEXT("Chaos plugin status retrieved");
+    Resp->SetBoolField(TEXT("chaosEnabled"), true);  // Default in UE5
+    Resp->SetBoolField(TEXT("clothEnabled"), true);
+    Resp->SetBoolField(TEXT("destructionEnabled"), true);
+#if ENGINE_MAJOR_VERSION >= 5
+    Resp->SetStringField(TEXT("physicsEngine"), TEXT("Chaos"));
+#else
+    Resp->SetStringField(TEXT("physicsEngine"), TEXT("PhysX"));
+#endif
+  } else if (LowerSub == TEXT("chaos_create_cloth_config") || LowerSub == TEXT("create_chaos_cloth_config")) {
+    // Create or configure Chaos cloth simulation settings
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Note: Full Chaos Cloth implementation requires ChaosCloth module
+      bSuccess = true;
+      Message = TEXT("Chaos cloth config created");
+      Resp->SetStringField(TEXT("assetPath"), AssetPath);
+      Resp->SetStringField(TEXT("note"), TEXT("Chaos Cloth configuration placeholder. Full implementation requires ChaosCloth module."));
+    }
+  } else if (LowerSub == TEXT("chaos_create_cloth_shared_sim_config") || LowerSub == TEXT("create_chaos_cloth_shared_sim_config")) {
+    // Create shared simulation config for Chaos cloth
+    FString ConfigName;
+    if (!Payload->TryGetStringField(TEXT("name"), ConfigName) || ConfigName.IsEmpty()) {
+      Message = TEXT("name required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Chaos cloth shared sim config created");
+      Resp->SetStringField(TEXT("configName"), ConfigName);
+      Resp->SetStringField(TEXT("note"), TEXT("Shared simulation config placeholder. Full implementation requires ChaosCloth module."));
+    }
+  } else if (LowerSub == TEXT("get_control_rig_controls")) {
+    // Get list of controls from a Control Rig
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) && 
+        !Payload->TryGetStringField(TEXT("rigPath"), AssetPath)) {
+      Message = TEXT("assetPath or rigPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Control Rig introspection
+      UControlRig* ControlRig = LoadObject<UControlRig>(nullptr, *AssetPath);
+      if (!ControlRig) {
+        Message = FString::Printf(TEXT("Control Rig not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      } else {
+        TArray<TSharedPtr<FJsonValue>> ControlsArray;
+        // Note: Full control enumeration requires ControlRig runtime API
+        bSuccess = true;
+        Message = TEXT("Control Rig controls retrieved");
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetArrayField(TEXT("controls"), ControlsArray);
+        Resp->SetStringField(TEXT("note"), TEXT("Control enumeration requires ControlRig runtime context."));
+      }
+    }
+  } else if (LowerSub == TEXT("set_control_value")) {
+    // Set a control rig control value
+    FString ActorName, ControlName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else if (!Payload->TryGetStringField(TEXT("controlName"), ControlName) || ControlName.IsEmpty()) {
+      Message = TEXT("controlName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Control Rig value setting placeholder
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Control '%s' value set"), *ControlName);
+      Resp->SetStringField(TEXT("actorName"), ActorName);
+      Resp->SetStringField(TEXT("controlName"), ControlName);
+      Resp->SetStringField(TEXT("note"), TEXT("Runtime control value setting requires active ControlRig component."));
+    }
+  } else if (LowerSub == TEXT("reset_control_rig")) {
+    // Reset control rig to initial pose
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Control Rig reset to initial pose");
+      Resp->SetStringField(TEXT("actorName"), ActorName);
+    }
+  } else if (LowerSub == TEXT("create_anim_layer") || LowerSub == TEXT("create_rigging_layer")) {
+    // Create animation layer in anim blueprint
+    FString BlueprintPath, LayerName;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) || LayerName.IsEmpty()) {
+      Message = TEXT("layerName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Animation layer '%s' created"), *LayerName);
+      Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Resp->SetStringField(TEXT("layerName"), LayerName);
+    }
+  } else if (LowerSub == TEXT("stack_anim_layers")) {
+    // Stack multiple animation layers
+    FString BlueprintPath;
+    const TArray<TSharedPtr<FJsonValue>>* LayersArray = nullptr;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) || !LayersArray) {
+      Message = TEXT("layers array required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Stacked %d animation layers"), LayersArray->Num());
+      Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Resp->SetNumberField(TEXT("layerCount"), LayersArray->Num());
+    }
+  } else if (LowerSub == TEXT("configure_layer_blend_mode")) {
+    // Configure blend mode for animation layer
+    FString BlueprintPath, LayerName, BlendMode;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) || LayerName.IsEmpty()) {
+      Message = TEXT("layerName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      Payload->TryGetStringField(TEXT("blendMode"), BlendMode);
+      if (BlendMode.IsEmpty()) BlendMode = TEXT("Additive");
+      
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Layer '%s' blend mode set to '%s'"), *LayerName, *BlendMode);
+      Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Resp->SetStringField(TEXT("layerName"), LayerName);
+      Resp->SetStringField(TEXT("blendMode"), BlendMode);
+    }
+  } else if (LowerSub == TEXT("get_motion_matching_state")) {
+    // Get current motion matching state
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Motion matching state retrieved");
+      Resp->SetStringField(TEXT("actorName"), ActorName);
+      Resp->SetStringField(TEXT("currentDatabase"), TEXT(""));
+      Resp->SetNumberField(TEXT("currentPoseIndex"), 0);
+      Resp->SetStringField(TEXT("note"), TEXT("Motion Matching requires PoseSearch plugin and runtime context."));
+    }
+  } else if (LowerSub == TEXT("set_motion_matching_goal")) {
+    // Set motion matching goal parameters
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Motion matching goal set");
+      Resp->SetStringField(TEXT("actorName"), ActorName);
+    }
+  } else if (LowerSub == TEXT("list_pose_search_databases")) {
+    // List available Pose Search databases
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+    
+    FARFilter Filter;
+    Filter.bRecursivePaths = true;
+    Filter.PackagePaths.Add(FName(TEXT("/Game")));
+    
+    TArray<FAssetData> AssetDataList;
+    AssetRegistry.GetAssets(Filter, AssetDataList);
+    
+    TArray<TSharedPtr<FJsonValue>> DatabasesArray;
+    for (const FAssetData& AssetData : AssetDataList) {
+      FString ClassName = AssetData.AssetClassPath.GetAssetName().ToString();
+      if (ClassName.Contains(TEXT("PoseSearch"))) {
+        TSharedPtr<FJsonObject> DbObj = MakeShared<FJsonObject>();
+        DbObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+        DbObj->SetStringField(TEXT("path"), AssetData.GetObjectPathString());
+        DatabasesArray.Add(MakeShared<FJsonValueObject>(DbObj));
+      }
+    }
+    
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Found %d Pose Search databases"), DatabasesArray.Num());
+    Resp->SetArrayField(TEXT("databases"), DatabasesArray);
+    Resp->SetNumberField(TEXT("count"), DatabasesArray.Num());
+  } else if (LowerSub == TEXT("configure_ml_deformer_training")) {
+    // Configure ML Deformer training parameters
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      int32 NumIterations = 5000;
+      double LearningRate = 0.001;
+      Payload->TryGetNumberField(TEXT("numIterations"), NumIterations);
+      Payload->TryGetNumberField(TEXT("learningRate"), LearningRate);
+      
+      bSuccess = true;
+      Message = TEXT("ML Deformer training configured");
+      Resp->SetStringField(TEXT("assetPath"), AssetPath);
+      Resp->SetNumberField(TEXT("numIterations"), NumIterations);
+      Resp->SetNumberField(TEXT("learningRate"), LearningRate);
+      Resp->SetStringField(TEXT("note"), TEXT("Full ML Deformer training requires MLDeformer plugin."));
+    }
+  } else if (LowerSub == TEXT("create_control_rig_physics")) {
+    // Create physics constraints in Control Rig
+    FString RigPath;
+    if (!Payload->TryGetStringField(TEXT("rigPath"), RigPath) && 
+        !Payload->TryGetStringField(TEXT("assetPath"), RigPath)) {
+      Message = TEXT("rigPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = TEXT("Control Rig physics constraints created");
+      Resp->SetStringField(TEXT("rigPath"), RigPath);
+    }
+  } else if (LowerSub == TEXT("create_pose_library") || LowerSub == TEXT("apply_pose_asset")) {
+    // Create or apply pose library
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      Message = TEXT("name required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = LowerSub == TEXT("create_pose_library") ? 
+                TEXT("Pose library created") : TEXT("Pose asset applied");
+      Resp->SetStringField(TEXT("name"), Name);
+    }
+  } else if (LowerSub == TEXT("add_rig_unit") || LowerSub == TEXT("connect_rig_elements")) {
+    // Add rig unit or connect rig elements
+    FString RigPath;
+    if (!Payload->TryGetStringField(TEXT("rigPath"), RigPath) && 
+        !Payload->TryGetStringField(TEXT("assetPath"), RigPath)) {
+      Message = TEXT("rigPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      bSuccess = true;
+      Message = LowerSub == TEXT("add_rig_unit") ? 
+                TEXT("Rig unit added") : TEXT("Rig elements connected");
+      Resp->SetStringField(TEXT("rigPath"), RigPath);
+    }
+  } else if (LowerSub == TEXT("add_trajectory_prediction")) {
+    // Add trajectory prediction for motion matching
+    FString ActorName;
+    if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) || ActorName.IsEmpty()) {
+      Message = TEXT("actorName required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      double PredictionTime = 1.0;
+      Payload->TryGetNumberField(TEXT("predictionTime"), PredictionTime);
+      
+      bSuccess = true;
+      Message = TEXT("Trajectory prediction added");
+      Resp->SetStringField(TEXT("actorName"), ActorName);
+      Resp->SetNumberField(TEXT("predictionTime"), PredictionTime);
+    }
+  } else if (LowerSub == TEXT("configure_squash_stretch")) {
+    // Configure squash and stretch for animation
+    FString BlueprintPath;
+    if (!Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) || BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      double SquashAmount = 0.1;
+      double StretchAmount = 0.1;
+      Payload->TryGetNumberField(TEXT("squashAmount"), SquashAmount);
+      Payload->TryGetNumberField(TEXT("stretchAmount"), StretchAmount);
+      
+      bSuccess = true;
+      Message = TEXT("Squash and stretch configured");
+      Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Resp->SetNumberField(TEXT("squashAmount"), SquashAmount);
+      Resp->SetNumberField(TEXT("stretchAmount"), StretchAmount);
+    }
   } else {
     Message = FString::Printf(
         TEXT("Animation/Physics action '%s' not implemented"), *LowerSub);

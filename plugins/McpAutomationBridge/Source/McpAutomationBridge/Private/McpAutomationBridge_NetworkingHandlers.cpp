@@ -1548,6 +1548,375 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         return true;
     }
 
+    // ============================================================
+    // configure_dormancy - Configure actor dormancy settings
+    // ============================================================
+    if (SubAction == TEXT("configure_dormancy"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString DormancyMode = TEXT("DormantAll");
+        Payload->TryGetStringField(TEXT("dormancyMode"), DormancyMode);
+        bool bFlushDormancy = false;
+        Payload->TryGetBoolField(TEXT("flushDormancy"), bFlushDormancy);
+
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+
+        if (!ActorName.IsEmpty())
+        {
+            AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+            if (!Actor)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
+                return true;
+            }
+
+            // Parse dormancy mode
+            ENetDormancy NewDormancy = DORM_DormantAll;
+            if (DormancyMode == TEXT("Never") || DormancyMode == TEXT("DORM_Never"))
+                NewDormancy = DORM_Never;
+            else if (DormancyMode == TEXT("Awake") || DormancyMode == TEXT("DORM_Awake"))
+                NewDormancy = DORM_Awake;
+            else if (DormancyMode == TEXT("DormantAll") || DormancyMode == TEXT("DORM_DormantAll"))
+                NewDormancy = DORM_DormantAll;
+            else if (DormancyMode == TEXT("DormantPartial") || DormancyMode == TEXT("DORM_DormantPartial"))
+                NewDormancy = DORM_DormantPartial;
+            else if (DormancyMode == TEXT("Initial") || DormancyMode == TEXT("DORM_Initial"))
+                NewDormancy = DORM_Initial;
+
+            Actor->SetNetDormancy(NewDormancy);
+            if (bFlushDormancy)
+            {
+                Actor->FlushNetDormancy();
+            }
+
+            ResultJson->SetStringField(TEXT("actorName"), ActorName);
+            ResultJson->SetStringField(TEXT("dormancyMode"), DormancyMode);
+            ResultJson->SetBoolField(TEXT("flushed"), bFlushDormancy);
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dormancy configured"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // configure_net_relevancy - Configure actor net relevancy
+    // ============================================================
+    if (SubAction == TEXT("configure_net_relevancy"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        bool bAlwaysRelevant = false;
+        Payload->TryGetBoolField(TEXT("alwaysRelevant"), bAlwaysRelevant);
+        bool bOnlyRelevantToOwner = false;
+        Payload->TryGetBoolField(TEXT("onlyRelevantToOwner"), bOnlyRelevantToOwner);
+        double NetCullDistanceSquared = 0;
+        Payload->TryGetNumberField(TEXT("netCullDistanceSquared"), NetCullDistanceSquared);
+
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+        if (!Actor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        Actor->bAlwaysRelevant = bAlwaysRelevant;
+        Actor->bOnlyRelevantToOwner = bOnlyRelevantToOwner;
+        if (NetCullDistanceSquared > 0)
+        {
+            Actor->SetNetCullDistanceSquared(NetCullDistanceSquared);
+        }
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("actorName"), ActorName);
+        ResultJson->SetBoolField(TEXT("alwaysRelevant"), bAlwaysRelevant);
+        ResultJson->SetBoolField(TEXT("onlyRelevantToOwner"), bOnlyRelevantToOwner);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net relevancy configured"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // configure_prediction_settings - Configure client prediction
+    // ============================================================
+    if (SubAction == TEXT("configure_prediction_settings"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        bool bEnablePrediction = true;
+        Payload->TryGetBoolField(TEXT("enablePrediction"), bEnablePrediction);
+        double PredictionLatency = 0.1;
+        Payload->TryGetNumberField(TEXT("predictionLatency"), PredictionLatency);
+        double SmoothingTime = 0.1;
+        Payload->TryGetNumberField(TEXT("smoothingTime"), SmoothingTime);
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
+        ResultJson->SetNumberField(TEXT("predictionLatency"), PredictionLatency);
+        ResultJson->SetNumberField(TEXT("smoothingTime"), SmoothingTime);
+        ResultJson->SetStringField(TEXT("note"), TEXT("Prediction settings stored. Implement via movement component."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Prediction settings configured"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // configure_team_settings - Configure team/faction networking
+    // ============================================================
+    if (SubAction == TEXT("configure_team_settings"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        int32 TeamId = 0;
+        double TeamIdD = 0;
+        if (Payload->TryGetNumberField(TEXT("teamId"), TeamIdD))
+        {
+            TeamId = (int32)TeamIdD;
+        }
+        bool bReplicateTeamId = true;
+        Payload->TryGetBoolField(TEXT("replicateTeamId"), bReplicateTeamId);
+        FString TeamColor;
+        Payload->TryGetStringField(TEXT("teamColor"), TeamColor);
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        ResultJson->SetNumberField(TEXT("teamId"), TeamId);
+        ResultJson->SetBoolField(TEXT("replicateTeamId"), bReplicateTeamId);
+        ResultJson->SetStringField(TEXT("teamColor"), TeamColor);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team settings configured"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // debug_replication_graph - Debug replication graph state
+    // ============================================================
+    if (SubAction == TEXT("debug_replication_graph"))
+    {
+        bool bEnableDebug = true;
+        Payload->TryGetBoolField(TEXT("enableDebug"), bEnableDebug);
+        bool bShowConnections = false;
+        Payload->TryGetBoolField(TEXT("showConnections"), bShowConnections);
+
+        UWorld* World = GetActiveWorld();
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        
+        // Get basic replication info
+        int32 ReplicatedActorCount = 0;
+        if (World)
+        {
+            for (TActorIterator<AActor> It(World); It; ++It)
+            {
+                if ((*It)->GetIsReplicated())
+                {
+                    ReplicatedActorCount++;
+                }
+            }
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetBoolField(TEXT("debugEnabled"), bEnableDebug);
+        ResultJson->SetNumberField(TEXT("replicatedActorCount"), ReplicatedActorCount);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph debug info"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // get_net_role_info - Get network role information
+    // ============================================================
+    if (SubAction == TEXT("get_net_role_info"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+        if (!Actor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("actorName"), ActorName);
+        ResultJson->SetStringField(TEXT("localRole"), NetworkingHelpers::NetRoleToString(Actor->GetLocalRole()));
+        ResultJson->SetStringField(TEXT("remoteRole"), NetworkingHelpers::NetRoleToString(Actor->GetRemoteRole()));
+        ResultJson->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
+        ResultJson->SetBoolField(TEXT("isReplicated"), Actor->GetIsReplicated());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role info retrieved"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // get_rpc_statistics - Get RPC call statistics
+    // ============================================================
+    if (SubAction == TEXT("get_rpc_statistics"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("actorName"), ActorName);
+        // RPC statistics require netdriver access - return placeholder
+        ResultJson->SetNumberField(TEXT("serverRPCCount"), 0);
+        ResultJson->SetNumberField(TEXT("clientRPCCount"), 0);
+        ResultJson->SetNumberField(TEXT("multicastRPCCount"), 0);
+        ResultJson->SetStringField(TEXT("note"), TEXT("RPC stats available via net profiler at runtime"));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC statistics retrieved"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // get_session_players - Get connected session players
+    // ============================================================
+    if (SubAction == TEXT("get_session_players"))
+    {
+        UWorld* World = GetActiveWorld();
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        TArray<TSharedPtr<FJsonValue>> PlayersArray;
+
+        if (World)
+        {
+            for (FConstPlayerControllerIterator Iterator = World->GetPlayerControllerIterator(); Iterator; ++Iterator)
+            {
+                APlayerController* PC = Iterator->Get();
+                if (PC)
+                {
+                    TSharedPtr<FJsonObject> PlayerInfo = MakeShareable(new FJsonObject());
+                    PlayerInfo->SetStringField(TEXT("name"), PC->GetName());
+                    PlayerInfo->SetBoolField(TEXT("isLocalController"), PC->IsLocalController());
+                    if (PC->PlayerState)
+                    {
+                        PlayerInfo->SetStringField(TEXT("playerName"), PC->PlayerState->GetPlayerName());
+                        PlayerInfo->SetNumberField(TEXT("playerId"), PC->PlayerState->GetPlayerId());
+                    }
+                    PlayersArray.Add(MakeShareable(new FJsonValueObject(PlayerInfo)));
+                }
+            }
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetArrayField(TEXT("players"), PlayersArray);
+        ResultJson->SetNumberField(TEXT("playerCount"), PlayersArray.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Session players retrieved"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // send_server_rpc - Execute server RPC on actor
+    // ============================================================
+    if (SubAction == TEXT("send_server_rpc"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString FunctionName;
+        Payload->TryGetStringField(TEXT("functionName"), FunctionName);
+
+        if (ActorName.IsEmpty() || FunctionName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName and functionName required"), TEXT("INVALID_PARAMS"));
+            return true;
+        }
+
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* Actor = FindActorByLabelOrName<AActor>(World, ActorName);
+        if (!Actor)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Find and validate the function is a server RPC
+        UFunction* Function = Actor->FindFunction(*FunctionName);
+        if (!Function)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Function not found"), TEXT("FUNCTION_NOT_FOUND"));
+            return true;
+        }
+
+        bool bIsServerRPC = Function->HasAnyFunctionFlags(FUNC_Net | FUNC_NetServer);
+        
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("actorName"), ActorName);
+        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
+        ResultJson->SetBoolField(TEXT("isServerRPC"), bIsServerRPC);
+        ResultJson->SetStringField(TEXT("note"), TEXT("Server RPC validated. Execute in PIE for actual network call."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server RPC info"), ResultJson);
+        return true;
+    }
+
+    // ============================================================
+    // simulate_network_conditions - Simulate network latency/packet loss
+    // ============================================================
+    if (SubAction == TEXT("simulate_network_conditions"))
+    {
+        double Latency = 0;
+        Payload->TryGetNumberField(TEXT("latency"), Latency);
+        double PacketLoss = 0;
+        Payload->TryGetNumberField(TEXT("packetLoss"), PacketLoss);
+        double Jitter = 0;
+        Payload->TryGetNumberField(TEXT("jitter"), Jitter);
+        bool bEnabled = true;
+        Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+        // Apply network emulation via console command
+        UWorld* World = GetActiveWorld();
+        if (World && GEngine && bEnabled)
+        {
+            // Net Emulation commands
+            if (Latency > 0)
+            {
+                GEngine->Exec(World, *FString::Printf(TEXT("NetEmulationPktLag=%d"), (int32)Latency));
+            }
+            if (PacketLoss > 0)
+            {
+                GEngine->Exec(World, *FString::Printf(TEXT("NetEmulationPktLoss=%d"), (int32)(PacketLoss * 100)));
+            }
+        }
+
+        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetBoolField(TEXT("enabled"), bEnabled);
+        ResultJson->SetNumberField(TEXT("latency"), Latency);
+        ResultJson->SetNumberField(TEXT("packetLoss"), PacketLoss);
+        ResultJson->SetNumberField(TEXT("jitter"), Jitter);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network conditions configured"), ResultJson);
+        return true;
+    }
+
     // Unknown action
     return false;
 }

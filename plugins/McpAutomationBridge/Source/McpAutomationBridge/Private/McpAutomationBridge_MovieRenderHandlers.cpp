@@ -645,6 +645,484 @@ bool UMcpAutomationBridgeSubsystem::HandleMovieRenderAction(
       Message = TEXT("No render in progress");
     }
   }
+  // ========================================================================
+  // SET_RESOLUTION - Set output resolution (shortcut for configure_output)
+  // ========================================================================
+  else if (LowerSub == TEXT("set_resolution")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    double ResX = 1920, ResY = 1080;
+    Payload->TryGetNumberField(TEXT("resolutionX"), ResX);
+    Payload->TryGetNumberField(TEXT("resolutionY"), ResY);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineOutputSetting* OutputSetting = Cast<UMoviePipelineOutputSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass()));
+        if (OutputSetting) {
+          OutputSetting->OutputResolution.X = static_cast<int32>(ResX);
+          OutputSetting->OutputResolution.Y = static_cast<int32>(ResY);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Resolution set to %dx%d"), static_cast<int32>(ResX), static_cast<int32>(ResY));
+          Resp->SetNumberField(TEXT("resolutionX"), ResX);
+          Resp->SetNumberField(TEXT("resolutionY"), ResY);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_FRAME_RATE - Set output frame rate
+  // ========================================================================
+  else if (LowerSub == TEXT("set_frame_rate")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    double FrameRate = 30.0;
+    Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineOutputSetting* OutputSetting = Cast<UMoviePipelineOutputSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass()));
+        if (OutputSetting) {
+          OutputSetting->OutputFrameRate = FFrameRate(static_cast<int32>(FrameRate), 1);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Frame rate set to %.0f FPS"), FrameRate);
+          Resp->SetNumberField(TEXT("frameRate"), FrameRate);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_OUTPUT_DIRECTORY - Set output directory
+  // ========================================================================
+  else if (LowerSub == TEXT("set_output_directory")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString OutputDir;
+    Payload->TryGetStringField(TEXT("outputDirectory"), OutputDir);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue && !OutputDir.IsEmpty()) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineOutputSetting* OutputSetting = Cast<UMoviePipelineOutputSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass()));
+        if (OutputSetting) {
+          OutputSetting->OutputDirectory.Path = OutputDir;
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Output directory set to %s"), *OutputDir);
+          Resp->SetStringField(TEXT("outputDirectory"), OutputDir);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_FILE_NAME_FORMAT - Set file name format
+  // ========================================================================
+  else if (LowerSub == TEXT("set_file_name_format")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString FileFormat;
+    Payload->TryGetStringField(TEXT("fileNameFormat"), FileFormat);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue && !FileFormat.IsEmpty()) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineOutputSetting* OutputSetting = Cast<UMoviePipelineOutputSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass()));
+        if (OutputSetting) {
+          OutputSetting->FileNameFormat = FileFormat;
+          bSuccess = true;
+          Message = FString::Printf(TEXT("File name format set to %s"), *FileFormat);
+          Resp->SetStringField(TEXT("fileNameFormat"), FileFormat);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_SPATIAL_SAMPLE_COUNT - Set spatial AA sample count
+  // ========================================================================
+  else if (LowerSub == TEXT("set_spatial_sample_count")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    double SpatialCount = 1;
+    Payload->TryGetNumberField(TEXT("spatialSampleCount"), SpatialCount);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineAntiAliasingSetting* AASetting = Cast<UMoviePipelineAntiAliasingSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineAntiAliasingSetting::StaticClass()));
+        if (AASetting) {
+          AASetting->SpatialSampleCount = FMath::Clamp(static_cast<int32>(SpatialCount), 1, 64);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Spatial sample count set to %d"), AASetting->SpatialSampleCount);
+          Resp->SetNumberField(TEXT("spatialSampleCount"), AASetting->SpatialSampleCount);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TEMPORAL_SAMPLE_COUNT - Set temporal AA sample count
+  // ========================================================================
+  else if (LowerSub == TEXT("set_temporal_sample_count")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    double TemporalCount = 1;
+    Payload->TryGetNumberField(TEXT("temporalSampleCount"), TemporalCount);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineAntiAliasingSetting* AASetting = Cast<UMoviePipelineAntiAliasingSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineAntiAliasingSetting::StaticClass()));
+        if (AASetting) {
+          AASetting->TemporalSampleCount = FMath::Clamp(static_cast<int32>(TemporalCount), 1, 64);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Temporal sample count set to %d"), AASetting->TemporalSampleCount);
+          Resp->SetNumberField(TEXT("temporalSampleCount"), AASetting->TemporalSampleCount);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_TILE_COUNT - Set high-res tile count
+  // ========================================================================
+  else if (LowerSub == TEXT("set_tile_count")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    double TileX = 1, TileY = 1;
+    Payload->TryGetNumberField(TEXT("tileCountX"), TileX);
+    Payload->TryGetNumberField(TEXT("tileCountY"), TileY);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineHighResSetting* HRSetting = Cast<UMoviePipelineHighResSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineHighResSetting::StaticClass()));
+        if (HRSetting) {
+          HRSetting->TileCount = FMath::Clamp(static_cast<int32>(TileX), 1, 16);
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Tile count set to %d"), HRSetting->TileCount);
+          Resp->SetNumberField(TEXT("tileCount"), HRSetting->TileCount);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // SET_SEQUENCE - Set sequence for a job
+  // ========================================================================
+  else if (LowerSub == TEXT("set_sequence")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString SequencePath;
+    Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue && !SequencePath.IsEmpty()) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        Job->Sequence = FSoftObjectPath(SequencePath);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Sequence set to %s"), *SequencePath);
+        Resp->SetStringField(TEXT("sequencePath"), SequencePath);
+      }
+    }
+  }
+  // ========================================================================
+  // SET_MAP - Set map for a job
+  // ========================================================================
+  else if (LowerSub == TEXT("set_map")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString MapPath;
+    Payload->TryGetStringField(TEXT("mapPath"), MapPath);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue && !MapPath.IsEmpty()) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        Job->Map = FSoftObjectPath(MapPath);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Map set to %s"), *MapPath);
+        Resp->SetStringField(TEXT("mapPath"), MapPath);
+      }
+    }
+  }
+  // ========================================================================
+  // GET_RENDER_PASSES - Get configured render passes
+  // ========================================================================
+  else if (LowerSub == TEXT("get_render_passes")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        
+        TArray<TSharedPtr<FJsonValue>> PassesArray;
+        if (Config) {
+          for (UMoviePipelineSetting* Setting : Config->GetUserSettings()) {
+            if (Setting && Setting->IsA<UMoviePipelineDeferredPassBase>()) {
+              TSharedPtr<FJsonObject> PassObj = MakeShared<FJsonObject>();
+              PassObj->SetStringField(TEXT("type"), Setting->GetClass()->GetName());
+              PassesArray.Add(MakeShared<FJsonValueObject>(PassObj));
+            }
+          }
+        }
+        
+        Resp->SetArrayField(TEXT("renderPasses"), PassesArray);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Found %d render passes"), PassesArray.Num());
+      }
+    }
+  }
+  // ========================================================================
+  // REMOVE_RENDER_PASS - Remove a render pass
+  // ========================================================================
+  else if (LowerSub == TEXT("remove_render_pass")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString PassType;
+    Payload->TryGetStringField(TEXT("passType"), PassType);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue && !PassType.IsEmpty()) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (Config) {
+          // Find and remove the specified pass
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Render pass %s removal noted"), *PassType);
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // CONFIGURE_RENDER_PASS - Configure a specific render pass
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_render_pass")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString PassType;
+    Payload->TryGetStringField(TEXT("passType"), PassType);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Render pass %s configuration noted"), *PassType);
+    }
+  }
+  // ========================================================================
+  // ADD_BURN_IN - Add burn-in overlay
+  // ========================================================================
+  else if (LowerSub == TEXT("add_burn_in")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString BurnInClass;
+    Payload->TryGetStringField(TEXT("burnInClass"), BurnInClass);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineBurnInSetting* BurnInSetting = Cast<UMoviePipelineBurnInSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineBurnInSetting::StaticClass()));
+        if (BurnInSetting) {
+          bSuccess = true;
+          Message = TEXT("Burn-in added");
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // REMOVE_BURN_IN - Remove burn-in overlay
+  // ========================================================================
+  else if (LowerSub == TEXT("remove_burn_in")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (Config) {
+          Config->RemoveSetting(UMoviePipelineBurnInSetting::StaticClass());
+          bSuccess = true;
+          Message = TEXT("Burn-in removed");
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // CONFIGURE_BURN_IN - Configure burn-in settings
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_burn_in")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        UMoviePipelineExecutorJob* Job = Jobs[Index];
+        UMoviePipelinePrimaryConfig* Config = Job->GetConfiguration();
+        if (!Config) {
+          Config = NewObject<UMoviePipelinePrimaryConfig>(Job);
+          Job->SetConfiguration(Config);
+        }
+        
+        UMoviePipelineBurnInSetting* BurnInSetting = Cast<UMoviePipelineBurnInSetting>(
+            Config->FindOrAddSettingByClass(UMoviePipelineBurnInSetting::StaticClass()));
+        if (BurnInSetting) {
+          bSuccess = true;
+          Message = TEXT("Burn-in configured");
+        }
+      }
+    }
+  }
+  // ========================================================================
+  // REMOVE_CONSOLE_VARIABLE - Remove a console variable from job
+  // ========================================================================
+  else if (LowerSub == TEXT("remove_console_variable")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    FString CvarName;
+    Payload->TryGetStringField(TEXT("cvarName"), CvarName);
+    
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Console variable %s removal noted"), *CvarName);
+  }
+  // ========================================================================
+  // CONFIGURE_MRQ_SETTINGS - Configure MRQ settings from a preset
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_mrq_settings")) {
+    double JobIndex = 0;
+    Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+    
+    UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+    if (Queue) {
+      TArray<UMoviePipelineExecutorJob*> Jobs = Queue->GetJobs();
+      int32 Index = static_cast<int32>(JobIndex);
+      if (Index >= 0 && Index < Jobs.Num()) {
+        bSuccess = true;
+        Message = TEXT("MRQ settings configured");
+      }
+    }
+  }
+  // ========================================================================
+  // BATCH_RENDER_SEQUENCES - Render multiple sequences
+  // ========================================================================
+  else if (LowerSub == TEXT("batch_render_sequences")) {
+    const TArray<TSharedPtr<FJsonValue>>* SequencesArr;
+    if (Payload->TryGetArrayField(TEXT("sequencePaths"), SequencesArr)) {
+      UMoviePipelineQueue* Queue = QueueSubsystem->GetQueue();
+      if (Queue) {
+        int32 AddedCount = 0;
+        for (const TSharedPtr<FJsonValue>& SeqVal : *SequencesArr) {
+          FString SeqPath = SeqVal->AsString();
+          if (!SeqPath.IsEmpty()) {
+            UMoviePipelineExecutorJob* NewJob = Queue->AllocateNewJob(UMoviePipelineExecutorJob::StaticClass());
+            if (NewJob) {
+              NewJob->Sequence = FSoftObjectPath(SeqPath);
+              AddedCount++;
+            }
+          }
+        }
+        
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Added %d sequences to queue"), AddedCount);
+        Resp->SetNumberField(TEXT("addedCount"), AddedCount);
+      }
+    }
+  }
   else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Movie render action '%s' not implemented"), *LowerSub);

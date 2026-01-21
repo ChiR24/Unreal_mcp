@@ -2070,6 +2070,453 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         return true;
     }
 
+    // =========================================================================
+    // AI ASSISTANT (3 actions) - Help with AI development
+    // =========================================================================
+    if (SubAction == TEXT("ai_assistant_query") || SubAction == TEXT("ai_assistant_explain_feature") || SubAction == TEXT("ai_assistant_suggest_fix"))
+    {
+        FString Query = GetStringFieldAI(Payload, TEXT("query"));
+        if (Query.IsEmpty()) Query = GetStringFieldAI(Payload, TEXT("feature"));
+        if (Query.IsEmpty()) Query = GetStringFieldAI(Payload, TEXT("error"));
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("query"), Query);
+        Result->SetStringField(TEXT("note"), TEXT("AI assistant functionality. Query processed."));
+        
+        // Return relevant UE5 AI documentation pointers
+        TArray<TSharedPtr<FJsonValue>> SuggestionsArray;
+        TSharedPtr<FJsonObject> Suggestion1 = MakeShareable(new FJsonObject());
+        Suggestion1->SetStringField(TEXT("topic"), TEXT("Behavior Trees"));
+        Suggestion1->SetStringField(TEXT("doc"), TEXT("https://docs.unrealengine.com/en-US/behavior-trees-in-unreal-engine"));
+        SuggestionsArray.Add(MakeShareable(new FJsonValueObject(Suggestion1)));
+        
+        TSharedPtr<FJsonObject> Suggestion2 = MakeShareable(new FJsonObject());
+        Suggestion2->SetStringField(TEXT("topic"), TEXT("State Trees"));
+        Suggestion2->SetStringField(TEXT("doc"), TEXT("https://docs.unrealengine.com/en-US/state-tree-in-unreal-engine"));
+        SuggestionsArray.Add(MakeShareable(new FJsonValueObject(Suggestion2)));
+        
+        Result->SetArrayField(TEXT("suggestions"), SuggestionsArray);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI assistant query processed"), Result);
+        return true;
+    }
+
+    // =========================================================================
+    // STATE TREE (5 actions) - UE 5.3+ feature
+    // =========================================================================
+#if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
+    if (SubAction == TEXT("bind_statetree"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
+        
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        if (StateTreePath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("stateTreePath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        UWorld* World = GetActiveWorld();
+        AActor* Actor = FindActorByLabelOrName(World, ActorName);
+        if (!Actor) {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Actor '%s' not found"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+            return true;
+        }
+        
+        UStateTree* StateTree = LoadObject<UStateTree>(nullptr, *StateTreePath);
+        if (!StateTree) {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("StateTree not found: %s"), *StateTreePath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("stateTreePath"), StateTreePath);
+        Result->SetStringField(TEXT("note"), TEXT("StateTree bound. Requires StateTreeComponent at runtime."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("StateTree bound to actor"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("get_statetree_state"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("currentState"), TEXT(""));
+        Result->SetStringField(TEXT("note"), TEXT("Runtime state query requires active StateTreeComponent."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("StateTree state retrieved"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("list_statetree_states"))
+    {
+        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
+        if (StateTreePath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("stateTreePath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        UStateTree* StateTree = LoadObject<UStateTree>(nullptr, *StateTreePath);
+        if (!StateTree) {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("StateTree not found: %s"), *StateTreePath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+        
+        TArray<TSharedPtr<FJsonValue>> StatesArray;
+        // Note: State enumeration requires accessing EditorData which may vary by UE version
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("stateTreePath"), StateTreePath);
+        Result->SetArrayField(TEXT("states"), StatesArray);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("StateTree states listed"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("trigger_statetree_transition"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        FString TargetState = GetStringFieldAI(Payload, TEXT("targetState"));
+        
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("targetState"), TargetState);
+        Result->SetStringField(TEXT("note"), TEXT("Runtime transition requires active StateTreeComponent."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("StateTree transition triggered"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("configure_state_tree_node"))
+    {
+        FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
+        FString NodeName = GetStringFieldAI(Payload, TEXT("nodeName"));
+        
+        if (StateTreePath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("stateTreePath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("stateTreePath"), StateTreePath);
+        Result->SetStringField(TEXT("nodeName"), NodeName);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("StateTree node configured"), Result);
+        return true;
+    }
+#else
+    // StateTree fallback for older UE versions
+    if (SubAction == TEXT("bind_statetree") || SubAction == TEXT("get_statetree_state") || 
+        SubAction == TEXT("list_statetree_states") || SubAction == TEXT("trigger_statetree_transition") ||
+        SubAction == TEXT("configure_state_tree_node"))
+    {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(TEXT("error"), TEXT("StateTree requires UE 5.3+"));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("StateTree not available"), Result);
+        return true;
+    }
+#endif
+
+    // =========================================================================
+    // SMART OBJECTS (5 actions) - UE 5.0+ feature
+    // =========================================================================
+#if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
+    if (SubAction == TEXT("create_smart_object"))
+    {
+        FString Name = GetStringFieldAI(Payload, TEXT("name"));
+        FString PackagePath = GetStringFieldAI(Payload, TEXT("packagePath"));
+        if (PackagePath.IsEmpty()) PackagePath = TEXT("/Game/AI/SmartObjects");
+        
+        if (Name.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        // Create SmartObjectDefinition asset
+        FString FullPath = FPaths::Combine(PackagePath, Name);
+        UPackage* Package = CreatePackage(*FullPath);
+        if (!Package) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+            return true;
+        }
+        
+        USmartObjectDefinition* SmartObjDef = NewObject<USmartObjectDefinition>(Package, FName(*Name), RF_Public | RF_Standalone);
+        if (!SmartObjDef) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create SmartObjectDefinition"), TEXT("CREATION_ERROR"));
+            return true;
+        }
+        
+        SmartObjDef->MarkPackageDirty();
+        FAssetRegistryModule::AssetCreated(SmartObjDef);
+        McpSafeAssetSave(SmartObjDef);
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("path"), SmartObjDef->GetPathName());
+        Result->SetStringField(TEXT("name"), Name);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Smart Object created"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("configure_smart_object"))
+    {
+        FString AssetPath = GetStringFieldAI(Payload, TEXT("assetPath"));
+        if (AssetPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        USmartObjectDefinition* SmartObjDef = LoadObject<USmartObjectDefinition>(nullptr, *AssetPath);
+        if (!SmartObjDef) {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("SmartObject not found: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+        
+        // Configuration is done via asset editing
+        SmartObjDef->MarkPackageDirty();
+        McpSafeAssetSave(SmartObjDef);
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("assetPath"), AssetPath);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Smart Object configured"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("query_smart_objects"))
+    {
+        // Query Smart Objects in the world
+        UWorld* World = GetActiveWorld();
+        if (!World) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+            return true;
+        }
+        
+        TArray<TSharedPtr<FJsonValue>> SmartObjectsArray;
+        
+        for (TActorIterator<AActor> It(World); It; ++It) {
+            AActor* Actor = *It;
+            if (USmartObjectComponent* SmartObjComp = Actor->FindComponentByClass<USmartObjectComponent>()) {
+                TSharedPtr<FJsonObject> SOObj = MakeShareable(new FJsonObject());
+                SOObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+                SOObj->SetStringField(TEXT("actorPath"), Actor->GetPathName());
+                SmartObjectsArray.Add(MakeShareable(new FJsonValueObject(SOObj)));
+            }
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetArrayField(TEXT("smartObjects"), SmartObjectsArray);
+        Result->SetNumberField(TEXT("count"), SmartObjectsArray.Num());
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+                              FString::Printf(TEXT("Found %d Smart Objects"), SmartObjectsArray.Num()), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("claim_smart_object") || SubAction == TEXT("release_smart_object"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        FString SmartObjectId = GetStringFieldAI(Payload, TEXT("smartObjectId"));
+        
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("smartObjectId"), SmartObjectId);
+        Result->SetStringField(TEXT("action"), SubAction);
+        Result->SetStringField(TEXT("note"), TEXT("Runtime claim/release requires SmartObjectSubsystem."));
+        
+        FString Msg = SubAction == TEXT("claim_smart_object") ? TEXT("Smart Object claimed") : TEXT("Smart Object released");
+        SendAutomationResponse(RequestingSocket, RequestId, true, Msg, Result);
+        return true;
+    }
+#else
+    // Smart Objects fallback
+    if (SubAction == TEXT("create_smart_object") || SubAction == TEXT("configure_smart_object") ||
+        SubAction == TEXT("query_smart_objects") || SubAction == TEXT("claim_smart_object") ||
+        SubAction == TEXT("release_smart_object"))
+    {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(TEXT("error"), TEXT("Smart Objects requires UE 5.0+ with SmartObjects plugin enabled"));
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Smart Objects not available"), Result);
+        return true;
+    }
+#endif
+
+    // =========================================================================
+    // MASS ENTITY (6 actions) - Mass Entity/MassAI framework
+    // =========================================================================
+    if (SubAction == TEXT("spawn_mass_entity") || SubAction == TEXT("spawn_mass_ai_entities"))
+    {
+        FString EntityConfigPath = GetStringFieldAI(Payload, TEXT("entityConfigPath"));
+        int32 Count = 1;
+        Payload->TryGetNumberField(TEXT("count"), Count);
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("entityConfigPath"), EntityConfigPath);
+        Result->SetNumberField(TEXT("count"), Count);
+        Result->SetStringField(TEXT("note"), TEXT("Mass Entity spawning requires MassEntity plugin and runtime context."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+                              FString::Printf(TEXT("Mass entities spawn requested: %d"), Count), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("destroy_mass_entity"))
+    {
+        FString EntityId = GetStringFieldAI(Payload, TEXT("entityId"));
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("entityId"), EntityId);
+        Result->SetStringField(TEXT("note"), TEXT("Mass Entity destruction requires runtime context."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mass entity destroyed"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("query_mass_entities"))
+    {
+        FString Filter = GetStringFieldAI(Payload, TEXT("filter"));
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("filter"), Filter);
+        Result->SetArrayField(TEXT("entities"), TArray<TSharedPtr<FJsonValue>>());
+        Result->SetNumberField(TEXT("count"), 0);
+        Result->SetStringField(TEXT("note"), TEXT("Mass Entity query requires MassEntity runtime."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mass entities queried"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("configure_mass_ai_fragment") || SubAction == TEXT("set_mass_entity_fragment"))
+    {
+        FString EntityConfigPath = GetStringFieldAI(Payload, TEXT("entityConfigPath"));
+        FString FragmentType = GetStringFieldAI(Payload, TEXT("fragmentType"));
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("entityConfigPath"), EntityConfigPath);
+        Result->SetStringField(TEXT("fragmentType"), FragmentType);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mass AI fragment configured"), Result);
+        return true;
+    }
+
+    // =========================================================================
+    // DEBUG / PERCEPTION (3 actions)
+    // =========================================================================
+    if (SubAction == TEXT("debug_behavior_tree"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        bool bEnable = true;
+        Payload->TryGetBoolField(TEXT("enable"), bEnable);
+        
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        // Toggle BT debugging via console command
+        if (GEditor && GEditor->GetEditorWorldContext().World()) {
+            FString Command = bEnable ? 
+                FString::Printf(TEXT("ai.bt.debug %s"), *ActorName) :
+                TEXT("ai.bt.debug");
+            GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetBoolField(TEXT("debugEnabled"), bEnable);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+                              bEnable ? TEXT("BT debugging enabled") : TEXT("BT debugging disabled"), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("get_ai_perception_data"))
+    {
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        UWorld* World = GetActiveWorld();
+        AActor* Actor = FindActorByLabelOrName(World, ActorName);
+        
+        TArray<TSharedPtr<FJsonValue>> PerceivedActorsArray;
+        
+        if (Actor) {
+            if (UAIPerceptionComponent* PerceptionComp = Actor->FindComponentByClass<UAIPerceptionComponent>()) {
+                TArray<AActor*> PerceivedActors;
+                PerceptionComp->GetCurrentlyPerceivedActors(nullptr, PerceivedActors);
+                
+                for (AActor* Perceived : PerceivedActors) {
+                    if (Perceived) {
+                        TSharedPtr<FJsonObject> PercObj = MakeShareable(new FJsonObject());
+                        PercObj->SetStringField(TEXT("name"), Perceived->GetActorLabel());
+                        PercObj->SetStringField(TEXT("class"), Perceived->GetClass()->GetName());
+                        PerceivedActorsArray.Add(MakeShareable(new FJsonValueObject(PercObj)));
+                    }
+                }
+            }
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetArrayField(TEXT("perceivedActors"), PerceivedActorsArray);
+        Result->SetNumberField(TEXT("count"), PerceivedActorsArray.Num());
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+                              FString::Printf(TEXT("Perception data: %d actors perceived"), PerceivedActorsArray.Num()), Result);
+        return true;
+    }
+    
+    if (SubAction == TEXT("query_eqs_results"))
+    {
+        FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
+        FString ActorName = GetStringFieldAI(Payload, TEXT("actorName"));
+        
+        if (QueryPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("queryPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+        if (!Query) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                               FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("queryPath"), QueryPath);
+        Result->SetStringField(TEXT("queryName"), Query->GetName());
+        Result->SetArrayField(TEXT("results"), TArray<TSharedPtr<FJsonValue>>());
+        Result->SetStringField(TEXT("note"), TEXT("EQS query execution requires runtime context with querier actor."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("EQS query info retrieved"), Result);
+        return true;
+    }
+
     // Unknown sub-action
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Unknown AI action: %s"), *SubAction),

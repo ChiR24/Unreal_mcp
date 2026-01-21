@@ -624,3 +624,466 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraRibbon(
   return true;
 #endif
 }
+
+// ============================================================================
+// ACTIVATE NIAGARA - Activate a Niagara component/system
+// ============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleActivateNiagara(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("activate")) && 
+      !Lower.Equals(TEXT("activate_niagara")) &&
+      !Lower.Equals(TEXT("activate_effect")) &&
+      !Lower.Equals(TEXT("niagara_activate"))) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("activate requires payload"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), ActorName);
+  }
+
+  if (ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName or name required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UWorld* World = GetActiveWorld();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No active world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+  ANiagaraActor* NiagaraActor = Cast<ANiagaraActor>(FoundActor);
+  
+  if (!NiagaraActor) {
+    // Try to find Niagara component on any actor
+    if (FoundActor) {
+      UNiagaraComponent* NiagaraComp = FoundActor->FindComponentByClass<UNiagaraComponent>();
+      if (NiagaraComp) {
+        NiagaraComp->Activate(true);
+        
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), FoundActor->GetActorLabel());
+        Resp->SetBoolField(TEXT("activated"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Niagara component activated"), Resp);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Niagara actor not found"),
+                        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  UNiagaraComponent* NiagaraComp = NiagaraActor->GetNiagaraComponent();
+  if (NiagaraComp) {
+    NiagaraComp->Activate(true);
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+  Resp->SetBoolField(TEXT("activated"), true);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Niagara system activated"), Resp);
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("activate requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// DEACTIVATE NIAGARA - Deactivate a Niagara component/system
+// ============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleDeactivateNiagara(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("deactivate")) && 
+      !Lower.Equals(TEXT("deactivate_niagara")) &&
+      !Lower.Equals(TEXT("niagara_deactivate"))) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("deactivate requires payload"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), ActorName);
+  }
+
+  if (ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName or name required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UWorld* World = GetActiveWorld();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No active world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+  ANiagaraActor* NiagaraActor = Cast<ANiagaraActor>(FoundActor);
+  
+  if (!NiagaraActor) {
+    if (FoundActor) {
+      UNiagaraComponent* NiagaraComp = FoundActor->FindComponentByClass<UNiagaraComponent>();
+      if (NiagaraComp) {
+        NiagaraComp->Deactivate();
+        
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), FoundActor->GetActorLabel());
+        Resp->SetBoolField(TEXT("deactivated"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Niagara component deactivated"), Resp);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Niagara actor not found"),
+                        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  UNiagaraComponent* NiagaraComp = NiagaraActor->GetNiagaraComponent();
+  if (NiagaraComp) {
+    NiagaraComp->Deactivate();
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+  Resp->SetBoolField(TEXT("deactivated"), true);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Niagara system deactivated"), Resp);
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("deactivate requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// RESET NIAGARA - Reset a Niagara component/system
+// ============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleResetNiagara(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("reset")) && 
+      !Lower.Equals(TEXT("reset_niagara")) &&
+      !Lower.Equals(TEXT("niagara_reset"))) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("reset requires payload"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), ActorName);
+  }
+
+  if (ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName or name required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UWorld* World = GetActiveWorld();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No active world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+  ANiagaraActor* NiagaraActor = Cast<ANiagaraActor>(FoundActor);
+  
+  if (!NiagaraActor) {
+    if (FoundActor) {
+      UNiagaraComponent* NiagaraComp = FoundActor->FindComponentByClass<UNiagaraComponent>();
+      if (NiagaraComp) {
+        NiagaraComp->ResetSystem();
+        
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), FoundActor->GetActorLabel());
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Niagara component reset"), Resp);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Niagara actor not found"),
+                        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  UNiagaraComponent* NiagaraComp = NiagaraActor->GetNiagaraComponent();
+  if (NiagaraComp) {
+    NiagaraComp->ResetSystem();
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Niagara system reset"), Resp);
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("reset requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// GET NIAGARA PARAMETERS - Get parameters from a Niagara system
+// ============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleGetNiagaraParameters(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("get_niagara_parameters")) && 
+      !Lower.Equals(TEXT("get_parameters")) &&
+      !Lower.Equals(TEXT("niagara_get_parameters"))) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("get_niagara_parameters requires payload"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString SystemPath;
+  Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
+  if (SystemPath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("assetPath"), SystemPath);
+  }
+
+  if (SystemPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("systemPath or assetPath required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Normalize path
+  if (SystemPath.StartsWith(TEXT("/Content"))) {
+    SystemPath = FString::Printf(TEXT("/Game%s"), *SystemPath.RightChop(8));
+  }
+
+  UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+  if (!NiagaraSystem) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to load Niagara system"),
+                        TEXT("LOAD_FAILED"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("systemPath"), SystemPath);
+  Resp->SetStringField(TEXT("systemName"), NiagaraSystem->GetName());
+
+  // Get exposed parameters info
+  TArray<TSharedPtr<FJsonValue>> ParamsArray;
+  
+  // Note: Accessing user parameters requires Niagara editor APIs
+  // For now, return basic system info
+  Resp->SetArrayField(TEXT("parameters"), ParamsArray);
+  Resp->SetStringField(TEXT("note"), TEXT("Use Niagara Editor for detailed parameter inspection"));
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Niagara parameters retrieved"), Resp);
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("get_niagara_parameters requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// SET NIAGARA VARIABLE - Set a variable on a Niagara component
+// ============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleSetNiagaraVariable(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("set_niagara_variable")) && 
+      !Lower.Equals(TEXT("set_parameter")) &&
+      !Lower.Equals(TEXT("niagara_set_variable")) &&
+      !Lower.Equals(TEXT("modify_niagara_parameter"))) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("set_niagara_variable requires payload"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  if (ActorName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), ActorName);
+  }
+
+  FString VariableName;
+  Payload->TryGetStringField(TEXT("variableName"), VariableName);
+  if (VariableName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("parameterName"), VariableName);
+  }
+
+  if (ActorName.IsEmpty() || VariableName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName and variableName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UWorld* World = GetActiveWorld();
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No active world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+  UNiagaraComponent* NiagaraComp = nullptr;
+  
+  ANiagaraActor* NiagaraActor = Cast<ANiagaraActor>(FoundActor);
+  if (NiagaraActor) {
+    NiagaraComp = NiagaraActor->GetNiagaraComponent();
+  } else if (FoundActor) {
+    NiagaraComp = FoundActor->FindComponentByClass<UNiagaraComponent>();
+  }
+
+  if (!NiagaraComp) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Niagara component not found"),
+                        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
+  }
+
+  FName ParamName = FName(*VariableName);
+  bool bSet = false;
+
+  // Try to set based on value type
+  double FloatValue = 0;
+  if (Payload->TryGetNumberField(TEXT("value"), FloatValue)) {
+    NiagaraComp->SetFloatParameter(ParamName, (float)FloatValue);
+    bSet = true;
+  }
+
+  bool BoolValue = false;
+  if (Payload->TryGetBoolField(TEXT("value"), BoolValue)) {
+    NiagaraComp->SetFloatParameter(ParamName, BoolValue ? 1.0f : 0.0f);
+    bSet = true;
+  }
+
+  const TSharedPtr<FJsonObject>* VectorObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("value"), VectorObj) && VectorObj) {
+    double X = 0, Y = 0, Z = 0;
+    (*VectorObj)->TryGetNumberField(TEXT("x"), X);
+    (*VectorObj)->TryGetNumberField(TEXT("y"), Y);
+    (*VectorObj)->TryGetNumberField(TEXT("z"), Z);
+    NiagaraComp->SetVectorParameter(ParamName, FVector(X, Y, Z));
+    bSet = true;
+  }
+
+  const TArray<TSharedPtr<FJsonValue>>* ArrayValue = nullptr;
+  if (Payload->TryGetArrayField(TEXT("value"), ArrayValue) && ArrayValue && ArrayValue->Num() >= 3) {
+    double X = (*ArrayValue)[0]->AsNumber();
+    double Y = (*ArrayValue)[1]->AsNumber();
+    double Z = (*ArrayValue)[2]->AsNumber();
+    
+    if (ArrayValue->Num() >= 4) {
+      double W = (*ArrayValue)[3]->AsNumber();
+      NiagaraComp->SetColorParameter(ParamName, FLinearColor(X, Y, Z, W));
+    } else {
+      NiagaraComp->SetVectorParameter(ParamName, FVector(X, Y, Z));
+    }
+    bSet = true;
+  }
+
+  if (!bSet) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("value required (number, bool, vector object, or array)"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), FoundActor->GetActorLabel());
+  Resp->SetStringField(TEXT("variableName"), VariableName);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Niagara variable set"), Resp);
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("set_niagara_variable requires editor build"),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}

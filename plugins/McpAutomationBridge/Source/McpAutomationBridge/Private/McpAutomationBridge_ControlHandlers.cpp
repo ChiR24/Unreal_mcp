@@ -2983,6 +2983,369 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorReplaceClass(
 }
 
 // ============================================================================
+// NEW HANDLERS: batch_transform_actors, clone_component_hierarchy, deserialize_actor_state
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorBatchTransform(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  const TArray<TSharedPtr<FJsonValue>> *TransformsArray = nullptr;
+  if (!Payload->TryGetArrayField(TEXT("transforms"), TransformsArray) || !TransformsArray || TransformsArray->Num() == 0) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("transforms array required (array of {actorName, location?, rotation?, scale?})"));
+    return true;
+  }
+
+  UWorld *World = GetActiveWorld();
+  if (!World) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No active world available"));
+    return true;
+  }
+
+  TArray<TSharedPtr<FJsonValue>> ResultsArray;
+  int32 SuccessCount = 0;
+  int32 FailCount = 0;
+
+  for (const TSharedPtr<FJsonValue> &Entry : *TransformsArray) {
+    if (!Entry.IsValid() || Entry->Type != EJson::Object) continue;
+    
+    const TSharedPtr<FJsonObject> &TransformSpec = Entry->AsObject();
+    FString ActorName;
+    TransformSpec->TryGetStringField(TEXT("actorName"), ActorName);
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    
+    if (ActorName.IsEmpty()) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(TEXT("error"), TEXT("actorName required"));
+      FailCount++;
+      ResultsArray.Add(MakeShared<FJsonValueObject>(Result));
+      continue;
+    }
+
+    AActor *Found = FindActorByLabelOrName<AActor>(World, ActorName);
+    if (!Found) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(TEXT("error"), TEXT("Actor not found"));
+      FailCount++;
+      ResultsArray.Add(MakeShared<FJsonValueObject>(Result));
+      continue;
+    }
+
+    Found->Modify();
+    
+    // Apply location if specified
+    FVector NewLocation = Found->GetActorLocation();
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if (TransformSpec->TryGetObjectField(TEXT("location"), LocObj) && LocObj && (*LocObj).IsValid()) {
+      double X, Y, Z;
+      if ((*LocObj)->TryGetNumberField(TEXT("x"), X)) NewLocation.X = X;
+      if ((*LocObj)->TryGetNumberField(TEXT("y"), Y)) NewLocation.Y = Y;
+      if ((*LocObj)->TryGetNumberField(TEXT("z"), Z)) NewLocation.Z = Z;
+      Found->SetActorLocation(NewLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    }
+    
+    // Apply rotation if specified
+    FRotator NewRotation = Found->GetActorRotation();
+    const TSharedPtr<FJsonObject> *RotObj = nullptr;
+    if (TransformSpec->TryGetObjectField(TEXT("rotation"), RotObj) && RotObj && (*RotObj).IsValid()) {
+      double Pitch, Yaw, Roll;
+      if ((*RotObj)->TryGetNumberField(TEXT("pitch"), Pitch)) NewRotation.Pitch = Pitch;
+      if ((*RotObj)->TryGetNumberField(TEXT("yaw"), Yaw)) NewRotation.Yaw = Yaw;
+      if ((*RotObj)->TryGetNumberField(TEXT("roll"), Roll)) NewRotation.Roll = Roll;
+      Found->SetActorRotation(NewRotation, ETeleportType::TeleportPhysics);
+    }
+    
+    // Apply scale if specified
+    FVector NewScale = Found->GetActorScale3D();
+    const TSharedPtr<FJsonObject> *ScaleObj = nullptr;
+    if (TransformSpec->TryGetObjectField(TEXT("scale"), ScaleObj) && ScaleObj && (*ScaleObj).IsValid()) {
+      double X, Y, Z;
+      if ((*ScaleObj)->TryGetNumberField(TEXT("x"), X)) NewScale.X = X;
+      if ((*ScaleObj)->TryGetNumberField(TEXT("y"), Y)) NewScale.Y = Y;
+      if ((*ScaleObj)->TryGetNumberField(TEXT("z"), Z)) NewScale.Z = Z;
+      Found->SetActorScale3D(NewScale);
+    }
+    
+    Found->MarkComponentsRenderStateDirty();
+    Found->MarkPackageDirty();
+    
+    Result->SetBoolField(TEXT("success"), true);
+    SuccessCount++;
+    ResultsArray.Add(MakeShared<FJsonValueObject>(Result));
+  }
+
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetArrayField(TEXT("results"), ResultsArray);
+  Data->SetNumberField(TEXT("successCount"), SuccessCount);
+  Data->SetNumberField(TEXT("failCount"), FailCount);
+  Data->SetNumberField(TEXT("totalCount"), TransformsArray->Num());
+  
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("ControlActor: Batch transformed %d/%d actors"), SuccessCount, TransformsArray->Num());
+  SendStandardSuccessResponse(this, Socket, RequestId, 
+                              FString::Printf(TEXT("Batch transformed %d actors"), SuccessCount), Data);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorCloneComponentHierarchy(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString SourceActorName, TargetActorName;
+  Payload->TryGetStringField(TEXT("sourceActor"), SourceActorName);
+  Payload->TryGetStringField(TEXT("targetActor"), TargetActorName);
+  
+  if (SourceActorName.IsEmpty() || TargetActorName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("sourceActor and targetActor required"));
+    return true;
+  }
+
+  UWorld *World = GetActiveWorld();
+  if (!World) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No active world available"));
+    return true;
+  }
+
+  AActor *Source = FindActorByLabelOrName<AActor>(World, SourceActorName);
+  AActor *Target = FindActorByLabelOrName<AActor>(World, TargetActorName);
+  
+  if (!Source) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              FString::Printf(TEXT("Source actor not found: %s"), *SourceActorName));
+    return true;
+  }
+  if (!Target) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              FString::Printf(TEXT("Target actor not found: %s"), *TargetActorName));
+    return true;
+  }
+
+  // Optional: filter by component name or class
+  FString ComponentFilter;
+  Payload->TryGetStringField(TEXT("componentFilter"), ComponentFilter);
+  
+  Target->Modify();
+  
+  TArray<TSharedPtr<FJsonValue>> ClonedComponents;
+  
+  for (UActorComponent *SourceComp : Source->GetComponents()) {
+    if (!SourceComp) continue;
+    
+    // Skip if filter is set and doesn't match
+    if (!ComponentFilter.IsEmpty() && 
+        !SourceComp->GetName().Contains(ComponentFilter, ESearchCase::IgnoreCase) &&
+        !SourceComp->GetClass()->GetName().Contains(ComponentFilter, ESearchCase::IgnoreCase)) {
+      continue;
+    }
+    
+    // Clone the component
+    UClass *CompClass = SourceComp->GetClass();
+    FName NewCompName = MakeUniqueObjectName(Target, CompClass, *SourceComp->GetName());
+    UActorComponent *NewComp = NewObject<UActorComponent>(Target, CompClass, NewCompName, RF_Transactional);
+    
+    if (!NewComp) continue;
+    
+    // Copy properties from source to new component
+    UEngine::FCopyPropertiesForUnrelatedObjectsParams CopyParams;
+    CopyParams.bDoDelta = false;
+    UEngine::CopyPropertiesForUnrelatedObjects(SourceComp, NewComp, CopyParams);
+    
+    Target->AddInstanceComponent(NewComp);
+    NewComp->OnComponentCreated();
+    
+    // Handle SceneComponent attachment
+    if (USceneComponent *NewSceneComp = Cast<USceneComponent>(NewComp)) {
+      if (Target->GetRootComponent() && !NewSceneComp->GetAttachParent()) {
+        NewSceneComp->SetupAttachment(Target->GetRootComponent());
+      }
+      
+      // Copy relative transform from source if it's also a scene component
+      if (USceneComponent *SourceSceneComp = Cast<USceneComponent>(SourceComp)) {
+        NewSceneComp->SetRelativeTransform(SourceSceneComp->GetRelativeTransform());
+      }
+    }
+    
+    NewComp->RegisterComponent();
+    NewComp->MarkPackageDirty();
+    
+    TSharedPtr<FJsonObject> CompEntry = MakeShared<FJsonObject>();
+    CompEntry->SetStringField(TEXT("name"), NewComp->GetName());
+    CompEntry->SetStringField(TEXT("class"), CompClass->GetName());
+    CompEntry->SetStringField(TEXT("sourceName"), SourceComp->GetName());
+    ClonedComponents.Add(MakeShared<FJsonValueObject>(CompEntry));
+  }
+  
+  Target->MarkPackageDirty();
+
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("sourceActor"), Source->GetActorLabel());
+  Data->SetStringField(TEXT("targetActor"), Target->GetActorLabel());
+  Data->SetArrayField(TEXT("clonedComponents"), ClonedComponents);
+  Data->SetNumberField(TEXT("count"), ClonedComponents.Num());
+  
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("ControlActor: Cloned %d components from '%s' to '%s'"), 
+         ClonedComponents.Num(), *Source->GetActorLabel(), *Target->GetActorLabel());
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component hierarchy cloned"), Data);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlActorDeserializeState(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  // Get state object - can be embedded or from JSON string
+  const TSharedPtr<FJsonObject> *StatePtr = nullptr;
+  TSharedPtr<FJsonObject> State;
+  
+  if (Payload->TryGetObjectField(TEXT("state"), StatePtr) && StatePtr && (*StatePtr).IsValid()) {
+    State = *StatePtr;
+  } else {
+    FString JsonString;
+    if (Payload->TryGetStringField(TEXT("json"), JsonString) && !JsonString.IsEmpty()) {
+      TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+      TSharedPtr<FJsonObject> ParsedState;
+      if (FJsonSerializer::Deserialize(Reader, ParsedState) && ParsedState.IsValid()) {
+        State = ParsedState;
+      }
+    }
+  }
+  
+  if (!State.IsValid()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("state object or json string required"));
+    return true;
+  }
+
+  // Get the target actor - either by name or from state
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  if (ActorName.IsEmpty()) {
+    State->TryGetStringField(TEXT("name"), ActorName);
+  }
+  
+  if (ActorName.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required (in payload or state.name)"));
+    return true;
+  }
+
+  UWorld *World = GetActiveWorld();
+  if (!World) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No active world available"));
+    return true;
+  }
+
+  AActor *Target = FindActorByLabelOrName<AActor>(World, ActorName);
+  if (!Target) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              FString::Printf(TEXT("Actor not found: %s"), *ActorName));
+    return true;
+  }
+
+  Target->Modify();
+  TArray<FString> AppliedFields;
+  TArray<FString> Warnings;
+
+  // Apply transform if present
+  const TSharedPtr<FJsonObject> *TransformPtr = nullptr;
+  if (State->TryGetObjectField(TEXT("transform"), TransformPtr) && TransformPtr && (*TransformPtr).IsValid()) {
+    const TSharedPtr<FJsonObject> &TransformObj = *TransformPtr;
+    
+    // Location
+    const TSharedPtr<FJsonObject> *LocPtr = nullptr;
+    if (TransformObj->TryGetObjectField(TEXT("location"), LocPtr) && LocPtr && (*LocPtr).IsValid()) {
+      FVector Loc = Target->GetActorLocation();
+      double X, Y, Z;
+      if ((*LocPtr)->TryGetNumberField(TEXT("x"), X)) Loc.X = X;
+      if ((*LocPtr)->TryGetNumberField(TEXT("y"), Y)) Loc.Y = Y;
+      if ((*LocPtr)->TryGetNumberField(TEXT("z"), Z)) Loc.Z = Z;
+      Target->SetActorLocation(Loc, false, nullptr, ETeleportType::TeleportPhysics);
+      AppliedFields.Add(TEXT("location"));
+    }
+    
+    // Rotation
+    const TSharedPtr<FJsonObject> *RotPtr = nullptr;
+    if (TransformObj->TryGetObjectField(TEXT("rotation"), RotPtr) && RotPtr && (*RotPtr).IsValid()) {
+      FRotator Rot = Target->GetActorRotation();
+      double Pitch, Yaw, Roll;
+      if ((*RotPtr)->TryGetNumberField(TEXT("pitch"), Pitch)) Rot.Pitch = Pitch;
+      if ((*RotPtr)->TryGetNumberField(TEXT("yaw"), Yaw)) Rot.Yaw = Yaw;
+      if ((*RotPtr)->TryGetNumberField(TEXT("roll"), Roll)) Rot.Roll = Roll;
+      Target->SetActorRotation(Rot, ETeleportType::TeleportPhysics);
+      AppliedFields.Add(TEXT("rotation"));
+    }
+    
+    // Scale
+    const TSharedPtr<FJsonObject> *ScalePtr = nullptr;
+    if (TransformObj->TryGetObjectField(TEXT("scale"), ScalePtr) && ScalePtr && (*ScalePtr).IsValid()) {
+      FVector Scale = Target->GetActorScale3D();
+      double X, Y, Z;
+      if ((*ScalePtr)->TryGetNumberField(TEXT("x"), X)) Scale.X = X;
+      if ((*ScalePtr)->TryGetNumberField(TEXT("y"), Y)) Scale.Y = Y;
+      if ((*ScalePtr)->TryGetNumberField(TEXT("z"), Z)) Scale.Z = Z;
+      Target->SetActorScale3D(Scale);
+      AppliedFields.Add(TEXT("scale"));
+    }
+  }
+
+  // Apply tags if present
+  const TArray<TSharedPtr<FJsonValue>> *TagsArray = nullptr;
+  if (State->TryGetArrayField(TEXT("tags"), TagsArray) && TagsArray) {
+    Target->Tags.Empty();
+    for (const TSharedPtr<FJsonValue> &TagVal : *TagsArray) {
+      if (TagVal.IsValid() && TagVal->Type == EJson::String) {
+        Target->Tags.Add(FName(*TagVal->AsString()));
+      }
+    }
+    AppliedFields.Add(TEXT("tags"));
+  }
+
+  Target->MarkComponentsRenderStateDirty();
+  Target->MarkPackageDirty();
+
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("actorName"), Target->GetActorLabel());
+  Data->SetStringField(TEXT("actorPath"), Target->GetPathName());
+  
+  TArray<TSharedPtr<FJsonValue>> AppliedArray;
+  for (const FString &Field : AppliedFields) {
+    AppliedArray.Add(MakeShared<FJsonValueString>(Field));
+  }
+  Data->SetArrayField(TEXT("appliedFields"), AppliedArray);
+  
+  if (Warnings.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> WarnArray;
+    for (const FString &Warn : Warnings) {
+      WarnArray.Add(MakeShared<FJsonValueString>(Warn));
+    }
+    Data->SetArrayField(TEXT("warnings"), WarnArray);
+  }
+  
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("ControlActor: Deserialized state for '%s' (%d fields)"), 
+         *Target->GetActorLabel(), AppliedFields.Num());
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor state deserialized"), Data);
+  return true;
+#else
+  return false;
+#endif
+}
+
+// ============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
@@ -3120,6 +3483,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorGetReferences(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("replace_actor_class"))
     return HandleControlActorReplaceClass(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("batch_transform_actors") || LowerSub == TEXT("batch_transform"))
+    return HandleControlActorBatchTransform(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("clone_component_hierarchy") || LowerSub == TEXT("clone_components"))
+    return HandleControlActorCloneComponentHierarchy(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("deserialize_actor_state") || LowerSub == TEXT("restore_state"))
+    return HandleControlActorDeserializeState(RequestId, Payload, RequestingSocket);
+  // merge_actors is handled by PerformanceHandlers but routed here for control_actor tool
+  if (LowerSub == TEXT("merge_actors"))
+    return HandlePerformanceAction(RequestId, TEXT("merge_actors"), Payload, RequestingSocket);
 
   SendAutomationResponse(
       RequestingSocket, RequestId, false,

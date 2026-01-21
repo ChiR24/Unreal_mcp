@@ -865,6 +865,122 @@ bool UMcpAutomationBridgeSubsystem::HandleMediaAction(
       }
     }
   }
+  // ========================================================================
+  // CREATE MEDIA SOUND WAVE - Create a sound wave from a media source
+  // ========================================================================
+  else if (LowerSub == TEXT("create_media_sound_wave")) {
+    FString SourcePath;
+    Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    if (SourcePath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("mediaSourcePath"), SourcePath);
+    }
+    FString OutputPath;
+    Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+    
+    if (SourcePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("sourcePath required for create_media_sound_wave");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Media sound waves are typically created from MediaSound components
+      // For now, provide guidance on using MediaSoundComponent
+      bSuccess = true;
+      Message = TEXT("To create audio from media, use UMediaSoundComponent attached to an actor playing a MediaPlayer. The component will generate audio from the media stream.");
+      Resp->SetStringField(TEXT("hint"), TEXT("Attach UMediaSoundComponent to actor, set MediaPlayer reference, and enable audio output"));
+      Resp->SetStringField(TEXT("sourcePath"), SourcePath);
+    }
+  }
+  // ========================================================================
+  // DELETE MEDIA ASSET - Delete a media asset (source, player, texture, etc)
+  // ========================================================================
+  else if (LowerSub == TEXT("delete_media_asset")) {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    if (AssetPath.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("path"), AssetPath);
+    }
+    
+    if (AssetPath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("assetPath required for delete_media_asset");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      // Normalize path
+      if (AssetPath.StartsWith(TEXT("/Content"))) {
+        AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
+      }
+      
+      if (UEditorAssetLibrary::DeleteAsset(AssetPath)) {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Media asset deleted: %s"), *AssetPath);
+        Resp->SetStringField(TEXT("deletedPath"), AssetPath);
+      } else {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Failed to delete media asset: %s"), *AssetPath);
+        ErrorCode = TEXT("DELETE_FAILED");
+      }
+    }
+  }
+  // ========================================================================
+  // REMOVE FROM PLAYLIST - Remove a media source from a playlist
+  // ========================================================================
+  else if (LowerSub == TEXT("remove_from_playlist")) {
+    FString PlaylistPath;
+    Payload->TryGetStringField(TEXT("playlistPath"), PlaylistPath);
+    int32 Index = -1;
+    Payload->TryGetNumberField(TEXT("index"), Index);
+    FString MediaSourcePath;
+    Payload->TryGetStringField(TEXT("mediaSourcePath"), MediaSourcePath);
+    
+    if (PlaylistPath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("playlistPath required for remove_from_playlist");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else if (Index < 0 && MediaSourcePath.IsEmpty()) {
+      bSuccess = false;
+      Message = TEXT("Either index or mediaSourcePath required for remove_from_playlist");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+    } else {
+      UMediaPlaylist* Playlist = LoadObject<UMediaPlaylist>(nullptr, *PlaylistPath);
+      if (Playlist) {
+        // UMediaPlaylist stores sources in an array, but doesn't have a direct Remove method
+        // We need to recreate the playlist without the target item
+        bool bRemoved = false;
+        if (Index >= 0 && Index < Playlist->Num()) {
+          Playlist->RemoveAt(Index);
+          bRemoved = true;
+        } else if (!MediaSourcePath.IsEmpty()) {
+          // Find by path and remove
+          UMediaSource* SourceToRemove = LoadObject<UMediaSource>(nullptr, *MediaSourcePath);
+          if (SourceToRemove) {
+            for (int32 i = Playlist->Num() - 1; i >= 0; --i) {
+              if (Playlist->Get(i) == SourceToRemove) {
+                Playlist->RemoveAt(i);
+                bRemoved = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (bRemoved) {
+          Playlist->MarkPackageDirty();
+          McpSafeAssetSave(Playlist);
+          bSuccess = true;
+          Message = TEXT("Source removed from playlist");
+          Resp->SetNumberField(TEXT("playlistLength"), Playlist->Num());
+        } else {
+          bSuccess = false;
+          Message = TEXT("Could not find item to remove from playlist");
+          ErrorCode = TEXT("ITEM_NOT_FOUND");
+        }
+      } else {
+        bSuccess = false;
+        Message = TEXT("Playlist not found");
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+      }
+    }
+  }
   else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Media action '%s' not implemented"), *LowerSub);

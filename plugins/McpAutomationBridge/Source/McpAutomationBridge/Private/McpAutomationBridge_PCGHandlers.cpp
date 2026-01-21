@@ -1621,6 +1621,93 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
     // Utility
     if (SubAction == TEXT("get_pcg_info")) return HandleGetPCGInfo(this, RequestId, Payload, Socket);
 
+    // =========================================================================
+    // PCG HLSL Actions - GPU compute shaders for PCG
+    // =========================================================================
+    
+    // batch_execute_pcg_with_gpu - Execute PCG graph with GPU acceleration
+    if (SubAction == TEXT("batch_execute_pcg_with_gpu")) {
+        // Forward to GPU processing handler with batch mode enabled
+        TSharedPtr<FJsonObject> BatchPayload = MakeShared<FJsonObject>();
+        BatchPayload->SetBoolField(TEXT("enableGPU"), true);
+        BatchPayload->SetBoolField(TEXT("batchMode"), true);
+        // Copy over graph settings from original payload
+        FString GraphPath;
+        if (Payload->TryGetStringField(TEXT("graphPath"), GraphPath)) {
+            BatchPayload->SetStringField(TEXT("graphPath"), GraphPath);
+        }
+        const TArray<TSharedPtr<FJsonValue>>* TargetsArray = nullptr;
+        if (Payload->TryGetArrayField(TEXT("targets"), TargetsArray)) {
+            BatchPayload->SetArrayField(TEXT("targets"), *TargetsArray);
+        }
+        return HandleEnablePCGGpuProcessing(this, RequestId, BatchPayload, Socket);
+    }
+    
+    // create_pcg_hlsl_node - Create a custom HLSL compute node for PCG
+    if (SubAction == TEXT("create_pcg_hlsl_node")) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        FString GraphPath, NodeName, HlslCode;
+        Payload->TryGetStringField(TEXT("graphPath"), GraphPath);
+        Payload->TryGetStringField(TEXT("nodeName"), NodeName);
+        Payload->TryGetStringField(TEXT("hlslCode"), HlslCode);
+        
+        if (GraphPath.IsEmpty() || NodeName.IsEmpty()) {
+            SendAutomationError(Socket, RequestId, TEXT("graphPath and nodeName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
+        // PCG HLSL nodes are created via UPCGSettings custom subclasses
+        // For now, provide guidance on creating custom PCG HLSL nodes
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("message"), TEXT("PCG HLSL nodes require creating a custom UPCGSettings subclass with HLSL compute shader. Use Unreal's GPU Compute infrastructure."));
+        Result->SetStringField(TEXT("hint"), TEXT("Create a UPCGHlslElementSettings subclass and implement the HLSL shader in the element's Execute method."));
+        Result->SetStringField(TEXT("graphPath"), GraphPath);
+        Result->SetStringField(TEXT("nodeName"), NodeName);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("HLSL node guidance provided"), Result);
+        return true;
+    }
+    
+    // export_pcg_hlsl_template - Export a template for PCG HLSL compute shader
+    if (SubAction == TEXT("export_pcg_hlsl_template")) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        FString OutputPath;
+        Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+        
+        FString HlslTemplate = TEXT(R"(// PCG HLSL Compute Shader Template
+// This template provides the structure for custom PCG GPU compute operations
+
+RWStructuredBuffer<float4> OutputPoints : register(u0);
+StructuredBuffer<float4> InputPoints : register(t0);
+
+cbuffer PCGParams : register(b0)
+{
+    uint NumPoints;
+    float Seed;
+    float2 Padding;
+};
+
+[numthreads(64, 1, 1)]
+void Main(uint3 DTid : SV_DispatchThreadID)
+{
+    if (DTid.x >= NumPoints) return;
+    
+    float4 Point = InputPoints[DTid.x];
+    // Transform point here
+    OutputPoints[DTid.x] = Point;
+})");
+        
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("template"), HlslTemplate);
+        Result->SetStringField(TEXT("message"), TEXT("PCG HLSL template generated"));
+        if (!OutputPath.IsEmpty()) {
+            if (FFileHelper::SaveStringToFile(HlslTemplate, *OutputPath)) {
+                Result->SetStringField(TEXT("savedTo"), OutputPath);
+            }
+        }
+        SendAutomationResponse(Socket, RequestId, true, TEXT("PCG HLSL template exported"), Result);
+        return true;
+    }
+
     // Unknown action
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown PCG subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));

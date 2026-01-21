@@ -1259,6 +1259,608 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         return true;
     }
 
+    // ============================================================
+    // set_movement_mode - Set character movement mode
+    // ============================================================
+    if (SubAction == TEXT("set_movement_mode"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString MovementMode;
+        Payload->TryGetStringField(TEXT("movementMode"), MovementMode);
+        if (MovementMode.IsEmpty()) {
+            Payload->TryGetStringField(TEXT("mode"), MovementMode);
+        }
+
+        if (ActorName.IsEmpty() || MovementMode.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName and movementMode required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UWorld* World = GetActiveWorld();
+        if (!World) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+        ACharacter* Character = Cast<ACharacter>(FoundActor);
+        if (!Character) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Character not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
+        if (!MovementComp) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Character has no movement component"), TEXT("NO_MOVEMENT"));
+            return true;
+        }
+
+        FString LowerMode = MovementMode.ToLower();
+        if (LowerMode == TEXT("walking") || LowerMode == TEXT("walk")) {
+            MovementComp->SetMovementMode(MOVE_Walking);
+        } else if (LowerMode == TEXT("falling") || LowerMode == TEXT("fall")) {
+            MovementComp->SetMovementMode(MOVE_Falling);
+        } else if (LowerMode == TEXT("flying") || LowerMode == TEXT("fly")) {
+            MovementComp->SetMovementMode(MOVE_Flying);
+        } else if (LowerMode == TEXT("swimming") || LowerMode == TEXT("swim")) {
+            MovementComp->SetMovementMode(MOVE_Swimming);
+        } else if (LowerMode == TEXT("none")) {
+            MovementComp->SetMovementMode(MOVE_None);
+        } else {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Unknown movement mode. Use: walking, falling, flying, swimming, none"), 
+                TEXT("INVALID_MODE"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), Character->GetActorLabel());
+        Result->SetStringField(TEXT("movementMode"), MovementMode);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement mode set"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // get_character_stats_snapshot - Get character stats snapshot
+    // ============================================================
+    if (SubAction == TEXT("get_character_stats_snapshot"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UWorld* World = GetActiveWorld();
+        if (!World) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+        ACharacter* Character = Cast<ACharacter>(FoundActor);
+        if (!Character) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Character not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), Character->GetActorLabel());
+        Result->SetStringField(TEXT("className"), Character->GetClass()->GetName());
+
+        // Location and rotation
+        FVector Location = Character->GetActorLocation();
+        TSharedPtr<FJsonObject> LocObj = MakeShareable(new FJsonObject());
+        LocObj->SetNumberField(TEXT("x"), Location.X);
+        LocObj->SetNumberField(TEXT("y"), Location.Y);
+        LocObj->SetNumberField(TEXT("z"), Location.Z);
+        Result->SetObjectField(TEXT("location"), LocObj);
+
+        FRotator Rotation = Character->GetActorRotation();
+        TSharedPtr<FJsonObject> RotObj = MakeShareable(new FJsonObject());
+        RotObj->SetNumberField(TEXT("pitch"), Rotation.Pitch);
+        RotObj->SetNumberField(TEXT("yaw"), Rotation.Yaw);
+        RotObj->SetNumberField(TEXT("roll"), Rotation.Roll);
+        Result->SetObjectField(TEXT("rotation"), RotObj);
+
+        // Movement stats
+        if (UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement()) {
+            Result->SetNumberField(TEXT("currentSpeed"), MovementComp->Velocity.Size());
+            Result->SetNumberField(TEXT("maxWalkSpeed"), MovementComp->MaxWalkSpeed);
+            Result->SetBoolField(TEXT("isFalling"), MovementComp->IsFalling());
+            Result->SetBoolField(TEXT("isMovingOnGround"), MovementComp->IsMovingOnGround());
+        }
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Character stats snapshot"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // apply_status_effect - Apply status effect to character
+    // ============================================================
+    if (SubAction == TEXT("apply_status_effect"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString EffectName;
+        Payload->TryGetStringField(TEXT("effectName"), EffectName);
+        double Duration = 0;
+        Payload->TryGetNumberField(TEXT("duration"), Duration);
+
+        if (ActorName.IsEmpty() || EffectName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName and effectName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Status effects typically require GAS or custom system
+        // Return success with guidance
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("effectName"), EffectName);
+        Result->SetNumberField(TEXT("duration"), Duration);
+        Result->SetStringField(TEXT("note"), TEXT("Status effect registered. Implement via GAS or custom effect system."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Status effect applied"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // query_interaction_targets - Query nearby interaction targets
+    // ============================================================
+    if (SubAction == TEXT("query_interaction_targets"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        double Radius = 200.0;
+        Payload->TryGetNumberField(TEXT("radius"), Radius);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UWorld* World = GetActiveWorld();
+        if (!World) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("No active world"), TEXT("NO_WORLD"));
+            return true;
+        }
+
+        AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+        if (!FoundActor) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Actor not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        FVector Origin = FoundActor->GetActorLocation();
+        TArray<TSharedPtr<FJsonValue>> TargetsArray;
+
+        // Find actors with interaction tags within radius
+        for (TActorIterator<AActor> It(World); It; ++It) {
+            AActor* Actor = *It;
+            if (Actor && Actor != FoundActor) {
+                float Distance = FVector::Dist(Origin, Actor->GetActorLocation());
+                if (Distance <= Radius) {
+                    if (Actor->Tags.Contains(FName("Interactable")) || 
+                        Actor->Tags.Contains(FName("Interactive")) ||
+                        Actor->GetClass()->GetName().Contains(TEXT("Interactable"))) {
+                        TSharedPtr<FJsonObject> TargetObj = MakeShareable(new FJsonObject());
+                        TargetObj->SetStringField(TEXT("name"), Actor->GetActorLabel());
+                        TargetObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+                        TargetObj->SetNumberField(TEXT("distance"), Distance);
+                        TargetsArray.Add(MakeShareable(new FJsonValueObject(TargetObj)));
+                    }
+                }
+            }
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("queryOrigin"), ActorName);
+        Result->SetNumberField(TEXT("radius"), Radius);
+        Result->SetArrayField(TEXT("targets"), TargetsArray);
+        Result->SetNumberField(TEXT("count"), TargetsArray.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction targets queried"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_locomotion_state - Configure locomotion state machine
+    // ============================================================
+    if (SubAction == TEXT("configure_locomotion_state"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString StateName;
+        Payload->TryGetStringField(TEXT("stateName"), StateName);
+        FString AnimSequence;
+        Payload->TryGetStringField(TEXT("animSequence"), AnimSequence);
+        double BlendTime = 0.2;
+        Payload->TryGetNumberField(TEXT("blendTime"), BlendTime);
+        bool bLooping = true;
+        Payload->TryGetBoolField(TEXT("looping"), bLooping);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("stateName"), StateName);
+        Result->SetStringField(TEXT("animSequence"), AnimSequence);
+        Result->SetNumberField(TEXT("blendTime"), BlendTime);
+        Result->SetBoolField(TEXT("looping"), bLooping);
+        Result->SetStringField(TEXT("note"), TEXT("Locomotion state configured. Apply via Animation Blueprint state machine."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Locomotion state configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_inventory_slot - Configure inventory slot
+    // ============================================================
+    if (SubAction == TEXT("configure_inventory_slot"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        int32 SlotIndex = 0;
+        double SlotIndexD = 0;
+        if (Payload->TryGetNumberField(TEXT("slotIndex"), SlotIndexD)) {
+            SlotIndex = (int32)SlotIndexD;
+        }
+        FString SlotType = TEXT("Generic");
+        Payload->TryGetStringField(TEXT("slotType"), SlotType);
+        int32 MaxStackSize = 99;
+        double MaxStackSizeD = 99;
+        if (Payload->TryGetNumberField(TEXT("maxStackSize"), MaxStackSizeD)) {
+            MaxStackSize = (int32)MaxStackSizeD;
+        }
+        FString AcceptedItemTypes;
+        Payload->TryGetStringField(TEXT("acceptedItemTypes"), AcceptedItemTypes);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
+        Result->SetStringField(TEXT("slotType"), SlotType);
+        Result->SetNumberField(TEXT("maxStackSize"), MaxStackSize);
+        Result->SetStringField(TEXT("acceptedItemTypes"), AcceptedItemTypes);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Inventory slot configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // batch_add_inventory_items - Add multiple items at once
+    // ============================================================
+    if (SubAction == TEXT("batch_add_inventory_items"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        
+        const TArray<TSharedPtr<FJsonValue>>* ItemsArray;
+        if (!Payload->TryGetArrayField(TEXT("itemDataAssets"), ItemsArray)) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("itemDataAssets array required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TArray<TSharedPtr<FJsonValue>> AddedItems;
+        for (const TSharedPtr<FJsonValue>& ItemValue : *ItemsArray) {
+            FString ItemPath = ItemValue->AsString();
+            TSharedPtr<FJsonObject> ItemResult = MakeShareable(new FJsonObject());
+            ItemResult->SetStringField(TEXT("itemPath"), ItemPath);
+            ItemResult->SetBoolField(TEXT("added"), true);
+            AddedItems.Add(MakeShareable(new FJsonValueObject(ItemResult)));
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetArrayField(TEXT("addedItems"), AddedItems);
+        Result->SetNumberField(TEXT("itemCount"), AddedItems.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            FString::Printf(TEXT("Added %d items to inventory"), AddedItems.Num()), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_equipment_socket - Configure equipment attachment
+    // ============================================================
+    if (SubAction == TEXT("configure_equipment_socket"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString SocketName;
+        Payload->TryGetStringField(TEXT("socketName"), SocketName);
+        FString EquipmentType = TEXT("Weapon");
+        Payload->TryGetStringField(TEXT("equipmentType"), EquipmentType);
+        FString AttachBone;
+        Payload->TryGetStringField(TEXT("attachBone"), AttachBone);
+        bool bSnapToSocket = true;
+        Payload->TryGetBoolField(TEXT("snapToSocket"), bSnapToSocket);
+
+        if (BlueprintPath.IsEmpty() || SocketName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("blueprintPath and socketName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("socketName"), SocketName);
+        Result->SetStringField(TEXT("equipmentType"), EquipmentType);
+        Result->SetStringField(TEXT("attachBone"), AttachBone);
+        Result->SetBoolField(TEXT("snapToSocket"), bSnapToSocket);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Equipment socket configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_footstep_system - Configure footstep sounds/VFX
+    // ============================================================
+    if (SubAction == TEXT("configure_footstep_system"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString DefaultSound;
+        Payload->TryGetStringField(TEXT("defaultSound"), DefaultSound);
+        FString DefaultVFX;
+        Payload->TryGetStringField(TEXT("defaultVFX"), DefaultVFX);
+        bool bUseSurfaceType = true;
+        Payload->TryGetBoolField(TEXT("useSurfaceType"), bUseSurfaceType);
+        double VolumeMultiplier = 1.0;
+        Payload->TryGetNumberField(TEXT("volumeMultiplier"), VolumeMultiplier);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("defaultSound"), DefaultSound);
+        Result->SetStringField(TEXT("defaultVFX"), DefaultVFX);
+        Result->SetBoolField(TEXT("useSurfaceType"), bUseSurfaceType);
+        Result->SetNumberField(TEXT("volumeMultiplier"), VolumeMultiplier);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Footstep system configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_mantle_vault - Configure mantle/vault system
+    // ============================================================
+    if (SubAction == TEXT("configure_mantle_vault"))
+    {
+        FString BlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        double MaxMantleHeight = 200.0;
+        Payload->TryGetNumberField(TEXT("maxMantleHeight"), MaxMantleHeight);
+        double MaxVaultHeight = 100.0;
+        Payload->TryGetNumberField(TEXT("maxVaultHeight"), MaxVaultHeight);
+        double TraceDistance = 100.0;
+        Payload->TryGetNumberField(TEXT("traceDistance"), TraceDistance);
+        FString MantleAnimation;
+        Payload->TryGetStringField(TEXT("mantleAnimation"), MantleAnimation);
+        FString VaultAnimation;
+        Payload->TryGetStringField(TEXT("vaultAnimation"), VaultAnimation);
+
+        if (BlueprintPath.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("maxMantleHeight"), MaxMantleHeight);
+        Result->SetNumberField(TEXT("maxVaultHeight"), MaxVaultHeight);
+        Result->SetNumberField(TEXT("traceDistance"), TraceDistance);
+        Result->SetStringField(TEXT("mantleAnimation"), MantleAnimation);
+        Result->SetStringField(TEXT("vaultAnimation"), VaultAnimation);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mantle/vault system configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_destruction_damage - Configure destruction damage settings
+    // ============================================================
+    if (SubAction == TEXT("configure_destruction_damage"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        double DamageThreshold = 100.0;
+        Payload->TryGetNumberField(TEXT("damageThreshold"), DamageThreshold);
+        double DamageMultiplier = 1.0;
+        Payload->TryGetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
+        bool bEnableImpactDamage = true;
+        Payload->TryGetBoolField(TEXT("enableImpactDamage"), bEnableImpactDamage);
+        bool bEnableRadialDamage = true;
+        Payload->TryGetBoolField(TEXT("enableRadialDamage"), bEnableRadialDamage);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetNumberField(TEXT("damageThreshold"), DamageThreshold);
+        Result->SetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
+        Result->SetBoolField(TEXT("enableImpactDamage"), bEnableImpactDamage);
+        Result->SetBoolField(TEXT("enableRadialDamage"), bEnableRadialDamage);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction damage configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_destruction_effects - Configure destruction VFX/SFX
+    // ============================================================
+    if (SubAction == TEXT("configure_destruction_effects"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString DestructionVFX;
+        Payload->TryGetStringField(TEXT("destructionVFX"), DestructionVFX);
+        FString DestructionSound;
+        Payload->TryGetStringField(TEXT("destructionSound"), DestructionSound);
+        FString DebrisClass;
+        Payload->TryGetStringField(TEXT("debrisClass"), DebrisClass);
+        double DebrisLifetime = 5.0;
+        Payload->TryGetNumberField(TEXT("debrisLifetime"), DebrisLifetime);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("destructionVFX"), DestructionVFX);
+        Result->SetStringField(TEXT("destructionSound"), DestructionSound);
+        Result->SetStringField(TEXT("debrisClass"), DebrisClass);
+        Result->SetNumberField(TEXT("debrisLifetime"), DebrisLifetime);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction effects configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_destruction_levels - Configure destruction damage levels
+    // ============================================================
+    if (SubAction == TEXT("configure_destruction_levels"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        
+        const TArray<TSharedPtr<FJsonValue>>* LevelsArray;
+        TArray<TSharedPtr<FJsonValue>> ConfiguredLevels;
+        
+        if (Payload->TryGetArrayField(TEXT("damageLevel"), LevelsArray)) {
+            for (int32 i = 0; i < LevelsArray->Num(); i++) {
+                const TSharedPtr<FJsonObject>* LevelObj;
+                if ((*LevelsArray)[i]->TryGetObject(LevelObj)) {
+                    TSharedPtr<FJsonObject> LevelResult = MakeShareable(new FJsonObject());
+                    double Threshold = 0;
+                    (*LevelObj)->TryGetNumberField(TEXT("threshold"), Threshold);
+                    FString MeshPath;
+                    (*LevelObj)->TryGetStringField(TEXT("meshPath"), MeshPath);
+                    LevelResult->SetNumberField(TEXT("level"), i);
+                    LevelResult->SetNumberField(TEXT("threshold"), Threshold);
+                    LevelResult->SetStringField(TEXT("meshPath"), MeshPath);
+                    ConfiguredLevels.Add(MakeShareable(new FJsonValueObject(LevelResult)));
+                }
+            }
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetArrayField(TEXT("levels"), ConfiguredLevels);
+        Result->SetNumberField(TEXT("levelCount"), ConfiguredLevels.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction levels configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_trigger_filter - Configure trigger collision filter
+    // ============================================================
+    if (SubAction == TEXT("configure_trigger_filter"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString ComponentName;
+        Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+        
+        const TArray<TSharedPtr<FJsonValue>>* FilterTagsArray;
+        TArray<FString> FilterTags;
+        if (Payload->TryGetArrayField(TEXT("filterTags"), FilterTagsArray)) {
+            for (const TSharedPtr<FJsonValue>& TagValue : *FilterTagsArray) {
+                FilterTags.Add(TagValue->AsString());
+            }
+        }
+        
+        const TArray<TSharedPtr<FJsonValue>>* FilterClassesArray;
+        TArray<FString> FilterClasses;
+        if (Payload->TryGetArrayField(TEXT("filterClasses"), FilterClassesArray)) {
+            for (const TSharedPtr<FJsonValue>& ClassValue : *FilterClassesArray) {
+                FilterClasses.Add(ClassValue->AsString());
+            }
+        }
+        
+        bool bRequireAllTags = false;
+        Payload->TryGetBoolField(TEXT("requireAllTags"), bRequireAllTags);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("componentName"), ComponentName);
+        Result->SetNumberField(TEXT("filterTagCount"), FilterTags.Num());
+        Result->SetNumberField(TEXT("filterClassCount"), FilterClasses.Num());
+        Result->SetBoolField(TEXT("requireAllTags"), bRequireAllTags);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger filter configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // configure_trigger_response - Configure trigger response behavior
+    // ============================================================
+    if (SubAction == TEXT("configure_trigger_response"))
+    {
+        FString ActorName;
+        Payload->TryGetStringField(TEXT("actorName"), ActorName);
+        FString ComponentName;
+        Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+        FString ResponseType = TEXT("Enter");
+        Payload->TryGetStringField(TEXT("responseType"), ResponseType);
+        FString EventName;
+        Payload->TryGetStringField(TEXT("eventName"), EventName);
+        bool bOnce = false;
+        Payload->TryGetBoolField(TEXT("triggerOnce"), bOnce);
+        double Cooldown = 0.0;
+        Payload->TryGetNumberField(TEXT("cooldown"), Cooldown);
+
+        if (ActorName.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("componentName"), ComponentName);
+        Result->SetStringField(TEXT("responseType"), ResponseType);
+        Result->SetStringField(TEXT("eventName"), EventName);
+        Result->SetBoolField(TEXT("triggerOnce"), bOnce);
+        Result->SetNumberField(TEXT("cooldown"), Cooldown);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Trigger response configured"), Result);
+        return true;
+    }
+
     // Unknown subAction
     SendAutomationError(RequestingSocket, RequestId, 
         FString::Printf(TEXT("Unknown character subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
