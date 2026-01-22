@@ -139,10 +139,89 @@ static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, cons
 // Helper Functions
 // ============================================================================
 
+/**
+ * Load a PCG graph by path, supporting both on-disk and in-memory assets.
+ * 
+ * In UE 5.7+, McpSafeAssetSave does not immediately save to disk (to avoid crashes).
+ * This means newly created graphs may exist in memory and in the Asset Registry
+ * but not yet on disk. This function handles both cases:
+ * 1. First tries LoadObject for on-disk assets
+ * 2. Falls back to Asset Registry lookup for in-memory assets
+ * 3. Tries FindObject as final fallback
+ */
 static UPCGGraph* LoadPCGGraph(const FString& GraphPath)
 {
     if (GraphPath.IsEmpty()) return nullptr;
-    return LoadObject<UPCGGraph>(nullptr, *GraphPath);
+    
+    // 1. Try standard LoadObject (works for saved-to-disk assets)
+    UPCGGraph* Graph = LoadObject<UPCGGraph>(nullptr, *GraphPath);
+    if (Graph) return Graph;
+    
+    // 2. Try Asset Registry lookup (works for in-memory, not-yet-saved assets)
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+    
+    // The path might be a package path or object path, try both
+    FString PackagePath = GraphPath;
+    FString ObjectName;
+    
+    // Extract object name if path contains a dot (object path format: /Game/Path.ObjectName)
+    int32 DotIndex = GraphPath.Find(TEXT("."), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+    if (DotIndex != INDEX_NONE)
+    {
+        PackagePath = GraphPath.Left(DotIndex);
+        ObjectName = GraphPath.Mid(DotIndex + 1);
+    }
+    else
+    {
+        // For package paths, the object name is typically the last path segment
+        int32 LastSlash = GraphPath.Find(TEXT("/"), ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+        if (LastSlash != INDEX_NONE)
+        {
+            ObjectName = GraphPath.Mid(LastSlash + 1);
+        }
+    }
+    
+    // Check Asset Registry
+    FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(GraphPath));
+    if (!AssetData.IsValid())
+    {
+        // Try with package.object format
+        FString FullObjectPath = PackagePath + TEXT(".") + ObjectName;
+        AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(FullObjectPath));
+    }
+    
+    if (AssetData.IsValid())
+    {
+        // Asset exists in registry, try to get the loaded asset
+        Graph = Cast<UPCGGraph>(AssetData.GetAsset());
+        if (Graph) return Graph;
+    }
+    
+    // 3. Final fallback: FindObject for already-loaded but unsaved assets
+    // Try package path with object name
+    FString FullPath = PackagePath + TEXT(".") + ObjectName;
+    Graph = FindObject<UPCGGraph>(nullptr, *FullPath);
+    if (Graph) return Graph;
+    
+    // Try just the package path (object might be named differently)
+    UPackage* Package = FindPackage(nullptr, *PackagePath);
+    if (Package)
+    {
+        Graph = FindObject<UPCGGraph>(Package, *ObjectName);
+        if (Graph) return Graph;
+        
+        // Search for any PCG graph in the package
+        for (TObjectIterator<UPCGGraph> It; It; ++It)
+        {
+            if (It->GetOutermost() == Package)
+            {
+                return *It;
+            }
+        }
+    }
+    
+    return nullptr;
 }
 
 static UPCGNode* FindNodeById(UPCGGraph* Graph, const FString& NodeId)
@@ -1627,15 +1706,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
     
     // batch_execute_pcg_with_gpu - Execute PCG graph with GPU acceleration
     if (SubAction == TEXT("batch_execute_pcg_with_gpu")) {
-        // Forward to GPU processing handler with batch mode enabled
+        // Handle both graphPath (single) and graphPaths (array) from TS
         TSharedPtr<FJsonObject> BatchPayload = MakeShared<FJsonObject>();
         BatchPayload->SetBoolField(TEXT("enableGPU"), true);
         BatchPayload->SetBoolField(TEXT("batchMode"), true);
-        // Copy over graph settings from original payload
-        FString GraphPath;
-        if (Payload->TryGetStringField(TEXT("graphPath"), GraphPath)) {
-            BatchPayload->SetStringField(TEXT("graphPath"), GraphPath);
+        
+        // Try graphPaths array first (TS sends this)
+        const TArray<TSharedPtr<FJsonValue>>* GraphPathsArray = nullptr;
+        if (Payload->TryGetArrayField(TEXT("graphPaths"), GraphPathsArray) && GraphPathsArray && GraphPathsArray->Num() > 0) {
+            // Use first graph path for now (PCG GPU processing is per-graph)
+            FString FirstPath;
+            if ((*GraphPathsArray)[0]->TryGetString(FirstPath)) {
+                BatchPayload->SetStringField(TEXT("graphPath"), FirstPath);
+            }
+            BatchPayload->SetArrayField(TEXT("graphPaths"), *GraphPathsArray);
         }
+        // Fallback to single graphPath
+        else {
+            FString GraphPath;
+            if (Payload->TryGetStringField(TEXT("graphPath"), GraphPath)) {
+                BatchPayload->SetStringField(TEXT("graphPath"), GraphPath);
+            }
+        }
+        
         const TArray<TSharedPtr<FJsonValue>>* TargetsArray = nullptr;
         if (Payload->TryGetArrayField(TEXT("targets"), TargetsArray)) {
             BatchPayload->SetArrayField(TEXT("targets"), *TargetsArray);
@@ -1651,9 +1744,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         Payload->TryGetStringField(TEXT("nodeName"), NodeName);
         Payload->TryGetStringField(TEXT("hlslCode"), HlslCode);
         
-        if (GraphPath.IsEmpty() || NodeName.IsEmpty()) {
-            SendAutomationError(Socket, RequestId, TEXT("graphPath and nodeName required"), TEXT("INVALID_ARGUMENT"));
+        // Require graphPath and hlslCode (nodeName can default)
+        if (GraphPath.IsEmpty() || HlslCode.IsEmpty()) {
+            SendAutomationError(Socket, RequestId, TEXT("graphPath and hlslCode required"), TEXT("INVALID_ARGUMENT"));
             return true;
+        }
+        
+        // Default nodeName if not provided
+        if (NodeName.IsEmpty()) {
+            NodeName = TEXT("CustomHLSLNode");
         }
         
         // PCG HLSL nodes are created via UPCGSettings custom subclasses

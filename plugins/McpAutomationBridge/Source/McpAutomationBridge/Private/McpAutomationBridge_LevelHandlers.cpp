@@ -373,17 +373,59 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         bSaved = FEditorFileUtils::SaveMap(World, SavePath);
       }
 #endif
-      if (bSaved) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetStringField(TEXT("levelPath"), SavePath);
-        SendAutomationResponse(
-            RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
-            FString());
-      } else {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Failed to save level as"), nullptr,
-                               TEXT("SAVE_FAILED"));
+      // UE 5.7 + Intel GPU Workaround: World Partition saves trigger massive
+      // recursive FlushRenderingCommands which can exhaust GPU resources.
+      // Defer the response by ~200ms to let rendering thread stabilize,
+      // preventing D3D12 swapchain creation failures (E_ACCESSDENIED 0x80070005).
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetStringField(TEXT("levelPath"), SavePath);
+      Resp->SetBoolField(TEXT("success"), bSaved);
+      
+      // Capture for deferred response
+      TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf = this;
+      const FString CapturedRequestId = RequestId;
+      const bool bCapturedSaved = bSaved;
+      const FString CapturedSavePath = SavePath;
+      TSharedPtr<FMcpBridgeWebSocket> CapturedSocket = RequestingSocket;
+      TSharedPtr<FJsonObject> CapturedResp = Resp;
+      
+      // Defer response to allow rendering commands to settle after WP save
+      if (GEditor)
+      {
+        FTimerDelegate ResponseDelegate;
+        ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, bCapturedSaved, CapturedSavePath, CapturedResp]()
+        {
+          if (UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get())
+          {
+            if (bCapturedSaved) {
+              Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, true,
+                                 FString::Printf(TEXT("Level saved as %s"), *CapturedSavePath),
+                                 CapturedResp, FString());
+            } else {
+              Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, false,
+                                 TEXT("Failed to save level as"), nullptr,
+                                 TEXT("SAVE_FAILED"));
+            }
+          }
+        });
+        
+        FTimerHandle TempHandle;
+        // Use 200ms for World Partition (more than 100ms for regular saves)
+        GEditor->GetTimerManager()->SetTimer(TempHandle, ResponseDelegate, 0.2f, false);
+      }
+      else
+      {
+        // Fallback: send immediately if timer not available
+        if (bSaved) {
+          SendAutomationResponse(
+              RequestingSocket, RequestId, true,
+              FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
+              FString());
+        } else {
+          SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 TEXT("Failed to save level as"), nullptr,
+                                 TEXT("SAVE_FAILED"));
+        }
       }
       return true;
     }
