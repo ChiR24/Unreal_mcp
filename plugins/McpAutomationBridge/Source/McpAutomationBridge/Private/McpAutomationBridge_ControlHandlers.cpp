@@ -5,6 +5,7 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpConnectionManager.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/DateTime.h"
 #include "Misc/Guid.h"

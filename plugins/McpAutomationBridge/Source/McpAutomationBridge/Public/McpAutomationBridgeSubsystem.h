@@ -140,6 +140,11 @@ public:
    */
   void InvalidateActorCache();
 
+  /**
+   * Get the connection manager for telemetry access.
+   */
+  TSharedPtr<class FMcpConnectionManager> GetConnectionManager() const { return ConnectionManager; }
+
 private:
     // Batch execution support
     static TArray<TSharedPtr<FJsonObject>>* CapturedResponses;
@@ -421,6 +426,13 @@ private:
   HandleGenerateThumbnail(const FString &RequestId, const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Asset deletion handlers
+  bool HandleDeleteAsset(const FString &RequestId, const FString &Action,
+                         const TSharedPtr<FJsonObject> &Payload,
+                         TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDeleteAssets(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Nanite Handlers
   bool HandleEnableNaniteMesh(const FString &RequestId, const FString &Action,
                               const TSharedPtr<FJsonObject> &Payload,
@@ -529,6 +541,22 @@ private:
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Niagara runtime handlers
+  bool HandleActivateNiagara(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDeactivateNiagara(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleResetNiagara(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetNiagaraParameters(const FString &RequestId, const FString &Action,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetNiagaraVariable(const FString &RequestId, const FString &Action,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Animation blueprint handlers
   bool HandlePlayAnimMontage(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,

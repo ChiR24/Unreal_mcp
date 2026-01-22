@@ -47,6 +47,11 @@ public:
 	void StartRequestTelemetry(const FString& RequestId, const FString& Action);
 	void RecordAutomationTelemetry(const FString& RequestId, bool bSuccess, const FString& Message, const FString& ErrorCode);
 
+	// Telemetry accessors for control_editor actions
+	TSharedPtr<FJsonObject> GetActionStatistics() const;
+	TSharedPtr<FJsonObject> GetOperationHistory(int32 Limit = 50) const;
+	TSharedPtr<FJsonObject> GetLastErrorDetails() const;
+
 	bool Tick(float DeltaTime);
 
 private:
@@ -112,10 +117,39 @@ private:
 		double LastUpdatedSeconds = 0.0;
 	};
 
+	/** Operation history entry for get_operation_history action */
+	struct FMcpOperationHistoryEntry
+	{
+		FString Action;
+		FString RequestId;
+		bool bSuccess = false;
+		FString Message;
+		FString ErrorCode;
+		double TimestampSeconds = 0.0;
+	};
+
+	/** Last error details for get_last_error_details action */
+	struct FMcpLastErrorDetails
+	{
+		FString ErrorMessage;
+		FString ErrorCode;
+		FString Action;
+		FString RequestId;
+		double TimestampSeconds = 0.0;
+	};
+
 	TMap<FString, FAutomationRequestTelemetry> ActiveRequestTelemetry;
 	TMap<FString, FAutomationActionStats> AutomationActionTelemetry;
 	double TelemetrySummaryIntervalSeconds = 120.0;
 	double LastTelemetrySummaryLogSeconds = 0.0;
+
+	/** Ring buffer for operation history (most recent operations) */
+	TArray<FMcpOperationHistoryEntry> OperationHistory;
+	static constexpr int32 MaxOperationHistorySize = 100;
+
+	/** Last error details for debugging */
+	FMcpLastErrorDetails LastErrorDetails;
+	double SessionStartTimeSeconds = 0.0;
 
 	mutable FCriticalSection PendingRequestsMutex;
 };

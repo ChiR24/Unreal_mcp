@@ -1399,16 +1399,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     // Parse falloff mode
+    // Note: In UE 5.7, FalloffMode uses EAttenuationDistanceModel (same values, different name)
     if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
-      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Logarithmic;
+      Attenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
     } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
-      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Inverse;
+      Attenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
     } else if (FalloffMode.Equals(TEXT("LogReverse"), ESearchCase::IgnoreCase)) {
-      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::LogReverse;
+      Attenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::LogReverse;
     } else if (FalloffMode.Equals(TEXT("Natural"), ESearchCase::IgnoreCase)) {
-      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::NaturalSound;
+      Attenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
     } else {
-      Attenuation->Attenuation.FalloffMode = EAttenuationDistanceModel::Linear;
+      Attenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
     }
 
     McpSafeAssetSave(Attenuation);

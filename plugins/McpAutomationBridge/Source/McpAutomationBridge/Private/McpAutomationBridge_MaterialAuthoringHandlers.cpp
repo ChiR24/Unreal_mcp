@@ -10,6 +10,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -69,6 +70,14 @@
 #define MCP_HAS_LANDSCAPE_LAYER 1
 #else
 #define MCP_HAS_LANDSCAPE_LAYER 0
+#endif
+
+// Landscape material expressions
+#if __has_include("Materials/MaterialExpressionLandscapeLayerBlend.h")
+#include "Materials/MaterialExpressionLandscapeLayerBlend.h"
+#define MCP_HAS_LANDSCAPE_MATERIAL_EXPRESSIONS 1
+#else
+#define MCP_HAS_LANDSCAPE_MATERIAL_EXPRESSIONS 0
 #endif
 #endif
 
@@ -3010,8 +3019,13 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     TArray<TSharedPtr<FJsonValue>> ParametersArray;
 
     // Get used textures
+    // UE 5.7: GetUsedTextures signature changed to use TOptional parameters
     TArray<UTexture*> UsedTextures;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    Material->GetUsedTextures(UsedTextures, TOptional<EMaterialQualityLevel::Type>(), TOptional<EShaderPlatform>());
+#else
     Material->GetUsedTextures(UsedTextures, EMaterialQualityLevel::Num, true, GMaxRHIFeatureLevel, true);
+#endif
     for (UTexture* Tex : UsedTextures) {
       if (Tex) {
         TexturesArray.Add(MakeShared<FJsonValueString>(Tex->GetPathName()));
@@ -3232,7 +3246,12 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     if (bIncludeTextures) {
       TArray<TSharedPtr<FJsonValue>> TexturesArray;
       TArray<UTexture*> UsedTextures;
+      // UE 5.7: GetUsedTextures signature changed to use TOptional parameters
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+      Material->GetUsedTextures(UsedTextures, TOptional<EMaterialQualityLevel::Type>(), TOptional<EShaderPlatform>());
+#else
       Material->GetUsedTextures(UsedTextures, EMaterialQualityLevel::Num, true, GMaxRHIFeatureLevel, true);
+#endif
       for (UTexture* Tex : UsedTextures) {
         if (Tex) {
           TexturesArray.Add(MakeShared<FJsonValueString>(Tex->GetPathName()));

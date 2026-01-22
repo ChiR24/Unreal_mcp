@@ -2401,8 +2401,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     // ============================================================
     if (SubAction == TEXT("configure_block_parry"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         double BlockAngle = 90.0;
         Payload->TryGetNumberField(TEXT("blockAngle"), BlockAngle);
         double ParryWindow = 0.2;
@@ -2412,14 +2412,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         bool bPerfectBlock = true;
         Payload->TryGetBoolField(TEXT("enablePerfectBlock"), bPerfectBlock);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetNumberField(TEXT("blockAngle"), BlockAngle);
         Result->SetNumberField(TEXT("parryWindow"), ParryWindow);
         Result->SetNumberField(TEXT("blockDamageReduction"), BlockDamageReduction);
@@ -2463,8 +2463,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     // ============================================================
     if (SubAction == TEXT("configure_melee_trace"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString ComponentName;
         Payload->TryGetStringField(TEXT("componentName"), ComponentName);
         double TraceRadius = 5.0;
@@ -2477,14 +2477,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TraceChannel = TEXT("Pawn");
         Payload->TryGetStringField(TEXT("traceChannel"), TraceChannel);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
         Result->SetNumberField(TEXT("tracePoints"), TracePoints);
@@ -2498,8 +2498,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     // ============================================================
     if (SubAction == TEXT("configure_weapon_trace"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString StartSocket;
         Payload->TryGetStringField(TEXT("startSocket"), StartSocket);
         FString EndSocket;
@@ -2509,14 +2509,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         bool bDebugDraw = false;
         Payload->TryGetBoolField(TEXT("debugDraw"), bDebugDraw);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("startSocket"), StartSocket);
         Result->SetStringField(TEXT("endSocket"), EndSocket);
         Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
@@ -2530,8 +2530,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     // ============================================================
     if (SubAction == TEXT("create_combo_sequence"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString ComboName;
         Payload->TryGetStringField(TEXT("comboName"), ComboName);
         double ComboWindow = 0.5;
@@ -2558,14 +2558,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             }
         }
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("comboName"), ComboName);
         Result->SetNumberField(TEXT("comboWindow"), ComboWindow);
         Result->SetBoolField(TEXT("resetOnMiss"), bResetOnMiss);

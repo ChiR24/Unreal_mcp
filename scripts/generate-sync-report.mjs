@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 /**
- * Generate synchronization report between TS and C++ actions
+ * Generate 3-Way Synchronization Report: TS ↔ C++ ↔ Live MCP Server
+ * 
+ * This script compares actions across three sources:
+ * 1. TypeScript definitions (static source)
+ * 2. C++ handler implementations (static source)
+ * 3. Live MCP server (runtime - what LLMs actually see)
  * 
  * Usage: npm run docs:sync-report
  * Output: docs/action-sync-report.md
@@ -8,28 +13,133 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+import fs from 'fs/promises';
 
-// Import tool definitions
+// MCP SDK imports for live server connection
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+// Import tool definitions (static TS)
 import { consolidatedToolDefinitions } from '../dist/tools/consolidated-tool-definitions.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(__dirname, '..');
 const handlersDir = join(__dirname, '..', 'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
 const outputPath = join(__dirname, '..', 'docs', 'action-sync-report.md');
 
 const ACTION_VARIABLES = new Set([
   'subaction', 'lowersubaction', 'lowersub', 'lower', 'actiontype',
   'action', 'operation', 'lowerpredicate', 'lowertype', 'lowerquality', 'lowermode',
-  'effectiveaction',  // Used in MetaSoundHandlers and other handlers with action normalization
+  'effectiveaction',
 ]);
 
+// ============================================================================
+// DYNAMIC FALSE POSITIVE DETECTION
+// ============================================================================
+// Instead of hardcoding every false positive, use pattern-based detection
+// that identifies characteristics of non-action strings.
+
+/**
+ * Patterns that indicate a string is NOT a valid action name
+ */
+const FALSE_POSITIVE_PATTERNS = {
+  // Tool name pattern: matches our tool naming convention
+  toolNames: /^(manage|control|build|test)_[a-z_]+$/,
+  
+  // Primitive type names
+  primitiveTypes: /^(float|int|int32|int64|double|bool|boolean|byte|string|text|name|object|class|void|auto)$/,
+  
+  // UE type patterns
+  ueTypes: /^(actor|pawn|character|vector|rotator|transform|color|linear_color)$/,
+  
+  // Single generic verbs - REMOVED from filtering
+  // These ARE valid actions when used as tool sub-actions (e.g., manage_level action:"load")
+  // The old pattern was: /^(add|remove|get|set|list|create|delete|update|save|load|find|search|hide|show|play|stop|pause|resume)$/
+  // Now we don't filter these because they're legitimate tool actions
+  genericVerbs: /^$/, // Empty pattern - don't filter generic verbs
+  
+  // Audio/synth node types (MetaSound, etc.)
+  audioNodes: /^(adsr|oscillator|envelope|filter|mixer|gain|delay|reverb|chorus|flanger|phaser|compressor|limiter|noise|decay|sine|saw|sawtooth|square|triangle|whitenoise|audioinput|audiooutput|floatinput|lowpass|highpass|bandpass|lpf|hpf|bpf|input|output|parameter)$/i,
+  
+  // Material expression patterns
+  materialExpressions: /^(multiply|divide|add|subtract|lerp|linearinterpolate|clamp|power|pow|frac|fraction|oneminus|fresnel|constant|constant[234]vector|scalar|scalarparameter|vectorparameter|textureparameter|texturesample|texturesampleparameter2d|texcoord|texturecoordinate|uv|panner|vertexnormal|vertexnormalws|worldposition|reflectionvector|pixeldepth|depth|functioncall|materialfunctioncall|custom|customexpression|staticswitch|staticswitchparameter|switch|if|rgb|rgba|floatparam|boolparam|colorparam|float[234]|mul|div|sub|append|appendvector|hlsl)$/i,
+  
+  // View modes (editor visualization)
+  viewModes: /^(lit|unlit|wireframe|shadercomplexity|lightcomplexity|lightingonly|lightmapdensity|reflectionoverride|stationarylightoverlap|detaillighting)$/,
+  
+  // GAS modifier operations
+  gasModifiers: /^(additive|multiplicative|division|override)$/,
+  
+  // Locomotion/movement modes
+  locomotionModes: /^(walk|walking|run|running|fly|flying|swim|swimming|fall|falling|none|crouch|crouching|prone|slide|sliding|idle|jump|jumping)$/,
+  
+  // Asset type categories (not actions)
+  assetCategories: /^(blueprint|blueprints|material|materials|mesh|meshes|texture|textures|sound|sounds|audio|staticmesh|skeletalmesh|animation|animations|particle|particles|niagara|level|levels|widget|widgets)$/,
+  
+  // Quality presets
+  qualityPresets: /^(high|medium|low|preview|epic|cinematic|ultra|custom)$/,
+};
+
+/**
+ * Heuristic rules for detecting false positives
+ */
+const FALSE_POSITIVE_RULES = [
+  // Rule 1: Too short (less than 3 chars) - likely abbreviation or enum value
+  (action) => action.length < 3,
+  
+  // Rule 2: Single word without underscore AND is a common word
+  // Valid actions typically have underscores (e.g., "create_actor", "spawn_blueprint")
+  // Exception: Some valid actions are single words with specific prefixes
+  (action) => {
+    if (action.includes('_')) return false; // Has underscore, likely valid
+    // Check against all pattern categories
+    return Object.values(FALSE_POSITIVE_PATTERNS).some(pattern => pattern.test(action));
+  },
+  
+  // Rule 3: Ends with common type suffixes suggesting it's a type, not action
+  (action) => /^.+(oscillator|filter|generator|parameter|input|output|sample|sampler)$/i.test(action) && !action.includes('_'),
+  
+  // Rule 4: PascalCase without underscore (likely a class/type name, not an action)
+  (action) => /^[A-Z][a-z]+[A-Z]/.test(action) && !action.includes('_'),
+];
+
+/**
+ * Check if an action is a false positive using pattern matching and heuristics
+ */
+function isFalsePositive(action) {
+  const lower = action.toLowerCase();
+  
+  // Check pattern matches
+  for (const [category, pattern] of Object.entries(FALSE_POSITIVE_PATTERNS)) {
+    if (pattern.test(lower)) {
+      return true;
+    }
+  }
+  
+  // Check heuristic rules
+  for (const rule of FALSE_POSITIVE_RULES) {
+    if (rule(action)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Filter out false positive actions from a list
+ */
+function filterFalsePositives(actions) {
+  return actions.filter(action => !isFalsePositive(action));
+}
+
 // PREFIX NORMALIZATION
-// TS uses prefixed actions (chaos_*, mw_*, bp_*, audio_*) while C++ uses unprefixed versions
-// This map defines prefixes to strip for comparison and which tools they apply to
 const PREFIX_NORMALIZATION = {
   'chaos_': ['animation_physics'],
   'mw_': ['manage_audio'],
   'bp_': ['manage_asset'],
-  'blueprint_': ['manage_asset'],  // C++ uses blueprint_* while TS uses bp_*
+  'blueprint_': ['manage_asset'],
   'audio_': ['manage_audio'],
   'anim_': ['animation_physics'],
   'vfx_': ['manage_effect'],
@@ -45,14 +155,12 @@ const PREFIX_NORMALIZATION = {
   'char_': ['manage_character', 'manage_character_avatar'],
   'ai_': ['manage_ai'],
   'nav_': ['manage_ai'],
-  'bt_': ['manage_ai'],  // Behavior Tree actions use bt_* prefix in TS
+  'bt_': ['manage_ai'],
   'net_': ['manage_networking'],
   'data_': ['manage_data'],
   'll_': ['manage_livelink'],
   'gas_': ['manage_gameplay_abilities', 'manage_attribute_sets', 'manage_gameplay_cues', 'test_gameplay_abilities'],
-  // Inventory system prefixes
   'inv_': ['manage_character'],
-  // Asset plugin prefixes
   'usd_': ['manage_asset_plugins'],
   'abc_': ['manage_asset_plugins'],
   'gltf_': ['manage_asset_plugins'],
@@ -60,41 +168,8 @@ const PREFIX_NORMALIZATION = {
   'hda_': ['manage_asset_plugins'],
   'sbsar_': ['manage_asset_plugins'],
   'ic_': ['manage_asset_plugins'],
-  'util_': ['manage_asset_plugins'],  // TS uses util_* prefix for utility plugin actions
+  'util_': ['manage_asset_plugins'],
 };
-
-/**
- * Normalize action name by stripping known prefixes for comparison
- * @param {string} action - Action name to normalize
- * @param {string} toolName - Tool this action belongs to
- * @returns {string} Normalized action name
- */
-function normalizeActionForComparison(action, toolName) {
-  for (const [prefix, tools] of Object.entries(PREFIX_NORMALIZATION)) {
-    if (tools.includes(toolName) && action.startsWith(prefix)) {
-      return action.substring(prefix.length);
-    }
-  }
-  return action;
-}
-
-/**
- * Check if two actions match after normalization
- * @param {string} tsAction - TS action name
- * @param {string} cppAction - C++ action name 
- * @param {string} toolName - Tool for context
- * @returns {boolean} Whether actions match
- */
-function actionsMatch(tsAction, cppAction, toolName) {
-  if (tsAction === cppAction) return true;
-  
-  const normalizedTs = normalizeActionForComparison(tsAction, toolName);
-  const normalizedCpp = normalizeActionForComparison(cppAction, toolName);
-  
-  return normalizedTs === normalizedCpp || 
-         tsAction === normalizedCpp || 
-         normalizedTs === cppAction;
-}
 
 // Map TS tools to C++ handler file patterns
 const TOOL_TO_HANDLER_PATTERNS = {
@@ -137,11 +212,19 @@ const TOOL_TO_HANDLER_PATTERNS = {
   'manage_pipeline': [],
 };
 
+function normalizeActionForComparison(action, toolName) {
+  for (const [prefix, tools] of Object.entries(PREFIX_NORMALIZATION)) {
+    if (tools.includes(toolName) && action.startsWith(prefix)) {
+      return action.substring(prefix.length);
+    }
+  }
+  return action;
+}
+
 function extractCppActionsFromFile(filePath) {
   const content = readFileSync(filePath, 'utf-8');
   const actions = new Set();
 
-  // Pattern 1: Variable == TEXT("action") - equality check
   const equalityRegex = /(\w+)\s*==\s*TEXT\s*\(\s*"([a-z_][a-z0-9_]*)"\s*\)/gi;
   let match;
   while ((match = equalityRegex.exec(content)) !== null) {
@@ -152,7 +235,6 @@ function extractCppActionsFromFile(filePath) {
     }
   }
 
-  // Pattern 2: Variable.Equals(TEXT("action"), ...) - Equals method call
   const equalsRegex = /(\w+)\.Equals\s*\(\s*TEXT\s*\(\s*"([a-z_][a-z0-9_]*)"\s*\)/gi;
   while ((match = equalsRegex.exec(content)) !== null) {
     const variableName = match[1].toLowerCase();
@@ -162,11 +244,9 @@ function extractCppActionsFromFile(filePath) {
     }
   }
 
-  // Pattern 3: ActionMatchesPattern(TEXT("action")) - helper function for action matching
   const actionMatchesPatternRegex = /ActionMatchesPattern\s*\(\s*TEXT\s*\(\s*"([a-z_][a-z0-9_]*)"\s*\)\s*\)/gi;
   while ((match = actionMatchesPatternRegex.exec(content)) !== null) {
-    const actionName = match[1];
-    actions.add(actionName);
+    actions.add(match[1]);
   }
 
   return Array.from(actions);
@@ -190,7 +270,8 @@ function getCppActionsForTool(toolName) {
     }
   }
 
-  return Array.from(allActions);
+  // Filter out false positives
+  return filterFalsePositives(Array.from(allActions));
 }
 
 function getTsActionsForTool(toolName) {
@@ -202,7 +283,107 @@ function getTsActionsForTool(toolName) {
   return [];
 }
 
-function analyzeSynchronization() {
+/**
+ * Fetch tools from live MCP server via MCP protocol
+ */
+async function getLiveServerTools() {
+  console.log('Starting live MCP server for 3-way comparison...');
+  
+  const serverCommand = 'node';
+  const serverArgs = [join(repoRoot, 'dist', 'cli.js')];
+  const serverEnv = {
+    ...process.env,
+    MOCK_UNREAL_CONNECTION: 'true',
+    LOG_LEVEL: 'error'
+  };
+
+  let transport;
+  let client;
+
+  try {
+    transport = new StdioClientTransport({
+      command: serverCommand,
+      args: serverArgs,
+      cwd: repoRoot,
+      stderr: 'pipe',
+      env: serverEnv
+    });
+
+    client = new Client({
+      name: 'sync-report-generator',
+      version: '1.0.0'
+    });
+
+    await client.connect(transport);
+    console.log('Connected to live MCP server');
+
+    const toolsResponse = await client.listTools({});
+    const tools = toolsResponse.tools || [];
+    console.log(`Fetched ${tools.length} tools from live server`);
+
+    // Build map of toolName -> actions
+    const liveToolActions = new Map();
+    for (const tool of tools) {
+      const actions = tool.inputSchema?.properties?.action?.enum || [];
+      liveToolActions.set(tool.name, actions);
+    }
+
+    return { tools, liveToolActions };
+  } finally {
+    if (client) {
+      try { await client.close(); } catch { /* ignore */ }
+    }
+    if (transport) {
+      try { await transport.close(); } catch { /* ignore */ }
+    }
+  }
+}
+
+function compareActionSets(setA, setB, toolName) {
+  const aSet = new Set(setA);
+  const bSet = new Set(setB);
+  const aNormalizedMap = new Map();
+  const bNormalizedMap = new Map();
+
+  for (const a of setA) {
+    const normalized = normalizeActionForComparison(a, toolName);
+    aNormalizedMap.set(normalized, a);
+    aNormalizedMap.set(a, a);
+  }
+
+  for (const b of setB) {
+    const normalized = normalizeActionForComparison(b, toolName);
+    bNormalizedMap.set(normalized, b);
+    bNormalizedMap.set(b, b);
+  }
+
+  const onlyInA = [];
+  const matched = [];
+  for (const a of setA) {
+    const hasExact = bSet.has(a);
+    const normalized = normalizeActionForComparison(a, toolName);
+    const hasNormalized = bNormalizedMap.has(normalized);
+    if (hasExact || hasNormalized) {
+      matched.push(a);
+    } else {
+      onlyInA.push(a);
+    }
+  }
+
+  const onlyInB = [];
+  for (const b of setB) {
+    const hasExact = aSet.has(b);
+    const normalized = normalizeActionForComparison(b, toolName);
+    const hasNormalized = aNormalizedMap.has(normalized);
+    if (!hasExact && !hasNormalized) {
+      onlyInB.push(b);
+    }
+  }
+
+  return { matched, onlyInA, onlyInB };
+}
+
+async function analyzeSynchronization(liveToolActions) {
   const results = [];
   const processedTools = new Set();
 
@@ -212,161 +393,252 @@ function analyzeSynchronization() {
 
     const tsActions = getTsActionsForTool(tool.name);
     const cppActions = getCppActionsForTool(tool.name);
-    
-    // Build normalized lookup sets for C++ actions
-    const cppSet = new Set(cppActions);
-    const cppNormalizedMap = new Map(); // normalized -> original
-    for (const cppAction of cppActions) {
-      const normalized = normalizeActionForComparison(cppAction, tool.name);
-      cppNormalizedMap.set(normalized, cppAction);
-      cppNormalizedMap.set(cppAction, cppAction); // also map exact
-    }
-    
-    // Find TS actions truly missing in C++ (considering normalization)
-    const missingInCpp = [];
-    const matchedTsActions = [];
-    for (const tsAction of tsActions) {
-      const hasExactMatch = cppSet.has(tsAction);
-      const normalizedTs = normalizeActionForComparison(tsAction, tool.name);
-      const hasNormalizedMatch = cppNormalizedMap.has(normalizedTs);
-      
-      if (hasExactMatch || hasNormalizedMatch) {
-        matchedTsActions.push(tsAction);
-      } else {
-        missingInCpp.push(tsAction);
-      }
-    }
-    
-    // Build normalized lookup for TS actions
-    const tsSet = new Set(tsActions);
-    const tsNormalizedMap = new Map();
-    for (const tsAction of tsActions) {
-      const normalized = normalizeActionForComparison(tsAction, tool.name);
-      tsNormalizedMap.set(normalized, tsAction);
-      tsNormalizedMap.set(tsAction, tsAction);
-    }
-    
-    // Find C++ actions truly missing in TS (considering normalization)
-    const missingInTs = [];
-    for (const cppAction of cppActions) {
-      const hasExactMatch = tsSet.has(cppAction);
-      const normalizedCpp = normalizeActionForComparison(cppAction, tool.name);
-      const hasNormalizedMatch = tsNormalizedMap.has(normalizedCpp);
-      
-      if (!hasExactMatch && !hasNormalizedMatch) {
-        missingInTs.push(cppAction);
-      }
-    }
+    const liveActions = liveToolActions.get(tool.name) || [];
 
-    const syncPercentage = tsActions.length > 0
-      ? Math.round(((tsActions.length - missingInCpp.length) / tsActions.length) * 100)
+    // TS vs C++
+    const tsCpp = compareActionSets(tsActions, cppActions, tool.name);
+    
+    // TS vs Live
+    const tsLive = compareActionSets(tsActions, liveActions, tool.name);
+    
+    // C++ vs Live
+    const cppLive = compareActionSets(cppActions, liveActions, tool.name);
+
+    const tsCppSync = tsActions.length > 0
+      ? Math.round((tsCpp.matched.length / tsActions.length) * 100)
+      : 100;
+
+    const tsLiveSync = tsActions.length > 0
+      ? Math.round((tsLive.matched.length / tsActions.length) * 100)
       : 100;
 
     results.push({
       toolName: tool.name,
       tsActions,
       cppActions,
-      missingInCpp,
-      missingInTs,
-      matchedCount: matchedTsActions.length,
-      syncPercentage,
+      liveActions,
+      tsCpp,
+      tsLive,
+      cppLive,
+      tsCppSync,
+      tsLiveSync,
     });
   }
 
-  results.sort((a, b) => a.syncPercentage - b.syncPercentage);
+  results.sort((a, b) => a.tsCppSync - b.tsCppSync);
   return results;
 }
 
-function generateReport() {
-  const results = analyzeSynchronization();
+async function generateReport() {
+  console.log('='.repeat(60));
+  console.log('3-Way Sync Report Generator: TS ↔ C++ ↔ Live MCP');
+  console.log('='.repeat(60));
+  console.log('');
+
+  // Fetch live server tools
+  let liveToolActions;
+  let liveToolCount = 0;
+  let liveFailed = false;
   
+  try {
+    const liveData = await getLiveServerTools();
+    liveToolActions = liveData.liveToolActions;
+    liveToolCount = liveData.tools.length;
+  } catch (error) {
+    console.warn('Failed to connect to live MCP server:', error.message);
+    console.warn('Proceeding with TS ↔ C++ comparison only');
+    liveToolActions = new Map();
+    liveFailed = true;
+  }
+
+  const results = await analyzeSynchronization(liveToolActions);
+  
+  // Calculate totals
   const totalTsActions = results.reduce((sum, r) => sum + r.tsActions.length, 0);
   const totalCppActions = results.reduce((sum, r) => sum + r.cppActions.length, 0);
-  const totalMissingInCpp = results.reduce((sum, r) => sum + r.missingInCpp.length, 0);
-  const totalMissingInTs = results.reduce((sum, r) => sum + r.missingInTs.length, 0);
-  const totalMatched = results.reduce((sum, r) => sum + r.matchedCount, 0);
-  const overallSync = Math.round(((totalTsActions - totalMissingInCpp) / totalTsActions) * 100);
+  const totalLiveActions = results.reduce((sum, r) => sum + r.liveActions.length, 0);
+  const totalTsCppMissing = results.reduce((sum, r) => sum + r.tsCpp.onlyInA.length, 0);
+  const totalTsLiveMissing = results.reduce((sum, r) => sum + r.tsLive.onlyInA.length, 0);
+  const totalTsCppMatched = results.reduce((sum, r) => sum + r.tsCpp.matched.length, 0);
+  const totalTsLiveMatched = results.reduce((sum, r) => sum + r.tsLive.matched.length, 0);
+  const overallTsCppSync = Math.round((totalTsCppMatched / totalTsActions) * 100);
+  const overallTsLiveSync = Math.round((totalTsLiveMatched / totalTsActions) * 100);
 
   const lines = [
-    '# TS/C++ Action Synchronization Report',
+    '# 3-Way Action Synchronization Report',
     '',
-    '> Auto-generated. Compares TypeScript tool definitions with C++ handler implementations.',
-    '> **Note:** Uses prefix normalization (chaos_*, mw_*, bp_*, etc.) to match actions across naming conventions.',
+    '> **TS ↔ C++ ↔ Live MCP Server**',
+    '>',
+    '> This report compares actions across three sources:',
+    '> 1. **TS (Static)**: TypeScript tool definitions in source code',
+    '> 2. **C++ (Static)**: C++ handler implementations in plugin',
+    '> 3. **Live MCP (Runtime)**: What the actual running MCP server exposes to LLMs',
     '',
     `Generated: ${new Date().toISOString()}`,
     '',
-    '## Executive Summary',
-    '',
-    '| Metric | Count |',
-    '|--------|-------|',
-    `| Total TS Actions | ${totalTsActions.toLocaleString()} |`,
-    `| Total C++ Actions | ${totalCppActions.toLocaleString()} |`,
-    `| Matched (TS→C++) | ${totalMatched.toLocaleString()} |`,
-    `| Missing in C++ | ${totalMissingInCpp.toLocaleString()} |`,
-    `| Extra in C++ | ${totalMissingInTs.toLocaleString()} |`,
-    `| **Overall Sync** | **${overallSync}%** |`,
-    '',
-    '## Prefix Normalization Applied',
-    '',
-    'The following prefixes are stripped for comparison to handle naming convention differences:',
-    '',
-    '| TS Prefix | Applied To Tools |',
-    '|-----------|------------------|',
-    '| `chaos_*` | animation_physics |',
-    '| `mw_*` | manage_audio |',
-    '| `bp_*` | manage_asset |',
-    '| `audio_*` | manage_audio |',
-    '| `niagara_*` | manage_effect |',
-    '| `seq_*`, `mrq_*` | manage_sequence |',
-    '| `water_*`, `weather_*` | build_environment |',
-    '',
-    '## Sync Status by Tool',
-    '',
-    '| Tool | TS | C++ | Matched | Missing | Extra | Sync |',
-    '|------|----|----|---------|---------|-------|------|',
   ];
 
-  for (const result of results) {
-    const status = result.syncPercentage === 100 ? '✅' :
-                   result.syncPercentage >= 75 ? '🟡' :
-                   result.syncPercentage >= 50 ? '🟠' : '🔴';
+  if (liveFailed) {
+    lines.push('> ⚠️ **Warning**: Live MCP server connection failed. Live columns show N/A.');
+    lines.push('');
+  }
+
+  lines.push(
+    '## Executive Summary',
+    '',
+    '| Source | Tools | Actions |',
+    '|--------|-------|---------|',
+    `| TypeScript (Static) | ${results.length} | ${totalTsActions.toLocaleString()} |`,
+    `| C++ Handlers (Static) | - | ${totalCppActions.toLocaleString()} |`,
+    `| Live MCP Server | ${liveToolCount} | ${totalLiveActions.toLocaleString()} |`,
+    '',
+    '### Sync Metrics',
+    '',
+    '| Comparison | Matched | Missing | Sync % |',
+    '|------------|---------|---------|--------|',
+    `| TS → C++ | ${totalTsCppMatched.toLocaleString()} | ${totalTsCppMissing.toLocaleString()} | **${overallTsCppSync}%** |`,
+    `| TS → Live | ${totalTsLiveMatched.toLocaleString()} | ${totalTsLiveMissing.toLocaleString()} | **${overallTsLiveSync}%** |`,
+    '',
+  );
+
+  // Discrepancy detection
+  const tsLiveDiscrepancies = results.filter(r => r.tsLive.onlyInA.length > 0 || r.tsLive.onlyInB.length > 0);
+  if (tsLiveDiscrepancies.length > 0 && !liveFailed) {
     lines.push(
-      `| ${result.toolName} | ${result.tsActions.length} | ${result.cppActions.length} | ` +
-      `${result.matchedCount} | ${result.missingInCpp.length} | ${result.missingInTs.length} | ${status} ${result.syncPercentage}% |`
+      '### ⚠️ TS vs Live Discrepancies',
+      '',
+      'Actions that differ between static TS definitions and live server exposure:',
+      '',
+    );
+    for (const r of tsLiveDiscrepancies.slice(0, 5)) {
+      if (r.tsLive.onlyInA.length > 0) {
+        lines.push(`- **${r.toolName}**: ${r.tsLive.onlyInA.length} in TS but NOT in Live`);
+      }
+      if (r.tsLive.onlyInB.length > 0) {
+        lines.push(`- **${r.toolName}**: ${r.tsLive.onlyInB.length} in Live but NOT in TS`);
+      }
+    }
+    if (tsLiveDiscrepancies.length > 5) {
+      lines.push(`- ... and ${tsLiveDiscrepancies.length - 5} more tools with discrepancies`);
+    }
+    lines.push('');
+  }
+
+  // Prefix normalization info
+  lines.push(
+    '## Prefix Normalization',
+    '',
+    'The following prefixes are stripped for comparison:',
+    '',
+    '| Prefix | Tools |',
+    '|--------|-------|',
+    '| `chaos_*` | animation_physics |',
+    '| `mw_*`, `audio_*` | manage_audio |',
+    '| `bp_*` | manage_asset |',
+    '| `niagara_*` | manage_effect |',
+    '| `seq_*`, `mrq_*` | manage_sequence |',
+    '',
+  );
+
+  // Detailed sync table
+  lines.push(
+    '## Sync Status by Tool',
+    '',
+    '| Tool | TS | C++ | Live | TS→C++ | TS→Live |',
+    '|------|----|----|------|--------|---------|',
+  );
+
+  for (const r of results) {
+    const tsCppStatus = r.tsCppSync === 100 ? '✅' : r.tsCppSync >= 75 ? '🟡' : r.tsCppSync >= 50 ? '🟠' : '🔴';
+    const tsLiveStatus = r.tsLiveSync === 100 ? '✅' : r.tsLiveSync >= 75 ? '🟡' : r.tsLiveSync >= 50 ? '🟠' : '🔴';
+    const liveCount = liveFailed ? 'N/A' : r.liveActions.length;
+    const tsLiveCol = liveFailed ? 'N/A' : `${tsLiveStatus} ${r.tsLiveSync}%`;
+    lines.push(
+      `| ${r.toolName} | ${r.tsActions.length} | ${r.cppActions.length} | ${liveCount} | ${tsCppStatus} ${r.tsCppSync}% | ${tsLiveCol} |`
     );
   }
 
   lines.push('', '---', '', '## Detailed Gap Analysis', '');
 
-  for (const result of results) {
-    if (result.missingInCpp.length === 0 && result.missingInTs.length === 0) continue;
+  // Show gaps for tools with issues
+  for (const r of results) {
+    const hasTsCppGap = r.tsCpp.onlyInA.length > 0 || r.tsCpp.onlyInB.length > 0;
+    const hasTsLiveGap = !liveFailed && (r.tsLive.onlyInA.length > 0 || r.tsLive.onlyInB.length > 0);
+    
+    if (!hasTsCppGap && !hasTsLiveGap) continue;
 
-    lines.push(`### ${result.toolName}`);
+    lines.push(`### ${r.toolName}`);
     lines.push('');
-    lines.push(`**TS Actions:** ${result.tsActions.length} | **C++ Actions:** ${result.cppActions.length} | **Sync:** ${result.syncPercentage}%`);
+    lines.push(`| Source | Count |`);
+    lines.push(`|--------|-------|`);
+    lines.push(`| TS | ${r.tsActions.length} |`);
+    lines.push(`| C++ | ${r.cppActions.length} |`);
+    if (!liveFailed) {
+      lines.push(`| Live | ${r.liveActions.length} |`);
+    }
     lines.push('');
 
-    if (result.missingInCpp.length > 0) {
-      lines.push(`#### Missing in C++ (${result.missingInCpp.length})`);
+    // TS → C++ gaps
+    if (r.tsCpp.onlyInA.length > 0) {
+      lines.push(`#### TS → C++ Missing (${r.tsCpp.onlyInA.length})`);
       lines.push('');
-      lines.push('These actions are defined in TypeScript but have NO C++ implementation:');
+      lines.push('Actions in TS but NOT implemented in C++:');
       lines.push('');
       lines.push('```');
-      for (const action of result.missingInCpp.sort()) {
+      for (const action of r.tsCpp.onlyInA.sort().slice(0, 20)) {
         lines.push(action);
+      }
+      if (r.tsCpp.onlyInA.length > 20) {
+        lines.push(`... and ${r.tsCpp.onlyInA.length - 20} more`);
       }
       lines.push('```');
       lines.push('');
     }
 
-    if (result.missingInTs.length > 0) {
-      lines.push(`#### Extra in C++ (${result.missingInTs.length})`);
+    if (r.tsCpp.onlyInB.length > 0) {
+      lines.push(`#### C++ → TS Extra (${r.tsCpp.onlyInB.length})`);
       lines.push('');
-      lines.push('These actions are in C++ but NOT exposed in TypeScript:');
+      lines.push('Actions in C++ but NOT exposed in TS:');
       lines.push('');
       lines.push('```');
-      for (const action of result.missingInTs.sort()) {
+      for (const action of r.tsCpp.onlyInB.sort().slice(0, 20)) {
         lines.push(action);
+      }
+      if (r.tsCpp.onlyInB.length > 20) {
+        lines.push(`... and ${r.tsCpp.onlyInB.length - 20} more`);
+      }
+      lines.push('```');
+      lines.push('');
+    }
+
+    // TS → Live gaps (runtime discrepancies)
+    if (!liveFailed && r.tsLive.onlyInA.length > 0) {
+      lines.push(`#### ⚠️ TS → Live Missing (${r.tsLive.onlyInA.length})`);
+      lines.push('');
+      lines.push('**RUNTIME ISSUE**: Actions defined in TS but NOT exposed by live server:');
+      lines.push('');
+      lines.push('```');
+      for (const action of r.tsLive.onlyInA.sort().slice(0, 20)) {
+        lines.push(action);
+      }
+      if (r.tsLive.onlyInA.length > 20) {
+        lines.push(`... and ${r.tsLive.onlyInA.length - 20} more`);
+      }
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (!liveFailed && r.tsLive.onlyInB.length > 0) {
+      lines.push(`#### Live → TS Extra (${r.tsLive.onlyInB.length})`);
+      lines.push('');
+      lines.push('Actions in live server but NOT in TS definitions:');
+      lines.push('');
+      lines.push('```');
+      for (const action of r.tsLive.onlyInB.sort().slice(0, 20)) {
+        lines.push(action);
+      }
+      if (r.tsLive.onlyInB.length > 20) {
+        lines.push(`... and ${r.tsLive.onlyInB.length - 20} more`);
       }
       lines.push('```');
       lines.push('');
@@ -375,14 +647,18 @@ function generateReport() {
     lines.push('---', '');
   }
 
+  // Implementation priority
   lines.push('## Implementation Priority', '');
+  
   lines.push('### High Priority (Core Tools)', '');
+  const coreTools = ['manage_asset', 'control_actor', 'control_editor', 'manage_level'];
   const coreMissing = results
-    .filter(r => ['manage_asset', 'control_actor', 'control_editor', 'manage_level'].includes(r.toolName))
-    .flatMap(r => r.missingInCpp.map(a => `${r.toolName}::${a}`));
+    .filter(r => coreTools.includes(r.toolName))
+    .flatMap(r => r.tsCpp.onlyInA.map(a => `${r.toolName}::${a}`));
   if (coreMissing.length > 0) {
     lines.push('```');
-    coreMissing.forEach(a => lines.push(a));
+    coreMissing.slice(0, 20).forEach(a => lines.push(a));
+    if (coreMissing.length > 20) lines.push(`... and ${coreMissing.length - 20} more`);
     lines.push('```');
   } else {
     lines.push('*All core tool actions are implemented!*');
@@ -390,9 +666,10 @@ function generateReport() {
   lines.push('');
 
   lines.push('### Medium Priority (Frequently Used)', '');
+  const mediumTools = ['animation_physics', 'manage_effect', 'manage_sequence', 'manage_audio', 'manage_lighting'];
   const mediumMissing = results
-    .filter(r => ['animation_physics', 'manage_effect', 'manage_sequence', 'manage_audio', 'manage_lighting'].includes(r.toolName))
-    .flatMap(r => r.missingInCpp.slice(0, 10).map(a => `${r.toolName}::${a}`));
+    .filter(r => mediumTools.includes(r.toolName))
+    .flatMap(r => r.tsCpp.onlyInA.slice(0, 5).map(a => `${r.toolName}::${a}`));
   if (mediumMissing.length > 0) {
     lines.push('```');
     mediumMissing.forEach(a => lines.push(a));
@@ -402,18 +679,40 @@ function generateReport() {
   }
   lines.push('');
 
-  const xrMissing = results.find(r => r.toolName === 'manage_xr')?.missingInCpp.length || 0;
-  const pluginMissing = results.find(r => r.toolName === 'manage_asset_plugins')?.missingInCpp.length || 0;
-  lines.push('### Lower Priority (Plugin/Optional)', '');
-  lines.push(`Tools like \`manage_xr\` (${xrMissing} missing) and \`manage_asset_plugins\` (${pluginMissing} missing) have many missing actions but are optional plugin integrations.`);
+  // Generation metadata
+  lines.push('## Metadata', '');
+  lines.push('```json');
+  lines.push(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    sources: {
+      ts: { tools: results.length, actions: totalTsActions },
+      cpp: { actions: totalCppActions },
+      live: { tools: liveToolCount, actions: totalLiveActions, failed: liveFailed }
+    },
+    sync: {
+      tsCpp: `${overallTsCppSync}%`,
+      tsLive: liveFailed ? 'N/A' : `${overallTsLiveSync}%`
+    }
+  }, null, 2));
+  lines.push('```');
   lines.push('');
 
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, lines.join('\n'));
-  console.log(`Generated: ${outputPath}`);
+  
+  console.log('');
+  console.log('='.repeat(60));
+  console.log('Report Generated');
+  console.log('='.repeat(60));
+  console.log(`Output: ${outputPath}`);
   console.log(`Tools analyzed: ${results.length}`);
-  console.log(`Overall sync: ${overallSync}%`);
-  console.log(`Total missing in C++: ${totalMissingInCpp}`);
+  console.log(`TS → C++ Sync: ${overallTsCppSync}%`);
+  console.log(`TS → Live Sync: ${liveFailed ? 'N/A (server failed)' : overallTsLiveSync + '%'}`);
+  console.log(`TS actions missing in C++: ${totalTsCppMissing}`);
+  console.log('');
 }
 
-generateReport();
+generateReport().catch(err => {
+  console.error('Failed to generate report:', err);
+  process.exit(1);
+});

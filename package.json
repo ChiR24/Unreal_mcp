@@ -57,6 +57,7 @@
     "docs:generate": "node --loader ts-node/esm scripts/generate-action-docs.ts",
     "docs:generate-cpp": "node scripts/generate-cpp-action-docs.mjs",
     "docs:sync-report": "node scripts/generate-sync-report.mjs",
+    "docs:generate-live": "node scripts/generate-live-action-docs.mjs",
     "docs:all": "npm run docs:generate && npm run docs:generate-cpp && npm run docs:sync-report"
   },
   "engines": {

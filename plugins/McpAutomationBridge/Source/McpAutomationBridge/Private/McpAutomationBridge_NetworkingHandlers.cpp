@@ -29,6 +29,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/NetDriver.h"
 #include "UObject/UnrealType.h"
@@ -1569,7 +1570,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
 
         if (!ActorName.IsEmpty())
         {
@@ -1599,13 +1600,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 Actor->FlushNetDormancy();
             }
 
-            ResultJson->SetStringField(TEXT("actorName"), ActorName);
-            ResultJson->SetStringField(TEXT("dormancyMode"), DormancyMode);
-            ResultJson->SetBoolField(TEXT("flushed"), bFlushDormancy);
+            LocalResultJson->SetStringField(TEXT("actorName"), ActorName);
+            LocalResultJson->SetStringField(TEXT("dormancyMode"), DormancyMode);
+            LocalResultJson->SetBoolField(TEXT("flushed"), bFlushDormancy);
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dormancy configured"), ResultJson);
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Dormancy configured"), LocalResultJson);
         return true;
     }
 
@@ -1644,12 +1645,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             Actor->SetNetCullDistanceSquared(NetCullDistanceSquared);
         }
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("actorName"), ActorName);
-        ResultJson->SetBoolField(TEXT("alwaysRelevant"), bAlwaysRelevant);
-        ResultJson->SetBoolField(TEXT("onlyRelevantToOwner"), bOnlyRelevantToOwner);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net relevancy configured"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("actorName"), ActorName);
+        LocalResultJson->SetBoolField(TEXT("alwaysRelevant"), bAlwaysRelevant);
+        LocalResultJson->SetBoolField(TEXT("onlyRelevantToOwner"), bOnlyRelevantToOwner);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net relevancy configured"), LocalResultJson);
         return true;
     }
 
@@ -1667,14 +1668,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         double SmoothingTime = 0.1;
         Payload->TryGetNumberField(TEXT("smoothingTime"), SmoothingTime);
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
-        ResultJson->SetNumberField(TEXT("predictionLatency"), PredictionLatency);
-        ResultJson->SetNumberField(TEXT("smoothingTime"), SmoothingTime);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Prediction settings stored. Implement via movement component."));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Prediction settings configured"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        LocalResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
+        LocalResultJson->SetNumberField(TEXT("predictionLatency"), PredictionLatency);
+        LocalResultJson->SetNumberField(TEXT("smoothingTime"), SmoothingTime);
+        LocalResultJson->SetStringField(TEXT("note"), TEXT("Prediction settings stored. Implement via movement component."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Prediction settings configured"), LocalResultJson);
         return true;
     }
 
@@ -1696,13 +1697,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         FString TeamColor;
         Payload->TryGetStringField(TEXT("teamColor"), TeamColor);
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        ResultJson->SetNumberField(TEXT("teamId"), TeamId);
-        ResultJson->SetBoolField(TEXT("replicateTeamId"), bReplicateTeamId);
-        ResultJson->SetStringField(TEXT("teamColor"), TeamColor);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team settings configured"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        LocalResultJson->SetNumberField(TEXT("teamId"), TeamId);
+        LocalResultJson->SetBoolField(TEXT("replicateTeamId"), bReplicateTeamId);
+        LocalResultJson->SetStringField(TEXT("teamColor"), TeamColor);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team settings configured"), LocalResultJson);
         return true;
     }
 
@@ -1717,7 +1718,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         Payload->TryGetBoolField(TEXT("showConnections"), bShowConnections);
 
         UWorld* World = GetActiveWorld();
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
         
         // Get basic replication info
         int32 ReplicatedActorCount = 0;
@@ -1732,10 +1733,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             }
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetBoolField(TEXT("debugEnabled"), bEnableDebug);
-        ResultJson->SetNumberField(TEXT("replicatedActorCount"), ReplicatedActorCount);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph debug info"), ResultJson);
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetBoolField(TEXT("debugEnabled"), bEnableDebug);
+        LocalResultJson->SetNumberField(TEXT("replicatedActorCount"), ReplicatedActorCount);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph debug info"), LocalResultJson);
         return true;
     }
 
@@ -1761,14 +1762,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("actorName"), ActorName);
-        ResultJson->SetStringField(TEXT("localRole"), NetworkingHelpers::NetRoleToString(Actor->GetLocalRole()));
-        ResultJson->SetStringField(TEXT("remoteRole"), NetworkingHelpers::NetRoleToString(Actor->GetRemoteRole()));
-        ResultJson->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
-        ResultJson->SetBoolField(TEXT("isReplicated"), Actor->GetIsReplicated());
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role info retrieved"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("actorName"), ActorName);
+        LocalResultJson->SetStringField(TEXT("localRole"), NetworkingHelpers::NetRoleToString(Actor->GetLocalRole()));
+        LocalResultJson->SetStringField(TEXT("remoteRole"), NetworkingHelpers::NetRoleToString(Actor->GetRemoteRole()));
+        LocalResultJson->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
+        LocalResultJson->SetBoolField(TEXT("isReplicated"), Actor->GetIsReplicated());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role info retrieved"), LocalResultJson);
         return true;
     }
 
@@ -1780,15 +1781,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         FString ActorName;
         Payload->TryGetStringField(TEXT("actorName"), ActorName);
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("actorName"), ActorName);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("actorName"), ActorName);
         // RPC statistics require netdriver access - return placeholder
-        ResultJson->SetNumberField(TEXT("serverRPCCount"), 0);
-        ResultJson->SetNumberField(TEXT("clientRPCCount"), 0);
-        ResultJson->SetNumberField(TEXT("multicastRPCCount"), 0);
-        ResultJson->SetStringField(TEXT("note"), TEXT("RPC stats available via net profiler at runtime"));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC statistics retrieved"), ResultJson);
+        LocalResultJson->SetNumberField(TEXT("serverRPCCount"), 0);
+        LocalResultJson->SetNumberField(TEXT("clientRPCCount"), 0);
+        LocalResultJson->SetNumberField(TEXT("multicastRPCCount"), 0);
+        LocalResultJson->SetStringField(TEXT("note"), TEXT("RPC stats available via net profiler at runtime"));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC statistics retrieved"), LocalResultJson);
         return true;
     }
 
@@ -1798,7 +1799,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     if (SubAction == TEXT("get_session_players"))
     {
         UWorld* World = GetActiveWorld();
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
         TArray<TSharedPtr<FJsonValue>> PlayersArray;
 
         if (World)
@@ -1821,10 +1822,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             }
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetArrayField(TEXT("players"), PlayersArray);
-        ResultJson->SetNumberField(TEXT("playerCount"), PlayersArray.Num());
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Session players retrieved"), ResultJson);
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetArrayField(TEXT("players"), PlayersArray);
+        LocalResultJson->SetNumberField(TEXT("playerCount"), PlayersArray.Num());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Session players retrieved"), LocalResultJson);
         return true;
     }
 
@@ -1868,13 +1869,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         bool bIsServerRPC = Function->HasAnyFunctionFlags(FUNC_Net | FUNC_NetServer);
         
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("actorName"), ActorName);
-        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetBoolField(TEXT("isServerRPC"), bIsServerRPC);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Server RPC validated. Execute in PIE for actual network call."));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server RPC info"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetStringField(TEXT("actorName"), ActorName);
+        LocalResultJson->SetStringField(TEXT("functionName"), FunctionName);
+        LocalResultJson->SetBoolField(TEXT("isServerRPC"), bIsServerRPC);
+        LocalResultJson->SetStringField(TEXT("note"), TEXT("Server RPC validated. Execute in PIE for actual network call."));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server RPC info"), LocalResultJson);
         return true;
     }
 
@@ -1907,13 +1908,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             }
         }
 
-        TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetBoolField(TEXT("enabled"), bEnabled);
-        ResultJson->SetNumberField(TEXT("latency"), Latency);
-        ResultJson->SetNumberField(TEXT("packetLoss"), PacketLoss);
-        ResultJson->SetNumberField(TEXT("jitter"), Jitter);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network conditions configured"), ResultJson);
+        TSharedPtr<FJsonObject> LocalResultJson = MakeShareable(new FJsonObject());
+        LocalResultJson->SetBoolField(TEXT("success"), true);
+        LocalResultJson->SetBoolField(TEXT("enabled"), bEnabled);
+        LocalResultJson->SetNumberField(TEXT("latency"), Latency);
+        LocalResultJson->SetNumberField(TEXT("packetLoss"), PacketLoss);
+        LocalResultJson->SetNumberField(TEXT("jitter"), Jitter);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network conditions configured"), LocalResultJson);
         return true;
     }
 

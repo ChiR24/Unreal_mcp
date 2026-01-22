@@ -2,24 +2,24 @@
 
 > Auto-generated from tool definitions. Do not edit manually.
 
-Generated: 2026-01-21T16:47:49.094Z
+Generated: 2026-01-22T05:56:01.721Z
 
 Total Tools: 37
 
 ## Table of Contents
 
-Total Actions: 2578
+Total Actions: 2665
 
 - [configure_tools](#configure-tools) (3 actions)
 - [manage_asset](#manage-asset) (99 actions)
 - [control_actor](#control-actor) (45 actions)
 - [control_editor](#control-editor) (84 actions)
-- [manage_level](#manage-level) (87 actions)
+- [manage_level](#manage-level) (94 actions)
 - [manage_motion_design](#manage-motion-design) (10 actions)
-- [animation_physics](#animation-physics) (162 actions)
-- [manage_effect](#manage-effect) (74 actions)
-- [build_environment](#build-environment) (58 actions)
-- [manage_sequence](#manage-sequence) (100 actions)
+- [animation_physics](#animation-physics) (166 actions)
+- [manage_effect](#manage-effect) (79 actions)
+- [build_environment](#build-environment) (73 actions)
+- [manage_sequence](#manage-sequence) (139 actions)
 - [manage_audio](#manage-audio) (134 actions)
 - [manage_lighting](#manage-lighting) (61 actions)
 - [manage_performance](#manage-performance) (20 actions)
@@ -42,8 +42,8 @@ Total Actions: 2578
 - [manage_livelink](#manage-livelink) (64 actions)
 - [manage_xr](#manage-xr) (272 actions)
 - [manage_accessibility](#manage-accessibility) (50 actions)
-- [manage_ui](#manage-ui) (7 actions)
-- [manage_gameplay_abilities](#manage-gameplay-abilities) (18 actions)
+- [manage_ui](#manage-ui) (11 actions)
+- [manage_gameplay_abilities](#manage-gameplay-abilities) (31 actions)
 - [manage_attribute_sets](#manage-attribute-sets) (6 actions)
 - [manage_gameplay_cues](#manage-gameplay-cues) (3 actions)
 - [test_gameplay_abilities](#test-gameplay-abilities) (4 actions)
@@ -362,6 +362,13 @@ Levels, streaming, World Partition, data layers, HLOD; PCG graphs.
 | `validate_level` | - |
 | `cleanup_invalid_datalayers` | - |
 | `add_sublevel` | - |
+| `load_level` | - |
+| `save_current_level` | - |
+| `stream_level` | - |
+| `bake_lightmap` | - |
+| `spawn_light` | - |
+| `create_datalayer` | - |
+| `create_new_level` | - |
 | `create_sublevel` | - |
 | `configure_level_streaming` | - |
 | `set_streaming_distance` | - |
@@ -628,6 +635,10 @@ Animation BPs, Montages, IK, retargeting + Chaos destruction/vehicles.
 | `blend_ragdoll_to_animation` | - |
 | `get_bone_transforms` | - |
 | `apply_pose_asset` | - |
+| `create_animation_blueprint` | - |
+| `play_anim_montage` | - |
+| `apply_animation_modifier` | - |
+| `get_chaos_plugin_status` | - |
 
 ---
 
@@ -715,6 +726,11 @@ Niagara/Cascade particles, debug shapes, VFX graph authoring.
 | `batch_compile_niagara` | - |
 | `get_niagara_parameters` | - |
 | `set_niagara_variable` | - |
+| `activate_niagara` | - |
+| `deactivate_niagara` | - |
+| `reset_niagara` | - |
+| `spawn_niagara_actor` | - |
+| `modify_niagara_parameter` | - |
 
 ---
 
@@ -786,6 +802,21 @@ Landscapes, foliage, procedural terrain, sky/fog, water, weather.
 | `create_volumetric_cloud` | - |
 | `configure_wind_directional` | - |
 | `get_terrain_height_at` | - |
+| `add_foliage_type` | - |
+| `configure_foliage_lod` | - |
+| `configure_foliage_placement` | - |
+| `get_foliage_types` | - |
+| `configure_landscape_lod` | - |
+| `get_landscape_info` | - |
+| `import_heightmap` | - |
+| `export_heightmap` | - |
+| `configure_sun_position` | - |
+| `configure_sun_color` | - |
+| `configure_sun_atmosphere` | - |
+| `set_skylight_intensity` | - |
+| `set_sun_intensity` | - |
+| `create_time_of_day_controller` | - |
+| `get_water_depth_info` | - |
 
 ---
 
@@ -899,6 +930,45 @@ Sequencer cinematics, Level Sequences, keyframes, MRQ renders.
 | `batch_render_sequences` | - |
 | `get_sequence_bindings` | - |
 | `configure_audio_track` | - |
+| `sequence_create` | - |
+| `sequence_open` | - |
+| `sequence_delete` | - |
+| `sequence_duplicate` | - |
+| `sequence_list` | - |
+| `sequence_rename` | - |
+| `sequence_add_actor` | - |
+| `sequence_add_actors` | - |
+| `sequence_add_camera` | - |
+| `sequence_add_track` | - |
+| `sequence_remove_track` | - |
+| `sequence_add_keyframe` | - |
+| `sequence_add_section` | - |
+| `sequence_add_spawnable_from_class` | - |
+| `sequence_get_bindings` | - |
+| `sequence_get_metadata` | - |
+| `sequence_get_properties` | - |
+| `sequence_set_properties` | - |
+| `sequence_set_display_rate` | - |
+| `sequence_set_tick_resolution` | - |
+| `sequence_set_work_range` | - |
+| `sequence_set_view_range` | - |
+| `sequence_play` | - |
+| `sequence_pause` | - |
+| `sequence_stop` | - |
+| `sequence_set_playback_speed` | - |
+| `sequence_list_tracks` | - |
+| `sequence_list_track_types` | - |
+| `sequence_remove_actors` | - |
+| `sequence_set_track_muted` | - |
+| `sequence_set_track_solo` | - |
+| `sequence_set_track_locked` | - |
+| `add_animation_track` | - |
+| `add_camera_track` | - |
+| `add_transform_track` | - |
+| `add_sequencer_keyframe` | - |
+| `delete_sequence` | - |
+| `duplicate_sequence` | - |
+| `list_sequences` | - |
 
 ---
 
@@ -3019,6 +3089,10 @@ Runtime UI management: spawn widgets, hierarchy, viewport control.
 | `set_input_mode` | - |
 | `show_mouse_cursor` | - |
 | `set_widget_visibility` | - |
+| `create_hud` | - |
+| `set_widget_text` | - |
+| `set_widget_image` | - |
+| `add_widget_child` | - |
 
 ---
 
@@ -3050,6 +3124,19 @@ Create and configure Gameplay Abilities, Effects, and Ability Tasks.
 | `set_effect_tags` | - |
 | `add_tag_to_asset` | - |
 | `get_gas_info` | - |
+| `add_ability_system_component` | - |
+| `configure_asc` | - |
+| `add_attribute` | - |
+| `create_attribute_set` | - |
+| `set_attribute_base_value` | - |
+| `set_attribute_clamping` | - |
+| `configure_cue_trigger` | - |
+| `set_cue_effects` | - |
+| `create_gameplay_cue_notify` | - |
+| `test_activate_ability` | - |
+| `test_apply_effect` | - |
+| `test_get_attribute` | - |
+| `test_get_gameplay_tags` | - |
 
 ---
 

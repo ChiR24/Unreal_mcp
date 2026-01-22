@@ -408,8 +408,15 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     else if (Preset == TEXT("Epic")) QualityLevel = 3;
     else if (Preset == TEXT("Cinematic")) QualityLevel = 4;
     
-    Scalability::SetQualityLevels(Scalability::FQualityLevels(QualityLevel));
+    // UE 5.7: FQualityLevels constructor signature may differ
+    Scalability::FQualityLevels QualityLevels;
+    QualityLevels.SetFromSingleQualityLevel(QualityLevel);
+    Scalability::SetQualityLevels(QualityLevels);
+    // UE 5.7: ApplyPendingNeedsRestartSettings() was removed
+    // Quality levels are applied immediately by SetQualityLevels()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
     Scalability::ApplyPendingNeedsRestartSettings();
+#endif
     
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);

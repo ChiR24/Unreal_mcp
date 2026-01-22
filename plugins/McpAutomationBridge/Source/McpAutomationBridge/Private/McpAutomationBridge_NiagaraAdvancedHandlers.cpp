@@ -477,10 +477,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
             return true;
         }
         
+        // UE 5.7: SetDeterminism() and SetRandomSeed() were removed from UNiagaraSystem
+        // Determinism is now controlled per-emitter via FVersionedNiagaraEmitterData
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
         System->SetDeterminism(bDeterministic);
         if (bDeterministic && RandomSeed != 0) {
             System->SetRandomSeed(RandomSeed);
         }
+#else
+        // UE 5.7+: Configure determinism on each emitter handle
+        for (FNiagaraEmitterHandle& EmitterHandle : System->GetEmitterHandles())
+        {
+            if (FVersionedNiagaraEmitterData* EmitterData = EmitterHandle.GetEmitterData())
+            {
+                EmitterData->bDeterminism = bDeterministic;
+                if (bDeterministic && RandomSeed != 0) {
+                    EmitterData->RandomSeed = RandomSeed;
+                }
+            }
+        }
+#endif
         if (bSave) System->MarkPackageDirty();
         
         Result->SetBoolField(TEXT("success"), true);

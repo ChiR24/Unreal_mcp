@@ -1477,8 +1477,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     if (SubAction == TEXT("configure_locomotion_state"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        // Reuse outer-scope BlueprintPath or read fresh value
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString StateName;
         Payload->TryGetStringField(TEXT("stateName"), StateName);
         FString AnimSequence;
@@ -1488,14 +1489,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         bool bLooping = true;
         Payload->TryGetBoolField(TEXT("looping"), bLooping);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, 
                 TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("animSequence"), AnimSequence);
         Result->SetNumberField(TEXT("blendTime"), BlendTime);
@@ -1510,8 +1511,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     if (SubAction == TEXT("configure_inventory_slot"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         int32 SlotIndex = 0;
         double SlotIndexD = 0;
         if (Payload->TryGetNumberField(TEXT("slotIndex"), SlotIndexD)) {
@@ -1527,14 +1528,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FString AcceptedItemTypes;
         Payload->TryGetStringField(TEXT("acceptedItemTypes"), AcceptedItemTypes);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, 
                 TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
         Result->SetStringField(TEXT("slotType"), SlotType);
         Result->SetNumberField(TEXT("maxStackSize"), MaxStackSize);
@@ -1587,8 +1588,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     if (SubAction == TEXT("configure_equipment_socket"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString SocketName;
         Payload->TryGetStringField(TEXT("socketName"), SocketName);
         FString EquipmentType = TEXT("Weapon");
@@ -1598,14 +1599,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         bool bSnapToSocket = true;
         Payload->TryGetBoolField(TEXT("snapToSocket"), bSnapToSocket);
 
-        if (BlueprintPath.IsEmpty() || SocketName.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty() || SocketName.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, 
                 TEXT("blueprintPath and socketName required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("socketName"), SocketName);
         Result->SetStringField(TEXT("equipmentType"), EquipmentType);
         Result->SetStringField(TEXT("attachBone"), AttachBone);
@@ -1619,8 +1620,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     if (SubAction == TEXT("configure_footstep_system"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         FString DefaultSound;
         Payload->TryGetStringField(TEXT("defaultSound"), DefaultSound);
         FString DefaultVFX;
@@ -1630,14 +1631,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         double VolumeMultiplier = 1.0;
         Payload->TryGetNumberField(TEXT("volumeMultiplier"), VolumeMultiplier);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, 
                 TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetStringField(TEXT("defaultSound"), DefaultSound);
         Result->SetStringField(TEXT("defaultVFX"), DefaultVFX);
         Result->SetBoolField(TEXT("useSurfaceType"), bUseSurfaceType);
@@ -1651,8 +1652,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
     // ============================================================
     if (SubAction == TEXT("configure_mantle_vault"))
     {
-        FString BlueprintPath;
-        Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+        FString LocalBlueprintPath;
+        Payload->TryGetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         double MaxMantleHeight = 200.0;
         Payload->TryGetNumberField(TEXT("maxMantleHeight"), MaxMantleHeight);
         double MaxVaultHeight = 100.0;
@@ -1664,14 +1665,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FString VaultAnimation;
         Payload->TryGetStringField(TEXT("vaultAnimation"), VaultAnimation);
 
-        if (BlueprintPath.IsEmpty()) {
+        if (LocalBlueprintPath.IsEmpty()) {
             SendAutomationError(RequestingSocket, RequestId, 
                 TEXT("blueprintPath required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("blueprintPath"), LocalBlueprintPath);
         Result->SetNumberField(TEXT("maxMantleHeight"), MaxMantleHeight);
         Result->SetNumberField(TEXT("maxVaultHeight"), MaxVaultHeight);
         Result->SetNumberField(TEXT("traceDistance"), TraceDistance);

@@ -6,6 +6,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/Paths.h"
 #include "Misc/Guid.h"
+#include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -2307,7 +2308,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
       UMovieScene* MovieScene = Sequence->GetMovieScene();
       for (UMovieSceneTrack* Track : MovieScene->GetTracks()) {
         if (Track->GetFName().ToString() == TrackId) {
+          // UE 5.7: SetIsEvalDisabled() was replaced with SetEvalDisabled()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+          Track->SetEvalDisabled(bMuted);
+#else
           Track->SetIsEvalDisabled(bMuted);
+#endif
           MovieScene->Modify();
           bSuccess = true;
           Message = FString::Printf(TEXT("Track %s"), bMuted ? TEXT("muted") : TEXT("unmuted"));
@@ -2334,7 +2340,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
         if (Track->GetFName().ToString() == TrackId) {
           // Solo: mute all others
           for (UMovieSceneTrack* OtherTrack : MovieScene->GetTracks()) {
+            // UE 5.7: SetIsEvalDisabled() was replaced with SetEvalDisabled()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+            OtherTrack->SetEvalDisabled(bSolo && OtherTrack != Track);
+#else
             OtherTrack->SetIsEvalDisabled(bSolo && OtherTrack != Track);
+#endif
           }
           MovieScene->Modify();
           bSuccess = true;
@@ -2436,7 +2447,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
         FFrameRate FrameRate = MovieScene->GetTickResolution();
         FFrameNumber StartFrame = (StartTime * FrameRate).FloorToFrame();
         FFrameNumber EndFrame = (EndTime * FrameRate).FloorToFrame();
+        // UE 5.7: SetWorkingRange signature changed from FFrameNumber to double
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        MovieScene->SetWorkingRange(StartTime, EndTime);
+#else
         MovieScene->SetWorkingRange(StartFrame, EndFrame);
+#endif
         MovieScene->Modify();
         bSuccess = true;
         Message = TEXT("Work range set");
@@ -2460,7 +2476,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
         FFrameRate FrameRate = MovieScene->GetTickResolution();
         FFrameNumber StartFrame = (StartTime * FrameRate).FloorToFrame();
         FFrameNumber EndFrame = (EndTime * FrameRate).FloorToFrame();
+        // UE 5.7: SetViewRange signature changed from FFrameNumber to double
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        MovieScene->SetViewRange(StartTime, EndTime);
+#else
         MovieScene->SetViewRange(StartFrame, EndFrame);
+#endif
         MovieScene->Modify();
         bSuccess = true;
         Message = TEXT("View range set");
@@ -2653,7 +2674,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     } else {
       ULevelSequence* Seq = LoadObject<ULevelSequence>(nullptr, *SequencePath);
       if (Seq && Seq->GetMovieScene()) {
-        UMovieSceneCameraCutTrack* CameraCutTrack = Seq->GetMovieScene()->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass());
+        // AddCameraCutTrack returns UMovieSceneTrack*, need to cast
+        UMovieSceneCameraCutTrack* CameraCutTrack = Cast<UMovieSceneCameraCutTrack>(
+            Seq->GetMovieScene()->AddCameraCutTrack(UMovieSceneCameraCutTrack::StaticClass()));
         if (CameraCutTrack) {
           bSuccess = true;
           Message = TEXT("Camera cut track created");
@@ -2686,7 +2709,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     } else {
       ULevelSequence* Seq = LoadObject<ULevelSequence>(nullptr, *SequencePath);
       if (Seq && Seq->GetMovieScene()) {
+        // UE 5.7: AddMasterTrack<T>() was replaced with AddTrack<T>()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        UMovieSceneEventTrack* EventTrack = Seq->GetMovieScene()->AddTrack<UMovieSceneEventTrack>();
+#else
         UMovieSceneEventTrack* EventTrack = Seq->GetMovieScene()->AddMasterTrack<UMovieSceneEventTrack>();
+#endif
         if (EventTrack) {
           if (!EventName.IsEmpty()) {
             EventTrack->SetDisplayName(FText::FromString(EventName));

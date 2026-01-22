@@ -76,6 +76,7 @@ void FMcpConnectionManager::Start() {
   bBridgeAvailable = true;
   bReconnectEnabled = AutoReconnectDelaySeconds > 0.0f;
   TimeUntilReconnect = 0.0f;
+  SessionStartTimeSeconds = FPlatformTime::Seconds();
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Starting MCP connection manager."));
   AttemptConnection();
@@ -740,6 +741,29 @@ void FMcpConnectionManager::RecordAutomationTelemetry(
 
   Stats.LastDurationSeconds = DurationSeconds;
   Stats.LastUpdatedSeconds = NowSeconds;
+
+  // Record operation history (ring buffer)
+  FMcpOperationHistoryEntry HistoryEntry;
+  HistoryEntry.Action = Entry.Action;
+  HistoryEntry.RequestId = RequestId;
+  HistoryEntry.bSuccess = bSuccess;
+  HistoryEntry.Message = Message;
+  HistoryEntry.ErrorCode = ErrorCode;
+  HistoryEntry.TimestampSeconds = NowSeconds;
+  
+  OperationHistory.Add(HistoryEntry);
+  if (OperationHistory.Num() > MaxOperationHistorySize) {
+    OperationHistory.RemoveAt(0);
+  }
+
+  // Track last error for debugging
+  if (!bSuccess && !ErrorCode.IsEmpty()) {
+    LastErrorDetails.ErrorMessage = Message;
+    LastErrorDetails.ErrorCode = ErrorCode;
+    LastErrorDetails.Action = Entry.Action;
+    LastErrorDetails.RequestId = RequestId;
+    LastErrorDetails.TimestampSeconds = NowSeconds;
+  }
 }
 
 void FMcpConnectionManager::EmitAutomationTelemetrySummaryIfNeeded(
@@ -804,4 +828,90 @@ void FMcpConnectionManager::StartRequestTelemetry(const FString &RequestId,
     Entry.StartTimeSeconds = FPlatformTime::Seconds();
     ActiveRequestTelemetry.Add(RequestId, Entry);
   }
+}
+
+TSharedPtr<FJsonObject> FMcpConnectionManager::GetActionStatistics() const {
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
+
+  int32 TotalSuccess = 0;
+  int32 TotalFailure = 0;
+
+  for (const TPair<FString, FAutomationActionStats>& Pair : AutomationActionTelemetry) {
+    TSharedPtr<FJsonObject> ActionObj = MakeShared<FJsonObject>();
+    ActionObj->SetNumberField(TEXT("successCount"), Pair.Value.SuccessCount);
+    ActionObj->SetNumberField(TEXT("failureCount"), Pair.Value.FailureCount);
+    ActionObj->SetNumberField(TEXT("lastDurationMs"), Pair.Value.LastDurationSeconds * 1000.0);
+    
+    double AvgSuccess = Pair.Value.SuccessCount > 0 
+        ? (Pair.Value.TotalSuccessDurationSeconds / Pair.Value.SuccessCount) * 1000.0 
+        : 0.0;
+    double AvgFailure = Pair.Value.FailureCount > 0 
+        ? (Pair.Value.TotalFailureDurationSeconds / Pair.Value.FailureCount) * 1000.0 
+        : 0.0;
+    ActionObj->SetNumberField(TEXT("avgSuccessDurationMs"), AvgSuccess);
+    ActionObj->SetNumberField(TEXT("avgFailureDurationMs"), AvgFailure);
+    
+    Stats->SetObjectField(Pair.Key, ActionObj);
+    TotalSuccess += Pair.Value.SuccessCount;
+    TotalFailure += Pair.Value.FailureCount;
+  }
+
+  Result->SetObjectField(TEXT("statistics"), Stats);
+  Result->SetNumberField(TEXT("totalActions"), TotalSuccess + TotalFailure);
+  Result->SetNumberField(TEXT("successCount"), TotalSuccess);
+  Result->SetNumberField(TEXT("failureCount"), TotalFailure);
+  Result->SetNumberField(TEXT("uniqueActions"), AutomationActionTelemetry.Num());
+  Result->SetNumberField(TEXT("sessionUptimeSeconds"), 
+      FPlatformTime::Seconds() - SessionStartTimeSeconds);
+
+  return Result;
+}
+
+TSharedPtr<FJsonObject> FMcpConnectionManager::GetOperationHistory(int32 Limit) const {
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TArray<TSharedPtr<FJsonValue>> HistoryArray;
+
+  // Get most recent entries (from end of array)
+  int32 StartIndex = FMath::Max(0, OperationHistory.Num() - Limit);
+  for (int32 i = OperationHistory.Num() - 1; i >= StartIndex; --i) {
+    const FMcpOperationHistoryEntry& Entry = OperationHistory[i];
+    TSharedPtr<FJsonObject> EntryObj = MakeShared<FJsonObject>();
+    EntryObj->SetStringField(TEXT("action"), Entry.Action);
+    EntryObj->SetStringField(TEXT("requestId"), Entry.RequestId);
+    EntryObj->SetBoolField(TEXT("success"), Entry.bSuccess);
+    EntryObj->SetStringField(TEXT("message"), Entry.Message);
+    if (!Entry.ErrorCode.IsEmpty()) {
+      EntryObj->SetStringField(TEXT("errorCode"), Entry.ErrorCode);
+    }
+    EntryObj->SetNumberField(TEXT("timestampSeconds"), Entry.TimestampSeconds);
+    HistoryArray.Add(MakeShared<FJsonValueObject>(EntryObj));
+  }
+
+  Result->SetArrayField(TEXT("history"), HistoryArray);
+  Result->SetNumberField(TEXT("count"), HistoryArray.Num());
+  Result->SetNumberField(TEXT("limit"), Limit);
+  Result->SetNumberField(TEXT("totalHistorySize"), OperationHistory.Num());
+
+  return Result;
+}
+
+TSharedPtr<FJsonObject> FMcpConnectionManager::GetLastErrorDetails() const {
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+
+  if (LastErrorDetails.TimestampSeconds > 0.0) {
+    Result->SetStringField(TEXT("errorMessage"), LastErrorDetails.ErrorMessage);
+    Result->SetStringField(TEXT("errorCode"), LastErrorDetails.ErrorCode);
+    Result->SetStringField(TEXT("action"), LastErrorDetails.Action);
+    Result->SetStringField(TEXT("requestId"), LastErrorDetails.RequestId);
+    Result->SetNumberField(TEXT("timestampSeconds"), LastErrorDetails.TimestampSeconds);
+    Result->SetNumberField(TEXT("secondsAgo"), 
+        FPlatformTime::Seconds() - LastErrorDetails.TimestampSeconds);
+    Result->SetBoolField(TEXT("hasError"), true);
+  } else {
+    Result->SetStringField(TEXT("errorMessage"), TEXT("No errors recorded"));
+    Result->SetBoolField(TEXT("hasError"), false);
+  }
+
+  return Result;
 }

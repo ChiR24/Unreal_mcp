@@ -404,6 +404,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting',
             'set_metadata', 'load_cells', 'set_datalayer', 'export_level', 'import_level', 'list_levels', 'get_summary',
             'delete', 'validate_level', 'cleanup_invalid_datalayers', 'add_sublevel',
+            // Aliases (C++ naming sync)
+            'load_level', 'save_current_level', 'stream_level', 'bake_lightmap', 'spawn_light', 'create_datalayer', 'create_new_level',
             // Level structure (merged from manage_level_structure)
             'create_sublevel', 'configure_level_streaming', 'set_streaming_distance', 'configure_level_bounds',
             'enable_world_partition', 'configure_grid_size', 'create_data_layer', 'assign_actor_to_data_layer',
@@ -658,7 +660,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_anim_layer', 'stack_anim_layers', 'configure_squash_stretch',
             'create_rigging_layer', 'configure_layer_blend_mode',
             'create_control_rig_physics', 'configure_ragdoll_profile', 'blend_ragdoll_to_animation',
-            'get_bone_transforms', 'apply_pose_asset'
+            'get_bone_transforms', 'apply_pose_asset',
+            // Aliases (C++ naming sync)
+            'create_animation_blueprint', 'play_anim_montage', 'apply_animation_modifier', 'get_chaos_plugin_status'
           ],
           description: 'Action'
         },
@@ -818,7 +822,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // Wave 4.1-4.10: Niagara Enhancement
             'create_niagara_sim_cache', 'configure_niagara_lod', 'export_niagara_system', 'import_niagara_module',
             'configure_niagara_determinism', 'create_niagara_data_interface', 'configure_gpu_simulation',
-            'batch_compile_niagara', 'get_niagara_parameters', 'set_niagara_variable'
+            'batch_compile_niagara', 'get_niagara_parameters', 'set_niagara_variable',
+            // Aliases (C++ naming sync)
+            'activate_niagara', 'deactivate_niagara', 'reset_niagara', 'spawn_niagara_actor', 'modify_niagara_parameter'
           ],
           description: 'Action'
         },
@@ -975,7 +981,12 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'configure_weather_preset', 'query_water_bodies', 'configure_ocean_waves',
             'create_landscape_spline', 'configure_foliage_density', 'batch_paint_foliage',
             'configure_sky_atmosphere', 'create_volumetric_cloud', 'configure_wind_directional',
-            'get_terrain_height_at'
+            'get_terrain_height_at',
+            // Aliases (C++ naming sync)
+            'add_foliage_type', 'configure_foliage_lod', 'configure_foliage_placement', 'get_foliage_types',
+            'configure_landscape_lod', 'get_landscape_info', 'import_heightmap', 'export_heightmap',
+            'configure_sun_position', 'configure_sun_color', 'configure_sun_atmosphere', 'set_skylight_intensity', 'set_sun_intensity',
+            'create_time_of_day_controller', 'get_water_depth_info'
           ],
           description: 'Action'
         },
@@ -1196,7 +1207,18 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             // Wave 4.11-4.20: Sequencer Enhancement Actions
             'create_media_track', 'configure_sequence_streaming', 'create_event_trigger_track',
             'add_procedural_camera_shake', 'configure_sequence_lod', 'create_camera_cut_track',
-            'configure_mrq_settings', 'batch_render_sequences', 'get_sequence_bindings', 'configure_audio_track'
+            'configure_mrq_settings', 'batch_render_sequences', 'get_sequence_bindings', 'configure_audio_track',
+            // Aliases (C++ naming sync)
+            'sequence_create', 'sequence_open', 'sequence_delete', 'sequence_duplicate', 'sequence_list', 'sequence_rename',
+            'sequence_add_actor', 'sequence_add_actors', 'sequence_add_camera', 'sequence_add_track', 'sequence_remove_track',
+            'sequence_add_keyframe', 'sequence_add_section', 'sequence_add_spawnable_from_class',
+            'sequence_get_bindings', 'sequence_get_metadata', 'sequence_get_properties', 'sequence_set_properties',
+            'sequence_set_display_rate', 'sequence_set_tick_resolution', 'sequence_set_work_range', 'sequence_set_view_range',
+            'sequence_play', 'sequence_pause', 'sequence_stop', 'sequence_set_playback_speed',
+            'sequence_list_tracks', 'sequence_list_track_types', 'sequence_remove_actors',
+            'sequence_set_track_muted', 'sequence_set_track_solo', 'sequence_set_track_locked',
+            'add_animation_track', 'add_camera_track', 'add_transform_track', 'add_sequencer_keyframe',
+            'delete_sequence', 'duplicate_sequence', 'list_sequences'
           ],
           description: 'Sequencer/MRQ action'
         },
@@ -7002,7 +7024,9 @@ createAsset: { type: 'boolean', description: 'Create as persistent asset.' },
           type: 'string',
           enum: [
             'create_widget', 'remove_widget_from_viewport', 'get_all_widgets', 'get_widget_hierarchy',
-            'set_input_mode', 'show_mouse_cursor', 'set_widget_visibility'
+            'set_input_mode', 'show_mouse_cursor', 'set_widget_visibility',
+            // Additional UI actions (C++ sync)
+            'create_hud', 'set_widget_text', 'set_widget_image', 'add_widget_child'
           ],
           description: 'UI action'
         },
@@ -7048,7 +7072,14 @@ createAsset: { type: 'boolean', description: 'Create as persistent asset.' },
             'create_gameplay_effect', 'set_effect_duration', 'add_effect_modifier', 'set_modifier_magnitude',
             'add_effect_execution_calculation', 'add_effect_cue', 'set_effect_stacking', 'set_effect_tags',
             // Common
-            'add_tag_to_asset', 'get_gas_info'
+            'add_tag_to_asset', 'get_gas_info',
+            // ASC & Attributes (C++ sync)
+            'add_ability_system_component', 'configure_asc', 'add_attribute',
+            'create_attribute_set', 'set_attribute_base_value', 'set_attribute_clamping',
+            // Cues (C++ sync)
+            'configure_cue_trigger', 'set_cue_effects', 'create_gameplay_cue_notify',
+            // Testing (C++ sync)
+            'test_activate_ability', 'test_apply_effect', 'test_get_attribute', 'test_get_gameplay_tags'
           ],
           description: 'Action to perform'
         },

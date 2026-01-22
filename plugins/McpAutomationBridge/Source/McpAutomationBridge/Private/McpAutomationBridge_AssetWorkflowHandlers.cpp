@@ -17,6 +17,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "Engine/TextureRenderTarget2D.h"
 #include "UObject/ObjectRedirector.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #include "ObjectTools.h"
@@ -2279,9 +2280,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
       UStaticMesh* StaticMesh = LoadObject<UStaticMesh>(nullptr, *AssetPath);
       if (StaticMesh) {
 #if ENGINE_MAJOR_VERSION >= 5
-        FStaticMeshSourceModel& LOD0 = StaticMesh->GetSourceModel(0);
-        LOD0.BuildSettings.bGenerateNaniteData = true;
+        // UE 5.7+: Use accessor functions for Nanite settings
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        FMeshNaniteSettings NaniteSettings = StaticMesh->GetNaniteSettings();
+        NaniteSettings.bEnabled = true;
+        StaticMesh->SetNaniteSettings(NaniteSettings);
+#else
         StaticMesh->NaniteSettings.bEnabled = true;
+#endif
         StaticMesh->MarkPackageDirty();
         McpSafeAssetSave(StaticMesh);
         ResultObj->SetBoolField(TEXT("success"), true);
@@ -2332,7 +2338,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
 #if ENGINE_MAJOR_VERSION >= 5
     // Force regeneration of Nanite data
+    // UE 5.7+: Use accessor functions for Nanite settings
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    FMeshNaniteSettings NaniteSettings = StaticMesh->GetNaniteSettings();
+    NaniteSettings.bEnabled = true;
+    StaticMesh->SetNaniteSettings(NaniteSettings);
+#else
     StaticMesh->NaniteSettings.bEnabled = true;
+#endif
     StaticMesh->Build(true);  // Force rebuild
     StaticMesh->MarkPackageDirty();
     McpSafeAssetSave(StaticMesh);
@@ -2340,7 +2353,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    Result->SetBoolField(TEXT("naniteEnabled"), StaticMesh->IsNaniteEnabled());
+#else
     Result->SetBoolField(TEXT("naniteEnabled"), StaticMesh->NaniteSettings.bEnabled);
+#endif
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nanite mesh rebuilt"), Result);
 #else
@@ -2369,14 +2386,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     Width = FMath::Clamp(Width, 1, 8192);
     Height = FMath::Clamp(Height, 1, 8192);
 
+    // Parse render target format
     FString FormatStr;
     Payload->TryGetStringField(TEXT("format"), FormatStr);
-    ETextureRenderTargetFormat Format = RTF_RGBA16f;
-    if (FormatStr == TEXT("RGBA8")) Format = RTF_RGBA8;
-    else if (FormatStr == TEXT("RGBA16f")) Format = RTF_RGBA16f;
-    else if (FormatStr == TEXT("RGBA32f")) Format = RTF_RGBA32f;
-    else if (FormatStr == TEXT("R16f")) Format = RTF_R16f;
-    else if (FormatStr == TEXT("R32f")) Format = RTF_R32f;
+    EPixelFormat PixelFormat = PF_FloatRGBA;  // Default RGBA16f
+    if (FormatStr == TEXT("RGBA8")) PixelFormat = PF_B8G8R8A8;
+    else if (FormatStr == TEXT("RGBA16f")) PixelFormat = PF_FloatRGBA;
+    else if (FormatStr == TEXT("RGBA32f")) PixelFormat = PF_A32B32G32R32F;
+    else if (FormatStr == TEXT("R16f")) PixelFormat = PF_R16F;
+    else if (FormatStr == TEXT("R32f")) PixelFormat = PF_R32_FLOAT;
 
     // Create the package
     FString PackageName = FPaths::Combine(PackagePath, Name);
@@ -2393,13 +2411,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     }
 
     RenderTarget->InitAutoFormat(Width, Height);
-    RenderTarget->RenderTargetFormat = Format;
+    RenderTarget->OverrideFormat = PixelFormat;
     RenderTarget->UpdateResourceImmediate(true);
     RenderTarget->MarkPackageDirty();
     
     // Register with Asset Registry
-    FAssetRegistryModule::AssetCreated(RenderTarget);
-    McpSafeAssetSave(RenderTarget);
+    FAssetRegistryModule::AssetCreated(Cast<UObject>(RenderTarget));
+    McpSafeAssetSave(Cast<UObject>(RenderTarget));
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
@@ -2446,7 +2464,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
       // Get input pins
       TArray<TSharedPtr<FJsonValue>> InputsArray;
+      // UE 5.3+: Use GetInputsView() instead of GetInputs()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      TArrayView<FExpressionInput*> Inputs = Expression->GetInputsView();
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#else
       TArray<FExpressionInput*> Inputs = Expression->GetInputs();
+#endif
       for (int32 i = 0; i < Inputs.Num(); i++) {
         if (FExpressionInput* Input = Inputs[i]) {
           TSharedPtr<FJsonObject> InputObj = MakeShared<FJsonObject>();
@@ -2519,7 +2544,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
     // Break all input connections on this node
     int32 BrokenCount = 0;
+    // UE 5.3+: Use GetInputsView() instead of GetInputs()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    TArrayView<FExpressionInput*> Inputs = TargetExpression->GetInputsView();
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#else
     TArray<FExpressionInput*> Inputs = TargetExpression->GetInputs();
+#endif
     for (FExpressionInput* Input : Inputs) {
       if (Input && Input->Expression) {
         Input->Expression = nullptr;
