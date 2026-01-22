@@ -3764,11 +3764,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     return true;
   }
 #endif
-  if (FEditorViewportClient *ViewportClient =
-          GEditor->GetActiveViewport()
-              ? (FEditorViewportClient *)GEditor->GetActiveViewport()
-                    ->GetClient()
-              : nullptr) {
+  // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+  // This avoids unsafe casting from FViewportClient* which fails with RTTI disabled (/GR-)
+  FEditorViewportClient* ViewportClient = nullptr;
+  const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+  for (FEditorViewportClient* Client : AllClients) {
+    if (Client && Client->IsPerspective()) {
+      ViewportClient = Client;
+      break;
+    }
+  }
+  if (!ViewportClient && AllClients.Num() > 0) {
+    ViewportClient = AllClients[0];
+  }
+  if (ViewportClient) {
     ViewportClient->SetViewLocation(Location);
     ViewportClient->SetViewRotation(Rotation);
     ViewportClient->Invalidate();
@@ -3845,25 +3854,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
   // Try to apply to viewport clients directly
   bool bApplied = false;
   
-  // First try the active viewport
-  if (GEditor->GetActiveViewport()) {
-    FViewport* ActiveViewport = GEditor->GetActiveViewport();
-    if (FViewportClient* BaseClient = ActiveViewport->GetClient()) {
-      FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
-      ViewportClient->SetViewMode(ViewModeIndex);
+  // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+  // This avoids unsafe casting which fails with RTTI disabled (/GR-)
+  const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+  for (FEditorViewportClient* Client : AllClients) {
+    if (Client) {
+      Client->SetViewMode(ViewModeIndex);
       bApplied = true;
-    }
-  }
-  
-  // If no active viewport, iterate all editor viewport clients
-  if (!bApplied) {
-    const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
-    for (FEditorViewportClient* Client : AllClients) {
-      if (Client) {
-        Client->SetViewMode(ViewModeIndex);
-        bApplied = true;
-        break;
-      }
+      break;
     }
   }
   
@@ -3942,9 +3940,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFOV(
     return true;
   }
   
-  FViewport* ActiveViewport = GEditor->GetActiveViewport();
-  if (FViewportClient* BaseClient = ActiveViewport->GetClient()) {
-    FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
+  // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+  // This avoids unsafe casting which fails with RTTI disabled (/GR-)
+  FEditorViewportClient* ViewportClient = nullptr;
+  const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+  for (FEditorViewportClient* Client : AllClients) {
+    if (Client && Client->IsPerspective()) {
+      ViewportClient = Client;
+      break;
+    }
+  }
+  if (!ViewportClient && AllClients.Num() > 0) {
+    ViewportClient = AllClients[0];
+  }
+  
+  if (ViewportClient) {
     ViewportClient->ViewFOV = FOV;
     ViewportClient->Invalidate();
     
@@ -4091,29 +4101,37 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
       SendAutomationError(RequestingSocket, RequestId, TEXT("bookmarkName required"), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    if (GEditor->GetActiveViewport()) {
-      FViewport* ActiveViewport = GEditor->GetActiveViewport();
-      // Use static_cast - GetClient() returns FViewportClient*, we need FEditorViewportClient*
-      if (FViewportClient* BaseClient = ActiveViewport->GetClient()) {
-        FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
-        FVector Loc = ViewportClient->GetViewLocation();
-        FRotator Rot = ViewportClient->GetViewRotation();
-        GSessionBookmarks.Add(BookmarkName, FTransform(Rot, Loc));
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-        Result->SetStringField(TEXT("name"), BookmarkName);
-        TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
-        LocObj->SetNumberField(TEXT("x"), Loc.X);
-        LocObj->SetNumberField(TEXT("y"), Loc.Y);
-        LocObj->SetNumberField(TEXT("z"), Loc.Z);
-        Result->SetObjectField(TEXT("location"), LocObj);
-        TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
-        RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
-        RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
-        RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
-        Result->SetObjectField(TEXT("rotation"), RotObj);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bookmark created (Session)"), Result);
-        return true;
+    // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+    // This avoids unsafe casting which fails with RTTI disabled (/GR-)
+    FEditorViewportClient* ViewportClient = nullptr;
+    const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+    for (FEditorViewportClient* Client : AllClients) {
+      if (Client && Client->IsPerspective()) {
+        ViewportClient = Client;
+        break;
       }
+    }
+    if (!ViewportClient && AllClients.Num() > 0) {
+      ViewportClient = AllClients[0];
+    }
+    if (ViewportClient) {
+      FVector Loc = ViewportClient->GetViewLocation();
+      FRotator Rot = ViewportClient->GetViewRotation();
+      GSessionBookmarks.Add(BookmarkName, FTransform(Rot, Loc));
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("name"), BookmarkName);
+      TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+      LocObj->SetNumberField(TEXT("x"), Loc.X);
+      LocObj->SetNumberField(TEXT("y"), Loc.Y);
+      LocObj->SetNumberField(TEXT("z"), Loc.Z);
+      Result->SetObjectField(TEXT("location"), LocObj);
+      TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
+      RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
+      RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
+      RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
+      Result->SetObjectField(TEXT("rotation"), RotObj);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bookmark created (Session)"), Result);
+      return true;
     }
     SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
     return true;
@@ -4123,16 +4141,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     FString BookmarkName;
     Payload->TryGetStringField(TEXT("bookmarkName"), BookmarkName);
     if (FTransform* Found = GSessionBookmarks.Find(BookmarkName)) {
-      if (GEditor->GetActiveViewport()) {
-        // Use static_cast - GetClient() returns FViewportClient*, we need FEditorViewportClient*
-        if (FViewportClient* BaseClient = GEditor->GetActiveViewport()->GetClient()) {
-          FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
-          ViewportClient->SetViewLocation(Found->GetLocation());
-          ViewportClient->SetViewRotation(Found->GetRotation().Rotator());
-          ViewportClient->Invalidate();
-          SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Jumped to bookmark '%s'"), *BookmarkName));
-          return true;
+      // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+      FEditorViewportClient* ViewportClient = nullptr;
+      const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+      for (FEditorViewportClient* Client : AllClients) {
+        if (Client && Client->IsPerspective()) {
+          ViewportClient = Client;
+          break;
         }
+      }
+      if (!ViewportClient && AllClients.Num() > 0) {
+        ViewportClient = AllClients[0];
+      }
+      if (ViewportClient) {
+        ViewportClient->SetViewLocation(Found->GetLocation());
+        ViewportClient->SetViewRotation(Found->GetRotation().Rotator());
+        ViewportClient->Invalidate();
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Jumped to bookmark '%s'"), *BookmarkName));
+        return true;
       }
       SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
       return true;
@@ -4171,15 +4197,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("set_viewport_realtime")) {
     bool bEnabled = false;
     if (Payload->TryGetBoolField(TEXT("enabled"), bEnabled)) {
-      if (GEditor && GEditor->GetActiveViewport()) {
-        // Use static_cast - GetClient() returns FViewportClient*, we need FEditorViewportClient*
-        if (FViewportClient* BaseClient = GEditor->GetActiveViewport()->GetClient()) {
-          FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
-          ViewportClient->SetRealtime(bEnabled);
-          ViewportClient->Invalidate();
-          SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Realtime set to %s"), bEnabled ? TEXT("true") : TEXT("false")));
-          return true;
+      // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+      FEditorViewportClient* ViewportClient = nullptr;
+      const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+      for (FEditorViewportClient* Client : AllClients) {
+        if (Client && Client->IsPerspective()) {
+          ViewportClient = Client;
+          break;
         }
+      }
+      if (!ViewportClient && AllClients.Num() > 0) {
+        ViewportClient = AllClients[0];
+      }
+      if (ViewportClient) {
+        ViewportClient->SetRealtime(bEnabled);
+        ViewportClient->Invalidate();
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Realtime set to %s"), bEnabled ? TEXT("true") : TEXT("false")));
+        return true;
       }
       SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
       return true;
@@ -4512,17 +4546,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("toggle_realtime_rendering")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-    if (GEditor && GEditor->GetActiveViewport()) {
-      if (FViewportClient* BaseClient = GEditor->GetActiveViewport()->GetClient()) {
-        FEditorViewportClient* ViewportClient = static_cast<FEditorViewportClient*>(BaseClient);
-        ViewportClient->SetRealtime(bEnabled);
-        ViewportClient->Invalidate();
-        TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-        Data->SetBoolField(TEXT("realtimeEnabled"), bEnabled);
-        SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
-          bEnabled ? TEXT("Realtime rendering enabled") : TEXT("Realtime rendering disabled"), Data);
-        return true;
+    // Use GEditor->GetAllViewportClients() to get typed FEditorViewportClient* directly
+    FEditorViewportClient* ViewportClient = nullptr;
+    const TArray<FEditorViewportClient*>& AllClients = GEditor->GetAllViewportClients();
+    for (FEditorViewportClient* Client : AllClients) {
+      if (Client && Client->IsPerspective()) {
+        ViewportClient = Client;
+        break;
       }
+    }
+    if (!ViewportClient && AllClients.Num() > 0) {
+      ViewportClient = AllClients[0];
+    }
+    if (ViewportClient) {
+      ViewportClient->SetRealtime(bEnabled);
+      ViewportClient->Invalidate();
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetBoolField(TEXT("realtimeEnabled"), bEnabled);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, 
+        bEnabled ? TEXT("Realtime rendering enabled") : TEXT("Realtime rendering disabled"), Data);
+      return true;
     }
     SendAutomationError(RequestingSocket, RequestId, TEXT("No active viewport"), TEXT("NO_VIEWPORT"));
     return true;
