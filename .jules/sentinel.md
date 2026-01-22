@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2026-05-26 - [Command Injection via String Interpolation in FoliageTools]
+**Vulnerability:** `FoliageTools` methods (e.g., `createInstancedMesh`, `removeFoliageInstances`) constructed console commands using string interpolation with user-provided names and paths. This allowed argument injection and potentially command chaining if the validator was bypassed or if the injected arguments altered the command's behavior dangerously.
+**Learning:** Security fixes must be applied comprehensively across all modules. When a pattern (like unsafe interpolation) is found in one tool (`UITools`), it is likely present in others (`FoliageTools`, `LandscapeTools`).
+**Prevention:** Audit all usages of `executeConsoleCommand` and ensure all interpolated variables are sanitized using `sanitizeConsoleString`, `sanitizeAssetName`, or `sanitizePath` as appropriate.
