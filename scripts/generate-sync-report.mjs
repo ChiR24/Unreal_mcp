@@ -44,8 +44,9 @@ const ACTION_VARIABLES = new Set([
  * Patterns that indicate a string is NOT a valid action name
  */
 const FALSE_POSITIVE_PATTERNS = {
-  // Tool name pattern: matches our tool naming convention
-  toolNames: /^(manage|control|build|test)_[a-z_]+$/,
+  // Tool name pattern: matches EXACT tool names with simple suffix (e.g., "manage_asset")
+  // Uses negative lookahead to exclude multi-part action names like "build_lighting"
+  toolNames: /^(?!build_lighting|build_hlod)(manage|control|build)_[a-z]+$/,
   
   // Primitive type names
   primitiveTypes: /^(float|int|int32|int64|double|bool|boolean|byte|string|text|name|object|class|void|auto)$/,
@@ -75,7 +76,8 @@ const FALSE_POSITIVE_PATTERNS = {
   locomotionModes: /^(walk|walking|run|running|fly|flying|swim|swimming|fall|falling|none|crouch|crouching|prone|slide|sliding|idle|jump|jumping)$/,
   
   // Asset type categories (not actions)
-  assetCategories: /^(blueprint|blueprints|material|materials|mesh|meshes|texture|textures|sound|sounds|audio|staticmesh|skeletalmesh|animation|animations|particle|particles|niagara|level|levels|widget|widgets)$/,
+  // Note: 'particle' and 'niagara' are VALID action names (shorthand for spawn_particle/spawn_niagara)
+  assetCategories: /^(blueprint|blueprints|material|materials|mesh|meshes|texture|textures|sound|sounds|audio|staticmesh|skeletalmesh|animation|animations|particles|level|levels|widget|widgets)$/,
   
   // Quality presets
   qualityPresets: /^(high|medium|low|preview|epic|cinematic|ultra|custom)$/,

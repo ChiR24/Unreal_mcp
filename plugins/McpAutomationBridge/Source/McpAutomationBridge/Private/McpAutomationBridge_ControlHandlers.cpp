@@ -4773,14 +4773,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
   // Get Action Statistics
   if (LowerSub == TEXT("get_action_statistics")) {
-    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-    TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
-    // Note: Action statistics tracking not implemented in this handler
-    // Return placeholder statistics
-    Data->SetObjectField(TEXT("statistics"), Stats);
-    Data->SetNumberField(TEXT("totalActions"), 0);
-    Data->SetStringField(TEXT("note"), TEXT("Action statistics tracking not yet implemented"));
-    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action statistics retrieved"), Data);
+    TSharedPtr<FMcpConnectionManager> ConnMgr = GetConnectionManager();
+    if (ConnMgr.IsValid()) {
+      TSharedPtr<FJsonObject> Data = ConnMgr->GetActionStatistics();
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action statistics retrieved"), Data);
+    } else {
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetNumberField(TEXT("totalActions"), 0);
+      Data->SetStringField(TEXT("note"), TEXT("Connection manager not available"));
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Action statistics retrieved"), Data);
+    }
     return true;
   }
 
@@ -4790,25 +4792,34 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     double LimitD = 20;
     Payload->TryGetNumberField(TEXT("limit"), LimitD);
     Limit = FMath::Max(1, (int32)LimitD);
-    TArray<TSharedPtr<FJsonValue>> HistoryArray;
-    // Operation history would be populated if tracking was implemented
-    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-    Data->SetArrayField(TEXT("history"), HistoryArray);
-    Data->SetNumberField(TEXT("count"), 0);
-    Data->SetNumberField(TEXT("limit"), Limit);
-    Data->SetStringField(TEXT("note"), TEXT("Operation history tracking not yet implemented"));
-    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Operation history retrieved"), Data);
+    
+    TSharedPtr<FMcpConnectionManager> ConnMgr = GetConnectionManager();
+    if (ConnMgr.IsValid()) {
+      TSharedPtr<FJsonObject> Data = ConnMgr->GetOperationHistory(Limit);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Operation history retrieved"), Data);
+    } else {
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      TArray<TSharedPtr<FJsonValue>> HistoryArray;
+      Data->SetArrayField(TEXT("history"), HistoryArray);
+      Data->SetNumberField(TEXT("count"), 0);
+      Data->SetStringField(TEXT("note"), TEXT("Connection manager not available"));
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Operation history retrieved"), Data);
+    }
     return true;
   }
 
   // Get Last Error Details
   if (LowerSub == TEXT("get_last_error_details")) {
-    bool bIncludeStackTrace = false;
-    Payload->TryGetBoolField(TEXT("includeStackTrace"), bIncludeStackTrace);
-    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-    Data->SetStringField(TEXT("lastError"), TEXT("No recent errors"));
-    Data->SetStringField(TEXT("note"), TEXT("Error tracking not yet implemented"));
-    SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Last error details retrieved"), Data);
+    TSharedPtr<FMcpConnectionManager> ConnMgr = GetConnectionManager();
+    if (ConnMgr.IsValid()) {
+      TSharedPtr<FJsonObject> Data = ConnMgr->GetLastErrorDetails();
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Last error details retrieved"), Data);
+    } else {
+      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+      Data->SetStringField(TEXT("errorMessage"), TEXT("Connection manager not available"));
+      Data->SetBoolField(TEXT("hasError"), false);
+      SendStandardSuccessResponse(this, RequestingSocket, RequestId, TEXT("Last error details retrieved"), Data);
+    }
     return true;
   }
 

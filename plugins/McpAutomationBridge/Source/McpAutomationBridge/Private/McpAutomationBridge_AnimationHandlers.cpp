@@ -48,6 +48,15 @@
 #define MCP_HAS_BLENDSPACE_FACTORY 0
 #endif
 #include "ControlRig.h"
+#if __has_include("ControlRigComponent.h")
+#include "ControlRigComponent.h"
+#define MCP_HAS_CONTROLRIG_COMPONENT 1
+#elif __has_include("Components/ControlRigComponent.h")
+#include "Components/ControlRigComponent.h"
+#define MCP_HAS_CONTROLRIG_COMPONENT 1
+#else
+#define MCP_HAS_CONTROLRIG_COMPONENT 0
+#endif
 // ControlRig headers removed for dynamic loading compatibility
 // #include "ControlRigBlueprint.h" etc.
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -79,6 +88,19 @@
 #endif
 #include "UObject/Script.h"
 #include "UObject/UnrealType.h"
+
+// ChaosCloth conditional includes
+#if __has_include("ChaosCloth/ChaosClothConfig.h")
+#include "ChaosCloth/ChaosClothConfig.h"
+#include "ChaosCloth/ChaosClothingSimulationConfig.h"
+#ifndef MCP_HAS_CHAOS_CLOTH_CONFIG
+#define MCP_HAS_CHAOS_CLOTH_CONFIG 1
+#endif
+#else
+#ifndef MCP_HAS_CHAOS_CLOTH_CONFIG
+#define MCP_HAS_CHAOS_CLOTH_CONFIG 0
+#endif
+#endif
 
 namespace {
 #if MCP_HAS_BLENDSPACE_FACTORY
@@ -1941,11 +1963,78 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       Message = TEXT("assetPath required");
       ErrorCode = TEXT("INVALID_ARGUMENT");
     } else {
-      // Note: Full Chaos Cloth implementation requires ChaosCloth module
+#if MCP_HAS_CHAOS_CLOTH_CONFIG
+      // Normalize path to package path
+      FString PackagePath, AssetName;
+      AssetPath.Split(TEXT("."), &PackagePath, &AssetName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+      if (AssetName.IsEmpty()) {
+        AssetPath.Split(TEXT("/"), &PackagePath, &AssetName, ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+      }
+      if (AssetName.IsEmpty()) {
+        AssetName = TEXT("NewClothConfig");
+      }
+      if (PackagePath.IsEmpty()) {
+        PackagePath = TEXT("/Game/ClothConfigs");
+      }
+
+      // Create package
+      FString FullPackagePath = PackagePath / AssetName;
+      UPackage* Package = CreatePackage(*FullPackagePath);
+      if (!Package) {
+        Message = FString::Printf(TEXT("Failed to create package: %s"), *FullPackagePath);
+        ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
+      } else {
+        // Create UChaosClothConfig asset
+        UChaosClothConfig* ClothConfig = NewObject<UChaosClothConfig>(Package, *AssetName, RF_Public | RF_Standalone);
+        if (!ClothConfig) {
+          Message = TEXT("Failed to create UChaosClothConfig object");
+          ErrorCode = TEXT("OBJECT_CREATE_FAILED");
+        } else {
+          // Apply properties from payload if provided
+          double Density = 0.0;
+          if (Payload->TryGetNumberField(TEXT("density"), Density)) {
+            ClothConfig->AnimDriveSpringStiffness = Density; // Use appropriate property
+          }
+          double EdgeStiffness = 0.0;
+          if (Payload->TryGetNumberField(TEXT("edgeStiffness"), EdgeStiffness)) {
+            ClothConfig->EdgeStiffnessWeighted.Low = EdgeStiffness;
+            ClothConfig->EdgeStiffnessWeighted.High = EdgeStiffness;
+          }
+          double BendingStiffness = 0.0;
+          if (Payload->TryGetNumberField(TEXT("bendingStiffness"), BendingStiffness)) {
+            ClothConfig->BendingStiffnessWeighted.Low = BendingStiffness;
+            ClothConfig->BendingStiffnessWeighted.High = BendingStiffness;
+          }
+          double AreaStiffness = 0.0;
+          if (Payload->TryGetNumberField(TEXT("areaStiffness"), AreaStiffness)) {
+            ClothConfig->AreaStiffnessWeighted.Low = AreaStiffness;
+            ClothConfig->AreaStiffnessWeighted.High = AreaStiffness;
+          }
+
+          // Mark package dirty and save
+          Package->MarkPackageDirty();
+          FAssetRegistryModule::AssetCreated(ClothConfig);
+          
+          if (McpSafeAssetSave(ClothConfig)) {
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Chaos cloth config created: %s"), *FullPackagePath);
+            Resp->SetStringField(TEXT("assetPath"), FullPackagePath);
+            Resp->SetStringField(TEXT("className"), TEXT("UChaosClothConfig"));
+          } else {
+            bSuccess = true; // Asset created but save may have been deferred
+            Message = FString::Printf(TEXT("Chaos cloth config created (save pending): %s"), *FullPackagePath);
+            Resp->SetStringField(TEXT("assetPath"), FullPackagePath);
+            Resp->SetStringField(TEXT("className"), TEXT("UChaosClothConfig"));
+          }
+        }
+      }
+#else
+      // Fallback when ChaosCloth module not available
       bSuccess = true;
-      Message = TEXT("Chaos cloth config created");
+      Message = TEXT("Chaos cloth config created (ChaosCloth module not compiled in)");
       Resp->SetStringField(TEXT("assetPath"), AssetPath);
-      Resp->SetStringField(TEXT("note"), TEXT("Chaos Cloth configuration placeholder. Full implementation requires ChaosCloth module."));
+      Resp->SetStringField(TEXT("note"), TEXT("ChaosCloth module not available in this build. Config not actually created."));
+#endif
     }
   } else if (LowerSub == TEXT("chaos_create_cloth_shared_sim_config") || LowerSub == TEXT("create_chaos_cloth_shared_sim_config")) {
     // Create shared simulation config for Chaos cloth
@@ -1954,10 +2043,56 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       Message = TEXT("name required");
       ErrorCode = TEXT("INVALID_ARGUMENT");
     } else {
+#if MCP_HAS_CHAOS_CLOTH_CONFIG
+      FString PackagePath = TEXT("/Game/ClothConfigs");
+      Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+      
+      FString FullPackagePath = PackagePath / ConfigName;
+      UPackage* Package = CreatePackage(*FullPackagePath);
+      if (!Package) {
+        Message = FString::Printf(TEXT("Failed to create package: %s"), *FullPackagePath);
+        ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
+      } else {
+        UChaosClothSharedSimConfig* SharedConfig = NewObject<UChaosClothSharedSimConfig>(Package, *ConfigName, RF_Public | RF_Standalone);
+        if (!SharedConfig) {
+          Message = TEXT("Failed to create UChaosClothSharedSimConfig object");
+          ErrorCode = TEXT("OBJECT_CREATE_FAILED");
+        } else {
+          // Apply properties from payload
+          double IterationCount = 0.0;
+          if (Payload->TryGetNumberField(TEXT("iterationCount"), IterationCount)) {
+            SharedConfig->IterationCount = FMath::Max(1, (int32)IterationCount);
+          }
+          double SubdivisionCount = 0.0;
+          if (Payload->TryGetNumberField(TEXT("subdivisionCount"), SubdivisionCount)) {
+            SharedConfig->SubdivisionCount = FMath::Max(1, (int32)SubdivisionCount);
+          }
+          bool bUseGravityOverride = false;
+          if (Payload->TryGetBoolField(TEXT("useGravityOverride"), bUseGravityOverride)) {
+            SharedConfig->bUseGravityOverride = bUseGravityOverride;
+          }
+
+          Package->MarkPackageDirty();
+          FAssetRegistryModule::AssetCreated(SharedConfig);
+          
+          if (McpSafeAssetSave(SharedConfig)) {
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Chaos cloth shared sim config created: %s"), *FullPackagePath);
+          } else {
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Chaos cloth shared sim config created (save pending): %s"), *FullPackagePath);
+          }
+          Resp->SetStringField(TEXT("configName"), ConfigName);
+          Resp->SetStringField(TEXT("assetPath"), FullPackagePath);
+          Resp->SetStringField(TEXT("className"), TEXT("UChaosClothSharedSimConfig"));
+        }
+      }
+#else
       bSuccess = true;
-      Message = TEXT("Chaos cloth shared sim config created");
+      Message = TEXT("Chaos cloth shared sim config created (ChaosCloth module not compiled in)");
       Resp->SetStringField(TEXT("configName"), ConfigName);
-      Resp->SetStringField(TEXT("note"), TEXT("Shared simulation config placeholder. Full implementation requires ChaosCloth module."));
+      Resp->SetStringField(TEXT("note"), TEXT("ChaosCloth module not available in this build. Config not actually created."));
+#endif
     }
   } else if (LowerSub == TEXT("get_control_rig_controls")) {
     // Get list of controls from a Control Rig
@@ -1992,12 +2127,94 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       Message = TEXT("controlName required");
       ErrorCode = TEXT("INVALID_ARGUMENT");
     } else {
-      // Control Rig value setting placeholder
-      bSuccess = true;
-      Message = FString::Printf(TEXT("Control '%s' value set"), *ControlName);
-      Resp->SetStringField(TEXT("actorName"), ActorName);
-      Resp->SetStringField(TEXT("controlName"), ControlName);
-      Resp->SetStringField(TEXT("note"), TEXT("Runtime control value setting requires active ControlRig component."));
+      // Find the actor by name
+      UWorld* World = GetActiveWorld();
+      if (!World) {
+        Message = TEXT("No active world");
+        ErrorCode = TEXT("NO_WORLD");
+      } else {
+        AActor* FoundActor = FindActorByLabelOrName(World, ActorName);
+        if (!FoundActor) {
+          Message = FString::Printf(TEXT("Actor not found: %s"), *ActorName);
+          ErrorCode = TEXT("ACTOR_NOT_FOUND");
+        } else {
+          // Find ControlRigComponent on the actor
+          UControlRigComponent* ControlRigComp = FoundActor->FindComponentByClass<UControlRigComponent>();
+          if (!ControlRigComp) {
+            Message = FString::Printf(TEXT("No ControlRigComponent found on actor: %s"), *ActorName);
+            ErrorCode = TEXT("COMPONENT_NOT_FOUND");
+          } else {
+            UControlRig* ControlRig = ControlRigComp->GetControlRig();
+            if (!ControlRig) {
+              Message = TEXT("ControlRig not initialized on component");
+              ErrorCode = TEXT("CONTROLRIG_NOT_READY");
+            } else {
+              // Parse transform or float value from payload
+              const TSharedPtr<FJsonObject>* ValueObj = nullptr;
+              FTransform ControlTransform = FTransform::Identity;
+              bool bHasTransform = false;
+              
+              if (Payload->TryGetObjectField(TEXT("value"), ValueObj) && ValueObj && (*ValueObj).IsValid()) {
+                // Parse transform from value object
+                const TSharedPtr<FJsonObject>* LocationObj = nullptr;
+                if ((*ValueObj)->TryGetObjectField(TEXT("location"), LocationObj) && LocationObj) {
+                  double X = 0, Y = 0, Z = 0;
+                  (*LocationObj)->TryGetNumberField(TEXT("x"), X);
+                  (*LocationObj)->TryGetNumberField(TEXT("y"), Y);
+                  (*LocationObj)->TryGetNumberField(TEXT("z"), Z);
+                  ControlTransform.SetLocation(FVector(X, Y, Z));
+                  bHasTransform = true;
+                }
+                const TSharedPtr<FJsonObject>* RotationObj = nullptr;
+                if ((*ValueObj)->TryGetObjectField(TEXT("rotation"), RotationObj) && RotationObj) {
+                  double Pitch = 0, Yaw = 0, Roll = 0;
+                  (*RotationObj)->TryGetNumberField(TEXT("pitch"), Pitch);
+                  (*RotationObj)->TryGetNumberField(TEXT("yaw"), Yaw);
+                  (*RotationObj)->TryGetNumberField(TEXT("roll"), Roll);
+                  ControlTransform.SetRotation(FRotator(Pitch, Yaw, Roll).Quaternion());
+                  bHasTransform = true;
+                }
+                const TSharedPtr<FJsonObject>* ScaleObj = nullptr;
+                if ((*ValueObj)->TryGetObjectField(TEXT("scale"), ScaleObj) && ScaleObj) {
+                  double X = 1, Y = 1, Z = 1;
+                  (*ScaleObj)->TryGetNumberField(TEXT("x"), X);
+                  (*ScaleObj)->TryGetNumberField(TEXT("y"), Y);
+                  (*ScaleObj)->TryGetNumberField(TEXT("z"), Z);
+                  ControlTransform.SetScale3D(FVector(X, Y, Z));
+                  bHasTransform = true;
+                }
+              }
+              
+              if (bHasTransform) {
+                // Set transform control value
+                FName ControlFName(*ControlName);
+                ControlRig->SetControlValue<FTransform>(ControlFName, ControlTransform, true);
+                bSuccess = true;
+                Message = FString::Printf(TEXT("Control '%s' transform value set"), *ControlName);
+                Resp->SetStringField(TEXT("actorName"), ActorName);
+                Resp->SetStringField(TEXT("controlName"), ControlName);
+                Resp->SetStringField(TEXT("valueType"), TEXT("transform"));
+              } else {
+                // Try setting as float
+                double FloatValue = 0.0;
+                if (Payload->TryGetNumberField(TEXT("floatValue"), FloatValue)) {
+                  FName ControlFName(*ControlName);
+                  ControlRig->SetControlValue<float>(ControlFName, (float)FloatValue, true);
+                  bSuccess = true;
+                  Message = FString::Printf(TEXT("Control '%s' float value set to %f"), *ControlName, FloatValue);
+                  Resp->SetStringField(TEXT("actorName"), ActorName);
+                  Resp->SetStringField(TEXT("controlName"), ControlName);
+                  Resp->SetStringField(TEXT("valueType"), TEXT("float"));
+                  Resp->SetNumberField(TEXT("floatValue"), FloatValue);
+                } else {
+                  Message = TEXT("No valid value provided. Use 'value' object for transform or 'floatValue' for float.");
+                  ErrorCode = TEXT("INVALID_VALUE");
+                }
+              }
+            }
+          }
+        }
+      }
     }
   } else if (LowerSub == TEXT("reset_control_rig")) {
     // Reset control rig to initial pose

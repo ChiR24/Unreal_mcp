@@ -2,38 +2,38 @@
 
 > Auto-generated from C++ handler files. Do not edit manually.
 
-Generated: 2026-01-22T05:56:02.909Z
+Generated: 2026-01-22T06:18:39.352Z
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
 | Handler Files | 72 |
-| Total Actions | 2478 |
+| Total Actions | 2504 |
 | Lines of Code | 1,24,275 |
 
 ## Table of Contents
 
 - [AssetPlugins](#assetplugins) (158 actions) → manage_asset_plugins
+- [Control](#control) (143 actions) → control_actor, control_editor
 - [XRPlugins](#xrplugins) (142 actions) → manage_xr
-- [Control](#control) (135 actions) → control_actor, control_editor
 - [VirtualProduction](#virtualproduction) (130 actions) → manage_xr
 - [UtilityPlugins](#utilityplugins) (100 actions) → manage_asset_plugins
 - [Geometry](#geometry) (83 actions) → manage_geometry
 - [AudioMiddleware](#audiomiddleware) (81 actions) → manage_audio
 - [PhysicsDestruction](#physicsdestruction) (80 actions) → animation_physics
-- [SequencerConsolidated](#sequencerconsolidated) (64 actions) → manage_sequence
-- [LiveLink](#livelink) (63 actions) → manage_livelink
+- [SequencerConsolidated](#sequencerconsolidated) (70 actions) → manage_sequence
+- [LiveLink](#livelink) (64 actions) → manage_livelink
 - [GameplayPrimitives](#gameplayprimitives) (62 actions) → manage_gameplay_primitives
+- [AssetWorkflow](#assetworkflow) (61 actions) → manage_asset
+- [Lighting](#lighting) (61 actions) → manage_lighting
+- [MaterialAuthoring](#materialauthoring) (61 actions) → manage_material_authoring
 - [CharacterAvatar](#characteravatar) (60 actions) → manage_character_avatar
-- [MaterialAuthoring](#materialauthoring) (60 actions) → manage_material_authoring
-- [Lighting](#lighting) (59 actions) → manage_lighting
-- [AssetWorkflow](#assetworkflow) (57 actions) → manage_asset
 - [AI](#ai) (56 actions) → manage_ai
-- [Environment](#environment) (54 actions) → build_environment
+- [Environment](#environment) (55 actions) → build_environment
 - [Audio](#audio) (52 actions) → manage_audio
 - [Accessibility](#accessibility) (50 actions) → manage_accessibility
-- [GameplaySystems](#gameplaysystems) (49 actions) → manage_gameplay_systems
+- [GameplaySystems](#gameplaysystems) (50 actions) → manage_gameplay_systems
 - [EditorUtilities](#editorutilities) (45 actions) → manage_editor_utilities
 - [Animation](#animation) (43 actions) → animation_physics
 - [PCG](#pcg) (41 actions) → manage_level
@@ -42,45 +42,45 @@ Generated: 2026-01-22T05:56:02.909Z
 - [Data](#data) (37 actions) → manage_data
 - [Networking](#networking) (37 actions) → manage_networking
 - [NiagaraAuthoring](#niagaraauthoring) (36 actions) → manage_effect
+- [LevelStructure](#levelstructure) (35 actions) → manage_level
 - [Character](#character) (34 actions) → manage_character
 - [MovieRender](#movierender) (33 actions) → manage_sequence
-- [Sequence](#sequence) (32 actions) → manage_sequence
-- [LevelStructure](#levelstructure) (31 actions) → manage_level
+- [Sequence](#sequence) (33 actions) → manage_sequence
+- [GAS](#gas) (31 actions) → manage_combat, manage_gameplay_abilities, manage_attribute_sets, manage_gameplay_cues, test_gameplay_abilities
+- [PostProcess](#postprocess) (31 actions) → manage_lighting
 - [AINPC](#ainpc) (30 actions) → manage_ai
 - [AudioAuthoring](#audioauthoring) (30 actions) → manage_audio
-- [PostProcess](#postprocess) (30 actions) → manage_lighting
 - [Skeleton](#skeleton) (29 actions) → manage_skeleton
-- [GAS](#gas) (27 actions) → manage_combat
 - [Inventory](#inventory) (27 actions) → manage_character
 - [Volume](#volume) (26 actions) → manage_volumes
+- [Media](#media) (25 actions) → manage_skeleton
 - [Modding](#modding) (25 actions) → manage_data
 - [Build](#build) (24 actions) → manage_build
 - [Testing](#testing) (24 actions) → manage_build
-- [Media](#media) (22 actions) → manage_skeleton
 - [Spline](#spline) (22 actions) → manage_volumes
 - [Texture](#texture) (21 actions) → manage_material_authoring
 - [GameFramework](#gameframework) (20 actions) → manage_networking
+- [Level](#level) (20 actions) → manage_level
 - [Performance](#performance) (20 actions) → manage_performance
 - [Interaction](#interaction) (17 actions) → manage_character
 - [NiagaraAdvanced](#niagaraadvanced) (17 actions) → manage_effect
 - [Water](#water) (17 actions) → build_environment
 - [Sessions](#sessions) (16 actions) → manage_networking
 - [Ui](#ui) (16 actions) → manage_ui
-- [Level](#level) (15 actions) → manage_level
 - [MetaSound](#metasound) (13 actions) → manage_asset, manage_audio
 - [BlueprintGraph](#blueprintgraph) (12 actions) → manage_asset
 - [ControlRig](#controlrig) (12 actions) → animation_physics
 - [Navigation](#navigation) (12 actions) → manage_ai
 - [MotionDesign](#motiondesign) (10 actions) → manage_motion_design
 - [Weather](#weather) (7 actions) → build_environment
+- [BehaviorTree](#behaviortree) (6 actions) → manage_ai
 - [MaterialGraph](#materialgraph) (6 actions) → manage_asset
-- [BehaviorTree](#behaviortree) (5 actions) → manage_ai
+- [Effect](#effect) (5 actions) → manage_effect
 - [AssetQuery](#assetquery) (4 actions) → manage_asset
 - [Input](#input) (4 actions) → control_editor
 - [NiagaraGraph](#niagaragraph) (4 actions) → manage_effect
 - [Render](#render) (4 actions) → manage_performance
 - [WorldPartition](#worldpartition) (4 actions) → manage_level
-- [Effect](#effect) (3 actions) → manage_effect
 - [Log](#log) (2 actions) → control_editor
 - [Blueprint](#blueprint) (1 actions) → manage_asset
 - [Debug](#debug) (1 actions) → control_editor
@@ -262,6 +262,164 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
+## Control
+
+**File:** `McpAutomationBridge_ControlHandlers.cpp`
+
+**Lines:** 5,720
+
+**Maps to TS Tool(s):** `control_actor`, `control_editor`
+
+**Actions (143):**
+
+| Action | Status |
+|--------|--------|
+| `add_component` | Implemented |
+| `add_mapping` | Implemented |
+| `add_tag` | Implemented |
+| `add_widget_child` | Implemented |
+| `apply_force` | Implemented |
+| `apply_force_to_actor` | Implemented |
+| `attach` | Implemented |
+| `batch_execute` | Implemented |
+| `batch_set_component_properties` | Implemented |
+| `batch_substrate_migration` | Implemented |
+| `batch_transform` | Implemented |
+| `batch_transform_actors` | Implemented |
+| `cancel_job` | Implemented |
+| `capture_viewport` | Implemented |
+| `capture_viewport_sequence` | Implemented |
+| `clear_event_subscriptions` | Implemented |
+| `clone_component_hierarchy` | Implemented |
+| `clone_components` | Implemented |
+| `configure_event_channel` | Implemented |
+| `configure_megalights` | Implemented |
+| `console_command` | Implemented |
+| `convert_to_substrate` | Implemented |
+| `create_bookmark` | Implemented |
+| `create_input_action` | Implemented |
+| `create_input_mapping_context` | Implemented |
+| `create_snapshot` | Implemented |
+| `create_widget` | Implemented |
+| `delete` | Implemented |
+| `delete_by_tag` | Implemented |
+| `delete_object` | Implemented |
+| `deserialize_actor_state` | Implemented |
+| `detach` | Implemented |
+| `duplicate` | Implemented |
+| `eject` | Implemented |
+| `execute_command` | Implemented |
+| `explain_action_parameters` | Implemented |
+| `export` | Implemented |
+| `find_by_class` | Implemented |
+| `find_by_name` | Implemented |
+| `find_by_tag` | Implemented |
+| `flush_operation_queue` | Implemented |
+| `focus_actor` | Implemented |
+| `get` | Implemented |
+| `get_action_statistics` | Implemented |
+| `get_active_jobs` | Implemented |
+| `get_actor` | Implemented |
+| `get_actor_bounds` | Implemented |
+| `get_actor_by_name` | Implemented |
+| `get_actor_references` | Implemented |
+| `get_actor_transform` | Implemented |
+| `get_all_component_properties` | Implemented |
+| `get_available_actions` | Implemented |
+| `get_bounding_box` | Implemented |
+| `get_bridge_health` | Implemented |
+| `get_class_hierarchy` | Implemented |
+| `get_component_property` | Implemented |
+| `get_components` | Implemented |
+| `get_event_history` | Implemented |
+| `get_job_status` | Implemented |
+| `get_last_error_details` | Implemented |
+| `get_light_budget_stats` | Implemented |
+| `get_metadata` | Implemented |
+| `get_operation_history` | Implemented |
+| `get_project_settings` | Implemented |
+| `get_property` | Implemented |
+| `get_selection_info` | Implemented |
+| `get_subscribed_events` | Implemented |
+| `get_transform` | Implemented |
+| `inspect_class` | Implemented |
+| `inspect_object` | Implemented |
+| `jump_to_bookmark` | Implemented |
+| `list` | Implemented |
+| `list_actors` | Implemented |
+| `list_objects` | Implemented |
+| `lumen_update_scene` | Implemented |
+| `merge_actors` | Implemented |
+| `open_asset` | Implemented |
+| `parallel_execute` | Implemented |
+| `pause` | Implemented |
+| `play` | Implemented |
+| `play_sound` | Implemented |
+| `playback_input_session` | Implemented |
+| `possess` | Implemented |
+| `profile` | Implemented |
+| `query_actors_by_predicate` | Implemented |
+| `queue_operations` | Implemented |
+| `record_input_session` | Implemented |
+| `remove` | Implemented |
+| `remove_mapping` | Implemented |
+| `remove_tag` | Implemented |
+| `replace_actor_class` | Implemented |
+| `restore_snapshot` | Implemented |
+| `restore_state` | Implemented |
+| `resume` | Implemented |
+| `run_tests` | Implemented |
+| `run_ubt` | Implemented |
+| `screenshot` | Implemented |
+| `serialize_actor_state` | Implemented |
+| `set_actor_transform` | Implemented |
+| `set_actor_visibility` | Implemented |
+| `set_blueprint_variables` | Implemented |
+| `set_camera` | Implemented |
+| `set_camera_fov` | Implemented |
+| `set_camera_position` | Implemented |
+| `set_component_properties` | Implemented |
+| `set_component_property` | Implemented |
+| `set_cvar` | Implemented |
+| `set_editor_mode` | Implemented |
+| `set_fullscreen` | Implemented |
+| `set_game_speed` | Implemented |
+| `set_preferences` | Implemented |
+| `set_project_setting` | Implemented |
+| `set_property` | Implemented |
+| `set_quality` | Implemented |
+| `set_resolution` | Implemented |
+| `set_transform` | Implemented |
+| `set_view_mode` | Implemented |
+| `set_viewport_camera` | Implemented |
+| `set_viewport_realtime` | Implemented |
+| `set_viewport_resolution` | Implemented |
+| `set_visibility` | Implemented |
+| `show_fps` | Implemented |
+| `show_widget` | Implemented |
+| `simulate_input` | Implemented |
+| `spawn` | Implemented |
+| `spawn_blueprint` | Implemented |
+| `spawn_category` | Implemented |
+| `start_background_job` | Implemented |
+| `start_recording` | Implemented |
+| `start_session` | Implemented |
+| `step_frame` | Implemented |
+| `stop` | Implemented |
+| `stop_pie` | Implemented |
+| `stop_recording` | Implemented |
+| `subscribe` | Implemented |
+| `subscribe_to_event` | Implemented |
+| `suggest_fix_for_error` | Implemented |
+| `toggle_realtime_rendering` | Implemented |
+| `unsubscribe` | Implemented |
+| `unsubscribe_from_event` | Implemented |
+| `validate_action_input` | Implemented |
+| `validate_assets` | Implemented |
+| `validate_operation_preconditions` | Implemented |
+
+---
+
 ## XRPlugins
 
 **File:** `McpAutomationBridge_XRPluginsHandlers.cpp`
@@ -416,156 +574,6 @@ Generated: 2026-01-22T05:56:02.909Z
 | `trigger_haptic_feedback` | Implemented |
 | `trigger_steamvr_haptic` | Implemented |
 | `unregister_voice_command` | Implemented |
-
----
-
-## Control
-
-**File:** `McpAutomationBridge_ControlHandlers.cpp`
-
-**Lines:** 5,720
-
-**Maps to TS Tool(s):** `control_actor`, `control_editor`
-
-**Actions (135):**
-
-| Action | Status |
-|--------|--------|
-| `add_component` | Implemented |
-| `add_mapping` | Implemented |
-| `add_tag` | Implemented |
-| `add_widget_child` | Implemented |
-| `apply_force` | Implemented |
-| `apply_force_to_actor` | Implemented |
-| `attach` | Implemented |
-| `batch_execute` | Implemented |
-| `batch_set_component_properties` | Implemented |
-| `batch_substrate_migration` | Implemented |
-| `batch_transform` | Implemented |
-| `batch_transform_actors` | Implemented |
-| `cancel_job` | Implemented |
-| `capture_viewport` | Implemented |
-| `capture_viewport_sequence` | Implemented |
-| `clear_event_subscriptions` | Implemented |
-| `clone_component_hierarchy` | Implemented |
-| `clone_components` | Implemented |
-| `configure_event_channel` | Implemented |
-| `configure_megalights` | Implemented |
-| `console_command` | Implemented |
-| `convert_to_substrate` | Implemented |
-| `create_bookmark` | Implemented |
-| `create_input_action` | Implemented |
-| `create_input_mapping_context` | Implemented |
-| `create_snapshot` | Implemented |
-| `create_widget` | Implemented |
-| `delete_by_tag` | Implemented |
-| `delete_object` | Implemented |
-| `deserialize_actor_state` | Implemented |
-| `detach` | Implemented |
-| `duplicate` | Implemented |
-| `eject` | Implemented |
-| `execute_command` | Implemented |
-| `explain_action_parameters` | Implemented |
-| `export` | Implemented |
-| `find_by_class` | Implemented |
-| `find_by_name` | Implemented |
-| `find_by_tag` | Implemented |
-| `flush_operation_queue` | Implemented |
-| `focus_actor` | Implemented |
-| `get_action_statistics` | Implemented |
-| `get_active_jobs` | Implemented |
-| `get_actor` | Implemented |
-| `get_actor_bounds` | Implemented |
-| `get_actor_by_name` | Implemented |
-| `get_actor_references` | Implemented |
-| `get_actor_transform` | Implemented |
-| `get_all_component_properties` | Implemented |
-| `get_available_actions` | Implemented |
-| `get_bounding_box` | Implemented |
-| `get_bridge_health` | Implemented |
-| `get_class_hierarchy` | Implemented |
-| `get_component_property` | Implemented |
-| `get_components` | Implemented |
-| `get_event_history` | Implemented |
-| `get_job_status` | Implemented |
-| `get_last_error_details` | Implemented |
-| `get_light_budget_stats` | Implemented |
-| `get_metadata` | Implemented |
-| `get_operation_history` | Implemented |
-| `get_project_settings` | Implemented |
-| `get_property` | Implemented |
-| `get_selection_info` | Implemented |
-| `get_subscribed_events` | Implemented |
-| `get_transform` | Implemented |
-| `inspect_class` | Implemented |
-| `inspect_object` | Implemented |
-| `jump_to_bookmark` | Implemented |
-| `list_actors` | Implemented |
-| `list_objects` | Implemented |
-| `lumen_update_scene` | Implemented |
-| `merge_actors` | Implemented |
-| `open_asset` | Implemented |
-| `parallel_execute` | Implemented |
-| `play_sound` | Implemented |
-| `playback_input_session` | Implemented |
-| `possess` | Implemented |
-| `profile` | Implemented |
-| `query_actors_by_predicate` | Implemented |
-| `queue_operations` | Implemented |
-| `record_input_session` | Implemented |
-| `remove_mapping` | Implemented |
-| `remove_tag` | Implemented |
-| `replace_actor_class` | Implemented |
-| `restore_snapshot` | Implemented |
-| `restore_state` | Implemented |
-| `run_tests` | Implemented |
-| `run_ubt` | Implemented |
-| `screenshot` | Implemented |
-| `serialize_actor_state` | Implemented |
-| `set_actor_transform` | Implemented |
-| `set_actor_visibility` | Implemented |
-| `set_blueprint_variables` | Implemented |
-| `set_camera` | Implemented |
-| `set_camera_fov` | Implemented |
-| `set_camera_position` | Implemented |
-| `set_component_properties` | Implemented |
-| `set_component_property` | Implemented |
-| `set_cvar` | Implemented |
-| `set_editor_mode` | Implemented |
-| `set_fullscreen` | Implemented |
-| `set_game_speed` | Implemented |
-| `set_preferences` | Implemented |
-| `set_project_setting` | Implemented |
-| `set_property` | Implemented |
-| `set_quality` | Implemented |
-| `set_resolution` | Implemented |
-| `set_transform` | Implemented |
-| `set_view_mode` | Implemented |
-| `set_viewport_camera` | Implemented |
-| `set_viewport_realtime` | Implemented |
-| `set_viewport_resolution` | Implemented |
-| `set_visibility` | Implemented |
-| `show_fps` | Implemented |
-| `show_widget` | Implemented |
-| `simulate_input` | Implemented |
-| `spawn` | Implemented |
-| `spawn_blueprint` | Implemented |
-| `spawn_category` | Implemented |
-| `start_background_job` | Implemented |
-| `start_recording` | Implemented |
-| `start_session` | Implemented |
-| `step_frame` | Implemented |
-| `stop_pie` | Implemented |
-| `stop_recording` | Implemented |
-| `subscribe` | Implemented |
-| `subscribe_to_event` | Implemented |
-| `suggest_fix_for_error` | Implemented |
-| `toggle_realtime_rendering` | Implemented |
-| `unsubscribe` | Implemented |
-| `unsubscribe_from_event` | Implemented |
-| `validate_action_input` | Implemented |
-| `validate_assets` | Implemented |
-| `validate_operation_preconditions` | Implemented |
 
 ---
 
@@ -1126,7 +1134,7 @@ Generated: 2026-01-22T05:56:02.909Z
 
 **Maps to TS Tool(s):** `manage_sequence`
 
-**Actions (64):**
+**Actions (70):**
 
 | Action | Status |
 |--------|--------|
@@ -1148,11 +1156,13 @@ Generated: 2026-01-22T05:56:02.909Z
 | `configure_camera_settings` | Implemented |
 | `configure_sequence_lod` | Implemented |
 | `configure_sequence_streaming` | Implemented |
+| `create` | Implemented |
 | `create_camera_cut_track` | Implemented |
 | `create_cine_camera_actor` | Implemented |
 | `create_event_trigger_track` | Implemented |
 | `create_master_sequence` | Implemented |
 | `create_media_track` | Implemented |
+| `delete` | Implemented |
 | `delete_sequence` | Implemented |
 | `duplicate` | Implemented |
 | `duplicate_sequence` | Implemented |
@@ -1167,11 +1177,14 @@ Generated: 2026-01-22T05:56:02.909Z
 | `get_shots` | Implemented |
 | `get_subsequences` | Implemented |
 | `get_tracks` | Implemented |
+| `list` | Implemented |
 | `list_sequences` | Implemented |
 | `list_track_types` | Implemented |
 | `list_tracks` | Implemented |
 | `open` | Implemented |
+| `pause` | Implemented |
 | `pause_sequence` | Implemented |
+| `play` | Implemented |
 | `play_sequence` | Implemented |
 | `remove_actors` | Implemented |
 | `remove_keyframe` | Implemented |
@@ -1192,6 +1205,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `set_track_solo` | Implemented |
 | `set_view_range` | Implemented |
 | `set_work_range` | Implemented |
+| `stop` | Implemented |
 | `stop_sequence` | Implemented |
 | `unbind_actor` | Implemented |
 
@@ -1205,7 +1219,7 @@ Generated: 2026-01-22T05:56:02.909Z
 
 **Maps to TS Tool(s):** `manage_livelink`
 
-**Actions (63):**
+**Actions (64):**
 
 | Action | Status |
 |--------|--------|
@@ -1217,6 +1231,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `apply_face_to_skeletal_mesh` | Implemented |
 | `apply_livelink_preset` | Implemented |
 | `apply_mocap_to_character` | Implemented |
+| `build_preset_from_client` | Implemented |
 | `clear_subject_frames` | Implemented |
 | `configure_arkit_mapping` | Implemented |
 | `configure_blendshape_remap` | Implemented |
@@ -1352,6 +1367,234 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
+## AssetWorkflow
+
+**File:** `McpAutomationBridge_AssetWorkflowHandlers.cpp`
+
+**Lines:** 3,389
+
+**Maps to TS Tool(s):** `manage_asset`
+
+**Actions (61):**
+
+| Action | Status |
+|--------|--------|
+| `add_material_node` | Implemented |
+| `add_material_parameter` | Implemented |
+| `analyze_graph` | Implemented |
+| `batch_nanite_convert` | Implemented |
+| `blueprint_list_node_types` | Implemented |
+| `bp_list_node_types` | Implemented |
+| `break_material_connections` | Implemented |
+| `compile_blueprint_batch` | Implemented |
+| `configure_audio_modulation` | Implemented |
+| `configure_nanite_settings` | Implemented |
+| `connect_material_pins` | Implemented |
+| `convert_to_nanite` | Implemented |
+| `create_envelope` | Implemented |
+| `create_filter` | Implemented |
+| `create_folder` | Implemented |
+| `create_material` | Implemented |
+| `create_material_instance` | Implemented |
+| `create_oscillator` | Implemented |
+| `create_procedural_music` | Implemented |
+| `create_render_target` | Implemented |
+| `create_sequencer_node` | Implemented |
+| `create_thumbnail` | Implemented |
+| `delete` | Implemented |
+| `delete_asset` | Implemented |
+| `delete_assets` | Implemented |
+| `duplicate` | Implemented |
+| `enable_nanite` | Implemented |
+| `enable_nanite_mesh` | Implemented |
+| `exists` | Implemented |
+| `find_by_tag` | Implemented |
+| `fixup_redirectors` | Implemented |
+| `generate_lods` | Implemented |
+| `generate_report` | Implemented |
+| `generate_thumbnail` | Implemented |
+| `get_asset_graph` | Implemented |
+| `get_blueprint_dependencies` | Implemented |
+| `get_dependencies` | Implemented |
+| `get_material_node_details` | Implemented |
+| `get_material_stats` | Implemented |
+| `get_metadata` | Implemented |
+| `get_source_control_state` | Implemented |
+| `import` | Implemented |
+| `list` | Implemented |
+| `list_instances` | Implemented |
+| `move` | Implemented |
+| `nanite_rebuild_mesh` | Implemented |
+| `query_assets_by_predicate` | Implemented |
+| `rebuild_material` | Implemented |
+| `remove_material_node` | Implemented |
+| `rename` | Implemented |
+| `reset_instance_parameters` | Implemented |
+| `save` | Implemented |
+| `save_asset` | Implemented |
+| `search` | Implemented |
+| `search_assets` | Implemented |
+| `set_metadata` | Implemented |
+| `set_nanite_settings` | Implemented |
+| `set_tags` | Implemented |
+| `validate` | Implemented |
+| `validate_asset` | Implemented |
+| `validate_blueprint` | Implemented |
+
+---
+
+## Lighting
+
+**File:** `McpAutomationBridge_LightingHandlers.cpp`
+
+**Lines:** 1,323
+
+**Maps to TS Tool(s):** `manage_lighting`
+
+**Actions (61):**
+
+| Action | Status |
+|--------|--------|
+| `bake_lighting_preview` | Implemented |
+| `build_lighting` | Implemented |
+| `build_lighting_quality` | Implemented |
+| `capture_scene` | Implemented |
+| `configure_bloom` | Implemented |
+| `configure_chromatic_aberration` | Implemented |
+| `configure_color_grading` | Implemented |
+| `configure_dof` | Implemented |
+| `configure_film_grain` | Implemented |
+| `configure_gi_settings` | Implemented |
+| `configure_indirect_lighting_cache` | Implemented |
+| `configure_lens_flares` | Implemented |
+| `configure_lightmass_settings` | Implemented |
+| `configure_lumen_gi` | Implemented |
+| `configure_megalights_scene` | Implemented |
+| `configure_motion_blur` | Implemented |
+| `configure_path_tracing` | Implemented |
+| `configure_pp_blend` | Implemented |
+| `configure_pp_priority` | Implemented |
+| `configure_ray_traced_ao` | Implemented |
+| `configure_ray_traced_gi` | Implemented |
+| `configure_ray_traced_reflections` | Implemented |
+| `configure_ray_traced_shadows` | Implemented |
+| `configure_shadow_settings` | Implemented |
+| `configure_shadows` | Implemented |
+| `configure_vignette` | Implemented |
+| `configure_volumetric_fog` | Implemented |
+| `configure_volumetric_lightmap` | Implemented |
+| `configure_white_balance` | Implemented |
+| `create_box_reflection_capture` | Implemented |
+| `create_dynamic_light` | Implemented |
+| `create_light` | Implemented |
+| `create_light_batch` | Implemented |
+| `create_lighting_enabled_level` | Implemented |
+| `create_lightmass_volume` | Implemented |
+| `create_lumen_volume` | Implemented |
+| `create_planar_reflection` | Implemented |
+| `create_post_process_volume` | Implemented |
+| `create_scene_capture_2d` | Implemented |
+| `create_scene_capture_cube` | Implemented |
+| `create_sky_light` | Implemented |
+| `create_sphere_reflection_capture` | Implemented |
+| `ensure_single_sky_light` | Implemented |
+| `get_light_complexity` | Implemented |
+| `get_megalights_budget` | Implemented |
+| `get_post_process_settings` | Implemented |
+| `list_light_types` | Implemented |
+| `optimize_lights_for_megalights` | Implemented |
+| `recapture_scene` | Implemented |
+| `set_actor_light_channel` | Implemented |
+| `set_ambient_occlusion` | Implemented |
+| `set_exposure` | Implemented |
+| `set_light_channel` | Implemented |
+| `set_lumen_reflections` | Implemented |
+| `set_virtual_shadow_maps` | Implemented |
+| `setup_global_illumination` | Implemented |
+| `setup_volumetric_fog` | Implemented |
+| `spawn_light` | Implemented |
+| `spawn_sky_light` | Implemented |
+| `tune_lumen_performance` | Implemented |
+| `validate_lighting_setup` | Implemented |
+
+---
+
+## MaterialAuthoring
+
+**File:** `McpAutomationBridge_MaterialAuthoringHandlers.cpp`
+
+**Lines:** 3,388
+
+**Maps to TS Tool(s):** `manage_material_authoring`
+
+**Actions (61):**
+
+| Action | Status |
+|--------|--------|
+| `add_custom_expression` | Implemented |
+| `add_fresnel` | Implemented |
+| `add_function_input` | Implemented |
+| `add_function_output` | Implemented |
+| `add_if` | Implemented |
+| `add_landscape_layer` | Implemented |
+| `add_material_node` | Implemented |
+| `add_material_parameter` | Implemented |
+| `add_math_node` | Implemented |
+| `add_noise` | Implemented |
+| `add_panner` | Implemented |
+| `add_pixel_depth` | Implemented |
+| `add_reflection_vector` | Implemented |
+| `add_rotator` | Implemented |
+| `add_scalar_parameter` | Implemented |
+| `add_static_switch_parameter` | Implemented |
+| `add_switch` | Implemented |
+| `add_texture_coordinate` | Implemented |
+| `add_texture_sample` | Implemented |
+| `add_vector_parameter` | Implemented |
+| `add_vertex_normal` | Implemented |
+| `add_voronoi` | Implemented |
+| `add_world_position` | Implemented |
+| `batch_convert_to_substrate` | Implemented |
+| `compile_material` | Implemented |
+| `configure_exposure` | Implemented |
+| `configure_landscape_material_layer` | Implemented |
+| `configure_layer_blend` | Implemented |
+| `configure_material_lod` | Implemented |
+| `configure_sss_profile` | Implemented |
+| `connect_material_pins` | Implemented |
+| `connect_nodes` | Implemented |
+| `convert_material_to_substrate` | Implemented |
+| `create_decal_material` | Implemented |
+| `create_landscape_material` | Implemented |
+| `create_material` | Implemented |
+| `create_material_expression_template` | Implemented |
+| `create_material_function` | Implemented |
+| `create_material_instance` | Implemented |
+| `create_material_instance_batch` | Implemented |
+| `create_post_process_material` | Implemented |
+| `create_substrate_material` | Implemented |
+| `disconnect_nodes` | Implemented |
+| `export_material_template` | Implemented |
+| `get_material_dependencies` | Implemented |
+| `get_material_info` | Implemented |
+| `get_material_stats` | Implemented |
+| `invert` | Implemented |
+| `manage_material_authoring` | Implemented |
+| `reflectionvectorws` | Implemented |
+| `remove_material_node` | Implemented |
+| `set_blend_mode` | Implemented |
+| `set_material_domain` | Implemented |
+| `set_scalar_parameter_value` | Implemented |
+| `set_shading_model` | Implemented |
+| `set_substrate_properties` | Implemented |
+| `set_texture_parameter_value` | Implemented |
+| `set_vector_parameter_value` | Implemented |
+| `texture2d` | Implemented |
+| `use_material_function` | Implemented |
+| `validate_material` | Implemented |
+
+---
+
 ## CharacterAvatar
 
 **File:** `McpAutomationBridge_CharacterAvatarHandlers.cpp`
@@ -1424,227 +1667,6 @@ Generated: 2026-01-22T05:56:02.909Z
 | `spawn_groom_actor` | Implemented |
 | `spawn_metahuman_actor` | Implemented |
 | `update_skeletal_mesh` | Implemented |
-
----
-
-## MaterialAuthoring
-
-**File:** `McpAutomationBridge_MaterialAuthoringHandlers.cpp`
-
-**Lines:** 3,388
-
-**Maps to TS Tool(s):** `manage_material_authoring`
-
-**Actions (60):**
-
-| Action | Status |
-|--------|--------|
-| `add_custom_expression` | Implemented |
-| `add_fresnel` | Implemented |
-| `add_function_input` | Implemented |
-| `add_function_output` | Implemented |
-| `add_if` | Implemented |
-| `add_landscape_layer` | Implemented |
-| `add_material_node` | Implemented |
-| `add_material_parameter` | Implemented |
-| `add_math_node` | Implemented |
-| `add_noise` | Implemented |
-| `add_panner` | Implemented |
-| `add_pixel_depth` | Implemented |
-| `add_reflection_vector` | Implemented |
-| `add_rotator` | Implemented |
-| `add_scalar_parameter` | Implemented |
-| `add_static_switch_parameter` | Implemented |
-| `add_switch` | Implemented |
-| `add_texture_coordinate` | Implemented |
-| `add_texture_sample` | Implemented |
-| `add_vector_parameter` | Implemented |
-| `add_vertex_normal` | Implemented |
-| `add_voronoi` | Implemented |
-| `add_world_position` | Implemented |
-| `batch_convert_to_substrate` | Implemented |
-| `compile_material` | Implemented |
-| `configure_exposure` | Implemented |
-| `configure_landscape_material_layer` | Implemented |
-| `configure_layer_blend` | Implemented |
-| `configure_material_lod` | Implemented |
-| `configure_sss_profile` | Implemented |
-| `connect_material_pins` | Implemented |
-| `connect_nodes` | Implemented |
-| `convert_material_to_substrate` | Implemented |
-| `create_decal_material` | Implemented |
-| `create_landscape_material` | Implemented |
-| `create_material` | Implemented |
-| `create_material_expression_template` | Implemented |
-| `create_material_function` | Implemented |
-| `create_material_instance` | Implemented |
-| `create_material_instance_batch` | Implemented |
-| `create_post_process_material` | Implemented |
-| `create_substrate_material` | Implemented |
-| `disconnect_nodes` | Implemented |
-| `export_material_template` | Implemented |
-| `get_material_dependencies` | Implemented |
-| `get_material_info` | Implemented |
-| `get_material_stats` | Implemented |
-| `invert` | Implemented |
-| `reflectionvectorws` | Implemented |
-| `remove_material_node` | Implemented |
-| `set_blend_mode` | Implemented |
-| `set_material_domain` | Implemented |
-| `set_scalar_parameter_value` | Implemented |
-| `set_shading_model` | Implemented |
-| `set_substrate_properties` | Implemented |
-| `set_texture_parameter_value` | Implemented |
-| `set_vector_parameter_value` | Implemented |
-| `texture2d` | Implemented |
-| `use_material_function` | Implemented |
-| `validate_material` | Implemented |
-
----
-
-## Lighting
-
-**File:** `McpAutomationBridge_LightingHandlers.cpp`
-
-**Lines:** 1,323
-
-**Maps to TS Tool(s):** `manage_lighting`
-
-**Actions (59):**
-
-| Action | Status |
-|--------|--------|
-| `bake_lighting_preview` | Implemented |
-| `capture_scene` | Implemented |
-| `configure_bloom` | Implemented |
-| `configure_chromatic_aberration` | Implemented |
-| `configure_color_grading` | Implemented |
-| `configure_dof` | Implemented |
-| `configure_film_grain` | Implemented |
-| `configure_gi_settings` | Implemented |
-| `configure_indirect_lighting_cache` | Implemented |
-| `configure_lens_flares` | Implemented |
-| `configure_lightmass_settings` | Implemented |
-| `configure_lumen_gi` | Implemented |
-| `configure_megalights_scene` | Implemented |
-| `configure_motion_blur` | Implemented |
-| `configure_path_tracing` | Implemented |
-| `configure_pp_blend` | Implemented |
-| `configure_pp_priority` | Implemented |
-| `configure_ray_traced_ao` | Implemented |
-| `configure_ray_traced_gi` | Implemented |
-| `configure_ray_traced_reflections` | Implemented |
-| `configure_ray_traced_shadows` | Implemented |
-| `configure_shadow_settings` | Implemented |
-| `configure_shadows` | Implemented |
-| `configure_vignette` | Implemented |
-| `configure_volumetric_fog` | Implemented |
-| `configure_volumetric_lightmap` | Implemented |
-| `configure_white_balance` | Implemented |
-| `create_box_reflection_capture` | Implemented |
-| `create_dynamic_light` | Implemented |
-| `create_light` | Implemented |
-| `create_light_batch` | Implemented |
-| `create_lighting_enabled_level` | Implemented |
-| `create_lightmass_volume` | Implemented |
-| `create_lumen_volume` | Implemented |
-| `create_planar_reflection` | Implemented |
-| `create_post_process_volume` | Implemented |
-| `create_scene_capture_2d` | Implemented |
-| `create_scene_capture_cube` | Implemented |
-| `create_sky_light` | Implemented |
-| `create_sphere_reflection_capture` | Implemented |
-| `ensure_single_sky_light` | Implemented |
-| `get_light_complexity` | Implemented |
-| `get_megalights_budget` | Implemented |
-| `get_post_process_settings` | Implemented |
-| `list_light_types` | Implemented |
-| `optimize_lights_for_megalights` | Implemented |
-| `recapture_scene` | Implemented |
-| `set_actor_light_channel` | Implemented |
-| `set_ambient_occlusion` | Implemented |
-| `set_exposure` | Implemented |
-| `set_light_channel` | Implemented |
-| `set_lumen_reflections` | Implemented |
-| `set_virtual_shadow_maps` | Implemented |
-| `setup_global_illumination` | Implemented |
-| `setup_volumetric_fog` | Implemented |
-| `spawn_light` | Implemented |
-| `spawn_sky_light` | Implemented |
-| `tune_lumen_performance` | Implemented |
-| `validate_lighting_setup` | Implemented |
-
----
-
-## AssetWorkflow
-
-**File:** `McpAutomationBridge_AssetWorkflowHandlers.cpp`
-
-**Lines:** 3,389
-
-**Maps to TS Tool(s):** `manage_asset`
-
-**Actions (57):**
-
-| Action | Status |
-|--------|--------|
-| `add_material_node` | Implemented |
-| `add_material_parameter` | Implemented |
-| `analyze_graph` | Implemented |
-| `batch_nanite_convert` | Implemented |
-| `blueprint_list_node_types` | Implemented |
-| `bp_list_node_types` | Implemented |
-| `break_material_connections` | Implemented |
-| `compile_blueprint_batch` | Implemented |
-| `configure_audio_modulation` | Implemented |
-| `configure_nanite_settings` | Implemented |
-| `connect_material_pins` | Implemented |
-| `convert_to_nanite` | Implemented |
-| `create_envelope` | Implemented |
-| `create_filter` | Implemented |
-| `create_folder` | Implemented |
-| `create_material` | Implemented |
-| `create_material_instance` | Implemented |
-| `create_oscillator` | Implemented |
-| `create_procedural_music` | Implemented |
-| `create_render_target` | Implemented |
-| `create_sequencer_node` | Implemented |
-| `create_thumbnail` | Implemented |
-| `delete_asset` | Implemented |
-| `delete_assets` | Implemented |
-| `duplicate` | Implemented |
-| `enable_nanite` | Implemented |
-| `enable_nanite_mesh` | Implemented |
-| `exists` | Implemented |
-| `find_by_tag` | Implemented |
-| `fixup_redirectors` | Implemented |
-| `generate_lods` | Implemented |
-| `generate_report` | Implemented |
-| `generate_thumbnail` | Implemented |
-| `get_asset_graph` | Implemented |
-| `get_blueprint_dependencies` | Implemented |
-| `get_dependencies` | Implemented |
-| `get_material_node_details` | Implemented |
-| `get_material_stats` | Implemented |
-| `get_metadata` | Implemented |
-| `get_source_control_state` | Implemented |
-| `import` | Implemented |
-| `list_instances` | Implemented |
-| `move` | Implemented |
-| `nanite_rebuild_mesh` | Implemented |
-| `query_assets_by_predicate` | Implemented |
-| `rebuild_material` | Implemented |
-| `remove_material_node` | Implemented |
-| `rename` | Implemented |
-| `reset_instance_parameters` | Implemented |
-| `save_asset` | Implemented |
-| `search_assets` | Implemented |
-| `set_metadata` | Implemented |
-| `set_nanite_settings` | Implemented |
-| `set_tags` | Implemented |
-| `validate` | Implemented |
-| `validate_asset` | Implemented |
-| `validate_blueprint` | Implemented |
 
 ---
 
@@ -1727,7 +1749,7 @@ Generated: 2026-01-22T05:56:02.909Z
 
 **Maps to TS Tool(s):** `build_environment`
 
-**Actions (54):**
+**Actions (55):**
 
 | Action | Status |
 |--------|--------|
@@ -1752,6 +1774,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `create_sky_sphere` | Implemented |
 | `create_time_of_day_controller` | Implemented |
 | `create_volumetric_cloud` | Implemented |
+| `delete` | Implemented |
 | `engine_quit` | Implemented |
 | `export_snapshot` | Implemented |
 | `find_by_class` | Implemented |
@@ -1928,7 +1951,7 @@ Generated: 2026-01-22T05:56:02.909Z
 
 **Maps to TS Tool(s):** `manage_gameplay_systems`
 
-**Actions (49):**
+**Actions (50):**
 
 | Action | Status |
 |--------|--------|
@@ -1936,6 +1959,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `add_instance` | Implemented |
 | `add_string_entry` | Implemented |
 | `assign_actor_to_hlod` | Implemented |
+| `build_hlod` | Implemented |
 | `configure_aim_assist` | Implemented |
 | `configure_checkpoint_data` | Implemented |
 | `configure_hlod_settings` | Implemented |
@@ -2423,6 +2447,56 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
+## LevelStructure
+
+**File:** `McpAutomationBridge_LevelStructureHandlers.cpp`
+
+**Lines:** 2,894
+
+**Maps to TS Tool(s):** `manage_level`
+
+**Actions (35):**
+
+| Action | Status |
+|--------|--------|
+| `add_level_blueprint_node` | Implemented |
+| `assign_actor_to_data_layer` | Implemented |
+| `build_hlod_for_level` | Implemented |
+| `configure_grid_size` | Implemented |
+| `configure_hlod_layer` | Implemented |
+| `configure_hlod_settings` | Implemented |
+| `configure_large_world_coordinates` | Implemented |
+| `configure_level_bounds` | Implemented |
+| `configure_level_streaming` | Implemented |
+| `configure_runtime_loading` | Implemented |
+| `configure_world_partition` | Implemented |
+| `configure_world_settings` | Implemented |
+| `connect_level_blueprint_nodes` | Implemented |
+| `create_data_layer` | Implemented |
+| `create_level` | Implemented |
+| `create_level_instance` | Implemented |
+| `create_minimap_volume` | Implemented |
+| `create_packed_level_actor` | Implemented |
+| `create_streaming_volume` | Implemented |
+| `create_sublevel` | Implemented |
+| `create_world_partition_cell` | Implemented |
+| `enable_world_partition` | Implemented |
+| `get_level_structure_info` | Implemented |
+| `get_streaming_levels_status` | Implemented |
+| `get_summary` | Implemented |
+| `get_world_partition_cells` | Implemented |
+| `hide` | Implemented |
+| `load` | Implemented |
+| `open_level_blueprint` | Implemented |
+| `set_metadata` | Implemented |
+| `set_streaming_distance` | Implemented |
+| `show` | Implemented |
+| `stream_level_async` | Implemented |
+| `unload` | Implemented |
+| `validate_level` | Implemented |
+
+---
+
 ## Character
 
 **File:** `McpAutomationBridge_CharacterHandlers.cpp`
@@ -2528,10 +2602,11 @@ Generated: 2026-01-22T05:56:02.909Z
 
 **Maps to TS Tool(s):** `manage_sequence`
 
-**Actions (32):**
+**Actions (33):**
 
 | Action | Status |
 |--------|--------|
+| `create` | Implemented |
 | `sequence_add_actor` | Implemented |
 | `sequence_add_actors` | Implemented |
 | `sequence_add_camera` | Implemented |
@@ -2567,49 +2642,95 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
-## LevelStructure
+## GAS
 
-**File:** `McpAutomationBridge_LevelStructureHandlers.cpp`
+**File:** `McpAutomationBridge_GASHandlers.cpp`
 
-**Lines:** 2,894
+**Lines:** 2,396
 
-**Maps to TS Tool(s):** `manage_level`
+**Maps to TS Tool(s):** `manage_combat`, `manage_gameplay_abilities`, `manage_attribute_sets`, `manage_gameplay_cues`, `test_gameplay_abilities`
 
 **Actions (31):**
 
 | Action | Status |
 |--------|--------|
-| `add_level_blueprint_node` | Implemented |
-| `assign_actor_to_data_layer` | Implemented |
-| `configure_grid_size` | Implemented |
-| `configure_hlod_layer` | Implemented |
-| `configure_hlod_settings` | Implemented |
-| `configure_large_world_coordinates` | Implemented |
-| `configure_level_bounds` | Implemented |
-| `configure_level_streaming` | Implemented |
-| `configure_runtime_loading` | Implemented |
-| `configure_world_partition` | Implemented |
-| `configure_world_settings` | Implemented |
-| `connect_level_blueprint_nodes` | Implemented |
-| `create_data_layer` | Implemented |
-| `create_level` | Implemented |
-| `create_level_instance` | Implemented |
-| `create_minimap_volume` | Implemented |
-| `create_packed_level_actor` | Implemented |
-| `create_streaming_volume` | Implemented |
-| `create_sublevel` | Implemented |
-| `create_world_partition_cell` | Implemented |
-| `enable_world_partition` | Implemented |
-| `get_level_structure_info` | Implemented |
-| `get_streaming_levels_status` | Implemented |
-| `get_summary` | Implemented |
-| `get_world_partition_cells` | Implemented |
-| `open_level_blueprint` | Implemented |
-| `set_metadata` | Implemented |
-| `set_streaming_distance` | Implemented |
-| `stream_level_async` | Implemented |
-| `unload` | Implemented |
-| `validate_level` | Implemented |
+| `add_ability_system_component` | Implemented |
+| `add_ability_task` | Implemented |
+| `add_attribute` | Implemented |
+| `add_effect_cue` | Implemented |
+| `add_effect_execution_calculation` | Implemented |
+| `add_effect_modifier` | Implemented |
+| `add_tag_to_asset` | Implemented |
+| `configure_asc` | Implemented |
+| `configure_cue_trigger` | Implemented |
+| `create_attribute_set` | Implemented |
+| `create_gameplay_ability` | Implemented |
+| `create_gameplay_cue_notify` | Implemented |
+| `create_gameplay_effect` | Implemented |
+| `get_gas_info` | Implemented |
+| `set_ability_cooldown` | Implemented |
+| `set_ability_costs` | Implemented |
+| `set_ability_tags` | Implemented |
+| `set_ability_targeting` | Implemented |
+| `set_activation_policy` | Implemented |
+| `set_attribute_base_value` | Implemented |
+| `set_attribute_clamping` | Implemented |
+| `set_cue_effects` | Implemented |
+| `set_effect_duration` | Implemented |
+| `set_effect_stacking` | Implemented |
+| `set_effect_tags` | Implemented |
+| `set_instancing_policy` | Implemented |
+| `set_modifier_magnitude` | Implemented |
+| `test_activate_ability` | Implemented |
+| `test_apply_effect` | Implemented |
+| `test_get_attribute` | Implemented |
+| `test_get_gameplay_tags` | Implemented |
+
+---
+
+## PostProcess
+
+**File:** `McpAutomationBridge_PostProcessHandlers.cpp`
+
+**Lines:** 1,522
+
+**Maps to TS Tool(s):** `manage_lighting`
+
+**Actions (31):**
+
+| Action | Status |
+|--------|--------|
+| `build_lighting_quality` | Implemented |
+| `capture_scene` | Implemented |
+| `configure_bloom` | Implemented |
+| `configure_chromatic_aberration` | Implemented |
+| `configure_color_grading` | Implemented |
+| `configure_dof` | Implemented |
+| `configure_film_grain` | Implemented |
+| `configure_indirect_lighting_cache` | Implemented |
+| `configure_lens_flares` | Implemented |
+| `configure_lightmass_settings` | Implemented |
+| `configure_motion_blur` | Implemented |
+| `configure_path_tracing` | Implemented |
+| `configure_pp_blend` | Implemented |
+| `configure_pp_priority` | Implemented |
+| `configure_ray_traced_ao` | Implemented |
+| `configure_ray_traced_gi` | Implemented |
+| `configure_ray_traced_reflections` | Implemented |
+| `configure_ray_traced_shadows` | Implemented |
+| `configure_vignette` | Implemented |
+| `configure_volumetric_lightmap` | Implemented |
+| `configure_white_balance` | Implemented |
+| `create_box_reflection_capture` | Implemented |
+| `create_planar_reflection` | Implemented |
+| `create_post_process_volume` | Implemented |
+| `create_scene_capture_2d` | Implemented |
+| `create_scene_capture_cube` | Implemented |
+| `create_sphere_reflection_capture` | Implemented |
+| `get_post_process_settings` | Implemented |
+| `recapture_scene` | Implemented |
+| `set_actor_light_channel` | Implemented |
+| `set_light_channel` | Implemented |
 
 ---
 
@@ -2703,51 +2824,6 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
-## PostProcess
-
-**File:** `McpAutomationBridge_PostProcessHandlers.cpp`
-
-**Lines:** 1,522
-
-**Maps to TS Tool(s):** `manage_lighting`
-
-**Actions (30):**
-
-| Action | Status |
-|--------|--------|
-| `capture_scene` | Implemented |
-| `configure_bloom` | Implemented |
-| `configure_chromatic_aberration` | Implemented |
-| `configure_color_grading` | Implemented |
-| `configure_dof` | Implemented |
-| `configure_film_grain` | Implemented |
-| `configure_indirect_lighting_cache` | Implemented |
-| `configure_lens_flares` | Implemented |
-| `configure_lightmass_settings` | Implemented |
-| `configure_motion_blur` | Implemented |
-| `configure_path_tracing` | Implemented |
-| `configure_pp_blend` | Implemented |
-| `configure_pp_priority` | Implemented |
-| `configure_ray_traced_ao` | Implemented |
-| `configure_ray_traced_gi` | Implemented |
-| `configure_ray_traced_reflections` | Implemented |
-| `configure_ray_traced_shadows` | Implemented |
-| `configure_vignette` | Implemented |
-| `configure_volumetric_lightmap` | Implemented |
-| `configure_white_balance` | Implemented |
-| `create_box_reflection_capture` | Implemented |
-| `create_planar_reflection` | Implemented |
-| `create_post_process_volume` | Implemented |
-| `create_scene_capture_2d` | Implemented |
-| `create_scene_capture_cube` | Implemented |
-| `create_sphere_reflection_capture` | Implemented |
-| `get_post_process_settings` | Implemented |
-| `recapture_scene` | Implemented |
-| `set_actor_light_channel` | Implemented |
-| `set_light_channel` | Implemented |
-
----
-
 ## Skeleton
 
 **File:** `McpAutomationBridge_SkeletonHandlers.cpp`
@@ -2789,48 +2865,6 @@ Generated: 2026-01-22T05:56:02.909Z
 | `set_bone_transform` | Implemented |
 | `set_morph_target_deltas` | Implemented |
 | `set_vertex_weights` | Implemented |
-
----
-
-## GAS
-
-**File:** `McpAutomationBridge_GASHandlers.cpp`
-
-**Lines:** 2,396
-
-**Maps to TS Tool(s):** `manage_combat`
-
-**Actions (27):**
-
-| Action | Status |
-|--------|--------|
-| `add_ability_system_component` | Implemented |
-| `add_ability_task` | Implemented |
-| `add_attribute` | Implemented |
-| `add_effect_cue` | Implemented |
-| `add_effect_execution_calculation` | Implemented |
-| `add_effect_modifier` | Implemented |
-| `add_tag_to_asset` | Implemented |
-| `configure_asc` | Implemented |
-| `configure_cue_trigger` | Implemented |
-| `create_attribute_set` | Implemented |
-| `create_gameplay_ability` | Implemented |
-| `create_gameplay_cue_notify` | Implemented |
-| `create_gameplay_effect` | Implemented |
-| `get_gas_info` | Implemented |
-| `set_ability_cooldown` | Implemented |
-| `set_ability_costs` | Implemented |
-| `set_ability_tags` | Implemented |
-| `set_ability_targeting` | Implemented |
-| `set_activation_policy` | Implemented |
-| `set_attribute_base_value` | Implemented |
-| `set_attribute_clamping` | Implemented |
-| `set_cue_effects` | Implemented |
-| `set_effect_duration` | Implemented |
-| `set_effect_stacking` | Implemented |
-| `set_effect_tags` | Implemented |
-| `set_instancing_policy` | Implemented |
-| `set_modifier_magnitude` | Implemented |
 
 ---
 
@@ -2914,6 +2948,46 @@ Generated: 2026-01-22T05:56:02.909Z
 | `get_volumes_info` | Implemented |
 | `set_volume_extent` | Implemented |
 | `set_volume_properties` | Implemented |
+
+---
+
+## Media
+
+**File:** `McpAutomationBridge_MediaHandlers.cpp`
+
+**Lines:** 1,004
+
+**Maps to TS Tool(s):** `manage_skeleton`
+
+**Actions (25):**
+
+| Action | Status |
+|--------|--------|
+| `add_to_playlist` | Implemented |
+| `bind_to_texture` | Implemented |
+| `close` | Implemented |
+| `create_file_media_source` | Implemented |
+| `create_media_player` | Implemented |
+| `create_media_playlist` | Implemented |
+| `create_media_sound_wave` | Implemented |
+| `create_media_texture` | Implemented |
+| `create_stream_media_source` | Implemented |
+| `delete_media_asset` | Implemented |
+| `get_duration` | Implemented |
+| `get_media_info` | Implemented |
+| `get_playlist` | Implemented |
+| `get_state` | Implemented |
+| `get_time` | Implemented |
+| `open_source` | Implemented |
+| `open_url` | Implemented |
+| `pause` | Implemented |
+| `play` | Implemented |
+| `remove_from_playlist` | Implemented |
+| `seek` | Implemented |
+| `set_looping` | Implemented |
+| `set_rate` | Implemented |
+| `stop` | Implemented |
+| `unbind_from_texture` | Implemented |
 
 ---
 
@@ -3035,43 +3109,6 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
-## Media
-
-**File:** `McpAutomationBridge_MediaHandlers.cpp`
-
-**Lines:** 1,004
-
-**Maps to TS Tool(s):** `manage_skeleton`
-
-**Actions (22):**
-
-| Action | Status |
-|--------|--------|
-| `add_to_playlist` | Implemented |
-| `bind_to_texture` | Implemented |
-| `close` | Implemented |
-| `create_file_media_source` | Implemented |
-| `create_media_player` | Implemented |
-| `create_media_playlist` | Implemented |
-| `create_media_sound_wave` | Implemented |
-| `create_media_texture` | Implemented |
-| `create_stream_media_source` | Implemented |
-| `delete_media_asset` | Implemented |
-| `get_duration` | Implemented |
-| `get_media_info` | Implemented |
-| `get_playlist` | Implemented |
-| `get_state` | Implemented |
-| `get_time` | Implemented |
-| `open_source` | Implemented |
-| `open_url` | Implemented |
-| `remove_from_playlist` | Implemented |
-| `seek` | Implemented |
-| `set_looping` | Implemented |
-| `set_rate` | Implemented |
-| `unbind_from_texture` | Implemented |
-
----
-
 ## Spline
 
 **File:** `McpAutomationBridge_SplineHandlers.cpp`
@@ -3177,6 +3214,41 @@ Generated: 2026-01-22T05:56:02.909Z
 | `set_player_state_class` | Implemented |
 | `set_respawn_rules` | Implemented |
 | `setup_match_states` | Implemented |
+
+---
+
+## Level
+
+**File:** `McpAutomationBridge_LevelHandlers.cpp`
+
+**Lines:** 920
+
+**Maps to TS Tool(s):** `manage_level`
+
+**Actions (20):**
+
+| Action | Status |
+|--------|--------|
+| `add_sublevel` | Implemented |
+| `bake_lightmap` | Implemented |
+| `build_lighting` | Implemented |
+| `create_level` | Implemented |
+| `create_light` | Implemented |
+| `create_new_level` | Implemented |
+| `delete` | Implemented |
+| `export_level` | Implemented |
+| `import_level` | Implemented |
+| `list` | Implemented |
+| `list_levels` | Implemented |
+| `load` | Implemented |
+| `load_level` | Implemented |
+| `save` | Implemented |
+| `save_as` | Implemented |
+| `save_current_level` | Implemented |
+| `save_level_as` | Implemented |
+| `spawn_light` | Implemented |
+| `stream` | Implemented |
+| `stream_level` | Implemented |
 
 ---
 
@@ -3373,36 +3445,6 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
-## Level
-
-**File:** `McpAutomationBridge_LevelHandlers.cpp`
-
-**Lines:** 920
-
-**Maps to TS Tool(s):** `manage_level`
-
-**Actions (15):**
-
-| Action | Status |
-|--------|--------|
-| `add_sublevel` | Implemented |
-| `bake_lightmap` | Implemented |
-| `create_level` | Implemented |
-| `create_light` | Implemented |
-| `create_new_level` | Implemented |
-| `export_level` | Implemented |
-| `import_level` | Implemented |
-| `list_levels` | Implemented |
-| `load_level` | Implemented |
-| `save_as` | Implemented |
-| `save_current_level` | Implemented |
-| `save_level_as` | Implemented |
-| `spawn_light` | Implemented |
-| `stream` | Implemented |
-| `stream_level` | Implemented |
-
----
-
 ## MetaSound
 
 **File:** `McpAutomationBridge_MetaSoundHandlers.cpp`
@@ -3559,6 +3601,27 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
+## BehaviorTree
+
+**File:** `McpAutomationBridge_BehaviorTreeHandlers.cpp`
+
+**Lines:** 506
+
+**Maps to TS Tool(s):** `manage_ai`
+
+**Actions (6):**
+
+| Action | Status |
+|--------|--------|
+| `add_node` | Implemented |
+| `break_connections` | Implemented |
+| `connect_nodes` | Implemented |
+| `create` | Implemented |
+| `remove_node` | Implemented |
+| `set_node_properties` | Implemented |
+
+---
+
 ## MaterialGraph
 
 **File:** `McpAutomationBridge_MaterialGraphHandlers.cpp`
@@ -3580,23 +3643,23 @@ Generated: 2026-01-22T05:56:02.909Z
 
 ---
 
-## BehaviorTree
+## Effect
 
-**File:** `McpAutomationBridge_BehaviorTreeHandlers.cpp`
+**File:** `McpAutomationBridge_EffectHandlers.cpp`
 
-**Lines:** 506
+**Lines:** 1,731
 
-**Maps to TS Tool(s):** `manage_ai`
+**Maps to TS Tool(s):** `manage_effect`
 
 **Actions (5):**
 
 | Action | Status |
 |--------|--------|
-| `add_node` | Implemented |
-| `break_connections` | Implemented |
-| `connect_nodes` | Implemented |
-| `remove_node` | Implemented |
-| `set_node_properties` | Implemented |
+| `create_niagara_system` | Implemented |
+| `debug_shape` | Implemented |
+| `niagara` | Implemented |
+| `particle` | Implemented |
+| `spawn_niagara` | Implemented |
 
 ---
 
@@ -3692,24 +3755,6 @@ Generated: 2026-01-22T05:56:02.909Z
 | `create_datalayer` | Implemented |
 | `load_cells` | Implemented |
 | `set_datalayer` | Implemented |
-
----
-
-## Effect
-
-**File:** `McpAutomationBridge_EffectHandlers.cpp`
-
-**Lines:** 1,731
-
-**Maps to TS Tool(s):** `manage_effect`
-
-**Actions (3):**
-
-| Action | Status |
-|--------|--------|
-| `create_niagara_system` | Implemented |
-| `debug_shape` | Implemented |
-| `spawn_niagara` | Implemented |
 
 ---
 
@@ -4145,6 +4190,11 @@ Generated: 2026-01-22T05:56:02.909Z
 | `break_pin_links` | BlueprintGraph |
 | `bridge` | Geometry |
 | `broadcast_event` | EditorUtilities |
+| `build_hlod` | GameplaySystems |
+| `build_hlod_for_level` | LevelStructure |
+| `build_lighting` | Level, Lighting |
+| `build_lighting_quality` | Lighting, PostProcess |
+| `build_preset_from_client` | LiveLink |
 | `cache_avatar` | CharacterAvatar |
 | `calibrate_varjo_eye_tracking` | XRPlugins |
 | `cancel_interchange_import` | AssetPlugins |
@@ -4584,6 +4634,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `cook_content` | Build |
 | `cook_hda` | AssetPlugins |
 | `copy_weights` | Skeleton |
+| `create` | BehaviorTree, Sequence, SequencerConsolidated |
 | `create_accessibility_preset` | Accessibility |
 | `create_actor_state_machine` | GameplayPrimitives |
 | `create_ai_controller` | AI |
@@ -4929,6 +4980,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `debug_replication_graph` | Networking |
 | `debug_shape` | Effect |
 | `define_equipment_slots` | Inventory |
+| `delete` | AssetWorkflow, Control, Environment, Level, SequencerConsolidated |
 | `delete_asset` | AssetWorkflow |
 | `delete_assets` | AssetWorkflow |
 | `delete_by_tag` | Control |
@@ -5101,6 +5153,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `generate_project_files` | Build |
 | `generate_report` | AssetWorkflow |
 | `generate_thumbnail` | AssetWorkflow |
+| `get` | Control |
 | `get_accessibility_info` | Accessibility |
 | `get_ace_info` | AINPC |
 | `get_action_statistics` | Control |
@@ -5414,6 +5467,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `grant_gas_ability` | Combat |
 | `group_actors` | EditorUtilities |
 | `has_tag` | Data |
+| `hide` | LevelStructure |
 | `hide_overlay` | XRPlugins |
 | `host_cloud_anchor` | XRPlugins |
 | `host_lan_server` | Sessions |
@@ -5472,6 +5526,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `join_lan_server` | Sessions |
 | `jump_to_bookmark` | Control |
 | `link_sections` | AnimationAuthoring |
+| `list` | AssetWorkflow, Control, Level, SequencerConsolidated |
 | `list_active_vp_sessions` | VirtualProduction |
 | `list_actors` | Control |
 | `list_asset_overrides` | Modding |
@@ -5512,6 +5567,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `list_utility_plugins` | UtilityPlugins |
 | `list_water_bodies` | Water |
 | `list_xr_devices` | XRPlugins |
+| `load` | Level, LevelStructure |
 | `load_avatar_from_glb` | CharacterAvatar |
 | `load_avatar_from_url` | CharacterAvatar |
 | `load_cells` | WorldPartition |
@@ -5529,6 +5585,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `loft` | Geometry |
 | `loop_cut` | Geometry |
 | `lumen_update_scene` | Control, Render |
+| `manage_material_authoring` | MaterialAuthoring |
 | `map_surface_to_sound` | Character |
 | `merge_actors` | Control, Performance |
 | `merge_vertices` | Geometry |
@@ -5542,6 +5599,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `mw_configure_wwise_occlusion` | Audio |
 | `nanite_rebuild_mesh` | AssetWorkflow, Render |
 | `navigate_to_path` | EditorUtilities |
+| `niagara` | Effect |
 | `noise_deform` | Geometry |
 | `normalize_weights` | Skeleton |
 | `offset_faces` | Geometry |
@@ -5563,6 +5621,8 @@ Generated: 2026-01-22T05:56:02.909Z
 | `paint_landscape` | Environment |
 | `paint_landscape_layer` | Environment |
 | `parallel_execute` | Control |
+| `particle` | Effect |
+| `pause` | Control, Media, SequencerConsolidated |
 | `pause_all_fmod_events` | AudioMiddleware |
 | `pause_arcore_session` | XRPlugins |
 | `pause_arkit_session` | XRPlugins |
@@ -5573,6 +5633,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `pause_world_time` | GameplayPrimitives |
 | `perform_arcore_raycast` | XRPlugins |
 | `perform_raycast` | XRPlugins |
+| `play` | Control, Media, SequencerConsolidated |
 | `play_anim_montage` | Animation |
 | `play_bink` | AudioMiddleware |
 | `play_dialogue` | GameplaySystems |
@@ -5635,6 +5696,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `reload_python_module` | UtilityPlugins |
 | `remesh_uniform` | Geometry |
 | `remesh_voxel` | Geometry |
+| `remove` | Control |
 | `remove_actor_binding` | UtilityPlugins |
 | `remove_actors` | SequencerConsolidated |
 | `remove_all_sources` | LiveLink |
@@ -5696,6 +5758,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `restore_original_asset` | Modding |
 | `restore_snapshot` | Control |
 | `restore_state` | Control |
+| `resume` | Control |
 | `resume_all_fmod_events` | AudioMiddleware |
 | `retarget_rpm_animation` | CharacterAvatar |
 | `revolve` | Geometry |
@@ -5706,6 +5769,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `run_test` | Testing |
 | `run_tests` | Control, Test, Testing |
 | `run_ubt` | Build, Control |
+| `save` | AssetWorkflow, Level |
 | `save_all` | Ui |
 | `save_as` | Level |
 | `save_asset` | AssetWorkflow |
@@ -5723,6 +5787,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `scrub_to_time` | SequencerConsolidated |
 | `sculpt` | Environment |
 | `sculpt_landscape` | Environment |
+| `search` | AssetWorkflow |
 | `search_assets` | AssetQuery, AssetWorkflow |
 | `search_fab_assets` | AssetPlugins |
 | `seek` | Media |
@@ -6149,6 +6214,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `setup_weapon_switching` | Combat |
 | `sharpen` | Texture |
 | `shell` | Geometry |
+| `show` | LevelStructure |
 | `show_fps` | Control, Environment, Performance |
 | `show_in_explorer` | EditorUtilities |
 | `show_mouse_cursor` | Ui |
@@ -6194,6 +6260,7 @@ Generated: 2026-01-22T05:56:02.909Z
 | `start_trace` | Testing |
 | `start_web_server` | VirtualProduction |
 | `step_frame` | Control |
+| `stop` | Control, Media, SequencerConsolidated |
 | `stop_audio2face_stream` | AINPC |
 | `stop_bink` | AudioMiddleware |
 | `stop_convai_session` | AINPC |
@@ -6225,6 +6292,10 @@ Generated: 2026-01-22T05:56:02.909Z
 | `synchronize_timecode` | VirtualProduction |
 | `take_photo_mode_screenshot` | GameplaySystems |
 | `taper` | Geometry |
+| `test_activate_ability` | GAS |
+| `test_apply_effect` | GAS |
+| `test_get_attribute` | GAS |
+| `test_get_gameplay_tags` | GAS |
 | `texture2d` | MaterialAuthoring |
 | `toggle_realtime_rendering` | Control |
 | `transfer_control` | GameplayPrimitives |
