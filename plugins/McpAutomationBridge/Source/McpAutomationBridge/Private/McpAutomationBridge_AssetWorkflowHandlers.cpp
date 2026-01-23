@@ -2577,11 +2577,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   }
 
   // If we reach here, the subAction was not recognized by this handler
-  // Send an error instead of returning false to prevent fallthrough confusion
-  SendAutomationError(RequestingSocket, RequestId,
-                      FString::Printf(TEXT("Unknown manage_asset action: %s"), *LowerSubAction),
-                      TEXT("UNKNOWN_ACTION"));
-  return true;
+  // Return false to allow other handlers to try processing this request
+  return false;
 #else
   return false;
 #endif

@@ -214,9 +214,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
         const foldersList = payload.folders_list as Array<Record<string, unknown>> | undefined;
         const foldersArr = Array.isArray(foldersList)
           ? foldersList.map((f) => ({
-            Name: coerceString(f?.n ?? f?.Name ?? f?.name) ?? '',
-            Path: coerceString(f?.p ?? f?.Path ?? f?.path) ?? '',
-            Class: 'Folder',
+            name: coerceString(f?.n ?? f?.Name ?? f?.name) ?? '',
+            path: coerceString(f?.p ?? f?.Path ?? f?.path) ?? '',
+            class: 'Folder',
             isFolder: true
           }))
           : [];
@@ -224,9 +224,9 @@ export class AssetResources extends BaseTool implements IAssetResources {
         const assetsList = payload.assets as Array<Record<string, unknown>> | undefined;
         const assetsArr = Array.isArray(assetsList)
           ? assetsList.map((a) => ({
-            Name: coerceString(a?.n ?? a?.Name ?? a?.name) ?? '',
-            Path: coerceString(a?.p ?? a?.Path ?? a?.path) ?? '',
-            Class: coerceString(a?.c ?? a?.Class ?? a?.class) ?? 'Object'
+            name: coerceString(a?.n ?? a?.Name ?? a?.name) ?? '',
+            path: coerceString(a?.p ?? a?.Path ?? a?.path) ?? '',
+            class: coerceString(a?.c ?? a?.Class ?? a?.class) ?? 'Object'
           }))
           : [];
 

@@ -336,42 +336,94 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
 
     // Use McpSafeAssetSave which handles dialogs silently
     bool bSaved = McpSafeAssetSave(World);
-    if (bSaved) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetStringField(TEXT("levelPath"), World->GetOutermost()->GetName());
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Level saved"), Resp, FString());
-    } else {
-      // Provide detailed error information
-      TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
-      ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
-
+    
+    // POST-SAVE GPU sync: Save triggers async thumbnail generation which
+    // causes recursive FlushRenderingCommands on Intel Gen12 drivers.
+    // Flush GPU again AFTER save to catch any pending thumbnail work.
+    McpSyncGPUForWorldPartitionSave();
+    
+    // UE 5.7 + Intel GPU Workaround: World Partition saves trigger massive
+    // recursive FlushRenderingCommands which can exhaust GPU resources.
+    // Defer the response by ~200ms to let rendering thread stabilize,
+    // preventing SlateRHIRenderer crashes during thumbnail generation.
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("levelPath"), PackageName);
+    Resp->SetBoolField(TEXT("success"), bSaved);
+    
+    // Capture for deferred response
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf = this;
+    const FString CapturedRequestId = RequestId;
+    const bool bCapturedSaved = bSaved;
+    const FString CapturedPackageName = PackageName;
+    TSharedPtr<FMcpBridgeWebSocket> CapturedSocket = RequestingSocket;
+    TSharedPtr<FJsonObject> CapturedResp = Resp;
+    TSharedPtr<FJsonObject> CapturedErrorDetail = nullptr;
+    FString CapturedErrorReason;
+    
+    if (!bSaved) {
+      // Prepare error details for deferred response
+      CapturedErrorDetail = MakeShared<FJsonObject>();
+      CapturedErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
+      
       FString Filename;
-      FString ErrorReason = TEXT("Unknown save failure");
-
+      CapturedErrorReason = TEXT("Unknown save failure");
+      
       if (FPackageName::TryConvertLongPackageNameToFilename(
                      PackageName, Filename,
                      FPackageName::GetMapPackageExtension())) {
         if (IFileManager::Get().IsReadOnly(*Filename)) {
-          ErrorReason = TEXT("File is read-only or locked by another process");
-          ErrorDetail->SetStringField(TEXT("filename"), Filename);
+          CapturedErrorReason = TEXT("File is read-only or locked by another process");
+          CapturedErrorDetail->SetStringField(TEXT("filename"), Filename);
         } else if (!IFileManager::Get().DirectoryExists(
                        *FPaths::GetPath(Filename))) {
-          ErrorReason = TEXT("Target directory does not exist");
-          ErrorDetail->SetStringField(TEXT("directory"),
+          CapturedErrorReason = TEXT("Target directory does not exist");
+          CapturedErrorDetail->SetStringField(TEXT("directory"),
                                       FPaths::GetPath(Filename));
         } else {
-          ErrorReason =
+          CapturedErrorReason =
               TEXT("Save operation failed - check Output Log for details");
-          ErrorDetail->SetStringField(TEXT("filename"), Filename);
+          CapturedErrorDetail->SetStringField(TEXT("filename"), Filename);
         }
       }
-
-      ErrorDetail->SetStringField(TEXT("reason"), ErrorReason);
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          FString::Printf(TEXT("Failed to save level: %s"), *ErrorReason),
-          ErrorDetail, TEXT("SAVE_FAILED"));
+      CapturedErrorDetail->SetStringField(TEXT("reason"), CapturedErrorReason);
+    }
+    
+    // Defer response to allow rendering commands to settle after save
+    if (GEditor)
+    {
+      FTimerDelegate ResponseDelegate;
+      ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, bCapturedSaved, CapturedPackageName, CapturedResp, CapturedErrorDetail, CapturedErrorReason]()
+      {
+        if (UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get())
+        {
+          if (bCapturedSaved) {
+            Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, true,
+                               TEXT("Level saved"), CapturedResp, FString());
+          } else {
+            Self->SendAutomationResponse(
+                CapturedSocket, CapturedRequestId, false,
+                FString::Printf(TEXT("Failed to save level: %s"), *CapturedErrorReason),
+                CapturedErrorDetail, TEXT("SAVE_FAILED"));
+          }
+        }
+      });
+      
+      FTimerHandle TempHandle;
+      // Use 200ms delay to let GPU/Slate stabilize after World Partition save
+      GEditor->GetTimerManager()->SetTimer(TempHandle, ResponseDelegate, 0.2f, false);
+    }
+    else
+    {
+      // Fallback: send immediately if timer not available
+      if (bSaved) {
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Level saved"), Resp, FString());
+      } else {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Failed to save level: %s"), *CapturedErrorReason),
+            CapturedErrorDetail, TEXT("SAVE_FAILED"));
+      }
     }
     return true;
   }
@@ -398,6 +450,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         bSaved = FEditorFileUtils::SaveMap(World, SavePath);
       }
 #endif
+      // POST-SAVE GPU sync: SaveMap triggers async thumbnail generation which
+      // causes recursive FlushRenderingCommands on Intel Gen12 drivers.
+      // Flush GPU again AFTER save to catch any pending thumbnail work.
+      McpSyncGPUForWorldPartitionSave();
+      
       // UE 5.7 + Intel GPU Workaround: World Partition saves trigger massive
       // recursive FlushRenderingCommands which can exhaust GPU resources.
       // Defer the response by ~200ms to let rendering thread stabilize,

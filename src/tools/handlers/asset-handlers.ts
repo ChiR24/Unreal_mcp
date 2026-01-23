@@ -4,6 +4,7 @@ import type { HandlerArgs, HandlerResult, AssetArgs } from '../../types/handler-
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalArray } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
+import { handleAudioTools } from './audio-handlers.js';
 
 /** Asset info from list response */
 interface AssetListItem {
@@ -696,6 +697,36 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Material node added successfully');
       }
+      case 'connect_material_pins': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'fromNodeId', aliases: ['sourceNode'], required: true },
+          { key: 'fromPin', aliases: ['sourcePin'], required: true },
+          { key: 'toNodeId', aliases: ['targetNode'], required: true },
+          { key: 'toPin', aliases: ['targetPin'], required: true }
+        ]);
+        const res = await executeAutomationRequest(tools, 'manage_material_graph', {
+          subAction: 'connect_pins',
+          assetPath: extractString(params, 'assetPath'),
+          fromNodeId: extractString(params, 'fromNodeId'),
+          fromPin: extractString(params, 'fromPin'),
+          toNodeId: extractString(params, 'toNodeId'),
+          toPin: extractString(params, 'toPin')
+        });
+        return ResponseFactory.success(res, 'Material pins connected successfully');
+      }
+      case 'remove_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', aliases: ['nodeName'], required: true }
+        ]);
+        const res = await executeAutomationRequest(tools, 'manage_material_graph', {
+          subAction: 'remove_node',
+          assetPath: extractString(params, 'assetPath'),
+          nodeId: extractString(params, 'nodeId')
+        });
+        return ResponseFactory.success(res, 'Material node removed successfully');
+      }
       // Wave 1.14: Query Enhancement - query assets by predicate
       case 'query_assets_by_predicate': {
         const predicate = args.predicate || {};
@@ -870,6 +901,23 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           stopOnError
         });
         return ResponseFactory.success(res, 'Batch compile completed');
+      }
+      // Route MetaSound actions to audio handlers
+      case 'create_metasound':
+      case 'add_metasound_node':
+      case 'connect_metasound_nodes':
+      case 'remove_metasound_node':
+      case 'set_metasound_variable':
+      case 'create_oscillator':
+      case 'create_envelope':
+      case 'create_filter':
+      case 'create_sequencer_node':
+      case 'create_procedural_music':
+      case 'import_audio_to_metasound':
+      case 'export_metasound_preset':
+      case 'configure_audio_modulation': {
+        // Delegate to audio handlers for proper MetaSound routing
+        return await handleAudioTools(action, args, tools);
       }
       default: {
         // Route ALL actions through manage_asset with subAction for proper C++ dispatch
