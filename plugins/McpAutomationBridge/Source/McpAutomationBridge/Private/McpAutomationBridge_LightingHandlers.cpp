@@ -733,22 +733,30 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       // Handle Lumen GI configuration
       double Quality;
       if (Payload->TryGetNumberField(TEXT("quality"), Quality)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Quality"))->Set((int32)Quality);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Quality"))) {
+              CVar->Set((int32)Quality);
+          }
       }
       
       bool bDetailTrace;
       if (Payload->TryGetBoolField(TEXT("detailTrace"), bDetailTrace)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.DetailTrace"))->Set(bDetailTrace ? 1 : 0);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.DetailTrace"))) {
+              CVar->Set(bDetailTrace ? 1 : 0);
+          }
       }
 
       double UpdateSpeed;
       if (Payload->TryGetNumberField(TEXT("updateSpeed"), UpdateSpeed)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.LumenScene.UpdateSpeed"))->Set((float)UpdateSpeed);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.LumenScene.UpdateSpeed"))) {
+              CVar->Set((float)UpdateSpeed);
+          }
       }
 
       double FinalGatherQuality;
       if (Payload->TryGetNumberField(TEXT("finalGatherQuality"), FinalGatherQuality)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.ScreenProbeGather.Quality"))->Set((float)FinalGatherQuality);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.ScreenProbeGather.Quality"))) {
+              CVar->Set((float)FinalGatherQuality);
+          }
       }
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -759,12 +767,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       // Handle Lumen Reflections
       double Quality;
       if (Payload->TryGetNumberField(TEXT("quality"), Quality)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.Quality"))->Set((int32)Quality);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.Quality"))) {
+              CVar->Set((int32)Quality);
+          }
       }
 
       bool bDetailTrace;
       if (Payload->TryGetBoolField(TEXT("detailTrace"), bDetailTrace)) {
-          IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.DetailTrace"))->Set(bDetailTrace ? 1 : 0);
+          if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.Reflections.DetailTrace"))) {
+              CVar->Set(bDetailTrace ? 1 : 0);
+          }
       }
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

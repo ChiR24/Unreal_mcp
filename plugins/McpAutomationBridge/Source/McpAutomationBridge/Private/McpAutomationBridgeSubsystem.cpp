@@ -16,7 +16,13 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "Math/UnrealMathUtility.h"
 
+#if MCP_UE57_PLUS
+// Definitive definition for UE 5.7+ to resolve undefined type errors in unity builds
+DECLARE_STATS_GROUP(TEXT("McpBridge"), STATGROUP_McpBridge, STATCAT_Advanced);
+#endif
+
 // Editor-only includes for ExecuteEditorCommands
+
 #if WITH_EDITOR
 #include "Editor.h"
 #endif
@@ -1534,8 +1540,109 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleTriggerMetaSound(R, A, P, S);
                   });
 
+  // ============================================================================
+  // Control Actor Extended Actions (find_by_class, inspect_object, etc.)
+  // ============================================================================
+  RegisterHandler(TEXT("find_by_class"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorFindByClass(R, P, S);
+                  });
+  RegisterHandler(TEXT("inspect_object"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorInspectObject(R, P, S);
+                  });
+  RegisterHandler(TEXT("get_property"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorGetProperty(R, P, S);
+                  });
+  RegisterHandler(TEXT("set_property"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorSetProperty(R, P, S);
+                  });
+  RegisterHandler(TEXT("inspect_class"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorInspectClass(R, P, S);
+                  });
+  RegisterHandler(TEXT("list_objects"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorListObjects(R, P, S);
+                  });
+  RegisterHandler(TEXT("get_component_property"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorGetComponentProperty(R, P, S);
+                  });
+  RegisterHandler(TEXT("set_component_property"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorSetComponentProperty(R, P, S);
+                  });
+  RegisterHandler(TEXT("delete_object"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorDeleteObject(R, P, S);
+                  });
+  RegisterHandler(TEXT("get_all_component_properties"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorGetAllComponentProperties(R, P, S);
+                  });
+  RegisterHandler(TEXT("batch_set_component_properties"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorBatchSetComponentProperties(R, P, S);
+                  });
+  RegisterHandler(TEXT("serialize_actor_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorSerializeState(R, P, S);
+                  });
+  RegisterHandler(TEXT("get_actor_references"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorGetReferences(R, P, S);
+                  });
+  RegisterHandler(TEXT("replace_actor_class"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorReplaceClass(R, P, S);
+                  });
+  RegisterHandler(TEXT("batch_transform_actors"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleControlActorBatchTransform(R, P, S);
+                  });
+  RegisterHandler(TEXT("clone_component_hierarchy"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                     return HandleControlActorCloneComponentHierarchy(R, P, S);
+                   });
+  
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Initialized %d handlers"), AutomationHandlers.Num());
 }
+
 
 // Drain and process any automation requests that were enqueued while the
 // subsystem was busy. This implementation lives in the primary subsystem

@@ -273,10 +273,10 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     }
     // Wave 2.31-2.40: Level Enhancement Actions (incl. PCG GPU)
     case 'create_pcg_hlsl_node': {
-      // UE 5.7+ feature
+      // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
       const graphPath = requireNonEmptyString(argsTyped.graphPath, 'graphPath');
       const hlslCode = requireNonEmptyString(argsTyped.hlslCode, 'hlslCode');
-      const res = await executeAutomationRequest(tools, 'manage_level', {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'create_pcg_hlsl_node',
         graphPath,
         hlslCode,
@@ -285,9 +285,9 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as HandlerResult;
     }
     case 'enable_pcg_gpu_processing': {
-      // UE 5.7+ feature
+      // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
       const graphPath = requireNonEmptyString(argsTyped.graphPath, 'graphPath');
-      const res = await executeAutomationRequest(tools, 'manage_level', {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'enable_pcg_gpu_processing',
         graphPath,
         enabled: argsTyped.enabled ?? true
@@ -295,8 +295,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as HandlerResult;
     }
     case 'configure_pcg_mode_brush': {
-      // UE 5.7+ feature
-      const res = await executeAutomationRequest(tools, 'manage_level', {
+      // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'configure_pcg_mode_brush',
         brushSize: argsTyped.brushSize,
         brushStrength: argsTyped.brushStrength,
@@ -305,9 +305,9 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as HandlerResult;
     }
     case 'export_pcg_hlsl_template': {
-      // UE 5.7+ feature
+      // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
       const outputPath = requireNonEmptyString(argsTyped.outputPath, 'outputPath');
-      const res = await executeAutomationRequest(tools, 'manage_level', {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'export_pcg_hlsl_template',
         outputPath,
         templateType: argsTyped.templateType ?? 'point_processor'
@@ -315,12 +315,12 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as HandlerResult;
     }
     case 'batch_execute_pcg_with_gpu': {
-      // UE 5.7+ feature
+      // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
       const graphPaths = argsTyped.graphPaths;
       if (!Array.isArray(graphPaths) || graphPaths.length === 0) {
-        throw new Error('manage_level.batch_execute_pcg_with_gpu: graphPaths array is required');
+        throw new Error('manage_pcg.batch_execute_pcg_with_gpu: graphPaths array is required');
       }
-      const res = await executeAutomationRequest(tools, 'manage_level', {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'batch_execute_pcg_with_gpu',
         graphPaths,
         useGPU: argsTyped.useGPU ?? true
@@ -369,6 +369,18 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         levelPath: argsTyped.levelPath,
         hlodLayerName: argsTyped.hlodLayerName,
         rebuildAll: argsTyped.rebuildAll ?? false
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    // PCG actions - Route to manage_pcg where C++ handlers exist
+    case 'create_biome_rules':
+    case 'blend_biomes':
+    case 'export_pcg_to_static':
+    case 'import_pcg_preset':
+    case 'debug_pcg_execution': {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
+        action,
+        ...args
       });
       return cleanObject(res) as HandlerResult;
     }

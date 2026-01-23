@@ -12,6 +12,7 @@
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/Paths.h"
+#include "Async/Async.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -1100,15 +1101,30 @@ static bool HandleConfigureHlodLayer(
         return true;
     }
 
-    // Configure the HLOD layer
-    // UE 5.7+: SetIsSpatiallyLoaded is deprecated. Streaming grid properties are now in partition settings.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
+    // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded were removed or deprecated.
+    // These properties still exist in the class but are private or lack public setters.
+    // We use reflection to set them for compatibility while bridging the gap to new Partition Settings.
+#if MCP_UE57_PLUS
+    auto SetHLODProperty = [](UObject* Obj, FName PropName, auto Value) {
+        if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
+            if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
+                BoolProp->SetPropertyValue_InContainer(Obj, (bool)Value);
+            } else if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
+                NumericProp->SetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj), (double)Value);
+            }
+        }
+    };
+
+    SetHLODProperty(NewHLODLayer, TEXT("bIsSpatiallyLoaded"), bIsSpatiallyLoaded);
+    SetHLODProperty(NewHLODLayer, TEXT("CellSize"), (double)CellSize);
+    SetHLODProperty(NewHLODLayer, TEXT("LoadingRange"), LoadingDistance);
+#else
+    // Configure the HLOD layer for pre-5.7 versions
     NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    NewHLODLayer->SetCellSize(CellSize);
+    NewHLODLayer->SetLoadingRange(LoadingDistance);
 #endif
+
     
     // Set layer type
     if (LayerType == TEXT("Instancing"))
@@ -2088,15 +2104,27 @@ static bool HandleGetLevelStructureInfo(
                 LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
                 // UE 5.7+: GetCellSize, GetLoadingRange, IsSpatiallyLoaded are deprecated
                 // These streaming grid properties are now in the partition's settings
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-                PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
+#if MCP_UE57_PLUS
+                auto GetHLODProperty = [](UObject* Obj, FName PropName, auto DefaultValue) {
+                    if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
+                        if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
+                            return (decltype(DefaultValue))BoolProp->GetPropertyValue_InContainer(Obj);
+                        } else if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
+                            return (decltype(DefaultValue))NumericProp->GetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj));
+                        }
+                    }
+                    return DefaultValue;
+                };
+
+                LayerJson->SetNumberField(TEXT("cellSize"), GetHLODProperty(Layer, TEXT("CellSize"), 0.0));
+                LayerJson->SetNumberField(TEXT("loadingRange"), GetHLODProperty(Layer, TEXT("LoadingRange"), 0.0));
+                LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), GetHLODProperty(Layer, TEXT("bIsSpatiallyLoaded"), false));
+#else
                 LayerJson->SetNumberField(TEXT("cellSize"), Layer->GetCellSize());
                 LayerJson->SetNumberField(TEXT("loadingRange"), Layer->GetLoadingRange());
                 LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), Layer->IsSpatiallyLoaded());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-                PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
+
                 
                 // Get layer type as string
                 FString LayerTypeStr;
@@ -2470,17 +2498,23 @@ static bool HandleConfigureHlodSettings(
         HlodLayer->SetLayerType(LayerType);
     }
 
-    // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded may be deprecated
-    // These streaming grid properties are now specified in the partition's settings in UE 5.7+
-    // The properties exist but setters were removed - use deprecation warning suppression
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-    // In UE 5.7, these are deprecated - the streaming grid properties should be set in partition settings
-    // For now, just set the spatially loaded flag which still has a setter
-    HlodLayer->SetIsSpatiallyLoaded(bSpatiallyLoaded);
-    // Note: CellSize and LoadingRange cannot be set via API in UE 5.7 - they're read-only
-    // The user should configure these in the World Partition settings instead
-    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded were removed or deprecated.
+    // These properties still exist in the class but are private or lack public setters.
+    // We use reflection to set them for compatibility while bridging the gap to new Partition Settings.
+#if MCP_UE57_PLUS
+    auto SetHLODProperty = [](UObject* Obj, FName PropName, auto Value) {
+        if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
+            if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
+                BoolProp->SetPropertyValue_InContainer(Obj, (bool)Value);
+            } else if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
+                NumericProp->SetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj), (double)Value);
+            }
+        }
+    };
+
+    SetHLODProperty(HlodLayer, TEXT("bIsSpatiallyLoaded"), bSpatiallyLoaded);
+    if (CellSize > 0) SetHLODProperty(HlodLayer, TEXT("CellSize"), (double)CellSize);
+    if (LoadingRange > 0) SetHLODProperty(HlodLayer, TEXT("LoadingRange"), (double)LoadingRange);
 #else
     if (CellSize > 0)
     {
@@ -2534,14 +2568,23 @@ static bool HandleBuildHlodForLevel(
         // In UE5, we use console commands for HLOD building
         if (GEditor)
         {
-            GEditor->Exec(World, TEXT("HLODCmd BuildAll"));
+            // Execute on game thread in next tick to avoid blocking and return response immediately
+            FString Command = TEXT("HLODCmd BuildAll");
+            TWeakObjectPtr<UWorld> WeakWorld(World);
+            AsyncTask(ENamedThreads::GameThread, [WeakWorld, Command]()
+            {
+                if (GEditor && WeakWorld.IsValid())
+                {
+                    GEditor->Exec(WeakWorld.Get(), *Command);
+                }
+            });
             
             TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
             ResponseJson->SetStringField(TEXT("buildType"), TEXT("legacy"));
             ResponseJson->SetBoolField(TEXT("forceRebuild"), bForceRebuild);
             
             Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                TEXT("Initiated legacy HLOD build via console command"), ResponseJson);
+                TEXT("HLOD build scheduled on GameThread"), ResponseJson);
             return true;
         }
         
@@ -2554,9 +2597,16 @@ static bool HandleBuildHlodForLevel(
     // This is typically done through the World Partition editor subsystem
     if (GEditor)
     {
-        // Execute World Partition HLOD build command
+        // Execute World Partition HLOD build command asynchronously
         FString Command = bForceRebuild ? TEXT("wp.Runtime.HLOD RebuildAll") : TEXT("wp.Runtime.HLOD Build");
-        GEditor->Exec(World, *Command);
+        TWeakObjectPtr<UWorld> WeakWorld(World);
+        AsyncTask(ENamedThreads::GameThread, [WeakWorld, Command]()
+        {
+            if (GEditor && WeakWorld.IsValid())
+            {
+                GEditor->Exec(WeakWorld.Get(), *Command);
+            }
+        });
         
         TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
         ResponseJson->SetStringField(TEXT("buildType"), TEXT("world_partition"));
@@ -2564,7 +2614,7 @@ static bool HandleBuildHlodForLevel(
         ResponseJson->SetStringField(TEXT("command"), Command);
         
         Subsystem->SendAutomationResponse(Socket, RequestId, true,
-            TEXT("Initiated World Partition HLOD build"), ResponseJson);
+            TEXT("World Partition HLOD build scheduled on GameThread"), ResponseJson);
         return true;
     }
 
