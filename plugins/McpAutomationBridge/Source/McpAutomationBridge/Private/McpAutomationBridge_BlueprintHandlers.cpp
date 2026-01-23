@@ -1519,6 +1519,40 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       return Req;
     }
 
+    // Also accept 'assetPath' field (commonly used by tests)
+    if (LocalPayload->TryGetStringField(TEXT("assetPath"), Req) &&
+        !Req.TrimStartAndEnd().IsEmpty()) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("ResolveBlueprintRequestedPath: Found assetPath='%s'"),
+             *Req);
+      FString Norm;
+      if (FindBlueprintNormalizedPath(Req, Norm) &&
+          !Norm.TrimStartAndEnd().IsEmpty()) {
+        return Norm;
+      }
+      return Req;
+    }
+
+    // Also accept 'path' field (used by some create_blueprint calls)
+    if (LocalPayload->TryGetStringField(TEXT("path"), Req) &&
+        !Req.TrimStartAndEnd().IsEmpty()) {
+      // For create_blueprint, path + name may be separate fields
+      FString Name;
+      if (LocalPayload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
+        // Combine path + name
+        Req = Req / Name;
+      }
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("ResolveBlueprintRequestedPath: Found path='%s'"),
+             *Req);
+      FString Norm;
+      if (FindBlueprintNormalizedPath(Req, Norm) &&
+          !Norm.TrimStartAndEnd().IsEmpty()) {
+        return Norm;
+      }
+      return Req;
+    }
+
     const TArray<TSharedPtr<FJsonValue>> *CandidateArray = nullptr;
     // Accept either 'blueprintCandidates' (preferred) or legacy 'candidates'
     if (LocalPayload->TryGetArrayField(TEXT("blueprintCandidates"),
@@ -5412,12 +5446,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   }
 
   // ==========================================================================
-  // bp_ensure_exists / ensure_exists - Ensure blueprint exists, create if not
+  // bp_ensure_exists / ensure_exists / create_blueprint - Ensure blueprint exists, create if not
   // ==========================================================================
   if (ActionMatchesPattern(TEXT("bp_ensure_exists")) ||
       ActionMatchesPattern(TEXT("ensure_exists")) ||
       ActionMatchesPattern(TEXT("blueprint_ensure_exists")) ||
-      AlphaNumLower.Contains(TEXT("ensureexists"))) {
+      ActionMatchesPattern(TEXT("create_blueprint")) ||
+      ActionMatchesPattern(TEXT("bp_create")) ||
+      AlphaNumLower.Contains(TEXT("ensureexists")) ||
+      AlphaNumLower.Contains(TEXT("createblueprint"))) {
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       SendAutomationResponse(

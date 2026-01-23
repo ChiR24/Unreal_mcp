@@ -35,7 +35,7 @@ const setupTests = [
   { scenario: 'SETUP: Import Dragon FBX mesh', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: 'C:/Users/micro/Downloads/Compressed/fbx/Dragon 2.5_fbx.fbx', destinationPath: `${TEST_FOLDER}/SM_Dragon` }, expected: 'success|already exists|error|file not found|not implemented' },
   
   // Create test Blueprint (may not be implemented - allow error)
-  { scenario: 'SETUP: Create BP_TestActor', toolName: 'manage_asset', arguments: { action: 'create_blueprint', name: 'BP_TestActor', path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists|not implemented|error' },
+  { scenario: 'SETUP: Create BP_TestActor', toolName: 'manage_asset', arguments: { action: 'bp_create', name: 'BP_TestActor', path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists|not implemented|error' },
 ];
 
 // ============================================================================

@@ -163,6 +163,17 @@ const BLUEPRINT_ACTION_MAP: Record<string, string> = {
   bp_implement_interface: 'implement_interface',
   bp_add_event_dispatcher: 'add_event_dispatcher',
   bp_create_widget_binding: 'create_widget_binding',
+  // Variable operations
+  bp_add_variable: 'add_variable',
+  bp_remove_variable: 'remove_variable',
+  bp_rename_variable: 'rename_variable',
+  // Function operations
+  bp_add_function: 'add_function',
+  bp_add_event: 'add_event',
+  bp_remove_event: 'remove_event',
+  // Ensure/create operations
+  bp_create: 'create',
+  bp_ensure_exists: 'ensure_exists',
 };
 
 function isBlueprintAction(action: string): boolean {
@@ -221,8 +232,22 @@ function registerDefaultHandlers() {
     const action = getAction(args);
     // Reroute merged functionality
     if (['create_render_target', 'nanite_rebuild_mesh'].includes(action)) {
-      const payload = { ...args, subAction: action };
+      // Map meshPath -> assetPath for Nanite actions
+      const mappedArgs: Record<string, unknown> = { ...args };
+      if ('meshPath' in mappedArgs && !('assetPath' in mappedArgs)) {
+        mappedArgs.assetPath = mappedArgs.meshPath;
+      }
+      const payload = { ...mappedArgs, subAction: action };
       return cleanObject(await executeAutomationRequest(tools, 'manage_render', payload, `Automation bridge not available for ${action}`));
+    }
+    // Also handle set_nanite_settings
+    if (action === 'set_nanite_settings') {
+      const mappedArgs: Record<string, unknown> = { ...args };
+      if ('meshPath' in mappedArgs && !('assetPath' in mappedArgs)) {
+        mappedArgs.assetPath = mappedArgs.meshPath;
+      }
+      const payload = { ...mappedArgs, subAction: action };
+      return cleanObject(await executeAutomationRequest(tools, 'manage_asset', payload, `Automation bridge not available for ${action}`));
     }
     if (isMaterialGraphAction(action)) {
       const subAction = MATERIAL_GRAPH_ACTION_MAP[action] || action;

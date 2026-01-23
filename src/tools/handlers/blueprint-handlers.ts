@@ -56,10 +56,19 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'add_variable': {
+      // Support multiple naming conventions:
+      // - blueprintPath/assetPath/path for the blueprint
+      // - variableName/name for the variable (when 'name' isn't used for blueprint)
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
+      // If blueprintPath is provided, 'name' can be used for variableName
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
+      // memberClass/variableType for the type
+      const variableTypeArg = (argsRecord.variableType as string) || (argsRecord.memberClass as string) || 'Boolean';
+      
       const res = await tools.blueprintTools.addVariable({
-        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
-        variableName: argsTyped.variableName ?? '',
-        variableType: (argsRecord.variableType as string) ?? 'Boolean',
+        blueprintName: blueprintPathArg,
+        variableName: variableNameArg,
+        variableType: variableTypeArg,
         defaultValue: argsRecord.defaultValue,
         category: argsRecord.category as string | undefined,
         isReplicated: argsRecord.isReplicated as boolean | undefined,
@@ -72,18 +81,22 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'set_variable_metadata': {
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.setVariableMetadata({
-        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
-        variableName: argsTyped.variableName ?? '',
+        blueprintName: blueprintPathArg,
+        variableName: variableNameArg,
         metadata: argsTyped.metadata ?? {},
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
       return cleanObject(res) as HandlerResult;
     }
     case 'remove_variable': {
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.removeVariable({
-        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
-        variableName: argsTyped.variableName ?? '',
+        blueprintName: blueprintPathArg,
+        variableName: variableNameArg,
         timeoutMs: argsRecord.timeoutMs as number | undefined,
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
@@ -91,9 +104,12 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'rename_variable': {
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
+      // For rename, 'name' is the old name (the variable to rename), newName is the new name
+      const oldNameArg = (argsRecord.oldName as string) || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.renameVariable({
-        blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
-        oldName: (argsRecord.oldName as string) ?? '',
+        blueprintName: blueprintPathArg,
+        oldName: oldNameArg,
         newName: (argsRecord.newName as string) ?? '',
         timeoutMs: argsRecord.timeoutMs as number | undefined,
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,

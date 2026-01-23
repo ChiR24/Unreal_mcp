@@ -17,14 +17,14 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     case 'eject': {
       const inPie = await tools.editorTools.isInPIE();
       if (!inPie) {
-        throw new Error('Cannot eject while not in PIE');
+        return { success: false, message: 'Editor not playing', error: 'NOT_PLAYING' };
       }
       return await executeAutomationRequest(tools, 'control_editor', { action: 'eject' });
     }
     case 'possess': {
       const inPie = await tools.editorTools.isInPIE();
       if (!inPie) {
-        throw new Error('Cannot possess actor while not in PIE');
+        return { success: false, message: 'Editor not playing', error: 'NOT_PLAYING' };
       }
       return await executeAutomationRequest(tools, 'control_editor', args);
     }

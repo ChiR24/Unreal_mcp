@@ -362,8 +362,8 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
     if (!GEditor || !GEditor->IsPlaySessionInProgress()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Possess only available during PIE session"),
-                             nullptr, TEXT("NOT_IN_PIE"));
+                             TEXT("Editor not playing"),
+                             nullptr, TEXT("NOT_PLAYING"));
       return true;
     }
 
@@ -409,6 +409,47 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     Out->SetStringField(TEXT("possessed"), FoundPawn->GetActorLabel());
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Possessed pawn"), Out, FString());
+    return true;
+  }
+
+  if (FN == TEXT("EJECT")) {
+    if (!GEditor || !GEditor->IsPlaySessionInProgress()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not playing"),
+                             nullptr, TEXT("NOT_PLAYING"));
+      return true;
+    }
+
+    UWorld *PlayWorld = GEditor->PlayWorld;
+    if (!PlayWorld) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("PIE World not found"), nullptr,
+                             TEXT("WORLD_NOT_FOUND"));
+      return true;
+    }
+
+    APlayerController *PC = PlayWorld->GetFirstPlayerController();
+    if (!PC) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No PlayerController found in PIE"), nullptr,
+                             TEXT("PC_NOT_FOUND"));
+      return true;
+    }
+
+    // Unpossess the current pawn to return to spectator/free camera mode
+    APawn *CurrentPawn = PC->GetPawn();
+    if (CurrentPawn) {
+      PC->UnPossess();
+    }
+
+    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    Out->SetBoolField(TEXT("success"), true);
+    Out->SetStringField(TEXT("message"), TEXT("Ejected to free camera"));
+    if (CurrentPawn) {
+      Out->SetStringField(TEXT("previousPawn"), CurrentPawn->GetActorLabel());
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Ejected"), Out, FString());
     return true;
   }
 

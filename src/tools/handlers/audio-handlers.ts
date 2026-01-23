@@ -216,6 +216,15 @@ export async function handleAudioTools(
         delete mappedArgs.metaSoundName;
       }
       
+      // For create_metasound, extract name from assetPath if name not provided
+      if (action === 'create_metasound' && !('name' in mappedArgs) && 'assetPath' in mappedArgs) {
+        const assetPath = mappedArgs.assetPath as string;
+        const pathParts = assetPath.split('/');
+        mappedArgs.name = pathParts[pathParts.length - 1] || 'NewMetaSound';
+        // Also set packagePath from the directory
+        mappedArgs.packagePath = pathParts.slice(0, -1).join('/') || '/Game/Audio/MetaSounds';
+      }
+      
       // Map metaSoundPath -> packagePath or assetPath (for node operations)
       if ('metaSoundPath' in mappedArgs) {
         if (!('packagePath' in mappedArgs)) {

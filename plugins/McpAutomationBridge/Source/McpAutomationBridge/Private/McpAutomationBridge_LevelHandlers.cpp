@@ -13,6 +13,7 @@
 #include "FileHelpers.h"
 #include "LevelEditor.h"
 #include "RenderingThread.h"
+#include "RenderCommandFence.h"
 #include "Exporters/Exporter.h"
 
 // Check for LevelEditorSubsystem
@@ -29,6 +30,37 @@
 #else
 #define MCP_HAS_LEVELEDITOR_SUBSYSTEM 0
 #endif
+
+// Helper to fully synchronize GPU before World Partition saves.
+// Intel Gen12 drivers crash when SaveMap triggers recursive FlushRenderingCommands
+// while async thumbnail generation is in flight. This ensures GPU is truly idle.
+static void McpSyncGPUForWorldPartitionSave()
+{
+	// Step 1: Issue a fence on the render thread
+	FRenderCommandFence Fence;
+	Fence.BeginFence();
+	
+	// Step 2: Wait for all current rendering commands to complete
+	FlushRenderingCommands();
+	
+	// Step 3: Wait for the fence to signal (ensures GPU work is complete)
+	Fence.Wait();
+	
+	// Step 4: Additional flush to catch any commands queued during wait
+	FlushRenderingCommands();
+	
+	// Step 5: Force a full GC to release any pending GPU resources
+	if (GEditor)
+	{
+		GEditor->ForceGarbageCollection(true);
+	}
+	
+	// Step 6: Final fence wait after GC (GC may have queued resource releases)
+	FRenderCommandFence PostGCFence;
+	PostGCFence.BeginFence();
+	FlushRenderingCommands();
+	PostGCFence.Wait();
+}
 #endif
 
 // Cycle stats for Level handlers.
@@ -299,10 +331,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    // Force cleanup before save to prevent deadlocks
-    FlushRenderingCommands();
-    GEditor->ForceGarbageCollection(true);
-    FlushRenderingCommands();
+    // Use robust GPU sync for World Partition saves (Intel GPU crash fix)
+    McpSyncGPUForWorldPartitionSave();
 
     // Use McpSafeAssetSave which handles dialogs silently
     bool bSaved = McpSafeAssetSave(World);
@@ -346,13 +376,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     return true;
   }
   if (EffectiveAction == TEXT("save_level_as")) {
-    // Force cleanup to prevent potential deadlocks with HLODs/WorldPartition
-    // during save
-    if (GEditor) {
-      FlushRenderingCommands();
-      GEditor->ForceGarbageCollection(true);
-      FlushRenderingCommands();
-    }
+    // Use robust GPU sync for World Partition saves (Intel GPU crash fix)
+    McpSyncGPUForWorldPartitionSave();
 
     FString SavePath;
     if (Payload.IsValid())
