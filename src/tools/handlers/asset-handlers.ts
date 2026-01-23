@@ -4,6 +4,7 @@ import type { HandlerArgs, AssetArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalArray } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
+import { sanitizePath } from '../../utils/validation.js';
 
 /** Asset info from list response */
 interface AssetListItem {
@@ -43,7 +44,9 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'depth', default: undefined }
         ]);
 
-        const path = extractOptionalString(params, 'path') ?? '/Game';
+        let path = extractOptionalString(params, 'path') ?? '/Game';
+        path = sanitizePath(path);
+
         const limit = extractOptionalNumber(params, 'limit') ?? 50;
         const recursive = extractOptionalBoolean(params, 'recursive') ?? false;
         const depth = extractOptionalNumber(params, 'depth');
