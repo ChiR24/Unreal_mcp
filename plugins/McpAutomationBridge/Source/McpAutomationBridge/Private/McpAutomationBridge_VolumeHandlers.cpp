@@ -1332,7 +1332,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    FString EffectiveAction = Action;
+    if (Action.Equals(TEXT("manage_volumes"), ESearchCase::IgnoreCase))
+    {
+        // Try 'action' first, then 'subAction' for backward compatibility
+        if (!Payload->TryGetStringField(TEXT("action"), EffectiveAction))
+        {
+            Payload->TryGetStringField(TEXT("subAction"), EffectiveAction);
+        }
+    }
+    const FString SubAction = EffectiveAction.ToLower();
 
     UE_LOG(LogMcpVolumeHandlers, Verbose, TEXT("HandleManageVolumesAction: SubAction=%s"), *SubAction);
 

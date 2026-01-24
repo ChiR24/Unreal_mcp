@@ -21,12 +21,7 @@ class USkeleton;
  * Use `stat McpBridge` in the UE console to view these stats.
  * In UE 5.7+, this definition is moved to the source file to avoid undefined type errors in unity builds.
  */
-#if !MCP_UE57_PLUS
 DECLARE_STATS_GROUP(TEXT("McpBridge"), STATGROUP_McpBridge, STATCAT_Advanced);
-#else
-// Forward declaration of the stat group struct for 5.7+ to resolve visibility issues in unity builds
-struct FStatGroup_STATGROUP_McpBridge;
-#endif
 
 /**
  * Concrete data asset class for MCP inventory/item operations.

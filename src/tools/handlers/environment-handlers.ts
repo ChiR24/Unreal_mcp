@@ -61,12 +61,17 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
   const argsTyped = args as EnvironmentArgs;
   const argsRecord = args as Record<string, unknown>;
   const envAction = String(action || '').toLowerCase();
+
   const timeoutMs = getTimeoutMs();
 
   // Helper for Water/Weather requests
   const sendAutomationRequest = async (targetTool: string, actionName: string, requestArgs: Record<string, unknown>): Promise<HandlerResult> => {
     const normalizedArgs = normalizePathFields(requestArgs);
-    const payload = { ...normalizedArgs, action: actionName };
+    const payload = { 
+      ...normalizedArgs, 
+      action: actionName,
+      actorName: (normalizedArgs.name as string) || (normalizedArgs.actorName as string)
+    };
     const result = await executeAutomationRequest(
       tools,
       targetTool,
@@ -76,6 +81,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     );
     return cleanObject(result) as HandlerResult;
   };
+
   
   switch (envAction) {
     // ========================================================================
@@ -416,12 +422,16 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         materialPath: argsTyped.materialPath ?? ''
       })) as HandlerResult;
-    case 'generate_lods':
+    case 'generate_lods': {
+      const paths = (argsRecord.assetPaths as string[]) || (argsRecord.assets as string[]) || (argsRecord.path ? [argsRecord.path as string] : []);
+      const assetPath = paths.length > 0 ? paths[0] : (argsRecord.assetPath as string || '');
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
         action: 'generate_lods',
-        assetPaths: (argsRecord.assetPaths as string[]) || (argsRecord.assets as string[]) || (argsRecord.path ? [argsRecord.path as string] : []),
+        assetPath,
         numLODs: argsRecord.numLODs as number | undefined
       }, 'Bridge unavailable')) as HandlerResult;
+    }
+
     case 'delete': {
       const names: string[] = Array.isArray(argsRecord.names)
         ? argsRecord.names as string[]

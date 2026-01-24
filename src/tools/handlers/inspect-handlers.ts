@@ -114,7 +114,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
 
       const res = await executeAutomationRequest(
         tools,
-        'inspect',
+        'inspect_object',
         payload,
         'Automation bridge not available for inspect operations'
       ) as InspectResponse;

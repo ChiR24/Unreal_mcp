@@ -342,7 +342,8 @@ function registerDefaultHandlers() {
     'add_transform_points', 'add_project_to_surface', 'add_copy_points', 'add_merge_points',
     'add_static_mesh_spawner', 'add_actor_spawner', 'add_spline_spawner',
     'execute_pcg_graph', 'set_pcg_partition_grid_size', 'get_pcg_info',
-    'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution'
+    'create_biome_rules', 'blend_biomes', 'export_pcg_to_static', 'import_pcg_preset', 'debug_pcg_execution',
+    'enable_pcg_gpu_processing', 'configure_pcg_mode_brush', 'export_pcg_hlsl_template', 'batch_execute_pcg_with_gpu'
   ]);
   toolRegistry.register('manage_level', async (args, tools) => {
     const action = getAction(args);

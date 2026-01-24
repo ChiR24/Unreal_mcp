@@ -16,10 +16,6 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "Math/UnrealMathUtility.h"
 
-#if MCP_UE57_PLUS
-// Definitive definition for UE 5.7+ to resolve undefined type errors in unity builds
-DECLARE_STATS_GROUP(TEXT("McpBridge"), STATGROUP_McpBridge, STATCAT_Advanced);
-#endif
 
 // Editor-only includes for ExecuteEditorCommands
 
@@ -686,6 +682,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleEditLandscape(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("get_terrain_height_at"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetTerrainHeightAt(R, A, P, S);
                   });
 
   // Foliage

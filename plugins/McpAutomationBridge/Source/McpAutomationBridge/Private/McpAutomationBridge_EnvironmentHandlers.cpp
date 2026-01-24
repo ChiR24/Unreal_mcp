@@ -93,10 +93,32 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase) &&
-      !Lower.StartsWith(TEXT("build_environment")))
+  FString EffectiveAction = Action;
+  if (Action.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase)) {
+    Payload->TryGetStringField(TEXT("action"), EffectiveAction);
+  }
+  const FString Lower = EffectiveAction.ToLower();
+  
+  // Static set of all environment actions we handle
+  static TSet<FString> EnvironmentActions = {
+    TEXT("add_foliage_instances"), TEXT("add_foliage"), TEXT("get_foliage_instances"),
+    TEXT("remove_foliage"), TEXT("paint_landscape"), TEXT("paint_landscape_layer"),
+    TEXT("sculpt_landscape"), TEXT("sculpt"), TEXT("modify_heightmap"),
+    TEXT("set_landscape_material"), TEXT("create_landscape_grass_type"),
+    TEXT("generate_lods"), TEXT("bake_lightmap"), TEXT("export_snapshot"),
+    TEXT("import_snapshot"), TEXT("delete"), TEXT("create_sky_sphere"),
+    TEXT("set_time_of_day"), TEXT("create_fog_volume"), TEXT("configure_sky_atmosphere"),
+    TEXT("configure_exponential_height_fog"), TEXT("configure_volumetric_cloud"),
+    TEXT("create_sky_atmosphere"), TEXT("create_volumetric_cloud"),
+    TEXT("create_exponential_height_fog"), TEXT("create_landscape_spline"),
+    TEXT("configure_foliage_density"), TEXT("batch_paint_foliage"),
+    TEXT("create_procedural_terrain"), TEXT("create_procedural_foliage")
+  };
+
+  if (!EnvironmentActions.Contains(Lower) && 
+      !Lower.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase)) {
     return false;
+  }
 
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -105,9 +127,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     return true;
   }
 
-  FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
-  const FString LowerSub = SubAction.ToLower();
+  const FString LowerSub = Lower;
 
   // Fast-path foliage sub-actions to dedicated native handlers to avoid double
   // responses
@@ -1436,9 +1456,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("control_environment"), ESearchCase::IgnoreCase) &&
-      !Lower.StartsWith(TEXT("control_environment"))) {
+  FString EffectiveAction = Action;
+  if (Action.Equals(TEXT("control_environment"), ESearchCase::IgnoreCase)) {
+    Payload->TryGetStringField(TEXT("action"), EffectiveAction);
+  }
+  const FString Lower = EffectiveAction.ToLower();
+
+  // Static set of all control environment actions we handle
+  static TSet<FString> ControlActions = {
+    TEXT("set_time_of_day"), TEXT("set_sun_intensity"), TEXT("set_skylight_intensity"),
+    TEXT("configure_sun_position"), TEXT("configure_sun_color"),
+    TEXT("configure_sun_atmosphere"), TEXT("create_time_of_day_controller")
+  };
+
+  if (!ControlActions.Contains(Lower) && 
+      !Lower.Equals(TEXT("control_environment"), ESearchCase::IgnoreCase)) {
     return false;
   }
 
@@ -1449,9 +1481,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
     return true;
   }
 
-  FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
-  const FString LowerSub = SubAction.ToLower();
+  const FString LowerSub = Lower;
 
 #if WITH_EDITOR
   auto SendResult = [&](bool bSuccess, const TCHAR *Message,

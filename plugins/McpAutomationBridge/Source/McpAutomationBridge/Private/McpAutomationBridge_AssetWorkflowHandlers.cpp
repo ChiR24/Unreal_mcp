@@ -2258,6 +2258,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // BATCH NANITE CONVERT - Enable Nanite on multiple meshes
   // ============================================================================
   if (LowerSubAction == TEXT("batch_nanite_convert")) {
+    // If 'directory' is provided, use the specialized batch handler which handles registry scanning
+    if (Payload->HasField(TEXT("directory"))) {
+      return HandleBatchNaniteConvert(RequestId, Action, Payload, RequestingSocket);
+    }
+
     const TArray<TSharedPtr<FJsonValue>>* AssetPathsArray = nullptr;
     if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) || !AssetPathsArray) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("assetPaths array required"), TEXT("INVALID_ARGUMENT"));

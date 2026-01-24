@@ -142,6 +142,8 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             
             if (Asset)
             {
+                Asset->GetOutermost()->MarkPackageDirty();
+                FAssetRegistryModule::AssetCreated(Asset);
                 McpSafeAssetSave(Asset);
                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                 Resp->SetBoolField(TEXT("success"), true);

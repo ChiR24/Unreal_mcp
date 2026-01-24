@@ -272,14 +272,20 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const resolvedNodeType = (argsTyped.nodeType && nodeAliases[argsTyped.nodeType]) || argsTyped.nodeType || 'K2Node_CallFunction';
 
       // Validation for Event nodes
-      if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !(argsRecord.eventName as string | undefined) && !(argsRecord.customEventName as string | undefined) && !argsTyped.name) {
-        // Allow 'name' as fallback for customEventName/eventName
-        if (!(argsRecord.eventName as string | undefined)) argsRecord.eventName = argsTyped.name;
+      if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !(argsRecord.eventName as string | undefined) && !(argsRecord.customEventName as string | undefined)) {
+        // Check if 'name' was used for the blueprint or if it's available as an event name
+        const usedNameForBlueprint = !argsTyped.blueprintPath && !(argsRecord.path as string | undefined) && argsTyped.name;
+        
+        // If 'name' is present and NOT used for the blueprint path, use it as eventName fallback
+        if (argsTyped.name && !usedNameForBlueprint) {
+           argsRecord.eventName = argsTyped.name;
+        }
 
         if (!(argsRecord.eventName as string | undefined)) {
           throw new Error(`${resolvedNodeType} requires eventName (or customEventName) parameter`);
         }
       }
+
 
       const res = await tools.blueprintTools.addNode({
         blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',

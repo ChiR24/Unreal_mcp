@@ -526,8 +526,7 @@ export class IntrospectionTools {
 
     return this.executeWithRetry(async () => {
       try {
-        const response = await bridge.sendAutomationRequest('inspect', {
-          action: 'inspect_class',
+        const response = await bridge.sendAutomationRequest('inspect_class', {
           // C++ plugin expects `classPath` for inspect_class, but accepts both
           // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
           classPath: className
@@ -564,8 +563,7 @@ export class IntrospectionTools {
 
     return this.executeWithRetry(async () => {
       try {
-        const response = await bridge.sendAutomationRequest('inspect', {
-          action: 'find_by_class',
+        const response = await bridge.sendAutomationRequest('find_by_class', {
           className,
           limit
         }, {

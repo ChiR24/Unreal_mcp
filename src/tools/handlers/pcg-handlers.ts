@@ -193,6 +193,28 @@ export async function handlePCGTools(
     case 'get_pcg_info':
       return sendRequest('get_pcg_info');
 
+    // Advanced PCG
+    case 'create_biome_rules':
+      return sendRequest('create_biome_rules');
+    case 'blend_biomes':
+      return sendRequest('blend_biomes');
+    case 'export_pcg_to_static':
+      return sendRequest('export_pcg_to_static');
+    case 'import_pcg_preset':
+      return sendRequest('import_pcg_preset');
+    case 'debug_pcg_execution':
+      return sendRequest('debug_pcg_execution');
+
+    // GPU & Mode Brush
+    case 'enable_pcg_gpu_processing':
+      return sendRequest('enable_pcg_gpu_processing');
+    case 'configure_pcg_mode_brush':
+      return sendRequest('configure_pcg_mode_brush');
+    case 'export_pcg_hlsl_template':
+      return sendRequest('export_pcg_hlsl_template');
+    case 'batch_execute_pcg_with_gpu':
+      return sendRequest('batch_execute_pcg_with_gpu');
+
     default:
       return cleanObject({
         success: false,

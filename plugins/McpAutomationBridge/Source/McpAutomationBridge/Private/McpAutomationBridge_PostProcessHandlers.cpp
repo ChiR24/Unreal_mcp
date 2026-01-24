@@ -49,10 +49,35 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("manage_post_process"), ESearchCase::IgnoreCase) &&
-      !Lower.StartsWith(TEXT("manage_post_process")))
+  FString EffectiveAction = Action;
+  if (Action.Equals(TEXT("manage_post_process"), ESearchCase::IgnoreCase)) {
+    Payload->TryGetStringField(TEXT("action"), EffectiveAction);
+  }
+  const FString Lower = EffectiveAction.ToLower();
+
+  // Static set of all post-process actions we handle
+  static TSet<FString> PostProcessActions = {
+    TEXT("create_post_process_volume"), TEXT("configure_pp_blend"),
+    TEXT("configure_pp_priority"), TEXT("get_post_process_settings"),
+    TEXT("configure_bloom"), TEXT("configure_dof"), TEXT("configure_motion_blur"),
+    TEXT("configure_color_grading"), TEXT("configure_white_balance"),
+    TEXT("configure_vignette"), TEXT("configure_chromatic_aberration"),
+    TEXT("configure_film_grain"), TEXT("configure_lens_flares"),
+    TEXT("create_sphere_reflection_capture"), TEXT("create_box_reflection_capture"),
+    TEXT("create_planar_reflection"), TEXT("recapture_scene"),
+    TEXT("create_scene_capture_2d"), TEXT("create_scene_capture_cube"),
+    TEXT("capture_scene"), TEXT("set_light_channel"), TEXT("set_actor_light_channel"),
+    TEXT("configure_ray_traced_shadows"), TEXT("configure_ray_traced_gi"),
+    TEXT("configure_ray_traced_reflections"), TEXT("configure_ray_traced_ao"),
+    TEXT("configure_path_tracing"), TEXT("configure_lightmass_settings"),
+    TEXT("build_lighting_quality"), TEXT("configure_indirect_lighting_cache"),
+    TEXT("configure_volumetric_lightmap")
+  };
+
+  if (!PostProcessActions.Contains(Lower) && 
+      !Lower.Equals(TEXT("manage_post_process"), ESearchCase::IgnoreCase)) {
     return false;
+  }
 
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -61,13 +86,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
     return true;
   }
 
-  FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
-  // Also check for action_type for compatibility
-  if (SubAction.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("action_type"), SubAction);
-  }
-  const FString LowerSub = SubAction.ToLower();
+  const FString LowerSub = Lower;
+
 
 #if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

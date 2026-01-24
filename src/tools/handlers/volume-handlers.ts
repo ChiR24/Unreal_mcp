@@ -64,17 +64,18 @@ export async function handleVolumeTools(
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<HandlerResult> => {
-    const payload = { ...argsRecord, subAction };
+  const sendRequest = async (actionName: string): Promise<HandlerResult> => {
+    const payload = { ...argsRecord, action: actionName };
     const result = await executeAutomationRequest(
       tools,
       'manage_volumes',
       payload as HandlerArgs,
-      `Automation bridge not available for volume action: ${subAction}`,
+      `Automation bridge not available for volume action: ${actionName}`,
       { timeoutMs }
     );
     return cleanObject(result) as HandlerResult;
   };
+
 
   switch (action) {
     // ========================================================================
@@ -146,7 +147,35 @@ export async function handleVolumeTools(
     case 'get_volumes_info':
       return sendRequest('get_volumes_info');
 
+    // ========================================================================
+    // Splines (merged from manage_splines)
+    // ========================================================================
+    case 'create_spline_actor':
+    case 'add_spline_point':
+    case 'remove_spline_point':
+    case 'set_spline_point_position':
+    case 'set_spline_point_tangents':
+    case 'set_spline_point_rotation':
+    case 'set_spline_point_scale':
+    case 'set_spline_type':
+    case 'create_spline_mesh_component':
+    case 'set_spline_mesh_asset':
+    case 'configure_spline_mesh_axis':
+    case 'set_spline_mesh_material':
+    case 'scatter_meshes_along_spline':
+    case 'configure_mesh_spacing':
+    case 'configure_mesh_randomization':
+    case 'create_road_spline':
+    case 'create_river_spline':
+    case 'create_fence_spline':
+    case 'create_wall_spline':
+    case 'create_cable_spline':
+    case 'create_pipe_spline':
+    case 'get_splines_info':
+      return sendRequest(action);
+
     default:
+
       return cleanObject({
         success: false,
         error: 'UNKNOWN_ACTION',

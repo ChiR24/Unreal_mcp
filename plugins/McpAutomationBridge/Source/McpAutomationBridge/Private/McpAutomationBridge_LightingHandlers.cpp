@@ -35,7 +35,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
+  FString EffectiveAction = Action;
+  if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase)) {
+    Payload->TryGetStringField(TEXT("action"), EffectiveAction);
+  }
+  const FString Lower = EffectiveAction.ToLower();
   
   // Static set of all lighting/post-process actions we handle
   static TSet<FString> LightingActions = {

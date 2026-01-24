@@ -1278,26 +1278,51 @@ static bool HandleBlendBiomes(
     UPCGGraph* Graph = LoadPCGGraph(GraphPath);
     if (!Graph) { Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Graph not found"), nullptr, TEXT("NOT_FOUND")); return true; }
     
-    // Blending usually means creating a Subgraph that encapsulates the blend logic
-    // or adding a specific Merge/Filter setup.
-    // We'll create a subgraph node intended for blending.
+    // Blending in PCG usually involves Merging multiple biome outputs.
+    // We will create a Merge node and attempt to connect input biomes if provided.
     
-    UPCGSubgraphSettings* SubgraphSettings = NewObject<UPCGSubgraphSettings>(Graph);
-    if (!SubgraphSettings)
+    UPCGMergeSettings* MergeSettings = NewObject<UPCGMergeSettings>(Graph);
+    if (!MergeSettings)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create blend settings"), nullptr, TEXT("CREATE_ERROR"));
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create merge settings for blending"), nullptr, TEXT("CREATE_ERROR"));
         return true;
     }
     
-    // Optionally create the inner graph if requested
-    FString BlendGraphName = PCGHelpers::GetJsonStringField(Payload, TEXT("blendName"), TEXT("BiomeBlend"));
-    UPCGGraph* BlendGraph = NewObject<UPCGGraph>(SubgraphSettings, *BlendGraphName);
-    SubgraphSettings->SetSubgraph(BlendGraph);
+    UPCGNode* MergeNode = Graph->AddNode(MergeSettings);
+    SetNodePosition(MergeNode, Payload);
     
-    UPCGNode* Node = Graph->AddNode(SubgraphSettings);
-    SetNodePosition(Node, Payload);
+    // If 'biomes' array is provided, create subgraph nodes for each and connect to Merge
+    const TArray<TSharedPtr<FJsonValue>>* BiomesArray;
+    int32 ConnectedCount = 0;
+    if (Payload->TryGetArrayField(TEXT("biomes"), BiomesArray))
+    {
+        float StartX = MergeNode->PositionX - 300.0f;
+        float StartY = MergeNode->PositionY - (BiomesArray->Num() * 100.0f) / 2.0f;
+        
+        for (int32 i = 0; i < BiomesArray->Num(); ++i)
+        {
+            FString BiomePath = BiomesArray->operator[](i)->AsString();
+            UPCGGraph* BiomeGraph = LoadPCGGraph(BiomePath);
+            if (BiomeGraph)
+            {
+                UPCGSubgraphSettings* Subgraph = NewObject<UPCGSubgraphSettings>(Graph);
+                Subgraph->SetSubgraph(BiomeGraph);
+                UPCGNode* SubNode = Graph->AddNode(Subgraph);
+                SubNode->PositionX = StartX;
+                SubNode->PositionY = StartY + (i * 100.0f);
+                
+                Graph->AddEdge(SubNode, TEXT("Out"), MergeNode, TEXT("In"));
+                ConnectedCount++;
+            }
+        }
+    }
+    
     Graph->MarkPackageDirty();
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Biome blend node added"), CreateNodeResult(Node, TEXT("Biome Blend Subgraph")));
+    
+    TSharedPtr<FJsonObject> Result = CreateNodeResult(MergeNode, TEXT("Biome blend (Merge) node created"));
+    Result->SetNumberField(TEXT("biomesConnected"), ConnectedCount);
+    Self->SendAutomationResponse(Socket, RequestId, true, 
+        FString::Printf(TEXT("Biome blend node created with %d biomes connected"), ConnectedCount), Result);
     return true;
 }
 
@@ -1316,19 +1341,27 @@ static bool HandleExportPCGToStatic(
         return true;
     }
     
-    // Force generation first
+    // Force generation first to ensure we have latest results
     PCGComp->Generate(true);
     
-    // In runtime/automation, true "Export to Static Mesh Asset" is complex.
-    // However, we can simulate the intent by ensuring generation and marking for save.
-    // Real export usually involves the Editor's Merge Actors tool.
-    // We will return success indicating generation is complete and ready for manual merge or 
-    // implying that ISMs are now present.
+    // Bake PCG results into persistent actors using ClearPCGLink
+    // This detaches the generated resources from the PCG component, making them regular actors/components
+    AActor* BakedActor = PCGComp->ClearPCGLink();
     
-    // Log intent
-    UE_LOG(LogMcpPCGHandlers, Log, TEXT("ExportPCGToStatic: Triggered generation for %s"), *ActorName);
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    if (BakedActor)
+    {
+        Result->SetStringField(TEXT("bakedActorName"), BakedActor->GetActorLabel());
+        Result->SetStringField(TEXT("bakedActorPath"), BakedActor->GetPathName());
+        
+        UE_LOG(LogMcpPCGHandlers, Log, TEXT("ExportPCGToStatic: Baked PCG for %s into %s"), *ActorName, *BakedActor->GetActorLabel());
+        Self->SendAutomationResponse(Socket, RequestId, true, TEXT("PCG results baked to static actors"), Result);
+    }
+    else
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to bake PCG results"), nullptr, TEXT("BAKE_FAILED"));
+    }
     
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("PCG generated (ready for static export)"), nullptr);
     return true;
 }
 

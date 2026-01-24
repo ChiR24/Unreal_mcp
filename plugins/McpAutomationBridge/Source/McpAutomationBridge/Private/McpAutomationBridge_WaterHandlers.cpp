@@ -9,6 +9,8 @@
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
@@ -125,9 +127,14 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *OceanClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyOcean"));
     if (OceanClass) {
-      AActor *OceanActor = SpawnActorInActiveWorld<AActor>(
-          OceanClass, Location, FRotator::ZeroRotator,
-          Name.IsEmpty() ? TEXT("WaterBodyOcean") : *Name);
+      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyOcean")) : FName(*Name);
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      SpawnParams.bDeferConstruction = true;
+      
+      AActor *OceanActor = GetActiveWorld()->SpawnActor<AActor>(OceanClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
+
       if (OceanActor) {
         // Configure ocean-specific properties
         UWaterBodyOceanComponent *OceanComp = OceanActor->FindComponentByClass<UWaterBodyOceanComponent>();
@@ -147,6 +154,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
             }
           }
         }
+
+        // Finish spawning after configuration
+        OceanActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
 
         bSuccess = true;
         Message = TEXT("Water body ocean created");
@@ -179,9 +189,14 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *LakeClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyLake"));
     if (LakeClass) {
-      AActor *LakeActor = SpawnActorInActiveWorld<AActor>(
-          LakeClass, Location, FRotator::ZeroRotator,
-          Name.IsEmpty() ? TEXT("WaterBodyLake") : *Name);
+      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyLake")) : FName(*Name);
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      SpawnParams.bDeferConstruction = true;
+      
+      AActor *LakeActor = GetActiveWorld()->SpawnActor<AActor>(LakeClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
+
       if (LakeActor) {
         // Configure lake-specific properties
         UWaterBodyLakeComponent *LakeComp = LakeActor->FindComponentByClass<UWaterBodyLakeComponent>();
@@ -195,6 +210,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
             }
           }
         }
+
+        // Finish spawning after configuration
+        LakeActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
 
         bSuccess = true;
         Message = TEXT("Water body lake created");
@@ -227,9 +245,14 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *RiverClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyRiver"));
     if (RiverClass) {
-      AActor *RiverActor = SpawnActorInActiveWorld<AActor>(
-          RiverClass, Location, FRotator::ZeroRotator,
-          Name.IsEmpty() ? TEXT("WaterBodyRiver") : *Name);
+      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyRiver")) : FName(*Name);
+      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+      SpawnParams.bDeferConstruction = true;
+      
+      AActor *RiverActor = GetActiveWorld()->SpawnActor<AActor>(RiverClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
+
       if (RiverActor) {
         // Configure river-specific properties
         UWaterBodyComponent *RiverComp = RiverActor->FindComponentByClass<UWaterBodyComponent>();
@@ -243,6 +266,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
             }
           }
         }
+
+        // Finish spawning after configuration
+        RiverActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
 
         bSuccess = true;
         Message = TEXT("Water body river created");

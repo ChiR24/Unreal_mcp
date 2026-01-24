@@ -36,30 +36,17 @@
 // while async thumbnail generation is in flight. This ensures GPU is truly idle.
 static void McpSyncGPUForWorldPartitionSave()
 {
-	// Step 1: Issue a fence on the render thread
+	// Issue a fence on the render thread
 	FRenderCommandFence Fence;
 	Fence.BeginFence();
 	
-	// Step 2: Wait for all current rendering commands to complete
+	// Wait for all current rendering commands to complete
+	// Intel Gen12 drivers crash when SaveMap triggers recursive FlushRenderingCommands.
+	// We use a single flush and a fence to ensure GPU work is complete safely.
 	FlushRenderingCommands();
 	
-	// Step 3: Wait for the fence to signal (ensures GPU work is complete)
+	// Wait for the fence to signal (ensures GPU work is complete)
 	Fence.Wait();
-	
-	// Step 4: Additional flush to catch any commands queued during wait
-	FlushRenderingCommands();
-	
-	// Step 5: Force a full GC to release any pending GPU resources
-	if (GEditor)
-	{
-		GEditor->ForceGarbageCollection(true);
-	}
-	
-	// Step 6: Final fence wait after GC (GC may have queued resource releases)
-	FRenderCommandFence PostGCFence;
-	PostGCFence.BeginFence();
-	FlushRenderingCommands();
-	PostGCFence.Wait();
 }
 #endif
 
@@ -288,7 +275,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           StructurePayload->Values.Add(Field.Key, Field.Value);
         }
       }
-      StructurePayload->SetStringField(TEXT("subAction"), SubAction);
+      StructurePayload->SetStringField(TEXT("subAction"), LowerSub);
       
       if (HandleManageLevelStructureAction(RequestId, Action, StructurePayload, RequestingSocket)) {
         return true;
@@ -322,14 +309,38 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // Check if this is an unsaved/temporary level first
     FString PackageName = World->GetOutermost()->GetName();
     if (PackageName.Contains(TEXT("Untitled")) || PackageName.StartsWith(TEXT("/Temp/"))) {
+      FString SavePath;
+      if (Payload.IsValid() && Payload->TryGetStringField(TEXT("savePath"), SavePath) && !SavePath.IsEmpty()) {
+        // Use save_level_as logic instead of failing
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Level is Untitled/Temp, but savePath provided. Redirecting to save_level_as."));
+        
+        McpSyncGPUForWorldPartitionSave();
+#if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
+        if (ULevelEditorSubsystem *LevelEditorSS = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
+          bool bSaved = false;
+#if __has_include("FileHelpers.h")
+          bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+#endif
+          McpSyncGPUForWorldPartitionSave();
+          if (bSaved) {
+            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            Resp->SetStringField(TEXT("levelPath"), SavePath);
+            SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Untitled level saved as %s"), *SavePath), Resp);
+            return true;
+          }
+        }
+#endif
+      }
+      
       TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
       ErrorDetail->SetStringField(TEXT("reason"), TEXT("Level is unsaved/temporary. Use save_level_as with a path first."));
       ErrorDetail->SetStringField(TEXT("hint"), TEXT("Use manage_level with action='save_as' and provide savePath"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Cannot save unsaved level - use save_as first"), ErrorDetail, TEXT("SAVE_FAILED"));
+                             TEXT("Cannot save unsaved level - use save_as first or provide savePath"), ErrorDetail, TEXT("SAVE_FAILED"));
       return true;
     }
+
 
     // Use robust GPU sync for World Partition saves (Intel GPU crash fix)
     McpSyncGPUForWorldPartitionSave();
