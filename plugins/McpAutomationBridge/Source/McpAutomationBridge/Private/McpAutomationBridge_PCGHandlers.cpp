@@ -1421,10 +1421,10 @@ static bool HandleDebugPCGExecution(
         UPCGNode* Node = FindNodeById(Graph, NodeId);
         if (Node)
         {
-            // Node->SetDebug(bEnableDebug); // Not directly exposed in all versions, usually via Settings
             // Try settings
             if (UPCGSettings* Settings = const_cast<UPCGSettings*>(Node->GetSettings()))
             {
+                Settings->Modify();
                 Settings->bDebug = bEnableDebug;
                 DebugCount++;
             }
@@ -1432,12 +1432,13 @@ static bool HandleDebugPCGExecution(
     }
     else
     {
-        // Toggle all? Or just return error if node missing?
-        // Let's toggle all for convenience if node missing
+        // Toggle all for convenience if node missing
         for (UPCGNode* Node : Graph->GetNodes())
         {
-            if (UPCGSettings* Settings = const_cast<UPCGSettings*>(Node->GetSettings()))
+            if (Node && Node->GetSettings())
             {
+                UPCGSettings* Settings = const_cast<UPCGSettings*>(Node->GetSettings());
+                Settings->Modify();
                 Settings->bDebug = bEnableDebug;
                 DebugCount++;
             }
@@ -1657,201 +1658,144 @@ static bool HandleGetPCGInfo(
 
 #endif // MCP_HAS_PCG
 
-#endif // WITH_EDITOR
-
-// ============================================================================
-// Main Dispatcher
-// ============================================================================
-
 bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
     const FString& RequestId,
     const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
 #if MCP_HAS_PCG
     FString SubAction = PCGHelpers::GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
     
     UE_LOG(LogMcpPCGHandlers, Verbose, TEXT("HandleManagePCGAction: SubAction=%s"), *SubAction);
 
     // Graph Management
-    if (SubAction == TEXT("create_pcg_graph")) return HandleCreatePCGGraph(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("create_pcg_subgraph")) return HandleCreatePCGSubgraph(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_pcg_node")) return HandleAddPCGNode(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("connect_pcg_pins")) return HandleConnectPCGPins(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("set_pcg_node_settings")) return HandleSetPCGNodeSettings(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("create_pcg_graph")) return HandleCreatePCGGraph(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("create_pcg_subgraph")) return HandleCreatePCGSubgraph(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_pcg_node")) return HandleAddPCGNode(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("connect_pcg_pins")) return HandleConnectPCGPins(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("set_pcg_node_settings")) return HandleSetPCGNodeSettings(this, RequestId, Payload, RequestingSocket);
 
     // Input Nodes
-    if (SubAction == TEXT("add_landscape_data_node")) return HandleAddLandscapeDataNode(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_spline_data_node")) return HandleAddSplineDataNode(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_volume_data_node")) return HandleAddVolumeDataNode(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_actor_data_node")) return HandleAddActorDataNode(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_texture_data_node")) return HandleAddTextureDataNode(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("add_landscape_data_node")) return HandleAddLandscapeDataNode(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_spline_data_node")) return HandleAddSplineDataNode(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_volume_data_node")) return HandleAddVolumeDataNode(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_actor_data_node")) return HandleAddActorDataNode(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_texture_data_node")) return HandleAddTextureDataNode(this, RequestId, Payload, RequestingSocket);
 
     // Samplers
-    if (SubAction == TEXT("add_surface_sampler")) return HandleAddSurfaceSampler(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_mesh_sampler")) return HandleAddMeshSampler(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_spline_sampler")) return HandleAddSplineSampler(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_volume_sampler")) return HandleAddVolumeSampler(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("add_surface_sampler")) return HandleAddSurfaceSampler(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_mesh_sampler")) return HandleAddMeshSampler(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_spline_sampler")) return HandleAddSplineSampler(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_volume_sampler")) return HandleAddVolumeSampler(this, RequestId, Payload, RequestingSocket);
 
     // Filters
-    if (SubAction == TEXT("add_bounds_modifier")) return HandleAddBoundsModifier(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_density_filter")) return HandleAddDensityFilter(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_height_filter")) return HandleAddHeightFilter(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_slope_filter")) return HandleAddSlopeFilter(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_distance_filter")) return HandleAddDistanceFilter(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_bounds_filter")) return HandleAddBoundsFilter(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_self_pruning")) return HandleAddSelfPruning(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("add_bounds_modifier")) return HandleAddBoundsModifier(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_density_filter")) return HandleAddDensityFilter(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_height_filter")) return HandleAddHeightFilter(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_slope_filter")) return HandleAddSlopeFilter(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_distance_filter")) return HandleAddDistanceFilter(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_bounds_filter")) return HandleAddBoundsFilter(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_self_pruning")) return HandleAddSelfPruning(this, RequestId, Payload, RequestingSocket);
 
     // Transforms
-    if (SubAction == TEXT("add_transform_points")) return HandleAddTransformPoints(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_project_to_surface")) return HandleAddProjectToSurface(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_copy_points")) return HandleAddCopyPoints(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_merge_points")) return HandleAddMergePoints(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("add_transform_points")) return HandleAddTransformPoints(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_project_to_surface")) return HandleAddProjectToSurface(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_copy_points")) return HandleAddCopyPoints(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_merge_points")) return HandleAddMergePoints(this, RequestId, Payload, RequestingSocket);
 
     // Spawners
-    if (SubAction == TEXT("add_static_mesh_spawner")) return HandleAddStaticMeshSpawner(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_actor_spawner")) return HandleAddActorSpawner(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("add_spline_spawner")) return HandleAddSplineSpawner(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("add_static_mesh_spawner")) return HandleAddStaticMeshSpawner(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_actor_spawner")) return HandleAddActorSpawner(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("add_spline_spawner")) return HandleAddSplineSpawner(this, RequestId, Payload, RequestingSocket);
 
     // Execution
-    if (SubAction == TEXT("execute_pcg_graph")) return HandleExecutePCGGraph(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("set_pcg_partition_grid_size")) return HandleSetPCGPartitionGridSize(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("execute_pcg_graph")) return HandleExecutePCGGraph(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("set_pcg_partition_grid_size")) return HandleSetPCGPartitionGridSize(this, RequestId, Payload, RequestingSocket);
 
     // Advanced PCG (Phase 3A.2)
-    if (SubAction == TEXT("create_biome_rules")) return HandleCreateBiomeRules(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("blend_biomes")) return HandleBlendBiomes(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("export_pcg_to_static")) return HandleExportPCGToStatic(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("import_pcg_preset")) return HandleImportPCGPreset(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("debug_pcg_execution")) return HandleDebugPCGExecution(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("create_biome_rules")) return HandleCreateBiomeRules(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("blend_biomes")) return HandleBlendBiomes(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("export_pcg_to_static")) return HandleExportPCGToStatic(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("import_pcg_preset")) return HandleImportPCGPreset(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("debug_pcg_execution")) return HandleDebugPCGExecution(this, RequestId, Payload, RequestingSocket);
 
     // GPU & Mode Brush
-    if (SubAction == TEXT("enable_pcg_gpu_processing")) return HandleEnablePCGGpuProcessing(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("configure_pcg_mode_brush")) return HandleConfigurePCGModeBrush(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("enable_pcg_gpu_processing")) return HandleEnablePCGGpuProcessing(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("configure_pcg_mode_brush")) return HandleConfigurePCGModeBrush(this, RequestId, Payload, RequestingSocket);
 
     // Utility
-    if (SubAction == TEXT("get_pcg_info")) return HandleGetPCGInfo(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("get_pcg_info")) return HandleGetPCGInfo(this, RequestId, Payload, RequestingSocket);
 
-    // =========================================================================
-    // PCG HLSL Actions - GPU compute shaders for PCG
-    // =========================================================================
-    
-    // batch_execute_pcg_with_gpu - Execute PCG graph with GPU acceleration
+    // PCG HLSL Actions
     if (SubAction == TEXT("batch_execute_pcg_with_gpu")) {
-        // Handle both graphPath (single) and graphPaths (array) from TS
         TSharedPtr<FJsonObject> BatchPayload = MakeShared<FJsonObject>();
         BatchPayload->SetBoolField(TEXT("enableGPU"), true);
         BatchPayload->SetBoolField(TEXT("batchMode"), true);
-        
-        // Try graphPaths array first (TS sends this)
         const TArray<TSharedPtr<FJsonValue>>* GraphPathsArray = nullptr;
         if (Payload->TryGetArrayField(TEXT("graphPaths"), GraphPathsArray) && GraphPathsArray && GraphPathsArray->Num() > 0) {
-            // Use first graph path for now (PCG GPU processing is per-graph)
             FString FirstPath;
-            if ((*GraphPathsArray)[0]->TryGetString(FirstPath)) {
-                BatchPayload->SetStringField(TEXT("graphPath"), FirstPath);
-            }
+            if ((*GraphPathsArray)[0]->TryGetString(FirstPath)) BatchPayload->SetStringField(TEXT("graphPath"), FirstPath);
             BatchPayload->SetArrayField(TEXT("graphPaths"), *GraphPathsArray);
-        }
-        // Fallback to single graphPath
-        else {
+        } else {
             FString GraphPath;
-            if (Payload->TryGetStringField(TEXT("graphPath"), GraphPath)) {
-                BatchPayload->SetStringField(TEXT("graphPath"), GraphPath);
-            }
+            if (Payload->TryGetStringField(TEXT("graphPath"), GraphPath)) BatchPayload->SetStringField(TEXT("graphPath"), GraphPath);
         }
-        
         const TArray<TSharedPtr<FJsonValue>>* TargetsArray = nullptr;
-        if (Payload->TryGetArrayField(TEXT("targets"), TargetsArray)) {
-            BatchPayload->SetArrayField(TEXT("targets"), *TargetsArray);
-        }
-        return HandleEnablePCGGpuProcessing(this, RequestId, BatchPayload, Socket);
+        if (Payload->TryGetArrayField(TEXT("targets"), TargetsArray)) BatchPayload->SetArrayField(TEXT("targets"), *TargetsArray);
+        return HandleEnablePCGGpuProcessing(this, RequestId, BatchPayload, RequestingSocket);
     }
     
-    // create_pcg_hlsl_node - Create a custom HLSL compute node for PCG
     if (SubAction == TEXT("create_pcg_hlsl_node")) {
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         FString GraphPath, NodeName, HlslCode;
         Payload->TryGetStringField(TEXT("graphPath"), GraphPath);
         Payload->TryGetStringField(TEXT("nodeName"), NodeName);
         Payload->TryGetStringField(TEXT("hlslCode"), HlslCode);
-        
-        // Require graphPath and hlslCode (nodeName can default)
         if (GraphPath.IsEmpty() || HlslCode.IsEmpty()) {
-            SendAutomationError(Socket, RequestId, TEXT("graphPath and hlslCode required"), TEXT("INVALID_ARGUMENT"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("graphPath and hlslCode required"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        
-        // Default nodeName if not provided
-        if (NodeName.IsEmpty()) {
-            NodeName = TEXT("CustomHLSLNode");
-        }
-        
-        // PCG HLSL nodes are created via UPCGSettings custom subclasses
-        // For now, provide guidance on creating custom PCG HLSL nodes
+        if (NodeName.IsEmpty()) NodeName = TEXT("CustomHLSLNode");
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("message"), TEXT("PCG HLSL nodes require creating a custom UPCGSettings subclass with HLSL compute shader. Use Unreal's GPU Compute infrastructure."));
-        Result->SetStringField(TEXT("hint"), TEXT("Create a UPCGHlslElementSettings subclass and implement the HLSL shader in the element's Execute method."));
+        Result->SetStringField(TEXT("message"), TEXT("PCG HLSL nodes require creating a custom UPCGSettings subclass with HLSL compute shader."));
+        Result->SetStringField(TEXT("hint"), TEXT("Create a UPCGHlslElementSettings subclass."));
         Result->SetStringField(TEXT("graphPath"), GraphPath);
         Result->SetStringField(TEXT("nodeName"), NodeName);
-        SendAutomationResponse(Socket, RequestId, true, TEXT("HLSL node guidance provided"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("HLSL node guidance provided"), Result);
         return true;
     }
     
-    // export_pcg_hlsl_template - Export a template for PCG HLSL compute shader
     if (SubAction == TEXT("export_pcg_hlsl_template")) {
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         FString OutputPath;
         Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
-        
         FString HlslTemplate = TEXT(R"(// PCG HLSL Compute Shader Template
-// This template provides the structure for custom PCG GPU compute operations
-
 RWStructuredBuffer<float4> OutputPoints : register(u0);
 StructuredBuffer<float4> InputPoints : register(t0);
-
-cbuffer PCGParams : register(b0)
-{
-    uint NumPoints;
-    float Seed;
-    float2 Padding;
-};
-
-[numthreads(64, 1, 1)]
-void Main(uint3 DTid : SV_DispatchThreadID)
-{
+cbuffer PCGParams : register(b0) { uint NumPoints; float Seed; float2 Padding; };
+[numthreads(64, 1, 1)] void Main(uint3 DTid : SV_DispatchThreadID) {
     if (DTid.x >= NumPoints) return;
-    
     float4 Point = InputPoints[DTid.x];
-    // Transform point here
     OutputPoints[DTid.x] = Point;
 })");
-        
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("template"), HlslTemplate);
         Result->SetStringField(TEXT("message"), TEXT("PCG HLSL template generated"));
         if (!OutputPath.IsEmpty()) {
-            if (FFileHelper::SaveStringToFile(HlslTemplate, *OutputPath)) {
-                Result->SetStringField(TEXT("savedTo"), OutputPath);
-            }
+            if (FFileHelper::SaveStringToFile(HlslTemplate, *OutputPath)) Result->SetStringField(TEXT("savedTo"), OutputPath);
         }
-        SendAutomationResponse(Socket, RequestId, true, TEXT("PCG HLSL template exported"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("PCG HLSL template exported"), Result);
         return true;
     }
 
-    // Unknown action
-    SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("Unknown PCG subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
+    SendAutomationResponse(RequestingSocket, RequestId, false, FString::Printf(TEXT("Unknown PCG subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
 #else
-    SendAutomationResponse(Socket, RequestId, false,
-        TEXT("PCG plugin is not available. Enable the PCG plugin in your project."), nullptr, TEXT("PCG_NOT_AVAILABLE"));
-    return true;
-#endif
-#else
-    SendAutomationResponse(Socket, RequestId, false,
-        TEXT("PCG operations require editor build"), nullptr, TEXT("EDITOR_ONLY"));
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("PCG plugin is not available."), nullptr, TEXT("PCG_NOT_AVAILABLE"));
     return true;
 #endif
 }
+
+#endif // WITH_EDITOR
+

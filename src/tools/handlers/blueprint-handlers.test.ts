@@ -115,6 +115,20 @@ describe('handleBlueprintTools', () => {
       );
     });
 
+    it('handles bp_ensure_exists action successfully', async () => {
+      const mockTools = createMockTools();
+
+      const result = await handleBlueprintTools('bp_ensure_exists', {
+        name: '/Game/Blueprints/BP_Test',
+      }, mockTools);
+
+      expect(result).toHaveProperty('success', true);
+      expect(mockTools.blueprintTools.waitForBlueprint).toHaveBeenCalledWith(
+        '/Game/Blueprints/BP_Test',
+        undefined
+      );
+    });
+
     it('handles compile action successfully', async () => {
       const mockTools = createMockTools();
 

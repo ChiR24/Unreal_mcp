@@ -68,7 +68,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
        Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
        Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
-       Lower == TEXT("add_sublevel"));
+       Lower == TEXT("add_sublevel") ||
+       Lower == TEXT("configure_world_partition") ||
+       Lower == TEXT("create_streaming_volume") ||
+       Lower == TEXT("configure_large_world_coordinates") ||
+       Lower == TEXT("create_world_partition_cell") ||
+       Lower == TEXT("configure_runtime_loading") ||
+       Lower == TEXT("configure_world_settings") ||
+       Lower == TEXT("get_world_partition_cells") ||
+       Lower == TEXT("configure_hlod_settings") ||
+       Lower == TEXT("build_hlod_for_level"));
   if (!bIsLevelAction)
     return false;
 
@@ -180,6 +189,24 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {
       EffectiveAction = TEXT("add_sublevel");
+    } else if (LowerSub == TEXT("configure_world_partition")) {
+      EffectiveAction = TEXT("configure_world_partition");
+    } else if (LowerSub == TEXT("create_streaming_volume")) {
+      EffectiveAction = TEXT("create_streaming_volume");
+    } else if (LowerSub == TEXT("configure_large_world_coordinates")) {
+      EffectiveAction = TEXT("configure_large_world_coordinates");
+    } else if (LowerSub == TEXT("create_world_partition_cell")) {
+      EffectiveAction = TEXT("create_world_partition_cell");
+    } else if (LowerSub == TEXT("configure_runtime_loading")) {
+      EffectiveAction = TEXT("configure_runtime_loading");
+    } else if (LowerSub == TEXT("configure_world_settings")) {
+      EffectiveAction = TEXT("configure_world_settings");
+    } else if (LowerSub == TEXT("get_world_partition_cells")) {
+      EffectiveAction = TEXT("get_world_partition_cells");
+    } else if (LowerSub == TEXT("configure_hlod_settings")) {
+      EffectiveAction = TEXT("configure_hlod_settings");
+    } else if (LowerSub == TEXT("build_hlod_for_level")) {
+      EffectiveAction = TEXT("build_hlod_for_level");
     } else if (LowerSub == TEXT("delete")) {
       // Handle level deletion
       const TArray<TSharedPtr<FJsonValue>>* LevelPathsArray = nullptr;
@@ -1044,7 +1071,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     return true;
   }
 
-  return false;
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      FString::Printf(TEXT("Unknown level action: %s"), *EffectiveAction),
+      nullptr, TEXT("UNKNOWN_ACTION"));
+  return true;
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
                          TEXT("Level actions require editor build."), nullptr,

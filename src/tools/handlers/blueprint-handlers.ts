@@ -51,6 +51,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       });
       return cleanObject(res) as HandlerResult;
     }
+    case 'bp_ensure_exists':
     case 'ensure_exists': {
       const res = await tools.blueprintTools.waitForBlueprint(argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '', argsRecord.timeoutMs as number | undefined);
       return cleanObject(res) as HandlerResult;
@@ -59,9 +60,9 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       // Support multiple naming conventions:
       // - blueprintPath/assetPath/path for the blueprint
       // - variableName/name for the variable (when 'name' isn't used for blueprint)
-      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
-      // If blueprintPath is provided, 'name' can be used for variableName
-      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || (argsTyped.variableName ? (argsRecord.name as string) : '') || '';
+      // If blueprintPath is provided and different from 'name', 'name' can be used for variableName
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg && blueprintPathArg !== argsRecord.name ? (argsRecord.name as string) : '') || '';
       // memberClass/variableType for the type
       const variableTypeArg = (argsRecord.variableType as string) || (argsRecord.memberClass as string) || 'Boolean';
       
@@ -81,8 +82,8 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'set_variable_metadata': {
-      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
-      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || (argsTyped.variableName ? (argsRecord.name as string) : '') || '';
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg && blueprintPathArg !== argsRecord.name ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.setVariableMetadata({
         blueprintName: blueprintPathArg,
         variableName: variableNameArg,
@@ -92,8 +93,8 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'remove_variable': {
-      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
-      const variableNameArg = argsTyped.variableName || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || (argsTyped.variableName ? (argsRecord.name as string) : '') || '';
+      const variableNameArg = argsTyped.variableName || (blueprintPathArg && blueprintPathArg !== argsRecord.name ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.removeVariable({
         blueprintName: blueprintPathArg,
         variableName: variableNameArg,
@@ -104,9 +105,9 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as HandlerResult;
     }
     case 'rename_variable': {
-      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || '';
-      // For rename, 'name' is the old name (the variable to rename), newName is the new name
-      const oldNameArg = (argsRecord.oldName as string) || (blueprintPathArg ? (argsRecord.name as string) : '') || '';
+      const blueprintPathArg = argsTyped.blueprintPath || (argsRecord.assetPath as string) || (argsRecord.path as string) || (argsRecord.newName || argsRecord.oldName ? (argsRecord.name as string) : '') || '';
+      // For rename, 'name' is the old name (the variable to rename) if blueprintPath is already set
+      const oldNameArg = (argsRecord.oldName as string) || (blueprintPathArg && blueprintPathArg !== argsRecord.name ? (argsRecord.name as string) : '') || '';
       const res = await tools.blueprintTools.renameVariable({
         blueprintName: blueprintPathArg,
         oldName: oldNameArg,

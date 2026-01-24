@@ -52,7 +52,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
-      const res = await tools.levelTools.createLevel({ levelName, savePath: argsTyped.savePath || argsTyped.levelPath });
+      const res = await tools.levelTools.createLevel({ levelName, savePath: argsTyped.savePath || (argsTyped.levelPath ? argsTyped.levelPath.split('/').slice(0, -1).join('/') : undefined) });
       return cleanObject(res) as HandlerResult;
     }
     case 'add_sublevel': {
@@ -278,6 +278,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const hlslCode = requireNonEmptyString(argsTyped.hlslCode, 'hlslCode');
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'create_pcg_hlsl_node',
+        subAction: 'create_pcg_hlsl_node',
         graphPath,
         hlslCode,
         nodeName: argsTyped.nodeName
@@ -289,6 +290,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const graphPath = requireNonEmptyString(argsTyped.graphPath, 'graphPath');
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'enable_pcg_gpu_processing',
+        subAction: 'enable_pcg_gpu_processing',
         graphPath,
         enabled: argsTyped.enabled ?? true
       });
@@ -298,6 +300,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       // UE 5.7+ feature - Route to manage_pcg where C++ handler exists
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'configure_pcg_mode_brush',
+        subAction: 'configure_pcg_mode_brush',
         brushSize: argsTyped.brushSize,
         brushStrength: argsTyped.brushStrength,
         brushFalloff: argsTyped.brushFalloff
@@ -309,6 +312,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const outputPath = requireNonEmptyString(argsTyped.outputPath, 'outputPath');
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'export_pcg_hlsl_template',
+        subAction: 'export_pcg_hlsl_template',
         outputPath,
         templateType: argsTyped.templateType ?? 'point_processor'
       });
@@ -322,8 +326,17 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       }
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action: 'batch_execute_pcg_with_gpu',
+        subAction: 'batch_execute_pcg_with_gpu',
         graphPaths,
         useGPU: argsTyped.useGPU ?? true
+      });
+      return cleanObject(res) as HandlerResult;
+    }
+    case 'set_pcg_partition_grid_size': {
+      const res = await executeAutomationRequest(tools, 'manage_pcg', {
+        action: 'set_pcg_partition_grid_size',
+        subAction: 'set_pcg_partition_grid_size',
+        gridCellSize: argsTyped.gridCellSize, gridSize: argsTyped.gridCellSize
       });
       return cleanObject(res) as HandlerResult;
     }
@@ -380,6 +393,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'debug_pcg_execution': {
       const res = await executeAutomationRequest(tools, 'manage_pcg', {
         action,
+        subAction: action,
         ...args
       });
       return cleanObject(res) as HandlerResult;

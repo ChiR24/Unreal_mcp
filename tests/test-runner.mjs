@@ -136,8 +136,8 @@ function evaluateExpectation(testCase, response) {
 
   const structuredSuccess = typeof response.structuredContent?.success === 'boolean'
     ? response.structuredContent.success
-    : undefined;
-  const actualSuccess = structuredSuccess ?? !response.isError;
+    : (response.structuredContent?.isError === true ? false : undefined);
+  const actualSuccess = (structuredSuccess ?? !response.isError) && response.structuredContent?.isError !== true;
 
   // Extract actual error/message from response
   let actualError = null;

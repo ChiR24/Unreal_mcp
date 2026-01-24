@@ -30,7 +30,7 @@ function normalizePathFields(args: Record<string, unknown>): Record<string, unkn
   const result = { ...args };
   const pathFields = [
     'graphPath', 'subgraphPath', 'actorPath', 'meshPath', 'texturePath',
-    'landscapePath', 'splinePath', 'volumePath', 'actorClass'
+    'landscapePath', 'splinePath', 'volumePath', 'actorClass', 'presetPath', 'assetPath'
   ];
 
   for (const field of pathFields) {

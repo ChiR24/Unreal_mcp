@@ -980,9 +980,9 @@ private:
   bool HandleQueryMassEntities(const FString &RequestId, const FString &Action,
                                const TSharedPtr<FJsonObject> &Payload,
                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleSetMassEntityFragment(const FString &RequestId, const FString &Action,
-                                    const TSharedPtr<FJsonObject> &Payload,
-                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetMassEntityFragment(const FString &RequestId, const FString &Action,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
   // A2: StateTree Query/Control handlers
   bool HandleGetStateTreeState(const FString &RequestId, const FString &Action,

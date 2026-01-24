@@ -35,14 +35,13 @@ public class McpAutomationBridge : ModuleRules
             PCHUsage = PCHUsageMode.NoPCHs;
         }
         
-        // Enable Unity builds to reduce compilation units
+        // Unity builds enabled per user request. 
+        // Note: This may increase heap usage (C1060) on memory-constrained systems.
         bUseUnity = true;
         MinSourceFilesForUnityBuildOverride = 2;
         
-        // Increase bytes per unity file to combine MORE files into fewer translation units
-        // Default is 384KB; we increase to 2MB to handle our 50+ handler files
-        // This reduces number of compiler invocations, preventing memory exhaustion
-        NumIncludedBytesPerUnityCPPOverride = 2048 * 1024;
+        // NumIncludedBytesPerUnityCPPOverride set to 512KB for Unity build.
+        NumIncludedBytesPerUnityCPPOverride = 512 * 1024;
         
         // Adaptive Unity toggles (reflection-safe across UE 5.x)
         TrySetBoolMember(this, "bUseAdaptiveUnityBuild", false);
@@ -159,8 +158,15 @@ public class McpAutomationBridge : ModuleRules
             TryAddConditionalModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
 
             // Phase 27: PCG Framework (conditional - requires PCG plugin)
-            TryAddConditionalModule(Target, EngineDir, "PCG", "PCG");
-            TryAddConditionalModule(Target, EngineDir, "PCGEditor", "PCGEditor");
+            if (TryAddConditionalModule(Target, EngineDir, "PCG", "PCG"))
+            {
+                PublicDefinitions.Add("MCP_HAS_PCG=1");
+                TryAddConditionalModule(Target, EngineDir, "PCGEditor", "PCGEditor");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_HAS_PCG=0");
+            }
 
             // Phase 3B: Motion Design (Avalanche)
             TryAddConditionalModule(Target, EngineDir, "MotionDesign", "MotionDesign");

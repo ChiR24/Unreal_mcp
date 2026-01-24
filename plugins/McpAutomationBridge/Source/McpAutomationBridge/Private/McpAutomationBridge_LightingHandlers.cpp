@@ -185,16 +185,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
+ 
     // Safety check: Validate ActorSS and World before spawning
-    if (!ActorSS || !ActorSS->GetWorld()) {
+    UWorld* World = GetActiveWorld();
+    if (!ActorSS || !World) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("No valid world context available for spawning light"),
                           TEXT("NO_WORLD"));
       return true;
     }
-
-    AActor *NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location,
+ 
+    AActor *NewLight = World->SpawnActor(LightClass, &Location,
                                                        &Rotation, SpawnParams);
 
     // Explicitly set location/rotation
@@ -1164,6 +1165,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       int32 SuccessCount = 0;
       int32 FailCount = 0;
       
+      UWorld* World = GetActiveWorld();
+      if (!World) {
+          SendAutomationError(RequestingSocket, RequestId, TEXT("No active world context available for spawning lights"), TEXT("NO_WORLD"));
+          return true;
+      }
+      
       for (const TSharedPtr<FJsonValue>& LightVal : *LightsArray) {
           const TSharedPtr<FJsonObject>* LightObj = nullptr;
           if (!LightVal->TryGetObject(LightObj) || !LightObj) continue;
@@ -1188,7 +1195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           
           FActorSpawnParameters SpawnParams;
           SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-          AActor* NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location, nullptr, SpawnParams);
+          AActor* NewLight = World->SpawnActor(LightClass, &Location, nullptr, SpawnParams);
           
           if (NewLight) {
               FString Name;

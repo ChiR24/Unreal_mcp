@@ -110,17 +110,6 @@ export async function executeAutomationRequest(
     });
   }
 
-  if (!automationBridge.isConnected()) {
-    throw new McpError(
-      McpErrorCode.UE_NOT_CONNECTED,
-      `Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`,
-      {
-        retryable: true,
-        suggestedFixes: ['Start Unreal Engine', 'Enable McpAutomationBridge plugin']
-      }
-    );
-  }
-
   try {
     const result = await automationBridge.sendAutomationRequest(toolName, args, options);
     

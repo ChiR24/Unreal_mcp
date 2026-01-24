@@ -53,9 +53,19 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const finalTimeout = typeof options?.timeoutMs === 'number' && options?.timeoutMs > 0 ? options.timeoutMs : defaultTimeout;
     try {
       const response = await this.sendAutomationRequest(action, payload, { timeoutMs: finalTimeout, waitForEvent: !!options?.waitForEvent, waitForEventTimeoutMs: options?.waitForEventTimeoutMs }) as ActionResponseInput;
-      const success = response && response.success !== false;
       const result = (response.result ?? response) as Record<string, unknown>;
-      return { success, message: response.message ?? undefined, error: response.success === false ? (response.error ?? response.message) : undefined, result, requestId: response.requestId };
+      
+      // Fix: Treat Unreal-level errors (isError: true or result.error) as failure
+      // Even if the bridge protocol call itself reported success.
+      const success = response && response.success !== false && result.isError !== true && !result.error;
+      
+      return { 
+        success, 
+        message: response.message ?? (result.message as string) ?? undefined, 
+        error: !success ? (response.error ?? (result.error as string) ?? response.message) : undefined, 
+        result, 
+        requestId: response.requestId 
+      };
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       return { success: false, error: errMsg, message: errMsg };

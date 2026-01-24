@@ -23,7 +23,7 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
 
     // Reasonable runtime tuning defaults
     HeartbeatIntervalMs = 1000; // advertise heartbeats every 1s
-    HeartbeatTimeoutSeconds = 10.0f; // drop connections after 10s without heartbeat
+    HeartbeatTimeoutSeconds = 60.0f; // drop connections after 60s without heartbeat (increased for slow editor ops)
     ListenBacklog = 10; // typical listen backlog
     AcceptSleepSeconds = 0.01f; // brief sleepers to reduce CPU when idle
     TickerIntervalSeconds = 0.1f; // subsystem tick every 100ms
