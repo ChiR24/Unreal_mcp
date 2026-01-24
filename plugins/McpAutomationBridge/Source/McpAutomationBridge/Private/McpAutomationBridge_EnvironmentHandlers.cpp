@@ -112,7 +112,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     TEXT("create_sky_atmosphere"), TEXT("create_volumetric_cloud"),
     TEXT("create_exponential_height_fog"), TEXT("create_landscape_spline"),
     TEXT("configure_foliage_density"), TEXT("batch_paint_foliage"),
-    TEXT("create_procedural_terrain"), TEXT("create_procedural_foliage")
+    TEXT("create_procedural_terrain"), TEXT("create_procedural_foliage"),
+    // Weather & Water actions (Phase 54: merged from manage_weather/manage_water)
+    TEXT("configure_weather_preset"), TEXT("query_water_bodies"), TEXT("configure_ocean_waves"),
+    TEXT("create_water_body"), TEXT("configure_water_mesh"), TEXT("create_ocean"),
+    TEXT("create_lake"), TEXT("create_river"), TEXT("configure_water_material"),
+    TEXT("create_wind_source"), TEXT("set_wind_direction"), TEXT("configure_rain"),
+    TEXT("configure_snow"), TEXT("create_lightning")
   };
 
   if (!EnvironmentActions.Contains(Lower) && 
@@ -1431,7 +1437,43 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         Resp->SetStringField(TEXT("error"), Message);
       }
     }
-  } else {
+  }
+  // ========================================================================
+  // Weather & Water Actions - Forward to dedicated handlers (Phase 54)
+  // ========================================================================
+  else if (LowerSub == TEXT("configure_weather_preset") ||
+           LowerSub == TEXT("create_wind_source") ||
+           LowerSub == TEXT("set_wind_direction") ||
+           LowerSub == TEXT("configure_rain") ||
+           LowerSub == TEXT("configure_snow") ||
+           LowerSub == TEXT("create_lightning")) {
+    // Forward to weather handler - construct payload with action field
+    TSharedPtr<FJsonObject> WeatherPayload = MakeShared<FJsonObject>();
+    // Copy all fields from original payload
+    for (const auto& Pair : Payload->Values) {
+      WeatherPayload->SetField(Pair.Key, Pair.Value);
+    }
+    WeatherPayload->SetStringField(TEXT("action"), LowerSub);
+    return HandleWeatherAction(RequestId, TEXT("manage_weather"), WeatherPayload, RequestingSocket);
+  }
+  else if (LowerSub == TEXT("query_water_bodies") ||
+           LowerSub == TEXT("configure_ocean_waves") ||
+           LowerSub == TEXT("create_water_body") ||
+           LowerSub == TEXT("configure_water_mesh") ||
+           LowerSub == TEXT("create_ocean") ||
+           LowerSub == TEXT("create_lake") ||
+           LowerSub == TEXT("create_river") ||
+           LowerSub == TEXT("configure_water_material")) {
+    // Forward to water handler - construct payload with action field
+    TSharedPtr<FJsonObject> WaterPayload = MakeShared<FJsonObject>();
+    // Copy all fields from original payload
+    for (const auto& Pair : Payload->Values) {
+      WaterPayload->SetField(Pair.Key, Pair.Value);
+    }
+    WaterPayload->SetStringField(TEXT("action"), LowerSub);
+    return HandleWaterAction(RequestId, TEXT("manage_water"), WaterPayload, RequestingSocket);
+  }
+  else {
     bSuccess = false;
     Message = FString::Printf(TEXT("Environment action '%s' not implemented"),
                               *LowerSub);

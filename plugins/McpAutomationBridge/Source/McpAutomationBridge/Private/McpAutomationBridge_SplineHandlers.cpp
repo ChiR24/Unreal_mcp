@@ -1442,7 +1442,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    // Read 'action' first, then fall back to 'subAction' for backward compatibility
+    // This matches the pattern used by VolumeHandlers
+    FString SubAction;
+    if (!Payload->TryGetStringField(TEXT("action"), SubAction) || SubAction.IsEmpty())
+    {
+        SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    }
     
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 

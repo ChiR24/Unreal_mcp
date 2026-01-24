@@ -515,9 +515,9 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   }
 
   // 2. Token-based blocking
-  TArray<FString> ForbiddenTokens = {TEXT("rm "),
-                                     TEXT("rm-"),
-                                     TEXT("del "),
+  // Note: We use word-boundary checking for tokens that might appear as
+  // substrings in legitimate UE commands (e.g., "rm " in "warm ", "transform")
+  TArray<FString> ForbiddenTokens = {TEXT("del "),
                                      TEXT("format "),
                                      TEXT("rmdir"),
                                      TEXT("mklink"),
@@ -547,6 +547,22 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
           nullptr, TEXT("COMMAND_BLOCKED"));
       return true;
     }
+  }
+
+  // Special handling for "rm" - use word-boundary check to avoid blocking
+  // legitimate UE commands like "warm", "transform", "uniform", etc.
+  // Check if "rm " appears at start or after a space (word boundary)
+  if (LowerCommand.StartsWith(TEXT("rm ")) ||
+      LowerCommand.StartsWith(TEXT("rm-")) ||
+      LowerCommand.Contains(TEXT(" rm ")) ||
+      LowerCommand.Contains(TEXT(" rm-"))) {
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        FString::Printf(
+            TEXT("Command '%s' contains forbidden 'rm' command and is blocked"),
+            *Command),
+        nullptr, TEXT("COMMAND_BLOCKED"));
+    return true;
   }
 
   // 3. Block Chaining

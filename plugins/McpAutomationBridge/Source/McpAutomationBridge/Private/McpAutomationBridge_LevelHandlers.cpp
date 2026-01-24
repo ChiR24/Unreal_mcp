@@ -1071,6 +1071,28 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     return true;
   }
 
+  // Handle direct HLOD and World Partition actions by forwarding to LevelStructure handlers
+  if (EffectiveAction == TEXT("configure_hlod_settings") ||
+      EffectiveAction == TEXT("build_hlod_for_level") ||
+      EffectiveAction == TEXT("get_world_partition_cells") ||
+      EffectiveAction == TEXT("configure_world_partition") ||
+      EffectiveAction == TEXT("create_world_partition_cell") ||
+      EffectiveAction == TEXT("configure_runtime_loading") ||
+      EffectiveAction == TEXT("configure_world_settings"))
+  {
+      TSharedPtr<FJsonObject> StructurePayload = MakeShared<FJsonObject>();
+      if (Payload.IsValid()) {
+          for (const auto& Field : Payload->Values) {
+              StructurePayload->Values.Add(Field.Key, Field.Value);
+          }
+      }
+      StructurePayload->SetStringField(TEXT("subAction"), EffectiveAction);
+
+      if (HandleManageLevelStructureAction(RequestId, Action, StructurePayload, RequestingSocket)) {
+          return true;
+      }
+  }
+
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       FString::Printf(TEXT("Unknown level action: %s"), *EffectiveAction),

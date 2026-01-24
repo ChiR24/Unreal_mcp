@@ -126,6 +126,8 @@ namespace LevelStructureHelpers
 #endif
 }
 
+
+
 // ============================================================================
 // Levels Handlers (5 actions)
 // ============================================================================
@@ -1104,21 +1106,14 @@ static bool HandleConfigureHlodLayer(
     // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded were removed or deprecated.
     // These properties still exist in the class but are private or lack public setters.
     // We use reflection to set them for compatibility while bridging the gap to new Partition Settings.
-    auto SetHLODProperty = [](UObject* Obj, FName PropName, double Value) {
-        if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
-            if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
-                NumericProp->SetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj), Value);
-            }
-        }
-    };
-
+    SetNumericPropertyRobust(NewHLODLayer, TEXT("CellSize"), (double)CellSize);
+    SetNumericPropertyRobust(NewHLODLayer, TEXT("LoadingRange"), LoadingDistance);
+    
     if (FProperty* SpatiallyLoadedProp = NewHLODLayer->GetClass()->FindPropertyByName(TEXT("bIsSpatiallyLoaded"))) {
         if (FBoolProperty* BoolProp = CastField<FBoolProperty>(SpatiallyLoadedProp)) {
             BoolProp->SetPropertyValue_InContainer(NewHLODLayer, bIsSpatiallyLoaded);
         }
     }
-    SetHLODProperty(NewHLODLayer, TEXT("CellSize"), (double)CellSize);
-    SetHLODProperty(NewHLODLayer, TEXT("LoadingRange"), LoadingDistance);
 
     
     // Set layer type
@@ -2496,21 +2491,15 @@ static bool HandleConfigureHlodSettings(
     // UE 5.7+: SetCellSize, SetLoadingRange, SetSpatiallyLoaded were removed or deprecated.
     // These properties still exist in the class but are private or lack public setters.
     // We use reflection to set them for compatibility while bridging the gap to new Partition Settings.
-    auto SetHLODProperty = [](UObject* Obj, FName PropName, double Value) {
-        if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
-            if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
-                NumericProp->SetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj), Value);
-            }
-        }
-    };
+    if (CellSize > 0) SetNumericPropertyRobust(HlodLayer, TEXT("CellSize"), (double)CellSize);
+    if (LoadingRange > 0) SetNumericPropertyRobust(HlodLayer, TEXT("LoadingRange"), (double)LoadingRange);
 
     if (FProperty* SpatiallyLoadedProp = HlodLayer->GetClass()->FindPropertyByName(TEXT("bIsSpatiallyLoaded"))) {
-        if (FBoolProperty* BoolProp = CastField<FBoolProperty>(SpatiallyLoadedProp)) {
+        FBoolProperty* BoolProp = CastField<FBoolProperty>(SpatiallyLoadedProp);
+        if (BoolProp) {
             BoolProp->SetPropertyValue_InContainer(HlodLayer, bSpatiallyLoaded);
         }
     }
-    if (CellSize > 0) SetHLODProperty(HlodLayer, TEXT("CellSize"), (double)CellSize);
-    if (LoadingRange > 0) SetHLODProperty(HlodLayer, TEXT("LoadingRange"), (double)LoadingRange);
 
     // Save the asset
     McpSafeAssetSave(HlodLayer);

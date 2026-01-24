@@ -24,7 +24,7 @@ export async function handlePostProcessTools(
 
   // Build the payload for automation request
   const payload: Record<string, unknown> = {
-    action_type: action,
+    action: action,  // C++ expects 'action' field, not 'action_type'
     ...args,
     location: normalizedLocation,
     rotation: normalizedRotation,

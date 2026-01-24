@@ -331,6 +331,51 @@ static inline bool McpSafeAssetSave(UObject* Asset)
 }
 
 /**
+ * Robust numeric property setter for HLOD and other reflection-based sets.
+ * Handles both floating-point and integer numeric properties automatically.
+ * 
+ * @param Obj The target UObject.
+ * @param PropName The name of the numeric property to set.
+ * @param Value The value to set (as double).
+ */
+static inline void SetNumericPropertyRobust(UObject* Obj, FName PropName, double Value)
+{
+    if (!Obj) return;
+    if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName))
+    {
+        if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop))
+        {
+            void* ValuePtr = NumericProp->ContainerPtrToValuePtr<void>(Obj);
+            if (NumericProp->IsFloatingPoint())
+            {
+                NumericProp->SetFloatingPointPropertyValue(ValuePtr, Value);
+            }
+            else
+            {
+                NumericProp->SetIntPropertyValue(ValuePtr, static_cast<int64>(Value));
+            }
+        }
+    }
+}
+
+/**
+ * Robust numeric property setter for pointers (useful for structs/addresses).
+ */
+static inline void SetNumericPropertyRobustDirect(FNumericProperty* NumericProp, void* ValuePtr, double Value)
+{
+    if (!NumericProp || !ValuePtr) return;
+    if (NumericProp->IsFloatingPoint())
+    {
+        NumericProp->SetFloatingPointPropertyValue(ValuePtr, Value);
+    }
+    else
+    {
+        NumericProp->SetIntPropertyValue(ValuePtr, static_cast<int64>(Value));
+    }
+}
+
+
+/**
  * Create a standardized error response for unavailable plugins.
  * @param PluginName Name of the required plugin that is not loaded.
  * @returns JSON object with success=false, error=PLUGIN_UNAVAILABLE, and plugin name.

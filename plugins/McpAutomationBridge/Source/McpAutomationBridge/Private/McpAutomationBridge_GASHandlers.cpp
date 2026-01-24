@@ -413,19 +413,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         {
             // Navigate into the FGameplayAttributeData struct to set BaseValue
             UScriptStruct* AttrStruct = FGameplayAttributeData::StaticStruct();
-            FNumericProperty* BaseValueProp = CastField<FNumericProperty>(AttrStruct->FindPropertyByName(TEXT("BaseValue")));
-            if (BaseValueProp)
+            
+            if (FProperty* BaseValueProp = AttrStruct->FindPropertyByName(TEXT("BaseValue")))
             {
-                void* BaseValueAddr = BaseValueProp->ContainerPtrToValuePtr<void>(AttrDataPtr);
-                BaseValueProp->SetFloatingPointPropertyValue(BaseValueAddr, static_cast<double>(BaseValue));
+                if (FNumericProperty* NumericProp = CastField<FNumericProperty>(BaseValueProp))
+                {
+                    void* BaseValueAddr = NumericProp->ContainerPtrToValuePtr<void>(AttrDataPtr);
+                    SetNumericPropertyRobustDirect(NumericProp, BaseValueAddr, static_cast<double>(BaseValue));
+                }
             }
             
             // Also set CurrentValue to match
-            FNumericProperty* CurrentValueProp = CastField<FNumericProperty>(AttrStruct->FindPropertyByName(TEXT("CurrentValue")));
-            if (CurrentValueProp)
+            if (FProperty* CurrentValueProp = AttrStruct->FindPropertyByName(TEXT("CurrentValue")))
             {
-                void* CurrentValueAddr = CurrentValueProp->ContainerPtrToValuePtr<void>(AttrDataPtr);
-                CurrentValueProp->SetFloatingPointPropertyValue(CurrentValueAddr, static_cast<double>(BaseValue));
+                if (FNumericProperty* NumericProp = CastField<FNumericProperty>(CurrentValueProp))
+                {
+                    void* CurrentValueAddr = NumericProp->ContainerPtrToValuePtr<void>(AttrDataPtr);
+                    SetNumericPropertyRobustDirect(NumericProp, CurrentValueAddr, static_cast<double>(BaseValue));
+                }
             }
         }
 
