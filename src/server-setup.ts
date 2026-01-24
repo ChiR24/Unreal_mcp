@@ -37,8 +37,8 @@ export class ServerSetup {
 
     // Initialize resources
     this.assetResources = new AssetResources(bridge);
-    this.actorResources = new ActorResources(bridge);
-    this.levelResources = new LevelResources(bridge);
+    this.actorResources = new ActorResources(bridge, automationBridge);
+    this.levelResources = new LevelResources(bridge, automationBridge);
   }
 
   async setup() {
