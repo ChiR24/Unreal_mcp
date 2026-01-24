@@ -67,11 +67,58 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
   // Helper for Water/Weather requests
   const sendAutomationRequest = async (targetTool: string, actionName: string, requestArgs: Record<string, unknown>): Promise<HandlerResult> => {
     const normalizedArgs = normalizePathFields(requestArgs);
-    const payload = { 
+    const payload: Record<string, unknown> = { 
       ...normalizedArgs, 
       action: actionName,
       actorName: (normalizedArgs.name as string) || (normalizedArgs.actorName as string)
     };
+
+    // Ensure common object-based fields are wrapped if passed as flat parameters
+    // Handle 'location' wrapping
+    if (!payload.location && (payload.x !== undefined || payload.y !== undefined || payload.z !== undefined)) {
+      payload.location = { 
+        x: Number(payload.x ?? 0), 
+        y: Number(payload.y ?? 0), 
+        z: Number(payload.z ?? 0) 
+      };
+    }
+
+    // Handle 'rotation' wrapping
+    if (!payload.rotation && (payload.pitch !== undefined || payload.yaw !== undefined || payload.roll !== undefined)) {
+      payload.rotation = { 
+        pitch: Number(payload.pitch ?? 0), 
+        yaw: Number(payload.yaw ?? 0), 
+        roll: Number(payload.roll ?? 0) 
+      };
+    }
+
+    // Handle 'extent' wrapping for Water/Ocean
+    if (!payload.extent && (payload.extentX !== undefined || payload.extentY !== undefined)) {
+      payload.extent = { 
+        x: Number(payload.extentX ?? 0), 
+        y: Number(payload.extentY ?? 0) 
+      };
+    }
+
+    // Handle 'collisionExtents' wrapping
+    if (!payload.collisionExtents && (payload.collisionX !== undefined || payload.collisionY !== undefined || payload.collisionZ !== undefined)) {
+      payload.collisionExtents = { 
+        x: Number(payload.collisionX ?? 0), 
+        y: Number(payload.collisionY ?? 0), 
+        z: Number(payload.collisionZ ?? 0) 
+      };
+    }
+
+    // Handle 'color' wrapping
+    if (!payload.color && (payload.r !== undefined || payload.g !== undefined || payload.b !== undefined)) {
+      payload.color = { 
+        r: Number(payload.r ?? 1), 
+        g: Number(payload.g ?? 1), 
+        b: Number(payload.b ?? 1),
+        a: Number(payload.a ?? 1)
+      };
+    }
+
     const result = await executeAutomationRequest(
       tools,
       targetTool,
@@ -116,151 +163,36 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     // ========================================================================
     // Wave 5: Environment Actions (5.1-5.10)
     // ========================================================================
-    case 'configure_weather_preset': {
-      // 5.1: Configure weather system preset
-      const payload = {
-        action: 'configure_weather_preset',
-        presetName: argsRecord.presetName as string | undefined,
-        intensity: argsRecord.intensity as number | undefined,
-        transitionTime: argsRecord.transitionTime as number | undefined,
-        windSpeed: argsRecord.windSpeed as number | undefined,
-        cloudCoverage: argsRecord.cloudCoverage as number | undefined,
-        precipitation: argsRecord.precipitation as number | undefined,
-        fogDensity: argsRecord.fogDensity as number | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for configure_weather_preset', { timeoutMs })) as HandlerResult;
-    }
+    case 'configure_weather_preset':
+      return sendAutomationRequest('manage_weather', envAction, argsRecord);
 
-    case 'query_water_bodies': {
-      // 5.2: Query water body properties
-      const payload = {
-        action: 'query_water_bodies',
-        filter: argsRecord.filter as string | undefined,
-        waterBodyType: argsRecord.waterBodyType as string | undefined,
-        includeProperties: argsRecord.includeProperties as boolean | undefined,
-        bounds: argsRecord.bounds as Record<string, unknown> | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for query_water_bodies', { timeoutMs })) as HandlerResult;
-    }
+    case 'query_water_bodies':
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
 
-    case 'configure_ocean_waves': {
-      // 5.3: Configure ocean wave settings
-      const payload = {
-        action: 'configure_ocean_waves',
-        waterBodyName: argsRecord.waterBodyName as string | undefined,
-        waveAmplitude: argsRecord.waveAmplitude as number | undefined,
-        waveLength: argsRecord.waveLength as number | undefined,
-        waveSpeed: argsRecord.waveSpeed as number | undefined,
-        waveDirection: argsRecord.waveDirection as number | undefined,
-        steepness: argsRecord.steepness as number | undefined,
-        numWaves: argsRecord.numWaves as number | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for configure_ocean_waves', { timeoutMs })) as HandlerResult;
-    }
+    case 'configure_ocean_waves':
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
 
-    case 'create_landscape_spline': {
-      // 5.4: Create landscape spline
-      const payload = {
-        action: 'create_landscape_spline',
-        landscapeName: argsTyped.landscapeName || argsTyped.name || '',
-        splinePoints: argsRecord.splinePoints as Array<Record<string, unknown>> | undefined,
-        width: argsRecord.width as number | undefined,
-        falloff: argsRecord.falloff as number | undefined,
-        layerName: argsRecord.layerName as string | undefined,
-        raiseTerrain: argsRecord.raiseTerrain as boolean | undefined,
-        lowerTerrain: argsRecord.lowerTerrain as boolean | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for create_landscape_spline', { timeoutMs })) as HandlerResult;
-    }
+    case 'create_landscape_spline':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
 
-    case 'configure_foliage_density': {
-      // 5.5: Configure foliage density
-      const payload = {
-        action: 'configure_foliage_density',
-        foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || '',
-        density: argsTyped.density,
-        minScale: argsRecord.minScale as number | undefined,
-        maxScale: argsRecord.maxScale as number | undefined,
-        cullDistance: argsRecord.cullDistance as number | undefined,
-        collisionRadius: argsRecord.collisionRadius as number | undefined,
-        alignToNormal: argsRecord.alignToNormal as boolean | undefined,
-        randomYaw: argsRecord.randomYaw as boolean | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for configure_foliage_density', { timeoutMs })) as HandlerResult;
-    }
+    case 'configure_foliage_density':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
 
-    case 'batch_paint_foliage': {
-      // 5.6: Batch paint foliage
-      const payload = {
-        action: 'batch_paint_foliage',
-        foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || '',
-        regions: argsRecord.regions as Array<Record<string, unknown>> | undefined,
-        density: argsTyped.density,
-        brushSize: argsRecord.brushSize as number | undefined,
-        eraseMode: argsRecord.eraseMode as boolean | undefined,
-        paintOnLandscapeOnly: argsRecord.paintOnLandscapeOnly as boolean | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for batch_paint_foliage', { timeoutMs })) as HandlerResult;
-    }
+    case 'batch_paint_foliage':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
 
-    case 'configure_sky_atmosphere': {
-      // 5.7: Configure sky atmosphere (NOTE: exists in enum, adding explicit handler)
-      const payload = {
-        action: 'configure_sky_atmosphere',
-        actorName: argsTyped.name || argsRecord.actorName as string | undefined,
-        bottomRadius: argsRecord.bottomRadius as number | undefined,
-        atmosphereHeight: argsRecord.atmosphereHeight as number | undefined,
-        mieAnisotropy: argsRecord.mieAnisotropy as number | undefined,
-        mieScatteringScale: argsRecord.mieScatteringScale as number | undefined,
-        rayleighScatteringScale: argsRecord.rayleighScatteringScale as number | undefined,
-        multiScatteringFactor: argsRecord.multiScatteringFactor as number | undefined,
-        rayleighScattering: argsRecord.rayleighScattering as Record<string, unknown> | undefined,
-        mieScattering: argsRecord.mieScattering as Record<string, unknown> | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for configure_sky_atmosphere', { timeoutMs })) as HandlerResult;
-    }
+    case 'configure_sky_atmosphere':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
 
-    case 'create_volumetric_cloud': {
-      // 5.8: Create volumetric cloud actor (NOTE: exists in enum, adding explicit handler)
-      const payload = {
-        action: 'create_volumetric_cloud',
-        name: argsTyped.name || 'VolumetricCloud',
-        location: vec3ToArray(argsTyped.location),
-        layerBottomAltitude: argsRecord.layerBottomAltitude as number | undefined,
-        layerHeight: argsRecord.layerHeight as number | undefined,
-        tracingStartMaxDistance: argsRecord.tracingStartMaxDistance as number | undefined,
-        tracingMaxDistance: argsRecord.tracingMaxDistance as number | undefined,
-        planetRadius: argsRecord.planetRadius as number | undefined,
-        groundAlbedo: argsRecord.groundAlbedo as Record<string, unknown> | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for create_volumetric_cloud', { timeoutMs })) as HandlerResult;
-    }
+    case 'create_volumetric_cloud':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
 
-    case 'configure_wind_directional': {
-      // 5.9: Configure wind settings
-      const payload = {
-        action: 'configure_wind_directional',
-        actorName: argsTyped.name || argsRecord.actorName as string | undefined,
-        speed: argsRecord.speed as number | undefined,
-        minGustAmount: argsRecord.minGustAmount as number | undefined,
-        maxGustAmount: argsRecord.maxGustAmount as number | undefined,
-        direction: argsRecord.direction as Record<string, unknown> | undefined,
-        strength: argsRecord.strength as number | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for configure_wind_directional', { timeoutMs })) as HandlerResult;
-    }
+    case 'configure_wind_directional':
+      return sendAutomationRequest('manage_weather', envAction, argsRecord);
 
-    case 'get_terrain_height_at': {
-      // 5.10: Get terrain height at location
-      const payload = {
-        action: 'get_terrain_height_at',
-        landscapeName: argsTyped.landscapeName || argsTyped.name || '',
-        location: vec3ToArray(argsTyped.location),
-        x: argsRecord.x as number | undefined,
-        y: argsRecord.y as number | undefined
-      };
-      return cleanObject(await executeAutomationRequest(tools, 'build_environment', payload as HandlerArgs, 'Automation bridge not available for get_terrain_height_at', { timeoutMs })) as HandlerResult;
-    }
+    case 'get_terrain_height_at':
+      return sendAutomationRequest('build_environment', envAction, argsRecord);
+
 
     // ========================================================================
     // Landscape & Foliage Actions

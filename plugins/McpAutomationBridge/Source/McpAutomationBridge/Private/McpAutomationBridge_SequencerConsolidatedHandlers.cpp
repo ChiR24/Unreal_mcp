@@ -343,7 +343,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     UWorld* World = GetActiveWorld();
     if (World) {
       FActorSpawnParameters SpawnParams;
-      SpawnParams.Name = FName(*CameraName);
+      // UE 5.7+ fix: Ensure unique name to avoid crash in LevelActor.cpp
+      SpawnParams.Name = MakeUniqueObjectName(World->GetCurrentLevel(), ACineCameraActor::StaticClass(), FName(*CameraName));
       SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
       
       ACineCameraActor* CameraActor = World->SpawnActor<ACineCameraActor>(
@@ -2120,7 +2121,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     if (Sequence && World) {
       // Spawn camera
       FActorSpawnParameters SpawnParams;
-      SpawnParams.Name = FName(*CameraName);
+      // UE 5.7+ fix: Ensure unique name to avoid crash in LevelActor.cpp
+      SpawnParams.Name = MakeUniqueObjectName(World->GetCurrentLevel(), ACineCameraActor::StaticClass(), FName(*CameraName));
       ACineCameraActor* CameraActor = World->SpawnActor<ACineCameraActor>(
           ACineCameraActor::StaticClass(),
           FVector::ZeroVector,

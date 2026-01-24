@@ -3237,8 +3237,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   // Add an event to the blueprint (synchronous editor implementation)
   if (ActionMatchesPattern(TEXT("blueprint_add_event")) ||
       ActionMatchesPattern(TEXT("add_event")) ||
+      ActionMatchesPattern(TEXT("blueprint_add_custom_event")) ||
+      ActionMatchesPattern(TEXT("add_custom_event")) ||
       AlphaNumLower.Contains(TEXT("blueprintaddevent")) ||
-      AlphaNumLower.Contains(TEXT("addevent"))) {
+      AlphaNumLower.Contains(TEXT("addevent")) ||
+      AlphaNumLower.Contains(TEXT("blueprintaddcustomevent"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_event handler: RequestId=%s"),
            *RequestId);
@@ -3254,7 +3257,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     FString EventType;
     LocalPayload->TryGetStringField(TEXT("eventType"), EventType);
     FString CustomName;
-    LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName);
+    if (!LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName) ||
+        CustomName.IsEmpty()) {
+      if (!LocalPayload->TryGetStringField(TEXT("eventName"), CustomName) ||
+          CustomName.IsEmpty()) {
+        LocalPayload->TryGetStringField(TEXT("name"), CustomName);
+      }
+    }
     const TArray<TSharedPtr<FJsonValue>> *ParamsField = nullptr;
     LocalPayload->TryGetArrayField(TEXT("parameters"), ParamsField);
     TArray<TSharedPtr<FJsonValue>> Params =
@@ -3331,7 +3340,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       EventPosY = Payload->GetIntegerField(TEXT("y"));
     }
 
-    const FString FinalType = EventType.IsEmpty() ? TEXT("custom") : EventType;
+    FString FinalType = EventType.IsEmpty() ? TEXT("custom") : EventType;
+
+    // Force custom event if the action was specifically add_custom_event
+    if (ActionMatchesPattern(TEXT("blueprint_add_custom_event")) ||
+        ActionMatchesPattern(TEXT("add_custom_event")) ||
+        AlphaNumLower.Contains(TEXT("blueprintaddcustomevent"))) {
+      FinalType = TEXT("custom");
+    }
+
     const bool bIsCustomEvent =
         FinalType.Equals(TEXT("custom"), ESearchCase::IgnoreCase);
 
@@ -3469,7 +3486,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
     FKismetEditorUtilities::CompileBlueprint(BP);
-    const bool bSaved = SaveLoadedAssetThrottled(BP);
+    const bool bSaved = McpSafeAssetSave(BP);
 
     // Update Registry (Persistent list of events)
     TSharedPtr<FJsonObject> Entry =
@@ -5049,74 +5066,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   }
 
   // ==========================================================================
-  // blueprint_add_custom_event - Add a custom event to a blueprint
-  // ==========================================================================
-  if (ActionMatchesPattern(TEXT("blueprint_add_custom_event")) ||
-      ActionMatchesPattern(TEXT("add_custom_event")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddcustomevent"))) {
-    FString Path = ResolveBlueprintRequestedPath();
-    if (Path.IsEmpty()) {
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_add_custom_event requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
-      return true;
-    }
-
-    FString EventName;
-    if (!LocalPayload->TryGetStringField(TEXT("eventName"), EventName) || EventName.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("name"), EventName);
-    }
-    if (EventName.TrimStartAndEnd().IsEmpty()) {
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("eventName or name required."), nullptr, TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    FString Normalized;
-    FString LoadErr;
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
-    if (!Blueprint) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             LoadErr.IsEmpty() ? TEXT("Failed to load blueprint") : *LoadErr, nullptr,
-                             TEXT("BLUEPRINT_NOT_FOUND"));
-      return true;
-    }
-
-    UEdGraph* EventGraph = Blueprint->UbergraphPages.Num() > 0 ? Blueprint->UbergraphPages[0] : nullptr;
-    if (!EventGraph) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No event graph found"), nullptr,
-                             TEXT("GRAPH_UNAVAILABLE"));
-      return true;
-    }
-
-    // Create custom event node
-    UK2Node_CustomEvent* CustomEventNode = NewObject<UK2Node_CustomEvent>(EventGraph);
-    CustomEventNode->CustomFunctionName = FName(*EventName);
-    CustomEventNode->CreateNewGuid();
-    CustomEventNode->PostPlacedNewNode();
-    CustomEventNode->AllocateDefaultPins();
-    EventGraph->AddNode(CustomEventNode, false, true);
-    CustomEventNode->NodePosX = 0;
-    CustomEventNode->NodePosY = 0;
-
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("blueprintPath"), Normalized);
-    Resp->SetStringField(TEXT("eventName"), EventName);
-    Resp->SetStringField(TEXT("nodeId"), CustomEventNode->NodeGuid.ToString());
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Custom event added"), Resp, FString());
-    return true;
-  }
-
-  // ==========================================================================
   // blueprint_set_replication_settings - Configure blueprint replication
   // ==========================================================================
   if (ActionMatchesPattern(TEXT("blueprint_set_replication_settings")) ||
@@ -5769,38 +5718,86 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
     }
 
     // Create the SCS node correctly
-    USCS_Node *NewNode = NewObject<USCS_Node>(SCS);
-    if (NewNode) {
-      NewNode->SetVariableName(*ComponentName);
-      NewNode->ComponentClass = ComponentClass;
-      SCS->AddNode(NewNode);
+#if WITH_EDITOR && MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
+    bool bAddedViaSubsystem = false;
+    FString AdditionMethodStr;
+    {
+      using namespace McpAutomationBridge;
+      USubobjectDataSubsystem *Subsystem =
+          GEngine->GetEngineSubsystem<USubobjectDataSubsystem>();
+      if (Subsystem) {
+        // Find parent handle (default to root)
+        FSubobjectDataHandle ParentHandle;
+        TArray<FSubobjectDataHandle> ExistingHandles;
+        Subsystem->GatherSubobjectData(Blueprint, ExistingHandles);
+        if (ExistingHandles.Num() > 0) {
+          ParentHandle = ExistingHandles[0];
+        }
 
-      // Compile and save the blueprint
-      bool bCompiled = false;
-      bool bSaved = false;
-      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-      FKismetEditorUtilities::CompileBlueprint(Blueprint);
-      bCompiled = true;
-      bSaved = SaveLoadedAssetThrottled(Blueprint);
+        constexpr bool bHasAddTwoArg =
+            THasAddTwoArg<USubobjectDataSubsystem>::value;
+        constexpr bool bHandleHasIsValid =
+            THandleHasIsValid<FSubobjectDataHandle>::value;
+        constexpr bool bHasRename = THasRename<USubobjectDataSubsystem>::value;
 
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetStringField(TEXT("componentName"), ComponentName);
-      Result->SetStringField(TEXT("componentType"), ComponentType);
-      Result->SetStringField(TEXT("variableName"),
-                             NewNode->GetVariableName().ToString());
-      Result->SetBoolField(TEXT("compiled"), bCompiled);
-      Result->SetBoolField(TEXT("saved"), bSaved);
-      SendAutomationResponse(
-          RequestingSocket, RequestId, true,
-          FString::Printf(TEXT("Added component %s to blueprint SCS"),
-                          *ComponentName),
-          Result, FString());
-      return true;
+        if constexpr (bHasAddTwoArg) {
+          FAddNewSubobjectParams Params;
+          Params.ParentHandle = ParentHandle;
+          Params.NewClass = ComponentClass;
+          Params.BlueprintContext = Blueprint;
+          FText FailReason;
+          FSubobjectDataHandle NewHandle =
+              Subsystem->AddNewSubobject(Params, FailReason);
+
+          bool bHandleValid = true;
+          if constexpr (bHandleHasIsValid) {
+            bHandleValid = NewHandle.IsValid();
+          }
+
+          if (bHandleValid) {
+            if constexpr (bHasRename) {
+              Subsystem->RenameSubobjectMemberVariable(
+                  Blueprint, NewHandle, FName(*ComponentName));
+            }
+            bAddedViaSubsystem = true;
+            AdditionMethodStr = TEXT("SubobjectDataSubsystem");
+          }
+        }
+      }
     }
+    if (!bAddedViaSubsystem) {
+#endif
+      USCS_Node *NewNode = NewObject<USCS_Node>(SCS);
+      if (NewNode) {
+        NewNode->SetVariableName(*ComponentName);
+        NewNode->ComponentClass = ComponentClass;
+        SCS->AddNode(NewNode);
+      }
+#if WITH_EDITOR && MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
+    }
+#endif
 
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Failed to add component to SCS"), nullptr,
-                           TEXT("OPERATION_FAILED"));
+    // Compile and save the blueprint
+    bool bCompiled = false;
+    bool bSaved = false;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    bCompiled = true;
+    bSaved = McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("componentName"), ComponentName);
+    Result->SetStringField(TEXT("componentType"), ComponentType);
+    if (!AdditionMethodStr.IsEmpty()) {
+      Result->SetStringField(TEXT("additionMethod"), AdditionMethodStr);
+    }
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Added component %s to blueprint SCS"),
+                        *ComponentName),
+        Result, FString());
     return true;
   }
 
