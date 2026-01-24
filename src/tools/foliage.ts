@@ -3,11 +3,21 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { coerceBoolean, coerceNumber, coerceString } from '../utils/result-helpers.js';
 import { IFoliageTools, StandardActionResponse } from '../types/tool-interfaces.js';
+import { sanitizeAssetName, sanitizePath, ensureVector3, ensureRotation, validateNumber } from '../utils/validation.js';
 
 export class FoliageTools implements IFoliageTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
   setAutomationBridge(automationBridge?: AutomationBridge) { this.automationBridge = automationBridge; }
+
+  // Helper to safely sanitize foliage type which can be a name or a path
+  private sanitizeFoliageType(type: string): string {
+    if (!type) return '';
+    if (type.includes('/') || type.includes('\\')) {
+      return sanitizePath(type);
+    }
+    return sanitizeAssetName(type);
+  }
 
   // NOTE: We intentionally avoid issuing Unreal console commands here because
   // they have proven unreliable and generate engine warnings (failed FindConsoleObject).
@@ -59,6 +69,11 @@ export class FoliageTools implements IFoliageTools {
 
     try {
       const base = meshPath.includes('.') ? meshPath : `${meshPath}.${meshPath.split('/').filter(Boolean).pop()}`;
+      // Note: add_foliage_type is an automation request, not a console command interpolation,
+      // so strict sanitization here is handled by the backend or the bridge if needed,
+      // but it's good practice to ensure inputs are reasonable.
+      // Since we already validate inputs above, we pass them through.
+
       const response = await this.automationBridge.sendAutomationRequest('add_foliage_type', {
         name,
         meshPath: base,
@@ -247,26 +262,29 @@ export class FoliageTools implements IFoliageTools {
     cullDistance?: number;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeName = sanitizeAssetName(params.name);
+    const safeMeshPath = sanitizePath(params.meshPath);
 
-    commands.push(`CreateInstancedStaticMesh ${params.name} ${params.meshPath}`);
+    commands.push(`CreateInstancedStaticMesh ${safeName} ${safeMeshPath}`);
 
     for (const instance of params.instances) {
-      const rot = instance.rotation || [0, 0, 0];
-      const scale = instance.scale || [1, 1, 1];
-      commands.push(`AddInstance ${params.name} ${instance.position.join(' ')} ${rot.join(' ')} ${scale.join(' ')}`);
+      const pos = ensureVector3(instance.position, 'instance position');
+      const rot = ensureRotation(instance.rotation || [0, 0, 0], 'instance rotation');
+      const scale = ensureVector3(instance.scale || [1, 1, 1], 'instance scale');
+      commands.push(`AddInstance ${safeName} ${pos.join(' ')} ${rot.join(' ')} ${scale.join(' ')}`);
     }
 
     if (params.enableCulling !== undefined) {
-      commands.push(`SetInstanceCulling ${params.name} ${params.enableCulling}`);
+      commands.push(`SetInstanceCulling ${safeName} ${params.enableCulling}`);
     }
 
     if (params.cullDistance !== undefined) {
-      commands.push(`SetInstanceCullDistance ${params.name} ${params.cullDistance}`);
+      commands.push(`SetInstanceCullDistance ${safeName} ${params.cullDistance}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Instanced mesh ${params.name} created with ${params.instances.length} instances` };
+    return { success: true, message: `Instanced mesh ${safeName} created with ${params.instances.length} instances` };
   }
 
   // Set foliage LOD
@@ -276,13 +294,16 @@ export class FoliageTools implements IFoliageTools {
     screenSize?: number[];
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeFoliageType = this.sanitizeFoliageType(params.foliageType);
 
     if (params.lodDistances) {
-      commands.push(`SetFoliageLODDistances ${params.foliageType} ${params.lodDistances.join(' ')}`);
+      const safeDistances = params.lodDistances.map((d, i) => validateNumber(d, `lodDistance[${i}]`));
+      commands.push(`SetFoliageLODDistances ${safeFoliageType} ${safeDistances.join(' ')}`);
     }
 
     if (params.screenSize) {
-      commands.push(`SetFoliageLODScreenSize ${params.foliageType} ${params.screenSize.join(' ')}`);
+      const safeSizes = params.screenSize.map((s, i) => validateNumber(s, `screenSize[${i}]`));
+      commands.push(`SetFoliageLODScreenSize ${safeFoliageType} ${safeSizes.join(' ')}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -437,17 +458,20 @@ export class FoliageTools implements IFoliageTools {
     generateOverlapEvents?: boolean;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeFoliageType = this.sanitizeFoliageType(params.foliageType);
 
     if (params.collisionEnabled !== undefined) {
-      commands.push(`SetFoliageCollision ${params.foliageType} ${params.collisionEnabled}`);
+      commands.push(`SetFoliageCollision ${safeFoliageType} ${params.collisionEnabled}`);
     }
 
     if (params.collisionProfile) {
-      commands.push(`SetFoliageCollisionProfile ${params.foliageType} ${params.collisionProfile}`);
+      // collisionProfile is a Name, sanitize as asset name (alphanumeric + underscores)
+      const safeProfile = sanitizeAssetName(params.collisionProfile);
+      commands.push(`SetFoliageCollisionProfile ${safeFoliageType} ${safeProfile}`);
     }
 
     if (params.generateOverlapEvents !== undefined) {
-      commands.push(`SetFoliageOverlapEvents ${params.foliageType} ${params.generateOverlapEvents}`);
+      commands.push(`SetFoliageOverlapEvents ${safeFoliageType} ${params.generateOverlapEvents}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
@@ -468,26 +492,28 @@ export class FoliageTools implements IFoliageTools {
     windSpeed?: number;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeName = sanitizeAssetName(params.name);
 
-    commands.push(`CreateGrassSystem ${params.name}`);
+    commands.push(`CreateGrassSystem ${safeName}`);
 
     for (const grassType of params.grassTypes) {
       const minScale = grassType.minScale || 0.8;
       const maxScale = grassType.maxScale || 1.2;
-      commands.push(`AddGrassType ${params.name} ${grassType.meshPath} ${grassType.density} ${minScale} ${maxScale}`);
+      const safeMeshPath = sanitizePath(grassType.meshPath);
+      commands.push(`AddGrassType ${safeName} ${safeMeshPath} ${grassType.density} ${minScale} ${maxScale}`);
     }
 
     if (params.windStrength !== undefined) {
-      commands.push(`SetGrassWindStrength ${params.name} ${params.windStrength}`);
+      commands.push(`SetGrassWindStrength ${safeName} ${params.windStrength}`);
     }
 
     if (params.windSpeed !== undefined) {
-      commands.push(`SetGrassWindSpeed ${params.name} ${params.windSpeed}`);
+      commands.push(`SetGrassWindSpeed ${safeName} ${params.windSpeed}`);
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Grass system ${params.name} created` };
+    return { success: true, message: `Grass system ${safeName} created` };
   }
 
   // Remove foliage instances
@@ -496,7 +522,10 @@ export class FoliageTools implements IFoliageTools {
     position: [number, number, number];
     radius: number;
   }): Promise<StandardActionResponse> {
-    const command = `RemoveFoliageInRadius ${params.foliageType} ${params.position.join(' ')} ${params.radius}`;
+    const safeFoliageType = this.sanitizeFoliageType(params.foliageType);
+    const pos = ensureVector3(params.position, 'position');
+    const radius = validateNumber(params.radius, 'radius');
+    const command = `RemoveFoliageInRadius ${safeFoliageType} ${pos.join(' ')} ${radius}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -508,13 +537,16 @@ export class FoliageTools implements IFoliageTools {
     selectAll?: boolean;
   }): Promise<StandardActionResponse> {
     let command: string;
+    const safeFoliageType = this.sanitizeFoliageType(params.foliageType);
 
     if (params.selectAll) {
-      command = `SelectAllFoliage ${params.foliageType}`;
+      command = `SelectAllFoliage ${safeFoliageType}`;
     } else if (params.position && params.radius) {
-      command = `SelectFoliageInRadius ${params.foliageType} ${params.position.join(' ')} ${params.radius}`;
+      const pos = ensureVector3(params.position, 'position');
+      const radius = validateNumber(params.radius, 'radius');
+      command = `SelectFoliageInRadius ${safeFoliageType} ${pos.join(' ')} ${radius}`;
     } else {
-      command = `SelectFoliageType ${params.foliageType}`;
+      command = `SelectFoliageType ${safeFoliageType}`;
     }
 
     return this.bridge.executeConsoleCommand(command);
@@ -528,16 +560,18 @@ export class FoliageTools implements IFoliageTools {
     newMeshPath?: string;
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeFoliageType = this.sanitizeFoliageType(params.foliageType);
 
     if (params.updateTransforms) {
-      commands.push(`UpdateFoliageTransforms ${params.foliageType}`);
+      commands.push(`UpdateFoliageTransforms ${safeFoliageType}`);
     }
 
     if (params.updateMesh && params.newMeshPath) {
-      commands.push(`UpdateFoliageMesh ${params.foliageType} ${params.newMeshPath}`);
+      const safeMeshPath = sanitizePath(params.newMeshPath);
+      commands.push(`UpdateFoliageMesh ${safeFoliageType} ${safeMeshPath}`);
     }
 
-    commands.push(`RefreshFoliage ${params.foliageType}`);
+    commands.push(`RefreshFoliage ${safeFoliageType}`);
 
     await this.bridge.executeConsoleCommands(commands);
 
@@ -551,18 +585,22 @@ export class FoliageTools implements IFoliageTools {
     excludeAreas?: Array<[number, number, number, number]>; // [x, y, z, radius]
   }): Promise<StandardActionResponse> {
     const commands: string[] = [];
+    const safeName = sanitizeAssetName(params.name);
 
-    commands.push(`CreateFoliageSpawner ${params.name} ${params.spawnArea}`);
+    commands.push(`CreateFoliageSpawner ${safeName} ${params.spawnArea}`);
 
     if (params.excludeAreas) {
       for (const area of params.excludeAreas) {
-        commands.push(`AddFoliageExclusionArea ${params.name} ${area.join(' ')}`);
+        if (!Array.isArray(area) || area.length !== 4 || !area.every(n => Number.isFinite(n))) {
+            throw new Error('Invalid exclusion area: expected [x,y,z,radius]');
+        }
+        commands.push(`AddFoliageExclusionArea ${safeName} ${area.join(' ')}`);
       }
     }
 
     await this.bridge.executeConsoleCommands(commands);
 
-    return { success: true, message: `Foliage spawner ${params.name} created` };
+    return { success: true, message: `Foliage spawner ${safeName} created` };
   }
 
   // Optimize foliage
@@ -580,7 +618,9 @@ export class FoliageTools implements IFoliageTools {
 
     if (params.generateClusters) {
       const size = params.clusterSize || 100;
-      commands.push(`GenerateFoliageClusters ${size}`);
+      // Ensure size is a number to prevent injection if it were string
+      const safeSize = typeof size === 'number' ? size : 100;
+      commands.push(`GenerateFoliageClusters ${safeSize}`);
     }
 
     if (params.reduceDrawCalls) {
