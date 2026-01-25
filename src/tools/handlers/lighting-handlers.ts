@@ -141,6 +141,10 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       let methodLower: string | undefined;
       if (args.method) {
         methodLower = String(args.method).toLowerCase();
+        // Map common variations to standard UE internal strings
+        if (methodLower === 'lumengi') methodLower = 'lumen';
+        if (methodLower === 'screen_space') methodLower = 'screenspace';
+        
         if (!VALID_GI_METHODS.includes(methodLower)) {
           return {
             success: false,
@@ -183,8 +187,9 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       }));
     }
     case 'build_lighting': {
+      const quality = toString(args.quality) || 'Preview';
       return cleanObject(await tools.lightingTools.buildLighting({
-        quality: toString(args.quality),
+        quality: quality,
         buildOnlySelected: toBoolean(args.buildOnlySelected),
         buildReflectionCaptures: toBoolean(args.buildReflectionCaptures)
       }));

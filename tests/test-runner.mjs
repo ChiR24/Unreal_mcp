@@ -118,7 +118,7 @@ function summarize(toolName, results, resultsPath) {
 /**
  * Evaluates whether a test case passed based on expected outcome
  */
-function evaluateExpectation(testCase, response) {
+export function evaluateExpectation(testCase, response) {
   const expectation = testCase.expected;
 
   // Normalize expected into a comparable form. If expected is an object
@@ -207,19 +207,14 @@ function evaluateExpectation(testCase, response) {
     const separator = lowerExpected.includes(' or ') ? ' or ' : '|';
     const conditions = lowerExpected.split(separator).map((c) => c.trim()).filter(Boolean);
     for (const condition of conditions) {
-      if (successKeywords.some((kw) => condition.includes(kw)) && actualSuccess === true) {
-        return { passed: true, reason: JSON.stringify(response.structuredContent) };
-      }
-      if (condition === 'handled' && response.structuredContent && response.structuredContent.handled === true) {
-        return { passed: true, reason: 'Handled gracefully' };
-      }
-
-      // Special-case timeout expectations so that MCP transport timeouts
-      // (e.g. "Request timed out") satisfy conditions containing "timeout".
-      if (condition === 'timeout' || condition.includes('timeout')) {
-        if (combined.includes('timeout') || combined.includes('timed out')) {
-          return { passed: true, reason: `Expected timeout condition met: ${condition}` };
+      // If condition is a success keyword, it MUST have actualSuccess === true
+      const isSuccessCondition = successKeywords.some((kw) => condition.includes(kw));
+      if (isSuccessCondition) {
+        if (actualSuccess === true) {
+          return { passed: true, reason: JSON.stringify(response.structuredContent) };
         }
+        // If it's a success condition but we don't have actual success, skip this condition
+        continue;
       }
 
       if (combined.includes(condition)) {

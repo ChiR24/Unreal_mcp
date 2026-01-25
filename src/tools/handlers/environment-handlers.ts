@@ -142,10 +142,25 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     case 'get_water_body_info':
     case 'list_water_bodies':
     case 'set_river_depth':
+      // Ensure required args are mapped correctly
+      if (argsRecord.depth === undefined && argsRecord.riverDepth !== undefined) {
+        argsRecord.depth = argsRecord.riverDepth;
+      }
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'set_ocean_extent':
+      if (argsRecord.extent === undefined && argsRecord.oceanExtent !== undefined) {
+        argsRecord.extent = argsRecord.oceanExtent;
+      }
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'set_water_static_mesh':
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'set_river_transitions':
+      if (argsRecord.lakeTransitionMaterial === undefined && argsRecord.lakeTransitionMaterialPath !== undefined) {
+        argsRecord.lakeTransitionMaterial = argsRecord.lakeTransitionMaterialPath;
+      }
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'set_water_zone':
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'get_water_surface_info':
     case 'get_wave_info':
       return sendAutomationRequest('manage_water', envAction, argsRecord);
@@ -164,6 +179,9 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     // Wave 5: Environment Actions (5.1-5.10)
     // ========================================================================
     case 'configure_weather_preset':
+      if (argsRecord.presetName === undefined && argsRecord.name !== undefined) {
+        argsRecord.presetName = argsRecord.name;
+      }
       return sendAutomationRequest('manage_weather', envAction, argsRecord);
 
     case 'query_water_bodies':
@@ -176,9 +194,15 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       return sendAutomationRequest('build_environment', envAction, argsRecord);
 
     case 'configure_foliage_density':
+      if (argsRecord.foliageTypePath === undefined && argsRecord.foliageType !== undefined) {
+        argsRecord.foliageTypePath = argsRecord.foliageType;
+      }
       return sendAutomationRequest('build_environment', envAction, argsRecord);
 
     case 'batch_paint_foliage':
+      if (argsRecord.foliageTypePath === undefined && argsRecord.foliageType !== undefined) {
+        argsRecord.foliageTypePath = argsRecord.foliageType;
+      }
       return sendAutomationRequest('build_environment', envAction, argsRecord);
 
     case 'configure_sky_atmosphere':
@@ -356,7 +380,13 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       })) as HandlerResult;
     case 'generate_lods': {
       const paths = (argsRecord.assetPaths as string[]) || (argsRecord.assets as string[]) || (argsRecord.path ? [argsRecord.path as string] : []);
-      const assetPath = paths.length > 0 ? paths[0] : (argsRecord.assetPath as string || '');
+      let assetPath = paths.length > 0 ? paths[0] : (argsRecord.assetPath as string || '');
+      
+      // Fallback to meshPath or landscapeName if assetPath is missing
+      if (!assetPath) {
+        assetPath = (argsRecord.meshPath as string) || (argsRecord.landscapeName as string) || '';
+      }
+      
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
         action: 'generate_lods',
         assetPath,

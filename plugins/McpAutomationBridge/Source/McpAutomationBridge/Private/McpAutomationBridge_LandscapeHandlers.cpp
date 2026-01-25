@@ -24,6 +24,9 @@
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
 #include "LandscapeStreamingProxy.h"
+#if __has_include("LandscapeLayerInfoObject.h")
+#include "LandscapeLayerInfoObject.h"
+#endif
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Misc/ScopedSlowTask.h"
@@ -625,10 +628,35 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     }
 
     if (!LayerInfo) {
+      // Auto-create landscape layer info if it doesn't exist
+      FString LayerPath = TEXT("/Game/Landscape/Layers");
+      FString FullLayerPath = LayerPath / LayerName;
+      
+      // Create package for the new layer info
+      UPackage* LayerPackage = CreatePackage(*FullLayerPath);
+      if (LayerPackage) {
+        LayerInfo = NewObject<ULandscapeLayerInfoObject>(LayerPackage, FName(*LayerName), RF_Public | RF_Standalone);
+        if (LayerInfo) {
+          LayerInfo->LayerName = FName(*LayerName);
+          
+          // Register with LandscapeInfo
+          LandscapeInfo->Layers.Add(FLandscapeInfoLayerSettings(LayerInfo, Landscape));
+          LandscapeInfo->UpdateLayerInfoMap();
+          
+          // Save the new asset
+          McpSafeAssetSave(LayerInfo);
+          
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Display, 
+                 TEXT("HandlePaintLandscapeLayer: Auto-created layer info for '%s' at '%s'"), 
+                 *LayerName, *FullLayerPath);
+        }
+      }
+    }
+
+    if (!LayerInfo) {
       Subsystem->SendAutomationError(
           RequestingSocket, RequestId,
-          FString::Printf(TEXT("Layer '%s' not found. Create layer first using "
-                               "landscape editor."),
+          FString::Printf(TEXT("Layer '%s' not found and could not be auto-created."),
                           *LayerName),
           TEXT("LAYER_NOT_FOUND"));
       return;

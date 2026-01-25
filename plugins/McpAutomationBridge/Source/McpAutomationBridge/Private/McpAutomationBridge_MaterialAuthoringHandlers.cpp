@@ -48,7 +48,9 @@
 #include "Materials/MaterialExpressionPower.h"
 #include "Materials/MaterialExpressionReflectionVectorWS.h"
 #include "Materials/MaterialExpressionRotator.h"
+#include "Materials/MaterialExpressionSubstrate.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
 #include "Materials/MaterialExpressionSubtract.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
@@ -2056,7 +2058,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
 
   // --------------------------------------------------------------------------
-  // add_landscape_layer
+  // compile_material
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("add_landscape_layer")) {
     FString LayerName;
@@ -2702,23 +2704,38 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     
-    // Substrate (formerly Strata) is enabled by setting material domain and shading model
-    // In UE 5.3+, this is set via the material's StrataCompilationConfig
-    // For now, we configure the material for Substrate-like behavior
+    // Substrate conversion setup
     Material->Modify();
     
-    // Set shading model to DefaultLit which is Substrate-compatible
-    Material->SetShadingModel(MSM_DefaultLit);
+    // For Substrate, we often want to use material attributes
+    Material->bUseMaterialAttributes = true;
     
+    // Set shading model to DefaultLit (Substrate handles the rest if enabled in project)
+    Material->SetShadingModel(MSM_DefaultLit);
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    // Inject Substrate Slab BSDF node for a functional conversion
+    UMaterialExpressionSubstrateSlabBSDF* SlabNode = NewObject<UMaterialExpressionSubstrateSlabBSDF>(Material);
+    if (SlabNode) {
+        Material->GetExpressions().Add(SlabNode);
+        Material->ExpressionAttributeOutput.Expression = SlabNode;
+        SlabNode->MaterialExpressionEditorX = -200;
+        SlabNode->MaterialExpressionEditorY = 0;
+    }
+#endif
+    
+    Material->PostEditChange();
     if (bSave) {
       Material->MarkPackageDirty();
+      McpSafeAssetSave(Material);
     }
 
     Result->SetStringField(TEXT("assetPath"), MaterialPath);
     Result->SetBoolField(TEXT("converted"), true);
-    Result->SetStringField(TEXT("newShadingModel"), TEXT("DefaultLit"));
+    Result->SetBoolField(TEXT("useMaterialAttributes"), true);
+    Result->SetStringField(TEXT("shadingModel"), TEXT("DefaultLit"));
     
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Material configured for Substrate."), Result);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material converted to Substrate attributes mode."), Result);
     return true;
   }
 
@@ -3313,7 +3330,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   SendAutomationError(
       Socket, RequestId,
       FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
-      TEXT("INVALID_SUBACTION"));
+      TEXT("NOT_IMPLEMENTED"));
   return true;
 #else
   SendAutomationError(Socket, RequestId, TEXT("Editor only."),

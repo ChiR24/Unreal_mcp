@@ -35,7 +35,43 @@ export async function handleAudioAuthoringTools(
 
   // All actions are dispatched to C++ via automation bridge
   const sendRequest = async (subAction: string): Promise<HandlerResult> => {
-    const payload = { ...argsRecord, subAction };
+    const payload: Record<string, unknown> = { ...argsRecord, subAction };
+    
+    // Map common aliases to what C++ expects
+    if ('soundPath' in payload && !('wavePath' in payload)) {
+      payload.wavePath = payload.soundPath;
+    }
+    if ('assetPath' in payload && !('wavePath' in payload) && subAction === 'add_cue_node') {
+      // In some cases assetPath might be used for the wave being added
+    }
+    if ('savePath' in payload && !('path' in payload)) {
+      payload.path = payload.savePath;
+    }
+    if ('packagePath' in payload && !('path' in payload)) {
+      payload.path = payload.packagePath;
+    }
+
+    // MetaSound specific mappings (synced from audio-handlers.ts)
+    if (subAction.includes('metasound')) {
+      if ('metaSoundName' in payload && !('name' in payload)) {
+        payload.name = payload.metaSoundName;
+      }
+      if ('metaSoundPath' in payload) {
+        if (!('path' in payload)) payload.path = payload.metaSoundPath;
+        if (!('assetPath' in payload)) payload.assetPath = payload.metaSoundPath;
+      }
+      
+      // Auto-extract name from assetPath if needed for creation
+      if (subAction === 'create_metasound' && !('name' in payload) && 'assetPath' in payload) {
+        const assetPath = payload.assetPath as string;
+        const pathParts = assetPath.split('/');
+        payload.name = pathParts[pathParts.length - 1] || 'NewMetaSound';
+        if (!('path' in payload)) {
+          payload.path = pathParts.slice(0, -1).join('/') || '/Game/Audio/MetaSounds';
+        }
+      }
+    }
+
     const result = await executeAutomationRequest(
       tools,
       'manage_audio_authoring',

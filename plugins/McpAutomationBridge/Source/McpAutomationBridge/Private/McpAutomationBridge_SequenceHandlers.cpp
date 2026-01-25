@@ -71,6 +71,39 @@
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
 
+#if __has_include("Tracks/MovieSceneLevelVisibilityTrack.h")
+#include "Tracks/MovieSceneLevelVisibilityTrack.h"
+#include "Sections/MovieSceneLevelVisibilitySection.h"
+#define MCP_HAS_LEVEL_VISIBILITY_TRACK 1
+#else
+#define MCP_HAS_LEVEL_VISIBILITY_TRACK 0
+#endif
+
+#if __has_include("Tracks/MovieSceneMediaTrack.h")
+#include "Tracks/MovieSceneMediaTrack.h"
+#include "Sections/MovieSceneMediaSection.h"
+#define MCP_HAS_MEDIA_TRACK 1
+#else
+#define MCP_HAS_MEDIA_TRACK 0
+#endif
+
+#if __has_include("MoviePipelinePrimaryConfig.h")
+#include "MoviePipelinePrimaryConfig.h"
+#include "MoviePipelineExecutor.h"
+#include "MoviePipelineQueue.h"
+#define MCP_HAS_MRQ 1
+#else
+#define MCP_HAS_MRQ 0
+#endif
+
+#if __has_include("Tracks/MovieSceneCameraShakeTrack.h")
+#include "Tracks/MovieSceneCameraShakeTrack.h"
+#include "Sections/MovieSceneCameraShakeSection.h"
+#define MCP_HAS_CAMERA_SHAKE_TRACK 1
+#else
+#define MCP_HAS_CAMERA_SHAKE_TRACK 0
+#endif
+
 #if __has_include("Sections/MovieScene3DTransformSection.h")
 #include "Sections/MovieScene3DTransformSection.h"
 #endif
@@ -2304,6 +2337,226 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
 #endif
 }
 
+#if MCP_HAS_MEDIA_TRACK
+bool UMcpAutomationBridgeSubsystem::HandleSequenceCreateMediaTrack(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SeqPath = ResolveSequencePath(Payload);
+  FString MediaPath;
+  Payload->TryGetStringField(TEXT("mediaPath"), MediaPath);
+
+  if (SeqPath.IsEmpty() || MediaPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("sequence_create_media_track requires sequence path and mediaPath"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+  UObject *MediaSource = LoadObject<UObject>(nullptr, *MediaPath);
+
+  if (!Sequence || !MediaSource) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Sequence or MediaSource not found"), nullptr,
+                           TEXT("NOT_FOUND"));
+    return true;
+  }
+
+  UMovieScene *MovieScene = Sequence->GetMovieScene();
+  UMovieSceneMediaTrack *MediaTrack = MovieScene->AddTrack<UMovieSceneMediaTrack>();
+  if (MediaTrack) {
+    bool bSectionAdded = false;
+    UMovieSceneMediaSection *MediaSection = Cast<UMovieSceneMediaSection>(MediaTrack->FindOrAddSection(0, bSectionAdded));
+    if (MediaSection) {
+      MediaSection->SetMediaSource(MediaSource);
+      MovieScene->Modify();
+      Sequence->MarkPackageDirty();
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Media track created"), nullptr);
+      return true;
+    }
+  }
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create media track"), nullptr, TEXT("CREATION_FAILED"));
+  return true;
+}
+#endif
+
+#if MCP_HAS_CAMERA_SHAKE_TRACK
+bool UMcpAutomationBridgeSubsystem::HandleSequenceAddProceduralCameraShake(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SeqPath = ResolveSequencePath(Payload);
+  FString ShakeClassPath;
+  Payload->TryGetStringField(TEXT("shakeClass"), ShakeClassPath);
+  FString ActorName;
+  Payload->TryGetStringField(TEXT("actorName"), ActorName);
+
+  if (SeqPath.IsEmpty() || ShakeClassPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("add_procedural_camera_shake requires sequence path and shakeClass"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+  UClass *ShakeClass = ResolveClassByName(ShakeClassPath);
+
+  if (!Sequence || !ShakeClass) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Sequence or CameraShake class not found"), nullptr,
+                           TEXT("NOT_FOUND"));
+    return true;
+  }
+
+  UMovieScene *MovieScene = Sequence->GetMovieScene();
+  FGuid BindingGuid;
+
+  if (!ActorName.IsEmpty()) {
+    for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+      FString BindingName;
+      if (FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Binding.GetObjectGuid())) {
+        BindingName = Possessable->GetName();
+      } else if (FMovieSceneSpawnable *Spawnable = MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
+        BindingName = Spawnable->GetName();
+      }
+
+      if (BindingName.Contains(ActorName)) {
+        BindingGuid = Binding.GetObjectGuid();
+        break;
+      }
+    }
+  }
+
+  if (!BindingGuid.IsValid()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Binding not found for actor"), nullptr, TEXT("BINDING_NOT_FOUND"));
+    return true;
+  }
+
+  UMovieSceneCameraShakeTrack *ShakeTrack = MovieScene->AddTrack<UMovieSceneCameraShakeTrack>(BindingGuid);
+  if (ShakeTrack) {
+    UMovieSceneCameraShakeSection *ShakeSection = ShakeTrack->AddNewCameraShake(ShakeClass, 0);
+    if (ShakeSection) {
+      MovieScene->Modify();
+      Sequence->MarkPackageDirty();
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Camera shake added"), nullptr);
+      return true;
+    }
+  }
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to add camera shake"), nullptr, TEXT("CREATION_FAILED"));
+  return true;
+}
+#endif
+
+bool UMcpAutomationBridgeSubsystem::HandleSequenceConfigureStreaming(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SeqPath = ResolveSequencePath(Payload);
+  if (SeqPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence path required"), nullptr, TEXT("INVALID_SEQUENCE"));
+    return true;
+  }
+
+#if WITH_EDITOR && MCP_HAS_LEVEL_VISIBILITY_TRACK
+  ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+  if (!Sequence || !Sequence->GetMovieScene()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr, TEXT("SEQUENCE_NOT_FOUND"));
+    return true;
+  }
+
+  UMovieScene* MovieScene = Sequence->GetMovieScene();
+  UMovieSceneLevelVisibilityTrack* VisibilityTrack = MovieScene->FindTrack<UMovieSceneLevelVisibilityTrack>();
+  if (!VisibilityTrack) {
+    VisibilityTrack = MovieScene->AddTrack<UMovieSceneLevelVisibilityTrack>();
+  }
+
+  if (VisibilityTrack) {
+    bool bSectionAdded = false;
+    UMovieSceneLevelVisibilitySection* VisibilitySection = Cast<UMovieSceneLevelVisibilitySection>(VisibilityTrack->FindOrAddSection(0, bSectionAdded));
+    if (VisibilitySection) {
+        FString LevelName;
+        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+        if (!LevelName.IsEmpty()) {
+            VisibilitySection->SetLevelNames({FName(*LevelName)});
+        }
+        
+        FString VisibilityStr;
+        if (Payload->TryGetStringField(TEXT("visibility"), VisibilityStr)) {
+            if (VisibilityStr.Equals(TEXT("Visible"), ESearchCase::IgnoreCase)) {
+                VisibilitySection->SetVisibility(ELevelVisibility::Visible);
+            } else {
+                VisibilitySection->SetVisibility(ELevelVisibility::Hidden);
+            }
+        }
+        
+        MovieScene->Modify();
+        Sequence->MarkPackageDirty();
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Level visibility track configured"), nullptr);
+        return true;
+    }
+  }
+#endif
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Level visibility track not supported or failed to create"), nullptr, TEXT("NOT_SUPPORTED"));
+  return true;
+}
+
+#if MCP_HAS_MRQ
+bool UMcpAutomationBridgeSubsystem::HandleSequenceConfigureMRQSettings(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString SeqPath = ResolveSequencePath(Payload);
+  if (SeqPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("sequence path required"), nullptr, TEXT("INVALID_SEQUENCE"));
+    return true;
+  }
+
+  FString ConfigName;
+  Payload->TryGetStringField(TEXT("configName"), ConfigName);
+  if (ConfigName.IsEmpty()) ConfigName = TEXT("MRQ_Config");
+
+  FString Path = TEXT("/Game/Cinematics/MRQ");
+  Payload->TryGetStringField(TEXT("path"), Path);
+
+#if WITH_EDITOR
+  FString FullPath = Path / ConfigName;
+  UPackage* Package = CreatePackage(*FullPath);
+  if (!Package) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create package for MRQ config"), nullptr, TEXT("PACKAGE_ERROR"));
+    return true;
+  }
+
+  UMoviePipelinePrimaryConfig* Config = NewObject<UMoviePipelinePrimaryConfig>(Package, FName(*ConfigName), RF_Public | RF_Standalone);
+  if (Config) {
+    // Add default settings
+    // Deferred Rendering
+    UClass* DeferredClass = FindObject<UClass>(nullptr, TEXT("/Script/MovieRenderPipelineRenderPasses.MoviePipelineDeferredPassBase"));
+    if (DeferredClass) {
+        Config->FindOrAddSettingByClass(DeferredClass);
+    }
+    
+    // Output Setting
+    UClass* OutputClass = FindObject<UClass>(nullptr, TEXT("/Script/MovieRenderPipelineCore.MoviePipelineOutputSetting"));
+    if (OutputClass) {
+        Config->FindOrAddSettingByClass(OutputClass);
+    }
+
+    Config->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(Config);
+    McpSafeAssetSave(Config);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("configPath"), Config->GetPathName());
+    SendAutomationResponse(Socket, RequestId, true, TEXT("MRQ primary config created and configured"), Resp);
+    return true;
+  }
+#endif
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("MRQ not supported or failed to create config"), nullptr, TEXT("NOT_SUPPORTED"));
+  return true;
+}
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -2380,6 +2633,37 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_keyframe"))
     return HandleSequenceAddKeyframe(RequestId, LocalPayload, RequestingSocket);
+
+  if (EffectiveAction == TEXT("sequence_create_media_track")) {
+#if MCP_HAS_MEDIA_TRACK
+    return HandleSequenceCreateMediaTrack(RequestId, LocalPayload, RequestingSocket);
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Media track support not available in this build"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  if (EffectiveAction == TEXT("sequence_configure_streaming")) {
+    return HandleSequenceConfigureStreaming(RequestId, LocalPayload, RequestingSocket);
+  }
+
+  if (EffectiveAction == TEXT("sequence_add_procedural_camera_shake")) {
+#if MCP_HAS_CAMERA_SHAKE_TRACK
+    return HandleSequenceAddProceduralCameraShake(RequestId, LocalPayload, RequestingSocket);
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Camera shake track support not available in this build"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  if (EffectiveAction == TEXT("sequence_configure_mrq_settings")) {
+#if MCP_HAS_MRQ
+    return HandleSequenceConfigureMRQSettings(RequestId, LocalPayload, RequestingSocket);
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("MRQ support not available in this build"), nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
 
   // New handlers
   if (EffectiveAction == TEXT("sequence_add_section"))

@@ -1145,6 +1145,18 @@ private:
   bool HandleSequenceAddKeyframe(const FString &RequestId,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceCreateMediaTrack(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceConfigureStreaming(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceAddProceduralCameraShake(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleSequenceConfigureMRQSettings(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control Actor Subhandlers
 

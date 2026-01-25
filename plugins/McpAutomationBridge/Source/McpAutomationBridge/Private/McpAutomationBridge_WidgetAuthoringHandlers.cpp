@@ -13,6 +13,8 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpBridgeWebSocket.h"
+#include "Dom/JsonObject.h"
+#include "Templates/SharedPointer.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Blueprint/UserWidget.h"
@@ -68,7 +70,7 @@ namespace WidgetAuthoringHelpers
     // Get string field with default
     FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""))
     {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
+        if (Payload.Get() != nullptr && Payload->HasField(FieldName))
         {
             return Payload->GetStringField(FieldName);
         }
@@ -78,7 +80,7 @@ namespace WidgetAuthoringHelpers
     // Get number field with default
     double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0)
     {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
+        if (Payload.Get() != nullptr && Payload->HasField(FieldName))
         {
             return Payload->GetNumberField(FieldName);
         }
@@ -88,7 +90,7 @@ namespace WidgetAuthoringHelpers
     // Get bool field with default
     bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false)
     {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
+        if (Payload.Get() != nullptr && Payload->HasField(FieldName))
         {
             return Payload->GetBoolField(FieldName);
         }
@@ -3659,17 +3661,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     // =========================================================================
     if (SubAction.Equals(TEXT("batch_localize_widgets"), ESearchCase::IgnoreCase))
     {
-        const TArray<TSharedPtr<FJsonValue>>* WidgetPathsArray;
+        const TArray<TSharedPtr<FJsonValue>>* WidgetPathsArray = nullptr;
         if (!Payload->TryGetArrayField(TEXT("widgetPaths"), WidgetPathsArray))
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPaths"), TEXT("MISSING_PARAMETER"));
+            Payload->TryGetArrayField(TEXT("targetWidgets"), WidgetPathsArray);
+        }
+
+        if (!WidgetPathsArray)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPaths or targetWidgets"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
         FString Namespace = TEXT("Game");
-        Payload->TryGetStringField(TEXT("namespace"), Namespace);
-        bool bAutoGenerateKeys = true;
-        Payload->TryGetBoolField(TEXT("autoGenerateKeys"), bAutoGenerateKeys);
+        if (!Payload->TryGetStringField(TEXT("namespace"), Namespace))
+        {
+            Payload->TryGetStringField(TEXT("localizationNamespace"), Namespace);
+        }
 
         TArray<TSharedPtr<FJsonValue>> LocalizedWidgets;
         TArray<TSharedPtr<FJsonValue>> FailedWidgets;
@@ -3678,9 +3686,32 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         {
             FString WidgetPath = PathValue->AsString();
             UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-            if (WidgetBP)
+            if (WidgetBP && WidgetBP->WidgetTree)
             {
-                LocalizedWidgets.Add(MakeShareable(new FJsonValueString(WidgetPath)));
+                int32 StringsLocalized = 0;
+                WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
+                    if (UTextBlock* TextBlock = Cast<UTextBlock>(Widget)) {
+                        FText CurrentText = TextBlock->GetText();
+                        FString SourceString = CurrentText.ToString();
+                        if (!SourceString.IsEmpty()) {
+                            FString Key = FGuid::NewGuid().ToString();
+                            // Create localizable text
+                            FText LocalizedText = FText::ChangeKey(Namespace, Key, CurrentText);
+                            TextBlock->SetText(LocalizedText);
+                            StringsLocalized++;
+                        }
+                    }
+                });
+                
+                if (StringsLocalized > 0) {
+                    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+                    McpSafeAssetSave(WidgetBP);
+                }
+                
+                TSharedPtr<FJsonObject> WidgetResult = MakeShared<FJsonObject>();
+                WidgetResult->SetStringField(TEXT("path"), WidgetPath);
+                WidgetResult->SetNumberField(TEXT("stringsLocalized"), StringsLocalized);
+                LocalizedWidgets.Add(MakeShared<FJsonValueObject>(WidgetResult));
             }
             else
             {
@@ -3713,15 +3744,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         double LeftPadding = 0;
-        Payload->TryGetNumberField(TEXT("leftPadding"), LeftPadding);
         double RightPadding = 0;
-        Payload->TryGetNumberField(TEXT("rightPadding"), RightPadding);
         double TopPadding = 0;
-        Payload->TryGetNumberField(TEXT("topPadding"), TopPadding);
         double BottomPadding = 0;
-        Payload->TryGetNumberField(TEXT("bottomPadding"), BottomPadding);
-        bool bPadByDesiredSize = false;
-        Payload->TryGetBoolField(TEXT("padByDesiredSize"), bPadByDesiredSize);
+
+        const TSharedPtr<FJsonObject>* PaddingObjPtr = nullptr;
+        if (Payload->TryGetObjectField(TEXT("safeZonePadding"), PaddingObjPtr) && PaddingObjPtr && PaddingObjPtr->IsValid())
+        {
+            const TSharedPtr<FJsonObject>& PaddingObj = *PaddingObjPtr;
+            PaddingObj->TryGetNumberField(TEXT("left"), LeftPadding);
+            PaddingObj->TryGetNumberField(TEXT("right"), RightPadding);
+            PaddingObj->TryGetNumberField(TEXT("top"), TopPadding);
+            PaddingObj->TryGetNumberField(TEXT("bottom"), BottomPadding);
+        }
+        else
+        {
+            Payload->TryGetNumberField(TEXT("leftPadding"), LeftPadding);
+            Payload->TryGetNumberField(TEXT("rightPadding"), RightPadding);
+            Payload->TryGetNumberField(TEXT("topPadding"), TopPadding);
+            Payload->TryGetNumberField(TEXT("bottomPadding"), BottomPadding);
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -3736,295 +3778,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetNumberField(TEXT("rightPadding"), RightPadding);
         ResultJson->SetNumberField(TEXT("topPadding"), TopPadding);
         ResultJson->SetNumberField(TEXT("bottomPadding"), BottomPadding);
-        ResultJson->SetBoolField(TEXT("padByDesiredSize"), bPadByDesiredSize);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Safe zone configured"), ResultJson);
-        return true;
-    }
-
-    // =========================================================================
-    // configure_widget_binding_batch - Batch configure widget bindings
-    // =========================================================================
-    if (SubAction.Equals(TEXT("configure_widget_binding_batch"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        if (WidgetPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* BindingsArray;
-        if (!Payload->TryGetArrayField(TEXT("bindings"), BindingsArray))
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: bindings"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        TArray<TSharedPtr<FJsonValue>> ConfiguredBindings;
-        for (const TSharedPtr<FJsonValue>& BindingValue : *BindingsArray)
-        {
-            const TSharedPtr<FJsonObject>* BindingObj;
-            if (BindingValue->TryGetObject(BindingObj))
-            {
-                TSharedPtr<FJsonObject> BindingResult = MakeShareable(new FJsonObject());
-                FString WidgetName;
-                FString PropertyName;
-                FString BindingType;
-                (*BindingObj)->TryGetStringField(TEXT("widgetName"), WidgetName);
-                (*BindingObj)->TryGetStringField(TEXT("propertyName"), PropertyName);
-                (*BindingObj)->TryGetStringField(TEXT("bindingType"), BindingType);
-                BindingResult->SetStringField(TEXT("widgetName"), WidgetName);
-                BindingResult->SetStringField(TEXT("propertyName"), PropertyName);
-                BindingResult->SetStringField(TEXT("bindingType"), BindingType);
-                BindingResult->SetBoolField(TEXT("configured"), true);
-                ConfiguredBindings.Add(MakeShareable(new FJsonValueObject(BindingResult)));
-            }
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetArrayField(TEXT("configuredBindings"), ConfiguredBindings);
-        ResultJson->SetNumberField(TEXT("bindingCount"), ConfiguredBindings.Num());
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
-            FString::Printf(TEXT("Configured %d widget bindings"), ConfiguredBindings.Num()), ResultJson);
-        return true;
-    }
-
-    // =========================================================================
-    // configure_widget_navigation - Configure widget navigation/focus
-    // =========================================================================
-    if (SubAction.Equals(TEXT("configure_widget_navigation"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        if (WidgetPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString NavigationUp;
-        Payload->TryGetStringField(TEXT("navigationUp"), NavigationUp);
-        FString NavigationDown;
-        Payload->TryGetStringField(TEXT("navigationDown"), NavigationDown);
-        FString NavigationLeft;
-        Payload->TryGetStringField(TEXT("navigationLeft"), NavigationLeft);
-        FString NavigationRight;
-        Payload->TryGetStringField(TEXT("navigationRight"), NavigationRight);
-        bool bIsFocusable = true;
-        Payload->TryGetBoolField(TEXT("isFocusable"), bIsFocusable);
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("widgetName"), WidgetName);
-        ResultJson->SetStringField(TEXT("navigationUp"), NavigationUp);
-        ResultJson->SetStringField(TEXT("navigationDown"), NavigationDown);
-        ResultJson->SetStringField(TEXT("navigationLeft"), NavigationLeft);
-        ResultJson->SetStringField(TEXT("navigationRight"), NavigationRight);
-        ResultJson->SetBoolField(TEXT("isFocusable"), bIsFocusable);
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget navigation configured"), ResultJson);
-        return true;
-    }
-
-    // =========================================================================
-    // create_hud_layout - Create HUD layout with common elements
-    // =========================================================================
-    if (SubAction.Equals(TEXT("create_hud_layout"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        if (WidgetPath.IsEmpty())
-        {
-            WidgetPath = TEXT("/Game/UI/HUD/WBP_HUD");
-        }
-
-        bool bIncludeHealthBar = true;
-        Payload->TryGetBoolField(TEXT("includeHealthBar"), bIncludeHealthBar);
-        bool bIncludeMinimap = true;
-        Payload->TryGetBoolField(TEXT("includeMinimap"), bIncludeMinimap);
-        bool bIncludeObjectives = true;
-        Payload->TryGetBoolField(TEXT("includeObjectives"), bIncludeObjectives);
-        bool bIncludeAmmo = false;
-        Payload->TryGetBoolField(TEXT("includeAmmo"), bIncludeAmmo);
-        bool bIncludeCrosshair = false;
-        Payload->TryGetBoolField(TEXT("includeCrosshair"), bIncludeCrosshair);
-
-        // Create HUD widget blueprint
-        FString PackageName = WidgetPath;
-        FString AssetName = FPackageName::GetShortName(WidgetPath);
-        UPackage* Package = CreatePackage(*PackageName);
-        
-        if (!Package)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_FAILED"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = NewObject<UWidgetBlueprint>(Package, *AssetName, RF_Public | RF_Standalone);
-        if (WidgetBP)
-        {
-            WidgetBP->MarkPackageDirty();
-            FAssetRegistryModule::AssetCreated(WidgetBP);
-
-            TArray<FString> IncludedElements;
-            if (bIncludeHealthBar) IncludedElements.Add(TEXT("HealthBar"));
-            if (bIncludeMinimap) IncludedElements.Add(TEXT("Minimap"));
-            if (bIncludeObjectives) IncludedElements.Add(TEXT("Objectives"));
-            if (bIncludeAmmo) IncludedElements.Add(TEXT("Ammo"));
-            if (bIncludeCrosshair) IncludedElements.Add(TEXT("Crosshair"));
-
-            TArray<TSharedPtr<FJsonValue>> ElementsArray;
-            for (const FString& Element : IncludedElements)
-            {
-                ElementsArray.Add(MakeShareable(new FJsonValueString(Element)));
-            }
-
-            ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
-            ResultJson->SetArrayField(TEXT("includedElements"), ElementsArray);
-            ResultJson->SetNumberField(TEXT("elementCount"), IncludedElements.Num());
-
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("HUD layout created"), ResultJson);
-        }
-        else
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create HUD widget"), TEXT("CREATE_FAILED"));
-        }
-        return true;
-    }
-
-    // =========================================================================
-    // create_widget_animation_advanced - Create advanced widget animation
-    // =========================================================================
-    if (SubAction.Equals(TEXT("create_widget_animation_advanced"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetStringField(Payload, TEXT("animationName"));
-        if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        FString EasingType = TEXT("EaseInOut");
-        Payload->TryGetStringField(TEXT("easingType"), EasingType);
-        double Duration = 1.0;
-        Payload->TryGetNumberField(TEXT("duration"), Duration);
-        bool bLooping = false;
-        Payload->TryGetBoolField(TEXT("looping"), bLooping);
-        int32 PlaybackCount = 1;
-        double PlaybackCountD = 1;
-        if (Payload->TryGetNumberField(TEXT("playbackCount"), PlaybackCountD)) {
-            PlaybackCount = (int32)PlaybackCountD;
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* KeyframesArray;
-        TArray<TSharedPtr<FJsonValue>> ConfiguredKeyframes;
-        if (Payload->TryGetArrayField(TEXT("keyframes"), KeyframesArray))
-        {
-            for (int32 i = 0; i < KeyframesArray->Num(); i++)
-            {
-                const TSharedPtr<FJsonObject>* KeyframeObj;
-                if ((*KeyframesArray)[i]->TryGetObject(KeyframeObj))
-                {
-                    TSharedPtr<FJsonObject> KfResult = MakeShareable(new FJsonObject());
-                    double Time = 0;
-                    (*KeyframeObj)->TryGetNumberField(TEXT("time"), Time);
-                    KfResult->SetNumberField(TEXT("index"), i);
-                    KfResult->SetNumberField(TEXT("time"), Time);
-                    KfResult->SetBoolField(TEXT("created"), true);
-                    ConfiguredKeyframes.Add(MakeShareable(new FJsonValueObject(KfResult)));
-                }
-            }
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("animationName"), AnimationName);
-        ResultJson->SetStringField(TEXT("easingType"), EasingType);
-        ResultJson->SetNumberField(TEXT("duration"), Duration);
-        ResultJson->SetBoolField(TEXT("looping"), bLooping);
-        ResultJson->SetNumberField(TEXT("playbackCount"), PlaybackCount);
-        ResultJson->SetArrayField(TEXT("keyframes"), ConfiguredKeyframes);
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Advanced widget animation created"), ResultJson);
-        return true;
-    }
-
-    // =========================================================================
-    // create_widget_template - Create reusable widget template
-    // =========================================================================
-    if (SubAction.Equals(TEXT("create_widget_template"), ESearchCase::IgnoreCase))
-    {
-        FString TemplateName = GetStringField(Payload, TEXT("templateName"));
-        FString TemplatePath = GetStringField(Payload, TEXT("templatePath"));
-        if (TemplateName.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: templateName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        if (TemplatePath.IsEmpty())
-        {
-            TemplatePath = FString::Printf(TEXT("/Game/UI/Templates/%s"), *TemplateName);
-        }
-
-        FString TemplateType = TEXT("Generic");
-        Payload->TryGetStringField(TEXT("templateType"), TemplateType);
-        FString Description;
-        Payload->TryGetStringField(TEXT("description"), Description);
-
-        FString PackageName = TemplatePath;
-        FString AssetName = FPackageName::GetShortName(TemplatePath);
-        UPackage* Package = CreatePackage(*PackageName);
-        
-        if (!Package)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_FAILED"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = NewObject<UWidgetBlueprint>(Package, *AssetName, RF_Public | RF_Standalone);
-        if (WidgetBP)
-        {
-            WidgetBP->MarkPackageDirty();
-            FAssetRegistryModule::AssetCreated(WidgetBP);
-
-            ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("templateName"), TemplateName);
-            ResultJson->SetStringField(TEXT("templatePath"), WidgetBP->GetPathName());
-            ResultJson->SetStringField(TEXT("templateType"), TemplateType);
-            ResultJson->SetStringField(TEXT("description"), Description);
-
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget template created"), ResultJson);
-        }
-        else
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create widget template"), TEXT("CREATE_FAILED"));
-        }
         return true;
     }
 
@@ -4040,17 +3795,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        bool bCheckContrast = true;
-        Payload->TryGetBoolField(TEXT("checkContrast"), bCheckContrast);
-        bool bCheckFocusOrder = true;
-        Payload->TryGetBoolField(TEXT("checkFocusOrder"), bCheckFocusOrder);
-        bool bCheckTextSize = true;
-        Payload->TryGetBoolField(TEXT("checkTextSize"), bCheckTextSize);
-        bool bCheckLabels = true;
-        Payload->TryGetBoolField(TEXT("checkLabels"), bCheckLabels);
-
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
+        if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
             return true;
@@ -4060,28 +3806,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         TArray<TSharedPtr<FJsonValue>> ErrorsArray;
         bool bIsAccessible = true;
 
-        // Basic accessibility checks
-        if (bCheckTextSize)
-        {
-            // Note: In a full implementation, we'd iterate widgets and check text sizes
-            TSharedPtr<FJsonObject> WarningObj = MakeShareable(new FJsonObject());
-            WarningObj->SetStringField(TEXT("type"), TEXT("info"));
-            WarningObj->SetStringField(TEXT("message"), TEXT("Text size check requires runtime analysis"));
-            WarningsArray.Add(MakeShareable(new FJsonValueObject(WarningObj)));
-        }
-
-        if (bCheckFocusOrder)
-        {
-            // Focus order check placeholder
-            TSharedPtr<FJsonObject> InfoObj = MakeShareable(new FJsonObject());
-            InfoObj->SetStringField(TEXT("type"), TEXT("info"));
-            InfoObj->SetStringField(TEXT("message"), TEXT("Focus order should be verified manually"));
-            WarningsArray.Add(MakeShareable(new FJsonValueObject(InfoObj)));
-        }
+        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
+            if (Widget) {
+                // Check if it's an interactive widget (Button, CheckBox, Slider, etc.)
+                bool bIsInteractive = Widget->IsA<UButton>() || Widget->IsA<UCheckBox>() || Widget->IsA<USlider>() || Widget->IsA<UComboBoxString>();
+                
+                if (bIsInteractive) {
+                    // Check for tooltip
+                    if (Widget->ToolTipText.IsEmpty()) {
+                        TSharedPtr<FJsonObject> WarningObj = MakeShared<FJsonObject>();
+                        WarningObj->SetStringField(TEXT("widgetName"), Widget->GetName());
+                        WarningObj->SetStringField(TEXT("type"), TEXT("accessibility_warning"));
+                        WarningObj->SetStringField(TEXT("message"), TEXT("Interactive widget missing ToolTipText"));
+                        WarningsArray.Add(MakeShared<FJsonValueObject>(WarningObj));
+                    }
+                }
+            }
+        });
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetBoolField(TEXT("isAccessible"), bIsAccessible);
+        ResultJson->SetBoolField(TEXT("isAccessible"), WarningsArray.Num() == 0 && ErrorsArray.Num() == 0);
         ResultJson->SetArrayField(TEXT("warnings"), WarningsArray);
         ResultJson->SetArrayField(TEXT("errors"), ErrorsArray);
         ResultJson->SetNumberField(TEXT("warningCount"), WarningsArray.Num());
@@ -4092,5 +3837,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     }
 
     // Action not recognized
-    return false;
+    SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Widget authoring subAction not implemented: %s"), *SubAction), 
+        TEXT("NOT_IMPLEMENTED"));
+    return true;
 }

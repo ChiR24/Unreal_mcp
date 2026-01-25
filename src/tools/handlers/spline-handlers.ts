@@ -109,6 +109,9 @@ export async function handleSplineTools(
     // Spline Mesh (4 actions)
     // ========================================================================
     case 'create_spline_mesh_component':
+      if (argsRecord.blueprintPath === undefined && argsRecord.path !== undefined) {
+        argsRecord.blueprintPath = argsRecord.path;
+      }
       return sendRequest('create_spline_mesh_component');
 
     case 'set_spline_mesh_asset':
