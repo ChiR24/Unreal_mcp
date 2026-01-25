@@ -10,10 +10,11 @@ interface CacheEntry {
 export class ActorResources {
   private cache = new Map<string, CacheEntry>();
   private readonly CACHE_TTL_MS = 5000; // 5 seconds cache for actors (they change more frequently)
-  private automationBridgeAvailable = false;
 
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {
-    this.automationBridgeAvailable = Boolean(automationBridge && typeof automationBridge.sendAutomationRequest === 'function');
+  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) {}
+
+  private isAutomationBridgeAvailable(): boolean {
+    return Boolean(this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function');
   }
   
   private getFromCache(key: string): unknown | null {
@@ -37,15 +38,25 @@ export class ActorResources {
     }
     
     try {
-      if (!this.automationBridgeAvailable || !this.automationBridge) {
+      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
       }
 
       const resp = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
-      const resultObj = (resp?.result ?? resp) as Record<string, unknown>;
-      if (resp && resp.success !== false && Array.isArray(resultObj.actors)) {
-        const actors = resultObj.actors as Array<Record<string, unknown>>;
-        const count = coerceNumber(resultObj.count) ?? actors.length;
+      // Response structure: { result: { data: { actors: [...] } } } or { result: { data: [...] } }
+      const respResult = resp?.result as Record<string, unknown> | undefined;
+      const resultData = respResult?.data as Record<string, unknown> | Array<unknown> | undefined;
+      
+      // Check multiple possible locations for actors array
+      const actors = Array.isArray(resp?.actors) ? resp.actors as Array<Record<string, unknown>>
+        : Array.isArray(respResult?.actors) ? respResult.actors as Array<Record<string, unknown>>
+        : Array.isArray(resultData) ? resultData as Array<Record<string, unknown>>
+        : (resultData && Array.isArray((resultData as Record<string, unknown>).actors)) 
+          ? (resultData as Record<string, unknown>).actors as Array<Record<string, unknown>>
+        : null;
+      
+      if (resp && resp.success !== false && actors) {
+        const count = coerceNumber(resp.count) ?? coerceNumber(respResult?.count) ?? actors.length;
         const payload = { success: true as const, count, actors };
         this.setCache('listActors', payload);
         return payload;
@@ -59,7 +70,7 @@ export class ActorResources {
 
   async getActorByName(actorName: string) {
     try {
-      if (!this.automationBridgeAvailable || !this.automationBridge) {
+      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
@@ -100,7 +111,7 @@ export class ActorResources {
 
   async listActorComponents(actorPath: string) {
     try {
-      if (!this.automationBridgeAvailable || !this.automationBridge) {
+      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
         return { success: false, error: 'Automation bridge is not available' };
       }
 
