@@ -83,6 +83,28 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material '${name}' created`);
       }
 
+      case 'duplicate_material': {
+        const params = normalizeArgs(args, [
+          { key: 'sourcePath', aliases: ['source'], required: true },
+          { key: 'destPath', aliases: ['destination', 'dest'], required: true },
+          { key: 'name', aliases: ['newName'], required: true },
+        ]);
+
+        const sourcePath = extractString(params, 'sourcePath');
+        const destPath = extractString(params, 'destPath');
+        const name = extractString(params, 'name');
+
+        // Route to manage_asset since it handles duplication generically
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'duplicate_asset',
+          sourcePath,
+          destinationPath: `${destPath}/${name}`,
+        });
+
+        return res as HandlerResult;
+      }
+
+
       case 'set_blend_mode': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -154,6 +176,54 @@ export async function handleMaterialAuthoringTools(
         }
         return ResponseFactory.success(res, res.message ?? `Material domain set to ${domain}`);
       }
+
+      case 'set_material_property': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'propertyName', required: true },
+          { key: 'value', required: true },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const propertyName = extractString(params, 'propertyName');
+        const value = params.value;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        // Map property name to specific action if possible
+        if (propertyName === 'BlendMode') {
+          return handleMaterialAuthoringTools('set_blend_mode', { assetPath, blendMode: String(value), save }, tools);
+        }
+        if (propertyName === 'ShadingModel') {
+          return handleMaterialAuthoringTools('set_shading_model', { assetPath, shadingModel: String(value), save }, tools);
+        }
+        if (propertyName === 'TwoSided') {
+          const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+            subAction: 'set_material_property',
+            assetPath,
+            propertyName: 'TwoSided',
+            value: Boolean(value),
+            save,
+          })) as MaterialAuthoringResponse;
+          return res.success === false 
+            ? ResponseFactory.error(res.error ?? 'Failed to set property', res.errorCode)
+            : ResponseFactory.success(res, res.message ?? `Property '${propertyName}' set`);
+        }
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'set_material_property',
+          assetPath,
+          propertyName,
+          value,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? `Failed to set property ${propertyName}`, res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Property '${propertyName}' set`);
+      }
+
 
       // ===== 8.2 Material Expressions =====
       case 'add_texture_sample': {
@@ -475,6 +545,37 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Nodes connected');
       }
 
+      case 'connect_material_pins': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'fromNode', aliases: ['sourceNodeId'], required: true },
+          { key: 'fromPin', aliases: ['sourcePin'], default: 'Output' },
+          { key: 'toNode', aliases: ['targetNodeId'], required: true },
+          { key: 'toPin', aliases: ['targetPin', 'inputName'], required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const fromNode = extractString(params, 'fromNode');
+        const fromPin = extractString(params, 'fromPin');
+        const toNode = extractString(params, 'toNode');
+        const toPin = extractString(params, 'toPin');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'connect_material_pins',
+          assetPath,
+          fromNode,
+          fromPin,
+          toNode,
+          toPin,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to connect material pins', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Pins connected');
+      }
+
+
       case 'disconnect_nodes': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -498,6 +599,52 @@ export async function handleMaterialAuthoringTools(
         }
         return ResponseFactory.success(res, res.message ?? 'Nodes disconnected');
       }
+
+      case 'disconnect_material_pin': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeName', aliases: ['nodeId'], required: true },
+          { key: 'pinName', required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeName = extractString(params, 'nodeName');
+        const pinName = extractString(params, 'pinName');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'disconnect_material_pin',
+          assetPath,
+          nodeName,
+          pinName,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to disconnect material pin', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Pin '${pinName}' disconnected`);
+      }
+
+      case 'remove_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeName', aliases: ['nodeId'], required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeName = extractString(params, 'nodeName');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'remove_material_node',
+          assetPath,
+          nodeId: nodeName,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to remove material node', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Node '${nodeName}' removed`);
+      }
+
 
       // ===== 8.3 Material Functions & Layers =====
       case 'create_material_function': {
@@ -1189,6 +1336,73 @@ export async function handleMaterialAuthoringTools(
           return ResponseFactory.error(res.error ?? 'Failed to export material template', res.errorCode);
         }
         return ResponseFactory.success(res, res.message ?? `Material template exported to ${exportPath}`);
+      }
+
+      case 'batch_compile_materials': {
+        const params = normalizeArgs(args, [
+          { key: 'directory', aliases: ['path'], default: '/Game' },
+          { key: 'recursive', default: true },
+        ]);
+
+        const directory = extractString(params, 'directory');
+        const recursive = extractOptionalBoolean(params, 'recursive') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'batch_compile_materials',
+          directory,
+          recursive,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to batch compile materials', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Batch compile completed');
+      }
+
+      case 'create_material_instance_dynamic': {
+        const params = normalizeArgs(args, [
+          { key: 'name', required: true },
+          { key: 'parentMaterial', aliases: ['parent'], required: true },
+          { key: 'ownerActor', aliases: ['actor'] },
+        ]);
+
+        const name = extractString(params, 'name');
+        const parentMaterial = extractString(params, 'parentMaterial');
+        const ownerActor = extractOptionalString(params, 'ownerActor');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'create_material_instance_dynamic',
+          name,
+          parentMaterial,
+          ownerActor,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to create MID', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `MID '${name}' created`);
+      }
+
+      case 'add_expression': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'expressionType', aliases: ['type'], required: true },
+          { key: 'x', aliases: ['posX'], default: 0 },
+          { key: 'y', aliases: ['posY'], default: 0 },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const expressionType = extractString(params, 'expressionType');
+        const x = extractOptionalNumber(params, 'x') ?? 0;
+        const y = extractOptionalNumber(params, 'y') ?? 0;
+
+        // Route to add_material_node with mapped node type
+        return handleMaterialAuthoringTools('add_material_node', {
+          assetPath,
+          nodeType: expressionType,
+          x,
+          y,
+        }, tools);
       }
 
       // Material graph node actions - route to manage_material_graph

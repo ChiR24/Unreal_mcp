@@ -156,7 +156,20 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         }
 
         // Finish spawning after configuration
-        OceanActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
+        // during heavy water mesh generation.
+        TWeakObjectPtr<AActor> WeakOceanActor = OceanActor;
+        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
+        
+        if (GEditor) {
+          GEditor->GetTimerManager()->SetTimerForNextTick([WeakOceanActor, FinalTransform]() {
+            if (AActor* Actor = WeakOceanActor.Get()) {
+              Actor->FinishSpawning(FinalTransform);
+            }
+          });
+        } else {
+          OceanActor->FinishSpawning(FinalTransform);
+        }
 
         bSuccess = true;
         Message = TEXT("Water body ocean created");
@@ -212,7 +225,20 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         }
 
         // Finish spawning after configuration
-        LakeActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
+        // during heavy water mesh generation.
+        TWeakObjectPtr<AActor> WeakLakeActor = LakeActor;
+        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
+        
+        if (GEditor) {
+          GEditor->GetTimerManager()->SetTimerForNextTick([WeakLakeActor, FinalTransform]() {
+            if (AActor* Actor = WeakLakeActor.Get()) {
+              Actor->FinishSpawning(FinalTransform);
+            }
+          });
+        } else {
+          LakeActor->FinishSpawning(FinalTransform);
+        }
 
         bSuccess = true;
         Message = TEXT("Water body lake created");
@@ -268,7 +294,20 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         }
 
         // Finish spawning after configuration
-        RiverActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
+        // during heavy water mesh generation.
+        TWeakObjectPtr<AActor> WeakRiverActor = RiverActor;
+        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
+        
+        if (GEditor) {
+          GEditor->GetTimerManager()->SetTimerForNextTick([WeakRiverActor, FinalTransform]() {
+            if (AActor* Actor = WeakRiverActor.Get()) {
+              Actor->FinishSpawning(FinalTransform);
+            }
+          });
+        } else {
+          RiverActor->FinishSpawning(FinalTransform);
+        }
 
         bSuccess = true;
         Message = TEXT("Water body river created");

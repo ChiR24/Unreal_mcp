@@ -234,41 +234,6 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
                 FlushAsyncLoading();
 
                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-====
-        if (Builder)
-        {
-            // Mark for removal and notify registry
-            McpSafeAssetSave(MetaSoundAsset);
-            FlushAsyncLoading();
-
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-====
-            if (AddResult == EMetaSoundBuilderResult::Succeeded)
-            {
-                McpSafeAssetSave(MetaSoundAsset);
-                FlushAsyncLoading();
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-====
-            if (AddResult == EMetaSoundBuilderResult::Succeeded)
-            {
-                McpSafeAssetSave(MetaSoundAsset);
-                FlushAsyncLoading();
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-====
-            if (AddResult == EMetaSoundBuilderResult::Succeeded)
-            {
-                McpSafeAssetSave(MetaSoundAsset);
-                FlushAsyncLoading();
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-====
-        if (Builder)
-        {
-            // Mark connection change and notify registry
-            McpSafeAssetSave(MetaSoundAsset);
-            FlushAsyncLoading();
-
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-
                 Resp->SetBoolField(TEXT("success"), true);
                 Resp->SetStringField(TEXT("nodeName"), NodeName);
                 Resp->SetStringField(TEXT("nodeType"), NodeType);

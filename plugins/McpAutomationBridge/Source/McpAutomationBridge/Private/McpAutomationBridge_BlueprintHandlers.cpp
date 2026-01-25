@@ -234,11 +234,12 @@ DECLARE_CYCLE_STAT(TEXT("Blueprint:Create"), STAT_MCP_BlueprintCreate, STATGROUP
 DECLARE_CYCLE_STAT(TEXT("Blueprint:ListBlueprints"), STAT_MCP_ListBlueprints, STATGROUP_McpBridge);
 
 #if WITH_EDITOR
-namespace {
+// namespace { // Removed anonymous namespace to export helpers
 #if MCP_HAS_EDGRAPH_SCHEMA_K2
-static UEdGraphPin *
+UEdGraphPin *
 FMcpAutomationBridge_FindExecPin(UEdGraphNode *Node,
                                  EEdGraphPinDirection Direction) {
+
   if (!Node) {
     return nullptr;
   }
@@ -253,9 +254,10 @@ FMcpAutomationBridge_FindExecPin(UEdGraphNode *Node,
   return nullptr;
 }
 
-static UEdGraphPin *
+UEdGraphPin *
 FMcpAutomationBridge_FindOutputPin(UEdGraphNode *Node,
-                                   const FName &PinName = NAME_None) {
+                                   const FName &PinName) {
+
   if (!Node) {
     return nullptr;
   }
@@ -275,8 +277,9 @@ FMcpAutomationBridge_FindOutputPin(UEdGraphNode *Node,
   return nullptr;
 }
 
-static UEdGraphPin *
+UEdGraphPin *
 FMcpAutomationBridge_FindPreferredEventExec(UEdGraph *Graph) {
+
   if (!Graph) {
     return nullptr;
   }
@@ -310,12 +313,13 @@ FMcpAutomationBridge_FindPreferredEventExec(UEdGraph *Graph) {
   return Fallback;
 }
 
-static void FMcpAutomationBridge_LogConnectionFailure(
+void FMcpAutomationBridge_LogConnectionFailure(
     const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin,
     const FPinConnectionResponse &Response);
 
-static UEdGraphPin *FMcpAutomationBridge_FindInputPin(UEdGraphNode *Node,
+UEdGraphPin *FMcpAutomationBridge_FindInputPin(UEdGraphNode *Node,
                                                       const FName &PinName) {
+
   if (!Node) {
     return nullptr;
   }
@@ -329,10 +333,11 @@ static UEdGraphPin *FMcpAutomationBridge_FindInputPin(UEdGraphNode *Node,
   return nullptr;
 }
 
-static UEdGraphPin *
+UEdGraphPin *
 FMcpAutomationBridge_FindDataPin(UEdGraphNode *Node,
                                  EEdGraphPinDirection Direction,
-                                 const FName &PreferredName = NAME_None) {
+                                 const FName &PreferredName) {
+
   if (!Node) {
     return nullptr;
   }
@@ -356,10 +361,11 @@ FMcpAutomationBridge_FindDataPin(UEdGraphNode *Node,
   return Fallback;
 }
 
-static UK2Node_VariableGet *
+UK2Node_VariableGet *
 FMcpAutomationBridge_CreateVariableGetter(UEdGraph *Graph,
                                           const FMemberReference &VarRef,
                                           float NodePosX, float NodePosY) {
+
   if (!Graph) {
     return nullptr;
   }
@@ -381,10 +387,11 @@ FMcpAutomationBridge_CreateVariableGetter(UEdGraph *Graph,
   return NewGet;
 }
 
-static bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
-                                                UEdGraph *Graph,
-                                                const UEdGraphSchema_K2 *Schema,
-                                                bool &bOutLinked) {
+bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
+                                         UEdGraph *Graph,
+                                         const UEdGraphSchema_K2 *Schema,
+                                         bool &bOutLinked) {
+
   if (!VarSet || !Graph || !Schema) {
     return false;
   }
@@ -507,7 +514,8 @@ static bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
   return bOutLinked;
 }
 
-static bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
+bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
+
   if (!Graph) {
     return false;
   }
@@ -561,9 +569,10 @@ static bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
   return bChanged;
 }
 
-static void FMcpAutomationBridge_LogConnectionFailure(
+void FMcpAutomationBridge_LogConnectionFailure(
     const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin,
     const FPinConnectionResponse &Response) {
+
   if (!SourcePin || !TargetPin) {
     UE_LOG(
         LogMcpAutomationBridgeSubsystem, Verbose,
@@ -586,7 +595,7 @@ static void FMcpAutomationBridge_LogConnectionFailure(
          static_cast<int32>(Response.Response));
 }
 
-static FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType) {
+FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType) {
   FEdGraphPinType PinType;
   const FString Lower = InType.ToLower();
   const FString CleanType = InType.TrimStartAndEnd();
@@ -667,7 +676,7 @@ static FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType) {
 }
 #endif
 
-static FString
+FString
 FMcpAutomationBridge_JsonValueToString(const TSharedPtr<FJsonValue> &Value) {
   if (!Value.IsValid()) {
     return FString();
@@ -702,7 +711,7 @@ FMcpAutomationBridge_JsonValueToString(const TSharedPtr<FJsonValue> &Value) {
   return Serialized;
 }
 
-static FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey) {
+FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey) {
   if (RawKey.Equals(TEXT("displayname"), ESearchCase::IgnoreCase)) {
     return FName(TEXT("DisplayName"));
   }
@@ -713,10 +722,11 @@ static FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey) {
 }
 
 #if MCP_HAS_EDGRAPH_SCHEMA_K2
-static void
+void
 FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node, const FString &PinName,
                                        const FString &PinType,
                                        EEdGraphPinDirection Direction) {
+
   if (!Node) {
     return;
   }
@@ -740,9 +750,10 @@ FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node, const FString &PinName,
   }
 }
 
-static UFunction *
+UFunction *
 FMcpAutomationBridge_ResolveFunction(UBlueprint *Blueprint,
                                      const FString &FunctionName) {
+
   if (!Blueprint || FunctionName.TrimStartAndEnd().IsEmpty()) {
     return nullptr;
   }
@@ -786,9 +797,10 @@ FMcpAutomationBridge_ResolveFunction(UBlueprint *Blueprint,
   return nullptr;
 }
 
-static FProperty *
+FProperty *
 FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
                                   const FString &PropertyName) {
+
   if (!Blueprint || PropertyName.TrimStartAndEnd().IsEmpty()) {
     return nullptr;
   }
@@ -812,8 +824,9 @@ FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
 }
 #endif // MCP_HAS_EDGRAPH_SCHEMA_K2
 
-static FString
+FString
 FMcpAutomationBridge_DescribePinType(const FEdGraphPinType &PinType) {
+
   FString BaseType = PinType.PinCategory.ToString();
 
   if (PinType.PinSubCategoryObject.IsValid()) {
@@ -853,7 +866,7 @@ FMcpAutomationBridge_DescribePinType(const FEdGraphPinType &PinType) {
   return ContainerWrappedType;
 }
 
-static void FMcpAutomationBridge_AppendPinsJson(
+void FMcpAutomationBridge_AppendPinsJson(
     const TArray<TSharedPtr<FUserPinInfo>> &Pins,
     TArray<TSharedPtr<FJsonValue>> &Out) {
   for (const TSharedPtr<FUserPinInfo> &PinInfo : Pins) {
@@ -872,7 +885,7 @@ static void FMcpAutomationBridge_AppendPinsJson(
   }
 }
 
-static bool FMcpAutomationBridge_CollectVariableMetadata(
+bool FMcpAutomationBridge_CollectVariableMetadata(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
     TSharedPtr<FJsonObject> &OutMetadata) {
   OutMetadata.Reset();
@@ -903,7 +916,7 @@ static bool FMcpAutomationBridge_CollectVariableMetadata(
   return false;
 }
 
-static TSharedPtr<FJsonObject>
+TSharedPtr<FJsonObject>
 FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
                                        const FBPVariableDescription &VarDesc) {
   TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
@@ -926,7 +939,7 @@ FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
   return Obj;
 }
 
-static TArray<TSharedPtr<FJsonValue>>
+TArray<TSharedPtr<FJsonValue>>
 FMcpAutomationBridge_CollectBlueprintVariables(UBlueprint *Blueprint) {
   TArray<TSharedPtr<FJsonValue>> Out;
   if (!Blueprint) {
@@ -940,7 +953,7 @@ FMcpAutomationBridge_CollectBlueprintVariables(UBlueprint *Blueprint) {
   return Out;
 }
 
-static TArray<TSharedPtr<FJsonValue>>
+TArray<TSharedPtr<FJsonValue>>
 FMcpAutomationBridge_CollectBlueprintFunctions(UBlueprint *Blueprint) {
   TArray<TSharedPtr<FJsonValue>> Out;
   if (!Blueprint) {
@@ -985,9 +998,9 @@ FMcpAutomationBridge_CollectBlueprintFunctions(UBlueprint *Blueprint) {
   return Out;
 }
 
-static void
+void
 FMcpAutomationBridge_CollectEventPins(UK2Node *Node,
-                                      TArray<TSharedPtr<FJsonValue>> &Out) {
+                                       TArray<TSharedPtr<FJsonValue>> &Out) {
   if (!Node) {
     return;
   }
@@ -1041,10 +1054,11 @@ FMcpAutomationBridge_CollectBlueprintEvents(UBlueprint *Blueprint) {
   return Out;
 }
 
-static TSharedPtr<FJsonObject>
+TSharedPtr<FJsonObject>
 FMcpAutomationBridge_FindNamedEntry(const TArray<TSharedPtr<FJsonValue>> &Array,
                                     const FString &FieldName,
                                     const FString &DesiredValue) {
+
   for (const TSharedPtr<FJsonValue> &Value : Array) {
     if (!Value.IsValid() || Value->Type != EJson::Object) {
       continue;
@@ -1064,8 +1078,9 @@ FMcpAutomationBridge_FindNamedEntry(const TArray<TSharedPtr<FJsonValue>> &Array,
   return nullptr;
 }
 
-static TSharedPtr<FJsonObject>
+TSharedPtr<FJsonObject>
 FMcpAutomationBridge_EnsureBlueprintEntry(const FString &Key) {
+
   if (TSharedPtr<FJsonObject> *Existing = GBlueprintRegistry.Find(Key)) {
     if (Existing->IsValid()) {
       return *Existing;
@@ -1083,9 +1098,10 @@ FMcpAutomationBridge_EnsureBlueprintEntry(const FString &Key) {
   return Entry;
 }
 
-static TSharedPtr<FJsonObject>
+TSharedPtr<FJsonObject>
 FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
                                             const FString &NormalizedPath) {
+
   if (!Blueprint) {
     return MakeShared<FJsonObject>();
   }
@@ -1119,8 +1135,9 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   return Snapshot;
 }
 #endif // MCP_HAS_EDGRAPH_SCHEMA_K2
-}
+// } // Removed anonymous namespace
 #endif // WITH_EDITOR
+
 #if WITH_EDITOR && MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
 namespace McpAutomationBridge {
 template <typename, typename = void> struct THasK2Add : std::false_type {};
@@ -1257,6 +1274,95 @@ static void DiagnosticPatternChecks(const FString &CleanAction,
            TEXT("Diagnostic pattern check: Action=%s Pattern=%s Matched=%s"),
            *CleanAction, P, bMatch ? TEXT("true") : TEXT("false"));
   }
+}
+
+FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &Payload) const {
+  if (!Payload.IsValid()) return FString();
+  
+  FString Req;
+  // Check 'requestedPath' field first (explicit path designation)
+  if (Payload->TryGetStringField(TEXT("requestedPath"), Req) &&
+      !Req.TrimStartAndEnd().IsEmpty()) {
+    FString Norm;
+    if (FindBlueprintNormalizedPath(Req, Norm) &&
+        !Norm.TrimStartAndEnd().IsEmpty()) {
+      return Norm;
+    }
+    return Req;
+  }
+
+  // Also accept 'name' field (commonly used by tool wrappers)
+  if (Payload->TryGetStringField(TEXT("name"), Req) &&
+      !Req.TrimStartAndEnd().IsEmpty()) {
+    FString Norm;
+    if (FindBlueprintNormalizedPath(Req, Norm) &&
+        !Norm.TrimStartAndEnd().IsEmpty()) {
+      return Norm;
+    }
+    return Req;
+  }
+
+  // Also accept 'blueprintPath' field for explicit designation
+  if (Payload->TryGetStringField(TEXT("blueprintPath"), Req) &&
+      !Req.TrimStartAndEnd().IsEmpty()) {
+    FString Norm;
+    if (FindBlueprintNormalizedPath(Req, Norm) &&
+        !Norm.TrimStartAndEnd().IsEmpty()) {
+      return Norm;
+    }
+    return Req;
+  }
+
+  // Also accept 'assetPath' field (commonly used by tests)
+  if (Payload->TryGetStringField(TEXT("assetPath"), Req) &&
+      !Req.TrimStartAndEnd().IsEmpty()) {
+    FString Norm;
+    if (FindBlueprintNormalizedPath(Req, Norm) &&
+        !Norm.TrimStartAndEnd().IsEmpty()) {
+      return Norm;
+    }
+    return Req;
+  }
+
+  // Also accept 'path' field (used by some create_blueprint calls)
+  if (Payload->TryGetStringField(TEXT("path"), Req) &&
+      !Req.TrimStartAndEnd().IsEmpty()) {
+    FString NameField;
+    if (Payload->TryGetStringField(TEXT("name"), NameField) && !NameField.IsEmpty()) {
+      Req = Req / NameField;
+    }
+    FString Norm;
+    if (FindBlueprintNormalizedPath(Req, Norm) &&
+        !Norm.TrimStartAndEnd().IsEmpty()) {
+      return Norm;
+    }
+    return Req;
+  }
+
+  const TArray<TSharedPtr<FJsonValue>> *CandidateArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("blueprintCandidates"), CandidateArray) &&
+      CandidateArray && CandidateArray->Num() > 0) {
+    for (const TSharedPtr<FJsonValue> &V : *CandidateArray) {
+      if (!V.IsValid() || V->Type != EJson::String) continue;
+      FString Candidate = V->AsString();
+      if (Candidate.TrimStartAndEnd().IsEmpty()) continue;
+      FString Norm;
+      if (FindBlueprintNormalizedPath(Candidate, Norm))
+        return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
+    }
+  }
+  if (Payload->TryGetArrayField(TEXT("candidates"), CandidateArray) &&
+      CandidateArray && CandidateArray->Num() > 0) {
+    for (const TSharedPtr<FJsonValue> &V : *CandidateArray) {
+      if (!V.IsValid() || V->Type != EJson::String) continue;
+      FString Candidate = V->AsString();
+      if (Candidate.TrimStartAndEnd().IsEmpty()) continue;
+      FString Norm;
+      if (FindBlueprintNormalizedPath(Candidate, Norm))
+        return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
+    }
+  }
+  return FString();
 }
 
 /**
@@ -1467,125 +1573,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     return bMatched;
   };
 
+  // Prioritize sub-handlers for cleaner translation units and reduced memory pressure
+  if (HandleBlueprintVariableAction(RequestId, Action, LocalPayload, RequestingSocket)) {
+    return true;
+  }
+  if (HandleBlueprintFunctionAction(RequestId, Action, LocalPayload, RequestingSocket)) {
+    return true;
+  }
+  if (HandleBlueprintGraphActionInternal(RequestId, Action, LocalPayload, RequestingSocket)) {
+    return true;
+  }
+
   // Run diagnostic pattern checks early while CleanAction/Lower/AlphaNumLower
+
   // are in scope
   DiagnosticPatternChecks(CleanAction, Lower, AlphaNumLower);
-
-  // Helper to resolve requested blueprint path (honors 'requestedPath', 'name',
-  // 'blueprintPath', or 'blueprintCandidates')
-  auto ResolveBlueprintRequestedPath = [&]() -> FString {
-    FString Req;
-
-    // Check 'requestedPath' field first (explicit path designation)
-    if (LocalPayload->TryGetStringField(TEXT("requestedPath"), Req) &&
-        !Req.TrimStartAndEnd().IsEmpty()) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("ResolveBlueprintRequestedPath: Found requestedPath='%s'"),
-             *Req);
-      // Prefer a normalized on-disk path when available to keep registry keys
-      // consistent
-      FString Norm;
-      if (FindBlueprintNormalizedPath(Req, Norm) &&
-          !Norm.TrimStartAndEnd().IsEmpty()) {
-        return Norm;
-      }
-      return Req;
-    }
-
-    // Also accept 'name' field (commonly used by tool wrappers)
-    if (LocalPayload->TryGetStringField(TEXT("name"), Req) &&
-        !Req.TrimStartAndEnd().IsEmpty()) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("ResolveBlueprintRequestedPath: Found name='%s'"), *Req);
-      FString Norm;
-      if (FindBlueprintNormalizedPath(Req, Norm) &&
-          !Norm.TrimStartAndEnd().IsEmpty()) {
-        return Norm;
-      }
-      return Req;
-    }
-
-    // Also accept 'blueprintPath' field for explicit designation
-    if (LocalPayload->TryGetStringField(TEXT("blueprintPath"), Req) &&
-        !Req.TrimStartAndEnd().IsEmpty()) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("ResolveBlueprintRequestedPath: Found blueprintPath='%s'"),
-             *Req);
-      FString Norm;
-      if (FindBlueprintNormalizedPath(Req, Norm) &&
-          !Norm.TrimStartAndEnd().IsEmpty()) {
-        return Norm;
-      }
-      return Req;
-    }
-
-    // Also accept 'assetPath' field (commonly used by tests)
-    if (LocalPayload->TryGetStringField(TEXT("assetPath"), Req) &&
-        !Req.TrimStartAndEnd().IsEmpty()) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("ResolveBlueprintRequestedPath: Found assetPath='%s'"),
-             *Req);
-      FString Norm;
-      if (FindBlueprintNormalizedPath(Req, Norm) &&
-          !Norm.TrimStartAndEnd().IsEmpty()) {
-        return Norm;
-      }
-      return Req;
-    }
-
-    // Also accept 'path' field (used by some create_blueprint calls)
-    if (LocalPayload->TryGetStringField(TEXT("path"), Req) &&
-        !Req.TrimStartAndEnd().IsEmpty()) {
-      // For create_blueprint, path + name may be separate fields
-      FString Name;
-      if (LocalPayload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
-        // Combine path + name
-        Req = Req / Name;
-      }
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("ResolveBlueprintRequestedPath: Found path='%s'"),
-             *Req);
-      FString Norm;
-      if (FindBlueprintNormalizedPath(Req, Norm) &&
-          !Norm.TrimStartAndEnd().IsEmpty()) {
-        return Norm;
-      }
-      return Req;
-    }
-
-    const TArray<TSharedPtr<FJsonValue>> *CandidateArray = nullptr;
-    // Accept either 'blueprintCandidates' (preferred) or legacy 'candidates'
-    if (LocalPayload->TryGetArrayField(TEXT("blueprintCandidates"),
-                                       CandidateArray) &&
-        CandidateArray && CandidateArray->Num() > 0) {
-      for (const TSharedPtr<FJsonValue> &V : *CandidateArray) {
-        if (!V.IsValid() || V->Type != EJson::String)
-          continue;
-        FString Candidate = V->AsString();
-        if (Candidate.TrimStartAndEnd().IsEmpty())
-          continue;
-        // Return the first existing candidate (normalized if possible)
-        FString Norm;
-        if (FindBlueprintNormalizedPath(Candidate, Norm))
-          return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
-      }
-    }
-    // Backwards-compatible key used by some older clients
-    if (LocalPayload->TryGetArrayField(TEXT("candidates"), CandidateArray) &&
-        CandidateArray && CandidateArray->Num() > 0) {
-      for (const TSharedPtr<FJsonValue> &V : *CandidateArray) {
-        if (!V.IsValid() || V->Type != EJson::String)
-          continue;
-        FString Candidate = V->AsString();
-        if (Candidate.TrimStartAndEnd().IsEmpty())
-          continue;
-        FString Norm;
-        if (FindBlueprintNormalizedPath(Candidate, Norm))
-          return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
-      }
-    }
-    return FString();
-  };
 
   if (ActionMatchesPattern(TEXT("blueprint_modify_scs")) ||
       ActionMatchesPattern(TEXT("modify_scs")) ||

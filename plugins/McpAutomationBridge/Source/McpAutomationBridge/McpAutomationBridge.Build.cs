@@ -35,18 +35,17 @@ public class McpAutomationBridge : ModuleRules
             PCHUsage = PCHUsageMode.NoPCHs;
         }
         
-        // Unity builds enabled per user request. 
-        // Note: This may increase heap usage (C1060) on memory-constrained systems.
-        bUseUnity = true;
-        MinSourceFilesForUnityBuildOverride = 2;
+        // Unity builds disabled to prevent memory exhaustion (C1060).
+        // Grouping 50+ large handlers into unity files causes the compiler to run out of heap space.
+        bUseUnity = false;
+        MinSourceFilesForUnityBuildOverride = 20;
         
-        // NumIncludedBytesPerUnityCPPOverride set to 512KB for Unity build.
-        NumIncludedBytesPerUnityCPPOverride = 512 * 1024;
-        
-        // Adaptive Unity toggles (reflection-safe across UE 5.x)
+        // Disable adaptive unity to ensure strict non-unity compilation
         TrySetBoolMember(this, "bUseAdaptiveUnityBuild", false);
-        TrySetBoolMember(this, "bMergeUnityFiles", true);
-        TrySetBoolMember(this, "bFasterWithoutUnity", false);
+        TrySetBoolMember(this, "bForceUnityBuild", false);
+        TrySetBoolMember(this, "bMergeUnityFiles", false);
+        TrySetBoolMember(this, "bFasterWithoutUnity", true);
+
 
         bool enableAdaptiveUnityTarget = GetBoolEnvironmentVariable("MCP_ENABLE_ADAPTIVE_UNITY", false);
         if (!enableAdaptiveUnityTarget)

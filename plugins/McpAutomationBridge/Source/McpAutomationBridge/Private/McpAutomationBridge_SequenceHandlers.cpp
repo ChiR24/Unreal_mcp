@@ -220,8 +220,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
     UObject *NewObj = AssetToolsModule.Get().CreateAsset(
         Name, DestFolder, ULevelSequence::StaticClass(), Factory);
     if (NewObj) {
-      UEditorAssetLibrary::SaveAsset(FullPath);
+      McpSafeAssetSave(NewObj);
       GCurrentSequencePath = FullPath;
+
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("sequencePath"), FullPath);
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
@@ -320,8 +321,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
       if (bRateFound) {
         MovieScene->SetDisplayRate(NewRate);
         MovieScene->Modify();
+        McpSafeAssetSave(LevelSeq);
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("displayRate"),
                              NewRate.ToPrettyText().ToString());
@@ -443,7 +446,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
       }
 
       if (bModified)
+      {
         MovieScene->Modify();
+        McpSafeAssetSave(LevelSeq);
+      }
+
 
       FFrameRate FR = MovieScene->GetDisplayRate();
       TSharedPtr<FJsonObject> FrameRateObj = MakeShared<FJsonObject>();
@@ -514,24 +521,68 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
     return true;
   }
 
-  if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
+  if (ULevelSequence *LevelSequence = Cast<ULevelSequence>(SeqObj)) {
     if (GEditor) {
       if (ULevelSequenceEditorSubsystem *LSES =
               GEditor->GetEditorSubsystem<ULevelSequenceEditorSubsystem>()) {
         if (UAssetEditorSubsystem *AssetEditorSS =
                 GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
-          AssetEditorSS->OpenEditorForAsset(LevelSeq);
-          Resp->SetStringField(TEXT("sequencePath"), SeqPath);
-          Resp->SetStringField(TEXT("message"), TEXT("Sequence opened"));
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-                 TEXT("HandleSequenceOpen: Successfully opened in LSES, "
-                      "sending response for RequestID=%s"),
-                 *RequestIdArg);
-          Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
-                                            TEXT("Sequence opened"), Resp,
-                                            FString());
+          // UE 5.7 Fix: Defer OpenEditorForAsset to avoid recursive flushes/crashes
+          AsyncTask(ENamedThreads::GameThread, [Subsystem, Socket, RequestIdArg, LevelSequence, SeqPath]() {
+              if (!GEditor) return;
+              UAssetEditorSubsystem* AESS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+              if (!AESS) return;
+
+              AESS->OpenEditorForAsset(LevelSequence);
+              
+              TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+              Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+              Resp->SetStringField(TEXT("message"), TEXT("Sequence opened"));
+              
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("HandleSequenceOpen: Successfully opened in LSES, "
+                          "sending response for RequestID=%s"),
+                     *RequestIdArg);
+              Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+                                                TEXT("Sequence opened"), Resp,
+                                                FString());
+          });
           return true;
         }
+      }
+    }
+  }
+
+  if (GEditor) {
+    if (UAssetEditorSubsystem *AssetEditorSS =
+            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
+      // UE 5.7 Fix: Defer OpenEditorForAsset
+      AsyncTask(ENamedThreads::GameThread, [Subsystem, Socket, RequestIdArg, SeqObj, SeqPath]() {
+          if (!GEditor) return;
+          UAssetEditorSubsystem* AESS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+          if (!AESS) return;
+
+          AESS->OpenEditorForAsset(SeqObj);
+
+          TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+          Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+          Resp->SetStringField(TEXT("message"), TEXT("Sequence opened (asset editor)"));
+          
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                 TEXT("HandleSequenceOpen: Opened via AssetEditorSS, sending response "
+                      "for RequestID=%s"),
+                 *RequestIdArg);
+          Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+                                            TEXT("Sequence opened"), Resp, FString());
+      });
+      return true;
+    }
+  }
+
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open asset editor"), nullptr, TEXT("OPEN_FAILED"));
+  return true;
+}
+
       }
     }
   }
@@ -595,8 +646,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
               Spawned->GetActorLabel(), Spawned->GetClass());
           if (MovieScene->FindPossessable(BindingGuid)) {
             MovieScene->Modify();
+            McpSafeAssetSave(LevelSeq);
             Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
           }
+
         }
       }
 
@@ -774,7 +827,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
               Item->SetBoolField(TEXT("success"), true);
               Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
               MovieScene->Modify();
+              McpSafeAssetSave(LevelSeq);
             } else {
+
               Item->SetBoolField(TEXT("success"), false);
               Item->SetStringField(
                   TEXT("error"), TEXT("Failed to create possessable binding"));
@@ -870,7 +925,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
         FGuid BindingGuid = MovieScene->AddSpawnable(ClassName, *DefaultObject);
         if (MovieScene->FindSpawnable(BindingGuid)) {
           MovieScene->Modify();
+          McpSafeAssetSave(LevelSeq);
           TSharedPtr<FJsonObject> SpawnableResp = MakeShared<FJsonObject>();
+
           SpawnableResp->SetBoolField(TEXT("success"), true);
           SpawnableResp->SetStringField(TEXT("className"), ClassName);
           SpawnableResp->SetStringField(TEXT("bindingGuid"),
@@ -966,9 +1023,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
             if (BindingName.Equals(Name, ESearchCase::IgnoreCase)) {
               MovieScene->RemovePossessable(Binding.GetObjectGuid());
               MovieScene->Modify();
+              McpSafeAssetSave(LevelSeq);
               bRemoved = true;
               break;
             }
+
           }
           if (bRemoved) {
             Item->SetBoolField(TEXT("success"), true);
@@ -2434,7 +2493,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddProceduralCameraShake(
 
   UMovieSceneCameraShakeTrack *ShakeTrack = MovieScene->AddTrack<UMovieSceneCameraShakeTrack>(BindingGuid);
   if (ShakeTrack) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    UMovieSceneCameraShakeSection *ShakeSection = Cast<UMovieSceneCameraShakeSection>(ShakeTrack->AddNewCameraShake(FFrameNumber(0), ShakeClass));
+#else
     UMovieSceneCameraShakeSection *ShakeSection = ShakeTrack->AddNewCameraShake(ShakeClass, 0);
+#endif
     if (ShakeSection) {
       MovieScene->Modify();
       Sequence->MarkPackageDirty();
@@ -2472,7 +2535,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceConfigureStreaming(
 
   if (VisibilityTrack) {
     bool bSectionAdded = false;
-    UMovieSceneLevelVisibilitySection* VisibilitySection = Cast<UMovieSceneLevelVisibilitySection>(VisibilityTrack->FindOrAddSection(0, bSectionAdded));
+    UMovieSceneLevelVisibilitySection* VisibilitySection = nullptr;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+    for (UMovieSceneSection* Section : VisibilityTrack->GetAllSections()) {
+        if (Section && Section->IsA<UMovieSceneLevelVisibilitySection>()) {
+            VisibilitySection = Cast<UMovieSceneLevelVisibilitySection>(Section);
+            break;
+        }
+    }
+    if (!VisibilitySection) {
+        VisibilitySection = Cast<UMovieSceneLevelVisibilitySection>(VisibilityTrack->CreateNewSection());
+        if (VisibilitySection) {
+            VisibilityTrack->AddSection(*VisibilitySection);
+            bSectionAdded = true;
+        }
+    }
+#else
+    VisibilitySection = Cast<UMovieSceneLevelVisibilitySection>(VisibilityTrack->FindOrAddSection(0, bSectionAdded));
+#endif
     if (VisibilitySection) {
         FString LevelName;
         Payload->TryGetStringField(TEXT("levelName"), LevelName);

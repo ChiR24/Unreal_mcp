@@ -254,7 +254,20 @@ namespace WidgetAuthoringHelpers
         }
         return ESlateVisibility::Visible;
     }
+
+    // Get widget name field (handles both widgetName and slotName)
+
+    FString GetWidgetNameField(const TSharedPtr<FJsonObject>& Payload, const FString& Default = TEXT(""))
+    {
+        FString Name = GetStringField(Payload, TEXT("widgetName"));
+        if (Name.IsEmpty())
+        {
+            Name = GetStringField(Payload, TEXT("slotName"));
+        }
+        return Name.IsEmpty() ? Default : Name;
+    }
 }
+
 
 using namespace WidgetAuthoringHelpers;
 
@@ -415,7 +428,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("CanvasPanel"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -457,6 +471,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added canvas panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added canvas panel"), ResultJson);
         return true;
@@ -471,7 +487,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("HorizontalBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("HorizontalBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -514,6 +531,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added horizontal box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added horizontal box"), ResultJson);
         return true;
@@ -528,7 +547,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("VerticalBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("VerticalBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -570,6 +590,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added vertical box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added vertical box"), ResultJson);
         return true;
@@ -584,7 +606,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Overlay"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("Overlay"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -626,6 +649,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added overlay"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added overlay"), ResultJson);
         return true;
@@ -644,7 +669,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TextBlock"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("TextBlock"));
+
         FString Text = GetStringField(Payload, TEXT("text"), TEXT("Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -704,6 +730,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text block"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added text block"), ResultJson);
         return true;
@@ -718,7 +746,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Image"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("Image"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -773,6 +802,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added image"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added image"), ResultJson);
         return true;
@@ -787,7 +818,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Button"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("Button"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -837,6 +869,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added button"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added button"), ResultJson);
         return true;
@@ -851,7 +885,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ProgressBar"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("ProgressBar"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -907,6 +942,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added progress bar"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added progress bar"), ResultJson);
         return true;
@@ -921,7 +958,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Slider"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("Slider"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -979,6 +1017,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added slider"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added slider"), ResultJson);
         return true;
@@ -1056,7 +1096,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("GridPanel"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("GridPanel"));
+
         int32 ColumnCount = static_cast<int32>(GetNumberField(Payload, TEXT("columnCount"), 2));
         int32 RowCount = static_cast<int32>(GetNumberField(Payload, TEXT("rowCount"), 2));
 
@@ -1101,6 +1142,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added grid panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added grid panel"), ResultJson);
         return true;
@@ -1115,7 +1158,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("UniformGridPanel"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("UniformGridPanel"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1182,6 +1226,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added uniform grid panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added uniform grid panel"), ResultJson);
         return true;
@@ -1196,7 +1242,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("WrapBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("WrapBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1257,6 +1304,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added wrap box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added wrap box"), ResultJson);
         return true;
@@ -1271,7 +1320,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ScrollBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("ScrollBox"));
+
         FString Orientation = GetStringField(Payload, TEXT("orientation"), TEXT("Vertical"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1348,6 +1398,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added scroll box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added scroll box"), ResultJson);
         return true;
@@ -1362,7 +1414,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("SizeBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("SizeBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1430,6 +1483,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added size box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added size box"), ResultJson);
         return true;
@@ -1444,7 +1499,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ScaleBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("ScaleBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1542,6 +1598,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added scale box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added scale box"), ResultJson);
         return true;
@@ -1556,7 +1614,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Border"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("Border"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1626,6 +1685,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added border"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added border"), ResultJson);
         return true;
@@ -1644,7 +1705,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("RichTextBlock"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("RichTextBlock"));
+
         FString Text = GetStringField(Payload, TEXT("text"), TEXT("Rich Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1682,6 +1744,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added rich text block"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added rich text block"), ResultJson);
         return true;
@@ -1696,7 +1760,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("CheckBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("CheckBox"));
+
         bool bIsChecked = GetBoolField(Payload, TEXT("isChecked"), false);
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1734,6 +1799,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added check box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added check box"), ResultJson);
         return true;
@@ -1748,7 +1815,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TextInput"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("TextInput"));
+
         FString HintText = GetStringField(Payload, TEXT("hintText"), TEXT(""));
         bool bMultiLine = GetBoolField(Payload, TEXT("multiLine"), false);
 
@@ -1804,6 +1872,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text input"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added text input"), ResultJson);
         return true;
@@ -1818,7 +1888,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ComboBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("ComboBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1870,6 +1941,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added combo box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added combo box"), ResultJson);
         return true;
@@ -1884,7 +1957,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("SpinBox"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("SpinBox"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1939,6 +2013,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added spin box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added spin box"), ResultJson);
         return true;
@@ -1953,7 +2029,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ListView"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("ListView"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1988,6 +2065,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added list view"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added list view"), ResultJson);
         return true;
@@ -2002,7 +2081,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TreeView"));
+        FString SlotName = GetWidgetNameField(Payload, TEXT("TreeView"));
+
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -2037,6 +2117,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Added tree view"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
+        ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added tree view"), ResultJson);
         return true;

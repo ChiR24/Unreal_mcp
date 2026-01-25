@@ -343,9 +343,25 @@ private:
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleBlueprintAction(const FString &RequestId, const FString &Action,
-                             const TSharedPtr<FJsonObject> &Payload,
-                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  
+  /** Resolves the requested blueprint path from various payload fields (name, assetPath, etc.) */
+  FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &Payload) const;
+  
+  // Sub-handlers for splitting the massive Blueprint handler into multiple translation units
+  bool HandleBlueprintVariableAction(const FString &RequestId, const FString &Action,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleBlueprintFunctionAction(const FString &RequestId, const FString &Action,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleBlueprintGraphActionInternal(const FString &RequestId, const FString &Action,
+                                          const TSharedPtr<FJsonObject> &Payload,
+                                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
   bool HandleSequenceAction(const FString &RequestId, const FString &Action,
+
                             const TSharedPtr<FJsonObject> &Payload,
                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleInputAction(const FString &RequestId, const FString &Action,

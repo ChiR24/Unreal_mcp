@@ -60,6 +60,21 @@ export async function handleWidgetAuthoringTools(
       return sendRequest('create_widget_blueprint');
     }
 
+    case 'duplicate_widget_blueprint': {
+      const sourcePath = requireNonEmptyString(argsRecord.sourcePath, 'sourcePath', 'Missing required parameter: sourcePath');
+      const destPath = requireNonEmptyString(argsRecord.destPath, 'destPath', 'Missing required parameter: destPath');
+      const newName = requireNonEmptyString(argsRecord.newName, 'newName', 'Missing required parameter: newName');
+      
+      // Route to manage_asset generically
+      const res = await executeAutomationRequest(tools, 'manage_asset', {
+        subAction: 'duplicate_asset',
+        sourcePath,
+        destinationPath: `${destPath}/${newName}`,
+      });
+      return res as HandlerResult;
+    }
+
+
     case 'set_widget_parent_class': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.parentClass, 'parentClass', 'Missing required parameter: parentClass');
@@ -147,6 +162,51 @@ export async function handleWidgetAuthoringTools(
       // Optional: slotName, parentSlot, brushColor, padding, horizontalAlignment, verticalAlignment
       return sendRequest('add_border');
     }
+
+    case 'add_widget': {
+      const widgetType = requireNonEmptyString(argsRecord.widgetType, 'widgetType', 'Missing required parameter: widgetType');
+      const name = requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      
+      // Map widgetType to specific action
+      const typeToAction: Record<string, string> = {
+        'CanvasPanel': 'add_canvas_panel',
+        'HorizontalBox': 'add_horizontal_box',
+        'VerticalBox': 'add_vertical_box',
+        'Overlay': 'add_overlay',
+        'GridPanel': 'add_grid_panel',
+        'UniformGridPanel': 'add_uniform_grid',
+        'WrapBox': 'add_wrap_box',
+        'ScrollBox': 'add_scroll_box',
+        'SizeBox': 'add_size_box',
+        'ScaleBox': 'add_scale_box',
+        'Border': 'add_border',
+        'TextBlock': 'add_text_block',
+        'RichTextBlock': 'add_rich_text_block',
+        'Image': 'add_image',
+        'Button': 'add_button',
+        'CheckBox': 'add_check_box',
+        'Slider': 'add_slider',
+        'ProgressBar': 'add_progress_bar',
+        'EditableText': 'add_text_input',
+        'EditableTextBox': 'add_text_input',
+        'MultiLineEditableText': 'add_text_input',
+        'ComboBox': 'add_combo_box',
+        'ComboBoxString': 'add_combo_box',
+        'SpinBox': 'add_spin_box',
+        'ListView': 'add_list_view',
+        'TreeView': 'add_tree_view',
+        'SafeZone': 'add_safe_zone',
+      };
+
+      const mappedAction = typeToAction[widgetType];
+      if (mappedAction) {
+        return handleWidgetAuthoringTools(mappedAction, { ...argsRecord, slotName: name }, tools);
+      }
+
+      // Fallback: send generic add_widget to C++
+      return sendRequest('add_widget');
+    }
+
 
     // =========================================================================
     // 19.3 Common Widgets (12 actions)
@@ -288,6 +348,34 @@ export async function handleWidgetAuthoringTools(
       return sendRequest('set_z_order');
     }
 
+    case 'set_widget_position': {
+      const widgetName = requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      const position = argsRecord.position as { x: number, y: number };
+      return handleWidgetAuthoringTools('set_position', { ...argsRecord, slotName: widgetName, positionX: position?.x, positionY: position?.y }, tools);
+    }
+
+    case 'set_widget_size': {
+      const widgetName = requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      const size = argsRecord.size as { x: number, y: number };
+      return handleWidgetAuthoringTools('set_size', { ...argsRecord, slotName: widgetName, sizeX: size?.x, sizeY: size?.y }, tools);
+    }
+
+    case 'set_widget_anchor': {
+      const widgetName = requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      return handleWidgetAuthoringTools('set_anchor', { ...argsRecord, slotName: widgetName }, tools);
+    }
+
+    case 'set_widget_alignment': {
+      const widgetName = requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      return handleWidgetAuthoringTools('set_alignment', { ...argsRecord, slotName: widgetName }, tools);
+    }
+
+    case 'set_widget_visibility': {
+      const widgetName = requireNonEmptyString(argsRecord.widgetName, 'widgetName', 'Missing required parameter: widgetName');
+      return handleWidgetAuthoringTools('set_visibility', { ...argsRecord, slotName: widgetName }, tools);
+    }
+
+
     case 'set_render_transform': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
@@ -400,6 +488,11 @@ export async function handleWidgetAuthoringTools(
       // Optional: length (duration in seconds)
       return sendRequest('create_widget_animation');
     }
+
+    case 'create_animation': {
+      return handleWidgetAuthoringTools('create_widget_animation', args, tools);
+    }
+
 
     case 'add_animation_track': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');

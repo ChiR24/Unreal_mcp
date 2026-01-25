@@ -258,9 +258,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("set_blend_mode")) {
     FString AssetPath, BlendMode;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+        !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -312,9 +312,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("set_shading_model")) {
     FString AssetPath, ShadingModel;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+        !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -374,14 +374,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("set_material_domain")) {
     FString AssetPath, Domain;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+        !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    if (!Payload->TryGetStringField(TEXT("materialDomain"), Domain)) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'materialDomain'."),
+    if (!Payload->TryGetStringField(TEXT("materialDomain"), Domain) &&
+        !Payload->TryGetStringField(TEXT("domain"), Domain)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'materialDomain' or 'domain'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -421,6 +422,120 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     return true;
   }
 
+  // --------------------------------------------------------------------------
+  // set_material_property
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_material_property")) {
+    FString MaterialPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), MaterialPath) &&
+        !Payload->TryGetStringField(TEXT("materialPath"), MaterialPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString PropertyName;
+    if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'propertyName'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    bool bSuccess = false;
+    FString ValueStr;
+    Payload->TryGetStringField(TEXT("value"), ValueStr);
+
+    if (PropertyName == TEXT("BlendMode")) {
+      if (ValueStr == TEXT("Opaque")) Material->BlendMode = BLEND_Opaque;
+      else if (ValueStr == TEXT("Masked")) Material->BlendMode = BLEND_Masked;
+      else if (ValueStr == TEXT("Translucent")) Material->BlendMode = BLEND_Translucent;
+      else if (ValueStr == TEXT("Additive")) Material->BlendMode = BLEND_Additive;
+      else if (ValueStr == TEXT("Modulate")) Material->BlendMode = BLEND_Modulate;
+      else if (ValueStr == TEXT("AlphaComposite")) Material->BlendMode = BLEND_AlphaComposite;
+      else if (ValueStr == TEXT("AlphaHoldout")) Material->BlendMode = BLEND_AlphaHoldout;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("ShadingModel")) {
+      if (ValueStr == TEXT("Unlit")) Material->SetShadingModel(MSM_Unlit);
+      else if (ValueStr == TEXT("DefaultLit")) Material->SetShadingModel(MSM_DefaultLit);
+      else if (ValueStr == TEXT("Subsurface")) Material->SetShadingModel(MSM_Subsurface);
+      else if (ValueStr == TEXT("SubsurfaceProfile")) Material->SetShadingModel(MSM_SubsurfaceProfile);
+      else if (ValueStr == TEXT("PreintegratedSkin")) Material->SetShadingModel(MSM_PreintegratedSkin);
+      else if (ValueStr == TEXT("ClearCoat")) Material->SetShadingModel(MSM_ClearCoat);
+      else if (ValueStr == TEXT("Hair")) Material->SetShadingModel(MSM_Hair);
+      else if (ValueStr == TEXT("Cloth")) Material->SetShadingModel(MSM_Cloth);
+      else if (ValueStr == TEXT("Eye")) Material->SetShadingModel(MSM_Eye);
+      else if (ValueStr == TEXT("TwoSidedFoliage")) Material->SetShadingModel(MSM_TwoSidedFoliage);
+      else if (ValueStr == TEXT("ThinTranslucent")) Material->SetShadingModel(MSM_ThinTranslucent);
+      bSuccess = true;
+    } else if (PropertyName == TEXT("TwoSided")) {
+      bool bVal = false;
+      Payload->TryGetBoolField(TEXT("value"), bVal);
+      Material->TwoSided = bVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("OpacityMaskClipValue")) {
+      double fVal = 0.333;
+      Payload->TryGetNumberField(TEXT("value"), fVal);
+      Material->OpacityMaskClipValue = (float)fVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("DitheredLODTransition")) {
+      bool bVal = false;
+      Payload->TryGetBoolField(TEXT("value"), bVal);
+      Material->DitheredLODTransition = bVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("AllowNegativeEmissiveColor")) {
+      bool bVal = false;
+      Payload->TryGetBoolField(TEXT("value"), bVal);
+      Material->AllowNegativeEmissiveColor = bVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("bUseMaterialAttributes")) {
+      bool bVal = false;
+      Payload->TryGetBoolField(TEXT("value"), bVal);
+      Material->bUseMaterialAttributes = bVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("bCastDynamicShadowAsMasked")) {
+      bool bVal = false;
+      Payload->TryGetBoolField(TEXT("value"), bVal);
+      Material->bCastDynamicShadowAsMasked = bVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("RefractionDepthBias")) {
+      double fVal = 0.0;
+      Payload->TryGetNumberField(TEXT("value"), fVal);
+      Material->RefractionDepthBias = (float)fVal;
+      bSuccess = true;
+    } else if (PropertyName == TEXT("TranslucencyLightingMode")) {
+      if (ValueStr == TEXT("VolumetricNonDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricNonDirectional;
+      else if (ValueStr == TEXT("VolumetricDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricDirectional;
+      else if (ValueStr == TEXT("VolumetricPerVertexNonDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricPerVertexNonDirectional;
+      else if (ValueStr == TEXT("VolumetricPerVertexDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricPerVertexDirectional;
+      else if (ValueStr == TEXT("SurfacePointNormal")) Material->TranslucencyLightingMode = TLM_SurfacePointNormal;
+      else if (ValueStr == TEXT("SurfacePerPixelLighting")) Material->TranslucencyLightingMode = TLM_SurfacePerPixelLighting;
+      bSuccess = true;
+    }
+
+    if (bSuccess) {
+      Material->PostEditChange();
+      Material->MarkPackageDirty();
+      bool bSave = true;
+      Payload->TryGetBoolField(TEXT("save"), bSave);
+      if (bSave) SaveMaterialAsset(Material);
+
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Property '%s' updated."), *PropertyName));
+    } else {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Property '%s' not supported or invalid value."), *PropertyName),
+                          TEXT("NOT_SUPPORTED"));
+    }
+    return true;
+  }
+
   // ==========================================================================
   // 8.2 Material Expressions
   // ==========================================================================
@@ -428,9 +543,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // Helper macro for expression creation
 #define LOAD_MATERIAL_OR_RETURN()                                              \
   FString AssetPath;                                                           \
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||             \
-      AssetPath.IsEmpty()) {                                                   \
-    SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),       \
+  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&              \
+      !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {          \
+    SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
+                        TEXT("INVALID_ARGUMENT"));                             \
+    return true;                                                               \
+  }                                                                            \
+  if (AssetPath.IsEmpty()) {                                                   \
+    SendAutomationError(Socket, RequestId, TEXT("Path is empty."),             \
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \
@@ -1278,9 +1398,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   if (SubAction == TEXT("add_function_input") ||
       SubAction == TEXT("add_function_output")) {
     FString AssetPath, InputName, InputType;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+        !Payload->TryGetStringField(TEXT("functionPath"), AssetPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'functionPath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -1495,9 +1615,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   if (SubAction == TEXT("set_scalar_parameter_value")) {
     FString AssetPath, ParamName;
     double Value = 0.0;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+        !Payload->TryGetStringField(TEXT("instancePath"), AssetPath)) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'instancePath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -2717,8 +2837,17 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     // Inject Substrate Slab BSDF node for a functional conversion
     UMaterialExpressionSubstrateSlabBSDF* SlabNode = NewObject<UMaterialExpressionSubstrateSlabBSDF>(Material);
     if (SlabNode) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+#if WITH_EDITORONLY_DATA
+        if (UMaterialEditorOnlyData* EditorOnly = Material->GetEditorOnlyData()) {
+            EditorOnly->ExpressionCollection.AddExpression(SlabNode);
+            EditorOnly->FrontMaterial.Expression = SlabNode;
+        }
+#endif
+#else
         Material->GetExpressions().Add(SlabNode);
         Material->ExpressionAttributeOutput.Expression = SlabNode;
+#endif
         SlabNode->MaterialExpressionEditorX = -200;
         SlabNode->MaterialExpressionEditorY = 0;
     }

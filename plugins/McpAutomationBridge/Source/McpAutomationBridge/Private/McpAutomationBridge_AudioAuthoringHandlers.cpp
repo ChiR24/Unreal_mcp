@@ -276,6 +276,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAudioPath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Audio/Cues")));
         FString WavePath = GetStringFieldSafe(Params, TEXT("wavePath"), TEXT(""));
+        if (WavePath.IsEmpty())
+        {
+            WavePath = GetStringFieldSafe(Params, TEXT("soundPath"), TEXT(""));
+        }
+
         bool bLooping = GetBoolFieldSafe(Params, TEXT("looping"), false);
         float Volume = static_cast<float>(GetNumberFieldSafe(Params, TEXT("volume"), 1.0));
         float Pitch = static_cast<float>(GetNumberFieldSafe(Params, TEXT("pitch"), 1.0));
@@ -367,6 +372,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         {
             USoundNodeWavePlayer* Player = Cue->ConstructSoundNode<USoundNodeWavePlayer>();
             FString WavePath = GetStringFieldSafe(Params, TEXT("wavePath"), TEXT(""));
+        if (WavePath.IsEmpty())
+        {
+            WavePath = GetStringFieldSafe(Params, TEXT("soundPath"), TEXT(""));
+        }
+
             if (!WavePath.IsEmpty())
             {
                 USoundWave* Wave = LoadSoundWaveFromPath(WavePath);

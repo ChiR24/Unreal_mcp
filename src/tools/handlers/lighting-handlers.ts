@@ -330,6 +330,28 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
         validateShadows: toBoolean(args.validateShadows)
       }));
     }
+
+    // Forward Post-Process / Ray Tracing / Scene Capture actions to C++
+    case 'configure_ray_traced_shadows':
+    case 'configure_ray_traced_gi':
+    case 'configure_ray_traced_reflections':
+    case 'configure_ray_traced_ao':
+    case 'configure_path_tracing':
+    case 'create_scene_capture_2d':
+    case 'create_scene_capture_cube':
+    case 'capture_scene':
+    case 'set_light_channel':
+    case 'set_actor_light_channel':
+    case 'configure_lightmass_settings':
+    case 'build_lighting_quality':
+    case 'configure_indirect_lighting_cache':
+    case 'configure_volumetric_lightmap': {
+      return cleanObject(await executeAutomationRequest(tools, 'manage_lighting', {
+        action: action,
+        ...args
+      }));
+    }
+
     default:
       throw new Error(`Unknown lighting action: ${action}`);
   }

@@ -214,11 +214,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     return HandleCreateLandscapeGrassType(RequestId,
                                           TEXT("create_landscape_grass_type"),
                                           Payload, RequestingSocket);
-  } else if (LowerSub == TEXT("generate_lods")) {
+  }   else if (LowerSub == TEXT("generate_lods")) {
     return HandleGenerateLODs(RequestId, TEXT("generate_lods"), Payload,
                               RequestingSocket);
   } else if (LowerSub == TEXT("bake_lightmap")) {
     return HandleBakeLightmap(RequestId, TEXT("bake_lightmap"), Payload,
+                              RequestingSocket);
+  } else if (LowerSub == TEXT("batch_paint_foliage")) {
+    return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), Payload,
                               RequestingSocket);
   } else if (LowerSub == TEXT("get_terrain_height_at")) {
     return HandleGetTerrainHeightAt(RequestId, TEXT("get_terrain_height_at"),

@@ -755,6 +755,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     // Link to skeletal mesh
     SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
     McpSafeAssetSave(SkeletalMesh);
+    McpSafeAssetSave(PhysicsAsset);
+
 
     // Save if requested
     bool bSave = false;

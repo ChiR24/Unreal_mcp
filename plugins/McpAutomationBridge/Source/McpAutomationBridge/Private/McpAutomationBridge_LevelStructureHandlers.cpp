@@ -1601,17 +1601,25 @@ static bool HandleOpenLevelBlueprint(
         return true;
     }
 
-    // Open the blueprint editor
-    GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(LevelBP);
+    // UE 5.7 Fix: Defer OpenEditorForAsset to avoid recursive flushes/crashes
+    AsyncTask(ENamedThreads::GameThread, [Subsystem, RequestId, Socket, LevelBP, WorldName = World->GetMapName()]() {
+        if (!GEditor) return;
+        UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+        if (!AssetEditorSS) return;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    ResponseJson->SetStringField(TEXT("levelName"), World->GetMapName());
-    ResponseJson->SetStringField(TEXT("blueprintPath"), LevelBP->GetPathName());
+        AssetEditorSS->OpenEditorForAsset(LevelBP);
 
-    FString Message = FString::Printf(TEXT("Opened Level Blueprint for: %s"), *World->GetMapName());
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        ResponseJson->SetStringField(TEXT("levelName"), WorldName);
+        ResponseJson->SetStringField(TEXT("blueprintPath"), LevelBP->GetPathName());
+
+        FString Message = FString::Printf(TEXT("Opened Level Blueprint for: %s"), *WorldName);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    });
+
     return true;
 }
+
 
 static bool HandleAddLevelBlueprintNode(
     UMcpAutomationBridgeSubsystem* Subsystem,

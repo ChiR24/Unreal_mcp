@@ -1650,11 +1650,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencerAction(
     } else {
       ULevelSequence* Sequence = LoadObject<ULevelSequence>(nullptr, *SequencePath);
       if (Sequence) {
-        // Open in asset editor
-        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Sequence);
-        bSuccess = true;
-        Message = FString::Printf(TEXT("Opened sequence: %s"), *SequencePath);
-        Resp->SetStringField(TEXT("sequencePath"), Sequence->GetPathName());
+        // UE 5.7 Fix: Defer OpenEditorForAsset to avoid recursive flushes/crashes
+        AsyncTask(ENamedThreads::GameThread, [this, Sequence, RequestingSocket, RequestId, SequencePath]() {
+            if (!GEditor) return;
+            UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+            if (AssetEditorSS) {
+                AssetEditorSS->OpenEditorForAsset(Sequence);
+            }
+            
+            TSharedPtr<FJsonObject> AsyncResp = MakeShared<FJsonObject>();
+            AsyncResp->SetBoolField(TEXT("success"), true);
+            AsyncResp->SetStringField(TEXT("sequencePath"), Sequence->GetPathName());
+            SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Opened sequence: %s"), *SequencePath), AsyncResp);
+        });
+        return true; // Successfully handled via deferred task
       } else {
         bSuccess = false;
         Message = TEXT("Sequence not found");

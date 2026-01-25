@@ -5372,6 +5372,39 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     return true;
   }
 
+  // UE 5.7 Fix: Defer OpenEditorForAsset to next tick/AsyncTask to avoid
+  // recursive FlushRenderingCommands and subsequent D3D12/RHI crashes on
+  // certain hardware (e.g. Intel GEN12LP).
+  AsyncTask(ENamedThreads::GameThread, [this, Asset, RequestId, Socket, AssetPath]() {
+    UAssetEditorSubsystem *AssetEditorSS =
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+    if (!AssetEditorSS) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("AssetEditorSubsystem became unavailable"),
+                             nullptr, TEXT("SUBSYSTEM_MISSING"));
+      return;
+    }
+
+    const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), bOpened);
+    Resp->SetStringField(TEXT("assetPath"), AssetPath);
+
+    if (bOpened) {
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
+                             FString());
+    } else {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("Failed to open asset editor"), Resp,
+                             TEXT("OPEN_FAILED"));
+    }
+  });
+
+  return true;
+}
+
+
   const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

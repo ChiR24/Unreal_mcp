@@ -113,13 +113,19 @@ export async function executeAutomationRequest(
   try {
     const result = await automationBridge.sendAutomationRequest(toolName, args, options);
     
-    // Universal check: if C++ returns { success: false }, propagate as error
+    // Universal check: if C++ returns { success: false } or has an error field, propagate as error
     // This prevents handlers from masking NOT_IMPLEMENTED or other C++ errors
     if (result && typeof result === 'object' && !Array.isArray(result)) {
       const resultObj = result as Record<string, unknown>;
-      if (resultObj.success === false) {
+      const hasExplicitFailure = resultObj.success === false;
+      const hasErrorField = resultObj.error !== undefined || resultObj.errorCode !== undefined;
+      
+      if (hasExplicitFailure || hasErrorField) {
         const errorCode = String(resultObj.errorCode || resultObj.error || 'BRIDGE_ERROR');
         const errorMsg = String(resultObj.message || resultObj.error || `${toolName} failed`);
+        
+        // If it was a success: true but has an error field, it's still a functional error
+        // that should be reported to the user/test-runner as a failure.
         
         // Check for NOT_IMPLEMENTED specifically
         if (errorCode === 'NOT_IMPLEMENTED' || errorMsg.includes('not implemented')) {

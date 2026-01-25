@@ -26,8 +26,15 @@ void UMcpZoneSubsystem::Deinitialize()
 
 bool UMcpZoneSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
-    // Create for all world types (Editor, PIE, Game)
-    return true;
+    if (UWorld* World = Cast<UWorld>(Outer))
+    {
+        // Don't create for preview worlds to avoid overhead and RHI crashes during editor automation
+        if (World->WorldType == EWorldType::EditorPreview)
+        {
+            return false;
+        }
+    }
+    return Super::ShouldCreateSubsystem(Outer);
 }
 
 bool UMcpZoneSubsystem::CreateZone(const FString& ZoneId, const FString& DisplayName, AActor* VolumeActor)

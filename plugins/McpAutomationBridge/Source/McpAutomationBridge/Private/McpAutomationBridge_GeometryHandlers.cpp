@@ -637,8 +637,13 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
                                    EGeometryScriptBooleanOperation BoolOp, const FString& OpName)
 {
     FString TargetActorName = Payload->GetStringField(TEXT("targetActor"));
+    if (TargetActorName.IsEmpty()) TargetActorName = Payload->GetStringField(TEXT("actorA"));
+
     FString ToolActorName = Payload->GetStringField(TEXT("toolActor"));
+    if (ToolActorName.IsEmpty()) ToolActorName = Payload->GetStringField(TEXT("actorB"));
+
     bool bKeepTool = Payload->HasField(TEXT("keepTool")) ? Payload->GetBoolField(TEXT("keepTool")) : false;
+
 
     if (TargetActorName.IsEmpty() || ToolActorName.IsEmpty())
     {
@@ -1722,7 +1727,61 @@ static bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     return true;
 }
 
+static bool HandleApplyDisplacement(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString TexturePath = Payload->GetStringField(TEXT("texturePath"));
+    if (TexturePath.IsEmpty()) TexturePath = Payload->GetStringField(TEXT("displacementMap"));
+
+    double Magnitude = Payload->HasField(TEXT("magnitude")) ? Payload->GetNumberField(TEXT("magnitude")) : 10.0;
+
+    if (ActorName.IsEmpty() || TexturePath.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and texturePath required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    ADynamicMeshActor* TargetActor = Cast<ADynamicMeshActor>(Self->FindActorCached(FName(*ActorName)));
+    if (!TargetActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
+    if (!DMC || !DMC->GetDynamicMesh())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+
+    UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
+    if (!Texture)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Texture not found: %s"), *TexturePath), TEXT("TEXTURE_NOT_FOUND"));
+        return true;
+    }
+
+    FGeometryScriptDisplacementMapOptions Options;
+    Options.Magnitude = Magnitude;
+
+    UGeometryScriptLibrary_MeshDeformFunctions::ApplyDisplacementMap(
+        Mesh, Texture, Options, FGeometryScriptMeshSelection(), nullptr);
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("magnitude"), Magnitude);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Displacement applied"), Result);
+    return true;
+}
+
 static bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = Payload->GetStringField(TEXT("actorName"));
@@ -4475,9 +4534,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("bend")) return HandleBend(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("twist")) return HandleTwist(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("taper")) return HandleTaper(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("noise_deform")) return HandleNoiseDeform(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("smooth")) return HandleSmooth(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("noise_deform") || SubAction == TEXT("apply_noise")) return HandleNoiseDeform(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("smooth") || SubAction == TEXT("smooth_mesh")) return HandleSmooth(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("apply_displacement")) return HandleApplyDisplacement(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("relax")) return HandleRelax(this, RequestId, Payload, RequestingSocket);
+
     if (SubAction == TEXT("stretch")) return HandleStretch(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("spherify")) return HandleSpherify(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("cylindrify")) return HandleCylindrify(this, RequestId, Payload, RequestingSocket);

@@ -637,7 +637,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
       if (LayerPackage) {
         LayerInfo = NewObject<ULandscapeLayerInfoObject>(LayerPackage, FName(*LayerName), RF_Public | RF_Standalone);
         if (LayerInfo) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+          LayerInfo->SetLayerName(FName(*LayerName), true);
+#else
           LayerInfo->LayerName = FName(*LayerName);
+#endif
           
           // Register with LandscapeInfo
           LandscapeInfo->Layers.Add(FLandscapeInfoLayerSettings(LayerInfo, Landscape));
