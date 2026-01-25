@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2026-02-14 - [Command Injection in FoliageTools]
+**Vulnerability:** `FoliageTools` methods (e.g., `createInstancedMesh`, `setFoliageLOD`) constructed console commands using raw string interpolation of user inputs (`params.name`, `params.meshPath`). This allowed command injection via malicious names or paths containing `;` or `"` characters.
+**Learning:** Even when some methods in a class use safer patterns (e.g., `addFoliageType` using `sendAutomationRequest`), others might fallback to or rely on insecure console command construction. Inconsistent security patterns within the same class are a common source of vulnerabilities.
+**Prevention:** Consistently apply `sanitizeAssetName` and `sanitizePath` to all user inputs before interpolating them into console command strings. Prefer `sendAutomationRequest` (C++ bridge) over `executeConsoleCommand` where possible, but sanitize inputs in both cases.
