@@ -3,6 +3,7 @@ import { ILevelTools, StandardActionResponse } from '../types/tool-interfaces.js
 import { LevelResponse } from '../types/automation-responses.js';
 import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 import { sanitizePath } from '../utils/path-security.js';
+import { ensureVector3, sanitizeCommandArgument } from '../utils/validation.js';
 import {
   DEFAULT_OPERATION_TIMEOUT_MS,
   DEFAULT_ASSET_OP_TIMEOUT_MS,
@@ -813,9 +814,10 @@ export class LevelTools extends BaseTool implements ILevelTools {
       // Fallback to console command
       const levelIdentifier = levelName ?? levelPath ?? '';
       const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
+      const safeName = sanitizeCommandArgument(simpleName);
       const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
       const visCmd = shouldBeVisible ? 'Show' : 'Hide';
-      const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
+      const command = `StreamLevel ${safeName} ${loadCmd} ${visCmd}`;
       return this.bridge.executeConsoleCommand(command);
     }
   }
@@ -863,7 +865,9 @@ export class LevelTools extends BaseTool implements ILevelTools {
     type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay';
     parent?: string;
   }): Promise<StandardActionResponse> {
-    const command = `CreateSubLevel ${params.name} ${params.type} ${params.parent || 'None'}`;
+    const safeName = sanitizeCommandArgument(params.name);
+    const safeParent = params.parent ? sanitizeCommandArgument(params.parent) : 'None';
+    const command = `CreateSubLevel ${safeName} ${params.type} ${safeParent}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -883,10 +887,10 @@ export class LevelTools extends BaseTool implements ILevelTools {
       commands.push(`SetWorldToMeters ${params.worldScale}`);
     }
     if (params.gameMode) {
-      commands.push(`SetGameMode ${params.gameMode}`);
+      commands.push(`SetGameMode ${sanitizeCommandArgument(params.gameMode)}`);
     }
     if (params.defaultPawn) {
-      commands.push(`SetDefaultPawn ${params.defaultPawn}`);
+      commands.push(`SetDefaultPawn ${sanitizeCommandArgument(params.defaultPawn)}`);
     }
     if (params.killZ !== undefined) {
       commands.push(`SetKillZ ${params.killZ}`);
@@ -901,7 +905,9 @@ export class LevelTools extends BaseTool implements ILevelTools {
     min: [number, number, number];
     max: [number, number, number];
   }): Promise<StandardActionResponse> {
-    const command = `SetLevelBounds ${params.min.join(',')} ${params.max.join(',')}`;
+    const min = ensureVector3(params.min, 'min');
+    const max = ensureVector3(params.max, 'max');
+    const command = `SetLevelBounds ${min.join(',')} ${max.join(',')}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -958,14 +964,15 @@ export class LevelTools extends BaseTool implements ILevelTools {
     levelName: string;
     visible: boolean;
   }): Promise<StandardActionResponse> {
-    const command = `SetLevelVisibility ${params.levelName} ${params.visible}`;
+    const command = `SetLevelVisibility ${sanitizeCommandArgument(params.levelName)} ${params.visible}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
   async setWorldOrigin(params: {
     location: [number, number, number];
   }): Promise<StandardActionResponse> {
-    const command = `SetWorldOriginLocation ${params.location.join(' ')}`;
+    const loc = ensureVector3(params.location, 'location');
+    const command = `SetWorldOriginLocation ${loc.join(' ')}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -975,7 +982,9 @@ export class LevelTools extends BaseTool implements ILevelTools {
     size: [number, number, number];
     streamingDistance?: number;
   }): Promise<StandardActionResponse> {
-    const command = `CreateStreamingVolume ${params.levelName} ${params.position.join(' ')} ${params.size.join(' ')} ${params.streamingDistance || 0}`;
+    const pos = ensureVector3(params.position, 'position');
+    const size = ensureVector3(params.size, 'size');
+    const command = `CreateStreamingVolume ${sanitizeCommandArgument(params.levelName)} ${pos.join(' ')} ${size.join(' ')} ${params.streamingDistance || 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -984,7 +993,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     lodLevel: number;
     distance: number;
   }): Promise<StandardActionResponse> {
-    const command = `SetLevelLOD ${params.levelName} ${params.lodLevel} ${params.distance}`;
+    const command = `SetLevelLOD ${sanitizeCommandArgument(params.levelName)} ${params.lodLevel} ${params.distance}`;
     return this.bridge.executeConsoleCommand(command);
   }
 }

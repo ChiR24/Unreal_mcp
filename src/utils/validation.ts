@@ -300,6 +300,18 @@ export function ensureVector3(value: unknown, label: string): [number, number, n
 }
 
 /**
+ * Sanitize a string for use as a command argument where it represents an identifier or path.
+ * Strict sanitization that only allows alphanumeric, _, -, ., and /.
+ * Replaces all other characters (including spaces, quotes, semicolons) with _.
+ * @param input The string to sanitize
+ * @returns Sanitized string
+ */
+export function sanitizeCommandArgument(input: string): string {
+  if (!input) return '';
+  return input.trim().replace(/[^a-zA-Z0-9_./-]/g, '_').replace(/_+/g, '_');
+}
+
+/**
  * Sanitize a string for use in a console command argument.
  * Replaces double quotes with single quotes to prevent breaking out of string arguments.
  * Also removes newlines.
