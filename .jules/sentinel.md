@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2025-05-26 - [Sanitization Strategy for Unreal Console Commands]
+**Vulnerability:** `LandscapeTools` used raw string interpolation for console commands, allowing command injection via separators (e.g., `;`). Applying `sanitizeAssetName` fixed injection but broke functionality for actors with spaces in their names by replacing spaces with underscores.
+**Learning:** `sanitizeAssetName` is appropriate for strict asset paths/names but too aggressive for Actor Labels (which allow spaces). The correct pattern for Actor Labels in console commands is to use `sanitizeConsoleString` (which escapes quotes) and wrap the argument in double quotes.
+**Prevention:** When constructing console commands for arguments that might contain spaces (like Actor names), use `"${sanitizeConsoleString(value)}"`. For strict identifiers, use `sanitizeAssetName`.
