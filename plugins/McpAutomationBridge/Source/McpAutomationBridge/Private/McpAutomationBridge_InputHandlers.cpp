@@ -5,6 +5,7 @@
 // Enhanced Input (Editor Only)
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
+#include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "EnhancedInputEditorSubsystem.h"
 #include "Factories/Factory.h"
@@ -12,6 +13,24 @@
 #include "InputMappingContext.h"
 
 #endif
+
+// Check if Play In Editor (PIE) is currently active - blocks asset operations
+static bool IsInputPIEActive() {
+#if WITH_EDITOR
+  if (GEditor && GEditor->IsPlaySessionInProgress()) {
+    return true;
+  }
+  if (GEditor) {
+    for (const FWorldContext &Context : GEngine->GetWorldContexts()) {
+      if (Context.WorldType == EWorldType::PIE ||
+          Context.WorldType == EWorldType::Game) {
+        return true;
+      }
+    }
+  }
+#endif
+  return false;
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     const FString &RequestId, const FString &Action,
@@ -38,6 +57,20 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleInputAction: %s"),
          *SubAction);
+
+  // Block asset-modifying operations during PIE to prevent D3D12 swapchain crashes
+  if (IsInputPIEActive() &&
+      (SubAction == TEXT("create_input_action") ||
+       SubAction == TEXT("create_input_mapping_context") ||
+       SubAction == TEXT("add_mapping") ||
+       SubAction == TEXT("remove_mapping"))) {
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("Input asset operations cannot be performed during Play In Editor "
+             "(PIE). Please stop the play session first."),
+        TEXT("PIE_ACTIVE"));
+    return true;
+  }
 
   if (SubAction == TEXT("create_input_action")) {
     FString Name;

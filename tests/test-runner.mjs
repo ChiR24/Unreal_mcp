@@ -627,6 +627,7 @@ export async function runToolTests(toolName, testCases) {
         }
 
         // Execute afterHook if present (e.g., stop PIE after tests that started it)
+        // This runs AFTER success - also needs to run after failure (see catch block)
         if (testCase.afterHook) {
           try {
             await callToolOnce(testCase.afterHook, testCase.afterHook.timeout ?? 10000);
@@ -656,6 +657,14 @@ export async function runToolTests(toolName, testCases) {
             durationMs,
             detail: errorMessage
           });
+          // Still run afterHook even for expected timeouts
+          if (testCase.afterHook) {
+            try {
+              await callToolOnce(testCase.afterHook, testCase.afterHook.timeout ?? 10000);
+            } catch (hookErr) {
+              console.log(`[HOOK] afterHook failed: ${hookErr.message || hookErr}`);
+            }
+          }
           continue;
         }
 
@@ -668,7 +677,28 @@ export async function runToolTests(toolName, testCases) {
           durationMs,
           detail: errorMessage
         });
+
+        // CRITICAL: Execute afterHook even when test fails to ensure cleanup (e.g., stop PIE)
+        if (testCase.afterHook) {
+          try {
+            await callToolOnce(testCase.afterHook, testCase.afterHook.timeout ?? 10000);
+          } catch (hookErr) {
+            console.log(`[HOOK] afterHook for failed test failed: ${hookErr.message || hookErr}`);
+          }
+        }
       }
+    }
+
+    // Global cleanup: Ensure PIE is stopped after all tests complete
+    // This prevents PIE from staying active if a test failed/timed out mid-session
+    try {
+      console.log('[CLEANUP] Ensuring PIE is stopped...');
+      await callToolOnce({
+        name: 'control_editor',
+        arguments: { action: 'stop_pie' }
+      }, 10000).catch(() => { /* ignore if not playing */ });
+    } catch (cleanupErr) {
+      // Ignore - PIE might not be running
     }
 
     const resultsPath = await persistResults(toolName, results);

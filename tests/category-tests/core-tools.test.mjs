@@ -629,8 +629,21 @@ const controlActorTests = [
 // ============================================================================
 const controlEditorTests = [
   // === 1. play ===
-  { scenario: 'Editor: play PIE', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success|already playing' },
-  { scenario: 'Editor: play default', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success|already playing' },
+  // NOTE: PIE tests use afterHook to ensure cleanup even if the test fails
+  { 
+    scenario: 'Editor: play PIE', 
+    toolName: 'control_editor', 
+    arguments: { action: 'play' }, 
+    expected: 'success|already playing',
+    afterHook: { name: 'control_editor', arguments: { action: 'stop_pie' }, timeout: 10000 }
+  },
+  { 
+    scenario: 'Editor: play default', 
+    toolName: 'control_editor', 
+    arguments: { action: 'play' }, 
+    expected: 'success|already playing',
+    afterHook: { name: 'control_editor', arguments: { action: 'stop_pie' }, timeout: 10000 }
+  },
 
   // === 2. stop ===
   { scenario: 'Editor: stop PIE', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success|not playing' },
