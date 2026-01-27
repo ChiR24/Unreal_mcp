@@ -30,9 +30,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintFunctionAction(
       ActionMatchesPattern(TEXT("add_event")) ||
       ActionMatchesPattern(TEXT("blueprint_add_custom_event"))) {
     
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
 #if WITH_EDITOR
-    UBlueprint *BP = LoadBlueprintAsset(Path);
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *BP = LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (!BP) return false;
 
     FString CustomName;
@@ -61,8 +63,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintFunctionAction(
   // Remove event
   if (ActionMatchesPattern(TEXT("blueprint_remove_event"))) {
 #if WITH_EDITOR
-    FString Path = ResolveBlueprintRequestedPath();
-    UBlueprint *BP = LoadBlueprintAsset(Path);
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *BP = LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     // ... logic for removal ...
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Event removed"), nullptr);
     return true;

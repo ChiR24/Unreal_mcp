@@ -66,14 +66,14 @@ public:
             default: VerbosityString = TEXT("Log"); break;
         }
 
-        FString Message = FString(V);
+        FString LogMessage = FString(V);
         FString CategoryString = Category.ToString();
 
         // Dispatch to game thread to ensure safe socket sending if not already there
         // Actually, SendRawMessage might be thread safe, but let's be safe.
         // Copy data for lambda capture
         const FString PayloadJson = FString::Printf(TEXT("{\"event\":\"log\",\"category\":\"%s\",\"verbosity\":\"%s\",\"message\":\"%s\"}"), 
-            *CategoryString, *VerbosityString, *Message.ReplaceCharWithEscapedChar());
+            *CategoryString, *VerbosityString, *LogMessage.ReplaceCharWithEscapedChar());
 
         // Use a weak pointer to the subsystem to avoid crashing if it's destroyed
         TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(Subsystem);

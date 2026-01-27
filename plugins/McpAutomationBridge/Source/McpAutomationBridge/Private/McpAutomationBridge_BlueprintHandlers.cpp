@@ -1013,7 +1013,7 @@ FMcpAutomationBridge_CollectEventPins(UK2Node *Node,
   }
 }
 
-static TArray<TSharedPtr<FJsonValue>>
+TArray<TSharedPtr<FJsonValue>>
 FMcpAutomationBridge_CollectBlueprintEvents(UBlueprint *Blueprint) {
   TArray<TSharedPtr<FJsonValue>> Out;
   if (!Blueprint) {
@@ -2402,7 +2402,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         TEXT("Entered blueprint_set_variable_metadata handler: RequestId=%s"),
         *RequestId);
 #if WITH_EDITOR
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -2569,7 +2569,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("add_construction_script")) ||
       AlphaNumLower.Contains(TEXT("blueprintaddconstructionscript")) ||
       AlphaNumLower.Contains(TEXT("addconstructionscript"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -2666,7 +2666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_variable handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -2937,7 +2937,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_set_default handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3066,7 +3066,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_remove_variable handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3151,7 +3151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_rename_variable handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3247,7 +3247,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_event handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3565,7 +3565,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("remove_event")) ||
       AlphaNumLower.Contains(TEXT("blueprintremoveevent")) ||
       AlphaNumLower.Contains(TEXT("removeevent"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3693,7 +3693,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_function handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -3992,7 +3992,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_set_default handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -4209,7 +4209,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("compile")) ||
       AlphaNumLower.Contains(TEXT("blueprintcompile")) ||
       AlphaNumLower.Contains(TEXT("compile"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -4284,7 +4284,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   if (ActionMatchesPattern(TEXT("blueprint_exists")) ||
       ActionMatchesPattern(TEXT("exists")) ||
       AlphaNumLower.Contains(TEXT("blueprintexists"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -4340,7 +4340,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       !Lower.Contains(TEXT("scs"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_get handler: RequestId=%s"), *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("blueprint_get requires a blueprint path."),
@@ -4473,7 +4473,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_node handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -4814,7 +4814,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("connect_pins")) ||
       AlphaNumLower.Contains(TEXT("blueprintconnectpins"))) {
 #if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -4999,7 +4999,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   if (ActionMatchesPattern(TEXT("blueprint_add_macro")) ||
       ActionMatchesPattern(TEXT("add_macro")) ||
       AlphaNumLower.Contains(TEXT("blueprintaddmacro"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5073,7 +5073,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   if (ActionMatchesPattern(TEXT("blueprint_set_replication_settings")) ||
       ActionMatchesPattern(TEXT("set_replication_settings")) ||
       AlphaNumLower.Contains(TEXT("blueprintsetreplicationsettings"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5142,7 +5142,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   if (ActionMatchesPattern(TEXT("blueprint_bind_event")) ||
       ActionMatchesPattern(TEXT("bind_event")) ||
       AlphaNumLower.Contains(TEXT("blueprintbindevent"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5195,7 +5195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   if (ActionMatchesPattern(TEXT("blueprint_implement_interface")) ||
       ActionMatchesPattern(TEXT("implement_interface")) ||
       AlphaNumLower.Contains(TEXT("blueprintimplementinterface"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5276,7 +5276,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("add_event_dispatcher")) ||
       ActionMatchesPattern(TEXT("blueprint_add_event_dispatcher")) ||
       AlphaNumLower.Contains(TEXT("addeventdispatcher"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5346,7 +5346,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("create_widget_binding")) ||
       ActionMatchesPattern(TEXT("blueprint_create_widget_binding")) ||
       AlphaNumLower.Contains(TEXT("createwidgetbinding"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5406,7 +5406,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("bp_create")) ||
       AlphaNumLower.Contains(TEXT("ensureexists")) ||
       AlphaNumLower.Contains(TEXT("createblueprint"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -5509,7 +5509,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       ActionMatchesPattern(TEXT("probe_handle")) ||
       ActionMatchesPattern(TEXT("blueprint_probe_handle")) ||
       AlphaNumLower.Contains(TEXT("probehandle"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,

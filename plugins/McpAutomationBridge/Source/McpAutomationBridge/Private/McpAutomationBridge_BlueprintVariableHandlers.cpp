@@ -29,7 +29,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintVariableAction(
       AlphaNumLower.Contains(TEXT("blueprintaddvariable")) ||
       AlphaNumLower.Contains(TEXT("addvariable"))) {
     
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     if (Path.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprint_add_variable requires a blueprint path."), nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
@@ -112,13 +112,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintVariableAction(
   // 2. Set Default Value
   if (ActionMatchesPattern(TEXT("blueprint_set_default")) ||
       AlphaNumLower.Contains(TEXT("blueprintsetdefault"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     FString PropertyName;
     LocalPayload->TryGetStringField(TEXT("propertyName"), PropertyName);
     const TSharedPtr<FJsonValue> ValueField = LocalPayload->TryGetField(TEXT("value"));
 
 #if WITH_EDITOR
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path);
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (Blueprint && Blueprint->GeneratedClass) {
       UObject *CDO = Blueprint->GeneratedClass->GetDefaultObject();
       FProperty *Property = CDO->GetClass()->FindPropertyByName(*PropertyName);
@@ -141,13 +143,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintVariableAction(
   // 3. Rename Variable
   if (ActionMatchesPattern(TEXT("blueprint_rename_variable")) ||
       AlphaNumLower.Contains(TEXT("blueprintrenamevariable"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     FString OldName, NewName;
     LocalPayload->TryGetStringField(TEXT("oldName"), OldName);
     LocalPayload->TryGetStringField(TEXT("newName"), NewName);
 
 #if WITH_EDITOR
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path);
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (Blueprint) {
       FBlueprintEditorUtils::RenameMemberVariable(Blueprint, FName(*OldName), FName(*NewName));
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -162,12 +166,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintVariableAction(
   // 4. Remove Variable
   if (ActionMatchesPattern(TEXT("blueprint_remove_variable")) ||
       AlphaNumLower.Contains(TEXT("blueprintremovevariable"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = ResolveBlueprintRequestedPath(LocalPayload);
     FString VarName;
     LocalPayload->TryGetStringField(TEXT("variableName"), VarName);
 
 #if WITH_EDITOR
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path);
+    FString LocalNormalized;
+    FString LocalLoadError;
+    UBlueprint *Blueprint = LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (Blueprint) {
       FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*VarName));
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);

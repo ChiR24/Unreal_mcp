@@ -2149,14 +2149,6 @@ static bool HandleGetLevelStructureInfo(
         }
     }
 
-                    LayerJson->SetStringField(TEXT("parentLayer"), ParentLayer->GetName());
-                }
-                
-                HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
-            }
-        }
-    }
-
     // Also check for World Partition HLOD actors in the world
     if (HlodLayersArray.Num() == 0 && World->GetWorldPartition())
     {
@@ -2170,11 +2162,11 @@ static bool HandleGetLevelStructureInfo(
                 if (!FoundLayers.Contains(LayerName))
                 {
                     FoundLayers.Add(LayerName);
-                    TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
-                    LayerJson->SetStringField(TEXT("name"), LayerName);
-                    LayerJson->SetStringField(TEXT("type"), TEXT("world_partition_hlod_actor"));
-                    LayerJson->SetNumberField(TEXT("lodLevel"), HLODActor->GetLODLevel());
-                    HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+                    TSharedPtr<FJsonObject> SubLayerJson = MakeShared<FJsonObject>();
+                    SubLayerJson->SetStringField(TEXT("name"), LayerName);
+                    SubLayerJson->SetStringField(TEXT("type"), TEXT("world_partition_hlod_actor"));
+                    SubLayerJson->SetNumberField(TEXT("lodLevel"), HLODActor->GetLODLevel());
+                    HlodLayersArray.Add(MakeShareable(new FJsonValueObject(SubLayerJson)));
                 }
             }
         }
@@ -2197,12 +2189,12 @@ static bool HandleGetLevelStructureInfo(
         // Create layer entries for each LOD level found
         for (const auto& Pair : LodLevelCounts)
         {
-            TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
-            LayerJson->SetStringField(TEXT("name"), FString::Printf(TEXT("LOD_Level_%d"), Pair.Key));
-            LayerJson->SetStringField(TEXT("type"), TEXT("legacy_hlod"));
-            LayerJson->SetNumberField(TEXT("lodLevel"), Pair.Key);
-            LayerJson->SetNumberField(TEXT("actorCount"), Pair.Value);
-            HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+            TSharedPtr<FJsonObject> SubLayerJson = MakeShared<FJsonObject>();
+            SubLayerJson->SetStringField(TEXT("name"), FString::Printf(TEXT("LOD_Level_%d"), Pair.Key));
+            SubLayerJson->SetStringField(TEXT("type"), TEXT("legacy_hlod"));
+            SubLayerJson->SetNumberField(TEXT("lodLevel"), Pair.Key);
+            SubLayerJson->SetNumberField(TEXT("actorCount"), Pair.Value);
+            HlodLayersArray.Add(MakeShareable(new FJsonValueObject(SubLayerJson)));
         }
     }
 
@@ -2216,9 +2208,8 @@ static bool HandleGetLevelStructureInfo(
     return true;
 }
 
-// ============================================================================
-// Streaming Level Status & Async Handlers (4 actions)
-// ============================================================================
+// Forward declarations for local handlers to ensure visibility within unity blobs
+static bool HandleGetStreamingLevelsStatus(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 static bool HandleGetStreamingLevelsStatus(
     UMcpAutomationBridgeSubsystem* Subsystem,

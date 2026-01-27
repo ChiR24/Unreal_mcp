@@ -13,48 +13,29 @@ public class McpAutomationBridge : ModuleRules
     public McpAutomationBridge(ReadOnlyTargetRules Target) : base(Target)
     {
         // ============================================================================
-        // BUILD CONFIGURATION FOR 50+ HANDLER FILES
+        // BUILD CONFIGURATION FOR 80+ HANDLER FILES
         // ============================================================================
-        // Using NoPCHs to avoid "Failed to create virtual memory for PCH" errors
-        // (C3859/C1076) that occur with large modules on systems with limited memory.
-        // 
-        // This trades slightly longer compile times for reliable builds without
-        // requiring system paging file modifications.
+        // Unity Build ENABLED for fast compilation (combines .cpp files = fewer compiler processes).
+        // Memory tuning via NumIncludedBytesPerUnityCPP controls chunk size to prevent C1060 heap errors.
+        // PCH disabled to avoid C3859 virtual memory errors on systems with limited paging.
         // ============================================================================
         
-        // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
-        // This is the most reliable workaround for C3859/C1076 errors
-        bool enablePch = GetBoolEnvironmentVariable("MCP_ENABLE_PCH", true);
-        if (enablePch)
-        {
-            PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-            PrivatePCHHeaderFile = "Private/McpAutomationBridgePCH.h";
-        }
-        else
-        {
-            PCHUsage = PCHUsageMode.NoPCHs;
-        }
+        // PCH disabled to avoid virtual memory errors (C3859).
+        // This is acceptable - Unity Build provides the primary compilation speedup.
+        PCHUsage = PCHUsageMode.NoPCHs;
         
-        // Unity builds enabled for faster compilation.
+        // Unity Build ENABLED for fast compilation.
+        // This combines multiple .cpp files into fewer translation units = fewer compiler processes = less RAM.
         bUseUnity = true;
-        MinSourceFilesForUnityBuildOverride = 20;
         
-        // Disable adaptive unity to ensure strict non-unity compilation
-        TrySetBoolMember(this, "bUseAdaptiveUnityBuild", false);
-        TrySetBoolMember(this, "bForceUnityBuild", false);
-        TrySetBoolMember(this, "bMergeUnityFiles", false);
-        TrySetBoolMember(this, "bFasterWithoutUnity", true);
-
-
-        bool enableAdaptiveUnityTarget = GetBoolEnvironmentVariable("MCP_ENABLE_ADAPTIVE_UNITY", true);
-        if (!enableAdaptiveUnityTarget)
-        {
-            TrySetBoolMember(Target, "bUseAdaptiveUnityBuild", false);
-            TrySetBoolMember(Target, "bUseUnityBuild", true);
-            TrySetBoolMember(Target, "bAdaptiveUnityDisablesPCH", false);
-            TrySetBoolMember(Target, "bAdaptiveUnityDisablesOptimizations", false);
-            TrySetBoolMember(Target, "bAdaptiveUnityCreatesDedicatedPCH", false);
-        }
+        // Control memory usage by limiting bytes per unity chunk.
+        // Smaller chunks = more translation units but less memory per compiler process.
+        // 1.5MB is conservative for 80+ file modules on systems with 16GB RAM.
+        // NOTE: These properties were removed in UE 5.7, use reflection for backward compatibility.
+        TrySetIntMember(this, "NumIncludedBytesPerUnityCPP", 1572864);  // 1.5MB (default is ~384KB, max reasonable ~2MB)
+        
+        // Ensure files are combined efficiently (2 = combine when 2+ files exist).
+        TrySetIntMember(this, "MinSourceFilesForUnityBuild", 2);
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
@@ -713,6 +694,40 @@ public class McpAutomationBridge : ModuleRules
             }
         }
         catch { /* Ignore reflection failures */ }
+    }
+
+    /// <summary>
+    /// Attempts to set an integer/uint property or field via reflection.
+    /// Used for UBT properties that may not exist in all UE versions (e.g., NumIncludedBytesPerUnityCPP removed in UE 5.7).
+    /// </summary>
+    private static void TrySetIntMember(object target, string memberName, long value)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(memberName)) return;
+
+        try
+        {
+            Type targetType = target.GetType();
+            PropertyInfo prop = targetType.GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null)
+            {
+                MethodInfo setter = prop.GetSetMethod(true);
+                if (setter != null)
+                {
+                    // Convert to appropriate type (int, uint, long, etc.)
+                    object convertedValue = Convert.ChangeType(value, prop.PropertyType);
+                    setter.Invoke(target, new object[] { convertedValue });
+                    return;
+                }
+            }
+
+            FieldInfo field = targetType.GetField(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field != null)
+            {
+                object convertedValue = Convert.ChangeType(value, field.FieldType);
+                field.SetValue(target, convertedValue);
+            }
+        }
+        catch { /* Ignore reflection failures - property doesn't exist in this UE version */ }
     }
 
     /// <summary>

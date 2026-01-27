@@ -87,20 +87,20 @@
 // ============================================================================
 namespace
 {
-    TSharedPtr<FJsonObject> MakeLiveLinkSuccess(const FString& Message)
+    TSharedPtr<FJsonObject> MakeLiveLinkSuccess(const FString& InMessage)
     {
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("message"), Message);
+        Result->SetStringField(TEXT("message"), InMessage);
         return Result;
     }
 
-    TSharedPtr<FJsonObject> MakeLiveLinkError(const FString& Message, const FString& ErrorCode = TEXT("ERROR"))
+    TSharedPtr<FJsonObject> MakeLiveLinkError(const FString& InMessage, const FString& ErrorCode = TEXT("ERROR"))
     {
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(TEXT("error"), ErrorCode);
-        Result->SetStringField(TEXT("message"), Message);
+        Result->SetStringField(TEXT("message"), InMessage);
         return Result;
     }
 

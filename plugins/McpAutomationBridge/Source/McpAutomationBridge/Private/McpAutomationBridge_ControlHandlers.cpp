@@ -5402,26 +5402,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
   });
 
   return true;
-}
-
-
-  const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
-
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), bOpened);
-  Resp->SetStringField(TEXT("assetPath"), AssetPath);
-
-  if (bOpened) {
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
-                           FString());
-  } else {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to open asset editor"), Resp,
-                           TEXT("OPEN_FAILED"));
-  }
-  return true;
 #else
-  return false;
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Editor required for OpenAsset"), nullptr,
+                         TEXT("EDITOR_REQUIRED"));
+  return true;
 #endif
 }
 
