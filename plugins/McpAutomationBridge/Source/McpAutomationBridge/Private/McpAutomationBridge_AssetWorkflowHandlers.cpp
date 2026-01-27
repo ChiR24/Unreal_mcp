@@ -1079,9 +1079,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  // GetMetaData returns the FMetaData object that is owned by this package.
-  FMetaData &Meta = Package->GetMetaData();
-
+  // GetMetaData API changed in UE 5.5: returns UMetaData* instead of FMetaData&
   const TSharedPtr<FJsonObject> &MetadataObj = *MetadataObjPtr;
   int32 UpdatedCount = 0;
 
@@ -1116,7 +1114,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     }
 
     if (!ValueString.IsEmpty()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+      UMetaData *Meta = Package->GetMetaData();
+      if (Meta) Meta->SetValue(Asset, *Key, *ValueString);
+#else
+      FMetaData &Meta = Package->GetMetaData();
       Meta.SetValue(Asset, *Key, *ValueString);
+#endif
       ++UpdatedCount;
     }
   }
@@ -2845,14 +2849,22 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   Resp->SetObjectField(TEXT("tags"), TagsObj);
 
   // 2. Package Metadata information
+  // GetMetaData API changed in UE 5.5: returns UMetaData* instead of FMetaData&
   UPackage *Package = Asset->GetOutermost();
   if (Package) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+    UMetaData *Meta = Package->GetMetaData();
+    bool bHasMeta = Meta && Meta->GetMapForObject(Asset) != nullptr;
+    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 
+    const TMap<FName, FString> *ObjectMeta = Meta ? Meta->GetMapForObject(Asset) : nullptr;
+#else
     FMetaData &Meta = Package->GetMetaData();
     bool bHasMeta = Meta.GetMapForObject(Asset) != nullptr;
     Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 
     const TMap<FName, FString> *ObjectMeta = Meta.GetMapForObject(Asset);
+#endif
     if (ObjectMeta) {
       TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
       for (const auto &Entry : *ObjectMeta) {

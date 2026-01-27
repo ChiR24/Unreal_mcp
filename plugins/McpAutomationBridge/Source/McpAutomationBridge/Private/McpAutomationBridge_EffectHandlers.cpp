@@ -20,6 +20,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "NiagaraSystemFactoryNew.h"
+#include "AssetToolsModule.h"
 #endif
 #if __has_include("Engine/PointLight.h")
 #include "Engine/PointLight.h"
@@ -306,30 +307,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         return true;
       }
 
-      // Basic asset creation logic (requires UNiagaraSystemFactoryNew or
-      // similar) Since we are inside EffectHandlers, usually we spawn things.
-      // creation might belong in AssetHandlers But per plan, we implement it
-      // here to unblock.
-
-      UPackage *Package = CreatePackage(*Path);
-      if (!Package) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create package"),
-                            TEXT("CREATE_FAILED"));
-        return true;
-      }
-
-      UNiagaraSystemFactoryNew *Factory = NewObject<UNiagaraSystemFactoryNew>();
-      if (!Factory) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create factory"),
-                            TEXT("FACTORY_ERROR"));
-        return true;
-      }
-      UNiagaraSystem *NewSystem =
-          Cast<UNiagaraSystem>(Factory->FactoryCreateNew(
-              UNiagaraSystem::StaticClass(), Package, *Name,
-              RF_Public | RF_Standalone, nullptr, nullptr));
+      // Use AssetTools for cross-version compatibility (UE 5.5+ factory linking changes)
+      // Path is the folder, Name is the asset name (same pattern as sequence_create)
+      FAssetToolsModule &AssetToolsModule =
+          FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+      UNiagaraSystem *NewSystem = Cast<UNiagaraSystem>(
+          AssetToolsModule.Get().CreateAsset(Name, Path, UNiagaraSystem::StaticClass(), nullptr));
 
       if (NewSystem) {
         McpSafeAssetSave(NewSystem);
@@ -342,7 +325,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("assetPath"), AssetPath);
-        Resp->SetStringField(TEXT("packageName"), Package->GetPathName());
+        Resp->SetStringField(TEXT("packageName"), NewSystem->GetOutermost()->GetPathName());
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara System created"), Resp);
