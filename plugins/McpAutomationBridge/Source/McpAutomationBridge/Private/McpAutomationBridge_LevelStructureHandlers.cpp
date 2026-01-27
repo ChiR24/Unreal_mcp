@@ -2091,55 +2091,64 @@ static bool HandleGetLevelStructureInfo(
     // Check for World Partition HLOD layers
     if (World->GetWorldPartition())
     {
-        // Iterate through all UHLODLayer assets that are relevant to this world
-        for (TObjectIterator<UHLODLayer> It; It; ++It) // NOLINT
+        // UE 5.7+ compatible: Use Asset Registry to find HLOD Layer assets
+        // This avoids global object iteration (TObjectIterator) which is unsafe in 5.7
+        IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+        TArray<FAssetData> AssetData;
+        
+        // Use recursive search for all UHLODLayer classes
+        AssetRegistry.GetAssetsByClass(UHLODLayer::StaticClass()->GetClassPathName(), AssetData, true);
+
+        for (const FAssetData& Data : AssetData)
         {
-            UHLODLayer* Layer = *It;
-            if (Layer && Layer->GetOuter() && Layer->GetOuter()->GetWorld() == World)
+            if (UHLODLayer* Layer = Cast<UHLODLayer>(Data.GetAsset()))
             {
-                TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
-                LayerJson->SetStringField(TEXT("name"), Layer->GetName());
-                LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
-                // UE 5.7+: GetCellSize, GetLoadingRange, IsSpatiallyLoaded are deprecated
-                // These streaming grid properties are now in the partition's settings
-#if MCP_UE57_PLUS
-                auto GetHLODProperty = [](UObject* Obj, FName PropName, auto DefaultValue) {
-                    if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
-                        if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
-                            return (decltype(DefaultValue))BoolProp->GetPropertyValue_InContainer(Obj);
-                        } else if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
-                            return (decltype(DefaultValue))NumericProp->GetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj));
+                // Only include layers belonging to the current world context
+                if (Layer && Layer->GetOuter() && Layer->GetOuter()->GetWorld() == World)
+                {
+                    TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+                    LayerJson->SetStringField(TEXT("name"), Layer->GetName());
+                    LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
+                    
+                    auto GetHLODProperty = [](UObject* Obj, FName PropName, auto DefaultValue) {
+                        if (FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName)) {
+                            if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Prop)) {
+                                return (decltype(DefaultValue))BoolProp->GetPropertyValue_InContainer(Obj);
+                            } else if (FNumericProperty* NumericProp = CastField<FNumericProperty>(Prop)) {
+                                return (decltype(DefaultValue))NumericProp->GetFloatingPointPropertyValue(Prop->ContainerPtrToValuePtr<void>(Obj));
+                            }
                         }
-                    }
-                    return DefaultValue;
-                };
+                        return DefaultValue;
+                    };
 
-                LayerJson->SetNumberField(TEXT("cellSize"), GetHLODProperty(Layer, TEXT("CellSize"), 0.0));
-                LayerJson->SetNumberField(TEXT("loadingRange"), GetHLODProperty(Layer, TEXT("LoadingRange"), 0.0));
-                LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), GetHLODProperty(Layer, TEXT("bIsSpatiallyLoaded"), false));
+#if MCP_UE_5_7_OR_LATER
+                    LayerJson->SetNumberField(TEXT("cellSize"), GetHLODProperty(Layer, TEXT("CellSize"), 0.0));
+                    LayerJson->SetNumberField(TEXT("loadingRange"), GetHLODProperty(Layer, TEXT("LoadingRange"), 0.0));
+                    LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), GetHLODProperty(Layer, TEXT("bIsSpatiallyLoaded"), false));
 #else
-                LayerJson->SetNumberField(TEXT("cellSize"), Layer->GetCellSize());
-                LayerJson->SetNumberField(TEXT("loadingRange"), Layer->GetLoadingRange());
-                LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), Layer->IsSpatiallyLoaded());
+                    LayerJson->SetNumberField(TEXT("cellSize"), Layer->GetCellSize());
+                    LayerJson->SetNumberField(TEXT("loadingRange"), Layer->GetLoadingRange());
+                    LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), Layer->IsSpatiallyLoaded());
 #endif
-
-                
-                // Get layer type as string
-                FString LayerTypeStr;
-                switch (Layer->GetLayerType())
-                {
-                    case EHLODLayerType::Instancing: LayerTypeStr = TEXT("Instancing"); break;
-                    case EHLODLayerType::MeshMerge: LayerTypeStr = TEXT("MeshMerge"); break;
-                    case EHLODLayerType::MeshSimplify: LayerTypeStr = TEXT("MeshSimplify"); break;
-                    case EHLODLayerType::MeshApproximate: LayerTypeStr = TEXT("MeshApproximate"); break;
-                    case EHLODLayerType::Custom: LayerTypeStr = TEXT("Custom"); break;
-                    default: LayerTypeStr = TEXT("Unknown"); break;
+                    
+                    // Get layer type as string
+                    FString LayerTypeStr;
+                    switch (Layer->GetLayerType())
+                    {
+                        case EHLODLayerType::Instancing: LayerTypeStr = TEXT("Instancing"); break;
+                        case EHLODLayerType::MeshMerge: LayerTypeStr = TEXT("MeshMerge"); break;
+                        case EHLODLayerType::MeshSimplify: LayerTypeStr = TEXT("MeshSimplify"); break;
+                        case EHLODLayerType::MeshApproximate: LayerTypeStr = TEXT("MeshApproximate"); break;
+                        default: LayerTypeStr = TEXT("Unknown"); break;
+                    }
+                    LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
+                    
+                    HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
                 }
-                LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
-                
-                // Get parent layer if available
-                if (UHLODLayer* ParentLayer = Layer->GetParentLayer())
-                {
+            }
+        }
+    }
+
                     LayerJson->SetStringField(TEXT("parentLayer"), ParentLayer->GetName());
                 }
                 

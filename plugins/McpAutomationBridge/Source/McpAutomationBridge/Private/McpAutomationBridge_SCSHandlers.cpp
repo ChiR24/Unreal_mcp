@@ -22,9 +22,9 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Materials/MaterialInterface.h"
-#include "UObject/UObjectIterator.h"
 
 #endif
+
 
 #if !WITH_EDITOR
 static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
@@ -50,8 +50,9 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   FKismetEditorUtilities::CompileBlueprint(Blueprint);
   bOutCompiled = true;
-  bOutSaved = SaveLoadedAssetThrottled(Blueprint);
+  bOutSaved = McpSafeAssetSave(Blueprint);
   if (!bOutSaved) {
+
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("SaveLoadedAssetThrottled reported failure for '%s' after SCS "
                 "change"),
@@ -293,16 +294,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   // Explicitly set the variable name to ensure it's properly registered
   NewNode->SetVariableName(FName(*ComponentName));
 
-  // Set parent or add as root
-  if (ParentNode) {
-    ParentNode->AddChildNode(NewNode);
-  } else {
-    SCS->AddNode(NewNode);
-  }
-
-  // Apply mesh if specified (Feature #1: Mesh Assignment)
-  // Uses: SetStaticMesh - Engine/StaticMeshComponent.cpp:2265
-  //       SetSkeletalMesh - Engine/SkeletalMeshComponent.cpp:3322
+  // Apply mesh and material BEFORE adding to SCS (UE 5.7 safe pattern)
+  // This ensures the component template is fully configured before it is
+  // officially registered with the Blueprint hierarchy.
   bool bMeshApplied = false;
   if (!MeshPath.IsEmpty() && NewNode->ComponentTemplate) {
     if (UStaticMeshComponent *SMC =
@@ -322,8 +316,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     }
   }
 
-  // Apply material if specified (Feature #2: Material Assignment)
-  // Uses: SetMaterial - Engine/PrimitiveComponent.cpp:2477
   bool bMaterialApplied = false;
   if (!MaterialPath.IsEmpty() && NewNode->ComponentTemplate) {
     if (UPrimitiveComponent *PC =
@@ -337,7 +329,15 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     }
   }
 
+  // Set parent or add as root (Finalizes ownership and triggers SCS updates)
+  if (ParentNode) {
+    ParentNode->AddChildNode(NewNode);
+  } else {
+    SCS->AddNode(NewNode);
+  }
+
   // Finalize blueprint change (compile/save)
+
   bool bCompiled = false;
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);

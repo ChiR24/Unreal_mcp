@@ -489,12 +489,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       Payload->TryGetBoolField(TEXT("value"), bVal);
       Material->DitheredLODTransition = bVal;
       bSuccess = true;
-    } else if (PropertyName == TEXT("AllowNegativeEmissiveColor")) {
+    }
+#if !MCP_UE_5_7_OR_LATER
+    else if (PropertyName == TEXT("AllowNegativeEmissiveColor")) {
       bool bVal = false;
       Payload->TryGetBoolField(TEXT("value"), bVal);
       Material->AllowNegativeEmissiveColor = bVal;
       bSuccess = true;
-    } else if (PropertyName == TEXT("bUseMaterialAttributes")) {
+    }
+#endif
+    else if (PropertyName == TEXT("bUseMaterialAttributes")) {
       bool bVal = false;
       Payload->TryGetBoolField(TEXT("value"), bVal);
       Material->bUseMaterialAttributes = bVal;
@@ -514,8 +518,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       else if (ValueStr == TEXT("VolumetricDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricDirectional;
       else if (ValueStr == TEXT("VolumetricPerVertexNonDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricPerVertexNonDirectional;
       else if (ValueStr == TEXT("VolumetricPerVertexDirectional")) Material->TranslucencyLightingMode = TLM_VolumetricPerVertexDirectional;
+#if MCP_UE_5_7_OR_LATER
+      else if (ValueStr == TEXT("SurfacePointNormal")) Material->TranslucencyLightingMode = TLM_Surface;
+      else if (ValueStr == TEXT("SurfacePerPixelLighting")) Material->TranslucencyLightingMode = TLM_Surface;
+#else
       else if (ValueStr == TEXT("SurfacePointNormal")) Material->TranslucencyLightingMode = TLM_SurfacePointNormal;
       else if (ValueStr == TEXT("SurfacePerPixelLighting")) Material->TranslucencyLightingMode = TLM_SurfacePerPixelLighting;
+#endif
       bSuccess = true;
     }
 

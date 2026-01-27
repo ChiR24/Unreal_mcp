@@ -1765,11 +1765,20 @@ static bool HandleApplyDisplacement(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
+#if !MCP_UE_5_7_OR_LATER
     FGeometryScriptDisplacementMapOptions Options;
     Options.Magnitude = Magnitude;
 
     UGeometryScriptLibrary_MeshDeformFunctions::ApplyDisplacementMap(
         Mesh, Texture, Options, FGeometryScriptMeshSelection(), nullptr);
+#else
+    // UE 5.7+: ApplyDisplacementMap was removed or renamed to ApplyDisplaceFromTextureMap
+    FGeometryScriptDisplaceFromTextureOptions Options;
+    Options.Magnitude = Magnitude;
+    
+    UGeometryScriptLibrary_MeshDeformFunctions::ApplyDisplaceFromTextureMap(
+        Mesh, Texture, FGeometryScriptMeshSelection(), Options, 0, nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -1980,8 +1989,13 @@ static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& 
     int32 NumFilledHoles = 0;
     int32 NumFailedHoleFills = 0;
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
     UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(
         Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+#else
+    UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(
+        Mesh, FillOptions, nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -2646,14 +2660,23 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Poke faces - offset vertices inward/outward along face normals
     // UE 5.7: FGeometryScriptMeshOffsetFacesOptions uses Distance not OffsetDistance
     FGeometryScriptMeshOffsetFacesOptions PokeOptions;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
     PokeOptions.Distance = PokeOffset;
+#else
+    PokeOptions.OffsetDistance = PokeOffset;
+#endif
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshOffsetFaces(
         Mesh, PokeOptions, FGeometryScriptMeshSelection(), nullptr);
 
     // Subdivide to create poked effect (each face gets a center vertex)
     // UE 5.7: ApplyPNTessellation now takes TessellationLevel as separate parameter
     FGeometryScriptPNTessellateOptions TessOptions;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
     UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, 1, nullptr);
+#else
+    TessOptions.TessellationLevel = 1;
+    UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -2758,6 +2781,7 @@ static bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     // UE 5.7: UV projection option structs removed. Use new function signatures directly.
     // Different projection types now have different function signatures.
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
     if (ProjectionType == TEXT("box") || ProjectionType == TEXT("cube"))
     {
         // UE 5.7: SetMeshUVsFromBoxProjection(Mesh, UVSetIndex, BoxTransform, Selection, MinIslandTriCount, Debug)
@@ -2776,6 +2800,26 @@ static bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& 
         UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromCylinderProjection(
             Mesh, UVChannel, FTransform::Identity, FGeometryScriptMeshSelection(), 45.0f, nullptr);
     }
+#else
+    if (ProjectionType == TEXT("box") || ProjectionType == TEXT("cube"))
+    {
+        FGeometryScriptBoxProjectionOptions Options;
+        UGeometryScriptLibrary_MeshUVFunctions::ApplyBoxProjectionToMesh(
+            Mesh, Options, FGeometryScriptMeshSelection(), nullptr);
+    }
+    else if (ProjectionType == TEXT("planar"))
+    {
+        FGeometryScriptPlanarProjectionOptions Options;
+        UGeometryScriptLibrary_MeshUVFunctions::ApplyPlanarProjectionToMesh(
+            Mesh, Options, FGeometryScriptMeshSelection(), nullptr);
+    }
+    else if (ProjectionType == TEXT("cylindrical"))
+    {
+        FGeometryScriptCylindricalProjectionOptions Options;
+        UGeometryScriptLibrary_MeshUVFunctions::ApplyCylindricalProjectionToMesh(
+            Mesh, Options, FGeometryScriptMeshSelection(), nullptr);
+    }
+#endif
     else
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown projection type: %s. Use: box, planar, cylindrical"), *ProjectionType), TEXT("INVALID_ARGUMENT"));

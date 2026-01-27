@@ -581,27 +581,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
 
   SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open asset editor"), nullptr, TEXT("OPEN_FAILED"));
   return true;
-}
-
-      }
-    }
-  }
-
-  if (GEditor) {
-    if (UAssetEditorSubsystem *AssetEditorSS =
-            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
-      AssetEditorSS->OpenEditorForAsset(SeqObj);
-    }
-  }
-  Resp->SetStringField(TEXT("sequencePath"), SeqPath);
-  Resp->SetStringField(TEXT("message"), TEXT("Sequence opened (asset editor)"));
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleSequenceOpen: Opened via AssetEditorSS, sending response "
-              "for RequestID=%s"),
-         *RequestIdArg);
-  Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
-                                    TEXT("Sequence opened"), Resp, FString());
-  return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
                          TEXT("sequence_open requires editor build."), nullptr,

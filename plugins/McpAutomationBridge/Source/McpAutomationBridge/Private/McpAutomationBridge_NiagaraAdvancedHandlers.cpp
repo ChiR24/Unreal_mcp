@@ -218,20 +218,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAdvancedAction(
         }
         
         // If still not found and looks like a short name, iterate derived classes of UNiagaraDataInterface
-        // Filter CDOs to avoid iterating over default objects
+        // UE 5.7+ compatible: Use GetDerivedClasses helper (Asset-backed or optimized iteration)
         if (!DIClass)
         {
-            for (TObjectIterator<UClass> It; It; ++It)
+            TArray<UClass*> DIClasses;
+            GetDerivedClasses(UNiagaraDataInterface::StaticClass(), DIClasses);
+
+            for (UClass* Class : DIClasses)
             {
-                // Skip CDOs and abstract classes
-                if (It->HasAnyFlags(RF_ClassDefaultObject)) continue;
-                if (It->IsChildOf(UNiagaraDataInterface::StaticClass()) && !It->HasAnyClassFlags(CLASS_Abstract))
+                if (Class->GetName() == ClassName || Class->GetName() == ("U" + ClassName))
                 {
-                    if (It->GetName() == ClassName || It->GetName() == ("U" + ClassName))
-                    {
-                        DIClass = *It;
-                        break;
-                    }
+                    DIClass = Class;
+                    break;
                 }
             }
         }

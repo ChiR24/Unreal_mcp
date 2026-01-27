@@ -218,6 +218,7 @@ static FRotator ParseRotatorFromJson(const TSharedPtr<FJsonObject>& JsonObj, con
  */
 bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -269,6 +270,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
  */
 bool UMcpAutomationBridgeSubsystem::HandleListBones(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -337,6 +339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
  */
 bool UMcpAutomationBridgeSubsystem::HandleListSockets(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -408,6 +411,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListSockets(
  */
 bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -505,6 +509,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
  */
 bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -604,6 +609,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
  */
 bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -688,6 +694,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
  */
 bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -781,6 +788,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
  */
 bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -863,6 +871,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
  */
 bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -964,6 +973,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
         CapsuleElem.Radius = static_cast<float>(Radius);
         CapsuleElem.Length = static_cast<float>(Length);
         CapsuleElem.Center = Center;
+        CapsuleElem.Rotation = Rotation;
         BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
     }
 
@@ -995,6 +1005,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
  */
 bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1092,6 +1103,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
  */
 bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1203,6 +1215,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
  */
 bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1329,6 +1342,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
  */
 bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1398,6 +1412,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
  */
 bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1443,13 +1458,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
 
     McpSafeAssetSave(Mesh);
 
-    // Save if requested
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
-
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("boneIndex"), BoneIndex);
@@ -1464,12 +1472,88 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
 // BATCH 6: Morph Target Operations
 // ============================================================================
 
+    FString Error;
+    USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPath(SkeletalMeshPath, Error);
+    if (!SkeletalMesh)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return false;
+    }
+
+    // Determine output path
+    if (OutputPath.IsEmpty())
+    {
+        OutputPath = FPaths::GetPath(SkeletalMeshPath);
+        FString MeshName = FPaths::GetBaseFilename(SkeletalMeshPath);
+        OutputPath = FString::Printf(TEXT("%s/%s_PhysicsAsset"), *OutputPath, *MeshName);
+    }
+
+    // Create package and asset directly to avoid UI dialogs
+    FString PackagePath = FPaths::GetPath(OutputPath);
+    FString AssetName = FPaths::GetBaseFilename(OutputPath);
+    FString FullPackagePath = PackagePath / AssetName;
+    
+    UPackage* Package = CreatePackage(*FullPackagePath);
+    if (!Package)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+        return false;
+    }
+
+    UPhysicsAssetFactory* Factory = NewObject<UPhysicsAssetFactory>();
+    if (!Factory)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics asset factory"), TEXT("FACTORY_CREATION_FAILED"));
+        return false;
+    }
+    Factory->TargetSkeletalMesh = SkeletalMesh;
+
+    UObject* NewAsset = Factory->FactoryCreateNew(UPhysicsAsset::StaticClass(), Package,
+                                                   FName(*AssetName), RF_Public | RF_Standalone,
+                                                   nullptr, GWarn);
+    if (!NewAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics asset"), TEXT("CREATE_FAILED"));
+        return false;
+    }
+
+    UPhysicsAsset* PhysicsAsset = Cast<UPhysicsAsset>(NewAsset);
+    if (!PhysicsAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Created asset is not a physics asset"), TEXT("TYPE_MISMATCH"));
+        return false;
+    }
+
+    // Link to skeletal mesh
+    SkeletalMesh->SetPhysicsAsset(PhysicsAsset);
+    McpSafeAssetSave(SkeletalMesh);
+    McpSafeAssetSave(PhysicsAsset);
+
+
+    // Save if requested
+    bool bSave = false;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave)
+    {
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAsset->GetPathName());
+    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMesh->GetPathName());
+    Result->SetNumberField(TEXT("bodyCount"), PhysicsAsset->SkeletalBodySetups.Num());
+    Result->SetNumberField(TEXT("constraintCount"), PhysicsAsset->ConstraintSetup.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Physics asset created"), Result);
+    return true;
+}
+
 /**
  * Handle: create_morph_target
  * Create a new morph target on a skeletal mesh
  */
 bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1538,6 +1622,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
  */
 bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1649,6 +1734,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
  */
 bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1715,6 +1801,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
  */
 bool UMcpAutomationBridgeSubsystem::HandleNormalizeWeights(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1761,6 +1848,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNormalizeWeights(
  */
 bool UMcpAutomationBridgeSubsystem::HandlePruneWeights(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1816,6 +1904,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePruneWeights(
  */
 bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -1936,6 +2025,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
  */
 bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -2007,92 +2097,92 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     // Route to specific handler
     if (SubAction == TEXT("get_skeleton_info"))
     {
-        return HandleGetSkeletonInfo(RequestId, Payload, RequestingSocket);
+        return HandleGetSkeletonInfo(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("list_bones"))
     {
-        return HandleListBones(RequestId, Payload, RequestingSocket);
+        return HandleListBones(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("list_sockets"))
     {
-        return HandleListSockets(RequestId, Payload, RequestingSocket);
+        return HandleListSockets(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("create_socket"))
     {
-        return HandleCreateSocket(RequestId, Payload, RequestingSocket);
+        return HandleCreateSocket(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("configure_socket"))
     {
-        return HandleConfigureSocket(RequestId, Payload, RequestingSocket);
+        return HandleConfigureSocket(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("create_virtual_bone"))
     {
-        return HandleCreateVirtualBone(RequestId, Payload, RequestingSocket);
+        return HandleCreateVirtualBone(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("create_physics_asset"))
     {
-        return HandleCreatePhysicsAsset(RequestId, Payload, RequestingSocket);
+        return HandleCreatePhysicsAsset(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("list_physics_bodies"))
     {
-        return HandleListPhysicsBodies(RequestId, Payload, RequestingSocket);
+        return HandleListPhysicsBodies(RequestId, Action, Payload, RequestingSocket);
     }
     // Physics body operations
     else if (SubAction == TEXT("add_physics_body"))
     {
-        return HandleAddPhysicsBody(RequestId, Payload, RequestingSocket);
+        return HandleAddPhysicsBody(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("configure_physics_body"))
     {
-        return HandleConfigurePhysicsBody(RequestId, Payload, RequestingSocket);
+        return HandleConfigurePhysicsBody(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("add_physics_constraint"))
     {
-        return HandleAddPhysicsConstraint(RequestId, Payload, RequestingSocket);
+        return HandleAddPhysicsConstraint(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("configure_constraint_limits"))
     {
-        return HandleConfigureConstraintLimits(RequestId, Payload, RequestingSocket);
+        return HandleConfigureConstraintLimits(RequestId, Action, Payload, RequestingSocket);
     }
     // Bone operations
     else if (SubAction == TEXT("rename_bone"))
     {
-        return HandleRenameBone(RequestId, Payload, RequestingSocket);
+        return HandleRenameBone(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("set_bone_transform"))
     {
-        return HandleSetBoneTransform(RequestId, Payload, RequestingSocket);
+        return HandleSetBoneTransform(RequestId, Action, Payload, RequestingSocket);
     }
     // Morph target operations
     else if (SubAction == TEXT("create_morph_target"))
     {
-        return HandleCreateMorphTarget(RequestId, Payload, RequestingSocket);
+        return HandleCreateMorphTarget(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("set_morph_target_deltas"))
     {
-        return HandleSetMorphTargetDeltas(RequestId, Payload, RequestingSocket);
+        return HandleSetMorphTargetDeltas(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("import_morph_targets"))
     {
-        return HandleImportMorphTargets(RequestId, Payload, RequestingSocket);
+        return HandleImportMorphTargets(RequestId, Action, Payload, RequestingSocket);
     }
     // Skin weight operations
     else if (SubAction == TEXT("normalize_weights"))
     {
-        return HandleNormalizeWeights(RequestId, Payload, RequestingSocket);
+        return HandleNormalizeWeights(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("prune_weights"))
     {
-        return HandlePruneWeights(RequestId, Payload, RequestingSocket);
+        return HandlePruneWeights(RequestId, Action, Payload, RequestingSocket);
     }
     // Cloth operations
     else if (SubAction == TEXT("bind_cloth_to_skeletal_mesh"))
     {
-        return HandleBindClothToSkeletalMesh(RequestId, Payload, RequestingSocket);
+        return HandleBindClothToSkeletalMesh(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("assign_cloth_asset_to_mesh"))
     {
-        return HandleAssignClothAssetToMesh(RequestId, Payload, RequestingSocket);
+        return HandleAssignClothAssetToMesh(RequestId, Action, Payload, RequestingSocket);
     }
     // Skeleton structure operations using FReferenceSkeletonModifier
     else if (SubAction == TEXT("create_skeleton"))

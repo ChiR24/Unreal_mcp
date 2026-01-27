@@ -25,9 +25,15 @@
 
 // Helper macro for error responses
 #define TEXTURE_ERROR_RESPONSE(Msg) \
-    Response->SetBoolField(TEXT("success"), false); \
-    Response->SetStringField(TEXT("error"), Msg); \
-    return Response;
+    SendAutomationError(RequestingSocket, RequestId, Msg, TEXT("TEXTURE_ERROR")); \
+    return true;
+
+// Helper macro for success responses
+#define TEXTURE_SUCCESS_RESPONSE(Msg) \
+    Response->SetBoolField(TEXT("success"), true); \
+    Response->SetStringField(TEXT("message"), Msg); \
+    SendAutomationResponse(RequestingSocket, RequestId, true, Msg, Response); \
+    return true;
 
 // Use consolidated JSON helpers from McpAutomationBridgeHelpers.h
 // Aliases for backward compatibility with existing code in this file
@@ -160,8 +166,17 @@ static float FBMNoise(float X, float Y, int32 Octaves, float Persistence, float 
     return Total / MaxValue;
 }
 
-TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction(const TSharedPtr<FJsonObject>& Params)
+bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
+    const FString& RequestId, const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    if (Action != TEXT("manage_texture"))
+    {
+        return false;
+    }
+
+    const TSharedPtr<FJsonObject>& Params = Payload;
     TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
     
     FString SubAction = GetStringFieldSafe(Params, TEXT("subAction"), TEXT(""));
@@ -253,7 +268,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Noise texture '%s' created"), *Name));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("create_gradient_texture"))
@@ -374,7 +390,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Gradient texture '%s' created"), *Name));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("create_pattern_texture"))
@@ -511,7 +528,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Pattern texture '%s' created"), *Name));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("create_normal_from_height"))
@@ -681,7 +699,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Normal map created from height map"));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("create_ao_from_mesh"))
@@ -774,7 +793,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("AO texture '%s' created (procedural approximation)"), *Name));
         Response->SetStringField(TEXT("note"), TEXT("For mesh-accurate AO, use external baking tools like Substance Painter or xNormal"));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     // ===== TEXTURE SETTINGS =====
@@ -821,7 +841,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Compression set to %s"), *CompressionSettingsStr));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("set_texture_group"))
@@ -866,7 +887,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture group set to %s"), *TextureGroup));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("set_lod_bias"))
@@ -897,7 +919,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("LOD bias set to %d"), LODBias));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("configure_virtual_texture"))
@@ -928,7 +951,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Virtual texture streaming %s"), bVirtualTextureStreaming ? TEXT("enabled") : TEXT("disabled")));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("set_streaming_priority"))
@@ -959,7 +983,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Streaming priority configured"));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("get_texture_info"))
@@ -1010,7 +1035,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Texture info retrieved"));
         Response->SetObjectField(TEXT("textureInfo"), TextureInfo);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     // ===== TEXTURE PROCESSING =====
@@ -1122,7 +1148,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture resized to %dx%d"), NewWidth, NewHeight));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("invert"))
@@ -1198,7 +1225,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Texture colors inverted"));
         Response->SetStringField(TEXT("assetPath"), bInPlace ? AssetPath : (Path / Name));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("desaturate"))
@@ -1279,7 +1307,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture desaturated (amount: %.2f)"), Amount));
         Response->SetStringField(TEXT("assetPath"), bInPlace ? AssetPath : (Path / Name));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("adjust_levels"))
@@ -1349,7 +1378,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Levels adjusted"));
         Response->SetStringField(TEXT("assetPath"), AssetPath);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("blur"))
@@ -1428,7 +1458,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Blur applied (radius: %d)"), Radius));
         Response->SetStringField(TEXT("assetPath"), AssetPath);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("sharpen"))
@@ -1502,7 +1533,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Sharpen applied (amount: %.2f)"), Amount));
         Response->SetStringField(TEXT("assetPath"), AssetPath);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("channel_pack"))
@@ -1592,7 +1624,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Channels packed into single texture"));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     if (SubAction == TEXT("combine_textures"))
@@ -1695,7 +1728,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Textures combined (mode: %s)"), *BlendMode));
         Response->SetStringField(TEXT("assetPath"), Path / Name);
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     // ===== adjust_curves =====
@@ -1881,7 +1915,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Curve adjustment applied"));
         Response->SetStringField(TEXT("assetPath"), bInPlace ? AssetPath : (Path / Name));
-        return Response;
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
+        return true;
     }
     
     // ===== channel_extract =====
@@ -2006,51 +2041,14 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         Response->SetStringField(TEXT("channel"), Channel);
         Response->SetNumberField(TEXT("width"), Width);
         Response->SetNumberField(TEXT("height"), Height);
-        return Response;
-    }
-    
-    // Unknown action
-    Response->SetBoolField(TEXT("success"), false);
-    Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Unknown texture action: %s"), *SubAction));
-    return Response;
-}
-
-// Wrapper handler that follows the standard signature pattern
-bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
-    const FString& RequestId, const FString& Action,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    // Check if this is a texture action
-    if (Action != TEXT("manage_texture"))
-    {
-        return false; // Not handled
-    }
-    
-    // Call the internal processing function
-    TSharedPtr<FJsonObject> Result = HandleManageTextureAction(Payload);
-    
-    // Send response
-    if (Result.IsValid())
-    {
-        bool bSuccess = Result->HasField(TEXT("success")) && Result->GetBoolField(TEXT("success"));
-        FString Message = Result->HasField(TEXT("message")) ? Result->GetStringField(TEXT("message")) : TEXT("");
-        
-        if (bSuccess)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
-        }
-        else
-        {
-            FString Error = Result->HasField(TEXT("error")) ? Result->GetStringField(TEXT("error")) : TEXT("Unknown error");
-            FString ErrorCode = Result->HasField(TEXT("errorCode")) ? Result->GetStringField(TEXT("errorCode")) : TEXT("TEXTURE_ERROR");
-            SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
-        }
+        SendAutomationResponse(RequestingSocket, RequestId, true, Response->GetStringField(TEXT("message")), Response);
         return true;
     }
     
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to process texture action"), TEXT("PROCESSING_FAILED"));
+    // Unknown action
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown texture action: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 }
 
 #undef TEXTURE_ERROR_RESPONSE
+#undef TEXTURE_SUCCESS_RESPONSE

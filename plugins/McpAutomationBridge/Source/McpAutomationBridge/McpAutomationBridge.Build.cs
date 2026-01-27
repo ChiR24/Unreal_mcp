@@ -24,7 +24,7 @@ public class McpAutomationBridge : ModuleRules
         
         // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
         // This is the most reliable workaround for C3859/C1076 errors
-        bool enablePch = GetBoolEnvironmentVariable("MCP_ENABLE_PCH", false);
+        bool enablePch = GetBoolEnvironmentVariable("MCP_ENABLE_PCH", true);
         if (enablePch)
         {
             PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
@@ -35,9 +35,8 @@ public class McpAutomationBridge : ModuleRules
             PCHUsage = PCHUsageMode.NoPCHs;
         }
         
-        // Unity builds disabled to prevent memory exhaustion (C1060).
-        // Grouping 50+ large handlers into unity files causes the compiler to run out of heap space.
-        bUseUnity = false;
+        // Unity builds enabled for faster compilation.
+        bUseUnity = true;
         MinSourceFilesForUnityBuildOverride = 20;
         
         // Disable adaptive unity to ensure strict non-unity compilation
@@ -47,7 +46,7 @@ public class McpAutomationBridge : ModuleRules
         TrySetBoolMember(this, "bFasterWithoutUnity", true);
 
 
-        bool enableAdaptiveUnityTarget = GetBoolEnvironmentVariable("MCP_ENABLE_ADAPTIVE_UNITY", false);
+        bool enableAdaptiveUnityTarget = GetBoolEnvironmentVariable("MCP_ENABLE_ADAPTIVE_UNITY", true);
         if (!enableAdaptiveUnityTarget)
         {
             TrySetBoolMember(Target, "bUseAdaptiveUnityBuild", false);
@@ -111,6 +110,16 @@ public class McpAutomationBridge : ModuleRules
             // --- Feature Detection Logic ---
 
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+
+            // Phase 57: Version-specific defines
+            if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 7)
+            {
+                PublicDefinitions.Add("MCP_UE_5_7_OR_LATER=1");
+            }
+            else
+            {
+                PublicDefinitions.Add("MCP_UE_5_7_OR_LATER=0");
+            }
 
             // Phase 11: MetaSound modules (conditional - may not be available in all UE versions)
             if (TryAddConditionalModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine"))

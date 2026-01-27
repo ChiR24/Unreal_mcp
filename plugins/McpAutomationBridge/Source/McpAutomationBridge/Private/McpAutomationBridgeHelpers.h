@@ -935,7 +935,12 @@ SaveLoadedAssetThrottled(UObject *Asset, double ThrottleSecondsOverride = -1.0,
   }
 
   // Perform the save and record timestamp on success
+#if MCP_UE_5_7_OR_LATER
+  // UE 5.7+: Use safe save helper to avoid bulkdata corruption/crashes during automation
+  const bool bSaved = McpSafeAssetSave(Asset);
+#else
   const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Asset);
+#endif
   if (bSaved) {
     FScopeLock Lock(&GRecentAssetSaveMutex);
     GRecentAssetSaveTs.Add(Key, Now);
@@ -2252,7 +2257,7 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
 
 /**
  * Safely find derived classes of a given base class.
- * Uses TObjectIterator internally but wraps it for approved usage. // NOLINT
+ * Uses optimized engine metadata in UE 5.7+ to avoid global object iteration.
  * @param BaseClass The base class to find children of.
  * @param OutClasses Array to populate with results.
  */
@@ -2262,12 +2267,23 @@ static inline void GetDerivedClasses(UClass *BaseClass,
   if (!BaseClass)
     return;
 
+#if MCP_UE_5_7_OR_LATER
+  // UE 5.7+: Use static metadata-backed API (fastest, safe)
+  ::GetDerivedClasses(BaseClass, OutClasses, true);
+#else
+  // UE 5.0-5.6: Fallback to global iteration (approved via this wrapper)
   for (TObjectIterator<UClass> It; It; ++It) // NOLINT
   {
-    if (It->IsChildOf(BaseClass) && !It->HasAnyClassFlags(CLASS_Abstract)) {
+    if (It->IsChildOf(BaseClass)) {
       OutClasses.Add(*It);
     }
   }
+#endif
+
+  // Post-filter: Remove abstract classes and CDOs
+  OutClasses.RemoveAll([](UClass* C) { 
+    return !C || C->HasAnyClassFlags(CLASS_Abstract) || C->HasAnyFlags(RF_ClassDefaultObject); 
+  });
 }
 
 #endif

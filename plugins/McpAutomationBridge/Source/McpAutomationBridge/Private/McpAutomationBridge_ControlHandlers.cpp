@@ -4062,25 +4062,25 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
   // Phase 4.1: Event Push System
   if (LowerSub == TEXT("subscribe_to_event"))
-    return HandleSubscribeToEvent(RequestId, Payload, RequestingSocket);
+    return HandleSubscribeToEvent(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("unsubscribe_from_event"))
-    return HandleUnsubscribeFromEvent(RequestId, Payload, RequestingSocket);
+    return HandleUnsubscribeFromEvent(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_subscribed_events"))
-    return HandleGetSubscribedEvents(RequestId, Payload, RequestingSocket);
+    return HandleGetSubscribedEvents(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("clear_event_subscriptions"))
-    return HandleClearEventSubscriptions(RequestId, Payload, RequestingSocket);
+    return HandleClearEventSubscriptions(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_event_history"))
-    return HandleGetEventHistory(RequestId, Payload, RequestingSocket);
+    return HandleGetEventHistory(RequestId, Action, Payload, RequestingSocket);
 
   // Phase 4.3: Background Job Management
   if (LowerSub == TEXT("start_background_job"))
-    return HandleStartBackgroundJob(RequestId, Payload, RequestingSocket);
+    return HandleStartBackgroundJob(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_job_status"))
-    return HandleGetJobStatus(RequestId, Payload, RequestingSocket);
+    return HandleGetJobStatus(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("cancel_job"))
-    return HandleCancelJob(RequestId, Payload, RequestingSocket);
+    return HandleCancelJob(RequestId, Action, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_active_jobs"))
-    return HandleGetActiveJobs(RequestId, Payload, RequestingSocket);
+    return HandleGetActiveJobs(RequestId, Action, Payload, RequestingSocket);
 
   if (LowerSub == TEXT("stop_recording")) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Sequence Recording not yet implemented in native bridge"), TEXT("NOT_IMPLEMENTED"));
@@ -5533,7 +5533,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleSubscribeToEvent(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
@@ -5578,7 +5578,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSubscribeToEvent(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleUnsubscribeFromEvent(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString EventType;
@@ -5616,7 +5616,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUnsubscribeFromEvent(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGetSubscribedEvents(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   TArray<TSharedPtr<FJsonValue>> SubscribedArray;
@@ -5646,7 +5646,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSubscribedEvents(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleClearEventSubscriptions(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   int32 ClearedCount = EventSubscriptions.Num();
@@ -5664,7 +5664,7 @@ bool UMcpAutomationBridgeSubsystem::HandleClearEventSubscriptions(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGetEventHistory(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   int32 Limit = 100;
@@ -5696,7 +5696,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetEventHistory(
 // =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleStartBackgroundJob(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobType;
@@ -5731,7 +5731,7 @@ bool UMcpAutomationBridgeSubsystem::HandleStartBackgroundJob(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGetJobStatus(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobId;
@@ -5760,7 +5760,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetJobStatus(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleCancelJob(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString JobId;
@@ -5788,7 +5788,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCancelJob(
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGetActiveJobs(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    const FString &RequestId, const FString &Action, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   TArray<TSharedPtr<FJsonValue>> JobsArray;

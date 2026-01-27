@@ -3898,7 +3898,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
+    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     TSharedPtr<FJsonObject> Entry =
         FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);

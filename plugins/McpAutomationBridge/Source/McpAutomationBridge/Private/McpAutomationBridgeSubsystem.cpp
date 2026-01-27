@@ -602,6 +602,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleGetAssetDependencies(R, A, P, S);
                   });
 
+  // Asset Query
+  RegisterHandler(TEXT("query_assets"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAssetQueryAction(R, A, P, S);
+                  });
+
   // Asset Workflow
   RegisterHandler(TEXT("fixup_redirectors"),
                   [this](const FString &R, const FString &A,
@@ -644,6 +652,43 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleGenerateThumbnail(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("enable_nanite"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleEnableNaniteMesh(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_nanite_settings"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetNaniteSettings(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("batch_nanite_convert"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBatchNaniteConvert(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("generate_lods"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGenerateLODs(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("delete_asset"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDeleteAsset(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("delete_assets"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDeleteAssets(R, A, P, S);
                   });
 
   // Landscape
@@ -690,6 +735,43 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleGetTerrainHeightAt(R, A, P, S);
                   });
 
+  RegisterHandler(TEXT("modify_heightmap"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleModifyHeightmap(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("paint_landscape_layer"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePaintLandscapeLayer(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("import_heightmap"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleImportHeightmap(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("export_heightmap"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleExportHeightmap(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("configure_landscape_lod"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleConfigureLandscapeLOD(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("get_landscape_info"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetLandscapeInfo(R, A, P, S);
+                  });
+
   // Foliage
   RegisterHandler(TEXT("add_foliage_type"),
                   [this](const FString &R, const FString &A,
@@ -727,6 +809,24 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleGetFoliageInstances(R, A, P, S);
                   });
+  RegisterHandler(TEXT("configure_foliage_placement"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleConfigureFoliagePlacement(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("configure_foliage_lod"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleConfigureFoliageLOD(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("get_foliage_types"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetFoliageTypes(R, A, P, S);
+                  });
 
   // Niagara
   RegisterHandler(TEXT("create_niagara_system"),
@@ -758,6 +858,43 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleModifyNiagaraParameter(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("activate_niagara"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleActivateNiagara(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("deactivate_niagara"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDeactivateNiagara(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("reset_niagara"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleResetNiagara(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("get_niagara_parameters"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetNiagaraParameters(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_niagara_variable"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSetNiagaraVariable(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_niagara_graph"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleNiagaraGraphAction(R, A, P, S);
                   });
 
   // Animation
@@ -900,6 +1037,24 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                                           TSharedPtr<FMcpBridgeWebSocket> S) {
     return HandleInspectAction(R, A, P, S);
   });
+  RegisterHandler(TEXT("manage_debug"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleDebugAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_insights"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleInsightsAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_logs"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleLogAction(R, A, P, S);
+                  });
   RegisterHandler(TEXT("system_control"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
@@ -911,6 +1066,30 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleBlueprintGraphAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_blueprint"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBlueprintAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_blueprint_variables"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBlueprintVariableAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_blueprint_functions"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBlueprintFunctionAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_scs"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSCSAction(R, A, P, S);
                   });
   RegisterHandler(TEXT("list_blueprints"),
                   [this](const FString &R, const FString &A,
@@ -973,11 +1152,38 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAssetAction(R, A, P, S);
                   });
 
+  RegisterHandler(TEXT("manage_geometry"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGeometryAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_skeleton"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSkeleton(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_material_graph"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMaterialGraphAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_material_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageMaterialAuthoringAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("rebuild_material"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleRebuildMaterial(R, P, S);
+                    return HandleRebuildMaterial(R, A, P, S);
                   });
 
   RegisterHandler(TEXT("manage_behavior_tree"),
@@ -1274,6 +1480,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          const TSharedPtr<FJsonObject> &P,
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageTestingAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_test"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleTestAction(R, A, P, S);
                   });
 
   // Phase 34: Editor Utilities

@@ -118,7 +118,6 @@ class UAnimBlueprint;
 
 // Editor subsystem
 #include "EditorSubsystem.h"
-#include "Subsystems/EditorSubsystem.h"
 
 // Scoped Transaction (for undo/redo support)
 #if __has_include("ScopedTransaction.h")

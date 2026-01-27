@@ -6,8 +6,8 @@
 #if WITH_EDITOR
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#include "BlueprintGraph/K2Node_VariableGet.h"
-#include "BlueprintGraph/K2Node_VariableSet.h"
+#include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
 #include "Misc/ScopeExit.h"
 #endif
 

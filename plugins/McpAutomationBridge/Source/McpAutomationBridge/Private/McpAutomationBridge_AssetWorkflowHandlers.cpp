@@ -3057,6 +3057,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
 
 bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
     const FString& RequestId,
+    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR

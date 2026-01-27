@@ -6,10 +6,10 @@
 #if WITH_EDITOR
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#include "BlueprintGraph/K2Node_CustomEvent.h"
-#include "BlueprintGraph/K2Node_Event.h"
-#include "BlueprintGraph/K2Node_FunctionEntry.h"
-#include "BlueprintGraph/K2Node_FunctionResult.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_Event.h"
+#include "K2Node_FunctionEntry.h"
+#include "K2Node_FunctionResult.h"
 #include "Misc/ScopeExit.h"
 #endif
 

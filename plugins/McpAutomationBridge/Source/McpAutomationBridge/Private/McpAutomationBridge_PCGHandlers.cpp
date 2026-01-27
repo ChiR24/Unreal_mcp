@@ -198,25 +198,21 @@ static UPCGGraph* LoadPCGGraph(const FString& GraphPath)
         if (Graph) return Graph;
     }
     
-    // 3. Final fallback: FindObject for already-loaded but unsaved assets
-    // Try package path with object name
-    FString FullPath = PackagePath + TEXT(".") + ObjectName;
-    Graph = FindObject<UPCGGraph>(nullptr, *FullPath);
-    if (Graph) return Graph;
-    
-    // Try just the package path (object might be named differently)
+    // 3. Final fallback: Search for any PCG graph in the package
+    // UE 5.7+ compatible: Use GetObjectsWithOuter to scope search to package
     UPackage* Package = FindPackage(nullptr, *PackagePath);
     if (Package)
     {
         Graph = FindObject<UPCGGraph>(Package, *ObjectName);
         if (Graph) return Graph;
         
-        // Search for any PCG graph in the package
-        for (TObjectIterator<UPCGGraph> It; It; ++It)
+        TArray<UObject*> PackageObjects;
+        GetObjectsWithOuter(Package, PackageObjects);
+        for (UObject* Obj : PackageObjects)
         {
-            if (It->GetOutermost() == Package)
+            if (UPCGGraph* PackageGraph = Cast<UPCGGraph>(Obj))
             {
-                return *It;
+                return PackageGraph;
             }
         }
     }
