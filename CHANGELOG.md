@@ -7,6 +7,159 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.12] - 2026-01-15
+
+> [!NOTE]
+> ### 🔧 Handler Synchronization Release
+> This release focuses on synchronizing TypeScript handler parameters with C++ handlers and dependency updates.
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🔧 TS Handler Parameter Sync</b> (<code>5953232</code>)</summary>
+
+- Synchronized TypeScript handler parameters with C++ handlers for consistency
+- Fixed parameter mapping issues between TS and C++ layers
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `release-drafter/release-drafter` | 6.1.0 → 6.1.1 | [#141](https://github.com/ChiR24/Unreal_mcp/pull/141) |
+| `google-github-actions/run-gemini-cli` | Latest | [#142](https://github.com/ChiR24/Unreal_mcp/pull/142) |
+
+</details>
+
+<details>
+<summary><b>NPM Package Updates</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/143">#143</a>)</summary>
+
+| Package | Update |
+|---------|--------|
+| `@types/node` | Various dev dependency updates |
+
+</details>
+
+---
+
+## 🏷️ [0.5.11] - 2026-01-12
+
+> [!IMPORTANT]
+> ### 🛡️ Security Hardening & UE 5.7 Compatibility
+> This release includes multiple critical security fixes for path traversal and command injection vulnerabilities, along with UE 5.7 Interchange compatibility fixes.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Path Traversal in Asset Import</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/125">#125</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Path traversal in asset import functionality |
+| **Fix** | Added path sanitization and validation |
+
+</details>
+
+<details>
+<summary><b>🔒 Command Injection Bypass</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/122">#122</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Command injection bypass via flexible whitespace |
+| **Fix** | Enhanced command validation to detect and block bypass attempts |
+
+</details>
+
+<details>
+<summary><b>🔒 Path Traversal in Screenshots</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/120">#120</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Path traversal in screenshot filenames |
+| **Fix** | Implemented filename sanitization and path validation |
+
+</details>
+
+<details>
+<summary><b>🔒 Path Traversal in GraphQL</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/135">#135</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Path traversal in GraphQL resolvers |
+| **Fix** | Added input sanitization for GraphQL resolver paths |
+
+</details>
+
+<details>
+<summary><b>🔒 GraphQL CORS Configuration</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/118">#118</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 MEDIUM |
+| **Vulnerability** | Insecure GraphQL CORS configuration |
+| **Fix** | Implemented secure CORS policy |
+
+</details>
+
+<details>
+<summary><b>🔒 Enhanced Command Validation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/113">#113</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Command injection bypasses |
+| **Fix** | Enhanced validation patterns to prevent injection bypasses |
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🐛 UE 5.7 Asset Import Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/138">#138</a>)</summary>
+
+| Fix | Description |
+|-----|-------------|
+| **Interchange Compatibility** | Deferred asset import to next tick for UE 5.7 Interchange compatibility |
+| **Name Sanitization** | Improved asset import robustness and name sanitization |
+
+**Closes [#137](https://github.com/ChiR24/Unreal_mcp/issues/137)**
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>NPM Package Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `@modelcontextprotocol/sdk` | 1.25.1 → 1.25.2 | [#119](https://github.com/ChiR24/Unreal_mcp/pull/119) |
+| `hono` | 4.11.1 → 4.11.4 | [#129](https://github.com/ChiR24/Unreal_mcp/pull/129) |
+| `@types/node` | Various updates | [#130](https://github.com/ChiR24/Unreal_mcp/pull/130), [#133](https://github.com/ChiR24/Unreal_mcp/pull/133), [#134](https://github.com/ChiR24/Unreal_mcp/pull/134) |
+
+</details>
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `github/codeql-action` | 4.31.9 → 4.31.10 | [#126](https://github.com/ChiR24/Unreal_mcp/pull/126) |
+| `actions/setup-node` | 6.1.0 → 6.2.0 | [#133](https://github.com/ChiR24/Unreal_mcp/pull/133) |
+| `dependabot/fetch-metadata` | 2.4.0 → 2.5.0 | [#114](https://github.com/ChiR24/Unreal_mcp/pull/114) |
+
+</details>
+
+---
+
 ## 🏷️ [0.5.10] - 2026-01-04
 
 > [!IMPORTANT]
