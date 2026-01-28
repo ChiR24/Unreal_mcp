@@ -9,7 +9,23 @@
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
+<div align="center">
+
+[![Beta](https://img.shields.io/badge/⚡%20BETA%20BRANCH-FF6B6B?style=for-the-badge&labelColor=1a1a1a)](https://github.com/ChiR24/Unreal_mcp/tree/beta)
+
+**This is the `beta` branch — Active development happens here**
+
+</div>
+
 A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript, C++, and Rust (WebAssembly).
+
+<div align="center">
+
+[![UE 5.7](https://img.shields.io/badge/⚠️%20UE%205.7%20Only-FFB347?style=for-the-badge&labelColor=1a1a1a&logo=unrealengine&logoColor=white)]()
+
+**Currently only Unreal Engine 5.7 is fully supported and tested**
+
+</div>
 
 ---
 
