@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // Copyright Epic Games, Inc. All Rights Reserved.
 // Phase 26: Spline System Handlers
 
@@ -28,7 +29,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpSplineHandlers, Log, All);
 #if WITH_EDITOR
 
 // Helper to get string field from JSON
-static FString GetJsonStringField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""))
+static FString GetJsonStringFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""))
 {
     if (!Payload.IsValid()) return Default;
     FString Value;
@@ -40,7 +41,7 @@ static FString GetJsonStringField(const TSharedPtr<FJsonObject>& Payload, const 
 }
 
 // Helper to get number field from JSON
-static double GetJsonNumberField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default = 0.0)
+static double GetJsonNumberFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default = 0.0)
 {
     if (!Payload.IsValid()) return Default;
     double Value;
@@ -52,7 +53,7 @@ static double GetJsonNumberField(const TSharedPtr<FJsonObject>& Payload, const T
 }
 
 // Helper to get bool field from JSON
-static bool GetJsonBoolField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default = false)
+static bool GetJsonBoolFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default = false)
 {
     if (!Payload.IsValid()) return Default;
     bool Value;
@@ -64,7 +65,7 @@ static bool GetJsonBoolField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
 }
 
 // Helper to get int field from JSON
-static int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, int32 Default = 0)
+static int32 GetJsonIntFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, int32 Default = 0)
 {
     if (!Payload.IsValid()) return Default;
     double Value;
@@ -76,32 +77,32 @@ static int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Payload, const TCHAR
 }
 
 // Helper to get FVector from JSON object field
-static FVector GetJsonVectorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
+static FVector GetJsonVectorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
 {
     if (!Payload.IsValid()) return Default;
     const TSharedPtr<FJsonObject>* VecObj;
     if (Payload->TryGetObjectField(FieldName, VecObj) && VecObj->IsValid())
     {
         return FVector(
-            GetJsonNumberField(*VecObj, TEXT("x"), Default.X),
-            GetJsonNumberField(*VecObj, TEXT("y"), Default.Y),
-            GetJsonNumberField(*VecObj, TEXT("z"), Default.Z)
+            GetJsonNumberFieldSpline(*VecObj, TEXT("x"), Default.X),
+            GetJsonNumberFieldSpline(*VecObj, TEXT("y"), Default.Y),
+            GetJsonNumberFieldSpline(*VecObj, TEXT("z"), Default.Z)
         );
     }
     return Default;
 }
 
 // Helper to get FRotator from JSON object field
-static FRotator GetJsonRotatorField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default = FRotator::ZeroRotator)
+static FRotator GetJsonRotatorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default = FRotator::ZeroRotator)
 {
     if (!Payload.IsValid()) return Default;
     const TSharedPtr<FJsonObject>* RotObj;
     if (Payload->TryGetObjectField(FieldName, RotObj) && RotObj->IsValid())
     {
         return FRotator(
-            GetJsonNumberField(*RotObj, TEXT("pitch"), Default.Pitch),
-            GetJsonNumberField(*RotObj, TEXT("yaw"), Default.Yaw),
-            GetJsonNumberField(*RotObj, TEXT("roll"), Default.Roll)
+            GetJsonNumberFieldSpline(*RotObj, TEXT("pitch"), Default.Pitch),
+            GetJsonNumberFieldSpline(*RotObj, TEXT("yaw"), Default.Yaw),
+            GetJsonNumberFieldSpline(*RotObj, TEXT("roll"), Default.Roll)
         );
     }
     return Default;
@@ -183,11 +184,11 @@ static bool HandleCreateSplineActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineActor"));
-    FVector Location = GetJsonVectorField(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("rotation"));
-    bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
-    FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TEXT("SplineActor"));
+    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
+    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("rotation"));
+    bool bClosedLoop = GetJsonBoolFieldSpline(Payload, TEXT("bClosedLoop"), false);
+    FString SplineType = GetJsonStringFieldSpline(Payload, TEXT("splineType"), TEXT("Curve"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -252,7 +253,7 @@ static bool HandleCreateSplineActor(
             const TSharedPtr<FJsonObject>* PointObj;
             if ((*PointsArray)[i]->TryGetObject(PointObj))
             {
-                FVector PointLocation = GetJsonVectorField(*PointObj, TEXT("location"));
+                FVector PointLocation = GetJsonVectorFieldSpline(*PointObj, TEXT("location"));
                 SplineComp->AddSplinePoint(PointLocation, ESplineCoordinateSpace::Local, true);
                 SplineComp->SetSplinePointType(i, PointType, false);
             }
@@ -280,10 +281,10 @@ static bool HandleAddSplinePoint(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FVector Position = GetJsonVectorField(Payload, TEXT("position"));
-    int32 Index = GetJsonIntField(Payload, TEXT("index"), -1);
-    FString PointType = GetJsonStringField(Payload, TEXT("pointType"), TEXT("Curve"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FVector Position = GetJsonVectorFieldSpline(Payload, TEXT("position"));
+    int32 Index = GetJsonIntFieldSpline(Payload, TEXT("index"), -1);
+    FString PointType = GetJsonStringFieldSpline(Payload, TEXT("pointType"), TEXT("Curve"));
 
     if (ActorName.IsEmpty())
     {
@@ -347,8 +348,8 @@ static bool HandleRemoveSplinePoint(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -408,9 +409,9 @@ static bool HandleSetSplinePointPosition(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FVector Position = GetJsonVectorField(Payload, TEXT("position"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FVector Position = GetJsonVectorFieldSpline(Payload, TEXT("position"));
 
     if (ActorName.IsEmpty())
     {
@@ -469,10 +470,10 @@ static bool HandleSetSplinePointTangents(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FVector ArriveTangent = GetJsonVectorField(Payload, TEXT("arriveTangent"));
-    FVector LeaveTangent = GetJsonVectorField(Payload, TEXT("leaveTangent"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FVector ArriveTangent = GetJsonVectorFieldSpline(Payload, TEXT("arriveTangent"));
+    FVector LeaveTangent = GetJsonVectorFieldSpline(Payload, TEXT("leaveTangent"));
 
     if (ActorName.IsEmpty())
     {
@@ -540,9 +541,9 @@ static bool HandleSetSplinePointRotation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FRotator Rotation = GetJsonRotatorField(Payload, TEXT("pointRotation"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("pointRotation"));
 
     if (ActorName.IsEmpty())
     {
@@ -601,9 +602,9 @@ static bool HandleSetSplinePointScale(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-    FVector Scale = GetJsonVectorField(Payload, TEXT("pointScale"), FVector::OneVector);
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FVector Scale = GetJsonVectorFieldSpline(Payload, TEXT("pointScale"), FVector::OneVector);
 
     if (ActorName.IsEmpty())
     {
@@ -662,9 +663,9 @@ static bool HandleSetSplineType(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
-    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), -1);
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString SplineType = GetJsonStringFieldSpline(Payload, TEXT("splineType"), TEXT("Curve"));
+    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), -1);
 
     if (ActorName.IsEmpty())
     {
@@ -741,10 +742,10 @@ static bool HandleCreateSplineMeshComponent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SplineMesh"));
-    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
-    FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FString BlueprintPath = GetJsonStringFieldSpline(Payload, TEXT("blueprintPath"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"), TEXT("SplineMesh"));
+    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
 
     if (BlueprintPath.IsEmpty())
     {
@@ -815,7 +816,7 @@ static bool HandleCreateSplineMeshComponent(
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false))
+    if (GetJsonBoolFieldSpline(Payload, TEXT("save"), false))
     {
         McpSafeAssetSave(Blueprint);
     }
@@ -835,9 +836,9 @@ static bool HandleSetSplineMeshAsset(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
+    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
 
     if (ActorName.IsEmpty() || MeshPath.IsEmpty())
     {
@@ -916,9 +917,9 @@ static bool HandleConfigureSplineMeshAxis(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-    FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
+    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
 
     if (ActorName.IsEmpty())
     {
@@ -991,10 +992,10 @@ static bool HandleSetSplineMeshMaterial(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-    FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
-    int32 MaterialIndex = GetJsonIntField(Payload, TEXT("materialIndex"), 0);
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
+    FString MaterialPath = GetJsonStringFieldSpline(Payload, TEXT("materialPath"));
+    int32 MaterialIndex = GetJsonIntFieldSpline(Payload, TEXT("materialIndex"), 0);
 
     if (ActorName.IsEmpty() || MaterialPath.IsEmpty())
     {
@@ -1076,10 +1077,10 @@ static bool HandleScatterMeshesAlongSpline(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
-    double Spacing = GetJsonNumberField(Payload, TEXT("spacing"), 100.0);
-    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("bAlignToSpline"), true);
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
+    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("bAlignToSpline"), true);
 
     if (ActorName.IsEmpty() || MeshPath.IsEmpty())
     {
@@ -1169,9 +1170,9 @@ static bool HandleConfigureMeshSpacing(
     // Future enhancement: Store in actor metadata via UMetaData component.
     
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetNumberField(TEXT("spacing"), GetJsonNumberField(Payload, TEXT("spacing"), 100.0));
-    Result->SetBoolField(TEXT("useRandomOffset"), GetJsonBoolField(Payload, TEXT("useRandomOffset"), false));
-    Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0));
+    Result->SetNumberField(TEXT("spacing"), GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0));
+    Result->SetBoolField(TEXT("useRandomOffset"), GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false));
+    Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Mesh spacing configuration stored"), Result);
@@ -1188,11 +1189,11 @@ static bool HandleConfigureMeshRandomization(
     // Storage is not implemented - pass randomization params to scatter_meshes_along_spline.
     // Future enhancement: Store in actor metadata via UMetaData component.
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetBoolField(TEXT("randomizeScale"), GetJsonBoolField(Payload, TEXT("randomizeScale"), false));
-    Result->SetNumberField(TEXT("minScale"), GetJsonNumberField(Payload, TEXT("minScale"), 0.8));
-    Result->SetNumberField(TEXT("maxScale"), GetJsonNumberField(Payload, TEXT("maxScale"), 1.2));
-    Result->SetBoolField(TEXT("randomizeRotation"), GetJsonBoolField(Payload, TEXT("randomizeRotation"), false));
-    Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberField(Payload, TEXT("rotationRange"), 360.0));
+    Result->SetBoolField(TEXT("randomizeScale"), GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false));
+    Result->SetNumberField(TEXT("minScale"), GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8));
+    Result->SetNumberField(TEXT("maxScale"), GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2));
+    Result->SetBoolField(TEXT("randomizeRotation"), GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false));
+    Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Mesh randomization configuration stored"), Result);
@@ -1211,10 +1212,10 @@ static bool HandleCreateTemplateSpline(
     const FString& TemplateName,
     const FString& DefaultMeshPath)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TemplateName + TEXT("_Spline"));
-    FVector Location = GetJsonVectorField(Payload, TEXT("location"));
-    double Width = GetJsonNumberField(Payload, TEXT("width"), 400.0);
-    FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TemplateName + TEXT("_Spline"));
+    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
+    double Width = GetJsonNumberFieldSpline(Payload, TEXT("width"), 400.0);
+    FString MaterialPath = GetJsonStringFieldSpline(Payload, TEXT("materialPath"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -1337,7 +1338,7 @@ static bool HandleGetSplinesInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -1442,7 +1443,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
+    FString SubAction = GetJsonStringFieldSpline(Payload, TEXT("subAction"), TEXT(""));
     
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 

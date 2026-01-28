@@ -1,4 +1,5 @@
 #include "McpAutomationBridge_SCSHandlers.h"
+#include "Dom/JsonObject.h"
 #include "Async/Async.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -26,15 +27,6 @@
 
 #endif
 
-#if !WITH_EDITOR
-static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), false);
-  Result->SetStringField(TEXT("error"),
-                         TEXT("SCS operations require editor build"));
-  return Result;
-}
-#endif
 
 #if WITH_EDITOR
 void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,

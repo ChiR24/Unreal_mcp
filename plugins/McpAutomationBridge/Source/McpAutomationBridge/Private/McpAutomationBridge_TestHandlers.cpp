@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Misc/AutomationTest.h"
@@ -16,7 +17,7 @@ bool UMcpAutomationBridgeSubsystem::HandleTestAction(const FString& RequestId, c
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("run_tests"))
     {

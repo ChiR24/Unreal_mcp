@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // Copyright Epic Games, Inc. All Rights Reserved.
 // Phase 17: Inventory & Items System Handlers
 
@@ -1920,8 +1921,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       for (const auto& TierVal : *TiersArr) {
         const TSharedPtr<FJsonObject>* TierObj = nullptr;
         if (TierVal->TryGetObject(TierObj) && TierObj && (*TierObj).IsValid()) {
-          FString TierName = (*TierObj)->GetStringField(TEXT("name"));
-          double TierWeight = (*TierObj)->GetNumberField(TEXT("dropWeight"));
+          FString TierName = GetJsonStringField((*TierObj), TEXT("name"));
+          double TierWeight = GetJsonNumberField((*TierObj), TEXT("dropWeight"));
           Tiers.Add(TPair<FString, double>(TierName, TierWeight));
         }
       }
@@ -2315,3 +2316,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       TEXT("UNKNOWN_ACTION"));
   return true;
 }
+
+#undef GetPayloadString
+#undef GetPayloadNumber
+#undef GetPayloadBool
+

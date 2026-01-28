@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // Copyright (c) 2025 MCP Automation Bridge Contributors
 // SPDX-License-Identifier: MIT
 //
@@ -29,9 +30,9 @@
 
 // Use consolidated JSON helpers from McpAutomationBridgeHelpers.h
 // Aliases for backward compatibility with existing code in this file
-#define GetNumberFieldSafe GetJsonNumberField
-#define GetBoolFieldSafe GetJsonBoolField
-#define GetStringFieldSafe GetJsonStringField
+#define GetNumberFieldTextAuth GetJsonNumberField
+#define GetBoolFieldTextAuth GetJsonBoolField
+#define GetStringFieldTextAuth GetJsonStringField
 
 // Helper to normalize asset path
 static FString NormalizeTexturePath(const FString& Path)
@@ -162,25 +163,25 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
 {
     TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
     
-    FString SubAction = GetStringFieldSafe(Params, TEXT("subAction"), TEXT(""));
+    FString SubAction = GetStringFieldTextAuth(Params, TEXT("subAction"), TEXT(""));
     
     // ===== PROCEDURAL GENERATION =====
     
     if (SubAction == TEXT("create_noise_texture"))
     {
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        FString NoiseType = GetStringFieldSafe(Params, TEXT("noiseType"), TEXT("Perlin"));
-        int32 Width = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("width"), 1024));
-        int32 Height = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("height"), 1024));
-        float Scale = static_cast<float>(GetNumberFieldSafe(Params, TEXT("scale"), 1.0));
-        int32 Octaves = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("octaves"), 4));
-        float Persistence = static_cast<float>(GetNumberFieldSafe(Params, TEXT("persistence"), 0.5));
-        float Lacunarity = static_cast<float>(GetNumberFieldSafe(Params, TEXT("lacunarity"), 2.0));
-        int32 Seed = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("seed"), 0));
-        bool bSeamless = GetBoolFieldSafe(Params, TEXT("seamless"), false);
-        bool bHDR = GetBoolFieldSafe(Params, TEXT("hdr"), false);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        FString NoiseType = GetStringFieldTextAuth(Params, TEXT("noiseType"), TEXT("Perlin"));
+        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
+        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
+        float Scale = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("scale"), 1.0));
+        int32 Octaves = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("octaves"), 4));
+        float Persistence = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("persistence"), 0.5));
+        float Lacunarity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("lacunarity"), 2.0));
+        int32 Seed = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("seed"), 0));
+        bool bSeamless = GetBoolFieldTextAuth(Params, TEXT("seamless"), false);
+        bool bHDR = GetBoolFieldTextAuth(Params, TEXT("hdr"), false);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (Name.IsEmpty())
         {
@@ -256,17 +257,17 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("create_gradient_texture"))
     {
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        FString GradientType = GetStringFieldSafe(Params, TEXT("gradientType"), TEXT("Linear"));
-        int32 Width = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("width"), 1024));
-        int32 Height = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("height"), 1024));
-        float Angle = static_cast<float>(GetNumberFieldSafe(Params, TEXT("angle"), 0.0));
-        float CenterX = static_cast<float>(GetNumberFieldSafe(Params, TEXT("centerX"), 0.5));
-        float CenterY = static_cast<float>(GetNumberFieldSafe(Params, TEXT("centerY"), 0.5));
-        float Radius = static_cast<float>(GetNumberFieldSafe(Params, TEXT("radius"), 0.5));
-        bool bHDR = GetBoolFieldSafe(Params, TEXT("hdr"), false);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        FString GradientType = GetStringFieldTextAuth(Params, TEXT("gradientType"), TEXT("Linear"));
+        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
+        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
+        float Angle = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("angle"), 0.0));
+        float CenterX = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("centerX"), 0.5));
+        float CenterY = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("centerY"), 0.5));
+        float Radius = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("radius"), 0.5));
+        bool bHDR = GetBoolFieldTextAuth(Params, TEXT("hdr"), false);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         // Get colors
         FLinearColor StartColor(0, 0, 0, 1);
@@ -277,10 +278,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             const TSharedPtr<FJsonObject>* StartColorObj;
             if (Params->TryGetObjectField(TEXT("startColor"), StartColorObj))
             {
-                StartColor.R = static_cast<float>(GetNumberFieldSafe(*StartColorObj, TEXT("r"), 0.0));
-                StartColor.G = static_cast<float>(GetNumberFieldSafe(*StartColorObj, TEXT("g"), 0.0));
-                StartColor.B = static_cast<float>(GetNumberFieldSafe(*StartColorObj, TEXT("b"), 0.0));
-                StartColor.A = static_cast<float>(GetNumberFieldSafe(*StartColorObj, TEXT("a"), 1.0));
+                StartColor.R = static_cast<float>(GetNumberFieldTextAuth(*StartColorObj, TEXT("r"), 0.0));
+                StartColor.G = static_cast<float>(GetNumberFieldTextAuth(*StartColorObj, TEXT("g"), 0.0));
+                StartColor.B = static_cast<float>(GetNumberFieldTextAuth(*StartColorObj, TEXT("b"), 0.0));
+                StartColor.A = static_cast<float>(GetNumberFieldTextAuth(*StartColorObj, TEXT("a"), 1.0));
             }
         }
         
@@ -289,10 +290,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             const TSharedPtr<FJsonObject>* EndColorObj;
             if (Params->TryGetObjectField(TEXT("endColor"), EndColorObj))
             {
-                EndColor.R = static_cast<float>(GetNumberFieldSafe(*EndColorObj, TEXT("r"), 1.0));
-                EndColor.G = static_cast<float>(GetNumberFieldSafe(*EndColorObj, TEXT("g"), 1.0));
-                EndColor.B = static_cast<float>(GetNumberFieldSafe(*EndColorObj, TEXT("b"), 1.0));
-                EndColor.A = static_cast<float>(GetNumberFieldSafe(*EndColorObj, TEXT("a"), 1.0));
+                EndColor.R = static_cast<float>(GetNumberFieldTextAuth(*EndColorObj, TEXT("r"), 1.0));
+                EndColor.G = static_cast<float>(GetNumberFieldTextAuth(*EndColorObj, TEXT("g"), 1.0));
+                EndColor.B = static_cast<float>(GetNumberFieldTextAuth(*EndColorObj, TEXT("b"), 1.0));
+                EndColor.A = static_cast<float>(GetNumberFieldTextAuth(*EndColorObj, TEXT("a"), 1.0));
             }
         }
         
@@ -377,17 +378,17 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("create_pattern_texture"))
     {
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        FString PatternType = GetStringFieldSafe(Params, TEXT("patternType"), TEXT("Checker"));
-        int32 Width = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("width"), 1024));
-        int32 Height = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("height"), 1024));
-        int32 TilesX = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("tilesX"), 8));
-        int32 TilesY = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("tilesY"), 8));
-        float LineWidth = static_cast<float>(GetNumberFieldSafe(Params, TEXT("lineWidth"), 0.02));
-        float BrickRatio = static_cast<float>(GetNumberFieldSafe(Params, TEXT("brickRatio"), 2.0));
-        float Offset = static_cast<float>(GetNumberFieldSafe(Params, TEXT("offset"), 0.5));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        FString PatternType = GetStringFieldTextAuth(Params, TEXT("patternType"), TEXT("Checker"));
+        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
+        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
+        int32 TilesX = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("tilesX"), 8));
+        int32 TilesY = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("tilesY"), 8));
+        float LineWidth = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("lineWidth"), 0.02));
+        float BrickRatio = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("brickRatio"), 2.0));
+        float Offset = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("offset"), 0.5));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         // Get colors
         FLinearColor PrimaryColor(1, 1, 1, 1);
@@ -398,10 +399,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             const TSharedPtr<FJsonObject>* ColorObj;
             if (Params->TryGetObjectField(TEXT("primaryColor"), ColorObj))
             {
-                PrimaryColor.R = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("r"), 1.0));
-                PrimaryColor.G = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("g"), 1.0));
-                PrimaryColor.B = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("b"), 1.0));
-                PrimaryColor.A = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("a"), 1.0));
+                PrimaryColor.R = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("r"), 1.0));
+                PrimaryColor.G = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("g"), 1.0));
+                PrimaryColor.B = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("b"), 1.0));
+                PrimaryColor.A = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("a"), 1.0));
             }
         }
         
@@ -410,10 +411,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             const TSharedPtr<FJsonObject>* ColorObj;
             if (Params->TryGetObjectField(TEXT("secondaryColor"), ColorObj))
             {
-                SecondaryColor.R = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("r"), 0.0));
-                SecondaryColor.G = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("g"), 0.0));
-                SecondaryColor.B = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("b"), 0.0));
-                SecondaryColor.A = static_cast<float>(GetNumberFieldSafe(*ColorObj, TEXT("a"), 1.0));
+                SecondaryColor.R = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("r"), 0.0));
+                SecondaryColor.G = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("g"), 0.0));
+                SecondaryColor.B = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("b"), 0.0));
+                SecondaryColor.A = static_cast<float>(GetNumberFieldTextAuth(*ColorObj, TEXT("a"), 1.0));
             }
         }
         
@@ -514,13 +515,13 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("create_normal_from_height"))
     {
-        FString SourceTexture = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("sourceTexture"), TEXT("")));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = GetStringFieldSafe(Params, TEXT("path"), TEXT(""));
-        float Strength = static_cast<float>(GetNumberFieldSafe(Params, TEXT("strength"), 1.0));
-        FString Algorithm = GetStringFieldSafe(Params, TEXT("algorithm"), TEXT("Sobel"));
-        bool bFlipY = GetBoolFieldSafe(Params, TEXT("flipY"), false);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString SourceTexture = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("sourceTexture"), TEXT("")));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT(""));
+        float Strength = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("strength"), 1.0));
+        FString Algorithm = GetStringFieldTextAuth(Params, TEXT("algorithm"), TEXT("Sobel"));
+        bool bFlipY = GetBoolFieldTextAuth(Params, TEXT("flipY"), false);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (SourceTexture.IsEmpty())
         {
@@ -566,7 +567,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         // Get channel mapping option - defaults to "luminance" for proper grayscale conversion
         // Options: "luminance", "red", "green", "blue", "alpha", "average"
-        FString ChannelMode = GetStringFieldSafe(Params, TEXT("channelMode"), TEXT("luminance"));
+        FString ChannelMode = GetStringFieldTextAuth(Params, TEXT("channelMode"), TEXT("luminance"));
         
         // Lock source texture for reading
         FTexture2DMipMap& HeightMip = HeightMap->GetPlatformData()->Mips[0];
@@ -686,15 +687,15 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     {
         // AO texture generation - creates a procedural AO approximation
         // For real mesh-based AO, GPU baking with scene capture would be required
-        FString MeshPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("meshPath"), TEXT("")));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        int32 Width = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("width"), 1024));
-        int32 Height = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("height"), 1024));
-        int32 SampleCount = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("sampleCount"), 16));
-        float Intensity = static_cast<float>(GetNumberFieldSafe(Params, TEXT("intensity"), 1.0));
-        float Radius = static_cast<float>(GetNumberFieldSafe(Params, TEXT("radius"), 0.1));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString MeshPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("meshPath"), TEXT("")));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
+        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
+        int32 SampleCount = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("sampleCount"), 16));
+        float Intensity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("intensity"), 1.0));
+        float Radius = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("radius"), 0.1));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (MeshPath.IsEmpty() || Name.IsEmpty())
         {
@@ -779,9 +780,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("set_compression_settings"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        FString CompressionSettingsStr = GetStringFieldSafe(Params, TEXT("compressionSettings"), TEXT("TC_Default"));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString CompressionSettingsStr = GetStringFieldTextAuth(Params, TEXT("compressionSettings"), TEXT("TC_Default"));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -824,9 +825,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("set_texture_group"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        FString TextureGroup = GetStringFieldSafe(Params, TEXT("textureGroup"), TEXT("TEXTUREGROUP_World"));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString TextureGroup = GetStringFieldTextAuth(Params, TEXT("textureGroup"), TEXT("TEXTUREGROUP_World"));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -869,9 +870,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("set_lod_bias"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        int32 LODBias = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("lodBias"), 0));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        int32 LODBias = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("lodBias"), 0));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -900,9 +901,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("configure_virtual_texture"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        bool bVirtualTextureStreaming = GetBoolFieldSafe(Params, TEXT("virtualTextureStreaming"), false);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        bool bVirtualTextureStreaming = GetBoolFieldTextAuth(Params, TEXT("virtualTextureStreaming"), false);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -931,9 +932,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("set_streaming_priority"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        bool bNeverStream = GetBoolFieldSafe(Params, TEXT("neverStream"), false);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        bool bNeverStream = GetBoolFieldTextAuth(Params, TEXT("neverStream"), false);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -962,7 +963,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("get_texture_info"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
         
         if (AssetPath.IsEmpty())
         {
@@ -1016,12 +1017,12 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("resize_texture"))
     {
-        FString SourcePath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("sourcePath"), TEXT("")));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("")));
-        int32 NewWidth = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("newWidth"), 512));
-        int32 NewHeight = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("newHeight"), 512));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("sourcePath"), TEXT("")));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("")));
+        int32 NewWidth = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("newWidth"), 512));
+        int32 NewHeight = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("newHeight"), 512));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (SourcePath.IsEmpty())
         {
@@ -1125,11 +1126,11 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("invert"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        bool bInPlace = GetBoolFieldSafe(Params, TEXT("inPlace"), true);
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("")));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("")));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1201,12 +1202,12 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("desaturate"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        float Amount = static_cast<float>(GetNumberFieldSafe(Params, TEXT("amount"), 1.0));
-        bool bInPlace = GetBoolFieldSafe(Params, TEXT("inPlace"), true);
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("")));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        float Amount = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("amount"), 1.0));
+        bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("")));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1282,14 +1283,14 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("adjust_levels"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        float InBlack = static_cast<float>(GetNumberFieldSafe(Params, TEXT("inBlack"), 0.0));
-        float InWhite = static_cast<float>(GetNumberFieldSafe(Params, TEXT("inWhite"), 1.0));
-        float Gamma = static_cast<float>(GetNumberFieldSafe(Params, TEXT("gamma"), 1.0));
-        float OutBlack = static_cast<float>(GetNumberFieldSafe(Params, TEXT("outBlack"), 0.0));
-        float OutWhite = static_cast<float>(GetNumberFieldSafe(Params, TEXT("outWhite"), 1.0));
-        bool bInPlace = GetBoolFieldSafe(Params, TEXT("inPlace"), true);
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        float InBlack = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("inBlack"), 0.0));
+        float InWhite = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("inWhite"), 1.0));
+        float Gamma = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("gamma"), 1.0));
+        float OutBlack = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("outBlack"), 0.0));
+        float OutWhite = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("outWhite"), 1.0));
+        bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1352,9 +1353,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("blur"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        int32 Radius = static_cast<int32>(GetNumberFieldSafe(Params, TEXT("radius"), 2));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        int32 Radius = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("radius"), 2));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1431,9 +1432,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("sharpen"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        float Amount = static_cast<float>(GetNumberFieldSafe(Params, TEXT("amount"), 1.0));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        float Amount = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("amount"), 1.0));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1505,13 +1506,13 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("channel_pack"))
     {
-        FString RedPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("redTexture"), TEXT("")));
-        FString GreenPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("greenTexture"), TEXT("")));
-        FString BluePath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("blueTexture"), TEXT("")));
-        FString AlphaPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("alphaTexture"), TEXT("")));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT("ChannelPacked"));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString RedPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("redTexture"), TEXT("")));
+        FString GreenPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("greenTexture"), TEXT("")));
+        FString BluePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("blueTexture"), TEXT("")));
+        FString AlphaPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("alphaTexture"), TEXT("")));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("ChannelPacked"));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (Name.IsEmpty())
         {
@@ -1595,13 +1596,13 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     
     if (SubAction == TEXT("combine_textures"))
     {
-        FString BaseTexturePath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("baseTexture"), TEXT("")));
-        FString OverlayTexturePath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("overlayTexture"), TEXT("")));
-        FString BlendMode = GetStringFieldSafe(Params, TEXT("blendMode"), TEXT("Normal"));
-        float Opacity = static_cast<float>(GetNumberFieldSafe(Params, TEXT("opacity"), 1.0));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT("Combined"));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("/Game/Textures")));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString BaseTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("baseTexture"), TEXT("")));
+        FString OverlayTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("overlayTexture"), TEXT("")));
+        FString BlendMode = GetStringFieldTextAuth(Params, TEXT("blendMode"), TEXT("Normal"));
+        float Opacity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("opacity"), 1.0));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("Combined"));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (BaseTexturePath.IsEmpty() || OverlayTexturePath.IsEmpty())
         {
@@ -1700,11 +1701,11 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     // Apply RGB curve adjustment using LUT (lookup table) built from control points
     if (SubAction == TEXT("adjust_curves"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("assetPath"), TEXT("")));
-        bool bInPlace = GetBoolFieldSafe(Params, TEXT("inPlace"), true);
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("path"), TEXT("")));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("")));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (AssetPath.IsEmpty())
         {
@@ -1886,11 +1887,11 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     // Extract a single channel (R, G, B, or A) to a new grayscale texture
     if (SubAction == TEXT("channel_extract"))
     {
-        FString SourcePath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("texturePath"), TEXT("")));
-        FString Channel = GetStringFieldSafe(Params, TEXT("channel"), TEXT("R"));
-        FString OutputPath = NormalizeTexturePath(GetStringFieldSafe(Params, TEXT("outputPath"), TEXT("")));
-        FString Name = GetStringFieldSafe(Params, TEXT("name"), TEXT(""));
-        bool bSave = GetBoolFieldSafe(Params, TEXT("save"), true);
+        FString SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("texturePath"), TEXT("")));
+        FString Channel = GetStringFieldTextAuth(Params, TEXT("channel"), TEXT("R"));
+        FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (SourcePath.IsEmpty())
         {
@@ -2031,8 +2032,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
     // Send response
     if (Result.IsValid())
     {
-        bool bSuccess = Result->HasField(TEXT("success")) && Result->GetBoolField(TEXT("success"));
-        FString Message = Result->HasField(TEXT("message")) ? Result->GetStringField(TEXT("message")) : TEXT("");
+        bool bSuccess = GetJsonBoolField(Result, TEXT("success"));
+        FString Message = GetJsonStringField(Result, TEXT("message"));
         
         if (bSuccess)
         {
@@ -2040,8 +2041,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
         }
         else
         {
-            FString Error = Result->HasField(TEXT("error")) ? Result->GetStringField(TEXT("error")) : TEXT("Unknown error");
-            FString ErrorCode = Result->HasField(TEXT("errorCode")) ? Result->GetStringField(TEXT("errorCode")) : TEXT("TEXTURE_ERROR");
+            FString Error = GetJsonStringField(Result, TEXT("error"), TEXT("Unknown error"));
+            FString ErrorCode = GetJsonStringField(Result, TEXT("errorCode"), TEXT("TEXTURE_ERROR"));
             SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         }
         return true;
@@ -2052,3 +2053,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
 }
 
 #undef TEXTURE_ERROR_RESPONSE
+
+#undef GetStringFieldTextAuth
+#undef GetNumberFieldTextAuth
+#undef GetBoolFieldTextAuth
+

@@ -1,6 +1,13 @@
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+
+// Helper macros for JSON field access
+#define GetStringFieldPipe GetJsonStringField
+#define GetNumberFieldPipe GetJsonNumberField
+#define GetBoolFieldPipe GetJsonBoolField
+
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
 
@@ -17,7 +24,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(const FString& RequestI
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetStringFieldPipe(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("run_ubt"))
     {
@@ -65,3 +72,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(const FString& RequestI
     SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
 }
+
+#undef GetStringFieldPipe
+#undef GetNumberFieldPipe
+#undef GetBoolFieldPipe
+

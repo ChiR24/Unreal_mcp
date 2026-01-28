@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 #include "DrawDebugHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -170,11 +171,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             const TSharedPtr<FJsonObject> O = LocVal->AsObject();
             if (O.IsValid())
               Loc = FVector(
-                  (float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x"))
+                  (float)(O->HasField(TEXT("x")) ? GetJsonNumberField(O, TEXT("x"))
                                                  : 0.0),
-                  (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y"))
+                  (float)(O->HasField(TEXT("y")) ? GetJsonNumberField(O, TEXT("y"))
                                                  : 0.0),
-                  (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z"))
+                  (float)(O->HasField(TEXT("z")) ? GetJsonNumberField(O, TEXT("z"))
                                                  : 0.0));
           }
         }
@@ -204,225 +205,41 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
       const bool bAutoDestroy =
           LocalPayload->HasField(TEXT("autoDestroy"))
-              ? LocalPayload->GetBoolField(TEXT("autoDestroy"))
+              ? GetJsonBoolField(LocalPayload, TEXT("autoDestroy"))
               : false;
-
-#if WITH_EDITOR
-      if (!GEditor) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), false);
-        Resp->SetStringField(TEXT("error"), TEXT("Editor not available"));
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Editor not available"), Resp,
-                               TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-      }
-      UEditorActorSubsystem *ActorSS =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-      if (!ActorSS) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), false);
-        Resp->SetStringField(TEXT("error"),
-                             TEXT("EditorActorSubsystem not available"));
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("EditorActorSubsystem not available"), Resp,
-                               TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-      }
-
-      UObject *ParticleObj = UEditorAssetLibrary::LoadAsset(Preset);
-      if (!ParticleObj) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), false);
-        Resp->SetStringField(TEXT("error"),
-                             TEXT("Particle preset asset not found"));
-        Resp->SetStringField(TEXT("preset"), Preset);
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Particle preset not found"), Resp,
-                               TEXT("PRESET_NOT_FOUND"));
-        return true;
-      }
-
-      const FRotator SpawnRot(static_cast<float>(RotArr[0]),
-                              static_cast<float>(RotArr[1]),
-                              static_cast<float>(RotArr[2]));
-      AActor *Spawned = SpawnActorInActiveWorld<AActor>(
-          ANiagaraActor::StaticClass(), Loc, SpawnRot);
-      if (!Spawned) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), false);
-        Resp->SetStringField(TEXT("error"),
-                             TEXT("Failed to spawn particle actor"));
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Failed to spawn particle actor"), Resp,
-                               TEXT("SPAWN_FAILED"));
-        return true;
-      }
-
-      UNiagaraComponent *NiComp =
-          Spawned->FindComponentByClass<UNiagaraComponent>();
-      if (NiComp && ParticleObj->IsA<UNiagaraSystem>()) {
-        NiComp->SetAsset(Cast<UNiagaraSystem>(ParticleObj));
-        NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
-        NiComp->Activate(true);
-      }
-
-      Spawned->SetActorLabel(FString::Printf(
-          TEXT("Particle_%s_%lld"), *FPackageName::GetShortName(Preset),
-          FDateTime::Now().ToUnixTimestamp()));
-
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("particlePath"), Preset);
-      Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
-      Resp->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Particle preset spawned"), Resp, FString());
-      return true;
-#else
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetBoolField(TEXT("success"), false);
-      Resp->SetStringField(TEXT("error"),
-                           TEXT("Particle spawning requires editor build"));
-      Resp->SetStringField(TEXT("preset"), Preset);
-      SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("Particle spawning not available in non-editor build"), Resp,
-          TEXT("NOT_AVAILABLE"));
-      return true;
-#endif
-    }
-    // Handle create_niagara_system
-    else if (LowerSub == TEXT("create_niagara_system")) {
-      FString Name;
-      LocalPayload->TryGetStringField(TEXT("name"), Name);
-      FString Path;
-      LocalPayload->TryGetStringField(TEXT("path"), Path);
-
-      if (Name.IsEmpty() || Path.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("name and path required"),
-                            TEXT("INVALID_ARGUMENT"));
-        return true;
-      }
-
-      // Basic asset creation logic (requires UNiagaraSystemFactoryNew or
-      // similar) Since we are inside EffectHandlers, usually we spawn things.
-      // creation might belong in AssetHandlers But per plan, we implement it
-      // here to unblock.
-
-      UPackage *Package = CreatePackage(*Path);
-      if (!Package) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create package"),
-                            TEXT("CREATE_FAILED"));
-        return true;
-      }
-
-      UNiagaraSystemFactoryNew *Factory = NewObject<UNiagaraSystemFactoryNew>();
-      if (!Factory) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create factory"),
-                            TEXT("FACTORY_ERROR"));
-        return true;
-      }
-      UNiagaraSystem *NewSystem =
-          Cast<UNiagaraSystem>(Factory->FactoryCreateNew(
-              UNiagaraSystem::StaticClass(), Package, *Name,
-              RF_Public | RF_Standalone, nullptr, nullptr));
-
-      if (NewSystem) {
-        McpSafeAssetSave(NewSystem);
-        // Return validity check
-        FString AssetPath = NewSystem->GetPathName();
-        // If it's something like /Game/Path/Asset.Asset, try to simplify for
-        // user convenience But LoadAsset works with the full Object path or
-        // Package path. Let's ensure we save it properly.
-
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("assetPath"), AssetPath);
-        Resp->SetStringField(TEXT("packageName"), Package->GetPathName());
-
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Niagara System created"), Resp);
-      } else {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Factory failed to create system"),
-                            TEXT("CREATE_FAILED"));
-      }
-      return true;
-    }
-
-    // Handle debug shapes
-    if (LowerSub == TEXT("debug_shape")) {
-      FString ShapeType;
-      LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
-      if (ShapeType.IsEmpty()) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), false);
-        Resp->SetStringField(
-            TEXT("error"),
-            TEXT("shapeType parameter required for debug shape drawing"));
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("shapeType required"), Resp,
-                               TEXT("INVALID_ARGUMENT"));
-        return true;
-      }
-
-      // Location
-      FVector Loc(0, 0, 0);
-      if (LocalPayload->HasField(TEXT("location"))) {
-        const TSharedPtr<FJsonValue> LocVal =
-            LocalPayload->TryGetField(TEXT("location"));
-        if (LocVal.IsValid()) {
-          if (LocVal->Type == EJson::Array) {
-            const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
-            if (Arr.Num() >= 3)
-              Loc =
-                  FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(),
-                          (float)Arr[2]->AsNumber());
-          } else if (LocVal->Type == EJson::Object) {
-            const TSharedPtr<FJsonObject> O = LocVal->AsObject();
-            if (O.IsValid())
-              Loc = FVector(
-                  (float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x"))
-                                                 : 0.0),
-                  (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y"))
-                                                 : 0.0),
-                  (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z"))
-                                                 : 0.0));
-          }
-        }
-      }
-
-      // Color (default: red)
-      TArray<double> ColorArr = {255, 0, 0, 255};
-      const TArray<TSharedPtr<FJsonValue>> *ColorJsonArr = nullptr;
-      if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) &&
-          ColorJsonArr && ColorJsonArr->Num() >= 4) {
-        ColorArr[0] = (*ColorJsonArr)[0]->AsNumber();
-        ColorArr[1] = (*ColorJsonArr)[1]->AsNumber();
-        ColorArr[2] = (*ColorJsonArr)[2]->AsNumber();
-        ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
-      }
 
       // Duration (default: 5.0 seconds)
       const float Duration =
           LocalPayload->HasField(TEXT("duration"))
-              ? (float)LocalPayload->GetNumberField(TEXT("duration"))
+              ? (float)GetJsonNumberField(LocalPayload, TEXT("duration"))
               : 5.0f;
 
       // Size/Radius (default: 100.0)
       const float Size = LocalPayload->HasField(TEXT("size"))
-                             ? (float)LocalPayload->GetNumberField(TEXT("size"))
+                             ? (float)GetJsonNumberField(LocalPayload, TEXT("size"))
                              : 100.0f;
 
       // Thickness for lines (default: 2.0)
       const float Thickness =
           LocalPayload->HasField(TEXT("thickness"))
-              ? (float)LocalPayload->GetNumberField(TEXT("thickness"))
+              ? (float)GetJsonNumberField(LocalPayload, TEXT("thickness"))
               : 2.0f;
+
+      // Extract Color and ShapeType for debug drawing
+      TArray<double> ColorArr = {255, 255, 255, 255};
+      const TArray<TSharedPtr<FJsonValue>> *ColorJsonArr = nullptr;
+      if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) &&
+          ColorJsonArr && ColorJsonArr->Num() >= 3) {
+        ColorArr[0] = (*ColorJsonArr)[0]->AsNumber();
+        ColorArr[1] = (*ColorJsonArr)[1]->AsNumber();
+        ColorArr[2] = (*ColorJsonArr)[2]->AsNumber();
+        if (ColorJsonArr->Num() >= 4) {
+          ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
+        }
+      }
+
+      FString ShapeType = TEXT("sphere");
+      LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
 
 #if WITH_EDITOR
       if (!GEditor) {
@@ -488,13 +305,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
-                                             ? O->GetNumberField(TEXT("x"))
+                                             ? GetJsonNumberField(O, TEXT("x"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("y"))
-                                             ? O->GetNumberField(TEXT("y"))
+                                             ? GetJsonNumberField(O, TEXT("y"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("z"))
-                                             ? O->GetNumberField(TEXT("z"))
+                                             ? GetJsonNumberField(O, TEXT("z"))
                                              : 0.0));
             }
           }
@@ -506,12 +323,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       } else if (LowerShapeType == TEXT("coordinate")) {
         FRotator Rot = FRotator::ZeroRotator;
         if (LocalPayload->HasField(TEXT("rotation"))) {
-          const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
-          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) &&
-              RotArr && RotArr->Num() >= 3) {
-            Rot = FRotator((float)(*RotArr)[0]->AsNumber(),
-                           (float)(*RotArr)[1]->AsNumber(),
-                           (float)(*RotArr)[2]->AsNumber());
+          const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
+          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
+              RotJsonArr && RotJsonArr->Num() >= 3) {
+            Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
+                           (float)(*RotJsonArr)[1]->AsNumber(),
+                           (float)(*RotJsonArr)[2]->AsNumber());
           }
         }
         DrawDebugCoordinateSystem(World, Loc, Rot, Size, false, Duration, 0,
@@ -532,13 +349,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
-                                             ? O->GetNumberField(TEXT("x"))
+                                             ? GetJsonNumberField(O, TEXT("x"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("y"))
-                                             ? O->GetNumberField(TEXT("y"))
+                                             ? GetJsonNumberField(O, TEXT("y"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("z"))
-                                             ? O->GetNumberField(TEXT("z"))
+                                             ? GetJsonNumberField(O, TEXT("z"))
                                              : 0.0));
             }
           }
@@ -561,27 +378,27 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
               const TSharedPtr<FJsonObject> O = DirVal->AsObject();
               if (O.IsValid())
                 Direction = FVector((float)(O->HasField(TEXT("x"))
-                                                ? O->GetNumberField(TEXT("x"))
+                                                ? GetJsonNumberField(O, TEXT("x"))
                                                 : 0.0),
                                     (float)(O->HasField(TEXT("y"))
-                                                ? O->GetNumberField(TEXT("y"))
+                                                ? GetJsonNumberField(O, TEXT("y"))
                                                 : 0.0),
                                     (float)(O->HasField(TEXT("z"))
-                                                ? O->GetNumberField(TEXT("z"))
+                                                ? GetJsonNumberField(O, TEXT("z"))
                                                 : 0.0));
             }
           }
         }
         float Length = 100.0f;
         if (LocalPayload->HasField(TEXT("length"))) {
-          Length = (float)LocalPayload->GetNumberField(TEXT("length"));
+          Length = (float)GetJsonNumberField(LocalPayload, TEXT("length"));
         }
         // Default to a 45 degree cone if not specified
         float AngleWidth = FMath::DegreesToRadians(45.0f);
         float AngleHeight = FMath::DegreesToRadians(45.0f);
 
         if (LocalPayload->HasField(TEXT("angle"))) {
-          float AngleDeg = (float)LocalPayload->GetNumberField(TEXT("angle"));
+          float AngleDeg = (float)GetJsonNumberField(LocalPayload, TEXT("angle"));
           AngleWidth = AngleHeight = FMath::DegreesToRadians(AngleDeg);
         }
 
@@ -590,18 +407,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       } else if (LowerShapeType == TEXT("capsule")) {
         FQuat Rot = FQuat::Identity;
         if (LocalPayload->HasField(TEXT("rotation"))) {
-          const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
-          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) &&
-              RotArr && RotArr->Num() >= 3) {
-            Rot = FRotator((float)(*RotArr)[0]->AsNumber(),
-                           (float)(*RotArr)[1]->AsNumber(),
-                           (float)(*RotArr)[2]->AsNumber())
+          const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
+          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
+              RotJsonArr && RotJsonArr->Num() >= 3) {
+            Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
+                           (float)(*RotJsonArr)[1]->AsNumber(),
+                           (float)(*RotJsonArr)[2]->AsNumber())
                       .Quaternion();
           }
         }
         float HalfHeight = Size; // Default if not specified
         if (LocalPayload->HasField(TEXT("halfHeight"))) {
-          HalfHeight = (float)LocalPayload->GetNumberField(TEXT("halfHeight"));
+          HalfHeight = (float)GetJsonNumberField(LocalPayload, TEXT("halfHeight"));
         }
         DrawDebugCapsule(World, Loc, HalfHeight, Size, Rot, DebugColor, false,
                          Duration, 0, Thickness);
@@ -622,13 +439,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
-                                             ? O->GetNumberField(TEXT("x"))
+                                             ? GetJsonNumberField(O, TEXT("x"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("y"))
-                                             ? O->GetNumberField(TEXT("y"))
+                                             ? GetJsonNumberField(O, TEXT("y"))
                                              : 0.0),
                                  (float)(O->HasField(TEXT("z"))
-                                             ? O->GetNumberField(TEXT("z"))
+                                             ? GetJsonNumberField(O, TEXT("z"))
                                              : 0.0));
             }
           }
@@ -646,12 +463,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         FQuat Rot = FQuat::Identity;
         if (LocalPayload->HasField(TEXT("rotation"))) {
-          const TArray<TSharedPtr<FJsonValue>> *RotArr = nullptr;
-          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotArr) &&
-              RotArr && RotArr->Num() >= 3) {
-            Rot = FRotator((float)(*RotArr)[0]->AsNumber(),
-                           (float)(*RotArr)[1]->AsNumber(),
-                           (float)(*RotArr)[2]->AsNumber())
+          const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
+          if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
+              RotJsonArr && RotJsonArr->Num() >= 3) {
+            Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
+                           (float)(*RotJsonArr)[1]->AsNumber(),
+                           (float)(*RotJsonArr)[2]->AsNumber())
                       .Quaternion();
           }
         }
@@ -913,7 +730,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       FString SystemName;
       LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
       bool bReset = LocalPayload->HasField(TEXT("reset"))
-                        ? LocalPayload->GetBoolField(TEXT("reset"))
+                        ? GetJsonBoolField(LocalPayload, TEXT("reset"))
                         : true;
 
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
@@ -1082,11 +899,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             const TSharedPtr<FJsonObject> O = LocVal->AsObject();
             if (O.IsValid())
               Loc = FVector(
-                  (float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x"))
+                  (float)(O->HasField(TEXT("x")) ? GetJsonNumberField(O, TEXT("x"))
                                                  : 0.0),
-                  (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y"))
+                  (float)(O->HasField(TEXT("y")) ? GetJsonNumberField(O, TEXT("y"))
                                                  : 0.0),
-                  (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z"))
+                  (float)(O->HasField(TEXT("z")) ? GetJsonNumberField(O, TEXT("z"))
                                                  : 0.0));
           }
         }
@@ -1111,13 +928,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           if (LocalPayload->TryGetObjectField(TEXT("color"), CO) && CO &&
               (*CO).IsValid()) {
             bHasColor = true;
-            Cr = (*CO)->HasField(TEXT("r")) ? (*CO)->GetNumberField(TEXT("r"))
+            Cr = (*CO)->HasField(TEXT("r")) ? GetJsonNumberField(*CO, TEXT("r"))
                                             : Cr;
-            Cg = (*CO)->HasField(TEXT("g")) ? (*CO)->GetNumberField(TEXT("g"))
+            Cg = (*CO)->HasField(TEXT("g")) ? GetJsonNumberField(*CO, TEXT("g"))
                                             : Cg;
-            Cb = (*CO)->HasField(TEXT("b")) ? (*CO)->GetNumberField(TEXT("b"))
+            Cb = (*CO)->HasField(TEXT("b")) ? GetJsonNumberField(*CO, TEXT("b"))
                                             : Cb;
-            Ca = (*CO)->HasField(TEXT("a")) ? (*CO)->GetNumberField(TEXT("a"))
+            Ca = (*CO)->HasField(TEXT("a")) ? GetJsonNumberField(*CO, TEXT("a"))
                                             : Ca;
           }
         }
@@ -1315,11 +1132,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           const TSharedPtr<FJsonObject> O = LocVal->AsObject();
           if (O.IsValid())
             Loc = FVector(
-                (float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x"))
+                (float)(O->HasField(TEXT("x")) ? GetJsonNumberField(O, TEXT("x"))
                                                : 0.0),
-                (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y"))
+                (float)(O->HasField(TEXT("y")) ? GetJsonNumberField(O, TEXT("y"))
                                                : 0.0),
-                (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z"))
+                (float)(O->HasField(TEXT("z")) ? GetJsonNumberField(O, TEXT("z"))
                                                : 0.0));
         }
       }
@@ -1349,7 +1166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     const bool bAutoDestroy =
         LocalPayload->HasField(TEXT("autoDestroy"))
-            ? LocalPayload->GetBoolField(TEXT("autoDestroy"))
+            ? GetJsonBoolField(LocalPayload, TEXT("autoDestroy"))
             : false;
     FString AttachToActor;
     LocalPayload->TryGetStringField(TEXT("attachToActor"), AttachToActor);
@@ -1633,11 +1450,11 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
         const TSharedPtr<FJsonObject> O = LocVal->AsObject();
         if (O.IsValid())
           Loc = FVector(
-              (float)(O->HasField(TEXT("x")) ? O->GetNumberField(TEXT("x"))
+              (float)(O->HasField(TEXT("x")) ? GetJsonNumberField(O, TEXT("x"))
                                              : 0.0),
-              (float)(O->HasField(TEXT("y")) ? O->GetNumberField(TEXT("y"))
+              (float)(O->HasField(TEXT("y")) ? GetJsonNumberField(O, TEXT("y"))
                                              : 0.0),
-              (float)(O->HasField(TEXT("z")) ? O->GetNumberField(TEXT("z"))
+              (float)(O->HasField(TEXT("z")) ? GetJsonNumberField(O, TEXT("z"))
                                              : 0.0));
       }
     }

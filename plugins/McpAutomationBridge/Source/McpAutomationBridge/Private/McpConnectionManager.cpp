@@ -1,4 +1,5 @@
 #include "McpConnectionManager.h"
+#include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeSettings.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -10,7 +11,7 @@
 // Reuse the log category from the subsystem for consistency
 // (It is declared extern in McpAutomationBridgeSubsystem.h)
 
-static inline FString SanitizeForLog(const FString &In) {
+static inline FString SanitizeForLogConnMgr(const FString &In) {
   if (In.IsEmpty())
     return FString();
   FString Out;
@@ -458,7 +459,7 @@ void FMcpConnectionManager::HandleMessage(
   if (!FJsonSerializer::Deserialize(Reader, RootObj) || !RootObj.IsValid()) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Failed to parse incoming automation message JSON: %s"),
-           *SanitizeForLog(Message));
+           *SanitizeForLogConnMgr(Message));
     return;
   }
 
@@ -466,7 +467,7 @@ void FMcpConnectionManager::HandleMessage(
   if (!RootObj->TryGetStringField(TEXT("type"), Type)) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Incoming message missing 'type' field: %s"),
-           *SanitizeForLog(Message));
+           *SanitizeForLogConnMgr(Message));
     return;
   }
 
@@ -485,7 +486,7 @@ void FMcpConnectionManager::HandleMessage(
     if (RequestId.IsEmpty() || Action.IsEmpty()) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request missing requestId or action: %s"),
-             *SanitizeForLog(Message));
+             *SanitizeForLogConnMgr(Message));
       return;
     }
 

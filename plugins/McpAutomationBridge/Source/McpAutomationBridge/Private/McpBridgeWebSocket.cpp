@@ -1,4 +1,5 @@
 #include "McpBridgeWebSocket.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "Async/Async.h"

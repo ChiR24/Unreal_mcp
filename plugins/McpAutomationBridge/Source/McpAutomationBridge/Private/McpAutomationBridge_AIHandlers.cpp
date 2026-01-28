@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_AIHandlers.cpp
 // Phase 16: AI System
 // Implements 35 actions for AI controllers, blackboards, behavior trees, EQS, perception,
@@ -1539,7 +1540,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             // UE 5.7+: SelectionBehavior API was refactored - skip setting
             (void)Behavior; // Suppress unused warning
 #endif
-        }
+}
         
         // Save
         McpSafeAssetSave(StateTree);

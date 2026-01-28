@@ -12,6 +12,7 @@
 // - Utility (info queries, preview)
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "McpBridgeWebSocket.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -62,34 +63,18 @@
 
 namespace WidgetAuthoringHelpers
 {
-    // Get string field with default
-    FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""))
+    FLinearColor GetColorFromJsonWidget(const TSharedPtr<FJsonObject>& ColorObj, const FLinearColor& Default = FLinearColor::White)
     {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
+        if (!ColorObj.IsValid())
         {
-            return Payload->GetStringField(FieldName);
+            return Default;
         }
-        return Default;
-    }
-
-    // Get number field with default
-    double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0)
-    {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
-        {
-            return Payload->GetNumberField(FieldName);
-        }
-        return Default;
-    }
-
-    // Get bool field with default
-    bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false)
-    {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
-        {
-            return Payload->GetBoolField(FieldName);
-        }
-        return Default;
+        FLinearColor Color = Default;
+        Color.R = ColorObj->HasField(TEXT("r")) ? GetJsonNumberField(ColorObj, TEXT("r")) : Default.R;
+        Color.G = ColorObj->HasField(TEXT("g")) ? GetJsonNumberField(ColorObj, TEXT("g")) : Default.G;
+        Color.B = ColorObj->HasField(TEXT("b")) ? GetJsonNumberField(ColorObj, TEXT("b")) : Default.B;
+        Color.A = ColorObj->HasField(TEXT("a")) ? GetJsonNumberField(ColorObj, TEXT("a")) : Default.A;
+        return Color;
     }
 
     // Get object field
@@ -226,36 +211,6 @@ namespace WidgetAuthoringHelpers
         return Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *PackagePath));
     }
 
-    // Get color from JSON object
-    FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& ColorObj, const FLinearColor& Default = FLinearColor::White)
-    {
-        if (!ColorObj.IsValid())
-        {
-            return Default;
-        }
-        
-        FLinearColor Color;
-        Color.R = GetNumberField(ColorObj, TEXT("r"), Default.R);
-        Color.G = GetNumberField(ColorObj, TEXT("g"), Default.G);
-        Color.B = GetNumberField(ColorObj, TEXT("b"), Default.B);
-        Color.A = GetNumberField(ColorObj, TEXT("a"), Default.A);
-        return Color;
-    }
-
-    // Get FVector2D from JSON object
-    FVector2D GetVector2DFromJson(const TSharedPtr<FJsonObject>& VecObj, const FVector2D& Default = FVector2D::ZeroVector)
-    {
-        if (!VecObj.IsValid())
-        {
-            return Default;
-        }
-        
-        return FVector2D(
-            GetNumberField(VecObj, TEXT("x"), Default.X),
-            GetNumberField(VecObj, TEXT("y"), Default.Y)
-        );
-    }
-
     // Convert visibility string to enum
     ESlateVisibility GetVisibility(const FString& VisibilityStr)
     {
@@ -298,10 +253,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     }
 
     // Get subAction from payload
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
-        SubAction = GetStringField(Payload, TEXT("action"));
+        SubAction = GetJsonStringField(Payload, TEXT("action"));
     }
 
     TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
@@ -312,15 +267,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase))
     {
-        FString Name = GetStringField(Payload, TEXT("name"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
         if (Name.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString Folder = GetStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
-        FString ParentClass = GetStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
+        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
 
         // Build full path
         FString FullPath = Folder / Name;
@@ -384,8 +339,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_widget_parent_class"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString ParentClass = GetStringField(Payload, TEXT("parentClass"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"));
 
         if (WidgetPath.IsEmpty())
         {
@@ -431,14 +386,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_canvas_panel"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -456,7 +411,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Add to root if no parent specified
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             WidgetBP->WidgetTree->RootWidget = CanvasPanel;
@@ -487,14 +442,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_horizontal_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("HorizontalBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("HorizontalBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -511,7 +466,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Add to parent or root
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -544,14 +499,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_vertical_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("VerticalBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("VerticalBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -567,7 +522,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -600,14 +555,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_overlay"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Overlay"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Overlay"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -623,7 +578,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -660,15 +615,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_text_block"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TextBlock"));
-        FString Text = GetStringField(Payload, TEXT("text"), TEXT("Text"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextBlock"));
+        FString Text = GetJsonStringField(Payload, TEXT("text"), TEXT("Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -691,24 +646,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (Payload->HasField(TEXT("fontSize")))
         {
             FSlateFontInfo FontInfo = TextBlock->GetFont();
-            FontInfo.Size = static_cast<int32>(GetNumberField(Payload, TEXT("fontSize"), 12.0));
+            FontInfo.Size = static_cast<int32>(GetJsonNumberField(Payload, TEXT("fontSize"), 12.0));
             TextBlock->SetFont(FontInfo);
         }
 
         if (Payload->HasTypedField<EJson::Object>(TEXT("colorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("colorAndOpacity"));
-            FLinearColor Color = GetColorFromJson(ColorObj);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj);
             TextBlock->SetColorAndOpacity(FSlateColor(Color));
         }
 
         if (Payload->HasField(TEXT("autoWrap")))
         {
-            TextBlock->SetAutoWrapText(GetBoolField(Payload, TEXT("autoWrap")));
+            TextBlock->SetAutoWrapText(GetJsonBoolField(Payload, TEXT("autoWrap")));
         }
 
         // Add to parent
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -734,14 +689,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_image"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Image"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Image"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -758,7 +713,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Set texture if provided
-        FString TexturePath = GetStringField(Payload, TEXT("texturePath"));
+        FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
         if (!TexturePath.IsEmpty())
         {
             UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath));
@@ -772,12 +727,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (Payload->HasTypedField<EJson::Object>(TEXT("colorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("colorAndOpacity"));
-            FLinearColor Color = GetColorFromJson(ColorObj);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj);
             ImageWidget->SetColorAndOpacity(Color);
         }
 
         // Add to parent
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -803,14 +758,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_button"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Button"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Button"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -829,19 +784,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set enabled state if provided
         if (Payload->HasField(TEXT("isEnabled")))
         {
-            ButtonWidget->SetIsEnabled(GetBoolField(Payload, TEXT("isEnabled"), true));
+            ButtonWidget->SetIsEnabled(GetJsonBoolField(Payload, TEXT("isEnabled"), true));
         }
 
         // Set color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("colorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("colorAndOpacity"));
-            FLinearColor Color = GetColorFromJson(ColorObj);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj);
             ButtonWidget->SetColorAndOpacity(Color);
         }
 
         // Add to parent
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -867,14 +822,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_progress_bar"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ProgressBar"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ProgressBar"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -893,25 +848,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set percent if provided
         if (Payload->HasField(TEXT("percent")))
         {
-            ProgressBarWidget->SetPercent(static_cast<float>(GetNumberField(Payload, TEXT("percent"), 0.5)));
+            ProgressBarWidget->SetPercent(static_cast<float>(GetJsonNumberField(Payload, TEXT("percent"), 0.5)));
         }
 
         // Set fill color if provided
         if (Payload->HasTypedField<EJson::Object>(TEXT("fillColorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("fillColorAndOpacity"));
-            FLinearColor Color = GetColorFromJson(ColorObj, FLinearColor::Green);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj, FLinearColor::Green);
             ProgressBarWidget->SetFillColorAndOpacity(Color);
         }
 
         // Set marquee if provided
         if (Payload->HasField(TEXT("isMarquee")))
         {
-            ProgressBarWidget->SetIsMarquee(GetBoolField(Payload, TEXT("isMarquee")));
+            ProgressBarWidget->SetIsMarquee(GetJsonBoolField(Payload, TEXT("isMarquee")));
         }
 
         // Add to parent
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -937,14 +892,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_slider"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Slider"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Slider"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -963,27 +918,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set value if provided
         if (Payload->HasField(TEXT("value")))
         {
-            SliderWidget->SetValue(static_cast<float>(GetNumberField(Payload, TEXT("value"), 0.5)));
+            SliderWidget->SetValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("value"), 0.5)));
         }
 
         // Set min/max values if provided
         if (Payload->HasField(TEXT("minValue")))
         {
-            SliderWidget->SetMinValue(static_cast<float>(GetNumberField(Payload, TEXT("minValue"), 0.0)));
+            SliderWidget->SetMinValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("minValue"), 0.0)));
         }
         if (Payload->HasField(TEXT("maxValue")))
         {
-            SliderWidget->SetMaxValue(static_cast<float>(GetNumberField(Payload, TEXT("maxValue"), 1.0)));
+            SliderWidget->SetMaxValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxValue"), 1.0)));
         }
 
         // Set step size if provided
         if (Payload->HasField(TEXT("stepSize")))
         {
-            SliderWidget->SetStepSize(static_cast<float>(GetNumberField(Payload, TEXT("stepSize"), 0.01)));
+            SliderWidget->SetStepSize(static_cast<float>(GetJsonNumberField(Payload, TEXT("stepSize"), 0.01)));
         }
 
         // Add to parent
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1013,7 +968,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("get_widget_info"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
@@ -1072,16 +1027,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_grid_panel"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("GridPanel"));
-        int32 ColumnCount = static_cast<int32>(GetNumberField(Payload, TEXT("columnCount"), 2));
-        int32 RowCount = static_cast<int32>(GetNumberField(Payload, TEXT("rowCount"), 2));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("GridPanel"));
+        int32 ColumnCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("columnCount"), 2));
+        int32 RowCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("rowCount"), 2));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1098,7 +1053,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Add to parent or root
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1131,14 +1086,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_uniform_grid"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("UniformGridPanel"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("UniformGridPanel"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1161,10 +1116,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PaddingObj.IsValid())
             {
                 FMargin SlotPadding;
-                SlotPadding.Left = GetNumberField(PaddingObj, TEXT("left"), 0.0);
-                SlotPadding.Top = GetNumberField(PaddingObj, TEXT("top"), 0.0);
-                SlotPadding.Right = GetNumberField(PaddingObj, TEXT("right"), 0.0);
-                SlotPadding.Bottom = GetNumberField(PaddingObj, TEXT("bottom"), 0.0);
+                SlotPadding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+                SlotPadding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+                SlotPadding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+                SlotPadding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
                 UniformGrid->SetSlotPadding(SlotPadding);
             }
         }
@@ -1172,14 +1127,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set min desired slot size
         if (Payload->HasField(TEXT("minDesiredSlotWidth")))
         {
-            UniformGrid->SetMinDesiredSlotWidth(static_cast<float>(GetNumberField(Payload, TEXT("minDesiredSlotWidth"), 0.0)));
+            UniformGrid->SetMinDesiredSlotWidth(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredSlotWidth"), 0.0)));
         }
         if (Payload->HasField(TEXT("minDesiredSlotHeight")))
         {
-            UniformGrid->SetMinDesiredSlotHeight(static_cast<float>(GetNumberField(Payload, TEXT("minDesiredSlotHeight"), 0.0)));
+            UniformGrid->SetMinDesiredSlotHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredSlotHeight"), 0.0)));
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1212,14 +1167,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_wrap_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("WrapBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WrapBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1242,8 +1197,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PaddingObj.IsValid())
             {
                 FVector2D InnerPadding;
-                InnerPadding.X = GetNumberField(PaddingObj, TEXT("x"), 0.0);
-                InnerPadding.Y = GetNumberField(PaddingObj, TEXT("y"), 0.0);
+                InnerPadding.X = GetJsonNumberField(PaddingObj, TEXT("x"), 0.0);
+                InnerPadding.Y = GetJsonNumberField(PaddingObj, TEXT("y"), 0.0);
                 WrapBox->SetInnerSlotPadding(InnerPadding);
             }
         }
@@ -1251,10 +1206,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set explicit wrap size
         if (Payload->HasField(TEXT("wrapSize")))
         {
-            WrapBox->SetWrapSize(static_cast<float>(GetNumberField(Payload, TEXT("wrapSize"), 0.0)));
+            WrapBox->SetWrapSize(static_cast<float>(GetJsonNumberField(Payload, TEXT("wrapSize"), 0.0)));
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1287,15 +1242,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_scroll_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ScrollBox"));
-        FString Orientation = GetStringField(Payload, TEXT("orientation"), TEXT("Vertical"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScrollBox"));
+        FString Orientation = GetJsonStringField(Payload, TEXT("orientation"), TEXT("Vertical"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1322,7 +1277,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Set scroll bar visibility
-        FString ScrollBarVisibility = GetStringField(Payload, TEXT("scrollBarVisibility"), TEXT(""));
+        FString ScrollBarVisibility = GetJsonStringField(Payload, TEXT("scrollBarVisibility"), TEXT(""));
         if (!ScrollBarVisibility.IsEmpty())
         {
             if (ScrollBarVisibility.Equals(TEXT("Visible"), ESearchCase::IgnoreCase))
@@ -1342,10 +1297,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set always show scrollbar
         if (Payload->HasField(TEXT("alwaysShowScrollbar")))
         {
-            ScrollBox->SetAlwaysShowScrollbar(GetBoolField(Payload, TEXT("alwaysShowScrollbar")));
+            ScrollBox->SetAlwaysShowScrollbar(GetJsonBoolField(Payload, TEXT("alwaysShowScrollbar")));
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1378,14 +1333,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_size_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("SizeBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SizeBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1404,30 +1359,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set size overrides
         if (Payload->HasField(TEXT("widthOverride")))
         {
-            SizeBox->SetWidthOverride(static_cast<float>(GetNumberField(Payload, TEXT("widthOverride"), 100.0)));
+            SizeBox->SetWidthOverride(static_cast<float>(GetJsonNumberField(Payload, TEXT("widthOverride"), 100.0)));
         }
         if (Payload->HasField(TEXT("heightOverride")))
         {
-            SizeBox->SetHeightOverride(static_cast<float>(GetNumberField(Payload, TEXT("heightOverride"), 100.0)));
+            SizeBox->SetHeightOverride(static_cast<float>(GetJsonNumberField(Payload, TEXT("heightOverride"), 100.0)));
         }
         if (Payload->HasField(TEXT("minDesiredWidth")))
         {
-            SizeBox->SetMinDesiredWidth(static_cast<float>(GetNumberField(Payload, TEXT("minDesiredWidth"), 0.0)));
+            SizeBox->SetMinDesiredWidth(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredWidth"), 0.0)));
         }
         if (Payload->HasField(TEXT("minDesiredHeight")))
         {
-            SizeBox->SetMinDesiredHeight(static_cast<float>(GetNumberField(Payload, TEXT("minDesiredHeight"), 0.0)));
+            SizeBox->SetMinDesiredHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredHeight"), 0.0)));
         }
         if (Payload->HasField(TEXT("maxDesiredWidth")))
         {
-            SizeBox->SetMaxDesiredWidth(static_cast<float>(GetNumberField(Payload, TEXT("maxDesiredWidth"), 0.0)));
+            SizeBox->SetMaxDesiredWidth(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxDesiredWidth"), 0.0)));
         }
         if (Payload->HasField(TEXT("maxDesiredHeight")))
         {
-            SizeBox->SetMaxDesiredHeight(static_cast<float>(GetNumberField(Payload, TEXT("maxDesiredHeight"), 0.0)));
+            SizeBox->SetMaxDesiredHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxDesiredHeight"), 0.0)));
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1460,14 +1415,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_scale_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ScaleBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScaleBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1484,7 +1439,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Set stretch mode
-        FString Stretch = GetStringField(Payload, TEXT("stretch"), TEXT(""));
+        FString Stretch = GetJsonStringField(Payload, TEXT("stretch"), TEXT(""));
         if (!Stretch.IsEmpty())
         {
             if (Stretch.Equals(TEXT("None"), ESearchCase::IgnoreCase))
@@ -1516,13 +1471,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 ScaleBox->SetStretch(EStretch::UserSpecified);
                 if (Payload->HasField(TEXT("userSpecifiedScale")))
                 {
-                    ScaleBox->SetUserSpecifiedScale(static_cast<float>(GetNumberField(Payload, TEXT("userSpecifiedScale"), 1.0)));
+                    ScaleBox->SetUserSpecifiedScale(static_cast<float>(GetJsonNumberField(Payload, TEXT("userSpecifiedScale"), 1.0)));
                 }
             }
         }
 
         // Set stretch direction
-        FString StretchDirection = GetStringField(Payload, TEXT("stretchDirection"), TEXT(""));
+        FString StretchDirection = GetJsonStringField(Payload, TEXT("stretchDirection"), TEXT(""));
         if (!StretchDirection.IsEmpty())
         {
             if (StretchDirection.Equals(TEXT("Both"), ESearchCase::IgnoreCase))
@@ -1539,7 +1494,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1572,14 +1527,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_border"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("Border"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Border"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1599,7 +1554,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (Payload->HasTypedField<EJson::Object>(TEXT("brushColor")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("brushColor"));
-            FLinearColor Color = GetColorFromJson(ColorObj);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj);
             BorderWidget->SetBrushColor(Color);
         }
 
@@ -1607,7 +1562,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (Payload->HasTypedField<EJson::Object>(TEXT("contentColorAndOpacity")))
         {
             TSharedPtr<FJsonObject> ColorObj = Payload->GetObjectField(TEXT("contentColorAndOpacity"));
-            FLinearColor Color = GetColorFromJson(ColorObj);
+            FLinearColor Color = GetColorFromJsonWidget(ColorObj);
             BorderWidget->SetContentColorAndOpacity(Color);
         }
 
@@ -1616,14 +1571,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         {
             TSharedPtr<FJsonObject> PaddingObj = Payload->GetObjectField(TEXT("padding"));
             FMargin Padding;
-            Padding.Left = GetNumberField(PaddingObj, TEXT("left"), 0.0);
-            Padding.Top = GetNumberField(PaddingObj, TEXT("top"), 0.0);
-            Padding.Right = GetNumberField(PaddingObj, TEXT("right"), 0.0);
-            Padding.Bottom = GetNumberField(PaddingObj, TEXT("bottom"), 0.0);
+            Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+            Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+            Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+            Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
             BorderWidget->SetPadding(Padding);
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
             if (!WidgetBP->WidgetTree->RootWidget)
@@ -1660,15 +1615,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_rich_text_block"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("RichTextBlock"));
-        FString Text = GetStringField(Payload, TEXT("text"), TEXT("Rich Text"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("RichTextBlock"));
+        FString Text = GetJsonStringField(Payload, TEXT("text"), TEXT("Rich Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1686,7 +1641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         RichTextBlock->SetText(FText::FromString(Text));
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1712,15 +1667,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_check_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("CheckBox"));
-        bool bIsChecked = GetBoolField(Payload, TEXT("isChecked"), false);
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CheckBox"));
+        bool bIsChecked = GetJsonBoolField(Payload, TEXT("isChecked"), false);
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1738,7 +1693,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         CheckBox->SetIsChecked(bIsChecked);
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1764,16 +1719,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_text_input"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TextInput"));
-        FString HintText = GetStringField(Payload, TEXT("hintText"), TEXT(""));
-        bool bMultiLine = GetBoolField(Payload, TEXT("multiLine"), false);
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextInput"));
+        FString HintText = GetJsonStringField(Payload, TEXT("hintText"), TEXT(""));
+        bool bMultiLine = GetJsonBoolField(Payload, TEXT("multiLine"), false);
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1808,7 +1763,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1834,14 +1789,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_combo_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ComboBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ComboBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1868,13 +1823,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Set selected option
-        FString SelectedOption = GetStringField(Payload, TEXT("selectedOption"));
+        FString SelectedOption = GetJsonStringField(Payload, TEXT("selectedOption"));
         if (!SelectedOption.IsEmpty())
         {
             ComboBox->SetSelectedOption(SelectedOption);
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1900,14 +1855,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_spin_box"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("SpinBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SpinBox"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1926,24 +1881,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set value
         if (Payload->HasField(TEXT("value")))
         {
-            SpinBox->SetValue(static_cast<float>(GetNumberField(Payload, TEXT("value"), 0.0)));
+            SpinBox->SetValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("value"), 0.0)));
         }
         // Set min/max
         if (Payload->HasField(TEXT("minValue")))
         {
-            SpinBox->SetMinValue(static_cast<float>(GetNumberField(Payload, TEXT("minValue"), 0.0)));
+            SpinBox->SetMinValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("minValue"), 0.0)));
         }
         if (Payload->HasField(TEXT("maxValue")))
         {
-            SpinBox->SetMaxValue(static_cast<float>(GetNumberField(Payload, TEXT("maxValue"), 100.0)));
+            SpinBox->SetMaxValue(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxValue"), 100.0)));
         }
         // Set delta
         if (Payload->HasField(TEXT("delta")))
         {
-            SpinBox->SetDelta(static_cast<float>(GetNumberField(Payload, TEXT("delta"), 1.0)));
+            SpinBox->SetDelta(static_cast<float>(GetJsonNumberField(Payload, TEXT("delta"), 1.0)));
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -1969,14 +1924,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_list_view"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("ListView"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ListView"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1992,7 +1947,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -2018,14 +1973,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("add_tree_view"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        FString SlotName = GetStringField(Payload, TEXT("slotName"), TEXT("TreeView"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TreeView"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -2041,7 +1996,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString ParentSlot = GetStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
@@ -2071,8 +2026,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_anchor"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and widgetName"), TEXT("MISSING_PARAMETER"));
@@ -2102,17 +2057,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
             if (AnchorMin.IsValid())
             {
-                Anchors.Minimum.X = GetNumberField(AnchorMin, TEXT("x"), 0.0);
-                Anchors.Minimum.Y = GetNumberField(AnchorMin, TEXT("y"), 0.0);
+                Anchors.Minimum.X = GetJsonNumberField(AnchorMin, TEXT("x"), 0.0);
+                Anchors.Minimum.Y = GetJsonNumberField(AnchorMin, TEXT("y"), 0.0);
             }
             if (AnchorMax.IsValid())
             {
-                Anchors.Maximum.X = GetNumberField(AnchorMax, TEXT("x"), 1.0);
-                Anchors.Maximum.Y = GetNumberField(AnchorMax, TEXT("y"), 1.0);
+                Anchors.Maximum.X = GetJsonNumberField(AnchorMax, TEXT("x"), 1.0);
+                Anchors.Maximum.Y = GetJsonNumberField(AnchorMax, TEXT("y"), 1.0);
             }
 
             // Handle preset anchors
-            FString Preset = GetStringField(Payload, TEXT("preset"));
+            FString Preset = GetJsonStringField(Payload, TEXT("preset"));
             if (!Preset.IsEmpty())
             {
                 if (Preset.Equals(TEXT("TopLeft"), ESearchCase::IgnoreCase))
@@ -2191,8 +2146,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_alignment"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters"), TEXT("MISSING_PARAMETER"));
@@ -2220,8 +2175,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (AlignmentObj.IsValid())
             {
                 FVector2D Alignment;
-                Alignment.X = GetNumberField(AlignmentObj, TEXT("x"), 0.0);
-                Alignment.Y = GetNumberField(AlignmentObj, TEXT("y"), 0.0);
+                Alignment.X = GetJsonNumberField(AlignmentObj, TEXT("x"), 0.0);
+                Alignment.Y = GetJsonNumberField(AlignmentObj, TEXT("y"), 0.0);
                 CanvasSlot->SetAlignment(Alignment);
             }
         }
@@ -2237,8 +2192,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_position"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters"), TEXT("MISSING_PARAMETER"));
@@ -2266,8 +2221,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PositionObj.IsValid())
             {
                 FVector2D Position;
-                Position.X = GetNumberField(PositionObj, TEXT("x"), 0.0);
-                Position.Y = GetNumberField(PositionObj, TEXT("y"), 0.0);
+                Position.X = GetJsonNumberField(PositionObj, TEXT("x"), 0.0);
+                Position.Y = GetJsonNumberField(PositionObj, TEXT("y"), 0.0);
                 CanvasSlot->SetPosition(Position);
             }
         }
@@ -2283,8 +2238,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_size"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters"), TEXT("MISSING_PARAMETER"));
@@ -2312,8 +2267,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (SizeObj.IsValid())
             {
                 FVector2D Size;
-                Size.X = GetNumberField(SizeObj, TEXT("x"), 100.0);
-                Size.Y = GetNumberField(SizeObj, TEXT("y"), 100.0);
+                Size.X = GetJsonNumberField(SizeObj, TEXT("x"), 100.0);
+                Size.Y = GetJsonNumberField(SizeObj, TEXT("y"), 100.0);
                 CanvasSlot->SetSize(Size);
             }
         }
@@ -2329,8 +2284,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_padding"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters"), TEXT("MISSING_PARAMETER"));
@@ -2358,10 +2313,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PaddingObj.IsValid())
             {
                 FMargin Padding;
-                Padding.Left = GetNumberField(PaddingObj, TEXT("left"), 0.0);
-                Padding.Top = GetNumberField(PaddingObj, TEXT("top"), 0.0);
-                Padding.Right = GetNumberField(PaddingObj, TEXT("right"), 0.0);
-                Padding.Bottom = GetNumberField(PaddingObj, TEXT("bottom"), 0.0);
+                Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+                Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+                Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+                Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
                 HBoxSlot->SetPadding(Padding);
             }
         }
@@ -2371,10 +2326,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PaddingObj.IsValid())
             {
                 FMargin Padding;
-                Padding.Left = GetNumberField(PaddingObj, TEXT("left"), 0.0);
-                Padding.Top = GetNumberField(PaddingObj, TEXT("top"), 0.0);
-                Padding.Right = GetNumberField(PaddingObj, TEXT("right"), 0.0);
-                Padding.Bottom = GetNumberField(PaddingObj, TEXT("bottom"), 0.0);
+                Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+                Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+                Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+                Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
                 VBoxSlot->SetPadding(Padding);
             }
         }
@@ -2384,10 +2339,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PaddingObj.IsValid())
             {
                 FMargin Padding;
-                Padding.Left = GetNumberField(PaddingObj, TEXT("left"), 0.0);
-                Padding.Top = GetNumberField(PaddingObj, TEXT("top"), 0.0);
-                Padding.Right = GetNumberField(PaddingObj, TEXT("right"), 0.0);
-                Padding.Bottom = GetNumberField(PaddingObj, TEXT("bottom"), 0.0);
+                Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+                Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+                Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+                Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
                 OverlaySlotWidget->SetPadding(Padding);
             }
         }
@@ -2403,9 +2358,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_z_order"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        int32 ZOrder = static_cast<int32>(GetNumberField(Payload, TEXT("zOrder"), 0));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        int32 ZOrder = static_cast<int32>(GetJsonNumberField(Payload, TEXT("zOrder"), 0));
 
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2444,8 +2399,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_render_transform"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
 
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2472,27 +2427,27 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         TSharedPtr<FJsonObject> TranslationObj = GetObjectField(Payload, TEXT("translation"));
         if (TranslationObj.IsValid())
         {
-            RenderTransform.Translation.X = GetNumberField(TranslationObj, TEXT("x"), 0.0);
-            RenderTransform.Translation.Y = GetNumberField(TranslationObj, TEXT("y"), 0.0);
+            RenderTransform.Translation.X = GetJsonNumberField(TranslationObj, TEXT("x"), 0.0);
+            RenderTransform.Translation.Y = GetJsonNumberField(TranslationObj, TEXT("y"), 0.0);
         }
 
         TSharedPtr<FJsonObject> ScaleObj = GetObjectField(Payload, TEXT("scale"));
         if (ScaleObj.IsValid())
         {
-            RenderTransform.Scale.X = GetNumberField(ScaleObj, TEXT("x"), 1.0);
-            RenderTransform.Scale.Y = GetNumberField(ScaleObj, TEXT("y"), 1.0);
+            RenderTransform.Scale.X = GetJsonNumberField(ScaleObj, TEXT("x"), 1.0);
+            RenderTransform.Scale.Y = GetJsonNumberField(ScaleObj, TEXT("y"), 1.0);
         }
 
         TSharedPtr<FJsonObject> ShearObj = GetObjectField(Payload, TEXT("shear"));
         if (ShearObj.IsValid())
         {
-            RenderTransform.Shear.X = GetNumberField(ShearObj, TEXT("x"), 0.0);
-            RenderTransform.Shear.Y = GetNumberField(ShearObj, TEXT("y"), 0.0);
+            RenderTransform.Shear.X = GetJsonNumberField(ShearObj, TEXT("x"), 0.0);
+            RenderTransform.Shear.Y = GetJsonNumberField(ShearObj, TEXT("y"), 0.0);
         }
 
         if (Payload->HasField(TEXT("angle")))
         {
-            RenderTransform.Angle = static_cast<float>(GetNumberField(Payload, TEXT("angle"), 0.0));
+            RenderTransform.Angle = static_cast<float>(GetJsonNumberField(Payload, TEXT("angle"), 0.0));
         }
 
         Widget->SetRenderTransform(RenderTransform);
@@ -2508,9 +2463,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("set_visibility"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString VisibilityStr = GetStringField(Payload, TEXT("visibility"), TEXT("Visible"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString VisibilityStr = GetJsonStringField(Payload, TEXT("visibility"), TEXT("Visible"));
 
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2547,8 +2502,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase) ||
         SubAction.Equals(TEXT("set_clipping"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
 
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2572,7 +2527,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         if (SubAction.Equals(TEXT("set_clipping"), ESearchCase::IgnoreCase))
         {
-            FString ClippingStr = GetStringField(Payload, TEXT("clipping"), TEXT("Inherit"));
+            FString ClippingStr = GetJsonStringField(Payload, TEXT("clipping"), TEXT("Inherit"));
             EWidgetClipping Clipping = EWidgetClipping::Inherit;
             if (ClippingStr.Equals(TEXT("ClipToBounds"), ESearchCase::IgnoreCase))
             {
@@ -2608,9 +2563,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("bind_text"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString BindingFunction = GetStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundText"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundText"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2656,9 +2611,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_visibility"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString BindingFunction = GetStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundVisibility"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundVisibility"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2701,9 +2656,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_color"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString BindingFunction = GetStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundColor"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundColor"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2746,9 +2701,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_enabled"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString BindingFunction = GetStringField(Payload, TEXT("bindingFunction"), TEXT("GetIsEnabled"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetIsEnabled"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2791,9 +2746,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_on_clicked"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"), TEXT("OnButtonClicked"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("OnButtonClicked"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2838,9 +2793,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_on_hovered"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"), TEXT("OnButtonHovered"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("OnButtonHovered"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2883,9 +2838,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("bind_on_value_changed"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"), TEXT("OnValueChanged"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("OnValueChanged"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -2938,10 +2893,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("create_property_binding"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-        FString FunctionName = GetStringField(Payload, TEXT("functionName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"));
         
         if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || PropertyName.IsEmpty())
         {
@@ -2998,9 +2953,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("create_widget_animation"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetStringField(Payload, TEXT("animationName"), TEXT("NewAnimation"));
-        double Duration = GetNumberField(Payload, TEXT("duration"), 1.0);
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"), TEXT("NewAnimation"));
+        double Duration = GetJsonNumberField(Payload, TEXT("duration"), 1.0);
         
         if (WidgetPath.IsEmpty())
         {
@@ -3050,10 +3005,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("add_animation_track"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetStringField(Payload, TEXT("animationName"));
-        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
-        FString PropertyName = GetStringField(Payload, TEXT("propertyName"), TEXT("RenderOpacity"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+        FString WidgetName = GetJsonStringField(Payload, TEXT("widgetName"));
+        FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"), TEXT("RenderOpacity"));
         
         if (WidgetPath.IsEmpty() || AnimationName.IsEmpty() || WidgetName.IsEmpty())
         {
@@ -3131,10 +3086,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("add_animation_keyframe"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetStringField(Payload, TEXT("animationName"));
-        double Time = GetNumberField(Payload, TEXT("time"), 0.0);
-        double Value = GetNumberField(Payload, TEXT("value"), 1.0);
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+        double Time = GetJsonNumberField(Payload, TEXT("time"), 0.0);
+        double Value = GetJsonNumberField(Payload, TEXT("value"), 1.0);
         
         if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
         {
@@ -3182,10 +3137,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("set_animation_loop"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetStringField(Payload, TEXT("animationName"));
-        bool bLoop = GetBoolField(Payload, TEXT("loop"), true);
-        int32 LoopCount = static_cast<int32>(GetNumberField(Payload, TEXT("loopCount"), 0)); // 0 = infinite
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+        bool bLoop = GetJsonBoolField(Payload, TEXT("loop"), true);
+        int32 LoopCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("loopCount"), 0)); // 0 = infinite
         
         if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
         {
@@ -3237,8 +3192,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("create_main_menu"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString Title = GetStringField(Payload, TEXT("title"), TEXT("Main Menu"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString Title = GetJsonStringField(Payload, TEXT("title"), TEXT("Main Menu"));
         
         if (WidgetPath.IsEmpty())
         {
@@ -3303,7 +3258,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("create_pause_menu"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         
         if (WidgetPath.IsEmpty())
         {
@@ -3365,7 +3320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("create_hud_widget"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         
         if (WidgetPath.IsEmpty())
         {
@@ -3397,12 +3352,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("add_health_bar"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString ParentName = GetStringField(Payload, TEXT("parentName"));
-        double X = GetNumberField(Payload, TEXT("x"), 20.0);
-        double Y = GetNumberField(Payload, TEXT("y"), 20.0);
-        double Width = GetNumberField(Payload, TEXT("width"), 200.0);
-        double Height = GetNumberField(Payload, TEXT("height"), 20.0);
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        double X = GetJsonNumberField(Payload, TEXT("x"), 20.0);
+        double Y = GetJsonNumberField(Payload, TEXT("y"), 20.0);
+        double Width = GetJsonNumberField(Payload, TEXT("width"), 200.0);
+        double Height = GetJsonNumberField(Payload, TEXT("height"), 20.0);
         
         if (WidgetPath.IsEmpty())
         {
@@ -3472,9 +3427,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("add_crosshair"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString ParentName = GetStringField(Payload, TEXT("parentName"));
-        double Size = GetNumberField(Payload, TEXT("size"), 32.0);
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        double Size = GetJsonNumberField(Payload, TEXT("size"), 32.0);
         
         if (WidgetPath.IsEmpty())
         {
@@ -3539,8 +3494,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     
     if (SubAction.Equals(TEXT("add_ammo_counter"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
-        FString ParentName = GetStringField(Payload, TEXT("parentName"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
         
         if (WidgetPath.IsEmpty())
         {
@@ -3613,7 +3568,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         SubAction.Equals(TEXT("create_dialog_widget"), ESearchCase::IgnoreCase) ||
         SubAction.Equals(TEXT("create_radial_menu"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         
         if (WidgetPath.IsEmpty())
         {
@@ -3653,7 +3608,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
     if (SubAction.Equals(TEXT("preview_widget"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         if (WidgetPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));

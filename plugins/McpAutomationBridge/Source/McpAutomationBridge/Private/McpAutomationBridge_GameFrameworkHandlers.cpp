@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_GameFrameworkHandlers.cpp
 // Phase 21: Game Framework System Handlers
 //
@@ -87,7 +88,7 @@ namespace GameFrameworkHelpers
     {
         if (Payload.IsValid() && Payload->HasField(FieldName))
         {
-            return Payload->GetStringField(FieldName);
+            return GetJsonStringField(Payload, FieldName);
         }
         return Default;
     }
@@ -97,7 +98,7 @@ namespace GameFrameworkHelpers
     {
         if (Payload.IsValid() && Payload->HasField(FieldName))
         {
-            return Payload->GetNumberField(FieldName);
+            return GetJsonNumberField(Payload, FieldName);
         }
         return Default;
     }
@@ -107,7 +108,7 @@ namespace GameFrameworkHelpers
     {
         if (Payload.IsValid() && Payload->HasField(FieldName))
         {
-            return Payload->GetBoolField(FieldName);
+            return GetJsonBoolField(Payload, FieldName);
         }
         return Default;
     }
@@ -976,42 +977,42 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // Add CurrentMatchState as byte (for use with custom enum or simple state index)
-        FEdGraphPinType BytePinType = MakeBytePinType();
-        if (AddBlueprintVariable(BP, TEXT("CurrentMatchState"), BytePinType, TEXT("Match Flow")))
+        FEdGraphPinType BytePinType = GameFrameworkHelpers::MakeBytePinType();
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("CurrentMatchState"), BytePinType, TEXT("Match Flow")))
         {
-            SetVariableDefaultValue(BP, TEXT("CurrentMatchState"), TEXT("0"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("CurrentMatchState"), TEXT("0"));
             VarsAdded++;
         }
 
         // Add MatchStateNames array as Name array for state name lookup
-        FEdGraphPinType NamePinType = MakeNamePinType();
+        FEdGraphPinType NamePinType = GameFrameworkHelpers::MakeNamePinType();
         NamePinType.ContainerType = EPinContainerType::Array;
-        if (AddBlueprintVariable(BP, TEXT("MatchStateNames"), NamePinType, TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchStateNames"), NamePinType, TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add PreviousMatchState for state change detection
-        if (AddBlueprintVariable(BP, TEXT("PreviousMatchState"), MakeBytePinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("PreviousMatchState"), GameFrameworkHelpers::MakeBytePinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add bMatchInProgress bool
-        if (AddBlueprintVariable(BP, TEXT("bMatchInProgress"), MakeBoolPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bMatchInProgress"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Match Flow")))
         {
-            SetVariableDefaultValue(BP, TEXT("bMatchInProgress"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bMatchInProgress"), TEXT("false"));
             VarsAdded++;
         }
 
         // Add MatchStartTime float
-        if (AddBlueprintVariable(BP, TEXT("MatchStartTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchStartTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
 
         // Add MatchElapsedTime float
-        if (AddBlueprintVariable(BP, TEXT("MatchElapsedTime"), MakeFloatPinType(), TEXT("Match Flow")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MatchElapsedTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Match Flow")))
         {
             VarsAdded++;
         }
@@ -1068,50 +1069,50 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // NumRounds (int) - total rounds in match
-        if (AddBlueprintVariable(BP, TEXT("NumRounds"), MakeIntPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("NumRounds"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("NumRounds"), FString::FromInt(NumRounds));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("NumRounds"), FString::FromInt(NumRounds));
             VarsAdded++;
         }
 
         // CurrentRound (int) - current round number
-        if (AddBlueprintVariable(BP, TEXT("CurrentRound"), MakeIntPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("CurrentRound"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("CurrentRound"), TEXT("0"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("CurrentRound"), TEXT("0"));
             VarsAdded++;
         }
 
         // RoundTime (float) - duration of each round in seconds
-        if (AddBlueprintVariable(BP, TEXT("RoundTime"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RoundTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("RoundTime"), FString::SanitizeFloat(RoundTime));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RoundTime"), FString::SanitizeFloat(RoundTime));
             VarsAdded++;
         }
 
         // RoundTimeRemaining (float) - time left in current round
-        if (AddBlueprintVariable(BP, TEXT("RoundTimeRemaining"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RoundTimeRemaining"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
             VarsAdded++;
         }
 
         // IntermissionTime (float) - time between rounds
-        if (AddBlueprintVariable(BP, TEXT("IntermissionTime"), MakeFloatPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("IntermissionTime"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("IntermissionTime"), FString::SanitizeFloat(IntermissionTime));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("IntermissionTime"), FString::SanitizeFloat(IntermissionTime));
             VarsAdded++;
         }
 
         // bIsInIntermission (bool) - whether we're between rounds
-        if (AddBlueprintVariable(BP, TEXT("bIsInIntermission"), MakeBoolPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bIsInIntermission"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bIsInIntermission"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bIsInIntermission"), TEXT("false"));
             VarsAdded++;
         }
 
         // bRoundInProgress (bool) - whether a round is active
-        if (AddBlueprintVariable(BP, TEXT("bRoundInProgress"), MakeBoolPinType(), TEXT("Round System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bRoundInProgress"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Round System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bRoundInProgress"), TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bRoundInProgress"), TEXT("false"));
             VarsAdded++;
         }
 
@@ -1165,43 +1166,43 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // NumTeams (int) - number of teams in the game
-        if (AddBlueprintVariable(BP, TEXT("NumTeams"), MakeIntPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("NumTeams"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("NumTeams"), FString::FromInt(NumTeams));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("NumTeams"), FString::FromInt(NumTeams));
             VarsAdded++;
         }
 
         // MaxTeamSize (int) - maximum players per team
-        if (AddBlueprintVariable(BP, TEXT("MaxTeamSize"), MakeIntPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MaxTeamSize"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("MaxTeamSize"), FString::FromInt(TeamSize));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("MaxTeamSize"), FString::FromInt(TeamSize));
             VarsAdded++;
         }
 
         // bAutoBalance (bool) - whether to auto-balance teams
-        if (AddBlueprintVariable(BP, TEXT("bAutoBalance"), MakeBoolPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bAutoBalance"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bAutoBalance"), bAutoBalance ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bAutoBalance"), bAutoBalance ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // bFriendlyFire (bool) - whether friendly fire is enabled
-        if (AddBlueprintVariable(BP, TEXT("bFriendlyFire"), MakeBoolPinType(), TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bFriendlyFire"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Team System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bFriendlyFire"), bFriendlyFire ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bFriendlyFire"), bFriendlyFire ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // TeamScores (int array) - scores for each team
-        FEdGraphPinType IntArrayPinType = MakeIntPinType();
+        FEdGraphPinType IntArrayPinType = GameFrameworkHelpers::MakeIntPinType();
         IntArrayPinType.ContainerType = EPinContainerType::Array;
-        if (AddBlueprintVariable(BP, TEXT("TeamScores"), IntArrayPinType, TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("TeamScores"), IntArrayPinType, TEXT("Team System")))
         {
             VarsAdded++;
         }
 
         // TeamPlayerCounts (int array) - player count per team
-        if (AddBlueprintVariable(BP, TEXT("TeamPlayerCounts"), IntArrayPinType, TEXT("Team System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("TeamPlayerCounts"), IntArrayPinType, TEXT("Team System")))
         {
             VarsAdded++;
         }
@@ -1256,39 +1257,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // ScorePerKill (int) - points awarded per kill
-        if (AddBlueprintVariable(BP, TEXT("ScorePerKill"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerKill"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerKill"), FString::FromInt(static_cast<int32>(ScorePerKill)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerKill"), FString::FromInt(static_cast<int32>(ScorePerKill)));
             VarsAdded++;
         }
 
         // ScorePerObjective (int) - points awarded per objective completion
-        if (AddBlueprintVariable(BP, TEXT("ScorePerObjective"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerObjective"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerObjective"), FString::FromInt(static_cast<int32>(ScorePerObjective)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerObjective"), FString::FromInt(static_cast<int32>(ScorePerObjective)));
             VarsAdded++;
         }
 
         // ScorePerAssist (int) - points awarded per assist
-        if (AddBlueprintVariable(BP, TEXT("ScorePerAssist"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerAssist"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerAssist"), FString::FromInt(static_cast<int32>(ScorePerAssist)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerAssist"), FString::FromInt(static_cast<int32>(ScorePerAssist)));
             VarsAdded++;
         }
 
         // WinScore (int) - score needed to win
         double WinScore = GetNumberField(Payload, TEXT("winScore"), 0);
-        if (AddBlueprintVariable(BP, TEXT("WinScore"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("WinScore"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("WinScore"), FString::FromInt(static_cast<int32>(WinScore)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("WinScore"), FString::FromInt(static_cast<int32>(WinScore)));
             VarsAdded++;
         }
 
         // ScorePerDeath (int) - penalty for dying (usually negative or 0)
         double ScorePerDeath = GetNumberField(Payload, TEXT("scorePerDeath"), 0);
-        if (AddBlueprintVariable(BP, TEXT("ScorePerDeath"), MakeIntPinType(), TEXT("Scoring System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("ScorePerDeath"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Scoring System")))
         {
-            SetVariableDefaultValue(BP, TEXT("ScorePerDeath"), FString::FromInt(static_cast<int32>(ScorePerDeath)));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("ScorePerDeath"), FString::FromInt(static_cast<int32>(ScorePerDeath)));
             VarsAdded++;
         }
 
@@ -1343,39 +1344,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // SpawnSelectionMethod (Name) - how spawn points are selected
-        if (AddBlueprintVariable(BP, TEXT("SpawnSelectionMethod"), MakeNamePinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("SpawnSelectionMethod"), GameFrameworkHelpers::MakeNamePinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("SpawnSelectionMethod"), SpawnMethod);
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("SpawnSelectionMethod"), SpawnMethod);
             VarsAdded++;
         }
 
         // RespawnDelay (float) - time before respawn
-        if (AddBlueprintVariable(BP, TEXT("RespawnDelay"), MakeFloatPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnDelay"), GameFrameworkHelpers::MakeFloatPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnDelay"), FString::SanitizeFloat(RespawnDelay));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnDelay"), FString::SanitizeFloat(RespawnDelay));
             VarsAdded++;
         }
 
         // bUsePlayerStarts (bool) - whether to use PlayerStart actors
-        if (AddBlueprintVariable(BP, TEXT("bUsePlayerStarts"), MakeBoolPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bUsePlayerStarts"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bUsePlayerStarts"), bUsePlayerStarts ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bUsePlayerStarts"), bUsePlayerStarts ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // bCanRespawn (bool) - whether respawning is enabled
         bool bCanRespawn = GetBoolField(Payload, TEXT("canRespawn"), true);
-        if (AddBlueprintVariable(BP, TEXT("bCanRespawn"), MakeBoolPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bCanRespawn"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("bCanRespawn"), bCanRespawn ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bCanRespawn"), bCanRespawn ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // MaxRespawns (int) - maximum respawns per player (-1 for unlimited)
         int32 MaxRespawns = static_cast<int32>(GetNumberField(Payload, TEXT("maxRespawns"), -1));
-        if (AddBlueprintVariable(BP, TEXT("MaxRespawns"), MakeIntPinType(), TEXT("Spawn System")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("MaxRespawns"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Spawn System")))
         {
-            SetVariableDefaultValue(BP, TEXT("MaxRespawns"), FString::FromInt(MaxRespawns));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("MaxRespawns"), FString::FromInt(MaxRespawns));
             VarsAdded++;
         }
 
@@ -1570,23 +1571,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         int32 VarsAdded = 0;
 
         // RespawnLocation (Name) - where players respawn
-        if (AddBlueprintVariable(BP, TEXT("RespawnLocation"), MakeNamePinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnLocation"), GameFrameworkHelpers::MakeNamePinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnLocation"), RespawnLocation);
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnLocation"), RespawnLocation);
             VarsAdded++;
         }
 
         // bForceRespawn (bool) - whether respawn is forced or optional
-        if (AddBlueprintVariable(BP, TEXT("bForceRespawn"), MakeBoolPinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("bForceRespawn"), GameFrameworkHelpers::MakeBoolPinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("bForceRespawn"), bForceRespawn ? TEXT("true") : TEXT("false"));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("bForceRespawn"), bForceRespawn ? TEXT("true") : TEXT("false"));
             VarsAdded++;
         }
 
         // RespawnLives (int) - number of lives (-1 for unlimited)
-        if (AddBlueprintVariable(BP, TEXT("RespawnLives"), MakeIntPinType(), TEXT("Respawn Rules")))
+        if (GameFrameworkHelpers::AddBlueprintVariable(BP, TEXT("RespawnLives"), GameFrameworkHelpers::MakeIntPinType(), TEXT("Respawn Rules")))
         {
-            SetVariableDefaultValue(BP, TEXT("RespawnLives"), FString::FromInt(RespawnLives));
+            GameFrameworkHelpers::SetVariableDefaultValue(BP, TEXT("RespawnLives"), FString::FromInt(RespawnLives));
             VarsAdded++;
         }
 

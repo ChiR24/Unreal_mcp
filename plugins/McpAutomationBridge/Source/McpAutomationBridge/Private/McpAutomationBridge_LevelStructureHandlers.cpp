@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_LevelStructureHandlers.cpp
 // Phase 23: Level Structure Handlers
 //
@@ -337,7 +338,7 @@ static bool HandleSetStreamingDistance(
     double StreamingDistance = GetJsonNumberField(Payload, TEXT("streamingDistance"), 10000.0);
     FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("LoadingAndVisibility"));
     TSharedPtr<FJsonObject> VolumeLocationJson = GetObjectField(Payload, TEXT("volumeLocation"));
-    FVector VolumeLocation = VolumeLocationJson.IsValid() ? GetVectorFromJson(VolumeLocationJson) : FVector::ZeroVector;
+    FVector VolumeLocation = VolumeLocationJson.IsValid() ? LevelStructureHelpers::GetVectorFromJson(VolumeLocationJson) : FVector::ZeroVector;
     bool bCreateVolume = GetJsonBoolField(Payload, TEXT("createVolume"), true);
 
     UWorld* World = GetEditorWorld();
@@ -484,8 +485,8 @@ static bool HandleConfigureLevelBounds(
 {
     using namespace LevelStructureHelpers;
 
-    FVector BoundsOrigin = GetVectorFromJson(GetObjectField(Payload, TEXT("boundsOrigin")));
-    FVector BoundsExtent = GetVectorFromJson(GetObjectField(Payload, TEXT("boundsExtent")), FVector(10000.0));
+    FVector BoundsOrigin = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("boundsOrigin")));
+    FVector BoundsExtent = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("boundsExtent")), FVector(10000.0));
     bool bAutoCalculateBounds = GetJsonBoolField(Payload, TEXT("bAutoCalculateBounds"), false);
 
     UWorld* World = GetEditorWorld();
@@ -1137,8 +1138,8 @@ static bool HandleCreateMinimapVolume(
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));
-    FVector VolumeLocation = GetVectorFromJson(GetObjectField(Payload, TEXT("volumeLocation")));
-    FVector VolumeExtent = GetVectorFromJson(GetObjectField(Payload, TEXT("volumeExtent")), FVector(10000.0));
+    FVector VolumeLocation = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("volumeLocation")));
+    FVector VolumeExtent = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("volumeExtent")), FVector(10000.0));
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1280,8 +1281,8 @@ static bool HandleAddLevelBlueprintNode(
     FString NodeClass = GetJsonStringField(Payload, TEXT("nodeClass"), TEXT(""));
     FString NodeName = GetJsonStringField(Payload, TEXT("nodeName"), TEXT(""));
     TSharedPtr<FJsonObject> PositionJson = GetObjectField(Payload, TEXT("nodePosition"));
-    int32 PosX = PositionJson.IsValid() ? static_cast<int32>(PositionJson->GetNumberField(TEXT("x"))) : 0;
-    int32 PosY = PositionJson.IsValid() ? static_cast<int32>(PositionJson->GetNumberField(TEXT("y"))) : 0;
+    int32 PosX = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("x"))) : 0;
+    int32 PosY = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("y"))) : 0;
 
     if (NodeClass.IsEmpty())
     {
@@ -1533,9 +1534,9 @@ static bool HandleCreateLevelInstance(
 
     FString LevelInstanceName = GetJsonStringField(Payload, TEXT("levelInstanceName"), TEXT("LevelInstance"));
     FString LevelAssetPath = GetJsonStringField(Payload, TEXT("levelAssetPath"), TEXT(""));
-    FVector InstanceLocation = GetVectorFromJson(GetObjectField(Payload, TEXT("instanceLocation")));
-    FRotator InstanceRotation = GetRotatorFromJson(GetObjectField(Payload, TEXT("instanceRotation")));
-    FVector InstanceScale = GetVectorFromJson(GetObjectField(Payload, TEXT("instanceScale")), FVector(1.0));
+    FVector InstanceLocation = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("instanceLocation")));
+    FRotator InstanceRotation = LevelStructureHelpers::GetRotatorFromJson(GetObjectField(Payload, TEXT("instanceRotation")));
+    FVector InstanceScale = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("instanceScale")), FVector(1.0));
 
     if (LevelAssetPath.IsEmpty())
     {
@@ -1608,8 +1609,8 @@ static bool HandleCreatePackedLevelActor(
 
     FString PackedLevelName = GetJsonStringField(Payload, TEXT("packedLevelName"), TEXT("PackedLevel"));
     FString LevelAssetPath = GetJsonStringField(Payload, TEXT("levelAssetPath"), TEXT(""));
-    FVector InstanceLocation = GetVectorFromJson(GetObjectField(Payload, TEXT("instanceLocation")));
-    FRotator InstanceRotation = GetRotatorFromJson(GetObjectField(Payload, TEXT("instanceRotation")));
+    FVector InstanceLocation = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("instanceLocation")));
+    FRotator InstanceRotation = LevelStructureHelpers::GetRotatorFromJson(GetObjectField(Payload, TEXT("instanceRotation")));
     bool bPackBlueprints = GetJsonBoolField(Payload, TEXT("bPackBlueprints"), true);
     bool bPackStaticMeshes = GetJsonBoolField(Payload, TEXT("bPackStaticMeshes"), true);
 

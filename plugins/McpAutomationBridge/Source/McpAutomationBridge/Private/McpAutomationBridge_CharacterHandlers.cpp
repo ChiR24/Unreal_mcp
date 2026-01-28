@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_CharacterHandlers.cpp
 // Phase 14: Character & Movement System
 // Implements 19 actions for character creation, movement configuration, and advanced movement.
@@ -110,8 +111,9 @@ static FRotator GetRotatorFromJsonChar(const TSharedPtr<FJsonObject>& Obj)
     );
 }
 
-// Helper to add a Blueprint variable with proper category
-static bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""))
+namespace {
+// Helper to add a Blueprint variable with proper category (suffixed to avoid Unity build collision)
+static bool AddBlueprintVariableChar(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""))
 {
     if (!Blueprint) return false;
     
@@ -124,6 +126,7 @@ static bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, 
     
     return bSuccess;
 }
+} // namespace
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
@@ -582,20 +585,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FString StateVarName = FString::Printf(TEXT("bIsIn%sMode"), *ModeName);
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, StateVarName, BoolPinType, TEXT("Movement States"));
+        AddBlueprintVariableChar(Blueprint, StateVarName, BoolPinType, TEXT("Movement States"));
 
         // Add custom mode ID variable
         FString ModeIdVarName = FString::Printf(TEXT("CustomModeId_%s"), *ModeName);
         FEdGraphPinType IntPinType;
         IntPinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-        AddBlueprintVariable(Blueprint, ModeIdVarName, IntPinType, TEXT("Movement States"));
+        AddBlueprintVariableChar(Blueprint, ModeIdVarName, IntPinType, TEXT("Movement States"));
 
         // Add custom speed variable for this mode
         FString SpeedVarName = FString::Printf(TEXT("%sSpeed"), *ModeName);
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, SpeedVarName, FloatPinType, TEXT("Movement States"));
+        AddBlueprintVariableChar(Blueprint, SpeedVarName, FloatPinType, TEXT("Movement States"));
 
         // Set default values for the variables
         SetBPVarDefaultValue(Blueprint, FName(*ModeIdVarName), FString::FromInt(ModeId));
@@ -694,14 +697,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add mantling state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsMantling"), BoolPinType, TEXT("Mantling"));
-        AddBlueprintVariable(Blueprint, TEXT("bCanMantle"), BoolPinType, TEXT("Mantling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsMantling"), BoolPinType, TEXT("Mantling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bCanMantle"), BoolPinType, TEXT("Mantling"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("MantleHeight"), FloatPinType, TEXT("Mantling"));
-        AddBlueprintVariable(Blueprint, TEXT("MantleReachDistance"), FloatPinType, TEXT("Mantling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("MantleHeight"), FloatPinType, TEXT("Mantling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("MantleReachDistance"), FloatPinType, TEXT("Mantling"));
 
         // Set default values for mantling configuration
         SetBPVarDefaultValue(Blueprint, FName(TEXT("bCanMantle")), TEXT("true"));
@@ -712,7 +715,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FEdGraphPinType VectorPinType;
         VectorPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         VectorPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-        AddBlueprintVariable(Blueprint, TEXT("MantleTargetLocation"), VectorPinType, TEXT("Mantling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("MantleTargetLocation"), VectorPinType, TEXT("Mantling"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -751,14 +754,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add vaulting state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsVaulting"), BoolPinType, TEXT("Vaulting"));
-        AddBlueprintVariable(Blueprint, TEXT("bCanVault"), BoolPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsVaulting"), BoolPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bCanVault"), BoolPinType, TEXT("Vaulting"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("VaultHeight"), FloatPinType, TEXT("Vaulting"));
-        AddBlueprintVariable(Blueprint, TEXT("VaultDepth"), FloatPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("VaultHeight"), FloatPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("VaultDepth"), FloatPinType, TEXT("Vaulting"));
 
         // Set default values for vaulting configuration
         SetBPVarDefaultValue(Blueprint, FName(TEXT("bCanVault")), TEXT("true"));
@@ -769,8 +772,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FEdGraphPinType VectorPinType;
         VectorPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         VectorPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-        AddBlueprintVariable(Blueprint, TEXT("VaultStartLocation"), VectorPinType, TEXT("Vaulting"));
-        AddBlueprintVariable(Blueprint, TEXT("VaultEndLocation"), VectorPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("VaultStartLocation"), VectorPinType, TEXT("Vaulting"));
+        AddBlueprintVariableChar(Blueprint, TEXT("VaultEndLocation"), VectorPinType, TEXT("Vaulting"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -808,23 +811,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add climbing state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsClimbing"), BoolPinType, TEXT("Climbing"));
-        AddBlueprintVariable(Blueprint, TEXT("bCanClimb"), BoolPinType, TEXT("Climbing"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsClimbing"), BoolPinType, TEXT("Climbing"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bCanClimb"), BoolPinType, TEXT("Climbing"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("ClimbSpeed"), FloatPinType, TEXT("Climbing"));
+        AddBlueprintVariableChar(Blueprint, TEXT("ClimbSpeed"), FloatPinType, TEXT("Climbing"));
 
         FEdGraphPinType NamePinType;
         NamePinType.PinCategory = UEdGraphSchema_K2::PC_Name;
-        AddBlueprintVariable(Blueprint, TEXT("ClimbableTag"), NamePinType, TEXT("Climbing"));
+        AddBlueprintVariableChar(Blueprint, TEXT("ClimbableTag"), NamePinType, TEXT("Climbing"));
 
         // Add climb surface normal for proper orientation
         FEdGraphPinType VectorPinType;
         VectorPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         VectorPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-        AddBlueprintVariable(Blueprint, TEXT("ClimbSurfaceNormal"), VectorPinType, TEXT("Climbing"));
+        AddBlueprintVariableChar(Blueprint, TEXT("ClimbSurfaceNormal"), VectorPinType, TEXT("Climbing"));
 
         // Set default values for climbing configuration
         SetBPVarDefaultValue(Blueprint, FName(TEXT("bCanClimb")), TEXT("true"));
@@ -879,17 +882,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add sliding state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsSliding"), BoolPinType, TEXT("Sliding"));
-        AddBlueprintVariable(Blueprint, TEXT("bCanSlide"), BoolPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsSliding"), BoolPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bCanSlide"), BoolPinType, TEXT("Sliding"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("SlideSpeed"), FloatPinType, TEXT("Sliding"));
-        AddBlueprintVariable(Blueprint, TEXT("SlideDuration"), FloatPinType, TEXT("Sliding"));
-        AddBlueprintVariable(Blueprint, TEXT("SlideCooldown"), FloatPinType, TEXT("Sliding"));
-        AddBlueprintVariable(Blueprint, TEXT("SlideTimeRemaining"), FloatPinType, TEXT("Sliding"));
-        AddBlueprintVariable(Blueprint, TEXT("SlideCooldownRemaining"), FloatPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("SlideSpeed"), FloatPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("SlideDuration"), FloatPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("SlideCooldown"), FloatPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("SlideTimeRemaining"), FloatPinType, TEXT("Sliding"));
+        AddBlueprintVariableChar(Blueprint, TEXT("SlideCooldownRemaining"), FloatPinType, TEXT("Sliding"));
 
         // Set default values for sliding configuration
         SetBPVarDefaultValue(Blueprint, FName(TEXT("bCanSlide")), TEXT("true"));
@@ -935,23 +938,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add wall running state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsWallRunning"), BoolPinType, TEXT("Wall Running"));
-        AddBlueprintVariable(Blueprint, TEXT("bIsWallRunningLeft"), BoolPinType, TEXT("Wall Running"));
-        AddBlueprintVariable(Blueprint, TEXT("bIsWallRunningRight"), BoolPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsWallRunning"), BoolPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsWallRunningLeft"), BoolPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsWallRunningRight"), BoolPinType, TEXT("Wall Running"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("WallRunSpeed"), FloatPinType, TEXT("Wall Running"));
-        AddBlueprintVariable(Blueprint, TEXT("WallRunDuration"), FloatPinType, TEXT("Wall Running"));
-        AddBlueprintVariable(Blueprint, TEXT("WallRunGravityScale"), FloatPinType, TEXT("Wall Running"));
-        AddBlueprintVariable(Blueprint, TEXT("WallRunTimeRemaining"), FloatPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("WallRunSpeed"), FloatPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("WallRunDuration"), FloatPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("WallRunGravityScale"), FloatPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("WallRunTimeRemaining"), FloatPinType, TEXT("Wall Running"));
 
         // Add wall normal for orientation
         FEdGraphPinType VectorPinType;
         VectorPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         VectorPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-        AddBlueprintVariable(Blueprint, TEXT("WallRunNormal"), VectorPinType, TEXT("Wall Running"));
+        AddBlueprintVariableChar(Blueprint, TEXT("WallRunNormal"), VectorPinType, TEXT("Wall Running"));
 
         // Configure CMC for custom movement mode
         ACharacter* CharCDO = Blueprint->GeneratedClass 
@@ -1002,24 +1005,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add grappling state and configuration variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bIsGrappling"), BoolPinType, TEXT("Grappling"));
-        AddBlueprintVariable(Blueprint, TEXT("bHasGrappleTarget"), BoolPinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsGrappling"), BoolPinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bHasGrappleTarget"), BoolPinType, TEXT("Grappling"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("GrappleRange"), FloatPinType, TEXT("Grappling"));
-        AddBlueprintVariable(Blueprint, TEXT("GrappleSpeed"), FloatPinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("GrappleRange"), FloatPinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("GrappleSpeed"), FloatPinType, TEXT("Grappling"));
 
         FEdGraphPinType NamePinType;
         NamePinType.PinCategory = UEdGraphSchema_K2::PC_Name;
-        AddBlueprintVariable(Blueprint, TEXT("GrappleTargetTag"), NamePinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("GrappleTargetTag"), NamePinType, TEXT("Grappling"));
 
         // Add grapple target location
         FEdGraphPinType VectorPinType;
         VectorPinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
         VectorPinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-        AddBlueprintVariable(Blueprint, TEXT("GrappleTargetLocation"), VectorPinType, TEXT("Grappling"));
+        AddBlueprintVariableChar(Blueprint, TEXT("GrappleTargetLocation"), VectorPinType, TEXT("Grappling"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -1063,17 +1066,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         // Add footstep system variables
         FEdGraphPinType BoolPinType;
         BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        AddBlueprintVariable(Blueprint, TEXT("bFootstepSystemEnabled"), BoolPinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("bFootstepSystemEnabled"), BoolPinType, TEXT("Footsteps"));
 
         FEdGraphPinType NamePinType;
         NamePinType.PinCategory = UEdGraphSchema_K2::PC_Name;
-        AddBlueprintVariable(Blueprint, TEXT("FootstepSocketLeft"), NamePinType, TEXT("Footsteps"));
-        AddBlueprintVariable(Blueprint, TEXT("FootstepSocketRight"), NamePinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepSocketLeft"), NamePinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepSocketRight"), NamePinType, TEXT("Footsteps"));
 
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("FootstepTraceDistance"), FloatPinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepTraceDistance"), FloatPinType, TEXT("Footsteps"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -1115,7 +1118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         MapPinType.PinCategory = UEdGraphSchema_K2::PC_Name;
         MapPinType.ContainerType = EPinContainerType::Map;
         MapPinType.PinValueType.TerminalCategory = UEdGraphSchema_K2::PC_SoftObject;
-        AddBlueprintVariable(Blueprint, TEXT("FootstepSoundMap"), MapPinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepSoundMap"), MapPinType, TEXT("Footsteps"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -1154,8 +1157,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         FEdGraphPinType FloatPinType;
         FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-        AddBlueprintVariable(Blueprint, TEXT("FootstepVolumeMultiplier"), FloatPinType, TEXT("Footsteps"));
-        AddBlueprintVariable(Blueprint, TEXT("FootstepParticleScale"), FloatPinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepVolumeMultiplier"), FloatPinType, TEXT("Footsteps"));
+        AddBlueprintVariableChar(Blueprint, TEXT("FootstepParticleScale"), FloatPinType, TEXT("Footsteps"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
@@ -1260,3 +1263,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
 #endif // WITH_EDITOR
 }
+
+#undef GetStringFieldChar
+#undef GetNumberFieldChar
+#undef GetBoolFieldChar
+

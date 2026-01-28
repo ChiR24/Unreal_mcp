@@ -1,5 +1,6 @@
 // Ensure the subsystem type and bridge socket types are available
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "Async/Async.h"
 #include "HAL/PlatformFilemanager.h"

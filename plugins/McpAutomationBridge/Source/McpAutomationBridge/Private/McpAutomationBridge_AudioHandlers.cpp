@@ -1,4 +1,5 @@
 #include "EngineUtils.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -531,9 +532,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
     FString PackagePath = TEXT("/Game/Audio/Mixes");
     if (Payload->HasField(TEXT("packagePath"))) {
-      PackagePath = Payload->GetStringField(TEXT("packagePath"));
+      PackagePath = GetJsonStringField(Payload, TEXT("packagePath"));
     } else if (Payload->HasField(TEXT("savePath"))) {
-      PackagePath = Payload->GetStringField(TEXT("savePath"));
+      PackagePath = GetJsonStringField(Payload, TEXT("savePath"));
     }
 
     USoundMixFactory *Factory = NewObject<USoundMixFactory>();

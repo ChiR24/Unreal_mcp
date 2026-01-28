@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 

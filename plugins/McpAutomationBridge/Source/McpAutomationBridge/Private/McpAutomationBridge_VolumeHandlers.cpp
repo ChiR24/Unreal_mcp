@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_VolumeHandlers.cpp
 // Phase 24: Volumes & Zones Handlers
 //

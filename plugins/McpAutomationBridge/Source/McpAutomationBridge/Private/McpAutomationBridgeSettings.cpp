@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeSettings.h"
+#include "Dom/JsonObject.h"
 
 #include "Internationalization/Text.h"
 

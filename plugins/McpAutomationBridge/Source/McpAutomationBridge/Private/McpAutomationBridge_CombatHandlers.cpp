@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_CombatHandlers.cpp
 // Phase 15: Combat & Weapons System
 // Implements 31 actions for weapon creation, firing modes, projectiles, damage, and melee combat.
@@ -142,8 +143,9 @@ static FVector GetVectorFromJsonCombat(const TSharedPtr<FJsonObject>& Obj)
     );
 }
 
+namespace {
 // Helper to add a Blueprint variable with a specific type
-static bool AddBlueprintVariable(UBlueprint* Blueprint, const FName& VarName, const FEdGraphPinType& PinType)
+static bool AddBlueprintVariableCombat(UBlueprint* Blueprint, const FName& VarName, const FEdGraphPinType& PinType)
 {
     if (!Blueprint)
     {
@@ -207,6 +209,7 @@ static FEdGraphPinType MakeObjectPinType(UClass* ObjectClass)
     PinType.PinSubCategoryObject = ObjectClass;
     return PinType;
 }
+} // namespace
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
@@ -285,10 +288,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
 
         // Apply weapon stats as Blueprint variables using FBlueprintEditorUtils
-        AddBlueprintVariable(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("FireRate"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("Range"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("Spread"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("FireRate"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("Range"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("Spread"), MakeFloatPinType());
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -392,8 +395,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString MuzzleSocket = GetStringFieldCombat(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
         FString EjectionSocket = GetStringFieldCombat(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
 
-        AddBlueprintVariable(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -447,10 +450,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Spread = GetNumberFieldCombat(Payload, TEXT("spread"), 2.0);
 
         // Add/update variables
-        AddBlueprintVariable(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("FireRate"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("Range"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("Spread"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("BaseDamage"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("FireRate"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("Range"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("Spread"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -517,9 +520,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("bIsHitscan"), MakeBoolPinType());
-        AddBlueprintVariable(Blueprint, TEXT("TraceChannel"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("HitscanRange"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsHitscan"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("TraceChannel"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitscanRange"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -576,8 +579,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double ProjectileSpeed = GetNumberFieldCombat(Payload, TEXT("projectileSpeed"), 5000.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileClassPath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -630,10 +633,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double SpreadRecovery = GetNumberFieldCombat(Payload, TEXT("spreadRecovery"), 2.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("SpreadPatternType"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("SpreadIncreasePerShot"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("SpreadRecoveryRate"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("CurrentSpread"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("SpreadPatternType"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("SpreadIncreasePerShot"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("SpreadRecoveryRate"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentSpread"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -695,9 +698,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double RecoilRecovery = GetNumberFieldCombat(Payload, TEXT("recoilRecovery"), 5.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("RecoilPitch"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("RecoilYaw"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("RecoilRecoverySpeed"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("RecoilPitch"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("RecoilYaw"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("RecoilRecoverySpeed"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -756,11 +759,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double AdsSpreadMultiplier = GetNumberFieldCombat(Payload, TEXT("adsSpreadMultiplier"), 0.5);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("bADSEnabled"), MakeBoolPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ADSFieldOfView"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ADSTransitionSpeed"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ADSSpreadMultiplier"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsAiming"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bADSEnabled"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ADSFieldOfView"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ADSTransitionSpeed"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ADSSpreadMultiplier"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsAiming"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1067,9 +1070,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double HeadshotMultiplier = GetNumberFieldCombat(Payload, TEXT("headshotMultiplier"), 2.5);
 
         // Add damage-related variables
-        AddBlueprintVariable(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1175,8 +1178,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         // Add hitbox metadata variables
-        AddBlueprintVariable(Blueprint, TEXT("bIsHeadshotZone"), MakeBoolPinType());
-        AddBlueprintVariable(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsHeadshotZone"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1234,13 +1237,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString ReloadAnimPath = GetStringFieldCombat(Payload, TEXT("reloadAnimationPath"));
 
         // Add integer variable: MagazineSize
-        AddBlueprintVariable(Blueprint, TEXT("MagazineSize"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MagazineSize"), MakeIntPinType());
         // Add integer variable: CurrentAmmo (starts at MagazineSize)
-        AddBlueprintVariable(Blueprint, TEXT("CurrentAmmo"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentAmmo"), MakeIntPinType());
         // Add float variable: ReloadTime
-        AddBlueprintVariable(Blueprint, TEXT("ReloadTime"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ReloadTime"), MakeFloatPinType());
         // Add bool variable: bIsReloading
-        AddBlueprintVariable(Blueprint, TEXT("bIsReloading"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsReloading"), MakeBoolPinType());
 
         // Add object variable: ReloadAnimation (UAnimMontage*)
         bool bReloadAnimLoaded = false;
@@ -1249,7 +1252,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UAnimMontage* ReloadAnim = LoadObject<UAnimMontage>(nullptr, *ReloadAnimPath);
             if (ReloadAnim)
             {
-                AddBlueprintVariable(Blueprint, TEXT("ReloadAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("ReloadAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
                 bReloadAnimLoaded = true;
             }
         }
@@ -1326,11 +1329,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         bool bInfiniteAmmo = GetBoolFieldCombat(Payload, TEXT("infiniteAmmo"), false);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("MaxAmmo"), MakeIntPinType());
-        AddBlueprintVariable(Blueprint, TEXT("CurrentTotalAmmo"), MakeIntPinType());
-        AddBlueprintVariable(Blueprint, TEXT("AmmoPerShot"), MakeIntPinType());
-        AddBlueprintVariable(Blueprint, TEXT("AmmoType"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bInfiniteAmmo"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MaxAmmo"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentTotalAmmo"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("AmmoPerShot"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("AmmoType"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bInfiniteAmmo"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1499,10 +1502,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString UnequipAnimPath = GetStringFieldCombat(Payload, TEXT("unequipAnimationPath"));
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsEquipped"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsEquipped"), MakeBoolPinType());
 
         // Add animation references if provided
         bool bEquipAnimLoaded = false;
@@ -1512,7 +1515,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UAnimMontage* EquipAnim = LoadObject<UAnimMontage>(nullptr, *EquipAnimPath);
             if (EquipAnim)
             {
-                AddBlueprintVariable(Blueprint, TEXT("EquipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("EquipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
                 bEquipAnimLoaded = true;
             }
         }
@@ -1521,7 +1524,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UAnimMontage* UnequipAnim = LoadObject<UAnimMontage>(nullptr, *UnequipAnimPath);
             if (UnequipAnim)
             {
-                AddBlueprintVariable(Blueprint, TEXT("UnequipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("UnequipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
                 bUnequipAnimLoaded = true;
             }
         }
@@ -1600,9 +1603,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString SoundPath = GetStringFieldCombat(Payload, TEXT("muzzleSoundPath"));
 
         // Add variables for muzzle flash config
-        AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashParticlePath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashScale"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("MuzzleSoundPath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashParticlePath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashScale"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSoundPath"), MakeStringPinType());
 
         // Load and add object references if paths are valid
         bool bParticleLoaded = false;
@@ -1612,7 +1615,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *ParticlePath);
             if (NiagaraSystem)
             {
-                AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashNiagara"), MakeObjectPinType(UNiagaraSystem::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashNiagara"), MakeObjectPinType(UNiagaraSystem::StaticClass()));
                 bParticleLoaded = true;
             }
             else
@@ -1620,7 +1623,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
                 UParticleSystem* ParticleSystem = LoadObject<UParticleSystem>(nullptr, *ParticlePath);
                 if (ParticleSystem)
                 {
-                    AddBlueprintVariable(Blueprint, TEXT("MuzzleFlashParticle"), MakeObjectPinType(UParticleSystem::StaticClass()));
+                    AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashParticle"), MakeObjectPinType(UParticleSystem::StaticClass()));
                     bParticleLoaded = true;
                 }
             }
@@ -1630,7 +1633,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             USoundCue* SoundCue = LoadObject<USoundCue>(nullptr, *SoundPath);
             if (SoundCue)
             {
-                AddBlueprintVariable(Blueprint, TEXT("MuzzleSound"), MakeObjectPinType(USoundCue::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSound"), MakeObjectPinType(USoundCue::StaticClass()));
                 bSoundLoaded = true;
             }
         }
@@ -1691,9 +1694,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double TracerSpeed = GetNumberFieldCombat(Payload, TEXT("tracerSpeed"), 10000.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("TracerParticlePath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("TracerSpeed"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("TracerParticlePath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("TracerSpeed"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1750,9 +1753,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString DecalPath = GetStringFieldCombat(Payload, TEXT("impactDecalPath"));
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("ImpactParticlePath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ImpactSoundPath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactParticlePath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactSoundPath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1810,10 +1813,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double ShellLifespan = GetNumberFieldCombat(Payload, TEXT("shellLifespan"), 5.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("ShellMeshPath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ShellEjectionForce"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ShellLifespan"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bEjectShells"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ShellMeshPath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ShellEjectionForce"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ShellLifespan"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bEjectShells"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1879,10 +1882,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double TraceRadius = GetNumberFieldCombat(Payload, TEXT("meleeTraceRadius"), 10.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceStartSocket"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceEndSocket"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("MeleeTraceRadius"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsTracing"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceStartSocket"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceEndSocket"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MeleeTraceRadius"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsTracing"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -1943,10 +1946,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         int32 MaxComboCount = static_cast<int32>(GetNumberFieldCombat(Payload, TEXT("maxComboCount"), 3));
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("ComboWindowTime"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("MaxComboCount"), MakeIntPinType());
-        AddBlueprintVariable(Blueprint, TEXT("CurrentComboIndex"), MakeIntPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bInComboWindow"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ComboWindowTime"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MaxComboCount"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentComboIndex"), MakeIntPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bInComboWindow"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -2006,9 +2009,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double TimeDilation = GetNumberFieldCombat(Payload, TEXT("hitPauseTimeDilation"), 0.1);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("HitPauseDuration"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("HitPauseTimeDilation"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bEnableHitPause"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitPauseDuration"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitPauseTimeDilation"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bEnableHitPause"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -2064,9 +2067,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double StunTime = GetNumberFieldCombat(Payload, TEXT("hitReactionStunTime"), 0.5);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("HitReactionMontagePath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("HitReactionStunTime"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsStunned"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionMontagePath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionStunTime"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsStunned"), MakeBoolPinType());
 
         // Load animation if path provided
         bool bAnimLoaded = false;
@@ -2075,7 +2078,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *HitReactionMontage);
             if (Montage)
             {
-                AddBlueprintVariable(Blueprint, TEXT("HitReactionMontage"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("HitReactionMontage"), MakeObjectPinType(UAnimMontage::StaticClass()));
                 bAnimLoaded = true;
             }
         }
@@ -2138,12 +2141,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         double BlockStaminaCost = GetNumberFieldCombat(Payload, TEXT("blockStaminaCost"), 10.0);
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("ParryWindowStart"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("ParryWindowEnd"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("BlockDamageReduction"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("BlockStaminaCost"), MakeFloatPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsBlocking"), MakeBoolPinType());
-        AddBlueprintVariable(Blueprint, TEXT("bIsInParryWindow"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ParryWindowStart"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ParryWindowEnd"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("BlockDamageReduction"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("BlockStaminaCost"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsBlocking"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsInParryWindow"), MakeBoolPinType());
 
         // Load parry animation if path provided
         bool bAnimLoaded = false;
@@ -2152,7 +2155,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *ParryAnimPath);
             if (Montage)
             {
-                AddBlueprintVariable(Blueprint, TEXT("ParryAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
+                AddBlueprintVariableCombat(Blueprint, TEXT("ParryAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
                 bAnimLoaded = true;
             }
         }
@@ -2237,10 +2240,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         FString TrailEndSocket = GetStringFieldCombat(Payload, TEXT("weaponTrailEndSocket"), TEXT("WeaponTip"));
 
         // Add variables
-        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailParticlePath"), MakeStringPinType());
-        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailStartSocket"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("WeaponTrailEndSocket"), MakeNamePinType());
-        AddBlueprintVariable(Blueprint, TEXT("bShowWeaponTrail"), MakeBoolPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailParticlePath"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailStartSocket"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("WeaponTrailEndSocket"), MakeNamePinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bShowWeaponTrail"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -2365,3 +2368,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     return true;
 #endif
 }
+
+#undef GetStringFieldCombat
+#undef GetNumberFieldCombat
+#undef GetBoolFieldCombat
+

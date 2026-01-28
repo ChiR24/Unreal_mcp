@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 // McpAutomationBridge_GASHandlers.cpp
 // Phase 13: Gameplay Ability System (GAS)
 // Implements 27 actions for abilities, effects, attributes, and gameplay cues.
@@ -2152,3 +2153,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
 #endif // WITH_EDITOR && MCP_HAS_GAS
 }
+
+#undef GetStringFieldGAS
+#undef GetNumberFieldGAS
+#undef GetBoolFieldGAS
+

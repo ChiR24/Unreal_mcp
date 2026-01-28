@@ -1,4 +1,5 @@
 #include "Async/Async.h"
+#include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "MaterialDomain.h"

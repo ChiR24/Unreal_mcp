@@ -7,9 +7,16 @@
 // - LAN (LAN play configuration, hosting, joining)
 // - Voice Chat (voice settings, channels, muting, attenuation, push-to-talk)
 
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
+
+// Helper macros for JSON field access
+#define GetStringFieldSess GetJsonStringField
+#define GetNumberFieldSess GetJsonNumberField
+#define GetBoolFieldSess GetJsonBoolField
+
 #include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
@@ -50,35 +57,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpSessionsHandlers, Log, All);
 
 namespace SessionsHelpers
 {
-    // Get string field with default
-    FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""))
-    {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
-        {
-            return Payload->GetStringField(FieldName);
-        }
-        return Default;
-    }
-
-    // Get number field with default
-    double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0)
-    {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
-        {
-            return Payload->GetNumberField(FieldName);
-        }
-        return Default;
-    }
-
-    // Get bool field with default
-    bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false)
-    {
-        if (Payload.IsValid() && Payload->HasField(FieldName))
-        {
-            return Payload->GetBoolField(FieldName);
-        }
-        return Default;
-    }
 
     // Get object field
     TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
@@ -144,14 +122,14 @@ static bool HandleConfigureLocalSessionSettings(
     using namespace SessionsHelpers;
 
     // Extract session settings from payload
-    FString SessionName = GetStringField(Payload, TEXT("sessionName"), TEXT("DefaultSession"));
-    int32 MaxPlayers = static_cast<int32>(GetNumberField(Payload, TEXT("maxPlayers"), 4.0));
-    bool bIsLANMatch = GetBoolField(Payload, TEXT("bIsLANMatch"), false);
-    bool bAllowJoinInProgress = GetBoolField(Payload, TEXT("bAllowJoinInProgress"), true);
-    bool bAllowInvites = GetBoolField(Payload, TEXT("bAllowInvites"), true);
-    bool bUsesPresence = GetBoolField(Payload, TEXT("bUsesPresence"), true);
-    bool bUseLobbiesIfAvailable = GetBoolField(Payload, TEXT("bUseLobbiesIfAvailable"), true);
-    bool bShouldAdvertise = GetBoolField(Payload, TEXT("bShouldAdvertise"), true);
+    FString SessionName = GetStringFieldSess(Payload, TEXT("sessionName"), TEXT("DefaultSession"));
+    int32 MaxPlayers = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("maxPlayers"), 4.0));
+    bool bIsLANMatch = GetBoolFieldSess(Payload, TEXT("bIsLANMatch"), false);
+    bool bAllowJoinInProgress = GetBoolFieldSess(Payload, TEXT("bAllowJoinInProgress"), true);
+    bool bAllowInvites = GetBoolFieldSess(Payload, TEXT("bAllowInvites"), true);
+    bool bUsesPresence = GetBoolFieldSess(Payload, TEXT("bUsesPresence"), true);
+    bool bUseLobbiesIfAvailable = GetBoolFieldSess(Payload, TEXT("bUseLobbiesIfAvailable"), true);
+    bool bShouldAdvertise = GetBoolFieldSess(Payload, TEXT("bShouldAdvertise"), true);
 
     // Build response with session configuration
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
@@ -179,7 +157,7 @@ static bool HandleConfigureSessionInterface(
 {
     using namespace SessionsHelpers;
 
-    FString InterfaceType = GetStringField(Payload, TEXT("interfaceType"), TEXT("Default"));
+    FString InterfaceType = GetStringFieldSess(Payload, TEXT("interfaceType"), TEXT("Default"));
 
     // Validate interface type
     TArray<FString> ValidTypes = { TEXT("Default"), TEXT("LAN"), TEXT("Null") };
@@ -211,8 +189,8 @@ static bool HandleConfigureSplitScreen(
 {
     using namespace SessionsHelpers;
 
-    bool bEnabled = GetBoolField(Payload, TEXT("enabled"), true);
-    FString SplitScreenType = GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
+    bool bEnabled = GetBoolFieldSess(Payload, TEXT("enabled"), true);
+    FString SplitScreenType = GetStringFieldSess(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
     bool bVerticalSplit = SplitScreenType.Contains(TEXT("Vertical"));
     bool bSuccess = false;
     FString StatusMessage;
@@ -279,7 +257,7 @@ static bool HandleSetSplitScreenType(
 {
     using namespace SessionsHelpers;
 
-    FString SplitScreenType = GetStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
+    FString SplitScreenType = GetStringFieldSess(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
 
     // Validate split screen type
     TArray<FString> ValidTypes = {
@@ -314,7 +292,7 @@ static bool HandleAddLocalPlayer(
 {
     using namespace SessionsHelpers;
 
-    int32 ControllerId = static_cast<int32>(GetNumberField(Payload, TEXT("controllerId"), -1));
+    int32 ControllerId = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("controllerId"), -1));
 
     UGameInstance* GI = GetGameInstance();
     if (!GI)
@@ -357,7 +335,7 @@ static bool HandleRemoveLocalPlayer(
 {
     using namespace SessionsHelpers;
 
-    int32 PlayerIndex = static_cast<int32>(GetNumberField(Payload, TEXT("playerIndex"), -1));
+    int32 PlayerIndex = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("playerIndex"), -1));
 
     UGameInstance* GI = GetGameInstance();
     if (!GI)
@@ -408,9 +386,9 @@ static bool HandleConfigureLanPlay(
 {
     using namespace SessionsHelpers;
 
-    bool bEnabled = GetBoolField(Payload, TEXT("enabled"), true);
-    int32 ServerPort = static_cast<int32>(GetNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
+    bool bEnabled = GetBoolFieldSess(Payload, TEXT("enabled"), true);
+    int32 ServerPort = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("serverPort"), 7777));
+    FString ServerPassword = GetStringFieldSess(Payload, TEXT("serverPassword"), TEXT(""));
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
@@ -434,11 +412,11 @@ static bool HandleHostLanServer(
 {
     using namespace SessionsHelpers;
 
-    FString ServerName = GetStringField(Payload, TEXT("serverName"), TEXT("LAN Server"));
-    FString MapName = GetStringField(Payload, TEXT("mapName"), TEXT(""));
-    int32 MaxPlayers = static_cast<int32>(GetNumberField(Payload, TEXT("maxPlayers"), 4));
-    FString TravelOptions = GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
-    bool bExecuteTravel = GetBoolField(Payload, TEXT("executeTravel"), false);
+    FString ServerName = GetStringFieldSess(Payload, TEXT("serverName"), TEXT("LAN Server"));
+    FString MapName = GetStringFieldSess(Payload, TEXT("mapName"), TEXT(""));
+    int32 MaxPlayers = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("maxPlayers"), 4));
+    FString TravelOptions = GetStringFieldSess(Payload, TEXT("travelOptions"), TEXT(""));
+    bool bExecuteTravel = GetBoolFieldSess(Payload, TEXT("executeTravel"), false);
 
     if (MapName.IsEmpty())
     {
@@ -518,10 +496,10 @@ static bool HandleJoinLanServer(
 {
     using namespace SessionsHelpers;
 
-    FString ServerAddress = GetStringField(Payload, TEXT("serverAddress"), TEXT(""));
-    int32 ServerPort = static_cast<int32>(GetNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetStringField(Payload, TEXT("serverPassword"), TEXT(""));
-    FString TravelOptions = GetStringField(Payload, TEXT("travelOptions"), TEXT(""));
+    FString ServerAddress = GetStringFieldSess(Payload, TEXT("serverAddress"), TEXT(""));
+    int32 ServerPort = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("serverPort"), 7777));
+    FString ServerPassword = GetStringFieldSess(Payload, TEXT("serverPassword"), TEXT(""));
+    FString TravelOptions = GetStringFieldSess(Payload, TEXT("travelOptions"), TEXT(""));
 
     if (ServerAddress.IsEmpty())
     {
@@ -562,7 +540,7 @@ static bool HandleEnableVoiceChat(
 {
     using namespace SessionsHelpers;
 
-    bool bEnabled = GetBoolField(Payload, TEXT("voiceEnabled"), true);
+    bool bEnabled = GetBoolFieldSess(Payload, TEXT("voiceEnabled"), true);
     bool bSuccess = false;
     FString StatusMessage;
 
@@ -674,11 +652,11 @@ static bool HandleConfigureVoiceSettings(
 
     if (VoiceSettings.IsValid())
     {
-        Volume = FMath::Clamp(GetNumberField(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
-        NoiseGateThreshold = GetNumberField(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
-        bNoiseSuppression = GetBoolField(VoiceSettings, TEXT("noiseSuppression"), true);
-        bEchoCancellation = GetBoolField(VoiceSettings, TEXT("echoCancellation"), true);
-        SampleRate = static_cast<int32>(GetNumberField(VoiceSettings, TEXT("sampleRate"), 16000));
+        Volume = FMath::Clamp(GetNumberFieldSess(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
+        NoiseGateThreshold = GetNumberFieldSess(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
+        bNoiseSuppression = GetBoolFieldSess(VoiceSettings, TEXT("noiseSuppression"), true);
+        bEchoCancellation = GetBoolFieldSess(VoiceSettings, TEXT("echoCancellation"), true);
+        SampleRate = static_cast<int32>(GetNumberFieldSess(VoiceSettings, TEXT("sampleRate"), 16000));
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
@@ -704,8 +682,8 @@ static bool HandleSetVoiceChannel(
 {
     using namespace SessionsHelpers;
 
-    FString ChannelName = GetStringField(Payload, TEXT("channelName"), TEXT("Default"));
-    FString ChannelType = GetStringField(Payload, TEXT("channelType"), TEXT("Global"));
+    FString ChannelName = GetStringFieldSess(Payload, TEXT("channelName"), TEXT("Default"));
+    FString ChannelType = GetStringFieldSess(Payload, TEXT("channelType"), TEXT("Global"));
 
     // Validate channel type
     TArray<FString> ValidTypes = { TEXT("Team"), TEXT("Global"), TEXT("Proximity"), TEXT("Party") };
@@ -733,11 +711,11 @@ static bool HandleMutePlayer(
 {
     using namespace SessionsHelpers;
 
-    FString PlayerName = GetStringField(Payload, TEXT("playerName"), TEXT(""));
-    FString TargetPlayerId = GetStringField(Payload, TEXT("targetPlayerId"), TEXT(""));
-    bool bMuted = GetBoolField(Payload, TEXT("muted"), true);
-    int32 LocalPlayerNum = static_cast<int32>(GetNumberField(Payload, TEXT("localPlayerNum"), 0));
-    bool bSystemWide = GetBoolField(Payload, TEXT("systemWide"), false);
+    FString PlayerName = GetStringFieldSess(Payload, TEXT("playerName"), TEXT(""));
+    FString TargetPlayerId = GetStringFieldSess(Payload, TEXT("targetPlayerId"), TEXT(""));
+    bool bMuted = GetBoolFieldSess(Payload, TEXT("muted"), true);
+    int32 LocalPlayerNum = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("localPlayerNum"), 0));
+    bool bSystemWide = GetBoolFieldSess(Payload, TEXT("systemWide"), false);
 
     if (PlayerName.IsEmpty() && TargetPlayerId.IsEmpty())
     {
@@ -849,8 +827,8 @@ static bool HandleSetVoiceAttenuation(
 {
     using namespace SessionsHelpers;
 
-    double AttenuationRadius = GetNumberField(Payload, TEXT("attenuationRadius"), 2000.0);
-    double AttenuationFalloff = GetNumberField(Payload, TEXT("attenuationFalloff"), 1.0);
+    double AttenuationRadius = GetNumberFieldSess(Payload, TEXT("attenuationRadius"), 2000.0);
+    double AttenuationFalloff = GetNumberFieldSess(Payload, TEXT("attenuationFalloff"), 1.0);
 
     // Clamp values to reasonable ranges
     AttenuationRadius = FMath::Max(AttenuationRadius, 0.0);
@@ -875,8 +853,8 @@ static bool HandleConfigurePushToTalk(
 {
     using namespace SessionsHelpers;
 
-    bool bPushToTalkEnabled = GetBoolField(Payload, TEXT("pushToTalkEnabled"), false);
-    FString PushToTalkKey = GetStringField(Payload, TEXT("pushToTalkKey"), TEXT("V"));
+    bool bPushToTalkEnabled = GetBoolFieldSess(Payload, TEXT("pushToTalkEnabled"), false);
+    FString PushToTalkKey = GetStringFieldSess(Payload, TEXT("pushToTalkKey"), TEXT("V"));
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetBoolField(TEXT("pushToTalkEnabled"), bPushToTalkEnabled);
@@ -954,7 +932,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSessionsAction(
     FString SubAction;
     if (Payload.IsValid() && Payload->HasField(TEXT("action")))
     {
-        SubAction = Payload->GetStringField(TEXT("action"));
+        SubAction = GetStringFieldSess(Payload, TEXT("action"));
     }
     
     UE_LOG(LogMcpSessionsHandlers, Log, TEXT("HandleManageSessionsAction: SubAction=%s, RequestId=%s"), *SubAction, *RequestId);
@@ -1044,3 +1022,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSessionsAction(
     return true;  // Return true: request was handled (error response sent)
 #endif
 }
+
+#undef GetStringFieldSess
+#undef GetNumberFieldSess
+#undef GetBoolFieldSess
+

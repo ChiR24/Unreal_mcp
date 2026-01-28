@@ -6,6 +6,7 @@
  */
 
 #include "McpAutomationBridgeGlobals.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
@@ -53,7 +54,13 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "Subsystems/EditorActorSubsystem.h"
 #include "UDynamicMesh.h"
 #include "Components/SplineComponent.h"
-
+ 
+// Helper macros for JSON field access
+#define GetStringFieldGeom GetJsonStringField
+#define GetNumberFieldGeom GetJsonNumberField
+#define GetBoolFieldGeom GetJsonBoolField
+#define GetIntFieldGeom GetJsonIntField
+ 
 // Helper to read FVector from JSON (supports both object and array formats)
 static FVector ReadVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, FVector Default = FVector::ZeroVector)
 {
@@ -76,9 +83,9 @@ static FVector ReadVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, con
     if (Payload->TryGetObjectField(FieldName, ObjPtr))
     {
         return FVector(
-            (*ObjPtr)->GetNumberField(TEXT("x")),
-            (*ObjPtr)->GetNumberField(TEXT("y")),
-            (*ObjPtr)->GetNumberField(TEXT("z"))
+            GetNumberFieldGeom((*ObjPtr), TEXT("x")),
+            GetNumberFieldGeom((*ObjPtr), TEXT("y")),
+            GetNumberFieldGeom((*ObjPtr), TEXT("z"))
         );
     }
 
@@ -110,16 +117,16 @@ static FRotator ReadRotatorFromPayload(const TSharedPtr<FJsonObject>& Payload, c
         if ((*ObjPtr)->HasField(TEXT("pitch")) || (*ObjPtr)->HasField(TEXT("yaw")) || (*ObjPtr)->HasField(TEXT("roll")))
         {
             return FRotator(
-                (*ObjPtr)->HasField(TEXT("pitch")) ? (*ObjPtr)->GetNumberField(TEXT("pitch")) : 0.0,
-                (*ObjPtr)->HasField(TEXT("yaw")) ? (*ObjPtr)->GetNumberField(TEXT("yaw")) : 0.0,
-                (*ObjPtr)->HasField(TEXT("roll")) ? (*ObjPtr)->GetNumberField(TEXT("roll")) : 0.0
+                GetNumberFieldGeom((*ObjPtr), TEXT("pitch"), 0.0),
+                GetNumberFieldGeom((*ObjPtr), TEXT("yaw"), 0.0),
+                GetNumberFieldGeom((*ObjPtr), TEXT("roll"), 0.0)
             );
         }
         // Fallback to {x, y, z} format (x=Pitch, y=Yaw, z=Roll)
         return FRotator(
-            (*ObjPtr)->GetNumberField(TEXT("x")),
-            (*ObjPtr)->GetNumberField(TEXT("y")),
-            (*ObjPtr)->GetNumberField(TEXT("z"))
+            GetNumberFieldGeom((*ObjPtr), TEXT("x")),
+            GetNumberFieldGeom((*ObjPtr), TEXT("y")),
+            GetNumberFieldGeom((*ObjPtr), TEXT("z"))
         );
     }
 
@@ -169,19 +176,19 @@ static double ClampDimension(double Value, double Default = 100.0)
 static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedBox");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
 
     // Get dimensions with safety clamping
-    double Width = ClampDimension(Payload->HasField(TEXT("width")) ? Payload->GetNumberField(TEXT("width")) : 100.0);
-    double Height = ClampDimension(Payload->HasField(TEXT("height")) ? Payload->GetNumberField(TEXT("height")) : 100.0);
-    double Depth = ClampDimension(Payload->HasField(TEXT("depth")) ? Payload->GetNumberField(TEXT("depth")) : 100.0);
-
-    int32 WidthSegments = ClampSegments(Payload->HasField(TEXT("widthSegments")) ? (int32)Payload->GetNumberField(TEXT("widthSegments")) : 1);
-    int32 HeightSegments = ClampSegments(Payload->HasField(TEXT("heightSegments")) ? (int32)Payload->GetNumberField(TEXT("heightSegments")) : 1);
-    int32 DepthSegments = ClampSegments(Payload->HasField(TEXT("depthSegments")) ? (int32)Payload->GetNumberField(TEXT("depthSegments")) : 1);
+    double Width = ClampDimension(GetNumberFieldGeom(Payload, TEXT("width"), 100.0));
+    double Height = ClampDimension(GetNumberFieldGeom(Payload, TEXT("height"), 100.0));
+    double Depth = ClampDimension(GetNumberFieldGeom(Payload, TEXT("depth"), 100.0));
+ 
+    int32 WidthSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("widthSegments"), 1));
+    int32 HeightSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("heightSegments"), 1));
+    int32 DepthSegments = ClampSegments(GetIntFieldGeom(Payload, TEXT("depthSegments"), 1));
 
     // Create DynamicMesh
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
@@ -242,12 +249,12 @@ static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& 
 static bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedSphere");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = Payload->HasField(TEXT("radius")) ? Payload->GetNumberField(TEXT("radius")) : 50.0;
-    int32 Subdivisions = ClampSegments(Payload->HasField(TEXT("subdivisions")) ? (int32)Payload->GetNumberField(TEXT("subdivisions")) : 16, 16);
+    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
+    int32 Subdivisions = ClampSegments(GetIntFieldGeom(Payload, TEXT("subdivisions"), 16), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -300,13 +307,13 @@ static bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FStrin
 static bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCylinder");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = Payload->HasField(TEXT("radius")) ? Payload->GetNumberField(TEXT("radius")) : 50.0;
-    double Height = Payload->HasField(TEXT("height")) ? Payload->GetNumberField(TEXT("height")) : 100.0;
-    int32 Segments = Payload->HasField(TEXT("segments")) ? (int32)Payload->GetNumberField(TEXT("segments")) : 16;
+    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
+    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -358,14 +365,14 @@ static bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FStr
 static bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCone");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double BaseRadius = Payload->HasField(TEXT("baseRadius")) ? Payload->GetNumberField(TEXT("baseRadius")) : 50.0;
-    double TopRadius = Payload->HasField(TEXT("topRadius")) ? Payload->GetNumberField(TEXT("topRadius")) : 0.0;
-    double Height = Payload->HasField(TEXT("height")) ? Payload->GetNumberField(TEXT("height")) : 100.0;
-    int32 Segments = Payload->HasField(TEXT("segments")) ? (int32)Payload->GetNumberField(TEXT("segments")) : 16;
+double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
+    double TopRadius = GetNumberFieldGeom(Payload, TEXT("topRadius"), 0.0);
+    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -411,14 +418,14 @@ static bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedCapsule");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = Payload->HasField(TEXT("radius")) ? Payload->GetNumberField(TEXT("radius")) : 50.0;
-    double Length = Payload->HasField(TEXT("length")) ? Payload->GetNumberField(TEXT("length")) : 100.0;
-    int32 HemisphereSteps = Payload->HasField(TEXT("hemisphereSteps")) ? (int32)Payload->GetNumberField(TEXT("hemisphereSteps")) : 4;
-    int32 Segments = Payload->HasField(TEXT("segments")) ? (int32)Payload->GetNumberField(TEXT("segments")) : 16;
+    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
+double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
+    int32 HemisphereSteps = GetIntFieldGeom(Payload, TEXT("hemisphereSteps"), 4);
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -463,14 +470,14 @@ static bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FStri
 static bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedTorus");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double MajorRadius = Payload->HasField(TEXT("majorRadius")) ? Payload->GetNumberField(TEXT("majorRadius")) : 50.0;
-    double MinorRadius = Payload->HasField(TEXT("minorRadius")) ? Payload->GetNumberField(TEXT("minorRadius")) : 20.0;
-    int32 MajorSegments = Payload->HasField(TEXT("majorSegments")) ? (int32)Payload->GetNumberField(TEXT("majorSegments")) : 16;
-    int32 MinorSegments = Payload->HasField(TEXT("minorSegments")) ? (int32)Payload->GetNumberField(TEXT("minorSegments")) : 8;
+double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 50.0);
+    double MinorRadius = GetNumberFieldGeom(Payload, TEXT("minorRadius"), 20.0);
+    int32 MajorSegments = GetIntFieldGeom(Payload, TEXT("majorSegments"), 16);
+    int32 MinorSegments = GetIntFieldGeom(Payload, TEXT("minorSegments"), 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -519,14 +526,14 @@ static bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedPlane");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Width = Payload->HasField(TEXT("width")) ? Payload->GetNumberField(TEXT("width")) : 100.0;
-    double Depth = Payload->HasField(TEXT("depth")) ? Payload->GetNumberField(TEXT("depth")) : 100.0;
-    int32 WidthSubdivisions = Payload->HasField(TEXT("widthSubdivisions")) ? (int32)Payload->GetNumberField(TEXT("widthSubdivisions")) : 1;
-    int32 DepthSubdivisions = Payload->HasField(TEXT("depthSubdivisions")) ? (int32)Payload->GetNumberField(TEXT("depthSubdivisions")) : 1;
+double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
+    double Depth = GetNumberFieldGeom(Payload, TEXT("depth"), 100.0);
+    int32 WidthSubdivisions = GetIntFieldGeom(Payload, TEXT("widthSubdivisions"), 1);
+    int32 DepthSubdivisions = GetIntFieldGeom(Payload, TEXT("depthSubdivisions"), 1);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -573,12 +580,12 @@ static bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedDisc");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = Payload->HasField(TEXT("radius")) ? Payload->GetNumberField(TEXT("radius")) : 50.0;
-    int32 Segments = Payload->HasField(TEXT("segments")) ? (int32)Payload->GetNumberField(TEXT("segments")) : 16;
+    double Radius = GetNumberFieldGeom(Payload, TEXT("radius"), 50.0);
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -635,9 +642,9 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
                                    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                                    EGeometryScriptBooleanOperation BoolOp, const FString& OpName)
 {
-    FString TargetActorName = Payload->GetStringField(TEXT("targetActor"));
-    FString ToolActorName = Payload->GetStringField(TEXT("toolActor"));
-    bool bKeepTool = Payload->HasField(TEXT("keepTool")) ? Payload->GetBoolField(TEXT("keepTool")) : false;
+    FString TargetActorName = GetStringFieldGeom(Payload, TEXT("targetActor"));
+    FString ToolActorName = GetStringFieldGeom(Payload, TEXT("toolActor"));
+    bool bKeepTool = GetBoolFieldGeom(Payload, TEXT("keepTool"), false);
 
     if (TargetActorName.IsEmpty() || ToolActorName.IsEmpty())
     {
@@ -750,7 +757,7 @@ static bool HandleBooleanIntersection(UMcpAutomationBridgeSubsystem* Self, const
 static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -814,9 +821,9 @@ static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    bool bAreaWeighted = Payload->HasField(TEXT("areaWeighted")) ? Payload->GetBoolField(TEXT("areaWeighted")) : true;
-    double SplitAngle = Payload->HasField(TEXT("splitAngle")) ? Payload->GetNumberField(TEXT("splitAngle")) : 60.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    bool bAreaWeighted = GetBoolFieldGeom(Payload, TEXT("areaWeighted"), true);
+    double SplitAngle = GetNumberFieldGeom(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {
@@ -881,7 +888,7 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
 static bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
@@ -928,8 +935,8 @@ static bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double TargetPercentage = Payload->HasField(TEXT("targetPercentage")) ? Payload->GetNumberField(TEXT("targetPercentage")) : 50.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double TargetPercentage = GetNumberFieldGeom(Payload, TEXT("targetPercentage"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1000,8 +1007,8 @@ static bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
 static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Iterations = Payload->HasField(TEXT("iterations")) ? (int32)Payload->GetNumberField(TEXT("iterations")) : 1;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -1064,7 +1071,7 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
 static bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -1119,8 +1126,8 @@ static bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString AssetPath = Payload->GetStringField(TEXT("assetPath"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
 
     if (ActorName.IsEmpty())
     {
@@ -1198,15 +1205,15 @@ static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const
 static bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    float StepWidth = Payload->HasField(TEXT("stepWidth")) ? Payload->GetNumberField(TEXT("stepWidth")) : 100.0f;
-    float StepHeight = Payload->HasField(TEXT("stepHeight")) ? Payload->GetNumberField(TEXT("stepHeight")) : 20.0f;
-    float StepDepth = Payload->HasField(TEXT("stepDepth")) ? Payload->GetNumberField(TEXT("stepDepth")) : 30.0f;
-    int32 NumSteps = Payload->HasField(TEXT("numSteps")) ? (int32)Payload->GetNumberField(TEXT("numSteps")) : 8;
-    bool bFloating = Payload->HasField(TEXT("floating")) ? Payload->GetBoolField(TEXT("floating")) : false;
+float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
+    float StepHeight = GetNumberFieldGeom(Payload, TEXT("stepHeight"), 20.0f);
+    float StepDepth = GetNumberFieldGeom(Payload, TEXT("stepDepth"), 30.0f);
+    int32 NumSteps = GetIntFieldGeom(Payload, TEXT("numSteps"), 8);
+    bool bFloating = GetBoolFieldGeom(Payload, TEXT("floating"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -1247,16 +1254,16 @@ static bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FStrin
 static bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedSpiralStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    float StepWidth = Payload->HasField(TEXT("stepWidth")) ? Payload->GetNumberField(TEXT("stepWidth")) : 100.0f;
-    float StepHeight = Payload->HasField(TEXT("stepHeight")) ? Payload->GetNumberField(TEXT("stepHeight")) : 20.0f;
-    float InnerRadius = Payload->HasField(TEXT("innerRadius")) ? Payload->GetNumberField(TEXT("innerRadius")) : 150.0f;
-    float CurveAngle = Payload->HasField(TEXT("curveAngle")) ? Payload->GetNumberField(TEXT("curveAngle")) : 90.0f;
-    int32 NumSteps = Payload->HasField(TEXT("numSteps")) ? (int32)Payload->GetNumberField(TEXT("numSteps")) : 8;
-    bool bFloating = Payload->HasField(TEXT("floating")) ? Payload->GetBoolField(TEXT("floating")) : false;
+float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
+    float StepHeight = GetNumberFieldGeom(Payload, TEXT("stepHeight"), 20.0f);
+    float InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 150.0f);
+    float CurveAngle = GetNumberFieldGeom(Payload, TEXT("curveAngle"), 90.0f);
+    int32 NumSteps = GetIntFieldGeom(Payload, TEXT("numSteps"), 8);
+    bool bFloating = GetBoolFieldGeom(Payload, TEXT("floating"), false);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -1298,13 +1305,13 @@ static bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const 
 static bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRing");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double OuterRadius = Payload->HasField(TEXT("outerRadius")) ? Payload->GetNumberField(TEXT("outerRadius")) : 50.0;
-    double InnerRadius = Payload->HasField(TEXT("innerRadius")) ? Payload->GetNumberField(TEXT("innerRadius")) : 25.0;
-    int32 Segments = Payload->HasField(TEXT("segments")) ? (int32)Payload->GetNumberField(TEXT("segments")) : 32;
+double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
+    double InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 25.0);
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 32);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -1352,8 +1359,8 @@ static bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Distance = Payload->HasField(TEXT("distance")) ? Payload->GetNumberField(TEXT("distance")) : 10.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 10.0);
     FVector Direction = ReadVectorFromPayload(Payload, TEXT("direction"), FVector(0, 0, 1));
 
     if (ActorName.IsEmpty())
@@ -1413,8 +1420,8 @@ static bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                               bool bIsInset)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Distance = Payload->HasField(TEXT("distance")) ? Payload->GetNumberField(TEXT("distance")) : 5.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1471,9 +1478,9 @@ static bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double BevelDistance = Payload->HasField(TEXT("distance")) ? Payload->GetNumberField(TEXT("distance")) : 5.0;
-    int32 Subdivisions = Payload->HasField(TEXT("subdivisions")) ? (int32)Payload->GetNumberField(TEXT("subdivisions")) : 0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
+    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -1527,8 +1534,8 @@ static bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Distance = Payload->HasField(TEXT("distance")) ? Payload->GetNumberField(TEXT("distance")) : 5.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1584,8 +1591,8 @@ static bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Thickness = Payload->HasField(TEXT("thickness")) ? Payload->GetNumberField(TEXT("thickness")) : 5.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Thickness = GetNumberFieldGeom(Payload, TEXT("thickness"), 5.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1642,9 +1649,9 @@ static bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double BendAngle = Payload->HasField(TEXT("angle")) ? Payload->GetNumberField(TEXT("angle")) : 45.0;
-    double BendExtent = Payload->HasField(TEXT("extent")) ? Payload->GetNumberField(TEXT("extent")) : 50.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+double BendAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
+    double BendExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1698,9 +1705,9 @@ static bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 static bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double TwistAngle = Payload->HasField(TEXT("angle")) ? Payload->GetNumberField(TEXT("angle")) : 45.0;
-    double TwistExtent = Payload->HasField(TEXT("extent")) ? Payload->GetNumberField(TEXT("extent")) : 50.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+double TwistAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
+    double TwistExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1754,10 +1761,10 @@ static bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double FlarePercentX = Payload->HasField(TEXT("flareX")) ? Payload->GetNumberField(TEXT("flareX")) : 50.0;
-    double FlarePercentY = Payload->HasField(TEXT("flareY")) ? Payload->GetNumberField(TEXT("flareY")) : 50.0;
-    double FlareExtent = Payload->HasField(TEXT("extent")) ? Payload->GetNumberField(TEXT("extent")) : 50.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+double FlarePercentX = GetNumberFieldGeom(Payload, TEXT("flareX"), 50.0);
+    double FlarePercentY = GetNumberFieldGeom(Payload, TEXT("flareY"), 50.0);
+    double FlareExtent = GetNumberFieldGeom(Payload, TEXT("extent"), 50.0);
 
     if (ActorName.IsEmpty())
     {
@@ -1809,9 +1816,9 @@ static bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Magnitude = Payload->HasField(TEXT("magnitude")) ? Payload->GetNumberField(TEXT("magnitude")) : 5.0;
-    double Frequency = Payload->HasField(TEXT("frequency")) ? Payload->GetNumberField(TEXT("frequency")) : 0.25;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+double Magnitude = GetNumberFieldGeom(Payload, TEXT("magnitude"), 5.0);
+    double Frequency = GetNumberFieldGeom(Payload, TEXT("frequency"), 0.25);
 
     if (ActorName.IsEmpty())
     {
@@ -1875,9 +1882,9 @@ static bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Iterations = Payload->HasField(TEXT("iterations")) ? (int32)Payload->GetNumberField(TEXT("iterations")) : 10;
-    double Alpha = Payload->HasField(TEXT("alpha")) ? Payload->GetNumberField(TEXT("alpha")) : 0.2;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 10);
+    double Alpha = GetNumberFieldGeom(Payload, TEXT("alpha"), 0.2);
 
     if (ActorName.IsEmpty())
     {
@@ -1937,8 +1944,8 @@ static bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 static bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Tolerance = Payload->HasField(TEXT("tolerance")) ? Payload->GetNumberField(TEXT("tolerance")) : 0.0001;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Tolerance = GetNumberFieldGeom(Payload, TEXT("tolerance"), 0.0001);
 
     if (ActorName.IsEmpty())
     {
@@ -1991,7 +1998,7 @@ static bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FStrin
 static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -2049,7 +2056,7 @@ static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& 
 static bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -2101,9 +2108,8 @@ static bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const F
 static bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 TargetTriangleCount = Payload->HasField(TEXT("targetTriangleCount")) ?
-        (int32)Payload->GetNumberField(TEXT("targetTriangleCount")) : 5000;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 TargetTriangleCount = GetIntFieldGeom(Payload, TEXT("targetTriangleCount"), 5000);
 
     if (ActorName.IsEmpty())
     {
@@ -2165,9 +2171,8 @@ static bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FStri
 static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString CollisionType = Payload->HasField(TEXT("collisionType")) ?
-        Payload->GetStringField(TEXT("collisionType")) : TEXT("convex");
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString CollisionType = GetStringFieldGeom(Payload, TEXT("collisionType"), TEXT("convex"));
 
     if (ActorName.IsEmpty())
     {
@@ -2256,9 +2261,9 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("X");
-    bool bWeld = Payload->HasField(TEXT("weld")) ? Payload->GetBoolField(TEXT("weld")) : true;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("X")).ToUpper();
+    bool bWeld = GetBoolFieldGeom(Payload, TEXT("weld"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -2329,8 +2334,8 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Count = Payload->HasField(TEXT("count")) ? (int32)Payload->GetNumberField(TEXT("count")) : 3;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 3);
     FVector Offset = ReadVectorFromPayload(Payload, TEXT("offset"), FVector(100, 0, 0));
 
     if (ActorName.IsEmpty())
@@ -2396,11 +2401,11 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Count = Payload->HasField(TEXT("count")) ? (int32)Payload->GetNumberField(TEXT("count")) : 6;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 6);
     FVector Center = ReadVectorFromPayload(Payload, TEXT("center"), FVector::ZeroVector);
-    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("Z");
-    double TotalAngle = Payload->HasField(TEXT("angle")) ? Payload->GetNumberField(TEXT("angle")) : 360.0;
+    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double TotalAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
 
     if (ActorName.IsEmpty())
     {
@@ -2485,15 +2490,15 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedArch");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double MajorRadius = Payload->HasField(TEXT("majorRadius")) ? Payload->GetNumberField(TEXT("majorRadius")) : 100.0;
-    double MinorRadius = Payload->HasField(TEXT("minorRadius")) ? Payload->GetNumberField(TEXT("minorRadius")) : 25.0;
-    double ArchAngle = Payload->HasField(TEXT("angle")) ? Payload->GetNumberField(TEXT("angle")) : 180.0;
-    int32 MajorSteps = Payload->HasField(TEXT("majorSteps")) ? (int32)Payload->GetNumberField(TEXT("majorSteps")) : 16;
-    int32 MinorSteps = Payload->HasField(TEXT("minorSteps")) ? (int32)Payload->GetNumberField(TEXT("minorSteps")) : 8;
+double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 100.0);
+    double MinorRadius = GetNumberFieldGeom(Payload, TEXT("minorRadius"), 25.0);
+    double ArchAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 180.0);
+    int32 MajorSteps = GetIntFieldGeom(Payload, TEXT("majorSteps"), 16);
+    int32 MinorSteps = GetIntFieldGeom(Payload, TEXT("minorSteps"), 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -2540,15 +2545,15 @@ static bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedPipe");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double OuterRadius = Payload->HasField(TEXT("outerRadius")) ? Payload->GetNumberField(TEXT("outerRadius")) : 50.0;
-    double InnerRadius = Payload->HasField(TEXT("innerRadius")) ? Payload->GetNumberField(TEXT("innerRadius")) : 40.0;
-    double Height = Payload->HasField(TEXT("height")) ? Payload->GetNumberField(TEXT("height")) : 100.0;
-    int32 RadialSteps = Payload->HasField(TEXT("radialSteps")) ? (int32)Payload->GetNumberField(TEXT("radialSteps")) : 24;
-    int32 HeightSteps = Payload->HasField(TEXT("heightSteps")) ? (int32)Payload->GetNumberField(TEXT("heightSteps")) : 1;
+double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
+    double InnerRadius = GetNumberFieldGeom(Payload, TEXT("innerRadius"), 40.0);
+    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 100.0);
+    int32 RadialSteps = GetIntFieldGeom(Payload, TEXT("radialSteps"), 24);
+    int32 HeightSteps = GetIntFieldGeom(Payload, TEXT("heightSteps"), 1);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -2605,13 +2610,13 @@ static bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRamp");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Width = Payload->HasField(TEXT("width")) ? Payload->GetNumberField(TEXT("width")) : 100.0;
-    double Length = Payload->HasField(TEXT("length")) ? Payload->GetNumberField(TEXT("length")) : 200.0;
-    double Height = Payload->HasField(TEXT("height")) ? Payload->GetNumberField(TEXT("height")) : 50.0;
+double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
+    double Length = GetNumberFieldGeom(Payload, TEXT("length"), 200.0);
+    double Height = GetNumberFieldGeom(Payload, TEXT("height"), 50.0);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -2665,7 +2670,7 @@ static bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -2716,8 +2721,8 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double PokeOffset = Payload->HasField(TEXT("offset")) ? Payload->GetNumberField(TEXT("offset")) : 0.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double PokeOffset = GetNumberFieldGeom(Payload, TEXT("offset"), 0.0);
 
     if (ActorName.IsEmpty())
     {
@@ -2781,9 +2786,9 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 static bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Iterations = Payload->HasField(TEXT("iterations")) ? (int32)Payload->GetNumberField(TEXT("iterations")) : 3;
-    double Strength = Payload->HasField(TEXT("strength")) ? Payload->GetNumberField(TEXT("strength")) : 0.5;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 3);
+    double Strength = GetNumberFieldGeom(Payload, TEXT("strength"), 0.5);
 
     if (ActorName.IsEmpty())
     {
@@ -2841,10 +2846,10 @@ static bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString ProjectionType = Payload->HasField(TEXT("projectionType")) ? Payload->GetStringField(TEXT("projectionType")).ToLower() : TEXT("box");
-    double Scale = Payload->HasField(TEXT("scale")) ? Payload->GetNumberField(TEXT("scale")) : 1.0;
-    int32 UVChannel = Payload->HasField(TEXT("uvChannel")) ? (int32)Payload->GetNumberField(TEXT("uvChannel")) : 0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEXT("box")).ToLower();
+    double Scale = GetNumberFieldGeom(Payload, TEXT("scale"), 1.0);
+    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -2923,7 +2928,7 @@ static bool HandleProjectUV(UMcpAutomationBridgeSubsystem* Self, const FString& 
 static bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -2977,13 +2982,13 @@ static bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const F
 static bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = Payload->GetStringField(TEXT("name"));
+    FString Name = GetStringFieldGeom(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedRevolve");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Angle = Payload->HasField(TEXT("angle")) ? Payload->GetNumberField(TEXT("angle")) : 360.0;
-    int32 Steps = Payload->HasField(TEXT("steps")) ? (int32)Payload->GetNumberField(TEXT("steps")) : 16;
-    bool bCapped = Payload->HasField(TEXT("capped")) ? Payload->GetBoolField(TEXT("capped")) : true;
+double Angle = GetNumberFieldGeom(Payload, TEXT("angle"), 360.0);
+    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 16);
+    bool bCapped = GetBoolFieldGeom(Payload, TEXT("capped"), true);
 
     // Get profile points from payload
     TArray<FVector2D> ProfilePoints;
@@ -2995,8 +3000,8 @@ static bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& Re
             const TSharedPtr<FJsonObject>& PointObj = PointValue->AsObject();
             if (PointObj.IsValid())
             {
-                double X = PointObj->HasField(TEXT("x")) ? PointObj->GetNumberField(TEXT("x")) : 0.0;
-                double Y = PointObj->HasField(TEXT("y")) ? PointObj->GetNumberField(TEXT("y")) : 0.0;
+double X = GetNumberFieldGeom(PointObj, TEXT("x"), 0.0);
+                double Y = GetNumberFieldGeom(PointObj, TEXT("y"), 0.0);
                 ProfilePoints.Add(FVector2D(X, Y));
             }
         }
@@ -3065,9 +3070,9 @@ static bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("Z");
-    double Factor = Payload->HasField(TEXT("factor")) ? Payload->GetNumberField(TEXT("factor")) : 1.5;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.5);
 
     if (ActorName.IsEmpty())
     {
@@ -3123,8 +3128,8 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Factor = Payload->HasField(TEXT("factor")) ? Payload->GetNumberField(TEXT("factor")) : 1.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.0);
 
     if (ActorName.IsEmpty())
     {
@@ -3223,9 +3228,9 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
 static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("Z");
-    double Factor = Payload->HasField(TEXT("factor")) ? Payload->GetNumberField(TEXT("factor")) : 1.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
+    double Factor = GetNumberFieldGeom(Payload, TEXT("factor"), 1.0);
 
     if (ActorName.IsEmpty())
     {
@@ -3376,9 +3381,9 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
 static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Distance = Payload->HasField(TEXT("distance")) ? Payload->GetNumberField(TEXT("distance")) : 5.0;
-    int32 Steps = Payload->HasField(TEXT("steps")) ? (int32)Payload->GetNumberField(TEXT("steps")) : 1;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Distance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
+    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -3438,9 +3443,9 @@ static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double Tolerance = Payload->HasField(TEXT("tolerance")) ? Payload->GetNumberField(TEXT("tolerance")) : 0.001;
-    bool bCompactMesh = Payload->HasField(TEXT("compact")) ? Payload->GetBoolField(TEXT("compact")) : true;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double Tolerance = GetNumberFieldGeom(Payload, TEXT("tolerance"), 0.001);
+    bool bCompactMesh = GetBoolFieldGeom(Payload, TEXT("compact"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -3511,15 +3516,15 @@ static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FStri
 static bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 UVChannel = Payload->HasField(TEXT("uvChannel")) ? (int32)Payload->GetNumberField(TEXT("uvChannel")) : 0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
     
     // Transform parameters
-    double TranslateU = Payload->HasField(TEXT("translateU")) ? Payload->GetNumberField(TEXT("translateU")) : 0.0;
-    double TranslateV = Payload->HasField(TEXT("translateV")) ? Payload->GetNumberField(TEXT("translateV")) : 0.0;
-    double ScaleU = Payload->HasField(TEXT("scaleU")) ? Payload->GetNumberField(TEXT("scaleU")) : 1.0;
-    double ScaleV = Payload->HasField(TEXT("scaleV")) ? Payload->GetNumberField(TEXT("scaleV")) : 1.0;
-    double Rotation = Payload->HasField(TEXT("rotation")) ? Payload->GetNumberField(TEXT("rotation")) : 0.0;
+double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
+    double TranslateV = GetNumberFieldGeom(Payload, TEXT("translateV"), 0.0);
+    double ScaleU = GetNumberFieldGeom(Payload, TEXT("scaleU"), 1.0);
+    double ScaleV = GetNumberFieldGeom(Payload, TEXT("scaleV"), 1.0);
+    double Rotation = GetNumberFieldGeom(Payload, TEXT("rotation"), 0.0);
 
     if (ActorName.IsEmpty())
     {
@@ -3599,9 +3604,9 @@ static bool HandleTransformUVs(UMcpAutomationBridgeSubsystem* Self, const FStrin
 static bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString TrimActorName = Payload->GetStringField(TEXT("trimActorName"));
-    bool bKeepInside = Payload->HasField(TEXT("keepInside")) ? Payload->GetBoolField(TEXT("keepInside")) : false;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString TrimActorName = GetStringFieldGeom(Payload, TEXT("trimActorName"));
+    bool bKeepInside = GetBoolFieldGeom(Payload, TEXT("keepInside"), false);
 
     if (ActorName.IsEmpty() || TrimActorName.IsEmpty())
     {
@@ -3672,8 +3677,8 @@ static bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString
 static bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    bool bFillHoles = Payload->HasField(TEXT("fillHoles")) ? Payload->GetBoolField(TEXT("fillHoles")) : true;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    bool bFillHoles = GetBoolFieldGeom(Payload, TEXT("fillHoles"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -3733,10 +3738,10 @@ static bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& 
 static bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 EdgeGroupA = Payload->HasField(TEXT("edgeGroupA")) ? (int32)Payload->GetNumberField(TEXT("edgeGroupA")) : 0;
-    int32 EdgeGroupB = Payload->HasField(TEXT("edgeGroupB")) ? (int32)Payload->GetNumberField(TEXT("edgeGroupB")) : 1;
-    int32 Subdivisions = Payload->HasField(TEXT("subdivisions")) ? (int32)Payload->GetNumberField(TEXT("subdivisions")) : 1;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
+    int32 EdgeGroupB = GetIntFieldGeom(Payload, TEXT("edgeGroupB"), 1);
+    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 1);
 
     if (ActorName.IsEmpty())
     {
@@ -3902,10 +3907,10 @@ static bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 Subdivisions = Payload->HasField(TEXT("subdivisions")) ? (int32)Payload->GetNumberField(TEXT("subdivisions")) : 8;
-    bool bSmooth = Payload->HasField(TEXT("smooth")) ? Payload->GetBoolField(TEXT("smooth")) : true;
-    bool bCap = Payload->HasField(TEXT("cap")) ? Payload->GetBoolField(TEXT("cap")) : true;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 Subdivisions = GetIntFieldGeom(Payload, TEXT("subdivisions"), 8);
+    bool bSmooth = GetBoolFieldGeom(Payload, TEXT("smooth"), true);
+    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
 
     // Get profile actor names if provided
     TArray<FString> ProfileActors;
@@ -4156,13 +4161,13 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 static bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString SplineActorName = Payload->HasField(TEXT("splineActorName")) ? Payload->GetStringField(TEXT("splineActorName")) : TEXT("");
-    int32 Steps = Payload->HasField(TEXT("steps")) ? (int32)Payload->GetNumberField(TEXT("steps")) : 16;
-    double Twist = Payload->HasField(TEXT("twist")) ? Payload->GetNumberField(TEXT("twist")) : 0.0;
-    double ScaleStart = Payload->HasField(TEXT("scaleStart")) ? Payload->GetNumberField(TEXT("scaleStart")) : 1.0;
-    double ScaleEnd = Payload->HasField(TEXT("scaleEnd")) ? Payload->GetNumberField(TEXT("scaleEnd")) : 1.0;
-    bool bCap = Payload->HasField(TEXT("cap")) ? Payload->GetBoolField(TEXT("cap")) : true;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), TEXT(""));
+    int32 Steps = GetIntFieldGeom(Payload, TEXT("steps"), 16);
+    double Twist = GetNumberFieldGeom(Payload, TEXT("twist"), 0.0);
+    double ScaleStart = GetNumberFieldGeom(Payload, TEXT("scaleStart"), 1.0);
+    double ScaleEnd = GetNumberFieldGeom(Payload, TEXT("scaleEnd"), 1.0);
+    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
 
     if (ActorName.IsEmpty())
     {
@@ -4357,11 +4362,11 @@ static bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 static bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    FString SplineActorName = Payload->GetStringField(TEXT("splineActorName"));
-    int32 Count = Payload->HasField(TEXT("count")) ? (int32)Payload->GetNumberField(TEXT("count")) : 10;
-    bool bAlignToSpline = Payload->HasField(TEXT("alignToSpline")) ? Payload->GetBoolField(TEXT("alignToSpline")) : true;
-    double ScaleVariation = Payload->HasField(TEXT("scaleVariation")) ? Payload->GetNumberField(TEXT("scaleVariation")) : 0.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
+int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
+    bool bAlignToSpline = GetBoolFieldGeom(Payload, TEXT("alignToSpline"), true);
+    double ScaleVariation = GetNumberFieldGeom(Payload, TEXT("scaleVariation"), 0.0);
 
     if (ActorName.IsEmpty() || SplineActorName.IsEmpty())
     {
@@ -4464,9 +4469,9 @@ static bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, cons
 static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    int32 NumCuts = Payload->HasField(TEXT("numCuts")) ? (int32)Payload->GetNumberField(TEXT("numCuts")) : 1;
-    double Offset = Payload->HasField(TEXT("offset")) ? Payload->GetNumberField(TEXT("offset")) : 0.5;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 NumCuts = GetIntFieldGeom(Payload, TEXT("numCuts"), 1);
+    double Offset = GetNumberFieldGeom(Payload, TEXT("offset"), 0.5);
 
     if (ActorName.IsEmpty())
     {
@@ -4503,7 +4508,7 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     int32 TrisBefore = Mesh->GetTriangleCount();
 
     // Get optional axis parameter (default to Z for horizontal cuts)
-    FString Axis = Payload->HasField(TEXT("axis")) ? Payload->GetStringField(TEXT("axis")).ToUpper() : TEXT("Z");
+    FString Axis = GetStringFieldGeom(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
     
     // Real loop cut implementation using plane cutting
     // Unlike PN tessellation which subdivides ALL faces uniformly,
@@ -4616,8 +4621,8 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 static bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = Payload->GetStringField(TEXT("actorName"));
-    double SplitAngle = Payload->HasField(TEXT("splitAngle")) ? Payload->GetNumberField(TEXT("splitAngle")) : 60.0;
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    double SplitAngle = GetNumberFieldGeom(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {
@@ -4695,7 +4700,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetStringFieldGeom(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload"), TEXT("INVALID_ARGUMENT"));

@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -104,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(const FString& RequestId, co
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("subscribe"))
     {

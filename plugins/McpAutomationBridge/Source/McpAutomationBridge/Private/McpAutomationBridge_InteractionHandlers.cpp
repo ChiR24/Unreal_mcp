@@ -2,6 +2,7 @@
 // Phase 18: Interaction System Handlers
 
 #include "McpAutomationBridgeHelpers.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"

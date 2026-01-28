@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeGlobals.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "UObject/UObjectIterator.h"
@@ -128,17 +129,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     FVector Location = FVector::ZeroVector;
     const TSharedPtr<FJsonObject> *LocPtr;
     if (Payload->TryGetObjectField(TEXT("location"), LocPtr)) {
-      Location.X = (*LocPtr)->GetNumberField(TEXT("x"));
-      Location.Y = (*LocPtr)->GetNumberField(TEXT("y"));
-      Location.Z = (*LocPtr)->GetNumberField(TEXT("z"));
+      Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
+      Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
+      Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
     }
 
     FRotator Rotation = FRotator::ZeroRotator;
     const TSharedPtr<FJsonObject> *RotPtr;
     if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr)) {
-      Rotation.Pitch = (*RotPtr)->GetNumberField(TEXT("pitch"));
-      Rotation.Yaw = (*RotPtr)->GetNumberField(TEXT("yaw"));
-      Rotation.Roll = (*RotPtr)->GetNumberField(TEXT("roll"));
+      Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
+      Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
+      Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
     }
 
     FActorSpawnParameters SpawnParams;
@@ -189,11 +190,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         const TSharedPtr<FJsonObject> *ColorObj;
         if ((*Props)->TryGetObjectField(TEXT("color"), ColorObj)) {
           FLinearColor Color;
-          Color.R = (*ColorObj)->GetNumberField(TEXT("r"));
-          Color.G = (*ColorObj)->GetNumberField(TEXT("g"));
-          Color.B = (*ColorObj)->GetNumberField(TEXT("b"));
+          Color.R = GetJsonNumberField((*ColorObj), TEXT("r"));
+          Color.G = GetJsonNumberField((*ColorObj), TEXT("g"));
+          Color.B = GetJsonNumberField((*ColorObj), TEXT("b"));
           Color.A = (*ColorObj)->HasField(TEXT("a"))
-                        ? (*ColorObj)->GetNumberField(TEXT("a"))
+                        ? GetJsonNumberField((*ColorObj), TEXT("a"))
                         : 1.0f;
           LightComp->SetLightColor(Color);
         }
@@ -381,17 +382,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     FVector Location = FVector::ZeroVector;
     const TSharedPtr<FJsonObject> *LocObj;
     if (Payload->TryGetObjectField(TEXT("location"), LocObj)) {
-      Location.X = (*LocObj)->GetNumberField(TEXT("x"));
-      Location.Y = (*LocObj)->GetNumberField(TEXT("y"));
-      Location.Z = (*LocObj)->GetNumberField(TEXT("z"));
+      Location.X = GetJsonNumberField((*LocObj), TEXT("x"));
+      Location.Y = GetJsonNumberField((*LocObj), TEXT("y"));
+      Location.Z = GetJsonNumberField((*LocObj), TEXT("z"));
     }
 
     FVector Size = FVector(1000, 1000, 1000);
     const TSharedPtr<FJsonObject> *SizeObj;
     if (Payload->TryGetObjectField(TEXT("size"), SizeObj)) {
-      Size.X = (*SizeObj)->GetNumberField(TEXT("x"));
-      Size.Y = (*SizeObj)->GetNumberField(TEXT("y"));
-      Size.Z = (*SizeObj)->GetNumberField(TEXT("z"));
+      Size.X = GetJsonNumberField((*SizeObj), TEXT("x"));
+      Size.Y = GetJsonNumberField((*SizeObj), TEXT("y"));
+      Size.Z = GetJsonNumberField((*SizeObj), TEXT("z"));
     }
 
     AActor *Volume = SpawnActorInActiveWorld<AActor>(

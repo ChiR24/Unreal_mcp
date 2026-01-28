@@ -1,6 +1,12 @@
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+
+// Helper macros for JSON field access
+#define GetStringFieldNiaG GetJsonStringField
+#define GetNumberFieldNiaG GetJsonNumberField
+#define GetBoolFieldNiaG GetJsonBoolField
 
 #if WITH_EDITOR
 #include "NiagaraSystem.h"
@@ -45,7 +51,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetStringFieldNiaG(Payload, TEXT("subAction"));
     FString EmitterName;
     Payload->TryGetStringField(TEXT("emitterName"), EmitterName);
 
@@ -276,3 +282,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
     return true;
 #endif
 }
+
+#undef GetStringFieldNiaG
+#undef GetNumberFieldNiaG
+#undef GetBoolFieldNiaG
+

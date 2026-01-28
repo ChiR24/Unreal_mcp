@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 #include "LevelSequence.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"

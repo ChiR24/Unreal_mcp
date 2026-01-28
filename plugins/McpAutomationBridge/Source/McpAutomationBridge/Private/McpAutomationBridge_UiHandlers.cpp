@@ -1,3 +1,4 @@
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -53,7 +54,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
   FString SubAction;
   if (Payload->HasField(TEXT("subAction"))) {
-    SubAction = Payload->GetStringField(TEXT("subAction"));
+    SubAction = GetJsonStringField(Payload, TEXT("subAction"));
   } else {
     Payload->TryGetStringField(TEXT("action"), SubAction);
   }

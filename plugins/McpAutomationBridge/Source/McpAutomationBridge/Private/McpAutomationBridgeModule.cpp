@@ -1,4 +1,5 @@
 #include "ISettingsModule.h"
+#include "Dom/JsonObject.h"
 #include "ISettingsSection.h"
 #include "McpAutomationBridgeSettings.h"
 

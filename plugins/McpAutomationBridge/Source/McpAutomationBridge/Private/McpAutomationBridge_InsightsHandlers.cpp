@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 
@@ -15,7 +16,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(const FString& RequestI
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("start_session"))
     {

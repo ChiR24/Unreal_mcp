@@ -3,6 +3,7 @@
 // Implements 35 actions for Niagara system/emitter creation, modules, parameters, events, and GPU simulation.
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 
@@ -74,30 +75,31 @@
 
 // Use consolidated JSON helpers from McpAutomationBridgeHelpers.h
 // Aliases for backward compatibility with existing code in this file
-#define GetStringField GetJsonStringField
-#define GetNumberField GetJsonNumberField
-#define GetBoolField GetJsonBoolField
+#define GetStringFieldNiagAuth GetJsonStringField
+#define GetNumberFieldNiagAuth GetJsonNumberField
+#define GetBoolFieldNiagAuth GetJsonBoolField
+
 
 // Helper to get FVector from JSON object
-static FVector GetVectorFromJson(const TSharedPtr<FJsonObject>& Obj)
+static FVector GetVectorFromJsonNiag(const TSharedPtr<FJsonObject>& Obj)
 {
     if (!Obj.IsValid()) return FVector::ZeroVector;
     return FVector(
-        GetNumberField(Obj, TEXT("x"), 0.0),
-        GetNumberField(Obj, TEXT("y"), 0.0),
-        GetNumberField(Obj, TEXT("z"), 0.0)
+        GetNumberFieldNiagAuth(Obj, TEXT("x"), 0.0),
+        GetNumberFieldNiagAuth(Obj, TEXT("y"), 0.0),
+        GetNumberFieldNiagAuth(Obj, TEXT("z"), 0.0)
     );
 }
 
 // Helper to get FLinearColor from JSON object
-static FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& Obj)
+static FLinearColor GetColorFromJsonNiagara(const TSharedPtr<FJsonObject>& Obj)
 {
     if (!Obj.IsValid()) return FLinearColor::White;
     return FLinearColor(
-        static_cast<float>(GetNumberField(Obj, TEXT("r"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("g"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("b"), 1.0)),
-        static_cast<float>(GetNumberField(Obj, TEXT("a"), 1.0))
+        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("r"), 1.0)),
+        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("g"), 1.0)),
+        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("b"), 1.0)),
+        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("a"), 1.0))
     );
 }
 
@@ -120,7 +122,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         return true;
     }
 
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = GetStringFieldNiagAuth(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
@@ -128,13 +130,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     }
 
     // Common parameters
-    FString Name = GetStringField(Payload, TEXT("name"));
-    FString Path = GetStringField(Payload, TEXT("path"), TEXT("/Game"));
-    FString AssetPath = GetStringField(Payload, TEXT("assetPath"));
-    FString SystemPath = GetStringField(Payload, TEXT("systemPath"));
-    FString EmitterPath = GetStringField(Payload, TEXT("emitterPath"));
-    FString EmitterName = GetStringField(Payload, TEXT("emitterName"));
-    bool bSave = GetBoolField(Payload, TEXT("save"), true);
+    FString Name = GetStringFieldNiagAuth(Payload, TEXT("name"));
+    FString Path = GetStringFieldNiagAuth(Payload, TEXT("path"), TEXT("/Game"));
+    FString AssetPath = GetStringFieldNiagAuth(Payload, TEXT("assetPath"));
+    FString SystemPath = GetStringFieldNiagAuth(Payload, TEXT("systemPath"));
+    FString EmitterPath = GetStringFieldNiagAuth(Payload, TEXT("emitterPath"));
+    FString EmitterName = GetStringFieldNiagAuth(Payload, TEXT("emitterName"));
+    bool bSave = GetBoolFieldNiagAuth(Payload, TEXT("save"), true);
+
 
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
@@ -420,7 +423,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double SpawnRate = GetNumberField(Payload, TEXT("spawnRate"), 100.0);
+        double SpawnRate = GetNumberFieldNiagAuth(Payload, TEXT("spawnRate"), 100.0);
 
         // Add the SpawnRate module to the Emitter Update stage
         // SpawnRate modules belong in EmitterUpdateScript as they control emission rate over time
@@ -476,8 +479,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double BurstCount = GetNumberField(Payload, TEXT("burstCount"), 10.0);
-        double BurstTime = GetNumberField(Payload, TEXT("burstTime"), 0.0);
+        double BurstCount = GetNumberFieldNiagAuth(Payload, TEXT("burstCount"), 10.0);
+        double BurstTime = GetNumberFieldNiagAuth(Payload, TEXT("burstTime"), 0.0);
 
         // Add the SpawnBurst_Instantaneous module to the Emitter Spawn stage
         // Burst modules belong in EmitterSpawnScript for instantaneous spawns
@@ -526,7 +529,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double SpawnPerUnit = GetNumberField(Payload, TEXT("spawnPerUnit"), 1.0);
+        double SpawnPerUnit = GetNumberFieldNiagAuth(Payload, TEXT("spawnPerUnit"), 1.0);
 
         // Add the SpawnPerUnit module to the Emitter Update stage
         UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
@@ -573,8 +576,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double Lifetime = GetNumberField(Payload, TEXT("lifetime"), 2.0);
-        double Mass = GetNumberField(Payload, TEXT("mass"), 1.0);
+        double Lifetime = GetNumberFieldNiagAuth(Payload, TEXT("lifetime"), 2.0);
+        double Mass = GetNumberFieldNiagAuth(Payload, TEXT("mass"), 1.0);
 
         // Add the InitializeParticle module to the Particle Spawn stage
         UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
@@ -653,7 +656,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString ForceType = GetStringField(Payload, TEXT("forceType"), TEXT("Gravity"));
+        FString ForceType = GetStringFieldNiagAuth(Payload, TEXT("forceType"), TEXT("Gravity"));
 
         UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
@@ -669,13 +672,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double ForceStrength = GetNumberField(Payload, TEXT("forceStrength"), 980.0);
+        double ForceStrength = GetNumberFieldNiagAuth(Payload, TEXT("forceStrength"), 980.0);
         
         const TSharedPtr<FJsonObject>* ForceVectorObj;
         FVector ForceVector = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("forceVector"), ForceVectorObj))
         {
-            ForceVector = GetVectorFromJson(*ForceVectorObj);
+            ForceVector = GetVectorFromJsonNiag(*ForceVectorObj);
         }
 
         // Determine the module path based on force type
@@ -761,10 +764,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FVector Velocity = FVector(0, 0, 100);
         if (Payload->TryGetObjectField(TEXT("velocity"), VelObj))
         {
-            Velocity = GetVectorFromJson(*VelObj);
+            Velocity = GetVectorFromJsonNiag(*VelObj);
         }
 
-        FString VelocityMode = GetStringField(Payload, TEXT("velocityMode"), TEXT("Linear"));
+        FString VelocityMode = GetStringFieldNiagAuth(Payload, TEXT("velocityMode"), TEXT("Linear"));
 
         // Determine the module path based on velocity mode
         FString ModulePath;
@@ -825,7 +828,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FVector Acceleration = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("acceleration"), AccelObj))
         {
-            Acceleration = GetVectorFromJson(*AccelObj);
+            Acceleration = GetVectorFromJsonNiag(*AccelObj);
         }
 
         if (bSave)
@@ -854,8 +857,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString SizeMode = GetStringField(Payload, TEXT("sizeMode"), TEXT("Uniform"));
-        double UniformSize = GetNumberField(Payload, TEXT("uniformSize"), 10.0);
+        FString SizeMode = GetStringFieldNiagAuth(Payload, TEXT("sizeMode"), TEXT("Uniform"));
+        double UniformSize = GetNumberFieldNiagAuth(Payload, TEXT("uniformSize"), 10.0);
 
         if (bSave)
         {
@@ -889,10 +892,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FLinearColor Color = FLinearColor::White;
         if (Payload->TryGetObjectField(TEXT("color"), ColorObj))
         {
-            Color = GetColorFromJson(*ColorObj);
+            Color = GetColorFromJsonNiagara(*ColorObj);
         }
 
-        FString ColorMode = GetStringField(Payload, TEXT("colorMode"), TEXT("Direct"));
+        FString ColorMode = GetStringFieldNiagAuth(Payload, TEXT("colorMode"), TEXT("Direct"));
 
         if (bSave)
         {
@@ -928,9 +931,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString MaterialPath = GetStringField(Payload, TEXT("materialPath"));
-        FString Alignment = GetStringField(Payload, TEXT("alignment"), TEXT("Unaligned"));
-        FString FacingMode = GetStringField(Payload, TEXT("facingMode"), TEXT("FaceCamera"));
+        FString MaterialPath = GetStringFieldNiagAuth(Payload, TEXT("materialPath"));
+        FString Alignment = GetStringFieldNiagAuth(Payload, TEXT("alignment"), TEXT("Unaligned"));
+        FString FacingMode = GetStringFieldNiagAuth(Payload, TEXT("facingMode"), TEXT("FaceCamera"));
 
         // Get the versioned emitter data for the specified emitter (UE 5.7+)
         FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
@@ -1003,7 +1006,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString MeshPath = GetStringField(Payload, TEXT("meshPath"));
+        FString MeshPath = GetStringFieldNiagAuth(Payload, TEXT("meshPath"));
 
         // Get the versioned emitter data (UE 5.7+)
         FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
@@ -1105,7 +1108,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 Emitter->AddRenderer(RibbonRenderer, VersionedEmitter.Version);
             }
 
-            FString MaterialPath = GetStringField(Payload, TEXT("materialPath"));
+            FString MaterialPath = GetStringFieldNiagAuth(Payload, TEXT("materialPath"));
             if (!MaterialPath.IsEmpty())
             {
                 UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
@@ -1176,7 +1179,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 Emitter->AddRenderer(LightRenderer, VersionedEmitter.Version);
             }
 
-            double LightRadius = GetNumberField(Payload, TEXT("lightRadius"), 100.0);
+            double LightRadius = GetNumberFieldNiagAuth(Payload, TEXT("lightRadius"), 100.0);
             LightRenderer->RadiusScale = static_cast<float>(LightRadius);
         }
 
@@ -1206,10 +1209,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString CollisionMode = GetStringField(Payload, TEXT("collisionMode"), TEXT("SceneDepth"));
-        double Restitution = GetNumberField(Payload, TEXT("restitution"), 0.3);
-        double Friction = GetNumberField(Payload, TEXT("friction"), 0.2);
-        bool bDieOnCollision = GetBoolField(Payload, TEXT("dieOnCollision"), false);
+        FString CollisionMode = GetStringFieldNiagAuth(Payload, TEXT("collisionMode"), TEXT("SceneDepth"));
+        double Restitution = GetNumberFieldNiagAuth(Payload, TEXT("restitution"), 0.3);
+        double Friction = GetNumberFieldNiagAuth(Payload, TEXT("friction"), 0.2);
+        bool bDieOnCollision = GetBoolFieldNiagAuth(Payload, TEXT("dieOnCollision"), false);
 
         if (bSave)
         {
@@ -1241,7 +1244,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString KillCondition = GetStringField(Payload, TEXT("killCondition"), TEXT("Age"));
+        FString KillCondition = GetStringFieldNiagAuth(Payload, TEXT("killCondition"), TEXT("Age"));
 
         if (bSave)
         {
@@ -1270,7 +1273,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        double CameraOffset = GetNumberField(Payload, TEXT("cameraOffset"), 0.0);
+        double CameraOffset = GetNumberFieldNiagAuth(Payload, TEXT("cameraOffset"), 0.0);
 
         if (bSave)
         {
@@ -1296,8 +1299,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString ParamName = GetStringField(Payload, TEXT("parameterName"));
-        FString ParamType = GetStringField(Payload, TEXT("parameterType"), TEXT("Float"));
+        FString ParamName = GetStringFieldNiagAuth(Payload, TEXT("parameterName"));
+        FString ParamType = GetStringFieldNiagAuth(Payload, TEXT("parameterType"), TEXT("Float"));
 
         if (ParamName.IsEmpty())
         {
@@ -1363,7 +1366,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString ParamName = GetStringField(Payload, TEXT("parameterName"));
+        FString ParamName = GetStringFieldNiagAuth(Payload, TEXT("parameterName"));
         if (ParamName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
@@ -1407,7 +1410,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             const TSharedPtr<FJsonObject>* ValObj;
             if (Payload->TryGetObjectField(TEXT("parameterValue"), ValObj))
             {
-                FVector Vec = GetVectorFromJson(*ValObj);
+                FVector Vec = GetVectorFromJsonNiag(*ValObj);
                 UserStore.SetParameterValue(Vec, VecVar);
             }
         }
@@ -1436,8 +1439,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString ParamName = GetStringField(Payload, TEXT("parameterName"));
-        FString SourceBinding = GetStringField(Payload, TEXT("sourceBinding"));
+        FString ParamName = GetStringFieldNiagAuth(Payload, TEXT("parameterName"));
+        FString SourceBinding = GetStringFieldNiagAuth(Payload, TEXT("sourceBinding"));
 
         if (ParamName.IsEmpty() || SourceBinding.IsEmpty())
         {
@@ -1481,7 +1484,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString SkeletalMeshPath = GetStringField(Payload, TEXT("skeletalMeshPath"));
+        FString SkeletalMeshPath = GetStringFieldNiagAuth(Payload, TEXT("skeletalMeshPath"));
 
         if (bSave)
         {
@@ -1509,7 +1512,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString StaticMeshPath = GetStringField(Payload, TEXT("staticMeshPath"));
+        FString StaticMeshPath = GetStringFieldNiagAuth(Payload, TEXT("staticMeshPath"));
 
         if (bSave)
         {
@@ -1612,7 +1615,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString EventName = GetStringField(Payload, TEXT("eventName"));
+        FString EventName = GetStringFieldNiagAuth(Payload, TEXT("eventName"));
         if (EventName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'eventName'."), TEXT("INVALID_ARGUMENT"));
@@ -1646,7 +1649,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString EventName = GetStringField(Payload, TEXT("eventName"));
+        FString EventName = GetStringFieldNiagAuth(Payload, TEXT("eventName"));
         if (EventName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'eventName'."), TEXT("INVALID_ARGUMENT"));
@@ -1660,8 +1663,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        bool bSpawnOnEvent = GetBoolField(Payload, TEXT("spawnOnEvent"), false);
-        double EventSpawnCount = GetNumberField(Payload, TEXT("eventSpawnCount"), 1.0);
+        bool bSpawnOnEvent = GetBoolFieldNiagAuth(Payload, TEXT("spawnOnEvent"), false);
+        double EventSpawnCount = GetNumberFieldNiagAuth(Payload, TEXT("eventSpawnCount"), 1.0);
 
         if (bSave)
         {
@@ -1684,7 +1687,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString EventName = GetStringField(Payload, TEXT("eventName"));
+        FString EventName = GetStringFieldNiagAuth(Payload, TEXT("eventName"));
         if (EventName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'eventName'."), TEXT("INVALID_ARGUMENT"));
@@ -1708,8 +1711,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 const TSharedPtr<FJsonObject>* AttrObj;
                 if (Item->TryGetObject(AttrObj) && AttrObj->IsValid())
                 {
-                    FString AttrName = GetStringField(*AttrObj, TEXT("name"));
-                    FString AttrType = GetStringField(*AttrObj, TEXT("type"));
+                    FString AttrName = GetStringFieldNiagAuth(*AttrObj, TEXT("name"));
+                    FString AttrType = GetStringFieldNiagAuth(*AttrObj, TEXT("type"));
                     PayloadAttributes.Add(FString::Printf(TEXT("%s:%s"), *AttrName, *AttrType));
                 }
             }
@@ -1761,8 +1764,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             }
         }
 
-        bool bFixedBounds = GetBoolField(Payload, TEXT("fixedBoundsEnabled"), false);
-        bool bDeterministic = GetBoolField(Payload, TEXT("deterministicEnabled"), false);
+        bool bFixedBounds = GetBoolFieldNiagAuth(Payload, TEXT("fixedBoundsEnabled"), false);
+        bool bDeterministic = GetBoolFieldNiagAuth(Payload, TEXT("deterministicEnabled"), false);
 
         if (bSave)
         {
@@ -1785,7 +1788,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString StageName = GetStringField(Payload, TEXT("stageName"));
+        FString StageName = GetStringFieldNiagAuth(Payload, TEXT("stageName"));
         if (StageName.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'stageName'."), TEXT("INVALID_ARGUMENT"));
@@ -1799,7 +1802,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        FString IterationSource = GetStringField(Payload, TEXT("stageIterationSource"), TEXT("Particles"));
+        FString IterationSource = GetStringFieldNiagAuth(Payload, TEXT("stageIterationSource"), TEXT("Particles"));
 
         if (bSave)
         {
@@ -1984,3 +1987,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     return true;
 #endif
 }
+
+#undef GetStringFieldNiagAuth
+#undef GetNumberFieldNiagAuth
+#undef GetBoolFieldNiagAuth
+

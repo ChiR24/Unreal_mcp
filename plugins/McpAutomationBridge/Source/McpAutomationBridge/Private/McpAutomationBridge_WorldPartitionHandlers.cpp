@@ -1,6 +1,8 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "Dom/JsonObject.h"
+
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -87,7 +89,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("load_cells"))
     {
@@ -149,8 +151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
     else if (SubAction == TEXT("create_datalayer"))
     {
 #if MCP_HAS_DATALAYER_EDITOR
-        FString DataLayerName;
-        Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
+        FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"));
 
         if (DataLayerName.IsEmpty())
         {
@@ -225,10 +226,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
     else if (SubAction == TEXT("set_datalayer"))
     {
 #if MCP_HAS_DATALAYER_EDITOR
-        FString ActorPath;
-        Payload->TryGetStringField(TEXT("actorPath"), ActorPath);
-        FString DataLayerName;
-        Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
+        FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"));
+        FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"));
 
         AActor* Actor = FindObject<AActor>(nullptr, *ActorPath);
         if (!Actor)

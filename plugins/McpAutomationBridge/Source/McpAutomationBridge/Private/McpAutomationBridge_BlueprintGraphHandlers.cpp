@@ -1,4 +1,5 @@
 #include "McpAutomationBridgeGlobals.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
@@ -160,7 +161,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     return true;
   }
 
-  const FString SubAction = Payload->GetStringField(TEXT("subAction"));
+  const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
   // Node identifier interoperability:
   // - Prefer NodeGuid strings for stable references.

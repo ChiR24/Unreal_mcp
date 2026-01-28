@@ -1,4 +1,5 @@
 #include "AssetRegistry/ARFilter.h"
+#include "Dom/JsonObject.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -38,7 +39,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     return true;
   }
 
-  FString SubAction = Payload->GetStringField(TEXT("subAction"));
+  FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
   if (SubAction == TEXT("get_dependencies")) {
     FString AssetPath;

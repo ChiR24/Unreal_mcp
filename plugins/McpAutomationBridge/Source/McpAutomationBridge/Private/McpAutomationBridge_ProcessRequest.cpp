@@ -1,4 +1,5 @@
 #include "Async/Async.h"
+#include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"

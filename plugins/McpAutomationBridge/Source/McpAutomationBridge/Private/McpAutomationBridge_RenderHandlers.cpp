@@ -1,6 +1,12 @@
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+
+// Helper macros for JSON field access
+#define GetStringFieldRend GetJsonStringField
+#define GetNumberFieldRend GetJsonNumberField
+#define GetBoolFieldRend GetJsonBoolField
 
 #if WITH_EDITOR
 #include "Engine/TextureRenderTarget2D.h"
@@ -27,7 +33,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         return true;
     }
 
-    FString SubAction = Payload->GetStringField(TEXT("subAction"));
+    FString SubAction = GetStringFieldRend(Payload, TEXT("subAction"));
 
     if (SubAction == TEXT("create_render_target"))
     {
@@ -187,3 +193,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
     return true;
 #endif
 }
+
+#undef GetStringFieldRend
+#undef GetNumberFieldRend
+#undef GetBoolFieldRend
+

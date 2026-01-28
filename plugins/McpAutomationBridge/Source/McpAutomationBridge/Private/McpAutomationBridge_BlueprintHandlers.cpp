@@ -1,4 +1,5 @@
 #include "Async/Async.h"
+#include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -225,9 +226,14 @@ static const FName MCP_PC_Wildcard(TEXT("wildcard"));
 static const FName MCP_PC_Text(TEXT("text"));
 static const FName MCP_PC_Struct(TEXT("struct"));
 #endif
+
 #if WITH_EDITOR
 namespace {
 #if MCP_HAS_EDGRAPH_SCHEMA_K2
+
+// Forward declaration for functions defined later in this namespace
+static void FMcpAutomationBridge_LogConnectionFailure(const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin, const FPinConnectionResponse &Response);
+
 static UEdGraphPin *
 FMcpAutomationBridge_FindExecPin(UEdGraphNode *Node,
                                  EEdGraphPinDirection Direction) {
@@ -302,9 +308,7 @@ FMcpAutomationBridge_FindPreferredEventExec(UEdGraph *Graph) {
   return Fallback;
 }
 
-static void FMcpAutomationBridge_LogConnectionFailure(
-    const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin,
-    const FPinConnectionResponse &Response);
+
 
 static UEdGraphPin *FMcpAutomationBridge_FindInputPin(UEdGraphNode *Node,
                                                       const FName &PinName) {
@@ -2223,7 +2227,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         RequestingSocket, RequestId, bOk, Message, ResultPayload,
         bOk ? FString()
             : (CompletionResult->HasField(TEXT("error"))
-                   ? CompletionResult->GetStringField(TEXT("error"))
+                   ? GetJsonStringField(CompletionResult, TEXT("error"))
                    : TEXT("SCS_OPERATION_FAILED")));
 
     // Release busy flag
@@ -2253,7 +2257,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
     TSharedPtr<FJsonObject> Result = FSCSHandlers::GetBlueprintSCS(BPPath);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2278,7 +2282,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result = FSCSHandlers::AddSCSComponent(
         BPPath, CompClass, CompName, ParentName, MeshPath, MaterialPath);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2294,7 +2298,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::RemoveSCSComponent(BPPath, CompName);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2312,7 +2316,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::ReparentSCSComponent(BPPath, CompName, NewParent);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2328,7 +2332,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::SetSCSComponentTransform(BPPath, CompName, Payload);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2348,7 +2352,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result = FSCSHandlers::SetSCSComponentProperty(
         BPPath, CompName, PropName, PropVal);
     SendAutomationResponse(RequestingSocket, RequestId,
-                           Result->GetBoolField(TEXT("success")),
+                           GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
                            SafeGetStr(Result, TEXT("error")));
     return true;
@@ -2655,10 +2659,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     LocalPayload->TryGetStringField(TEXT("category"), Category);
     const bool bReplicated =
         LocalPayload->HasField(TEXT("isReplicated"))
-            ? LocalPayload->GetBoolField(TEXT("isReplicated"))
+            ? GetJsonBoolField(LocalPayload, TEXT("isReplicated"))
             : false;
     const bool bPublic = LocalPayload->HasField(TEXT("isPublic"))
-                             ? LocalPayload->GetBoolField(TEXT("isPublic"))
+                             ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                              : false;
 
     const FString RequestedPath = Path;
@@ -3680,7 +3684,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
             ? *OutputsField
             : TArray<TSharedPtr<FJsonValue>>();
     const bool bIsPublic = LocalPayload->HasField(TEXT("isPublic"))
-                               ? LocalPayload->GetBoolField(TEXT("isPublic"))
+                               ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                                : false;
 
 #if WITH_EDITOR

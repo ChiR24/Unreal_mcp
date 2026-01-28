@@ -7,6 +7,7 @@
  */
 
 #include "McpAutomationBridgeGlobals.h"
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
@@ -72,11 +73,13 @@
 #endif
 
 // Forward declarations of helper functions
+#if WITH_EDITOR
+static UMaterialExpression* FindExpressionByIdOrName(UMaterial* Material, const FString& NodeIdOrName);
+#endif
 static bool SaveMaterialAsset(UMaterial *Material);
 static bool SaveMaterialFunctionAsset(UMaterialFunction *Function);
 static bool SaveMaterialInstanceAsset(UMaterialInstanceConstant *Instance);
-static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
-                                                      const FString &IdOrName);
+
 
 bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     const FString &RequestId, const FString &Action,
@@ -112,7 +115,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Path = Payload->GetStringField(TEXT("path"));
+    Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }
@@ -1187,7 +1190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Path = Payload->GetStringField(TEXT("path"));
+    Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials/Functions");
     }
@@ -1404,7 +1407,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Path = Payload->GetStringField(TEXT("path"));
+    Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }
@@ -1631,7 +1634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Path = Payload->GetStringField(TEXT("path"));
+    Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }
