@@ -108,7 +108,7 @@ export async function handleEditorUtilitiesTools(
     }
     
     case 'configure_editor_preferences': {
-      const category = requireNonEmptyString(args.category, 'category');
+      const category = args.category || 'General';
       return cleanObject(await executeAutomationRequest(tools, 'manage_editor_utilities', {
         action: 'configure_editor_preferences',
         category,

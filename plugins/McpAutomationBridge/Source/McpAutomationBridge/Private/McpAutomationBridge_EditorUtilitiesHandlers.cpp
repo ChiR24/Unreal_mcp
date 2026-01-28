@@ -1467,9 +1467,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageEditorUtilitiesAction(
     Message = TEXT("Retrieved editor utilities info");
   }
   else {
-    bSuccess = false;
-    ErrorCode = TEXT("UNKNOWN_ACTION");
-    Message = FString::Printf(TEXT("Unknown manage_editor_utilities action: %s"), *LowerSub);
+    // Unknown action - return false to allow dispatcher to try other handlers
+    // This fixes the "Dispatch Deadlock" where actions meant for other handlers
+    // were being swallowed by this catch-all handler
+    return false;
   }
 
   // Send response

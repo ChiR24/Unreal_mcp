@@ -16,6 +16,11 @@
 #include "RenderCommandFence.h"
 #include "Exporters/Exporter.h"
 
+// CRITICAL FIX: Add headers for thread checking and streaming
+#include "HAL/PlatformProcess.h"
+#include "HAL/RunnableThread.h"
+#include "Streaming/StreamingManagerTexture.h"
+
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
 #if __has_include("Subsystems/LevelEditorSubsystem.h")
@@ -36,6 +41,30 @@
 // while async thumbnail generation is in flight. This ensures GPU is truly idle.
 static void McpSyncGPUForWorldPartitionSave()
 {
+	// CRITICAL FIX: Check if we're already in a rendering flush or on the render thread
+	// to prevent TaskGraph recursion guard failures
+	if (IsInRenderingThread())
+	{
+		UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("McpSyncGPUForWorldPartitionSave: Called from render thread, skipping"));
+		return;
+	}
+
+	// Check if async loading is suspended - if so, skip the flush to avoid ensure failures
+	// This happens during World Partition saves when the engine is already managing rendering
+	if (IsAsyncLoadingSuspended())
+	{
+		UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("McpSyncGPUForWorldPartitionSave: Async loading is suspended, skipping GPU sync to avoid recursive flush"));
+		return;
+	}
+
+	// CRITICAL FIX: Check if asset streaming is suspended to prevent ensure failures
+	// in StreamingManagerTexture.cpp line 2099
+	if (IsAssetStreamingSuspended())
+	{
+		UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, TEXT("McpSyncGPUForWorldPartitionSave: Asset streaming is suspended, skipping GPU sync"));
+		return;
+	}
+	
 	// Issue a fence on the render thread
 	FRenderCommandFence Fence;
 	Fence.BeginFence();
@@ -43,7 +72,11 @@ static void McpSyncGPUForWorldPartitionSave()
 	// Wait for all current rendering commands to complete
 	// Intel Gen12 drivers crash when SaveMap triggers recursive FlushRenderingCommands.
 	// We use a single flush and a fence to ensure GPU work is complete safely.
-	FlushRenderingCommands();
+	// CRITICAL FIX: Only flush if we're on the game thread and not already flushing
+	if (IsInGameThread())
+	{
+		FlushRenderingCommands();
+	}
 	
 	// Wait for the fence to signal (ensures GPU work is complete)
 	Fence.Wait();
@@ -142,8 +175,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // something, else fallback to input.
       const FString FileToLoad = bGotFilename ? Filename : LevelPath;
 
-      // Force any pending work to complete
-      FlushRenderingCommands();
+      // CRITICAL FIX: Only flush rendering commands if we're on the game thread
+      // and not already in a flush to prevent TaskGraph recursion guard failures
+      if (IsInGameThread() && !IsAsyncLoadingSuspended() && !IsAssetStreamingSuspended())
+      {
+        FlushRenderingCommands();
+      }
 
       // LoadMap prompts for save if dirty. To avoid blocking automation, we
       // should carefuly consider. But for now, we assume user wants standard
@@ -617,10 +654,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // Force cleanup of previous world/resources to prevent RenderCore/Driver
     // crashes (monza/D3D12) especially when tests run back-to-back triggering
     // thumbnail generation or world partition shutdown.
-    if (GEditor) {
+    // CRITICAL FIX: Only flush if we're on the game thread and not already flushing
+    if (GEditor && IsInGameThread() && !IsAsyncLoadingSuspended() && !IsAssetStreamingSuspended()) {
       FlushRenderingCommands();
       GEditor->ForceGarbageCollection(true);
       FlushRenderingCommands();
+    } else if (GEditor) {
+      // Fallback: Just do GC without rendering flush if we're in a restricted state
+      GEditor->ForceGarbageCollection(true);
     }
 
     if (UWorld *NewWorld =

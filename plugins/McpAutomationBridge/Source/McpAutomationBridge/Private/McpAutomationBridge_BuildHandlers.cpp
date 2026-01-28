@@ -809,30 +809,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageBuildAction(
     Message = FString::Printf(TEXT("Package command prepared for %s/%s"), *Platform, *Configuration);
   }
   // ========================================================================
-  // UNKNOWN ACTION
+  // UNKNOWN ACTION - Return false to allow dispatcher to try other handlers
   // ========================================================================
   else {
-    bSuccess = false;
-    Message = FString::Printf(TEXT("Unknown manage_build action: '%s'"), *LowerSub);
-    ErrorCode = TEXT("UNKNOWN_ACTION");
-    
-    // List available actions
-    TArray<TSharedPtr<FJsonValue>> AvailableActions;
-    TArray<FString> Actions = {
-        TEXT("get_build_info"), TEXT("generate_project_files"), TEXT("run_ubt"),
-        TEXT("compile_shaders"), TEXT("cook_content"), TEXT("package_project"),
-        TEXT("configure_build_settings"), TEXT("configure_platform"), TEXT("get_platform_settings"),
-        TEXT("get_target_platforms"), TEXT("validate_assets"), TEXT("audit_assets"),
-        TEXT("get_asset_size_info"), TEXT("get_asset_references"), TEXT("configure_chunking"),
-        TEXT("create_pak_file"), TEXT("configure_encryption"), TEXT("list_plugins"),
-        TEXT("enable_plugin"), TEXT("disable_plugin"), TEXT("get_plugin_info"),
-        TEXT("clear_ddc"), TEXT("get_ddc_stats"), TEXT("configure_ddc")
-    };
-    AvailableActions.Reserve(Actions.Num());
-    for (const FString& ActionName : Actions) {
-      AvailableActions.Add(MakeShared<FJsonValueString>(ActionName));
-    }
-    Resp->SetArrayField(TEXT("availableActions"), AvailableActions);
+    // Don't send response here - let the dispatcher continue to other handlers
+    // This fixes the "Dispatch Deadlock" where Testing/Modding actions were
+    // being swallowed by the Build handler
+    return false;
   }
 
   SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);

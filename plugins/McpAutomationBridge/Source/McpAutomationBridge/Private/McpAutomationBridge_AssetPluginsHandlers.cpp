@@ -294,7 +294,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
             PipelineType.Equals(TEXT("StaticMesh"), ESearchCase::IgnoreCase) ||
             PipelineType.Equals(TEXT("SkeletalMesh"), ESearchCase::IgnoreCase))
         {
-            Pipeline = NewObject<UInterchangeGenericMeshPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            UClass* PipelineClass = UInterchangeGenericMeshPipeline::StaticClass();
+            if (PipelineClass && !PipelineClass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                Pipeline = NewObject<UInterchangePipelineBase>(Package, PipelineClass, *PipelineName, RF_Public | RF_Standalone);
+            }
             ActualPipelineType = TEXT("Mesh");
         }
         else 
@@ -303,7 +307,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         if (PipelineType.Equals(TEXT("Animation"), ESearchCase::IgnoreCase) || 
             PipelineType.Equals(TEXT("Anim"), ESearchCase::IgnoreCase))
         {
-            Pipeline = NewObject<UInterchangeGenericAnimationPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            UClass* PipelineClass = UInterchangeGenericAnimationPipeline::StaticClass();
+            if (PipelineClass && !PipelineClass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                Pipeline = NewObject<UInterchangePipelineBase>(Package, PipelineClass, *PipelineName, RF_Public | RF_Standalone);
+            }
             ActualPipelineType = TEXT("Animation");
         }
         else 
@@ -312,7 +320,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         if (PipelineType.Equals(TEXT("Material"), ESearchCase::IgnoreCase) || 
             PipelineType.Equals(TEXT("Texture"), ESearchCase::IgnoreCase))
         {
-            Pipeline = NewObject<UInterchangeGenericMaterialPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            UClass* PipelineClass = UInterchangeGenericMaterialPipeline::StaticClass();
+            if (PipelineClass && !PipelineClass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                Pipeline = NewObject<UInterchangePipelineBase>(Package, PipelineClass, *PipelineName, RF_Public | RF_Standalone);
+            }
             ActualPipelineType = TEXT("Material");
         }
         else 
@@ -320,7 +332,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         {
             // Default to mesh pipeline if available, otherwise error
 #if MCP_HAS_INTERCHANGE_MESH_PIPELINE
-            Pipeline = NewObject<UInterchangeGenericMeshPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            UClass* PipelineClass = UInterchangeGenericMeshPipeline::StaticClass();
+            if (PipelineClass && !PipelineClass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                Pipeline = NewObject<UInterchangePipelineBase>(Package, PipelineClass, *PipelineName, RF_Public | RF_Standalone);
+            }
             ActualPipelineType = TEXT("Mesh");
 #else
             SendAutomationError(RequestingSocket, RequestId, 

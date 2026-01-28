@@ -181,7 +181,7 @@ export class MessageHandler {
                     return response;
                 }
 
-                const startsEitherWay = got.startsWith(expected) || expected.startsWith(got);
+                const normalize = (s: string) => s.toLowerCase().replace(/[_-]/g, ''); const startsEitherWay = normalize(got).startsWith(normalize(expected)) || normalize(expected).startsWith(normalize(got));
 
                 if (!startsEitherWay) {
                     const mutated: ResponseWithAction = { ...response };

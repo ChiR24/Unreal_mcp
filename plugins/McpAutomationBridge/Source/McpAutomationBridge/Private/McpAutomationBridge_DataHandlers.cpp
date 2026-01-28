@@ -1344,16 +1344,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
   // ========================================================================
   // UNKNOWN ACTION
   // ========================================================================
+  // UNKNOWN ACTION
+  // Return false to allow other handlers to try (dispatch fall-through)
   else {
-    bSuccess = false;
-    Message = FString::Printf(TEXT("Unknown manage_data action: %s"), *LowerSub);
-    ErrorCode = TEXT("UNKNOWN_ACTION");
+    return false;
   }
 
-  SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
+  // Fallback return - should never reach here but required for compiler
   return true;
 
 #else
+  // Non-editor build - send error and return true to indicate we handled it
   SendAutomationError(RequestingSocket, RequestId,
                       TEXT("manage_data requires editor build."),
                       TEXT("EDITOR_ONLY"));

@@ -15,6 +15,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "Math/UnrealMathUtility.h"
+#include "Streaming/StreamingManagerTexture.h"
 
 
 // Editor-only includes for ExecuteEditorCommands
@@ -333,12 +334,43 @@ bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString &Message) {
  * @return true to remain registered and continue receiving ticks.
  */
 bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
-  // Check if we have pending requests that were deferred due to unsafe engine
-  // states
-  if (bPendingRequestsScheduled && !GIsSavingPackage &&
-      !IsGarbageCollecting() && !IsAsyncLoading()) {
-    ProcessPendingAutomationRequests();
+  // CRITICAL FIX: Only process pending requests if we're on the game thread
+  // and not in a state that could cause TaskGraph recursion guard failures
+  if (!bPendingRequestsScheduled) {
+    return true;
   }
+
+  // Check for unsafe engine states that could cause crashes or assertions
+  if (GIsSavingPackage || IsGarbageCollecting() || IsAsyncLoading()) {
+    return true; // Defer processing until next tick
+  }
+
+  // CRITICAL FIX: Additional checks to prevent TaskGraph recursion and Intel GPU crashes
+  if (IsAsyncLoadingSuspended()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+           TEXT("Tick: Async loading is suspended, deferring request processing"));
+    return true;
+  }
+
+  if (IsAssetStreamingSuspended()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+           TEXT("Tick: Asset streaming is suspended, deferring request processing"));
+    return true;
+  }
+
+  // CRITICAL FIX: Check if we're already processing requests to prevent recursion
+  static bool bIsProcessingRequests = false;
+  if (bIsProcessingRequests) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+           TEXT("Tick: Already processing requests, deferring to prevent recursion"));
+    return true;
+  }
+
+  // All checks passed, process the pending requests
+  bIsProcessingRequests = true;
+  ProcessPendingAutomationRequests();
+  bIsProcessingRequests = false;
+
   return true;
 }
 
