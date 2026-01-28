@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2026-01-21 - [Path Traversal in BlueprintTools]
+**Vulnerability:** `BlueprintTools` methods (e.g., `modifyConstructionScript`, `getBlueprintSCS`) accepted `blueprintPath` arguments and passed them directly to the automation bridge without sanitization. This allowed path traversal attacks (e.g., `../../Secret`) if the underlying plugin did not strictly validate paths.
+**Learning:** Utilities like `coerceString` only handle type safety, not security. Consistently using `sanitizePath` at the tool entry point is crucial, even if the underlying system (Unreal) has its own checks, to provide defense-in-depth and fail fast in the MCP layer.
+**Prevention:** Apply `sanitizePath` to all file path arguments in tool methods before processing or passing them to the bridge. Ensure sanitization logic handles both full paths and asset names correctly.

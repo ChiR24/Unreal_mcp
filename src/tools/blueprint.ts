@@ -1,7 +1,7 @@
 import { BaseTool } from './base-tool.js';
 import { IBlueprintTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { Logger } from '../utils/logger.js';
-import { validateAssetParams, concurrencyDelay } from '../utils/validation.js';
+import { validateAssetParams, concurrencyDelay, sanitizePath } from '../utils/validation.js';
 import { coerceString } from '../utils/result-helpers.js';
 
 /** Response from automation actions */
@@ -74,7 +74,26 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   private buildCandidates(rawName: string | undefined): string[] {
     const trimmed = coerceString(rawName)?.trim();
     if (!trimmed) return [];
-    const normalized = trimmed.replace(/\\/g, '/').replace(/\/\/+/g, '/');
+
+    // Sanitize the input to prevent path traversal
+    let cleanName: string;
+    try {
+      // If it looks like a full path (starts with /), sanitize it as a path
+      if (trimmed.startsWith('/')) {
+        cleanName = sanitizePath(trimmed);
+      } else {
+        // Otherwise treat as a name/partial path, but check for traversal
+        if (trimmed.includes('..')) {
+           // If we can't use sanitizePath (because it forces /Game prefix), at least block traversal
+           return [];
+        }
+        cleanName = trimmed;
+      }
+    } catch {
+      return [];
+    }
+
+    const normalized = cleanName.replace(/\\/g, '/').replace(/\/\/+/g, '/');
     const withoutLeading = normalized.replace(/^\/+/, '');
     const basename = withoutLeading.split('/').pop() ?? withoutLeading;
     const candidates: string[] = [];
@@ -144,8 +163,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   }
 
   async modifyConstructionScript(params: { blueprintPath: string; operations: SCSOperation[]; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, message: 'Blueprint path is required', error: 'INVALID_BLUEPRINT_PATH' };
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!Array.isArray(params.operations) || params.operations.length === 0) return { success: false, message: 'At least one SCS operation is required', error: 'MISSING_OPERATIONS' };
 
     // Fix: Map 'op' to 'type' if missing, for backward compatibility or user convenience
@@ -259,9 +285,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   }
 
   async getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const candidates = this.buildCandidates(blueprintPath);
@@ -443,9 +475,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   }
 
   async getBlueprintSCS(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     try {
@@ -472,9 +510,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     materialPath?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const componentClass = coerceString(params.componentClass);
@@ -522,9 +566,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
   }
 
   async removeSCSComponent(params: { blueprintPath: string; componentName: string; timeoutMs?: number }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const componentName = coerceString(params.componentName);
@@ -558,9 +608,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     newParent: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const componentName = coerceString(params.componentName);
@@ -600,9 +656,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     scale?: [number, number, number];
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const componentName = coerceString(params.componentName);
@@ -644,9 +706,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     propertyValue: unknown;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     const componentName = coerceString(params.componentName);
@@ -691,9 +759,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) {
       return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+    }
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
     }
 
     try {
@@ -761,8 +835,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
     const res = await this.sendAction('manage_blueprint_graph', {
@@ -781,8 +862,14 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     y: number;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
 
     const res = await this.sendAction('manage_blueprint_graph', {
       subAction: 'create_reroute_node',
@@ -802,8 +889,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
     if (!params.propertyName) return { success: false, error: 'INVALID_PROPERTY', message: 'Property name is required' } as const;
 
@@ -824,8 +918,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
     const res = await this.sendAction('manage_blueprint_graph', {
@@ -842,8 +943,14 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
 
     const res = await this.sendAction('manage_blueprint_graph', {
       subAction: 'get_graph_details',
@@ -860,8 +967,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
     const res = await this.sendAction('manage_blueprint_graph', {
@@ -878,9 +992,16 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     blueprintPath?: string;
     timeoutMs?: number;
   } = {}): Promise<StandardActionResponse> {
+    let blueprintPath = params.blueprintPath || '/Game/Temp';
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     const res = await this.sendAction('manage_blueprint_graph', {
       subAction: 'list_node_types',
-      blueprintPath: params.blueprintPath || '/Game/Temp',
+      blueprintPath: blueprintPath,
       graphName: 'EventGraph'
     }, { timeoutMs: params.timeoutMs });
     return res;
@@ -894,8 +1015,15 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     graphName?: string;
     timeoutMs?: number;
   }): Promise<StandardActionResponse> {
-    const blueprintPath = coerceString(params.blueprintPath);
+    let blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
+
+    try {
+      blueprintPath = sanitizePath(blueprintPath);
+    } catch (e) {
+      return { success: false, message: `Invalid blueprint path: ${e instanceof Error ? e.message : String(e)}`, error: 'INVALID_BLUEPRINT_PATH' };
+    }
+
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
     if (!params.pinName) return { success: false, error: 'INVALID_PIN_NAME', message: 'Pin name is required' } as const;
 
