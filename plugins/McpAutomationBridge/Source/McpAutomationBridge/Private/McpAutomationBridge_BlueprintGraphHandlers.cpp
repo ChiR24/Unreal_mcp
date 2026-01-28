@@ -267,6 +267,167 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     }
     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to connect pins."), TEXT("CONNECTION_FAILED"));
     return true;
+  } else if (SubAction == TEXT("delete_node") || SubAction == TEXT("bp_delete_node")) {
+    // ============================================================================
+    // bp_delete_node - Delete a node from the blueprint graph
+    // ============================================================================
+    const FScopedTransaction Transaction(FText::FromString(TEXT("Delete Blueprint Node")));
+    Blueprint->Modify();
+    TargetGraph->Modify();
+
+    FString NodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+
+    if (NodeId.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeId is required."), TEXT("MISSING_ARGUMENT"));
+      return true;
+    }
+
+    UEdGraphNode* NodeToDelete = FindNodeByIdOrName(NodeId);
+    if (!NodeToDelete) {
+      SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Node not found: %s"), *NodeId), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+
+    // Break all pin connections before deleting
+    for (UEdGraphPin* Pin : NodeToDelete->Pins) {
+      if (Pin) {
+        Pin->BreakAllPinLinks();
+      }
+    }
+
+    // Remove node from graph
+    TargetGraph->RemoveNode(NodeToDelete);
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("deletedNodeId"), NodeId);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node deleted successfully."), Result);
+    return true;
+  } else if (SubAction == TEXT("break_pin_links") || SubAction == TEXT("bp_break_pin_links")) {
+    // ============================================================================
+    // bp_break_pin_links - Break all connections from a specific pin
+    // ============================================================================
+    const FScopedTransaction Transaction(FText::FromString(TEXT("Break Pin Links")));
+    Blueprint->Modify();
+    TargetGraph->Modify();
+
+    FString NodeId, PinName;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    Payload->TryGetStringField(TEXT("pinName"), PinName);
+
+    if (NodeId.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeId is required."), TEXT("MISSING_ARGUMENT"));
+      return true;
+    }
+    if (PinName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("pinName is required."), TEXT("MISSING_ARGUMENT"));
+      return true;
+    }
+
+    UEdGraphNode* TargetNode = FindNodeByIdOrName(NodeId);
+    if (!TargetNode) {
+      SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Node not found: %s"), *NodeId), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+
+    UEdGraphPin* TargetPin = TargetNode->FindPin(*PinName);
+    if (!TargetPin) {
+      SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Pin not found: %s on node %s"), *PinName, *NodeId), TEXT("PIN_NOT_FOUND"));
+      return true;
+    }
+
+    int32 BrokenCount = TargetPin->LinkedTo.Num();
+    TargetPin->BreakAllPinLinks();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("pinName"), PinName);
+    Result->SetNumberField(TEXT("brokenLinkCount"), BrokenCount);
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+      FString::Printf(TEXT("Broke %d pin links."), BrokenCount), Result);
+    return true;
+  } else if (SubAction == TEXT("set_node_property") || SubAction == TEXT("bp_set_node_property")) {
+    // ============================================================================
+    // bp_set_node_property - Set a property on a blueprint node
+    // ============================================================================
+    const FScopedTransaction Transaction(FText::FromString(TEXT("Set Node Property")));
+    Blueprint->Modify();
+    TargetGraph->Modify();
+
+    FString NodeId, PropertyName, PropertyValue;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
+    Payload->TryGetStringField(TEXT("propertyValue"), PropertyValue);
+
+    if (NodeId.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeId is required."), TEXT("MISSING_ARGUMENT"));
+      return true;
+    }
+    if (PropertyName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("propertyName is required."), TEXT("MISSING_ARGUMENT"));
+      return true;
+    }
+
+    UEdGraphNode* TargetNode = FindNodeByIdOrName(NodeId);
+    if (!TargetNode) {
+      SendAutomationError(RequestingSocket, RequestId, 
+        FString::Printf(TEXT("Node not found: %s"), *NodeId), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+
+    // Handle common node properties
+    if (PropertyName.Equals(TEXT("NodePosX"), ESearchCase::IgnoreCase)) {
+      if (!PropertyValue.IsNumeric()) {
+        SendAutomationError(RequestingSocket, RequestId, 
+          FString::Printf(TEXT("Invalid numeric value for NodePosX: %s"), *PropertyValue), TEXT("INVALID_VALUE"));
+        return true;
+      }
+      TargetNode->NodePosX = FCString::Atof(*PropertyValue);
+    } else if (PropertyName.Equals(TEXT("NodePosY"), ESearchCase::IgnoreCase)) {
+      if (!PropertyValue.IsNumeric()) {
+        SendAutomationError(RequestingSocket, RequestId, 
+          FString::Printf(TEXT("Invalid numeric value for NodePosY: %s"), *PropertyValue), TEXT("INVALID_VALUE"));
+        return true;
+      }
+      TargetNode->NodePosY = FCString::Atof(*PropertyValue);
+    } else if (PropertyName.Equals(TEXT("NodeComment"), ESearchCase::IgnoreCase)) {
+      TargetNode->NodeComment = PropertyValue;
+    } else if (PropertyName.Equals(TEXT("bCommentBubbleVisible"), ESearchCase::IgnoreCase)) {
+      TargetNode->bCommentBubbleVisible = PropertyValue.ToBool();
+    } else if (PropertyName.Equals(TEXT("bCommentBubblePinned"), ESearchCase::IgnoreCase)) {
+      TargetNode->bCommentBubblePinned = PropertyValue.ToBool();
+    } else {
+      // Try to set via FProperty for custom node properties
+      FProperty* Prop = TargetNode->GetClass()->FindPropertyByName(*PropertyName);
+      if (Prop) {
+        void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(TargetNode);
+        if (Prop->ImportText_Direct(*PropertyValue, ValuePtr, TargetNode, PPF_None)) {
+          // Success via FProperty
+        } else {
+          SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Failed to set property value for: %s"), *PropertyName), TEXT("PROPERTY_SET_FAILED"));
+          return true;
+        }
+      } else {
+        SendAutomationError(RequestingSocket, RequestId, 
+          FString::Printf(TEXT("Property not found: %s"), *PropertyName), TEXT("PROPERTY_NOT_FOUND"));
+        return true;
+      }
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("propertyName"), PropertyName);
+    Result->SetStringField(TEXT("propertyValue"), PropertyValue);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node property set successfully."), Result);
+    return true;
   }
 
   SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));

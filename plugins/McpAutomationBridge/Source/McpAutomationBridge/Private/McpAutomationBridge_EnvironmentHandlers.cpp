@@ -369,14 +369,30 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     }
   } else if (LowerSub == TEXT("create_sky_sphere")) {
     if (GEditor) {
-      UClass *SkySphereClass = LoadClass<AActor>(
+      UClass *SkySphereClass = nullptr;
+      
+      // Try multiple paths for different UE versions
+      // UE 5.0-5.3 path
+      SkySphereClass = LoadClass<AActor>(
           nullptr, TEXT("/Script/Engine.Blueprint'/Engine/Maps/Templates/"
                         "SkySphere.SkySphere_C'"));
       
-      // Fallback for UE 5.7+ where template paths changed
+      // Fallback 1: UE 5.4-5.5 path
       if (!SkySphereClass) {
         SkySphereClass = LoadClass<AActor>(
             nullptr, TEXT("/Script/Engine.Blueprint'/Engine/EditorBlueprintResources/Sky/BP_Sky_Sphere.BP_Sky_Sphere_C'"));
+      }
+      
+      // Fallback 2: UE 5.6+ path (EngineSky folder)
+      if (!SkySphereClass) {
+        SkySphereClass = LoadClass<AActor>(
+            nullptr, TEXT("/Script/Engine.Blueprint'/Engine/EngineSky/BP_Sky_Sphere.BP_Sky_Sphere_C'"));
+      }
+      
+      // Fallback 3: Direct class path
+      if (!SkySphereClass) {
+        SkySphereClass = LoadClass<AActor>(
+            nullptr, TEXT("/Game/Blueprints/BP_Sky_Sphere.BP_Sky_Sphere_C'"));
       }
 
       if (SkySphereClass) {

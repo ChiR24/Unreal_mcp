@@ -141,17 +141,38 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     case 'configure_water_waves':
     case 'get_water_body_info':
     case 'list_water_bodies':
-    case 'set_river_depth':
+    case 'set_river_depth': {
       // Ensure required args are mapped correctly
       if (argsRecord.depth === undefined && argsRecord.riverDepth !== undefined) {
         argsRecord.depth = argsRecord.riverDepth;
       }
-      return sendAutomationRequest('manage_water', envAction, argsRecord);
-    case 'set_ocean_extent':
-      if (argsRecord.extent === undefined && argsRecord.oceanExtent !== undefined) {
-        argsRecord.extent = argsRecord.oceanExtent;
+      // C++ requires splineKey to know where on the river spline to apply depth
+      if (argsRecord.splineKey === undefined) {
+        throw new Error('set_river_depth: splineKey is required (0.0-1.0 along the river spline)');
       }
       return sendAutomationRequest('manage_water', envAction, argsRecord);
+    }
+    case 'set_ocean_extent': {
+      // C++ expects extent to be an object with x and y properties
+      let extent = argsRecord.extent;
+      if (extent === undefined && argsRecord.oceanExtent !== undefined) {
+        extent = argsRecord.oceanExtent;
+      }
+      // If extent is a number, convert to object format
+      if (typeof extent === 'number') {
+        argsRecord.extent = { x: extent, y: extent };
+      } else if (typeof extent === 'object' && extent !== null) {
+        // Ensure it has x and y properties
+        const ext = extent as Record<string, unknown>;
+        if (ext.x === undefined || ext.y === undefined) {
+          throw new Error('set_ocean_extent: extent object must have x and y properties');
+        }
+        argsRecord.extent = { x: ext.x, y: ext.y };
+      } else {
+        throw new Error('set_ocean_extent: extent must be a number or an object with x and y properties');
+      }
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
+    }
     case 'set_water_static_mesh':
       return sendAutomationRequest('manage_water', envAction, argsRecord);
     case 'set_river_transitions':

@@ -194,6 +194,9 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             NodeName = NodeType + TEXT("_Node");
         }
 
+        // Ensure any pending async loading from previous operations is complete before loading
+        FlushAsyncLoading();
+
         // Try to find or attach a builder to the existing asset
         UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
         if (!MetaSoundAsset)

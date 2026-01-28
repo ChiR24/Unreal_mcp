@@ -163,6 +163,36 @@ export async function handleLevelStructureTools(
     case 'configure_world_settings':
       return sendRequest('configure_world_settings');
 
+    // ========================================================================
+    // Level Metadata & Validation (3 actions) - Phase 3H
+    // ========================================================================
+    case 'set_metadata':
+      return sendRequest('set_metadata');
+
+    case 'get_summary':
+      return sendRequest('get_summary');
+
+    case 'validate_level':
+      return sendRequest('validate_level');
+
+    // ========================================================================
+    // Streaming & HLOD (4 actions)
+    // ========================================================================
+    case 'get_streaming_levels_status':
+      return sendRequest('get_streaming_levels_status');
+
+    case 'stream_level_async':
+      return sendRequest('stream_level_async');
+
+    case 'configure_hlod_settings':
+      return sendRequest('configure_hlod_settings');
+
+    case 'build_hlod_for_level':
+      return sendRequest('build_hlod_for_level');
+
+    case 'get_world_partition_cells':
+      return sendRequest('get_world_partition_cells');
+
     default:
       return cleanObject({
         success: false,

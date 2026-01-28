@@ -91,7 +91,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
 
 #if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetStringField(TEXT("action"), LowerSub);
+  // Use the original Action parameter (e.g., "manage_lighting" or "manage_post_process")
+  // rather than the sub-action name to maintain protocol consistency
+  Resp->SetStringField(TEXT("action"), Action);
   bool bSuccess = true;
   FString Message = FString::Printf(TEXT("Post-process action '%s' completed"), *LowerSub);
   FString ErrorCode;

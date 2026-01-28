@@ -271,6 +271,115 @@ const handlers: Record<string, ActorActionHandler> = {
         // exact lookup endpoint. This improves "spawn then find" reliability.
         return tools.actorTools.findByName(name);
     },
+    // Missing handlers from test report - now implemented
+    find_by_class: async (args, tools) => {
+        const className = extractString(normalizeArgs(args, [{ key: 'className', required: true }]), 'className');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'find_by_class',
+            className
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    inspect_object: async (args, tools) => {
+        const objectPath = extractString(normalizeArgs(args, [{ key: 'objectPath', aliases: ['actorName'], required: true }]), 'objectPath');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'inspect_object',
+            objectPath
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    get_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'propertyName', required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const propertyName = extractString(params, 'propertyName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_property',
+            actorName,
+            propertyName
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    set_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'propertyName', required: true },
+            { key: 'propertyValue', required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const propertyName = extractString(params, 'propertyName');
+        const propertyValue = params.propertyValue;
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'set_property',
+            actorName,
+            propertyName,
+            value: propertyValue
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    inspect_class: async (args, tools) => {
+        const className = extractString(normalizeArgs(args, [{ key: 'className', required: true }]), 'className');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'inspect_class',
+            className
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    list_objects: async (args, tools) => {
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'list_objects',
+            objectType: args.objectType,
+            limit: args.limit ?? 100
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    get_component_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'componentName', required: true },
+            { key: 'propertyName', required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const componentName = extractString(params, 'componentName');
+        const propertyName = extractString(params, 'propertyName');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_component_property',
+            actorName,
+            componentName,
+            propertyName
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    set_component_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name'], required: true },
+            { key: 'componentName', required: true },
+            { key: 'propertyName', required: true },
+            { key: 'propertyValue', required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const componentName = extractString(params, 'componentName');
+        const propertyName = extractString(params, 'propertyName');
+        const propertyValue = params.propertyValue;
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'set_component_property',
+            actorName,
+            componentName,
+            propertyName,
+            value: propertyValue
+        });
+        return cleanObject(res) as HandlerResult;
+    },
+    delete_object: async (args, tools) => {
+        const objectPath = extractString(normalizeArgs(args, [{ key: 'objectPath', required: true }]), 'objectPath');
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+            action: 'delete_object',
+            objectPath
+        });
+        return cleanObject(res) as HandlerResult;
+    },
     // Wave 1.13: Query Enhancement - query actors by predicate
     query_actors_by_predicate: async (args, tools) => {
         const predicate = args.predicate || {};
@@ -288,7 +397,7 @@ const handlers: Record<string, ActorActionHandler> = {
         const res = await executeAutomationRequest(tools, 'control_actor', {
             action: 'get_all_component_properties',
             actorName,
-            componentFilter: args.componentFilter
+            componentName: args.componentFilter
         });
         return cleanObject(res) as HandlerResult;
     },
@@ -312,7 +421,7 @@ const handlers: Record<string, ActorActionHandler> = {
             action: 'clone_component_hierarchy',
             sourceActor,
             targetActor,
-            componentName: args.componentName
+            componentFilter: args.componentName
         });
         return cleanObject(res) as HandlerResult;
     },
