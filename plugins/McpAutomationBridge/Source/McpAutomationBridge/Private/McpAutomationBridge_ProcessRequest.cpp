@@ -563,6 +563,97 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
           }))
         return;
 
+      // Phase 31: Data & Persistence
+      if (HandleAndLog(TEXT("HandleManageDataAction"), [&]() {
+            return HandleManageDataAction(RequestId, Action, Payload,
+                                          RequestingSocket);
+          }))
+        return;
+
+      // Phase 32: Build & Deployment
+      if (HandleAndLog(TEXT("HandleManageBuildAction"), [&]() {
+            return HandleManageBuildAction(RequestId, Action, Payload,
+                                           RequestingSocket);
+          }))
+        return;
+
+      // Phase 34: Editor Utilities
+      if (HandleAndLog(TEXT("HandleManageEditorUtilitiesAction"), [&]() {
+            return HandleManageEditorUtilitiesAction(RequestId, Action, Payload,
+                                                     RequestingSocket);
+          }))
+        return;
+
+      // Phase 36: Character & Avatar
+      if (HandleAndLog(TEXT("HandleManageCharacterAvatarAction"), [&]() {
+            return HandleManageCharacterAvatarAction(RequestId, Action, Payload,
+                                                     RequestingSocket);
+          }))
+        return;
+
+      // Phase 37: Asset & Content Plugins
+      if (HandleAndLog(TEXT("HandleManageAssetPluginsAction"), [&]() {
+            return HandleManageAssetPluginsAction(RequestId, Action, Payload,
+                                                  RequestingSocket);
+          }))
+        return;
+
+      // Phase 39: Live Link
+      if (HandleAndLog(TEXT("HandleManageLiveLinkAction"), [&]() {
+            return HandleManageLiveLinkAction(RequestId, Action, Payload,
+                                              RequestingSocket);
+          }))
+        return;
+
+      // Phase 40: Virtual Production
+      if (HandleAndLog(TEXT("HandleManageVirtualProductionAction"), [&]() {
+            return HandleManageVirtualProductionAction(RequestId, Action, Payload,
+                                                       RequestingSocket);
+          }))
+        return;
+
+      // Phase 41: XR Plugins
+      if (HandleAndLog(TEXT("HandleManageXRAction"), [&]() {
+            return HandleManageXRAction(RequestId, Action, Payload,
+                                        RequestingSocket);
+          }))
+        return;
+
+      // Phase 43: Utility Plugins
+      if (HandleAndLog(TEXT("HandleManageUtilityPluginsAction"), [&]() {
+            return HandleManageUtilityPluginsAction(RequestId, Action, Payload,
+                                                    RequestingSocket);
+          }))
+        return;
+
+      // Phase 44: Physics & Destruction
+      if (HandleAndLog(TEXT("HandleManagePhysicsDestructionAction"), [&]() {
+            return HandleManagePhysicsDestructionAction(RequestId, Action, Payload,
+                                                        RequestingSocket);
+          }))
+        return;
+
+      // Phase 45: Accessibility
+      if (HandleAndLog(TEXT("HandleManageAccessibilityAction"), [&]() {
+            return HandleManageAccessibilityAction(RequestId, Action, Payload,
+                                                   RequestingSocket);
+          }))
+        return;
+
+      // Phase 46: Modding & UGC
+      if (HandleAndLog(TEXT("HandleManageModdingAction"), [&]() {
+            return HandleManageModdingAction(RequestId, Action, Payload,
+                                             RequestingSocket);
+          }))
+        return;
+
+      // Phase 47: Motion Design
+      if (HandleAndLog(TEXT("HandleManageMotionDesignAction"), [&]() {
+            return HandleManageMotionDesignAction(RequestId, Action, Payload,
+                                                  RequestingSocket);
+          }))
+        return;
+
       // Phase 29: Post-Process & Rendering
       if (HandleAndLog(TEXT("HandlePostProcessAction"), [&]() {
             return HandlePostProcessAction(RequestId, Action, Payload,

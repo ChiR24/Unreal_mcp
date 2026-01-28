@@ -277,6 +277,431 @@
       "Name": "MediaCompositing",
       "Enabled": true,
       "Optional": true
+    },
+    {
+      "Name": "DisplayCluster",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AppleARKit",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AppleARKitFaceSupport",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GoogleARCore",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "OculusXR",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SteamVR",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "WindowsMixedReality",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "VarjoHMD",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "HeadMountedDisplay",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "HoudiniEngine",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SubstanceCore",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "QuixelBridge",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Fab",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GLTFImporter",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeFbx",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeOBJ",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeUSD",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeAlembic",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "InterchangeDatasmith",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EditorScriptingTools",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ModelingToolsEditorMode",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MeshModelingToolset",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimationBlueprintEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Persona",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SkeletonEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SkeletalMeshEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimationEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimGraph",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BehaviorTreeEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EnvironmentQueryEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AIGraph",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GameplayAbilitiesEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "NiagaraEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Cascade",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MaterialEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "UMGEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AudioEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SoundUtilities",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Synthesis",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MetaSoundEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Wwise",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "FMODStudio",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "LiveLinkAnimationCore",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "LiveLinkComponents",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TimecodeSynchronizer",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AjaMedia",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BlackmagicMedia",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MediaFrameworkUtilities",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "VolumetricCloud",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "VolumetricFog",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SkyAtmosphere",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Landscape",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Foliage",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "StaticMeshEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TextureEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AssetTools",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ContentBrowser",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EditorStyle",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Projects",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "HotReload",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SourceControl",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SourceControlWindows",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "UnrealEd",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "Kismet",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BlueprintGraph",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "GraphEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "PropertyEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "DetailCustomizations",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ComponentVisualizers",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "LevelEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "MainFrame",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "SessionFrontend",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "DeviceManager",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TargetDeviceServices",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AutomationController",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AutomationWindow",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "FunctionalTesting",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EditorTests",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "RuntimeTests",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TraceInsights",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TraceAnalysis",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TraceLog",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "TraceServices",
+      "Enabled": true,
+      "Optional": true
     }
   ]
 }

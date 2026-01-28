@@ -268,6 +268,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
     {
         const FString PipelineName = GetStringField(Payload, TEXT("pipelineName"));
         const FString DestPath = GetStringField(Payload, TEXT("destinationPath"), TEXT("/Game/Interchange/Pipelines"));
+        const FString PipelineType = GetStringField(Payload, TEXT("pipelineType"), TEXT("Mesh"));
         
         if (PipelineName.IsEmpty())
         {
@@ -283,7 +284,52 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
             return true;
         }
 
-        UInterchangePipelineBase* Pipeline = NewObject<UInterchangePipelineBase>(Package, *PipelineName, RF_Public | RF_Standalone);
+        // UInterchangePipelineBase is abstract - we must use a concrete subclass
+        // Supported pipeline types: Mesh, Animation, Material, Assets
+        UInterchangePipelineBase* Pipeline = nullptr;
+        FString ActualPipelineType;
+        
+#if MCP_HAS_INTERCHANGE_MESH_PIPELINE
+        if (PipelineType.Equals(TEXT("Mesh"), ESearchCase::IgnoreCase) || 
+            PipelineType.Equals(TEXT("StaticMesh"), ESearchCase::IgnoreCase) ||
+            PipelineType.Equals(TEXT("SkeletalMesh"), ESearchCase::IgnoreCase))
+        {
+            Pipeline = NewObject<UInterchangeGenericMeshPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            ActualPipelineType = TEXT("Mesh");
+        }
+        else 
+#endif
+#if MCP_HAS_INTERCHANGE_ANIM_PIPELINE
+        if (PipelineType.Equals(TEXT("Animation"), ESearchCase::IgnoreCase) || 
+            PipelineType.Equals(TEXT("Anim"), ESearchCase::IgnoreCase))
+        {
+            Pipeline = NewObject<UInterchangeGenericAnimationPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            ActualPipelineType = TEXT("Animation");
+        }
+        else 
+#endif
+#if MCP_HAS_INTERCHANGE_MAT_PIPELINE
+        if (PipelineType.Equals(TEXT("Material"), ESearchCase::IgnoreCase) || 
+            PipelineType.Equals(TEXT("Texture"), ESearchCase::IgnoreCase))
+        {
+            Pipeline = NewObject<UInterchangeGenericMaterialPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            ActualPipelineType = TEXT("Material");
+        }
+        else 
+#endif
+        {
+            // Default to mesh pipeline if available, otherwise error
+#if MCP_HAS_INTERCHANGE_MESH_PIPELINE
+            Pipeline = NewObject<UInterchangeGenericMeshPipeline>(Package, *PipelineName, RF_Public | RF_Standalone);
+            ActualPipelineType = TEXT("Mesh");
+#else
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Unknown pipeline type '%s' and no default pipeline available"), *PipelineType), 
+                TEXT("INVALID_PIPELINE_TYPE"));
+            return true;
+#endif
+        }
+        
         if (!Pipeline)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create pipeline object"), TEXT("CREATE_FAILED"));
@@ -295,8 +341,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         McpSafeAssetSave(Pipeline);
 
         TSharedPtr<FJsonObject> Result = MakeAssetPluginSuccess(
-            FString::Printf(TEXT("Created Interchange pipeline: %s"), *FullPath), TEXT("Interchange"));
+            FString::Printf(TEXT("Created Interchange %s pipeline: %s"), *ActualPipelineType, *FullPath), TEXT("Interchange"));
         Result->SetStringField(TEXT("pipelinePath"), FullPath);
+        Result->SetStringField(TEXT("pipelineType"), ActualPipelineType);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Result);
         return true;
     }

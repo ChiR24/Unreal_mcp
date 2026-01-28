@@ -1055,18 +1055,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageDataAction(
       Message = TEXT("tagName is required");
       ErrorCode = TEXT("MISSING_PARAMETER");
     } else {
-      UGameplayTagsManager& Manager = UGameplayTagsManager::Get();
-      FGameplayTag NewTag = Manager.AddNativeGameplayTag(FName(*TagName), Comment);
-      
-      if (NewTag.IsValid()) {
-        bSuccess = true;
-        Message = FString::Printf(TEXT("Gameplay tag '%s' created"), *TagName);
-        Resp->SetStringField(TEXT("tagName"), NewTag.ToString());
-      } else {
-        bSuccess = false;
-        Message = TEXT("Failed to create gameplay tag");
-        ErrorCode = TEXT("CREATION_FAILED");
-      }
+      // Native gameplay tags can ONLY be added during engine initialization (module startup).
+      // Once the engine is fully initialized (including in the editor), calling AddNativeGameplayTag
+      // will trigger an ensure condition and crash. This is a fundamental limitation of UE5.
+      // 
+      // Proper ways to add gameplay tags:
+      // 1. Add them during module startup using FGameplayTagNativeAdder
+      // 2. Add them to Config/DefaultGameplayTags.ini
+      // 3. Use the Project Settings > Gameplay Tags UI
+      //
+      // Since we're running in the editor (post-initialization), we cannot add native tags.
+      bSuccess = false;
+      Message = FString::Printf(TEXT("Cannot create native gameplay tag '%s' - engine is already initialized. "
+                                     "Native tags can only be added during module startup. "
+                                     "Use Project Settings > Gameplay Tags, or add to DefaultGameplayTags.ini instead."), *TagName);
+      ErrorCode = TEXT("NATIVE_TAGS_EDITOR_RESTRICTION");
+      Resp->SetBoolField(TEXT("editorRestriction"), true);
+      Resp->SetStringField(TEXT("alternative"), TEXT("Add tags via Project Settings > Gameplay Tags or Config/DefaultGameplayTags.ini"));
     }
   }
   else if (LowerSub == TEXT("request_gameplay_tag")) {
