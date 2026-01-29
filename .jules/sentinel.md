@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2026-01-29 - [Unvalidated File Read in Utility Functions]
+**Vulnerability:** The `readIniFile` utility allowed reading arbitrary files because it lacked validation of the file extension or path. While existing callers might have been safe, the utility itself was insecure by design.
+**Learning:** Utility functions that perform file I/O must enforce strict validation (e.g., file extensions, allowed directories) internally, rather than relying solely on callers. This provides defense-in-depth.
+**Prevention:** Enforce file extension checks (e.g., must end in `.ini`) and path allowlisting within the low-level utility function itself.

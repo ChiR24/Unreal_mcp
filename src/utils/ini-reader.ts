@@ -3,6 +3,10 @@ import path from 'path';
 
 export async function readIniFile(filePath: string): Promise<Record<string, Record<string, string>>> {
   try {
+    if (!filePath.toLowerCase().endsWith('.ini')) {
+      throw new Error('Invalid file extension: must be .ini');
+    }
+
     const content = await fs.readFile(filePath, 'utf-8');
     const result: Record<string, Record<string, string>> = {};
     let currentSection = '';
