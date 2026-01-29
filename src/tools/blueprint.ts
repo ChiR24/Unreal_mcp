@@ -353,11 +353,19 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
 
 
 
-  async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
+  async addEvent(params: { blueprintName: string; eventType: string; customEventName?: string; parameters?: Array<{ name: string; type: string }>; posX?: number; posY?: number; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
-    const pluginResp = await this.sendAction('blueprint_add_event', { blueprintCandidates: candidates, requestedPath: primary, eventType: params.eventType, customEventName: params.customEventName, parameters: params.parameters }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+    const pluginResp = await this.sendAction('blueprint_add_event', { 
+      blueprintCandidates: candidates, 
+      requestedPath: primary, 
+      eventType: params.eventType, 
+      customEventName: params.customEventName, 
+      parameters: params.parameters,
+      x: params.posX,
+      y: params.posY
+    }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) {
       return pluginResp;
     }
@@ -390,11 +398,21 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
+  async addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; posX?: number; posY?: number; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
-    const pluginResp = await this.sendAction('blueprint_add_function', { blueprintCandidates: candidates, requestedPath: primary, functionName: params.functionName, inputs: params.inputs, outputs: params.outputs, isPublic: params.isPublic, category: params.category }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+    const pluginResp = await this.sendAction('blueprint_add_function', { 
+      blueprintCandidates: candidates, 
+      requestedPath: primary, 
+      functionName: params.functionName, 
+      inputs: params.inputs, 
+      outputs: params.outputs, 
+      isPublic: params.isPublic, 
+      category: params.category,
+      x: params.posX,
+      y: params.posY
+    }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
     if (pluginResp && pluginResp.success) {
       return pluginResp;
     }

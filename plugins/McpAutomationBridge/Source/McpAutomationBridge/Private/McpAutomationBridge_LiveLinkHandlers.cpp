@@ -363,7 +363,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLiveLinkAction(
             DurationSeconds = 5.0;
         }
 
-        UWorld* World = GetActiveWorld();        if (!Finder)
+        UWorld* World = GetActiveWorld();
+        if (!World)
+        {
+            Result = MakeLiveLinkError(TEXT("No active world"), TEXT("NO_WORLD"));
+            SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);
+            return true;
+        }
+
+        // Create the message bus finder
+        ULiveLinkMessageBusFinder* Finder = NewObject<ULiveLinkMessageBusFinder>(World);
+        if (!Finder)
         {
             Result = MakeLiveLinkError(TEXT("Failed to construct LiveLinkMessageBusFinder"), TEXT("FINDER_CREATE_FAILED"));
             SendAutomationResponse(RequestingSocket, RequestId, Result->GetBoolField(TEXT("success")), Result->GetStringField(TEXT("message")), Result);

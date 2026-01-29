@@ -260,16 +260,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBatchNaniteConvert(
               Settings.bEnabled = bEnable;
               Mesh->SetNaniteSettings(Settings);
               Mesh->PostEditChange();
-              McpSafeAssetSave(Mesh);
-              UpdatedCount++;
+              if (McpSafeAssetSave(Mesh)) {
+                  UpdatedCount++;
+              }
           }
 #else
           if (Mesh->NaniteSettings.bEnabled != bEnable) {
               Mesh->Modify();
               Mesh->NaniteSettings.bEnabled = bEnable;
               Mesh->PostEditChange();
-              McpSafeAssetSave(Mesh);
-              UpdatedCount++;
+              if (McpSafeAssetSave(Mesh)) {
+                  UpdatedCount++;
+              }
           }
 #endif
       }
@@ -983,7 +985,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     }
     
     // Save after setting metadata
-    McpSafeAssetSave(Asset);
+    if (!McpSafeAssetSave(Asset)) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save asset after updating metadata"), TEXT("SAVE_FAILED"));
+        return true;
+    }
     
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
@@ -1047,7 +1052,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
       bool bSave = true;
       Payload->TryGetBoolField(TEXT("save"), bSave);
       if (bSave) {
-        McpSafeAssetSave(ImportedAsset);
+        if (!McpSafeAssetSave(ImportedAsset)) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save imported asset"), TEXT("SAVE_FAILED"));
+            return true;
+        }
       }
 
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();

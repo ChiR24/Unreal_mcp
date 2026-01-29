@@ -1208,9 +1208,17 @@ private:
                        const TSharedPtr<FJsonObject> &Payload,
                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleGetActiveJobs(const FString &RequestId,
-                           const FString &Action,
+                            const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  // Sequence Recording handlers (implemented in McpAutomationBridge_SequenceHandlers.cpp)
+  bool HandleStartRecording(const FString &RequestId,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleStopRecording(const FString &RequestId,
                            const TSharedPtr<FJsonObject> &Payload,
-                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                           TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 private:
   // Ticker handle for managing the subsystems tick function

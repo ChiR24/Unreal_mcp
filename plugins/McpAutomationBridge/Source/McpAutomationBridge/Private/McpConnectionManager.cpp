@@ -627,10 +627,10 @@ void FMcpConnectionManager::SendAutomationResponse(
   Response->SetStringField(TEXT("type"), TEXT("automation_response"));
   Response->SetStringField(TEXT("requestId"), RequestId);
   Response->SetBoolField(TEXT("success"), bSuccess);
-  if (!Message.IsEmpty())
-    Response->SetStringField(TEXT("message"), Message);
+  Response->SetStringField(TEXT("message"), Message);
   if (!ErrorCode.IsEmpty())
     Response->SetStringField(TEXT("error"), ErrorCode);
+
   if (Result.IsValid())
     Response->SetObjectField(TEXT("result"), Result.ToSharedRef());
 

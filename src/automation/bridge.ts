@@ -590,8 +590,34 @@ export class AutomationBridge extends EventEmitter {
             });
         }
 
-        return this.sendRequestInternal<T>(action, payload, options);
+        const response = await this.sendRequestInternal<T>(action, payload, options);
+
+        // Standardized error propagation: check for success: false in the response
+        // This ensures that even if a handler returns an object, it's treated as a failure
+        // if the success flag is explicitly false.
+        if (response && typeof response === 'object') {
+            const resp = response as unknown as AutomationBridgeResponseMessage;
+            if (resp.success === false) {
+                const errorMsg = resp.message || resp.error || `Automation action '${action}' failed`;
+                const errorCode = resp.error || 'AUTOMATION_FAILURE';
+                
+                this.log.error(`[${resp.requestId}] Automation request failed: ${errorMsg} (${errorCode})`);
+                
+                const error = new Error(errorMsg);
+                // Attach details for downstream handlers
+                Object.assign(error, { 
+                    requestId: resp.requestId, 
+                    errorCode,
+                    action,
+                    result: resp.result
+                });
+                throw error;
+            }
+        }
+
+        return response;
     }
+
 
     private async sendRequestInternal<T>(
         action: string,

@@ -140,7 +140,9 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
     case 'configure_water_body':
     case 'configure_water_waves':
     case 'get_water_body_info':
-    case 'list_water_bodies':
+    case 'list_water_bodies': {
+      return sendAutomationRequest('manage_water', envAction, argsRecord);
+    }
     case 'set_river_depth': {
       // Ensure required args are mapped correctly
       if (argsRecord.depth === undefined && argsRecord.riverDepth !== undefined) {

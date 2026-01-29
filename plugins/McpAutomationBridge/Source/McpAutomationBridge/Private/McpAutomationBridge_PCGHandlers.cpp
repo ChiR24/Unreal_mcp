@@ -353,7 +353,11 @@ static bool HandleCreatePCGSubgraph(
     }
     
     SetNodePosition(Node, Payload);
-    ParentGraph->MarkPackageDirty();
+    if (!McpSafeAssetSave(ParentGraph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to save parent graph after adding subgraph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     
     TSharedPtr<FJsonObject> Result = CreateNodeResult(Node, TEXT("Subgraph created"));
     Result->SetStringField(TEXT("subgraphName"), SubgraphName);
@@ -398,7 +402,11 @@ static bool HandleAddPCGNode(
     }
 
     SetNodePosition(NewNode, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Node added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Added node"), CreateNodeResult(NewNode, TEXT("Node added")));
     return true;
 }
@@ -435,7 +443,11 @@ static bool HandleConnectPCGPins(
     }
 
     Graph->AddEdge(SourceNode, FName(*SourcePinName), TargetNode, FName(*TargetPinName));
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Nodes connected but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("sourceNodeId"), SourceNodeId);
@@ -499,7 +511,11 @@ static bool HandleSetPCGNodeSettings(
         }
     }
     
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Settings updated but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Settings updated"), CreateNodeResult(Node, TEXT("Settings updated")));
     return true;
 }
@@ -648,7 +664,11 @@ static bool HandleAddSurfaceSampler(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Surface sampler added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Surface sampler added"), CreateNodeResult(Node, TEXT("Surface sampler")));
     return true;
 }
@@ -673,7 +693,11 @@ static bool HandleAddMeshSampler(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Mesh sampler added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh sampler added"), CreateNodeResult(Node, TEXT("Mesh sampler")));
     return true;
 }
@@ -709,7 +733,11 @@ static bool HandleAddSplineSampler(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Spline sampler added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Spline sampler added"), CreateNodeResult(Node, TEXT("Spline sampler")));
     return true;
 }
@@ -734,7 +762,11 @@ static bool HandleAddVolumeSampler(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Volume sampler added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Volume sampler added"), CreateNodeResult(Node, TEXT("Volume sampler")));
     return true;
 }
@@ -759,7 +791,11 @@ static bool HandleAddBoundsModifier(
     }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Bounds modifier added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bounds modifier added"), CreateNodeResult(Node, TEXT("Bounds modifier")));
     return true;
 }
@@ -784,7 +820,11 @@ static bool HandleAddDensityFilter(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Density filter added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     
     TSharedPtr<FJsonObject> Result = CreateNodeResult(Node, TEXT("Density filter added"));
     Result->SetNumberField(TEXT("lowerBound"), Settings->LowerBound);
@@ -809,7 +849,11 @@ static bool HandleAddHeightFilter(
     }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Height filter added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Height filter added"), CreateNodeResult(Node, TEXT("Use with Position.Z attribute")));
     return true;
 }
@@ -825,7 +869,11 @@ static bool HandleAddSlopeFilter(
     UPCGFilterByAttributeSettings* Settings = NewObject<UPCGFilterByAttributeSettings>(Graph);
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Slope filter added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Slope filter added"), CreateNodeResult(Node, TEXT("Use with Normal.Z attribute")));
     return true;
 }
@@ -846,7 +894,11 @@ static bool HandleAddDistanceFilter(
     }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Distance filter added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Distance filter added"), CreateNodeResult(Node, TEXT("Distance filter")));
     return true;
 }
@@ -867,7 +919,11 @@ static bool HandleAddBoundsFilter(
     }
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Bounds filter added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bounds filter added"), CreateNodeResult(Node, TEXT("Bounds filter")));
     return true;
 }
@@ -897,7 +953,11 @@ static bool HandleAddSelfPruning(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Self pruning added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Self pruning added"), CreateNodeResult(Node, TEXT("Self pruning")));
     return true;
 }
@@ -933,7 +993,11 @@ static bool HandleAddTransformPoints(
     
     UPCGNode* Node = Graph->AddNode(Settings);
     SetNodePosition(Node, Payload);
-    Graph->MarkPackageDirty();
+    if (!McpSafeAssetSave(Graph))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Transform points added but failed to save graph"), nullptr, TEXT("SAVE_ERROR"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Transform points added"), CreateNodeResult(Node, TEXT("Transform points")));
     return true;
 }

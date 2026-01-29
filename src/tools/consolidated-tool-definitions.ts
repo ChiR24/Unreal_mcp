@@ -111,6 +111,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         eventName: commonSchemas.eventName,
         memberClass: commonSchemas.stringProp,
         posX: commonSchemas.numberProp,
+        posY: commonSchemas.numberProp,
         newName: commonSchemas.newName,
         overwrite: commonSchemas.overwrite,
         save: commonSchemas.save,

@@ -7,6 +7,10 @@
 #include "MovieSceneSection.h"
 #include "MovieSceneSequence.h"
 #include "MovieSceneTrack.h"
+#if WITH_EDITOR
+#include "Modules/ModuleManager.h"
+#include "ISequenceRecorder.h"
+#endif
 #include "UObject/UObjectIterator.h"
 #include "Misc/Paths.h"
 #include "Misc/Guid.h"
@@ -126,7 +130,7 @@
 FString UMcpAutomationBridgeSubsystem::ResolveSequencePath(
     const TSharedPtr<FJsonObject> &Payload) {
   FString Path;
-  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("path"), Path) &&
+  if (Payload.Get() && Payload->TryGetStringField(TEXT("path"), Path) &&
       !Path.IsEmpty()) {
 #if WITH_EDITOR
     // Check existence first to avoid error log spam
@@ -150,7 +154,7 @@ UMcpAutomationBridgeSubsystem::EnsureSequenceEntry(const FString &SeqPath) {
     return nullptr;
   if (TSharedPtr<FJsonObject> *Found = GSequenceRegistry.Find(SeqPath))
     return *Found;
-  TSharedPtr<FJsonObject> NewObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> NewObj = MakeShareable(new FJsonObject());
   NewObj->SetStringField(TEXT("sequencePath"), SeqPath);
   GSequenceRegistry.Add(SeqPath, NewObj);
   return NewObj;
@@ -2616,6 +2620,81 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceConfigureMRQSettings(
 }
 #endif
 
+bool UMcpAutomationBridgeSubsystem::HandleStartRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  ISequenceRecorder& Recorder = FModuleManager::Get().LoadModuleChecked<ISequenceRecorder>("SequenceRecorder");
+  if (Recorder.IsRecording()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Recording already in progress"), nullptr,
+                           TEXT("RECORDING_IN_PROGRESS"));
+    return true;
+  }
+
+  // Clear previous queue
+  Recorder.RemoveCurrentRecordingGroup();
+
+  // Add actors to record
+  TArray<AActor*> ActorsToRecord;
+  const TArray<TSharedPtr<FJsonValue>> *ActorsArray;
+  if (Payload->TryGetArrayField(TEXT("actors"), ActorsArray)) {
+    for (const auto &Val : *ActorsArray) {
+      FString ActorName = Val->AsString();
+      AActor *Actor = FindActorByLabelOrName<AActor>(GetActiveWorld(), ActorName);
+      if (Actor) {
+        ActorsToRecord.Add(Actor);
+      }
+    }
+  }
+  
+  // Handle sequence path/name if provided
+  FString SequenceName;
+  FString SequencePath;
+  Payload->TryGetStringField(TEXT("sequenceName"), SequenceName);
+  Payload->TryGetStringField(TEXT("sequencePath"), SequencePath);
+
+  if (Recorder.StartRecording(ActorsToRecord, SequencePath, SequenceName)) {
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Recording started"),
+                           nullptr);
+  } else {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Failed to start recording"), nullptr,
+                           TEXT("START_FAILED"));
+  }
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("sequence_start_recording requires editor build"),
+                         nullptr, TEXT("EDITOR_ONLY"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleStopRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  ISequenceRecorder& Recorder = FModuleManager::Get().LoadModuleChecked<ISequenceRecorder>("SequenceRecorder");
+  if (!Recorder.IsRecording()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No recording in progress"), nullptr,
+                           TEXT("NO_RECORDING"));
+    return true;
+  }
+
+  Recorder.StopRecording();
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Recording stopped"),
+                         nullptr);
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("sequence_stop_recording requires editor build"),
+                         nullptr, TEXT("EDITOR_ONLY"));
+  return true;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -2688,6 +2767,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     return HandleSequenceRename(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_delete"))
     return HandleSequenceDelete(RequestId, LocalPayload, RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_start_recording"))
+    return HandleStartRecording(RequestId, LocalPayload, RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_stop_recording"))
+    return HandleStopRecording(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_get_metadata"))
     return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_keyframe"))

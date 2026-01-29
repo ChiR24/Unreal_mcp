@@ -351,8 +351,8 @@ const manageAssetTests = [
   { scenario: 'Asset: bp_create_node event', toolName: 'manage_asset', arguments: { action: 'bp_create_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_Event', x: 0, y: 0 }, expected: 'success|not found' },
 
   // === 78. bp_add_node ===
-  { scenario: 'Asset: bp_add_node', toolName: 'manage_asset', arguments: { action: 'bp_add_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_Event', nodeName: 'BeginPlay' }, expected: 'success|not found' },
-  { scenario: 'Asset: bp_add_node print', toolName: 'manage_asset', arguments: { action: 'bp_add_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_CallFunction', nodeName: 'PrintString' }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_node', toolName: 'manage_asset', arguments: { action: 'bp_add_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_Event', nodeName: 'BeginPlay', posX: 0, posY: 0 }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_node print', toolName: 'manage_asset', arguments: { action: 'bp_add_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_CallFunction', nodeName: 'PrintString', posX: 200, posY: 100 }, expected: 'success|not found' },
 
   // === 79. bp_delete_node ===
   { scenario: 'Asset: bp_delete_node', toolName: 'manage_asset', arguments: { action: 'bp_delete_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeName: 'TempNode' }, expected: 'success|not found' },
@@ -411,8 +411,8 @@ const manageAssetTests = [
   { scenario: 'Asset: bp_create_widget_binding nonexistent', toolName: 'manage_asset', arguments: { action: 'bp_create_widget_binding', assetPath: '/Game/NonExistent', propertyName: 'Prop', functionName: 'Func' }, expected: 'not found|error|success' },
 
   // === 93. bp_add_custom_event ===
-  { scenario: 'Asset: bp_add_custom_event', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHitReceived' }, expected: 'success|not found' },
-  { scenario: 'Asset: bp_add_custom_event second', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHealthChanged' }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_custom_event', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHitReceived', posX: 400, posY: 200 }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_custom_event second', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHealthChanged', posX: 400, posY: 400 }, expected: 'success|not found' },
 
   // === 94. bp_set_replication_settings ===
   { scenario: 'Asset: bp_set_replication_settings', toolName: 'manage_asset', arguments: { action: 'bp_set_replication_settings', assetPath: `${TEST_FOLDER}/BP_TestActor`, propertyName: 'CurrentHealth', replicated: true }, expected: 'success|not found' },
@@ -592,8 +592,8 @@ const controlActorTests = [
   { scenario: 'Actor: batch_set_component_properties nonexistent', toolName: 'control_actor', arguments: { action: 'batch_set_component_properties', actorName: 'NonExistent', componentName: 'Comp', properties: {} }, expected: 'not found|error|success' },
 
   // === 38. clone_component_hierarchy ===
-  { scenario: 'Actor: clone_component_hierarchy', toolName: 'control_actor', arguments: { action: 'clone_component_hierarchy', actorName: 'Test_Cube', componentName: 'AddedLight', destinationPath: 'Test_Sphere' }, expected: 'success|not found' },
-  { scenario: 'Actor: clone_component_hierarchy nonexistent', toolName: 'control_actor', arguments: { action: 'clone_component_hierarchy', actorName: 'NonExistent', componentName: 'Comp', destinationPath: 'Dest' }, expected: 'not found|error|success' },
+  { scenario: 'Actor: clone_component_hierarchy', toolName: 'control_actor', arguments: { action: 'clone_component_hierarchy', actorName: 'Test_Cube', componentName: 'AddedLight', targetActor: 'Test_Sphere' }, expected: 'success|not found' },
+  { scenario: 'Actor: clone_component_hierarchy nonexistent', toolName: 'control_actor', arguments: { action: 'clone_component_hierarchy', actorName: 'NonExistent', componentName: 'Comp', targetActor: 'Dest' }, expected: 'not found|error|success' },
 
   // === 39. serialize_actor_state ===
   { scenario: 'Actor: serialize_actor_state', toolName: 'control_actor', arguments: { action: 'serialize_actor_state', actorName: 'Test_Cube' }, expected: 'success|not found' },
@@ -608,8 +608,8 @@ const controlActorTests = [
   { scenario: 'Actor: get_actor_bounds nonexistent', toolName: 'control_actor', arguments: { action: 'get_actor_bounds', actorName: 'NonExistentActor' }, expected: 'not found|error|success' },
 
   // === 42. batch_transform_actors ===
-  { scenario: 'Actor: batch_transform_actors', toolName: 'control_actor', arguments: { action: 'batch_transform_actors', actorName: 'Test_Cube', location: { x: 0, y: 0, z: 300 } }, expected: 'success|not found' },
-  { scenario: 'Actor: batch_transform_actors nonexistent', toolName: 'control_actor', arguments: { action: 'batch_transform_actors', actorName: 'NonExistent', location: { x: 0, y: 0, z: 0 } }, expected: 'not found|error|success' },
+  { scenario: 'Actor: batch_transform_actors', toolName: 'control_actor', arguments: { action: 'batch_transform_actors', transforms: [{ actorName: 'Test_Cube', location: { x: 0, y: 0, z: 300 } }] }, expected: 'success|not found' },
+  { scenario: 'Actor: batch_transform_actors nonexistent', toolName: 'control_actor', arguments: { action: 'batch_transform_actors', transforms: [{ actorName: 'NonExistent', location: { x: 0, y: 0, z: 0 } }] }, expected: 'not found|error|success' },
 
   // === 43. get_actor_references ===
   { scenario: 'Actor: get_actor_references', toolName: 'control_actor', arguments: { action: 'get_actor_references', actorName: 'Test_Cube' }, expected: 'success|not found' },
@@ -830,8 +830,8 @@ const controlEditorTests = [
   { scenario: 'Editor: clear_event_subscriptions default', toolName: 'control_editor', arguments: { action: 'clear_event_subscriptions' }, expected: 'success' },
 
   // === 48. start_background_job ===
-  { scenario: 'Editor: start_background_job', toolName: 'control_editor', arguments: { action: 'start_background_job' }, expected: 'success|error' },
-  { scenario: 'Editor: start_background_job default', toolName: 'control_editor', arguments: { action: 'start_background_job' }, expected: 'success|error' },
+  { scenario: 'Editor: start_background_job', toolName: 'control_editor', arguments: { action: 'start_background_job', jobType: 'shader_compile' }, expected: 'success|error' },
+  { scenario: 'Editor: start_background_job default', toolName: 'control_editor', arguments: { action: 'start_background_job', jobType: 'validate' }, expected: 'success|error' },
 
   // === 49. get_job_status ===
   { scenario: 'Editor: get_job_status', toolName: 'control_editor', arguments: { action: 'get_job_status' }, expected: 'success|not found' },
@@ -1291,8 +1291,8 @@ const manageLevelTests = [
   { scenario: 'Level: debug_pcg_execution forest', toolName: 'manage_level', arguments: { action: 'debug_pcg_execution', graphPath: `${TEST_FOLDER}/PCG_ForestGraph` }, expected: 'success|not found' },
 
   // === 78. create_pcg_hlsl_node ===
-  { scenario: 'Level: create_pcg_hlsl_node', toolName: 'manage_level', arguments: { action: 'create_pcg_hlsl_node', graphPath: `${TEST_FOLDER}/PCG_TestGraph` }, expected: 'success|not found|not supported' },
-  { scenario: 'Level: create_pcg_hlsl_node forest', toolName: 'manage_level', arguments: { action: 'create_pcg_hlsl_node', graphPath: `${TEST_FOLDER}/PCG_ForestGraph` }, expected: 'success|not found|not supported' },
+  { scenario: 'Level: create_pcg_hlsl_node', toolName: 'manage_level', arguments: { action: 'create_pcg_hlsl_node', graphPath: `${TEST_FOLDER}/PCG_TestGraph`, hlslCode: 'float4 Main() { return float4(1,1,1,1); }' }, expected: 'success|not found|not supported' },
+  { scenario: 'Level: create_pcg_hlsl_node forest', toolName: 'manage_level', arguments: { action: 'create_pcg_hlsl_node', graphPath: `${TEST_FOLDER}/PCG_ForestGraph`, hlslCode: 'float4 Main() { return float4(0,1,0,1); }' }, expected: 'success|not found|not supported' },
 
   // === 79. enable_pcg_gpu_processing ===
   { scenario: 'Level: enable_pcg_gpu_processing', toolName: 'manage_level', arguments: { action: 'enable_pcg_gpu_processing', graphPath: `${TEST_FOLDER}/PCG_TestGraph` }, expected: 'success|not found|not supported' },

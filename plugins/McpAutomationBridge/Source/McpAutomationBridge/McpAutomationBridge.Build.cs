@@ -78,6 +78,8 @@ public class McpAutomationBridge : ModuleRules
                 "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
                 // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
                 "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
+                // Sequence Recorder
+                "SequenceRecorder",
                 // Phase 24: Navigation volumes
                 "NavigationSystem",
                 // Phase 44: Chaos Physics & Destruction
@@ -85,7 +87,9 @@ public class McpAutomationBridge : ModuleRules
                 // Phase 46: Modding & UGC
                 "PakFile",
                 // Phase 37: Interchange Framework (Runtime/Interchange/Engine)
-                "InterchangeCore", "InterchangeEngine"
+                "InterchangeCore", "InterchangeEngine",
+                // Phase 39: Live Link & Motion Capture
+                "LiveLink", "LiveLinkInterface"
             });
 
             // --- Feature Detection Logic ---

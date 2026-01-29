@@ -15,7 +15,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "Math/UnrealMathUtility.h"
-#include "Streaming/StreamingManagerTexture.h"
+#include "RenderAssetUpdate.h"
 
 
 // Editor-only includes for ExecuteEditorCommands

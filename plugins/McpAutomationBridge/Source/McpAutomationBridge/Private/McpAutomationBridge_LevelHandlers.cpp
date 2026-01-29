@@ -19,7 +19,7 @@
 // CRITICAL FIX: Add headers for thread checking and streaming
 #include "HAL/PlatformProcess.h"
 #include "HAL/RunnableThread.h"
-#include "Streaming/StreamingManagerTexture.h"
+#include "RenderAssetUpdate.h"
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)

@@ -321,6 +321,13 @@ static inline bool McpSafeAssetSave(UObject* Asset)
     if (!Asset)
         return false;
     
+    // Check if package is "Untitled" - reject with error
+    UPackage* Package = Asset->GetPackage();
+    if (Package && Package->GetName().Contains(TEXT("Untitled"))) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Cannot save asset in Untitled package: %s"), *Asset->GetPathName());
+        return false;
+    }
+    
     // UE 5.7+ Fix: Do not immediately save newly created assets to disk.
     // Saving immediately causes bulkdata corruption and crashes.
     // Instead, mark the package dirty and notify the asset registry.

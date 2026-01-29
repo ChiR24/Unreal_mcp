@@ -150,6 +150,8 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         eventType: argsTyped.eventType ?? 'Custom',
         customEventName: (argsRecord.customEventName as string | undefined) || (!usedNameForBlueprint ? argsTyped.name : undefined),
         parameters: argsRecord.parameters as { name: string; type: string }[] | undefined,
+        posX: (argsRecord.posX as number | undefined) ?? 0,
+        posY: (argsRecord.posY as number | undefined) ?? 0,
         timeoutMs: argsRecord.timeoutMs as number | undefined,
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
@@ -297,8 +299,8 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         nodeName: argsRecord.nodeName as string | undefined,
         eventName: (argsRecord.eventName as string | undefined) || (argsRecord.customEventName as string | undefined),
         memberClass: argsRecord.memberClass as string | undefined,
-        posX: argsRecord.posX as number | undefined,
-        posY: argsRecord.posY as number | undefined,
+        posX: (argsRecord.posX as number | undefined) ?? 0,
+        posY: (argsRecord.posY as number | undefined) ?? 0,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       });
       return cleanObject(res) as HandlerResult;

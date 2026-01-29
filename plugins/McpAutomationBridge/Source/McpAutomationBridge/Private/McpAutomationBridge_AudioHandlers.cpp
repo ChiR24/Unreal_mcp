@@ -342,7 +342,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     // Save the newly created SoundCue asset
-    McpSafeAssetSave(SoundCue);
+    if (!McpSafeAssetSave(SoundCue)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save SoundCue asset"), TEXT("SAVE_FAILED"));
+      return true;
+    }
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
@@ -517,7 +520,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
 
       // Save the newly created SoundClass asset
-      McpSafeAssetSave(SoundClass);
+      if (!McpSafeAssetSave(SoundClass)) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save SoundClass asset"), TEXT("SAVE_FAILED"));
+        return true;
+      }
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
@@ -579,7 +585,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       }
 
       // Save the newly created SoundMix asset
-      McpSafeAssetSave(SoundMix);
+      if (!McpSafeAssetSave(SoundMix)) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save SoundMix asset"), TEXT("SAVE_FAILED"));
+        return true;
+      }
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);

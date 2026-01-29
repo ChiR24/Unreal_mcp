@@ -144,7 +144,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             {
                 Asset->GetOutermost()->MarkPackageDirty();
                 FAssetRegistryModule::AssetCreated(Asset);
-                McpSafeAssetSave(Asset);
+                if (!McpSafeAssetSave(Asset)) {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save MetaSound asset"), TEXT("SAVE_FAILED"));
+                    return true;
+                }
                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                 Resp->SetBoolField(TEXT("success"), true);
                 Resp->SetStringField(TEXT("path"), Asset->GetPathName());
@@ -233,7 +236,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             if (AddResult == EMetaSoundBuilderResult::Succeeded)
             {
                 // Ensure asset is registered and package is dirty.
-                McpSafeAssetSave(MetaSoundAsset);
+                if (!McpSafeAssetSave(MetaSoundAsset)) {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save MetaSound asset after adding node"), TEXT("SAVE_FAILED"));
+                    return true;
+                }
                 FlushAsyncLoading();
 
                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -676,7 +682,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         }
 
         // Save the asset to ensure it's up to date
-        McpSafeAssetSave(MetaSoundAsset);
+        if (!McpSafeAssetSave(MetaSoundAsset)) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save MetaSound asset"), TEXT("SAVE_FAILED"));
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);

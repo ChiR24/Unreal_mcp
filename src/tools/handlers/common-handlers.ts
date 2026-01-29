@@ -43,6 +43,15 @@ export function mapToMcpError(error: unknown): McpError {
   const msg = error instanceof Error ? error.message : String(error);
   const lowerMsg = msg.toLowerCase();
 
+  // Extract metadata from error if it was augmented by bridge.ts
+  const errorObj = error as Record<string, unknown> | null;
+  const errorCode = errorObj?.errorCode ? String(errorObj.errorCode) : undefined;
+
+  // Check for NOT_IMPLEMENTED specifically
+  if (errorCode === 'NOT_IMPLEMENTED' || lowerMsg.includes('not implemented')) {
+    return new McpError(McpErrorCode.NOT_IMPLEMENTED, msg, { retryable: false });
+  }
+
   // Connection errors
   if (lowerMsg.includes('connect') || lowerMsg.includes('refused') || lowerMsg.includes('socket')) {
     return new McpError(McpErrorCode.UE_NOT_CONNECTED, msg, {
