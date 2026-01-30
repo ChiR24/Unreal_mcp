@@ -197,6 +197,7 @@ export interface EditorArgs extends HandlerArgs {
 export interface LevelArgs extends HandlerArgs {
     levelPath?: string;
     levelName?: string;
+    sublevelName?: string;
     levelPaths?: string[];
     destinationPath?: string;
     savePath?: string;

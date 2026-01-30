@@ -1,8 +1,8 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-01-16
-**Commit:** a64d1ba
-**Branch:** pcg
+**Generated:** 2026-01-30
+**Commit:** a2a25ef
+**Branch:** beta
 **Tools:** 37 consolidated tools (2,578 actions)
 
 ## OVERVIEW
@@ -14,7 +14,7 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TS (JSON-RPC) + Native C
 ├── src/               # TS Server (NodeNext ESM)
 │   ├── automation/    # Bridge Client & Handshake
 │   ├── tools/         # Tool Definitions & Handlers (37 tools)
-│   │   └── handlers/  # Domain-specific handler implementations (62 files)
+│   │   └── handlers/  # Domain-specific handler implementations (89 files)
 │   ├── utils/         # Normalization, Security, Validation
 │   ├── graphql/       # Optional GraphQL API (disabled by default)
 │   └── wasm/          # WASM bindings (pkg/)

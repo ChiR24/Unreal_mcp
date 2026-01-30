@@ -32,7 +32,22 @@
 #include "Editor/EditorAssetLibrary.h"
 #endif
 #include "Engine/Blueprint.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #endif
+
+/**
+ * RAII helper to suppress modal dialogs by temporarily setting GIsAutomationTesting.
+ */
+struct FModalDialogSuppressor {
+  bool bPreviousValue;
+  FModalDialogSuppressor() {
+    bPreviousValue = GIsAutomationTesting;
+    GIsAutomationTesting = true;
+  }
+  ~FModalDialogSuppressor() {
+    GIsAutomationTesting = bPreviousValue;
+  }
+};
 
 /**
  * Removes control characters (ASCII codes less than 32) from the input JSON
@@ -2293,4 +2308,71 @@ static inline void GetDerivedClasses(UClass *BaseClass,
   });
 }
 
+#endif
+
+#if WITH_EDITOR
+/**
+ * Compiles a blueprint and returns a JSON object with results (success, logs, status).
+ * 
+ * @param BP The blueprint to compile.
+ * @param bSave Optional: if true, also saves the asset on successful compilation.
+ * @returns JSON object with compilation results.
+ */
+static inline TSharedPtr<FJsonObject> McpCompileBlueprint(UBlueprint* BP, bool bSave = false)
+{
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    if (!BP)
+    {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(TEXT("error"), TEXT("Null blueprint"));
+        return Result;
+    }
+
+    FMcpOutputCapture Capture;
+    GLog->AddOutputDevice(&Capture);
+    
+    // Perform compilation
+    FKismetEditorUtilities::CompileBlueprint(BP);
+    
+    GLog->RemoveOutputDevice(&Capture);
+    TArray<FString> Logs = Capture.Consume();
+
+    const bool bHasErrors = (BP->Status == BS_Error);
+    const bool bHasWarnings = (BP->Status == BS_UpToDateWithWarnings);
+    const bool bCompiled = (BP->Status == BS_UpToDate || BP->Status == BS_UpToDateWithWarnings);
+
+    Result->SetBoolField(TEXT("success"), bCompiled);
+    Result->SetBoolField(TEXT("compiled"), bCompiled);
+    Result->SetBoolField(TEXT("hasErrors"), bHasErrors);
+    Result->SetBoolField(TEXT("hasWarnings"), bHasWarnings);
+
+    TArray<TSharedPtr<FJsonValue>> JsonLogs;
+    for (const FString& LogLine : Logs)
+    {
+        JsonLogs.Add(MakeShared<FJsonValueString>(LogLine));
+    }
+    Result->SetArrayField(TEXT("logs"), JsonLogs);
+
+    FString StatusStr;
+    switch (BP->Status)
+    {
+        case BS_Unknown: StatusStr = TEXT("Unknown"); break;
+        case BS_Dirty: StatusStr = TEXT("Dirty"); break;
+        case BS_Error: StatusStr = TEXT("Error"); break;
+        case BS_UpToDate: StatusStr = TEXT("UpToDate"); break;
+        case BS_BeingCreated: StatusStr = TEXT("BeingCreated"); break;
+        case BS_UpToDateWithWarnings: StatusStr = TEXT("UpToDateWithWarnings"); break;
+        default: StatusStr = TEXT("Unknown"); break;
+    }
+    Result->SetStringField(TEXT("status"), StatusStr);
+
+    bool bSaved = false;
+    if (bSave && bCompiled)
+    {
+        bSaved = SaveLoadedAssetThrottled(BP);
+    }
+    Result->SetBoolField(TEXT("saved"), bSaved);
+
+    return Result;
+}
 #endif

@@ -1382,6 +1382,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR
+  FModalDialogSuppressor Suppressor;
   // Explicitly ignore manage_blueprint_graph actions so they fall through to
   // HandleBlueprintGraphAction
   if (Action.Equals(TEXT("manage_blueprint_graph"), ESearchCase::IgnoreCase)) {
@@ -3487,8 +3488,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP);
-    const bool bSaved = McpSafeAssetSave(BP);
+    TSharedPtr<FJsonObject> CompileRes = McpCompileBlueprint(BP, true);
 
     // Update Registry (Persistent list of events)
     TSharedPtr<FJsonObject> Entry =
@@ -3530,18 +3530,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Entry->SetArrayField(TEXT("events"), Events);
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    bool bFinalSuccess = CompileRes->GetBoolField(TEXT("success"));
+    Resp->SetBoolField(TEXT("success"), bFinalSuccess);
+    Resp->SetBoolField(TEXT("saved"), CompileRes->GetBoolField(TEXT("saved")));
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetStringField(TEXT("eventName"), EventName.ToString());
     Resp->SetStringField(TEXT("eventType"), FinalType);
-    Resp->SetBoolField(TEXT("saved"), bSaved);
+    Resp->SetArrayField(TEXT("logs"), CompileRes->GetArrayField(TEXT("logs")));
     if (Params.Num() > 0) {
       Resp->SetArrayField(TEXT("parameters"), Params);
     }
-
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Event added"), Resp, FString());
-
+    SendAutomationResponse(RequestingSocket, RequestId, bFinalSuccess,
+                           bFinalSuccess ? TEXT("Event added") : TEXT("Event added but compilation failed"),
+                           Resp, bFinalSuccess ? FString() : TEXT("COMPILATION_FAILED"));
     TSharedPtr<FJsonObject> Notify = MakeShared<FJsonObject>();
     Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
     Notify->SetStringField(TEXT("event"), TEXT("add_event_completed"));
@@ -3897,8 +3898,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
+    TSharedPtr<FJsonObject> CompileRes = McpCompileBlueprint(Blueprint, true);
 
     TSharedPtr<FJsonObject> Entry =
         FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
@@ -3948,8 +3948,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     Entry->SetArrayField(TEXT("functions"), Funcs);
 
+    bool bFinalSuccess = CompileRes->GetBoolField(TEXT("success"));
+    bool bSaved = CompileRes->GetBoolField(TEXT("saved"));
+
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("success"), bFinalSuccess);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetStringField(TEXT("functionName"), FuncName);
     Resp->SetBoolField(TEXT("public"), bIsPublic);
@@ -3960,10 +3963,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     if (Outputs.Num() > 0) {
       Resp->SetArrayField(TEXT("outputs"), Outputs);
     }
-
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Function added"), Resp, FString());
-
+    Resp->SetArrayField(TEXT("logs"), CompileRes->GetArrayField(TEXT("logs")));
+    SendAutomationResponse(RequestingSocket, RequestId, bFinalSuccess,
+                           bFinalSuccess ? TEXT("Function added") : TEXT("Function added but compilation failed"),
+                           Resp, bFinalSuccess ? FString() : TEXT("COMPILATION_FAILED"));
     // Broadcast completion event so clients waiting for an automation_event can
     // resolve
     TSharedPtr<FJsonObject> Notify = MakeShared<FJsonObject>();
@@ -4234,17 +4237,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                              Err, TEXT("NOT_FOUND"));
       return true;
     }
-    FKismetEditorUtilities::CompileBlueprint(BP);
-    bool bSaved = false;
-    if (bSaveAfterCompile) {
-      bSaved = SaveLoadedAssetThrottled(BP);
-    }
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-    Out->SetBoolField(TEXT("compiled"), true);
-    Out->SetBoolField(TEXT("saved"), bSaved);
+    TSharedPtr<FJsonObject> Out = McpCompileBlueprint(BP, bSaveAfterCompile);
     Out->SetStringField(TEXT("blueprintPath"), Path);
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Blueprint compiled"), Out, FString());
+    bool bCompileSuccess = Out->GetBoolField(TEXT("success"));
+    SendAutomationResponse(RequestingSocket, RequestId, bCompileSuccess,
+                           bCompileSuccess ? TEXT("Blueprint compiled") : TEXT("Blueprint compilation failed"),
+                           Out, bCompileSuccess ? FString() : TEXT("COMPILATION_FAILED"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -5425,6 +5423,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       }
     }
     Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+    // Modal dialogs are already suppressed by the Suppressor declared at function entry
 
     // Try to load existing blueprint
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *Normalized);

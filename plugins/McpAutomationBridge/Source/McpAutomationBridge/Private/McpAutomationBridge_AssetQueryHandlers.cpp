@@ -28,6 +28,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  FModalDialogSuppressor Suppressor;
   const FString Lower = Action.ToLower();
   if (!Lower.Equals(TEXT("asset_query"), ESearchCase::IgnoreCase))
     return false;

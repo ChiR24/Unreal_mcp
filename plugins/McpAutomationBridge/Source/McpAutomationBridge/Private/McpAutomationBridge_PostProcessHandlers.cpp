@@ -91,9 +91,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
 
 #if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  // Echo back the actual sub-action name (e.g., "configure_bloom") rather than
-  // the generic tool name ("manage_post_process") to fix protocol mismatch
-  Resp->SetStringField(TEXT("action"), LowerSub);
+  // The action field should echo the ORIGINAL request action to maintain protocol consistency
+  // This ensures that tests expecting "manage_lighting" or "manage_post_process" receive the correct action
+  Resp->SetStringField(TEXT("action"), Action);
   bool bSuccess = true;
   FString Message = FString::Printf(TEXT("Post-process action '%s' completed"), *LowerSub);
   FString ErrorCode;

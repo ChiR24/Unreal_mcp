@@ -19,7 +19,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintFunctionAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 
   const FString AlphaNumLower = Action.ToLower();
-  const TSharedPtr<FJsonObject> LocalPayload = Payload;
+    TSharedPtr<FJsonObject> LocalPayload = Payload;
 
   auto ActionMatchesPattern = [&](const FString &Pattern) {
     return Action.Equals(Pattern, ESearchCase::IgnoreCase);
@@ -38,7 +38,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintFunctionAction(
     if (!BP) return false;
 
     FString CustomName;
-    LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName);
+    if (!LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName)) {
+        LocalPayload->TryGetStringField(TEXT("eventName"), CustomName);
+    }
+
+    int32 PosX = 0;
+    int32 PosY = 0;
+    if (!LocalPayload->TryGetNumberField(TEXT("posX"), PosX)) {
+        LocalPayload->TryGetNumberField(TEXT("x"), PosX);
+    }
+    if (!LocalPayload->TryGetNumberField(TEXT("posY"), PosY)) {
+        LocalPayload->TryGetNumberField(TEXT("y"), PosY);
+    }
     
     UEdGraph *EventGraph = FBlueprintEditorUtils::FindEventGraph(BP);
     if (!EventGraph) {
@@ -50,9 +61,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintFunctionAction(
     FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*EventGraph);
     UK2Node_CustomEvent *CustomEventNode = NodeCreator.CreateNode();
     CustomEventNode->CustomFunctionName = FName(*CustomName);
+    CustomEventNode->NodePosX = PosX;
+    CustomEventNode->NodePosY = PosY;
     NodeCreator.Finalize();
     
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    FCompilerResultsLog Results;
+    FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::None, &Results);
+    if (Results.NumErrors > 0) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Compilation failed"), TEXT("BlueprintCompileError"));
+      return true;
+    }
     McpSafeAssetSave(BP);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Event added"), nullptr);

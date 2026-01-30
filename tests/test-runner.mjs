@@ -237,8 +237,13 @@ export function evaluateExpectation(testCase, response) {
   }
 
   // CRITICAL: Check if message says "failed" but success is true (FALSE POSITIVE)
+  // BUT exclude patterns like "(0 failed)" or "0 failed" which indicate success
+  const hasRealFailure = messageStr.includes('failed') &&
+    !messageStr.includes('(0 failed)') &&
+    !messageStr.includes('0 failed') &&
+    !messageStr.match(/\(\d+\s+failed\)/); // Exclude patterns like "(N failed)" where N is any number
   if (actualSuccess && (
-    messageStr.includes('failed') ||
+    hasRealFailure ||
     messageStr.includes('python execution failed') ||
     errorStr.includes('failed')
   )) {

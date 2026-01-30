@@ -275,15 +275,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Blueprint->Modify();
     TargetGraph->Modify();
 
-    FString NodeId;
+    FString NodeId, NodeName;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    Payload->TryGetStringField(TEXT("nodeName"), NodeName);
 
-    if (NodeId.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeId is required."), TEXT("MISSING_ARGUMENT"));
+    if (NodeId.IsEmpty() && NodeName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("nodeId or nodeName required."), TEXT("MISSING_ARGUMENT"));
       return true;
     }
+    FString TargetNodeIdentifier = NodeId.IsEmpty() ? NodeName : NodeId;
 
-    UEdGraphNode* NodeToDelete = FindNodeByIdOrName(NodeId);
+    UEdGraphNode* NodeToDelete = FindNodeByIdOrName(TargetNodeIdentifier);
     if (!NodeToDelete) {
       SendAutomationError(RequestingSocket, RequestId, 
         FString::Printf(TEXT("Node not found: %s"), *NodeId), TEXT("NODE_NOT_FOUND"));

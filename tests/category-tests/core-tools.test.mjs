@@ -355,8 +355,8 @@ const manageAssetTests = [
   { scenario: 'Asset: bp_add_node print', toolName: 'manage_asset', arguments: { action: 'bp_add_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeType: 'K2Node_CallFunction', nodeName: 'PrintString', posX: 200, posY: 100 }, expected: 'success|not found' },
 
   // === 79. bp_delete_node ===
-  { scenario: 'Asset: bp_delete_node', toolName: 'manage_asset', arguments: { action: 'bp_delete_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeName: 'TempNode' }, expected: 'success|not found' },
-  { scenario: 'Asset: bp_delete_node nonexistent', toolName: 'manage_asset', arguments: { action: 'bp_delete_node', assetPath: '/Game/NonExistent', graphName: 'EventGraph', nodeName: 'Node' }, expected: 'not found|error|success' },
+  { scenario: 'Asset: bp_delete_node', toolName: 'manage_asset', arguments: { action: 'bp_delete_node', assetPath: `${TEST_FOLDER}/BP_TestActor`, graphName: 'EventGraph', nodeId: 'TempNode' }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_delete_node nonexistent', toolName: 'manage_asset', arguments: { action: 'bp_delete_node', assetPath: '/Game/NonExistent', graphName: 'EventGraph', nodeId: 'Node' }, expected: 'not found|error|success' },
 
   // === 80. bp_connect_pins ===
   { scenario: 'Asset: bp_connect_pins exec', toolName: 'manage_asset', arguments: { action: 'bp_connect_pins', assetPath: `${TEST_FOLDER}/BP_TestActor`, fromNodeId: 'BeginPlay', fromPin: 'exec', toNodeId: 'PrintString', toPin: 'exec' }, expected: 'success|not found' },
@@ -411,8 +411,8 @@ const manageAssetTests = [
   { scenario: 'Asset: bp_create_widget_binding nonexistent', toolName: 'manage_asset', arguments: { action: 'bp_create_widget_binding', assetPath: '/Game/NonExistent', propertyName: 'Prop', functionName: 'Func' }, expected: 'not found|error|success' },
 
   // === 93. bp_add_custom_event ===
-  { scenario: 'Asset: bp_add_custom_event', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHitReceived', posX: 400, posY: 200 }, expected: 'success|not found' },
-  { scenario: 'Asset: bp_add_custom_event second', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, eventName: 'OnHealthChanged', posX: 400, posY: 400 }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_custom_event', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, customEventName: 'OnHitReceived', x: 400, y: 200 }, expected: 'success|not found' },
+  { scenario: 'Asset: bp_add_custom_event second', toolName: 'manage_asset', arguments: { action: 'bp_add_custom_event', assetPath: `${TEST_FOLDER}/BP_TestActor`, customEventName: 'OnHealthChanged', x: 400, y: 400 }, expected: 'success|not found' },
 
   // === 94. bp_set_replication_settings ===
   { scenario: 'Asset: bp_set_replication_settings', toolName: 'manage_asset', arguments: { action: 'bp_set_replication_settings', assetPath: `${TEST_FOLDER}/BP_TestActor`, propertyName: 'CurrentHealth', replicated: true }, expected: 'success|not found' },
@@ -584,8 +584,8 @@ const controlActorTests = [
   { scenario: 'Actor: query_actors_by_predicate light', toolName: 'control_actor', arguments: { action: 'query_actors_by_predicate', className: 'Light' }, expected: 'success' },
 
   // === 36. get_all_component_properties ===
-  { scenario: 'Actor: get_all_component_properties', toolName: 'control_actor', arguments: { action: 'get_all_component_properties', actorName: 'Test_Cube', componentName: 'AddedLight' }, expected: 'success|not found' },
-  { scenario: 'Actor: get_all_component_properties nonexistent', toolName: 'control_actor', arguments: { action: 'get_all_component_properties', actorName: 'NonExistent', componentName: 'Comp' }, expected: 'not found|error|success' },
+  { scenario: 'Actor: get_all_component_properties', toolName: 'control_actor', arguments: { action: 'get_all_component_properties', actorName: 'Test_Cube', componentFilter: 'AddedLight' }, expected: 'success|not found' },
+  { scenario: 'Actor: get_all_component_properties nonexistent', toolName: 'control_actor', arguments: { action: 'get_all_component_properties', actorName: 'NonExistent', componentFilter: 'Comp' }, expected: 'not found|error|success' },
 
   // === 37. batch_set_component_properties ===
   { scenario: 'Actor: batch_set_component_properties', toolName: 'control_actor', arguments: { action: 'batch_set_component_properties', actorName: 'Test_Cube', componentName: 'AddedLight', properties: { Intensity: 7500, AttenuationRadius: 1000 } }, expected: 'success|not found' },
@@ -751,7 +751,7 @@ const controlEditorTests = [
 
   // === 28. add_mapping ===
   { scenario: 'Editor: add_mapping', toolName: 'control_editor', arguments: { action: 'add_mapping', contextPath: `${TEST_FOLDER}/IMC_Test`, actionPath: `${TEST_FOLDER}/IA_Test`, key: 'E' }, expected: 'success|not found' },
-  { scenario: 'Editor: add_mapping space', toolName: 'control_editor', arguments: { action: 'add_mapping', contextPath: `${TEST_FOLDER}/IMC_Test`, actionPath: `${TEST_FOLDER}/IA_Jump`, key: 'Space' }, expected: 'success|not found' },
+  { scenario: 'Editor: add_mapping space', toolName: 'control_editor', arguments: { action: 'add_mapping', contextPath: `${TEST_FOLDER}/IMC_Test`, actionPath: `${TEST_FOLDER}/IA_Jump`, key: 'SpaceBar' }, expected: 'success|not found' },
 
   // === 29. remove_mapping ===
   { scenario: 'Editor: remove_mapping', toolName: 'control_editor', arguments: { action: 'remove_mapping', contextPath: `${TEST_FOLDER}/IMC_Test`, actionPath: `${TEST_FOLDER}/IA_Test` }, expected: 'success|not found' },

@@ -93,15 +93,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintVariableAction(
 
     Blueprint->NewVariables.Add(NewVar);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
-    const bool bSaved = McpSafeAssetSave(Blueprint);
-
+    TSharedPtr<FJsonObject> CompileRes = McpCompileBlueprint(Blueprint, true);
     TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
-    Response->SetBoolField(TEXT("success"), true);
-    Response->SetBoolField(TEXT("saved"), bSaved);
+    bool bFinalSuccess = CompileRes->GetBoolField(TEXT("success"));
+    Response->SetBoolField(TEXT("success"), bFinalSuccess);
+    Response->SetBoolField(TEXT("saved"), CompileRes->GetBoolField(TEXT("saved")));
     Response->SetStringField(TEXT("variableName"), VarName);
-
-    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Variable added"), Response);
+    Response->SetArrayField(TEXT("logs"), CompileRes->GetArrayField(TEXT("logs")));
+    SendAutomationResponse(RequestingSocket, RequestId, bFinalSuccess,
+                           bFinalSuccess ? TEXT("Variable added") : TEXT("Variable added but compilation failed"),
+                           Response, bFinalSuccess ? FString() : TEXT("COMPILATION_FAILED"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Editor required"), nullptr, TEXT("NOT_AVAILABLE"));

@@ -185,10 +185,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCloneComponentHierarchy(
     CopyParams.bDoDelta = false;
     UEngine::CopyPropertiesForUnrelatedObjects(SourceComp, NewComp, CopyParams);
     
-    Target->AddInstanceComponent(NewComp);
-    NewComp->OnComponentCreated();
-    
-    // Handle SceneComponent attachment
+    // Handle SceneComponent attachment BEFORE registration
     if (USceneComponent *NewSceneComp = Cast<USceneComponent>(NewComp)) {
       if (Target->GetRootComponent() && !NewSceneComp->GetAttachParent()) {
         NewSceneComp->SetupAttachment(Target->GetRootComponent());
@@ -200,7 +197,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCloneComponentHierarchy(
       }
     }
     
+    // Register component (this triggers OnComponentCreated internally)
     NewComp->RegisterComponent();
+    
+    // Mark as instance component for serialization (must be after registration)
+    Target->AddInstanceComponent(NewComp);
     NewComp->MarkPackageDirty();
     
     TSharedPtr<FJsonObject> CompEntry = MakeShared<FJsonObject>();

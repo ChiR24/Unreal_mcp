@@ -38,6 +38,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEnableNaniteMesh(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR
+  FModalDialogSuppressor Suppressor;
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("enable_nanite_mesh payload missing"),
@@ -118,6 +119,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR
+  FModalDialogSuppressor Suppressor;
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("set_nanite_settings payload missing"),
@@ -211,6 +213,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBatchNaniteConvert(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR
+  FModalDialogSuppressor Suppressor;
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("batch_nanite_convert payload missing"),
@@ -301,6 +304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
 #if WITH_EDITOR
+  FModalDialogSuppressor Suppressor;
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));

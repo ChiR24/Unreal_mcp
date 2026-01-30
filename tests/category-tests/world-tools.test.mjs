@@ -31,7 +31,7 @@ const manageLightingTests = [
   
   // spawn_sky_light
   { scenario: 'Lighting: spawn_sky_light success', toolName: 'manage_lighting', arguments: { action: 'spawn_sky_light', name: 'SkyLight_Test', location: { x: 0, y: 0, z: 500 } }, expected: 'success' },
-  { scenario: 'Lighting: spawn_sky_light with cubemap', toolName: 'manage_lighting', arguments: { action: 'spawn_sky_light', name: 'SkyLight_Cubemap', location: { x: 0, y: 0, z: 500 }, sourceType: 'SpecifiedCubemap' }, expected: 'success|not found' },
+  { scenario: 'Lighting: spawn_sky_light with cubemap', toolName: 'manage_lighting', arguments: { action: 'spawn_sky_light', name: 'SkyLight_Cubemap', location: { x: 0, y: 0, z: 500 }, sourceType: 'SpecifiedCubemap', cubemapPath: '/Engine/EngineMaterials/DefaultDiffuse' }, expected: 'success|not found' },
   
   // create_sky_light
   { scenario: 'Lighting: create_sky_light success', toolName: 'manage_lighting', arguments: { action: 'create_sky_light', name: 'SkyLight_Created', location: { x: 0, y: 0, z: 600 } }, expected: 'success' },
@@ -431,24 +431,24 @@ const buildEnvironmentTests = [
   { scenario: 'Environment: list_water_bodies query', toolName: 'build_environment', arguments: { action: 'list_water_bodies' }, expected: 'success|bodies' },
   
   // set_river_depth
-  { scenario: 'Environment: set_river_depth success', toolName: 'build_environment', arguments: { action: 'set_river_depth', name: 'River_Test' }, expected: 'success|not found' },
-  { scenario: 'Environment: set_river_depth not found', toolName: 'build_environment', arguments: { action: 'set_river_depth', name: 'NonExistent_River' }, expected: 'not found|error' },
+  { scenario: 'Environment: set_river_depth success', toolName: 'build_environment', arguments: { action: 'set_river_depth', name: 'River_Test', splineKey: 0, depth: 100 }, expected: 'success|not found' },
+  { scenario: 'Environment: set_river_depth not found', toolName: 'build_environment', arguments: { action: 'set_river_depth', name: 'NonExistent_River', splineKey: 0, depth: 100 }, expected: 'not found|error' },
   
   // set_ocean_extent
-  { scenario: 'Environment: set_ocean_extent success', toolName: 'build_environment', arguments: { action: 'set_ocean_extent', name: 'Ocean_Test' }, expected: 'success|not found' },
-  { scenario: 'Environment: set_ocean_extent not found', toolName: 'build_environment', arguments: { action: 'set_ocean_extent', name: 'NonExistent_Ocean' }, expected: 'not found|error' },
+  { scenario: 'Environment: set_ocean_extent success', toolName: 'build_environment', arguments: { action: 'set_ocean_extent', name: 'Ocean_Test', extent: 5000 }, expected: 'success|not found' },
+  { scenario: 'Environment: set_ocean_extent not found', toolName: 'build_environment', arguments: { action: 'set_ocean_extent', name: 'NonExistent_Ocean', extent: 5000 }, expected: 'not found|error' },
   
   // set_water_static_mesh
   { scenario: 'Environment: set_water_static_mesh success', toolName: 'build_environment', arguments: { action: 'set_water_static_mesh', name: 'Lake_Test', meshPath: '/Engine/BasicShapes/Plane' }, expected: 'success|not found' },
   { scenario: 'Environment: set_water_static_mesh not found', toolName: 'build_environment', arguments: { action: 'set_water_static_mesh', name: 'NonExistent_Water', meshPath: '/Engine/BasicShapes/Plane' }, expected: 'not found|error' },
   
   // set_river_transitions
-  { scenario: 'Environment: set_river_transitions success', toolName: 'build_environment', arguments: { action: 'set_river_transitions', name: 'River_Test' }, expected: 'success|not found' },
-  { scenario: 'Environment: set_river_transitions not found', toolName: 'build_environment', arguments: { action: 'set_river_transitions', name: 'NonExistent_River' }, expected: 'not found|error' },
+  { scenario: 'Environment: set_river_transitions success', toolName: 'build_environment', arguments: { action: 'set_river_transitions', name: 'River_Test', lakeTransitionMaterial: '/Engine/EngineMaterials/DefaultMaterial', oceanTransitionMaterial: '/Engine/EngineMaterials/DefaultMaterial' }, expected: 'success|not found' },
+  { scenario: 'Environment: set_river_transitions not found', toolName: 'build_environment', arguments: { action: 'set_river_transitions', name: 'NonExistent_River', lakeTransitionMaterial: '/Engine/EngineMaterials/DefaultMaterial', oceanTransitionMaterial: '/Engine/EngineMaterials/DefaultMaterial' }, expected: 'not found|error' },
   
   // set_water_zone
-  { scenario: 'Environment: set_water_zone success', toolName: 'build_environment', arguments: { action: 'set_water_zone', name: 'Ocean_Test' }, expected: 'success|not found' },
-  { scenario: 'Environment: set_water_zone not found', toolName: 'build_environment', arguments: { action: 'set_water_zone', name: 'NonExistent_Water' }, expected: 'not found|error' },
+  { scenario: 'Environment: set_water_zone success', toolName: 'build_environment', arguments: { action: 'set_water_zone', name: 'Ocean_Test', waterZonePath: '/Game/WaterZones/OceanZone' }, expected: 'success|not found' },
+  { scenario: 'Environment: set_water_zone not found', toolName: 'build_environment', arguments: { action: 'set_water_zone', name: 'NonExistent_Water', waterZonePath: '/Game/WaterZones/OceanZone' }, expected: 'not found|error' },
   
   // get_water_surface_info
   { scenario: 'Environment: get_water_surface_info success', toolName: 'build_environment', arguments: { action: 'get_water_surface_info', name: 'Ocean_Test', location: { x: 0, y: 0, z: 0 } }, expected: 'success|not found' },
@@ -501,8 +501,8 @@ const buildEnvironmentTests = [
   { scenario: 'Environment: configure_foliage_density sparse', toolName: 'build_environment', arguments: { action: 'configure_foliage_density', foliageType: 'TestFoliage', density: 0.1 }, expected: 'success|not found' },
   
   // batch_paint_foliage
-  { scenario: 'Environment: batch_paint_foliage success', toolName: 'build_environment', arguments: { action: 'batch_paint_foliage', foliageTypes: ['TestFoliage'], locations: [{ x: 0, y: 0, z: 0 }] }, expected: 'success|not found' },
-  { scenario: 'Environment: batch_paint_foliage multi', toolName: 'build_environment', arguments: { action: 'batch_paint_foliage', foliageTypes: ['TestFoliage', 'TreeFoliage'], locations: [{ x: 100, y: 100, z: 0 }, { x: 200, y: 200, z: 0 }] }, expected: 'success|not found' },
+  { scenario: 'Environment: batch_paint_foliage success', toolName: 'build_environment', arguments: { action: 'batch_paint_foliage', foliageTypePath: '/Game/Foliage/TestFoliage', foliageTypes: ['TestFoliage'], locations: [{ x: 0, y: 0, z: 0 }] }, expected: 'success|not found' },
+  { scenario: 'Environment: batch_paint_foliage multi', toolName: 'build_environment', arguments: { action: 'batch_paint_foliage', foliageTypePath: '/Game/Foliage/TestFoliage', foliageTypes: ['TestFoliage', 'TreeFoliage'], locations: [{ x: 100, y: 100, z: 0 }, { x: 200, y: 200, z: 0 }] }, expected: 'success|not found' },
   
   // configure_wind_directional
   { scenario: 'Environment: configure_wind_directional success', toolName: 'build_environment', arguments: { action: 'configure_wind_directional' }, expected: 'success' },
@@ -633,8 +633,8 @@ const manageVolumesTests = [
   { scenario: 'Volumes: set_spline_type linear', toolName: 'manage_volumes', arguments: { action: 'set_spline_type', actorName: 'Spline_Test', splineType: 'Linear' }, expected: 'success|not found' },
   
   // create_spline_mesh_component
-  { scenario: 'Volumes: create_spline_mesh_component success', toolName: 'manage_volumes', arguments: { action: 'create_spline_mesh_component', actorName: 'SplineMesh_Test', meshPath: '/Engine/BasicShapes/Cylinder' }, expected: 'success' },
-  { scenario: 'Volumes: create_spline_mesh_component with axis', toolName: 'manage_volumes', arguments: { action: 'create_spline_mesh_component', actorName: 'SplineMesh_Custom', meshPath: '/Engine/BasicShapes/Cube', forwardAxis: 'X' }, expected: 'success' },
+  { scenario: 'Volumes: create_spline_mesh_component success', toolName: 'manage_volumes', arguments: { action: 'create_spline_mesh_component', actorName: 'SplineMesh_Test', meshPath: '/Engine/BasicShapes/Cylinder', blueprintPath: '/Game/Blueprints/SplineMeshBP' }, expected: 'success' },
+  { scenario: 'Volumes: create_spline_mesh_component with axis', toolName: 'manage_volumes', arguments: { action: 'create_spline_mesh_component', actorName: 'SplineMesh_Custom', meshPath: '/Engine/BasicShapes/Cube', forwardAxis: 'X', blueprintPath: '/Game/Blueprints/SplineMeshBP' }, expected: 'success' },
   
   // set_spline_mesh_asset
   { scenario: 'Volumes: set_spline_mesh_asset success', toolName: 'manage_volumes', arguments: { action: 'set_spline_mesh_asset', actorName: 'SplineMesh_Test', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success|not found' },

@@ -1,6 +1,6 @@
 # Private/ (C++ Handler Implementations)
 
-83 C++ handler files implementing UE automation actions.
+86 C++ handler files implementing UE automation actions.
 
 ## OVERVIEW
 Each `*Handlers.cpp` file implements actions for one tool domain. Handlers are registered in `McpAutomationBridgeSubsystem::InitializeHandlers()`. Largest: BlueprintHandlers (5,751 lines), GeometryHandlers (4,499 lines).

@@ -20,6 +20,7 @@
 #include "HAL/PlatformProcess.h"
 #include "HAL/RunnableThread.h"
 #include "RenderAssetUpdate.h"
+#include "ContentStreaming.h"  // For IStreamingManager in UE 5.7
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -96,12 +97,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
   const FString Lower = Action.ToLower();
   const bool bIsLevelAction =
       (Lower == TEXT("manage_level") || Lower == TEXT("save_current_level") ||
-       Lower == TEXT("create_new_level") || Lower == TEXT("stream_level") ||
-       Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
-       Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
-       Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
-       Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
-       Lower == TEXT("add_sublevel") ||
+        Lower == TEXT("create_new_level") || Lower == TEXT("stream_level") ||
+        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
+        Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
+        Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
+        Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
+        Lower == TEXT("add_sublevel") || Lower == TEXT("create_sublevel") ||
        Lower == TEXT("configure_world_partition") ||
        Lower == TEXT("create_streaming_volume") ||
        Lower == TEXT("configure_large_world_coordinates") ||
@@ -522,6 +523,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       bool bSaved = false;
 #if __has_include("FileHelpers.h")
       if (UWorld *World = GetActiveWorld()) {
+        // UE 5.7: Streaming management is automatic. Ensure all pending streaming
+        // requests are processed before saving to avoid conflicts.
+        IStreamingManager::Get().BlockTillAllRequestsFinished(5.0f, false);
+
         bSaved = FEditorFileUtils::SaveMap(World, SavePath);
       }
 #endif
@@ -662,6 +667,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     } else if (GEditor) {
       // Fallback: Just do GC without rendering flush if we're in a restricted state
       GEditor->ForceGarbageCollection(true);
+    }
+
+    // ADDITIONAL FIX: Ensure current world is properly cleaned up before creating new map
+    // This prevents component attachment inconsistencies during world transition
+    if (GEditor) {
+      UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+      if (CurrentWorld) {
+        // Clean up any pending component attachments
+        CurrentWorld->CleanupActors();
+        CurrentWorld->UpdateWorldComponents(false, false);
+      }
     }
 
     if (UWorld *NewWorld =
@@ -1109,6 +1125,173 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                           *SubLevelPath),
           nullptr, TEXT("ADD_FAILED"));
     }
+    return true;
+  }
+  if (EffectiveAction == TEXT("create_sublevel")) {
+    // Extract required parameters
+    FString SublevelName;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("sublevelName"), SublevelName);
+    }
+    
+    FString ParentLevel;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("parentLevel"), ParentLevel);
+    }
+    
+    if (SublevelName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("sublevelName required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    if (ParentLevel.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("parentLevel required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    // Extract optional streaming method
+    FString StreamingMethod = TEXT("blueprint");
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
+    }
+    
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not available"), nullptr,
+                             TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
+    }
+    
+    // Find the parent world
+    UWorld *ParentWorld = nullptr;
+    
+    // Check if the current world matches the parent level
+    UWorld *CurrentWorld = GetActiveWorld();
+    if (CurrentWorld) {
+      FString CurrentPackageName = CurrentWorld->GetOutermost()->GetName();
+      if (CurrentPackageName == ParentLevel ||
+          CurrentWorld->GetMapName() == ParentLevel) {
+        ParentWorld = CurrentWorld;
+      }
+    }
+    
+    // If parent world not found in current context, try to load it
+    if (!ParentWorld) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Parent level not found: %s"), *ParentLevel),
+                             nullptr, TEXT("PARENT_NOT_FOUND"));
+      return true;
+    }
+    
+    // Construct valid package path for the new sublevel
+    FString SublevelPath;
+    if (SublevelName.StartsWith(TEXT("/"))) {
+      SublevelPath = SublevelName;
+    } else {
+      // Place sublevel in the same directory as the parent level
+      FString ParentDir = FPaths::GetPath(ParentLevel);
+      if (ParentDir.IsEmpty()) {
+        ParentDir = TEXT("/Game/Maps");
+      }
+      SublevelPath = FString::Printf(TEXT("%s/%s"), *ParentDir, *SublevelName);
+    }
+    
+    // Ensure it has a valid package name
+    if (!SublevelPath.EndsWith(TEXT("_Level")) && !SublevelPath.EndsWith(TEXT("_Sublevel"))) {
+      // Optional: Add suffix for clarity
+      SublevelPath = FString::Printf(TEXT("%s_Sublevel"), *SublevelPath);
+    }
+    
+    // Check if sublevel already exists
+    if (FPackageName::DoesPackageExist(SublevelPath)) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Sublevel already exists: %s"), *SublevelPath),
+                             nullptr, TEXT("ALREADY_EXISTS"));
+      return true;
+    }
+    
+    // Create new map for the sublevel
+    if (GEditor->IsPlaySessionInProgress()) {
+      GEditor->RequestEndPlayMap();
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Cannot create sublevel while Play In Editor is active."), nullptr,
+          TEXT("PIE_ACTIVE"));
+      return true;
+    }
+    
+    // Cleanup before creating
+    if (IsInGameThread() && !IsAsyncLoadingSuspended() && !IsAssetStreamingSuspended()) {
+      FlushRenderingCommands();
+      GEditor->ForceGarbageCollection(true);
+      FlushRenderingCommands();
+    } else {
+      GEditor->ForceGarbageCollection(true);
+    }
+    
+    // Create the new level
+    UWorld *NewWorld = GEditor->NewMap(true);
+    if (!NewWorld) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create new map for sublevel"), nullptr,
+                             TEXT("CREATION_FAILED"));
+      return true;
+    }
+    
+    // Ensure directory exists before saving
+    FString Filename;
+    if (FPackageName::TryConvertLongPackageNameToFilename(
+            SublevelPath, Filename, FPackageName::GetMapPackageExtension())) {
+      IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
+    }
+    
+    // Save the new sublevel
+    // UE 5.7: Streaming management is automatic. Ensure all pending streaming
+    // requests are processed before saving to avoid conflicts.
+    IStreamingManager::Get().BlockTillAllRequestsFinished(5.0f, false);
+
+    bool bSaved = FEditorFileUtils::SaveMap(NewWorld, SublevelPath);
+    
+    if (!bSaved) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to save sublevel"), nullptr,
+                             TEXT("SAVE_FAILED"));
+      return true;
+    }
+    
+    // Determine streaming class based on method
+    UClass *StreamingClass = ULevelStreamingDynamic::StaticClass();
+    FString StreamingState = TEXT("Blueprint");
+    if (StreamingMethod.Equals(TEXT("always_loaded"), ESearchCase::IgnoreCase)) {
+      StreamingClass = ULevelStreamingAlwaysLoaded::StaticClass();
+      StreamingState = TEXT("AlwaysLoaded");
+    }
+    
+    // Add the created level as a sublevel to the parent world
+    ULevelStreaming *AddedLevel = UEditorLevelUtils::AddLevelToWorld(
+        ParentWorld, *SublevelPath, StreamingClass);
+    
+    if (!AddedLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to add sublevel %s to parent world"), *SublevelPath),
+                             nullptr, TEXT("ADD_FAILED"));
+      return true;
+    }
+    
+    // Build success response
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("levelPath"), SublevelPath);
+    Resp->SetStringField(TEXT("parentLevel"), ParentLevel);
+    Resp->SetStringField(TEXT("streamingState"), StreamingState);
+    Resp->SetBoolField(TEXT("success"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Sublevel created and added: %s"), *SublevelPath),
+                           Resp, FString());
     return true;
   }
 

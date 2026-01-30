@@ -381,6 +381,8 @@ private:
   bool HandleControlEditorSetGameSpeed(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorFocusActor(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorOpenAsset(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStartRecording(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStopRecording(const FString &RequestId, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
   // Level and lighting helpers (top-level actions)
   bool HandleLevelAction(const FString &RequestId, const FString &Action,
                          const TSharedPtr<FJsonObject> &Payload,

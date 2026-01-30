@@ -64,6 +64,16 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       });
       return cleanObject(res) as HandlerResult;
     }
+    case 'create_sublevel': {
+      const sublevelName = requireNonEmptyString(argsTyped.sublevelName || argsTyped.levelName, 'sublevelName', 'Missing required parameter: sublevelName');
+      const parentLevel = requireNonEmptyString(argsTyped.parentLevel || argsTyped.parentPath, 'parentLevel', 'Missing required parameter: parentLevel');
+      const result = await executeAutomationRequest(
+        tools,
+        'manage_level',
+        { ...args, subAction: 'create_sublevel', sublevelName, parentLevel }
+      );
+      return cleanObject(result) as HandlerResult;
+    }
     case 'stream': {
       const levelPath = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : undefined;
       const levelName = typeof argsTyped.levelName === 'string' ? argsTyped.levelName : undefined;

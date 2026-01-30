@@ -1,9 +1,9 @@
 # src/tools/handlers
 
-Domain-specific handler implementations for 38 consolidated MCP tools.
+Domain-specific handler implementations for 37 consolidated MCP tools.
 
 ## OVERVIEW
-62 handler files organized by domain. Each implements actions for one or more consolidated tools, calling `executeAutomationRequest()` to dispatch to C++.
+89 handler files organized by domain. Each implements actions for one or more consolidated tools, calling `executeAutomationRequest()` to dispatch to C++.
 
 ## STRUCTURE
 ```

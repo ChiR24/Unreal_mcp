@@ -22,6 +22,7 @@
 #if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "EngineUtils.h"
+#include "Engine/DemoNetDriver.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -3760,6 +3761,158 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFOV(
 #endif
 }
 
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  // Get the world - prefer PlayWorld if in PIE, otherwise use editor world
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetActiveWorld();
+  if (!World) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No active world available"));
+    return true;
+  }
+
+  // Check if already recording by looking for demo driver
+  if (World->GetDemoNetDriver()) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("recordingState"), TEXT("already_recording"));
+    Data->SetBoolField(TEXT("success"), false);
+    Data->SetStringField(TEXT("message"), TEXT("Demo recording is already in progress"));
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Recording already in progress"), Data);
+    return true;
+  }
+
+  // Get optional filename parameter
+  FString Filename;
+  Payload->TryGetStringField(TEXT("filename"), Filename);
+  if (Filename.IsEmpty()) {
+    Filename = TEXT("DemoRecording");
+  }
+
+  // Sanitize filename (remove extension if provided, we'll add .demo)
+  if (Filename.EndsWith(TEXT(".demo"))) {
+    Filename.RemoveFromEnd(TEXT(".demo"));
+  }
+
+  // Build the console command
+  FString Command = FString::Printf(TEXT("demorec %s"), *Filename);
+
+  // Execute the demo record command
+  bool bSuccess = false;
+  FString ErrorMessage;
+  if (GEngine) {
+    // Create output device to capture any errors
+    FStringOutputDevice OutputDevice;
+    bSuccess = GEngine->Exec(World, *Command, OutputDevice);
+    if (!bSuccess) {
+      ErrorMessage = OutputDevice;
+      if (ErrorMessage.IsEmpty()) {
+        ErrorMessage = TEXT("Failed to execute demorec command");
+      }
+    }
+  } else {
+    ErrorMessage = TEXT("GEngine not available");
+  }
+
+  // Check if recording started successfully
+  bool bRecordingStarted = (World->GetDemoNetDriver() != nullptr);
+
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("recordingState"), bRecordingStarted ? TEXT("started") : TEXT("failed"));
+  Data->SetStringField(TEXT("filename"), Filename);
+  Data->SetBoolField(TEXT("success"), bRecordingStarted);
+  Data->SetStringField(TEXT("command"), Command);
+
+  if (bRecordingStarted) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("ControlEditor: Started demo recording '%s'"), *Filename);
+    SendStandardSuccessResponse(this, Socket, RequestId, 
+                                FString::Printf(TEXT("Demo recording started: %s"), *Filename), Data);
+  } else {
+    Data->SetStringField(TEXT("error"), ErrorMessage);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("RECORDING_START_FAILED"),
+                              ErrorMessage, Data);
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  // Get the world - prefer PlayWorld if in PIE, otherwise use editor world
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetActiveWorld();
+  if (!World) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No active world available"));
+    return true;
+  }
+
+  // Check if recording is in progress
+  if (!World->GetDemoNetDriver()) {
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("recordingState"), TEXT("not_recording"));
+    Data->SetStringField(TEXT("filename"), TEXT(""));
+    Data->SetBoolField(TEXT("success"), true);
+    Data->SetStringField(TEXT("message"), TEXT("No demo recording is currently in progress"));
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("No recording in progress"), Data);
+    return true;
+  }
+
+  // Try to get filename from payload, otherwise use default
+  FString Filename;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("filename"), Filename);
+  }
+  if (Filename.IsEmpty()) {
+    Filename = TEXT("DemoRecording");
+  }
+
+  // Execute the demo stop command
+  bool bSuccess = false;
+  FString ErrorMessage;
+  if (GEngine) {
+    FStringOutputDevice OutputDevice;
+    bSuccess = GEngine->Exec(World, TEXT("demostop"), OutputDevice);
+    if (!bSuccess) {
+      ErrorMessage = OutputDevice;
+      if (ErrorMessage.IsEmpty()) {
+        ErrorMessage = TEXT("Failed to execute demostop command");
+      }
+    }
+  } else {
+    ErrorMessage = TEXT("GEngine not available");
+  }
+
+  // Verify recording stopped
+  bool bRecordingStopped = (World->GetDemoNetDriver() == nullptr);
+
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("recordingState"), bRecordingStopped ? TEXT("stopped") : TEXT("failed"));
+  Data->SetStringField(TEXT("filename"), Filename);
+  Data->SetBoolField(TEXT("success"), bRecordingStopped);
+  Data->SetStringField(TEXT("command"), TEXT("demostop"));
+
+  if (bRecordingStopped) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("ControlEditor: Stopped demo recording '%s'"), *Filename);
+    SendStandardSuccessResponse(this, Socket, RequestId,
+                                FString::Printf(TEXT("Demo recording stopped: %s"), *Filename), Data);
+  } else {
+    Data->SetStringField(TEXT("error"), ErrorMessage);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("RECORDING_STOP_FAILED"),
+                              ErrorMessage, Data);
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -3866,15 +4019,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("get_active_jobs"))
     return HandleGetActiveJobs(RequestId, Action, Payload, RequestingSocket);
 
-  if (LowerSub == TEXT("stop_recording")) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Sequence Recording not yet implemented in native bridge"), TEXT("NOT_IMPLEMENTED"));
-    return true;
-  }
-
-  if (LowerSub == TEXT("start_recording")) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Sequence Recording not yet implemented in native bridge"), TEXT("NOT_IMPLEMENTED"));
-    return true;
-  }
+  if (LowerSub == TEXT("start_recording"))
+    return HandleControlEditorStartRecording(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("stop_recording"))
+    return HandleControlEditorStopRecording(RequestId, Payload, RequestingSocket);
 
   // Consolidated Editor Actions from McpEditorHandlers
 
