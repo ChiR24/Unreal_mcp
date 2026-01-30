@@ -2,6 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 
 export async function readIniFile(filePath: string): Promise<Record<string, Record<string, string>>> {
+  // Security check: strictly enforce .ini extension to prevent arbitrary file reads
+  if (!filePath.toLowerCase().endsWith('.ini')) {
+    throw new Error(`Invalid file extension: ${filePath}. Only .ini files are allowed.`);
+  }
+
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const result: Record<string, Record<string, string>> = {};
