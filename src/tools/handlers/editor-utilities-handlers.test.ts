@@ -60,7 +60,7 @@ describe('handleEditorUtilitiesTools', () => {
     it('configure_editor_preferences requires category', async () => {
       await expect(
         handleEditorUtilitiesTools('configure_editor_preferences', {} as EditorUtilitiesArgs, mockTools)
-      ).rejects.toThrow('Invalid category');
+      ).rejects.toThrow(/category is required/);
     });
 
     it('set_grid_settings uses defaults', async () => {

@@ -84,11 +84,16 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
 
   // Map actorName to name for C++ handler compatibility
   // C++ geometry handlers expect 'name' field for actor naming
+  // Note: actorName is for primitives (create_box, etc.), resultName is for
+  // operations that create new actors (boolean_union, loft, etc.).
+  // If both are provided, resultName takes precedence (creation ops override primitives).
   if (args.actorName && typeof args.actorName === 'string') {
     normalized.name = args.actorName;
   }
 
   // Map resultName to name for boolean/creation operations
+  // This intentionally overwrites actorName when both are present, as creation
+  // operations (boolean, loft, sweep) take precedence over primitive naming.
   if (args.resultName && typeof args.resultName === 'string') {
     normalized.name = args.resultName;
   }

@@ -109,7 +109,7 @@ export async function handleEditorUtilitiesTools(
     
     case 'configure_editor_preferences': {
       if (!args.category || typeof args.category !== 'string') {
-        throw new Error('Invalid category');
+        throw new Error('Editor preferences category is required and must be a non-empty string (e.g., "General", "Viewport", "Input")');
       }
       return cleanObject(await executeAutomationRequest(tools, 'manage_editor_utilities', {
         action: 'configure_editor_preferences',
