@@ -334,15 +334,31 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                   A->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase)) {
                 // CRITICAL FIX: Delete attached actors first
                 // Landscapes and other environment actors may have attached brushes,
-                // foliage spawners, or water components that prevent deletion
+                // foliage spawners, water components, or WaterBrushManagers that prevent deletion
                 TArray<AActor*> AttachedActors;
                 A->GetAttachedActors(AttachedActors);
                 
                 bool bAllAttachedDeleted = true;
+                TArray<FString> FailedAttachedNames;
+                
+                // Sort attached actors to delete WaterBrushManagers and brushes first
+                // Use strict weak ordering: water/brush actors sort before non-water actors
+                AttachedActors.Sort([](const AActor& A, const AActor& B) {
+                  FString NameA = A.GetActorLabel();
+                  FString NameB = B.GetActorLabel();
+                  bool bIsWaterA = NameA.Contains(TEXT("Water")) || NameA.Contains(TEXT("Brush"));
+                  bool bIsWaterB = NameB.Contains(TEXT("Water")) || NameB.Contains(TEXT("Brush"));
+                  return bIsWaterA > bIsWaterB;  // Water actors sort first (true > false)
+                });
+                
                 for (AActor* Attached : AttachedActors) {
                   if (Attached && IsValid(Attached)) {
+                    // Force detach from parent before deletion
+                    Attached->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+                    
                     if (!ActorSS->DestroyActor(Attached)) {
                       bAllAttachedDeleted = false;
+                      FailedAttachedNames.Add(Attached->GetActorLabel());
                       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
                              TEXT("Failed to delete attached actor %s of %s"), 
                              *Attached->GetActorLabel(), *Name);
@@ -350,13 +366,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                   }
                 }
                 
+                // Also detach any actors that are attached to this actor's components
+                A->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+                
                 // Now try to delete the main actor
                 if (ActorSS->DestroyActor(A)) {
                   Deleted.Add(Name);
                   bRemoved = true;
                 } else if (!bAllAttachedDeleted) {
                   // Failed because attached actors couldn't be deleted
-                  Missing.Add(Name + TEXT(" (has attached actors that couldn't be deleted)"));
+                  FString FailedNames = FString::Join(FailedAttachedNames, TEXT(", "));
+                  Missing.Add(Name + TEXT(" (attached actors couldn't be deleted: ") + FailedNames + TEXT(")"));
                 }
                 break;
               }

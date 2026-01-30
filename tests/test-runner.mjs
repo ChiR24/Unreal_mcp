@@ -188,18 +188,49 @@ export function evaluateExpectation(testCase, response) {
     return { passed: false, reason: `Asset/Actor not found: ${actualMessage || actualError}` };
   }
 
-  // CRITICAL: Explicit success:false from Unreal should ALWAYS fail unless expecting failure
+  // CRITICAL: Explicit success:false from Unreal should ALWAYS fail unless explicitly expecting failure
   // This prevents false positives where TS receives a response but Unreal reports failure
   if (response.structuredContent?.success === false) {
-    const explicitlyExpectsFailure = lowerExpected.includes('error') || 
-      lowerExpected.includes('failed') || 
-      lowerExpected.includes('not found') ||
-      containsFailure;
-    if (!explicitlyExpectsFailure) {
-      return {
-        passed: false,
-        reason: `Unreal returned success:false. Error: ${actualError || actualMessage || 'Unknown error'}`
-      };
+    // First check: Does test explicitly expect ANY error/failure (regardless of type)?
+    const expectsAnyError = lowerExpected === 'error' || 
+                            lowerExpected === 'failed' ||
+                            lowerExpected === 'any error' ||
+                            lowerExpected === 'any failure';
+    
+    if (expectsAnyError) {
+      // Test explicitly expects any error - this is a pass
+      // Don't fail the test, let it continue to normal evaluation
+    } else {
+      // Check if test explicitly expects this specific type of failure
+      const errorString = (actualError || actualMessage || '').toString().toLowerCase();
+      
+      // Check if the actual error matches any of the expected failure conditions
+      let errorMatchesExpectation = false;
+      if (lowerExpected.includes('not found') && errorString.includes('not found')) {
+        errorMatchesExpectation = true;
+      } else if (lowerExpected.includes('already exists') && errorString.includes('already exists')) {
+        errorMatchesExpectation = true;
+      } else if (lowerExpected.includes('invalid') && errorString.includes('invalid')) {
+        errorMatchesExpectation = true;
+      } else if ((lowerExpected.includes('timeout') || lowerExpected.includes('timed out')) && 
+                 (errorString.includes('timeout') || errorString.includes('timed out'))) {
+        errorMatchesExpectation = true;
+      } else if (lowerExpected.includes('not implemented') && 
+                 (errorString.includes('not implemented') || actualError === 'NOT_IMPLEMENTED')) {
+        errorMatchesExpectation = true;
+      }
+      
+      // If test expects success OR the error doesn't match expected failure type, FAIL the test
+      const expectsSuccess = successKeywords.some(kw => lowerExpected.includes(kw)) && 
+                             !lowerExpected.includes('error') && 
+                             !lowerExpected.includes('failed');
+      
+      if (expectsSuccess || (!errorMatchesExpectation && containsFailure)) {
+        return {
+          passed: false,
+          reason: `Unreal returned success:false. Error: ${actualError || actualMessage || 'Unknown error'}`
+        };
+      }
     }
   }
 
@@ -325,8 +356,29 @@ export function evaluateExpectation(testCase, response) {
     }
   }
 
-  // Default evaluation logic
-  const passed = expectedFailure ? !actualSuccess : !!actualSuccess;
+  // Default evaluation logic - BUT with strict checking for success:false
+  // If response has success:false and test expects success keywords, it should FAIL
+  let passed;
+  if (response.structuredContent?.success === false && containsSuccess && !containsFailure) {
+    // Response failed but test only expected success - this is a false positive
+    passed = false;
+  } else if (response.structuredContent?.success === false && containsFailure) {
+    // Response failed and test expects some failure - check if error types match
+    const errorStr = (actualError || actualMessage || '').toString().toLowerCase();
+    // If test expects specific error type, verify it matches
+    if (lowerExpected.includes('not found') && !errorStr.includes('not found')) {
+      passed = false;  // Expected 'not found' but got different error
+    } else if (lowerExpected.includes('already exists') && !errorStr.includes('already exists')) {
+      passed = false;  // Expected 'already exists' but got different error
+    } else if (lowerExpected.includes('invalid') && !errorStr.includes('invalid')) {
+      passed = false;  // Expected 'invalid' but got different error
+    } else {
+      passed = expectedFailure ? !actualSuccess : !!actualSuccess;
+    }
+  } else {
+    passed = expectedFailure ? !actualSuccess : !!actualSuccess;
+  }
+  
   let reason;
   if (response.isError) {
     reason = response.content?.map((entry) => ('text' in entry ? entry.text : JSON.stringify(entry))).join('\n');
