@@ -12,6 +12,32 @@ import { pathToFileURL } from 'node:url';
  *   node tests/category-tests/world-tools.test.mjs
  */
 
+// ============================================================================
+// PREREQUISITE ASSETS REQUIRED FOR TESTS
+// ============================================================================
+// The following assets must exist in the Unreal Engine project before running tests:
+//
+// 1. /Game/Blueprints/SplineMeshBP (Blueprint Actor)
+//    - Required for: create_spline_mesh_component tests (lines ~636-637)
+//    - Create: Right-click in Content Browser > Blueprint Class > Actor
+//    - Name: SplineMeshBP
+//    - Location: /Game/Blueprints/
+//
+// 2. /Game/Foliage/TestFoliage (Foliage Type)
+//    - Required for: configure_foliage_density tests (lines ~500-501)
+//    - Create: Content Browser > Foliage > Foliage Type
+//    - Name: TestFoliage
+//    - Location: /Game/Foliage/
+//    - Note: Can also use any existing foliage type and update test parameters
+//
+// 3. /Game/WorldToolsTest (Static Mesh) - OPTIONAL
+//    - Required for: create_landscape_grass_type tests with custom mesh (line ~342)
+//    - Alternative: Tests use /Engine/BasicShapes/Plane as fallback
+//    - Create: Import static mesh or use engine basic shapes
+//
+// If these assets don't exist, the affected tests will fail with "ASSET_NOT_FOUND" errors.
+// ============================================================================
+
 import { runToolTests } from '../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/WorldToolsTest';

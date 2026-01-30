@@ -503,11 +503,14 @@ private:
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 28: Extended Foliage handlers
   bool HandleConfigureFoliagePlacement(const FString &RequestId, const FString &Action,
-                                       const TSharedPtr<FJsonObject> &Payload,
-                                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureFoliageDensity(const FString &RequestId, const FString &Action,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleConfigureFoliageLOD(const FString &RequestId, const FString &Action,
-                                 const TSharedPtr<FJsonObject> &Payload,
-                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleGetFoliageTypes(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
@@ -766,7 +769,12 @@ private:
                              const TSharedPtr<FJsonObject> &Payload,
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 7: Sub-handlers for skeleton operations
+  bool HandleListSkeletalMeshes(const FString &RequestId,
+                                const FString &Action,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleListBones(const FString &RequestId,
+
                        const FString &Action,
                        const TSharedPtr<FJsonObject> &Payload,
                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

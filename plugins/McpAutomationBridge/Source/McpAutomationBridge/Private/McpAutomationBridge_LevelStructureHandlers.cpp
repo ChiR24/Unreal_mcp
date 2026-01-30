@@ -2676,6 +2676,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
+    // Only handle manage_level_structure actions - return false immediately for other tools
+    // This prevents incorrect routing of lighting/environment actions to level structure handler
+    if (!Action.Equals(TEXT("manage_level_structure"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+    
     FString SubAction;
     if (Payload.IsValid())
     {

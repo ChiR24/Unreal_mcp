@@ -919,6 +919,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSessionsAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
+    // Only handle manage_sessions actions - return false immediately for other tools
+    // This prevents incorrect routing of lighting/environment actions to session handler
+    if (!Action.Equals(TEXT("manage_sessions"), ESearchCase::IgnoreCase))
+    {
+        return false;
+    }
+    
     // Extract sub-action from payload
     FString SubAction;
     if (Payload.IsValid() && Payload->HasField(TEXT("action")))

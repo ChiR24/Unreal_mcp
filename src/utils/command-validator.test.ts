@@ -36,4 +36,25 @@ describe('CommandValidator', () => {
         expect(() => CommandValidator.validate('stat fps')).not.toThrow();
         expect(() => CommandValidator.validate('viewmode lit')).not.toThrow();
     });
+
+    it('allows ShadingModel (false positive fix)', () => {
+        expect(() => CommandValidator.validate('ShadingModel')).not.toThrow();
+    });
+
+    it('allows file_name_format (false positive fix)', () => {
+        expect(() => CommandValidator.validate('file_name_format test')).not.toThrow();
+    });
+
+    it('allows Log commands with forbidden words in quotes (false positive fix)', () => {
+        expect(() => CommandValidator.validate('Log "Asset deleted"')).not.toThrow();
+        expect(() => CommandValidator.validate("Log 'Asset deleted'")).not.toThrow();
+    });
+
+    it('still blocks actual del commands (security)', () => {
+        expect(() => CommandValidator.validate('del /F file.txt')).toThrow(/contains unsafe token/);
+    });
+
+    it('still blocks actual format commands (security)', () => {
+        expect(() => CommandValidator.validate('format C:')).toThrow(/contains unsafe token/);
+    });
 });

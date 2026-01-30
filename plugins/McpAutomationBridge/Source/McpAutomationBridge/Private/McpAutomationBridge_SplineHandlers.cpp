@@ -748,11 +748,14 @@ static bool HandleCreateSplineMeshComponent(
         return true;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    // Normalize path and load blueprint using helper for robust asset loading
+    FString NormalizedBlueprintPath;
+    FString LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedBlueprintPath, LoadError);
     if (!Blueprint)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -788,10 +791,12 @@ static bool HandleCreateSplineMeshComponent(
     USplineMeshComponent* MeshComp = Cast<USplineMeshComponent>(NewNode->ComponentTemplate);
     if (MeshComp)
     {
-        // Set mesh if provided
+        // Set mesh if provided (with path normalization)
         if (!MeshPath.IsEmpty())
         {
-            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+            FNormalizedAssetPath NormalizedPath = NormalizeAssetPath(MeshPath);
+            FString NormalizedMeshPath = NormalizedPath.Path;
+            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *NormalizedMeshPath);
             if (Mesh)
             {
                 MeshComp->SetStaticMesh(Mesh);

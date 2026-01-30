@@ -61,6 +61,14 @@ export class CommandValidator {
     );
 
     /**
+     * Pre-compiled patterns for forbidden tokens using word boundaries.
+     * This prevents false positives like 'ShadingModel' matching 'del ' inside 'Model'.
+     */
+    private static readonly FORBIDDEN_PATTERNS = CommandValidator.FORBIDDEN_TOKENS.map(
+        token => new RegExp(`(?:^|\\s)${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')
+    );
+
+    /**
      * Validates a console command for safety before execution.
      * @param command - The console command string to validate
      * @throws Error if the command is dangerous, contains forbidden tokens, or is invalid
@@ -104,7 +112,12 @@ export class CommandValidator {
             throw new Error('Command piping with | is blocked for safety.');
         }
 
-        if (this.FORBIDDEN_TOKENS.some(token => cmdLower.includes(token))) {
+        // Log commands are safe UE console commands for outputting text.
+        // They may contain otherwise forbidden words in quoted strings, so bypass the check.
+        const isLogCommand = cmdLower.startsWith('log "') || cmdLower.startsWith('log \'');
+
+        // Use word-boundary patterns to avoid false positives like 'ShadingModel' matching 'del '
+        if (!isLogCommand && this.FORBIDDEN_PATTERNS.some(pattern => pattern.test(cmdLower))) {
             throw new Error(`Command contains unsafe token and was blocked: ${command}`);
         }
 

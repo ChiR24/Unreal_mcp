@@ -737,6 +737,65 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         return true;
     }
 
+    if (SubAction.Equals(TEXT("set_text_color"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+
+        if (WidgetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+        if (WidgetName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* FoundWidget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!FoundWidget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *WidgetName), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UTextBlock* TextBlock = Cast<UTextBlock>(FoundWidget);
+        if (!TextBlock)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' is not a TextBlock"), *WidgetName), TEXT("INVALID_TYPE"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> ColorObj = GetObjectField(Payload, TEXT("color"));
+        FLinearColor Color = GetColorFromJson(ColorObj);
+        
+        TextBlock->SetColorAndOpacity(FSlateColor(Color));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set color for text block: %s"), *WidgetName));
+        ResultJson->SetStringField(TEXT("widgetName"), WidgetName);
+        
+        TSharedPtr<FJsonObject> OutColor = MakeShareable(new FJsonObject());
+        OutColor->SetNumberField(TEXT("r"), Color.R);
+        OutColor->SetNumberField(TEXT("g"), Color.G);
+        OutColor->SetNumberField(TEXT("b"), Color.B);
+        OutColor->SetNumberField(TEXT("a"), Color.A);
+        ResultJson->SetObjectField(TEXT("color"), OutColor);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Set color for text block: %s"), *WidgetName), ResultJson);
+        return true;
+    }
+
     if (SubAction.Equals(TEXT("add_image"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));

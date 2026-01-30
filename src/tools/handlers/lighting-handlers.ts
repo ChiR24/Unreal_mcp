@@ -331,7 +331,26 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       }));
     }
 
-    // Forward Post-Process / Ray Tracing / Scene Capture actions to C++
+    // Forward Post-Process / Reflection / Ray Tracing / Scene Capture actions to C++
+    // Post-Process Volume & Settings, Post-Process Effects, Reflection Captures,
+    // Ray Tracing, Scene Capture, Light Channels, Lightmass
+    case 'create_post_process_volume':
+    case 'configure_pp_blend':
+    case 'configure_pp_priority':
+    case 'get_post_process_settings':
+    case 'configure_bloom':
+    case 'configure_dof':
+    case 'configure_motion_blur':
+    case 'configure_color_grading':
+    case 'configure_white_balance':
+    case 'configure_vignette':
+    case 'configure_chromatic_aberration':
+    case 'configure_film_grain':
+    case 'configure_lens_flares':
+    case 'create_sphere_reflection_capture':
+    case 'create_box_reflection_capture':
+    case 'create_planar_reflection':
+    case 'recapture_scene':
     case 'configure_ray_traced_shadows':
     case 'configure_ray_traced_gi':
     case 'configure_ray_traced_reflections':
@@ -356,4 +375,3 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       throw new Error(`Unknown lighting action: ${action}`);
   }
 }
-

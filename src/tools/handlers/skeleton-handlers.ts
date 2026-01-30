@@ -30,7 +30,7 @@ const SKELETON_ACTIONS = [
   // 7.5 Morph Targets
   'create_morph_target', 'set_morph_target_deltas', 'import_morph_targets',
   // Utils
-  'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies'
+  'get_skeleton_info', 'list_bones', 'list_sockets', 'list_physics_bodies', 'list_skeletal_meshes'
 ] as const;
 
 type SkeletonAction = (typeof SKELETON_ACTIONS)[number];

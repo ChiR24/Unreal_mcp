@@ -23,7 +23,9 @@
 #include "Rendering/SkeletalMeshLODModel.h"  // For FSkelMeshSection used by PopulateDeltas
 #include "Rendering/SkeletalMeshModel.h"     // For FSkeletalMeshModel
 #include "Animation/SkinWeightProfile.h"     // For FSkinWeightProfileInfo, FImportedSkinWeightProfileData
+#include "AssetRegistry/ARFilter.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
 #include "Factories/PhysicsAssetFactory.h"
@@ -261,6 +263,73 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     Result->SetNumberField(TEXT("socketCount"), Skeleton->Sockets.Num());
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Skeleton info retrieved"), Result);
+    return true;
+}
+
+/**
+ * Handle: list_skeletal_meshes
+ * List available skeletal meshes in the project
+ */
+bool UMcpAutomationBridgeSubsystem::HandleListSkeletalMeshes(
+    const FString& RequestId,
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString Directory = TEXT("/Game");
+    Payload->TryGetStringField(TEXT("directory"), Directory);
+    
+    FString FilterPattern;
+    Payload->TryGetStringField(TEXT("filter"), FilterPattern);
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    
+    FARFilter Filter;
+    Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("SkeletalMesh")));
+    Filter.PackagePaths.Add(FName(*Directory));
+    Filter.bRecursivePaths = true;
+    Filter.bRecursiveClasses = true;
+
+    TArray<FAssetData> AssetDataList;
+    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+
+    TArray<TSharedPtr<FJsonValue>> MeshArray;
+    for (const FAssetData& Data : AssetDataList)
+    {
+        if (!FilterPattern.IsEmpty() && !Data.AssetName.ToString().Contains(FilterPattern))
+        {
+            continue;
+        }
+
+        USkeletalMesh* Mesh = Cast<USkeletalMesh>(Data.GetAsset());
+        if (!Mesh)
+        {
+            continue;
+        }
+
+        TSharedPtr<FJsonObject> MeshObj = MakeShareable(new FJsonObject());
+        MeshObj->SetStringField(TEXT("path"), Data.GetSoftObjectPath().ToString());
+        MeshObj->SetStringField(TEXT("name"), Data.AssetName.ToString());
+        
+        // Bone count
+        MeshObj->SetNumberField(TEXT("boneCount"), Mesh->GetRefSkeleton().GetNum());
+        
+        // Socket count (Mesh sockets + Skeleton sockets)
+        int32 TotalSockets = Mesh->GetMeshOnlySocketList().Num();
+        if (Mesh->GetSkeleton())
+        {
+            TotalSockets += Mesh->GetSkeleton()->Sockets.Num();
+        }
+        MeshObj->SetNumberField(TEXT("socketCount"), TotalSockets);
+
+        MeshArray.Add(MakeShareable(new FJsonValueObject(MeshObj)));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetArrayField(TEXT("meshes"), MeshArray);
+    Result->SetNumberField(TEXT("count"), MeshArray.Num());
+
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Skeletal meshes listed"), Result);
     return true;
 }
 
@@ -2023,6 +2092,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     if (SubAction == TEXT("get_skeleton_info"))
     {
         return HandleGetSkeletonInfo(RequestId, Action, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("list_skeletal_meshes"))
+    {
+        return HandleListSkeletalMeshes(RequestId, Action, Payload, RequestingSocket);
     }
     else if (SubAction == TEXT("list_bones"))
     {

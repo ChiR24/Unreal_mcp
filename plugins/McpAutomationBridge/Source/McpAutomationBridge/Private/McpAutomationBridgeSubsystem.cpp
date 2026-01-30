@@ -847,6 +847,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleConfigureFoliagePlacement(R, A, P, S);
                   });
+  RegisterHandler(TEXT("configure_foliage_density"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleConfigureFoliageDensity(R, A, P, S);
+                  });
   RegisterHandler(TEXT("configure_foliage_lod"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,

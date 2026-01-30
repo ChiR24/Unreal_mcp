@@ -108,10 +108,12 @@ export async function handleEditorUtilitiesTools(
     }
     
     case 'configure_editor_preferences': {
-      const category = args.category || 'General';
+      if (!args.category || typeof args.category !== 'string') {
+        throw new Error('Invalid category');
+      }
       return cleanObject(await executeAutomationRequest(tools, 'manage_editor_utilities', {
         action: 'configure_editor_preferences',
-        category,
+        category: args.category,
         preferences: args.preferences ?? {}
       }));
     }

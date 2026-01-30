@@ -290,7 +290,8 @@ describe('handleEnvironmentTools', () => {
 
     it('adds /Game/ prefix to relative paths', async () => {
       await handleEnvironmentTools('set_river_depth', { 
-        actorPath: 'Rivers/MyRiver'
+        actorPath: 'Rivers/MyRiver',
+        splineKey: 0.5
       } as unknown as EnvironmentArgs, mockTools);
       
       expect(executeAutomationRequest).toHaveBeenCalledWith(

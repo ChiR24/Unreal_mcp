@@ -198,9 +198,10 @@ describe('handleLevelTools', () => {
     });
 
     it('returns error when bridge is not connected', async () => {
+      // Simulate bridge unavailable by removing sendAutomationRequest
       const bridge = mockTools.automationBridge;
       if (!bridge) throw new Error('Test setup error: bridge is null');
-      vi.mocked(bridge.isConnected).mockReturnValue(false);
+      bridge.sendAutomationRequest = undefined as unknown as typeof bridge.sendAutomationRequest;
       
       const result = await handleLevelTools('validate_level', { action: 'validate_level', levelPath: '/Game/Maps/TestLevel' } as HandlerArgs, mockTools);
       

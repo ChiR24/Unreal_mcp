@@ -134,10 +134,8 @@ export function evaluateExpectation(testCase, response) {
   const containsFailure = failureKeywords.some((word) => lowerExpected.includes(word));
   const containsSuccess = successKeywords.some((word) => lowerExpected.includes(word));
 
-  const structuredSuccess = typeof response.structuredContent?.success === 'boolean'
-    ? response.structuredContent.success
-    : (response.structuredContent?.isError === true ? false : undefined);
-  const actualSuccess = (structuredSuccess ?? !response.isError) && response.structuredContent?.isError !== true;
+  // Stricter success validation: success field must be explicitly true
+  const actualSuccess = response.structuredContent?.success === true;
 
   // Extract actual error/message from response
   let actualError = null;
@@ -181,6 +179,13 @@ export function evaluateExpectation(testCase, response) {
         reason: `Action not implemented in C++ bridge. Response: ${actualMessage || actualError || 'NOT_IMPLEMENTED'}`
       };
     }
+  }
+
+  // CRITICAL: ASSET_NOT_FOUND/ACTOR_NOT_FOUND should ALWAYS fail tests unless explicitly expected
+  const isAssetNotFound = errorStr === 'asset_not_found' || errorStr === 'actor_not_found' || 
+    actualError === 'ASSET_NOT_FOUND' || actualError === 'ACTOR_NOT_FOUND';
+  if (isAssetNotFound && !lowerExpected.includes('not found')) {
+    return { passed: false, reason: `Asset/Actor not found: ${actualMessage || actualError}` };
   }
 
   // CRITICAL: Explicit success:false from Unreal should ALWAYS fail unless expecting failure

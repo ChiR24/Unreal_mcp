@@ -1202,6 +1202,83 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureFoliagePlacement(
 #endif
 }
 
+// ============================================================================
+// Configure Foliage Density (Simplified interface for density-only updates)
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleConfigureFoliageDensity(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("configure_foliage_density"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("configure_foliage_density payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString FoliageTypePath;
+  if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath)) {
+    // Accept alternate key used by some clients
+    Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
+  }
+  if (FoliageTypePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("foliageTypePath (or foliageType) required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Load the foliage type
+  UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  if (!FoliageType) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                        TEXT("FOLIAGE_TYPE_NOT_FOUND"));
+    return true;
+  }
+
+  FoliageType->Modify();
+
+  // Density setting (primary purpose of this action)
+  double Density = 100.0;
+  if (Payload->TryGetNumberField(TEXT("density"), Density)) {
+    FoliageType->Density = static_cast<float>(Density);
+  }
+
+  // Optional radius setting
+  double Radius = 0.0;
+  if (Payload->TryGetNumberField(TEXT("radius"), Radius)) {
+    FoliageType->Radius = static_cast<float>(Radius);
+  }
+
+  McpSafeAssetSave(FoliageType);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  Resp->SetNumberField(TEXT("density"), FoliageType->Density);
+  Resp->SetNumberField(TEXT("radius"), FoliageType->Radius);
+  Resp->SetStringField(TEXT("message"), TEXT("Foliage density configured"));
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Foliage density configured"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(
+      RequestingSocket, RequestId, false,
+      TEXT("configure_foliage_density requires editor build."), nullptr,
+      TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleConfigureFoliageLOD(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,

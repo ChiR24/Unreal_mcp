@@ -82,6 +82,17 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
     normalized.axis = args.axis.map((v: unknown) => Number(v) || 0);
   }
 
+  // Map actorName to name for C++ handler compatibility
+  // C++ geometry handlers expect 'name' field for actor naming
+  if (args.actorName && typeof args.actorName === 'string') {
+    normalized.name = args.actorName;
+  }
+
+  // Map resultName to name for boolean/creation operations
+  if (args.resultName && typeof args.resultName === 'string') {
+    normalized.name = args.resultName;
+  }
+
   return normalized;
 }
 

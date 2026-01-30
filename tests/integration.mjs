@@ -34,6 +34,7 @@ const testCases = [
   { scenario: 'Actor: set transform', toolName: 'control_actor', arguments: { action: 'set_transform', actorName: 'IT_Cube', location: { x: 100, y: 100, z: 300 } }, expected: 'success|not found' },
   { scenario: 'Blueprint: create Actor blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: 'BP_IntegrationTest', path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
   { scenario: 'Geometry: Create box primitive', toolName: 'manage_geometry', arguments: { action: 'create_box', actorName: 'GeoTest_Box', dimensions: [100, 100, 100], location: { x: 0, y: 0, z: 100 } }, expected: 'success|already exists' },
+  { scenario: 'Skeleton: List skeletal meshes', toolName: 'manage_skeleton', arguments: { action: 'list_skeletal_meshes', directory: '/Game' }, expected: 'success' },
   { scenario: 'Skeleton: Get skeleton info', toolName: 'manage_skeleton', arguments: { action: 'get_skeleton_info', skeletonPath: '/Engine/EngineMeshes/SkeletalCube_Skeleton' }, expected: 'success|not found' },
   { scenario: 'Material Authoring: Create material', toolName: 'manage_material_authoring', arguments: { action: 'create_material', name: 'M_AdvTest', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Texture: Create noise texture', toolName: 'manage_texture', arguments: { action: 'create_noise_texture', name: 'T_TestNoise', path: ADV_TEST_FOLDER }, expected: 'success|already exists' },

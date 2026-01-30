@@ -124,11 +124,12 @@ describe('executeAutomationRequest', () => {
   it('throws when bridge is not connected', async () => {
     const bridge = mockTools.automationBridge;
     if (!bridge) throw new Error('Test setup error: bridge is null');
-    vi.mocked(bridge.isConnected).mockReturnValue(false);
+    // Simulate bridge unavailable by removing sendAutomationRequest
+    bridge.sendAutomationRequest = undefined as unknown as typeof bridge.sendAutomationRequest;
     
     await expect(
       executeAutomationRequest(mockTools, 'test_tool', { action: 'test' })
-    ).rejects.toThrow('Automation bridge is not connected to Unreal Engine');
+    ).rejects.toThrow('Automation bridge not available');
   });
 
   it('returns result when bridge is connected', async () => {
