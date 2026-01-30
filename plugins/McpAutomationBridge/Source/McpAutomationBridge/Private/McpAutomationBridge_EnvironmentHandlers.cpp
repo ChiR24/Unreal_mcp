@@ -332,9 +332,31 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
             for (AActor *A : AllActors) {
               if (A &&
                   A->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase)) {
+                // CRITICAL FIX: Delete attached actors first
+                // Landscapes and other environment actors may have attached brushes,
+                // foliage spawners, or water components that prevent deletion
+                TArray<AActor*> AttachedActors;
+                A->GetAttachedActors(AttachedActors);
+                
+                bool bAllAttachedDeleted = true;
+                for (AActor* Attached : AttachedActors) {
+                  if (Attached && IsValid(Attached)) {
+                    if (!ActorSS->DestroyActor(Attached)) {
+                      bAllAttachedDeleted = false;
+                      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                             TEXT("Failed to delete attached actor %s of %s"), 
+                             *Attached->GetActorLabel(), *Name);
+                    }
+                  }
+                }
+                
+                // Now try to delete the main actor
                 if (ActorSS->DestroyActor(A)) {
                   Deleted.Add(Name);
                   bRemoved = true;
+                } else if (!bAllAttachedDeleted) {
+                  // Failed because attached actors couldn't be deleted
+                  Missing.Add(Name + TEXT(" (has attached actors that couldn't be deleted)"));
                 }
                 break;
               }

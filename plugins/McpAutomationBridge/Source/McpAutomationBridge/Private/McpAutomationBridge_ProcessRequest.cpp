@@ -340,6 +340,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                                      RequestingSocket);
           }))
         return;
+      // Phase 29: Post-Process & Rendering (MUST be before HandleLightingAction)
+      // This handler is called by HandleLightingAction for ray-tracing/post-process actions
+      if (HandleAndLog(TEXT("HandlePostProcessAction"), [&]() {
+            return HandlePostProcessAction(RequestId, Action, Payload,
+                                           RequestingSocket);
+          }))
+        return;
       if (HandleAndLog(TEXT("HandleLightingAction"), [&]() {
             return HandleLightingAction(RequestId, Action, Payload,
                                         RequestingSocket);
@@ -655,12 +662,6 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
         return;
 
       // Phase 29: Post-Process & Rendering
-      if (HandleAndLog(TEXT("HandlePostProcessAction"), [&]() {
-            return HandlePostProcessAction(RequestId, Action, Payload,
-                                           RequestingSocket);
-          }))
-        return;
-
       // 2. Execution & Build / Test Pipeline
       // NOTE: configure_tools (formerly manage_pipeline) is handled entirely in TS
       if (HandleAndLog(TEXT("HandleTestAction"), [&]() {

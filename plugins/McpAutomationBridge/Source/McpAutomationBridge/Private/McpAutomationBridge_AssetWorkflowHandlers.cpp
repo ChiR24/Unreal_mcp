@@ -21,6 +21,7 @@
 #include "UObject/ObjectRedirector.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #include "ObjectTools.h"
+#include "WidgetBlueprint.h"
 
 #if WITH_EDITOR
 #include "ISourceControlModule.h"
@@ -1462,6 +1463,24 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     Payload->TryGetNumberField(TEXT("height"), Height);
     Width = FMath::Clamp(Width, 32, 1024);
     Height = FMath::Clamp(Height, 32, 1024);
+
+    // UE 5.7 D3D12 CRASH WORKAROUND: Skip thumbnail generation for Widget Blueprints
+    // Widget blueprint thumbnails can corrupt D3D12 rendering state and cause crashes
+    // in D3D12DescriptorCache. See: Fatal error at D3D12DescriptorCache.cpp:733
+    if (Asset->IsA(UWidgetBlueprint::StaticClass()))
+    {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetBoolField(TEXT("success"), true);
+      Result->SetStringField(TEXT("assetPath"), AssetPath);
+      Result->SetNumberField(TEXT("width"), Width);
+      Result->SetNumberField(TEXT("height"), Height);
+      Result->SetBoolField(TEXT("generated"), false);
+      Result->SetStringField(TEXT("skipReason"), TEXT("WidgetBlueprint thumbnails disabled for D3D12 stability"));
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Thumbnail generation skipped for widget blueprint"), Result);
+      return true;
+    }
 
     // Request thumbnail generation/capture
     FObjectThumbnail* Thumbnail = ThumbnailTools::GenerateThumbnailForObjectToSaveToDisk(Asset);

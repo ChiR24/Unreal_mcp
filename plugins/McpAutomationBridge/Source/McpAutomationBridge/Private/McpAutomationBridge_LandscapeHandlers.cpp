@@ -475,16 +475,33 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
       return;
     }
 
+    // Ensure landscape components are registered and initialized
+    // This fixes the INVALID_LANDSCAPE error for newly created landscapes
+    if (Landscape->GetRootComponent() &&
+        !Landscape->GetRootComponent()->IsRegistered()) {
+      Landscape->RegisterAllComponents();
+    }
+    
+    // Force landscape info update to ensure valid extents
+    LandscapeInfo->UpdateLayerInfoMap();
+
     FScopedSlowTask SlowTask(2.0f,
                              FText::FromString(TEXT("Modifying heightmap...")));
     SlowTask.MakeDialog();
 
     int32 MinX, MinY, MaxX, MaxY;
     if (!LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY)) {
-      Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                                     TEXT("Failed to get landscape extent"),
-                                     TEXT("INVALID_LANDSCAPE"));
-      return;
+      // If extent is still not available, the landscape might not be fully initialized
+      // Try to recreate collision components which forces extent calculation
+      Landscape->RecreateCollisionComponents();
+      
+      // Try again after recreating collision
+      if (!LandscapeInfo->GetLandscapeExtent(MinX, MinY, MaxX, MaxY)) {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                       TEXT("Failed to get landscape extent. Landscape may not be fully initialized."),
+                                       TEXT("INVALID_LANDSCAPE"));
+        return;
+      }
     }
 
     SlowTask.EnterProgressFrame(

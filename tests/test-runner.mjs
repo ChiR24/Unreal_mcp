@@ -183,6 +183,21 @@ export function evaluateExpectation(testCase, response) {
     }
   }
 
+  // CRITICAL: Explicit success:false from Unreal should ALWAYS fail unless expecting failure
+  // This prevents false positives where TS receives a response but Unreal reports failure
+  if (response.structuredContent?.success === false) {
+    const explicitlyExpectsFailure = lowerExpected.includes('error') || 
+      lowerExpected.includes('failed') || 
+      lowerExpected.includes('not found') ||
+      containsFailure;
+    if (!explicitlyExpectsFailure) {
+      return {
+        passed: false,
+        reason: `Unreal returned success:false. Error: ${actualError || actualMessage || 'Unknown error'}`
+      };
+    }
+  }
+
   // If expectation is an object with specific pattern constraints, apply them
   if (typeof expectation === 'object' && expectation !== null) {
     // If actual outcome was success, check successPattern

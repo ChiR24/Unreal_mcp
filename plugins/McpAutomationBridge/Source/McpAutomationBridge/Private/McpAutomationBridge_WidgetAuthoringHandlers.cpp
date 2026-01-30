@@ -3918,6 +3918,307 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         return true;
     }
 
+    // =========================================================================
+    // 19.9 Widget Hierarchy Operations (ADDED FOR UE 5.7 STABILITY)
+    // =========================================================================
+
+    // Rename a widget within the widget tree
+    if (SubAction.Equals(TEXT("rename_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString NewName = GetStringField(Payload, TEXT("newName"));
+        
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || NewName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, widgetName, newName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!Widget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found in blueprint"), TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        // Check if new name already exists
+        if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("A widget with the new name already exists"), TEXT("NAME_EXISTS"));
+            return true;
+        }
+
+        // Rename the widget
+        Widget->Rename(*NewName, nullptr, REN_DontCreateRedirectors);
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Renamed widget from '%s' to '%s'"), *WidgetName, *NewName));
+        ResultJson->SetStringField(TEXT("oldName"), WidgetName);
+        ResultJson->SetStringField(TEXT("newName"), NewName);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget renamed successfully"), ResultJson);
+        return true;
+    }
+
+    // Remove a widget from the widget tree
+    if (SubAction.Equals(TEXT("remove_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, widgetName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!Widget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found in blueprint"), TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        // Remove from parent panel if it has one
+        if (Widget->Slot && Widget->Slot->Parent)
+        {
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(Widget->Slot->Parent);
+            if (ParentPanel)
+            {
+                ParentPanel->RemoveChild(Widget);
+            }
+        }
+        else if (WidgetBP->WidgetTree->RootWidget == Widget)
+        {
+            // It's the root widget - clear it
+            WidgetBP->WidgetTree->RootWidget = nullptr;
+        }
+
+        // Mark for destruction
+        Widget->RemoveFromParent();
+        
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Removed widget: %s"), *WidgetName));
+        ResultJson->SetStringField(TEXT("widgetName"), WidgetName);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget removed successfully"), ResultJson);
+        return true;
+    }
+
+    // Duplicate a widget
+    if (SubAction.Equals(TEXT("duplicate_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString NewName = GetStringField(Payload, TEXT("newName"));
+        
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || NewName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, widgetName, newName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* SourceWidget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!SourceWidget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Source widget not found in blueprint"), TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        // Check if new name already exists
+        if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)))
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("A widget with the new name already exists"), TEXT("NAME_EXISTS"));
+            return true;
+        }
+
+        // Duplicate the widget
+        UWidget* DuplicatedWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(SourceWidget->GetClass(), FName(*NewName));
+        if (!DuplicatedWidget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to duplicate widget"), TEXT("DUPLICATION_FAILED"));
+            return true;
+        }
+
+        // Add to the same parent as the source widget
+        if (SourceWidget->Slot && SourceWidget->Slot->Parent)
+        {
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(SourceWidget->Slot->Parent);
+            if (ParentPanel)
+            {
+                ParentPanel->AddChild(DuplicatedWidget);
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Duplicated widget '%s' as '%s'"), *WidgetName, *NewName));
+        ResultJson->SetStringField(TEXT("sourceWidget"), WidgetName);
+        ResultJson->SetStringField(TEXT("newWidget"), NewName);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget duplicated successfully"), ResultJson);
+        return true;
+    }
+
+    // Move a widget to a different parent
+    if (SubAction.Equals(TEXT("move_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        FString NewParent = GetStringField(Payload, TEXT("newParent"));
+        
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty() || NewParent.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, widgetName, newParent"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!Widget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found in blueprint"), TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*NewParent));
+        if (!ParentWidget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("New parent widget not found"), TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
+
+        UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+        if (!ParentPanel)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("New parent is not a container widget"), TEXT("INVALID_PARENT"));
+            return true;
+        }
+
+        // Remove from current parent first
+        if (Widget->Slot && Widget->Slot->Parent)
+        {
+            UPanelWidget* CurrentParent = Cast<UPanelWidget>(Widget->Slot->Parent);
+            if (CurrentParent)
+            {
+                CurrentParent->RemoveChild(Widget);
+            }
+        }
+
+        // Add to new parent
+        ParentPanel->AddChild(Widget);
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Moved widget '%s' to '%s'"), *WidgetName, *NewParent));
+        ResultJson->SetStringField(TEXT("widgetName"), WidgetName);
+        ResultJson->SetStringField(TEXT("newParent"), NewParent);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget moved successfully"), ResultJson);
+        return true;
+    }
+
+    // Reorder a widget within its parent
+    if (SubAction.Equals(TEXT("reorder_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetStringField(Payload, TEXT("widgetPath"));
+        FString WidgetName = GetStringField(Payload, TEXT("widgetName"));
+        int32 NewIndex = static_cast<int32>(GetNumberField(Payload, TEXT("newIndex"), 0));
+        
+        if (WidgetPath.IsEmpty() || WidgetName.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, widgetName"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
+        if (!Widget)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found in blueprint"), TEXT("WIDGET_NOT_FOUND"));
+            return true;
+        }
+
+        if (!Widget->Slot || !Widget->Slot->Parent)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget has no parent to reorder within"), TEXT("NO_PARENT"));
+            return true;
+        }
+
+        UPanelWidget* ParentPanel = Cast<UPanelWidget>(Widget->Slot->Parent);
+        if (!ParentPanel)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Parent is not a container widget"), TEXT("INVALID_PARENT"));
+            return true;
+        }
+
+        // Get current slot index and move to new index
+        int32 CurrentIndex = ParentPanel->GetChildIndex(Widget);
+        if (CurrentIndex != INDEX_NONE)
+        {
+            // Clamp the new index to valid range
+            int32 MaxIndex = ParentPanel->GetChildrenCount() - 1;
+            NewIndex = FMath::Clamp(NewIndex, 0, MaxIndex);
+            
+            if (CurrentIndex != NewIndex)
+            {
+                // ShiftChild signature: ShiftChild(int32 Index, UWidget* Child)
+                // We need to pass the widget pointer, not the index
+                ParentPanel->ShiftChild(NewIndex, Widget);
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Reordered widget '%s' to index %d"), *WidgetName, NewIndex));
+        ResultJson->SetStringField(TEXT("widgetName"), WidgetName);
+        ResultJson->SetNumberField(TEXT("newIndex"), NewIndex);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget reordered successfully"), ResultJson);
+        return true;
+    }
+
     // Action not recognized
     SendAutomationError(RequestingSocket, RequestId, 
         FString::Printf(TEXT("Widget authoring subAction not implemented: %s"), *SubAction), 

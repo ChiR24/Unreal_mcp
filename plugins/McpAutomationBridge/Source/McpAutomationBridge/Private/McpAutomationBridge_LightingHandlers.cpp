@@ -895,8 +895,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       // Set the action field to the lowercase action name
       WrapperPayload->SetStringField(TEXT("action"), Lower);
       
-      // Delegate to PostProcessAction handler with manage_post_process action
-      return HandlePostProcessAction(RequestId, TEXT("manage_post_process"), WrapperPayload, RequestingSocket);
+       // Delegate to PostProcessAction handler with ORIGINAL action name (manage_lighting)
+       // to ensure response action matches the request tool name
+       return HandlePostProcessAction(RequestId, Action, WrapperPayload, RequestingSocket);
   }
   // ========================================================================
   // MegaLights (UE 5.7+)
