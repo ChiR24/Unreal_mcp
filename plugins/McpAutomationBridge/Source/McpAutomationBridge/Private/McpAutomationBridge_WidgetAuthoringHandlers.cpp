@@ -183,24 +183,23 @@ namespace WidgetAuthoringHelpers
         }
         
         // Method 3: Asset Registry lookup (Promoted from Method 4)
+        // This is the safest method - it checks if asset exists without triggering a load
+        // that could cause D3D12 crashes during thumbnail generation for missing assets
         IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
         FAssetData AssetData = Registry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
-        if (AssetData.IsValid())
+        if (AssetData.IsValid() && AssetData.AssetClassPath.ToString().Contains(TEXT("WidgetBlueprint")))
         {
+            // Asset exists in registry, now safe to load it
             if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(AssetData.GetAsset()))
             {
                 return WB;
             }
         }
         
-        // Method 4: StaticLoadObject with object path (for disk assets) (Promoted from Method 5)
-        if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *ObjectPath)))
-        {
-            return WB;
-        }
-        
-        // Method 5: StaticLoadObject with package path (Promoted from Method 6)
-        return Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *PackagePath));
+        // Asset not found in registry - don't attempt StaticLoadObject as it can trigger
+        // D3D12 crashes during thumbnail generation for non-existent assets
+        // Return nullptr and let the handler send a proper NOT_FOUND error
+        return nullptr;
     }
 
     // Get color from JSON object
