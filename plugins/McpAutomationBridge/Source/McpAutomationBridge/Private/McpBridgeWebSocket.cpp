@@ -331,13 +331,13 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
     StopEvent->Trigger();
   }
 
-  // Close and destroy the listen socket FIRST to unblock Accept() in RunServer()
-  // This is critical for clean shutdown - without this, the server thread hangs
-  // indefinitely waiting for connections during editor shutdown or cook/package.
+  // Close the listen socket to unblock Accept() in RunServer().
+  // IMPORTANT: We only close here, NOT destroy. RunServer() owns the socket and
+  // will destroy it after its loop exits. This avoids a TOCTOU race where we
+  // destroy the socket while RunServer() is between checking ListenSocket and
+  // calling Accept().
   if (ListenSocket) {
     ListenSocket->Close();
-    ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(ListenSocket);
-    ListenSocket = nullptr;
   }
 
   // Close any client sockets that were accepted by this server
@@ -552,10 +552,10 @@ uint32 FMcpBridgeWebSocket::RunServer() {
 
   while (!bStopping && ListenSocket) {
     // Note: Accept() blocks until a connection arrives or the socket is closed.
-    // Close() destroys ListenSocket to unblock this call during shutdown.
+    // Close() calls ListenSocket->Close() to unblock this call during shutdown.
+    // This thread owns ListenSocket destruction (done after loop exits).
     FSocket *ClientSocket =
-        ListenSocket ? ListenSocket->Accept(TEXT("McpAutomationBridgeClient"))
-                     : nullptr;
+        ListenSocket->Accept(TEXT("McpAutomationBridgeClient"));
     
     // Check again after Accept() returns - socket may have been closed
     if (bStopping || !ListenSocket) {
