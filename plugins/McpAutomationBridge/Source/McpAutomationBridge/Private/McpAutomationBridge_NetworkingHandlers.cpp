@@ -12,6 +12,7 @@
 // - Utility (info queries)
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
