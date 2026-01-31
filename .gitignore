@@ -70,3 +70,4 @@ plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
 .opencode/
 .sisyphus/
 plugins/McpAutomationBridge/generate_compile_commands.bat
+tests/category-tests/chunks/
