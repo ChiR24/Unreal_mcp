@@ -341,14 +341,16 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
   }
 
   // Close any client sockets that were accepted by this server
+  TArray<TSharedPtr<FMcpBridgeWebSocket>> SocketsToClose;
   {
     FScopeLock Lock(&ClientSocketsMutex);
-    for (TSharedPtr<FMcpBridgeWebSocket> &ClientSock : ClientSockets) {
-      if (ClientSock.IsValid()) {
-        ClientSock->Close(StatusCode, Reason);
-      }
+    SocketsToClose = MoveTemp(ClientSockets);
+  }
+
+  for (TSharedPtr<FMcpBridgeWebSocket>& ClientSock : SocketsToClose) {
+    if (ClientSock.IsValid()) {
+      ClientSock->Close(StatusCode, Reason);
     }
-    ClientSockets.Empty();
   }
 
   // Close the main socket (for client connections)
