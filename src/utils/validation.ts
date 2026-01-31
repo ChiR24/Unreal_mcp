@@ -300,6 +300,21 @@ export function ensureVector3(value: unknown, label: string): [number, number, n
 }
 
 /**
+ * Sanitize a string for use as a command identifier or path argument.
+ * Strictly allows only alphanumeric characters, underscores, hyphens, periods, and forward slashes.
+ * Replaces any other character with an underscore.
+ * @param input The input string
+ * @returns Sanitized string
+ */
+export function sanitizeCommandArgument(input: string): string {
+  if (!input) return '';
+  // Allow alphanum, -, _, ., /
+  // Replace anything else with _
+  // eslint-disable-next-line no-useless-escape
+  return input.replace(/[^a-zA-Z0-9\-_\.\/]/g, '_');
+}
+
+/**
  * Sanitize a string for use in a console command argument.
  * Replaces double quotes with single quotes to prevent breaking out of string arguments.
  * Also removes newlines.
