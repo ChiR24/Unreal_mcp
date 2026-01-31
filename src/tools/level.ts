@@ -3,6 +3,7 @@ import { ILevelTools, StandardActionResponse } from '../types/tool-interfaces.js
 import { LevelResponse } from '../types/automation-responses.js';
 import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 import { sanitizePath } from '../utils/path-security.js';
+import { sanitizeCommandArgument } from '../utils/validation.js';
 import {
   DEFAULT_OPERATION_TIMEOUT_MS,
   DEFAULT_ASSET_OP_TIMEOUT_MS,
@@ -812,7 +813,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
     } catch (_error) {
       // Fallback to console command
       const levelIdentifier = levelName ?? levelPath ?? '';
-      const simpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
+      const rawSimpleName = levelIdentifier.split('/').filter(Boolean).pop() || levelIdentifier;
+      const simpleName = sanitizeCommandArgument(rawSimpleName);
       const loadCmd = params.shouldBeLoaded ? 'Load' : 'Unload';
       const visCmd = shouldBeVisible ? 'Show' : 'Hide';
       const command = `StreamLevel ${simpleName} ${loadCmd} ${visCmd}`;
@@ -854,7 +856,8 @@ export class LevelTools extends BaseTool implements ILevelTools {
       connections?: string[];
     }>;
   }): Promise<StandardActionResponse> {
-    const command = `OpenLevelBlueprint ${params.eventType}`;
+    // strict validation for eventType is redundant due to type definition but safe to sanitize for runtime injection
+    const command = `OpenLevelBlueprint ${sanitizeCommandArgument(params.eventType)}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -863,7 +866,10 @@ export class LevelTools extends BaseTool implements ILevelTools {
     type: 'Persistent' | 'Streaming' | 'Lighting' | 'Gameplay';
     parent?: string;
   }): Promise<StandardActionResponse> {
-    const command = `CreateSubLevel ${params.name} ${params.type} ${params.parent || 'None'}`;
+    const sanitizedName = sanitizeCommandArgument(params.name);
+    const sanitizedType = sanitizeCommandArgument(params.type);
+    const sanitizedParent = params.parent ? sanitizeCommandArgument(params.parent) : 'None';
+    const command = `CreateSubLevel ${sanitizedName} ${sanitizedType} ${sanitizedParent}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -883,10 +889,10 @@ export class LevelTools extends BaseTool implements ILevelTools {
       commands.push(`SetWorldToMeters ${params.worldScale}`);
     }
     if (params.gameMode) {
-      commands.push(`SetGameMode ${params.gameMode}`);
+      commands.push(`SetGameMode ${sanitizeCommandArgument(params.gameMode)}`);
     }
     if (params.defaultPawn) {
-      commands.push(`SetDefaultPawn ${params.defaultPawn}`);
+      commands.push(`SetDefaultPawn ${sanitizeCommandArgument(params.defaultPawn)}`);
     }
     if (params.killZ !== undefined) {
       commands.push(`SetKillZ ${params.killZ}`);
@@ -958,7 +964,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     levelName: string;
     visible: boolean;
   }): Promise<StandardActionResponse> {
-    const command = `SetLevelVisibility ${params.levelName} ${params.visible}`;
+    const command = `SetLevelVisibility ${sanitizeCommandArgument(params.levelName)} ${params.visible}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -975,7 +981,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     size: [number, number, number];
     streamingDistance?: number;
   }): Promise<StandardActionResponse> {
-    const command = `CreateStreamingVolume ${params.levelName} ${params.position.join(' ')} ${params.size.join(' ')} ${params.streamingDistance || 0}`;
+    const command = `CreateStreamingVolume ${sanitizeCommandArgument(params.levelName)} ${params.position.join(' ')} ${params.size.join(' ')} ${params.streamingDistance || 0}`;
     return this.bridge.executeConsoleCommand(command);
   }
 
@@ -984,7 +990,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
     lodLevel: number;
     distance: number;
   }): Promise<StandardActionResponse> {
-    const command = `SetLevelLOD ${params.levelName} ${params.lodLevel} ${params.distance}`;
+    const command = `SetLevelLOD ${sanitizeCommandArgument(params.levelName)} ${params.lodLevel} ${params.distance}`;
     return this.bridge.executeConsoleCommand(command);
   }
 }
