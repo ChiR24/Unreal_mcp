@@ -19,6 +19,8 @@
 // CRITICAL FIX: Add headers for thread checking and streaming
 #include "HAL/PlatformProcess.h"
 #include "HAL/RunnableThread.h"
+#include "HAL/FileManager.h"      // For file operations
+#include "HAL/PlatformFileManager.h"  // For FPlatformFileManager
 #include "RenderAssetUpdate.h"
 #include "ContentStreaming.h"  // For IStreamingManager in UE 5.7
 
@@ -81,6 +83,59 @@ static void McpSyncGPUForWorldPartitionSave()
 	
 	// Wait for the fence to signal (ensures GPU work is complete)
 	Fence.Wait();
+}
+
+/**
+ * Cleans up World Partition external actor folders before saving.
+ * This prevents "Unable to delete existing actor packages" errors.
+ * 
+ * @param SavePath The target package path (e.g., /Game/Maps/MyLevel)
+ * @return true if cleanup succeeded or wasn't needed, false if cleanup failed
+ */
+static bool McpCleanupWorldPartitionExternalActors(const FString& SavePath)
+{
+    FString TargetFilename;
+    if (!FPackageName::TryConvertLongPackageNameToFilename(
+            SavePath, TargetFilename, FPackageName::GetMapPackageExtension())) {
+        return true; // Not a valid package path, nothing to clean
+    }
+
+    const FString BaseDir = FPaths::GetPath(TargetFilename);
+    const FString BaseName = FPaths::GetBaseFilename(TargetFilename);
+    bool bAllSucceeded = true;
+    
+    // Get the platform file interface
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+    // Clean up __ExternalActors__
+    FString ExternalActorsPath = BaseDir / TEXT("__ExternalActors__") / BaseName;
+    if (PlatformFile.DirectoryExists(*ExternalActorsPath)) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+               TEXT("McpCleanupWorldPartitionExternalActors: Removing %s"), 
+               *ExternalActorsPath);
+        if (!PlatformFile.DeleteDirectoryRecursively(*ExternalActorsPath)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                   TEXT("McpCleanupWorldPartitionExternalActors: Failed to delete %s"), 
+                   *ExternalActorsPath);
+            bAllSucceeded = false;
+        }
+    }
+
+    // Clean up __ExternalObjects__ (the problematic folder for saves)
+    FString ExternalObjectsPath = BaseDir / TEXT("__ExternalObjects__") / BaseName;
+    if (PlatformFile.DirectoryExists(*ExternalObjectsPath)) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+               TEXT("McpCleanupWorldPartitionExternalActors: Removing %s"), 
+               *ExternalObjectsPath);
+        if (!PlatformFile.DeleteDirectoryRecursively(*ExternalObjectsPath)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                   TEXT("McpCleanupWorldPartitionExternalActors: Failed to delete %s"), 
+                   *ExternalObjectsPath);
+            bAllSucceeded = false;
+        }
+    }
+
+    return bAllSucceeded;
 }
 #endif
 
@@ -380,10 +435,19 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Level is Untitled/Temp, but savePath provided. Redirecting to save_level_as."));
         
         McpSyncGPUForWorldPartitionSave();
+        
+        // CRITICAL FIX: Suppress modal dialogs and clean up external actors
+        FModalDialogSuppressor DialogSuppressor;
+        McpCleanupWorldPartitionExternalActors(SavePath);
+        
 #if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
         if (ULevelEditorSubsystem *LevelEditorSS = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
           bool bSaved = false;
 #if __has_include("FileHelpers.h")
+          // Force garbage collection to release file handles before save
+          GEditor->ForceGarbageCollection(true);
+          FPlatformProcess::Sleep(0.1f);
+          
           bSaved = FEditorFileUtils::SaveMap(World, SavePath);
 #endif
           McpSyncGPUForWorldPartitionSave();
@@ -521,13 +585,87 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     if (ULevelEditorSubsystem *LevelEditorSS =
             GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
       bool bSaved = false;
+      FString ErrorMessage;
+      
 #if __has_include("FileHelpers.h")
       if (UWorld *World = GetActiveWorld()) {
+        // CRITICAL FIX: Suppress modal dialogs during save to prevent automation breakage
+        FModalDialogSuppressor DialogSuppressor;
+        
         // UE 5.7: Streaming management is automatic. Ensure all pending streaming
         // requests are processed before saving to avoid conflicts.
-        IStreamingManager::Get().BlockTillAllRequestsFinished(5.0f, false);
+        // CRITICAL: Only call if asset streaming is not suspended to avoid ensure() failures
+        if (!IsAssetStreamingSuspended()) {
+          IStreamingManager::Get().BlockTillAllRequestsFinished(5.0f, false);
+        } else {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose, 
+                 TEXT("save_level_as: Asset streaming is suspended, skipping BlockTillAllRequestsFinished"));
+        }
 
-        bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+        // CRITICAL FIX: Check if target exists and clean up World Partition external actors
+        // to prevent "Unable to delete existing actor packages" modal dialog
+        FString TargetFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(
+                SavePath, TargetFilename, FPackageName::GetMapPackageExtension())) {
+          
+          // Check if file exists
+          if (IFileManager::Get().FileExists(*TargetFilename)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+                   TEXT("save_level_as: Target exists, cleaning up World Partition external actors: %s"), 
+                   *SavePath);
+            
+            // Clean up external actor folders before SaveMap tries to do it
+            McpCleanupWorldPartitionExternalActors(SavePath);
+            
+            // Force garbage collection to release any file handles
+            GEditor->ForceGarbageCollection(true);
+            
+            // Small delay to let file system settle
+            FPlatformProcess::Sleep(0.1f);
+          }
+        }
+
+        // CRITICAL: Check if asset streaming is suspended before SaveMap
+        // SaveMap internally calls BlockTillAllRequestsFinished which causes ensure() failure
+        // when streaming is already suspended (e.g., during another save operation)
+        // Wait up to 5 seconds for streaming to resume before attempting save
+        if (IsAssetStreamingSuspended()) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                 TEXT("save_level_as: Asset streaming is suspended, waiting for it to resume..."));
+          
+          float WaitTime = 0.0f;
+          const float MaxWaitTime = 5.0f;
+          const float SleepInterval = 0.1f;
+          
+          while (IsAssetStreamingSuspended() && WaitTime < MaxWaitTime) {
+            FPlatformProcess::Sleep(SleepInterval);
+            WaitTime += SleepInterval;
+          }
+          
+          if (IsAssetStreamingSuspended()) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, 
+                   TEXT("save_level_as: Asset streaming still suspended after %fs, cannot save"), MaxWaitTime);
+            ErrorMessage = TEXT("Asset streaming is suspended - cannot save while another streaming operation is in progress");
+            bSaved = false;
+          } else {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+                   TEXT("save_level_as: Asset streaming resumed after %fs, proceeding with save"), WaitTime);
+          }
+        }
+        
+        // Only attempt save if we haven't already marked it as failed
+        if (ErrorMessage.IsEmpty()) {
+          // Attempt the save
+          bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+          
+          if (!bSaved) {
+            ErrorMessage = TEXT("SaveMap returned false - check Output Log for details");
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+                   TEXT("save_level_as: SaveMap failed for %s"), *SavePath);
+          }
+        }
+      } else {
+        ErrorMessage = TEXT("No active world to save");
       }
 #endif
       // POST-SAVE GPU sync: SaveMap triggers async thumbnail generation which
@@ -542,12 +680,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("levelPath"), SavePath);
       Resp->SetBoolField(TEXT("success"), bSaved);
+      if (!ErrorMessage.IsEmpty()) {
+        Resp->SetStringField(TEXT("error"), ErrorMessage);
+      }
       
       // Capture for deferred response
       TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf = this;
       const FString CapturedRequestId = RequestId;
       const bool bCapturedSaved = bSaved;
       const FString CapturedSavePath = SavePath;
+      const FString CapturedError = ErrorMessage;
       TSharedPtr<FMcpBridgeWebSocket> CapturedSocket = RequestingSocket;
       TSharedPtr<FJsonObject> CapturedResp = Resp;
       
@@ -555,7 +697,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       if (GEditor)
       {
         FTimerDelegate ResponseDelegate;
-        ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, bCapturedSaved, CapturedSavePath, CapturedResp]()
+        ResponseDelegate.BindLambda([WeakSelf, CapturedSocket, CapturedRequestId, 
+                                     bCapturedSaved, CapturedSavePath, CapturedResp, CapturedError]()
         {
           if (UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get())
           {
@@ -564,9 +707,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                                  FString::Printf(TEXT("Level saved as %s"), *CapturedSavePath),
                                  CapturedResp, FString());
             } else {
+              TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+              ErrorDetail->SetStringField(TEXT("attemptedPath"), CapturedSavePath);
+              ErrorDetail->SetStringField(TEXT("reason"), CapturedError.IsEmpty() ? 
+                                          TEXT("Save operation failed") : CapturedError);
+              ErrorDetail->SetStringField(TEXT("hint"), 
+                                          TEXT("For World Partition levels, ensure external actor folders are writable"));
               Self->SendAutomationResponse(CapturedSocket, CapturedRequestId, false,
-                                 TEXT("Failed to save level as"), nullptr,
-                                 TEXT("SAVE_FAILED"));
+                                 FString::Printf(TEXT("Failed to save level as: %s"), 
+                                 CapturedError.IsEmpty() ? TEXT("Unknown error") : *CapturedError),
+                                 ErrorDetail, TEXT("SAVE_FAILED"));
             }
           }
         });
@@ -584,9 +734,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
               FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
               FString());
         } else {
+          TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+          ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
+          ErrorDetail->SetStringField(TEXT("reason"), ErrorMessage.IsEmpty() ? 
+                                      TEXT("Save operation failed") : *ErrorMessage);
+          ErrorDetail->SetStringField(TEXT("hint"), 
+                                      TEXT("For World Partition levels, ensure external actor folders are writable"));
           SendAutomationResponse(RequestingSocket, RequestId, false,
-                                 TEXT("Failed to save level as"), nullptr,
-                                 TEXT("SAVE_FAILED"));
+                                 FString::Printf(TEXT("Failed to save level as: %s"), 
+                                 ErrorMessage.IsEmpty() ? TEXT("Unknown error") : *ErrorMessage),
+                                 ErrorDetail, TEXT("SAVE_FAILED"));
         }
       }
       return true;
@@ -1252,9 +1409,36 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     // Save the new sublevel
     // UE 5.7: Streaming management is automatic. Ensure all pending streaming
     // requests are processed before saving to avoid conflicts.
+    // CRITICAL: Check if asset streaming is suspended and wait for it to resume
+    bool bSaved = false;
+    if (IsAssetStreamingSuspended()) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+             TEXT("create_sublevel: Asset streaming is suspended, waiting for it to resume..."));
+      
+      float WaitTime = 0.0f;
+      const float MaxWaitTime = 5.0f;
+      const float SleepInterval = 0.1f;
+      
+      while (IsAssetStreamingSuspended() && WaitTime < MaxWaitTime) {
+        FPlatformProcess::Sleep(SleepInterval);
+        WaitTime += SleepInterval;
+      }
+      
+      if (IsAssetStreamingSuspended()) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, 
+               TEXT("create_sublevel: Asset streaming still suspended after %fs, cannot save"), MaxWaitTime);
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Asset streaming is suspended - cannot save while another streaming operation is in progress"), 
+                               nullptr, TEXT("SAVE_FAILED"));
+        return true;
+      } else {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, 
+               TEXT("create_sublevel: Asset streaming resumed after %fs, proceeding with save"), WaitTime);
+      }
+    }
+    
     IStreamingManager::Get().BlockTillAllRequestsFinished(5.0f, false);
-
-    bool bSaved = FEditorFileUtils::SaveMap(NewWorld, SublevelPath);
+    bSaved = FEditorFileUtils::SaveMap(NewWorld, SublevelPath);
     
     if (!bSaved) {
       SendAutomationResponse(RequestingSocket, RequestId, false,

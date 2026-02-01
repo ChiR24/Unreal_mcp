@@ -463,7 +463,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
   SendAutomationError(
       Socket, RequestId,
-      FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
+      FString::Printf(TEXT("Unknown material_graph subAction: %s"), *SubAction),
       TEXT("INVALID_SUBACTION"));
   return true;
 #else

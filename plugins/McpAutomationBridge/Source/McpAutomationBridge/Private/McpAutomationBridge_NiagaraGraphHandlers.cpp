@@ -268,7 +268,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         return true;
     }
 
-    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown niagara_graph subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;
 #else
     SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));

@@ -37,6 +37,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(const FString& RequestId, 
         return true;
     }
 
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown debug subAction: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 }

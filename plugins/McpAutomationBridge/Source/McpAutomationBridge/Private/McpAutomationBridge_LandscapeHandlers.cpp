@@ -1199,13 +1199,36 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
 
     GrassType->GrassVarieties.Add(Variety);
 
-    McpSafeAssetSave(GrassType);
+    // Verify asset was saved successfully
+    // McpSafeAssetSave returns true if the asset was marked dirty successfully
+    bool bSaveSuccess = McpSafeAssetSave(GrassType);
+    
+    // Additional verification: check if the asset exists and is valid
+    bool bAssetExists = false;
+    if (bSaveSuccess && GrassType) {
+      // Try to find the asset in the package
+      UObject* VerifyAsset = StaticLoadObject(
+          ULandscapeGrassType::StaticClass(), nullptr, *FullPackagePath, nullptr, LOAD_NoWarn);
+      bAssetExists = (VerifyAsset != nullptr);
+    }
+    
+    if (!bSaveSuccess || !bAssetExists) {
+      FString ErrorMsg = !bSaveSuccess 
+          ? TEXT("Failed to save grass type asset (package may be Untitled)")
+          : TEXT("Asset creation succeeded but verification failed");
+      FString ErrorCode = !bSaveSuccess ? TEXT("SAVE_FAILED") : TEXT("VERIFICATION_FAILED");
+      Subsystem->SendAutomationError(RequestingSocket, RequestId, ErrorMsg, ErrorCode);
+      return;
+    }
+    
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("asset_path"), GrassType->GetPathName());
+    Resp->SetBoolField(TEXT("assetSaved"), true);
+    Resp->SetBoolField(TEXT("assetVerified"), bAssetExists);
 
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                      TEXT("Landscape grass type created"),
+                                      TEXT("Landscape grass type created and saved successfully"),
                                       Resp, FString());
   });
 

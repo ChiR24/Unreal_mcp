@@ -1,10 +1,11 @@
 /**
  * Unit tests for validation utility functions
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     sanitizeAssetName,
     sanitizePath,
+    sanitizePathSafe,
     validatePathLength,
     validateAssetParams,
     validateNumber,
@@ -178,5 +179,92 @@ describe('ensureRotation', () => {
 
     it('throws on invalid input', () => {
         expect(() => ensureRotation('invalid', 'rotation')).toThrow();
+    });
+});
+
+describe('sanitizePathSafe', () => {
+    it('accepts valid Unreal paths', () => {
+        const result = sanitizePathSafe('/Game/MyAsset');
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.path).toBe('/Game/MyAsset');
+        }
+    });
+
+    it('rejects empty paths', () => {
+        const result = sanitizePathSafe('');
+        expect(result.success).toBe(false);
+    });
+
+    it('rejects path traversal attempts', () => {
+        const result = sanitizePathSafe('/Game/../MyAsset');
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error).toContain('traversal');
+        }
+    });
+
+    it('rejects paths outside allowed roots', () => {
+        const result = sanitizePathSafe('/InvalidPath/MyAsset');
+        expect(result.success).toBe(false);
+    });
+
+    describe('Windows absolute paths in test mode', () => {
+        const originalEnv = process.env.MCP_TEST_MODE;
+
+        beforeEach(() => {
+            process.env.MCP_TEST_MODE = 'true';
+        });
+
+        afterEach(() => {
+            process.env.MCP_TEST_MODE = originalEnv;
+        });
+
+        it('accepts Windows absolute paths when MCP_TEST_MODE=true', () => {
+            const result = sanitizePathSafe('C:/Temp/landscape_export');
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.path).toBe('C:/Temp/landscape_export');
+            }
+        });
+
+        it('accepts Windows paths with backslashes when MCP_TEST_MODE=true', () => {
+            const result = sanitizePathSafe('C:\\Temp\\landscape_export');
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.path).toBe('C:/Temp/landscape_export');
+            }
+        });
+
+        it('accepts different drive letters when MCP_TEST_MODE=true', () => {
+            const result = sanitizePathSafe('D:/Test/export');
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.path).toBe('D:/Test/export');
+            }
+        });
+    });
+
+    describe('Windows absolute paths in production mode', () => {
+        const originalEnv = process.env.MCP_TEST_MODE;
+
+        beforeEach(() => {
+            process.env.MCP_TEST_MODE = 'false';
+        });
+
+        afterEach(() => {
+            process.env.MCP_TEST_MODE = originalEnv;
+        });
+
+        it('rejects Windows absolute paths when MCP_TEST_MODE=false', () => {
+            const result = sanitizePathSafe('C:/Temp/landscape_export');
+            expect(result.success).toBe(false);
+        });
+
+        it('rejects Windows paths when MCP_TEST_MODE is undefined', () => {
+            delete process.env.MCP_TEST_MODE;
+            const result = sanitizePathSafe('C:/Temp/landscape_export');
+            expect(result.success).toBe(false);
+        });
     });
 });

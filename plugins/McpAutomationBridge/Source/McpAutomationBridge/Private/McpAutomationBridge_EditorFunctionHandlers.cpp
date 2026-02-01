@@ -559,6 +559,8 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
           QualityEnum = ELightingBuildQuality::Quality_Medium;
         } else if (LowerQuality == TEXT("high")) {
           QualityEnum = ELightingBuildQuality::Quality_High;
+        } else if (LowerQuality == TEXT("production")) {
+          QualityEnum = ELightingBuildQuality::Quality_Production;
         } else {
           TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
           Err->SetBoolField(TEXT("success"), false);

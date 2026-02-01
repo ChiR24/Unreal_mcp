@@ -131,6 +131,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(const FString& RequestId, co
         return true;
     }
 
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown log subAction: %s"), *Action), TEXT("UNKNOWN_ACTION"));
     return true;
 }

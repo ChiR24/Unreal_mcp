@@ -306,6 +306,10 @@ const manageLightingTests = [
 // BUILD_ENVIRONMENT (58 actions) - ~116 test cases
 // ============================================================================
 const buildEnvironmentTests = [
+  // === SETUP: Create Required Test Assets ===
+  // Create TestFoliage asset for foliage tests
+  { scenario: 'SETUP: Create TestFoliage asset', toolName: 'build_environment', arguments: { action: 'add_foliage_type', foliageTypeName: 'TestFoliage', path: '/Game/Foliage/TestFoliage', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success|already exists' },
+  
   // === Landscape (20 actions) ===
   // create_landscape
   { scenario: 'Environment: create_landscape success', toolName: 'build_environment', arguments: { action: 'create_landscape', name: 'Landscape_Test', location: { x: 0, y: 0, z: 0 } }, expected: 'success|already exists' },
@@ -543,6 +547,10 @@ const buildEnvironmentTests = [
 // MANAGE_VOLUMES (41 actions) - ~82 test cases
 // ============================================================================
 const manageVolumesTests = [
+  // === SETUP: Create Required Test Assets ===
+  // Create SplineMeshBP blueprint for spline mesh component tests
+  { scenario: 'SETUP: Create SplineMeshBP blueprint', toolName: 'manage_asset', arguments: { action: 'create_blueprint', path: '/Game/Blueprints/SplineMeshBP', parentClass: 'Actor', name: 'SplineMeshBP' }, expected: 'success|already exists' },
+  
   // === Trigger Volumes (4 actions) ===
   // create_trigger_volume
   { scenario: 'Volumes: create_trigger_volume success', toolName: 'manage_volumes', arguments: { action: 'create_trigger_volume', volumeName: 'TriggerVol_Test', location: { x: 0, y: 0, z: 100 }, extent: { x: 200, y: 200, z: 200 } }, expected: 'success' },

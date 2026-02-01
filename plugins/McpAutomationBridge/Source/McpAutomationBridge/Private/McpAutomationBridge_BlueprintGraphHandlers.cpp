@@ -432,7 +432,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     return true;
   }
 
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
+  SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown blueprint graph subAction: %s"), *Action), TEXT("UNKNOWN_ACTION"));
   return true;
 #else
   SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));

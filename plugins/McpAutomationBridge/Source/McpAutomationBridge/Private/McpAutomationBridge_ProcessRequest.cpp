@@ -160,12 +160,22 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       // ---------------------------------------------------------
       // Check Handler Registry (O(1) dispatch)
       // ---------------------------------------------------------
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("ProcessAutomationRequest: Looking up handler for Action='%s' in registry (count=%d)"),
+             *Action, AutomationHandlers.Num());
       if (const FAutomationHandler *Handler = AutomationHandlers.Find(Action)) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+               TEXT("ProcessAutomationRequest: Found handler for Action='%s' in registry, dispatching..."),
+               *Action);
         if (HandleAndLog(*Action, [&]() {
               return (*Handler)(RequestId, Action, Payload, RequestingSocket);
             })) {
           return;
         }
+      } else {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+               TEXT("ProcessAutomationRequest: No handler found in registry for Action='%s', falling through to linear dispatch"),
+               *Action);
       }
 
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,

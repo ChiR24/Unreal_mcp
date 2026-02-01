@@ -495,7 +495,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
   SendAutomationError(
       RequestingSocket, RequestId,
-      FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
+      FString::Printf(TEXT("Unknown behavior_tree subAction: %s"), *SubAction),
       TEXT("INVALID_SUBACTION"));
   return true;
 #else

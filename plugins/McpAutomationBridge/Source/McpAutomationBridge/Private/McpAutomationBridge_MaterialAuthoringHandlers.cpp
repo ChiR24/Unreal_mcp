@@ -3467,7 +3467,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   // Unknown subAction
   SendAutomationError(
       Socket, RequestId,
-      FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
+      FString::Printf(TEXT("Unknown material_authoring subAction: %s"), *SubAction),
       TEXT("NOT_IMPLEMENTED"));
   return true;
 #else

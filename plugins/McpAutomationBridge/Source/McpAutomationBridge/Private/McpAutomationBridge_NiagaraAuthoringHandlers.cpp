@@ -2642,7 +2642,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     }
 
     // Unknown subAction
-    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown niagara_authoring subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;
 
 #else

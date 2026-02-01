@@ -180,7 +180,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         return true;
     }
 
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
+    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown render subAction: %s"), *Action), TEXT("UNKNOWN_ACTION"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("Render management requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));

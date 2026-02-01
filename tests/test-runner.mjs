@@ -20,6 +20,16 @@ let serverArgs = process.env.UNREAL_MCP_SERVER_ARGS ? process.env.UNREAL_MCP_SER
 const serverCwd = process.env.UNREAL_MCP_SERVER_CWD ?? repoRoot;
 const serverEnv = Object.assign({}, process.env);
 
+// Allow test paths for snapshot operations (semicolon-separated list)
+// This enables tests to use paths like C:\Temp for export/import snapshot operations
+// Paths should use forward slashes for cross-platform compatibility
+const testAllowedPaths = [
+  process.env.MCP_TEST_ALLOWED_PATHS,
+  'C:/Temp',
+  '/tmp',
+].filter(Boolean).join(';');
+serverEnv.MCP_TEST_ALLOWED_PATHS = testAllowedPaths;
+
 const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
 const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
 

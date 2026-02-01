@@ -2613,10 +2613,18 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   }
 
   // If we reach here, the subAction was not recognized by this handler
-  // Return false to allow other handlers to try processing this request
-  return false;
+  // CRITICAL FIX: Return true (consumed) with error response instead of false.
+  // This prevents the request from falling through to other handlers (like volume handler)
+  // which would incorrectly handle it and produce confusing error messages.
+  SendAutomationError(RequestingSocket, RequestId,
+                      FString::Printf(TEXT("Unknown manage_asset subAction: %s"), *LowerSubAction),
+                      TEXT("UNKNOWN_ACTION"));
+  return true;
 #else
-  return false;
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Asset operations require editor build"),
+                      TEXT("EDITOR_ONLY"));
+  return true;
 #endif
 }
 

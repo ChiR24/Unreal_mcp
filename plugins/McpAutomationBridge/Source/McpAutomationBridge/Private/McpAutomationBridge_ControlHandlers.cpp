@@ -8,6 +8,8 @@
 #include "McpConnectionManager.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/DateTime.h"
+#include "Misc/OutputDevice.h"
+#include "HAL/Event.h"
 #include "Misc/Guid.h"
 #include "Math/UnrealMathUtility.h"
 #include "Serialization/JsonSerializer.h"
@@ -3306,6 +3308,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     return true;
   }
 
+  // Suppress modal dialogs during play (e.g., blueprint compilation error dialogs)
+  FModalDialogSuppressor DialogSuppressor;
+
   FRequestPlaySessionParams PlayParams;
   PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
 #if MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS
@@ -3347,6 +3352,28 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
   }
 
   GEditor->RequestEndPlayMap();
+
+  // Wait for PIE to actually stop (RequestEndPlayMap is asynchronous)
+  // Poll every 100ms for up to 10 seconds
+  const float TimeoutSeconds = 10.0f;
+  const float SleepIntervalSeconds = 0.1f;
+  float ElapsedSeconds = 0.0f;
+
+  while (GEditor->PlayWorld && ElapsedSeconds < TimeoutSeconds) {
+    FPlatformProcess::Sleep(SleepIntervalSeconds);
+    ElapsedSeconds += SleepIntervalSeconds;
+  }
+
+  if (GEditor->PlayWorld) {
+    // Timeout - PIE didn't stop in time
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("timeout"), true);
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Timeout waiting for Play in Editor to stop"), Resp, TEXT("TIMEOUT"));
+    return true;
+  }
+
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   SendAutomationResponse(Socket, RequestId, true,
@@ -5307,32 +5334,80 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
   // UE 5.7 Fix: Defer OpenEditorForAsset to next tick/AsyncTask to avoid
   // recursive FlushRenderingCommands and subsequent D3D12/RHI crashes on
   // certain hardware (e.g. Intel GEN12LP).
-  AsyncTask(ENamedThreads::GameThread, [this, Asset, RequestId, Socket, AssetPath]() {
+  // Also wait for completion to prevent race conditions in rapid test sequences.
+  struct FOpenAssetResult {
+    bool bSuccess = false;
+    bool bSubsystemMissing = false;
+  };
+  FOpenAssetResult Result;
+  FEvent *CompletionEvent = FPlatformProcess::GetSynchEventFromPool(false);
+  
+  AsyncTask(ENamedThreads::GameThread, [this, Asset, AssetPath, &Result, CompletionEvent]() {
     UAssetEditorSubsystem *AssetEditorSS =
         GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
     if (!AssetEditorSS) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("AssetEditorSubsystem became unavailable"),
-                             nullptr, TEXT("SUBSYSTEM_MISSING"));
+      Result.bSubsystemMissing = true;
+      CompletionEvent->Trigger();
       return;
     }
 
-    const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
-
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), bOpened);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
-
-    if (bOpened) {
-      SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
-                             FString());
-    } else {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Failed to open asset editor"), Resp,
-                             TEXT("OPEN_FAILED"));
+    // CRITICAL FIX: Check if asset is valid before opening
+    if (!Asset || !IsValid(Asset)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("OpenAsset: Asset became invalid before opening"));
+      Result.bSuccess = false;
+      CompletionEvent->Trigger();
+      return;
     }
+
+    // Open the asset editor
+    Result.bSuccess = AssetEditorSS->OpenEditorForAsset(Asset);
+    
+    // CRITICAL FIX: Add small delay to let Slate UI initialize
+    // This prevents null pointer crashes in UnrealEditor-Slate.dll
+    // when tests run rapidly one after another
+    if (Result.bSuccess) {
+      FPlatformProcess::Sleep(0.5f); // 500ms delay for Slate initialization
+    }
+    
+    CompletionEvent->Trigger();
   });
 
+  // Wait for the async task to complete (timeout after 10 seconds)
+  const float TimeoutSeconds = 10.0f;
+  bool bCompleted = CompletionEvent->Wait(FTimespan::FromSeconds(TimeoutSeconds));
+  FPlatformProcess::ReturnSynchEventToPool(CompletionEvent);
+
+  if (!bCompleted) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("timeout"), true);
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Timeout waiting for asset editor to open"), Resp,
+                           TEXT("TIMEOUT"));
+    return true;
+  }
+
+  if (Result.bSubsystemMissing) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), false);
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("AssetEditorSubsystem became unavailable"), Resp,
+                           TEXT("SUBSYSTEM_MISSING"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), Result.bSuccess);
+  Resp->SetStringField(TEXT("assetPath"), AssetPath);
+
+  if (Result.bSuccess) {
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
+                           FString());
+  } else {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Failed to open asset editor"), Resp,
+                           TEXT("OPEN_FAILED"));
+  }
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,

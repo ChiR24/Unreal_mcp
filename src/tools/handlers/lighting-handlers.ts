@@ -7,7 +7,7 @@ import { normalizeLocation, executeAutomationRequest } from './common-handlers.j
 const VALID_LIGHT_TYPES = ['point', 'directional', 'spot', 'rect', 'sky'];
 
 // Valid GI methods
-const VALID_GI_METHODS = ['lumen', 'screenspace', 'none', 'raytraced', 'ssgi'];
+const VALID_GI_METHODS = ['lumen', 'screenspace', 'none', 'raytraced', 'ssgi', 'lightmass', 'baked'];
 
 // Helper to coerce unknown to number | undefined
 const toNumber = (val: unknown): number | undefined => {
@@ -144,6 +144,7 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
         // Map common variations to standard UE internal strings
         if (methodLower === 'lumengi') methodLower = 'lumen';
         if (methodLower === 'screen_space') methodLower = 'screenspace';
+        if (methodLower === 'baked') methodLower = 'lightmass';
         
         if (!VALID_GI_METHODS.includes(methodLower)) {
           return {

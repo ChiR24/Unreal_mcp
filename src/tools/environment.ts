@@ -9,17 +9,18 @@ import { requireBridge } from './base-tool.js';
 /**
  * Validates a filesystem path for snapshot operations.
  * Prevents directory traversal attacks and restricts to safe directories.
+ * Allows additional paths via MCP_TEST_ALLOWED_PATHS environment variable for testing.
  * @param targetPath - The resolved absolute path to validate
  * @returns Object with success status and optional error message
  */
 function validateSnapshotPath(targetPath: string): { valid: boolean; error?: string } {
   const normalized = path.normalize(targetPath);
-  
+
   // Block directory traversal attempts
   if (normalized.includes('..')) {
     return { valid: false, error: 'Path traversal (..) is not allowed' };
   }
-  
+
   // Get allowed base directories
   const allowedBases = [
     process.cwd(),
@@ -27,20 +28,29 @@ function validateSnapshotPath(targetPath: string): { valid: boolean; error?: str
     path.join(process.cwd(), 'tmp'),
     path.join(process.cwd(), 'Saved'),
   ].filter((p): p is string => typeof p === 'string' && p.length > 0);
-  
+
+  // Add test-specific allowed paths from environment variable (semicolon-separated)
+  const testAllowedPaths = process.env.MCP_TEST_ALLOWED_PATHS;
+  if (testAllowedPaths) {
+    const additionalPaths = testAllowedPaths.split(';').filter(p => p.trim().length > 0);
+    for (const p of additionalPaths) {
+      allowedBases.push(path.normalize(p.trim()));
+    }
+  }
+
   // Check if path is under an allowed directory
   const isAllowed = allowedBases.some(base => {
     const normalizedBase = path.normalize(base);
     return normalized === normalizedBase || normalized.startsWith(normalizedBase + path.sep);
   });
-  
+
   if (!isAllowed) {
-    return { 
-      valid: false, 
-      error: `Path must be within project directory or cwd. Got: ${normalized}` 
+    return {
+      valid: false,
+      error: `Path must be within project directory or cwd. Got: ${normalized}`
     };
   }
-  
+
   return { valid: true };
 }
 

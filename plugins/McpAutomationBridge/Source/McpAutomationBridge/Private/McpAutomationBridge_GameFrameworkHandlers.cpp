@@ -1784,7 +1784,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
     else
     {
         SendAutomationError(RequestingSocket, RequestId, 
-            FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
+            FString::Printf(TEXT("Unknown game_framework subAction: %s"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
         return true;
     }
 

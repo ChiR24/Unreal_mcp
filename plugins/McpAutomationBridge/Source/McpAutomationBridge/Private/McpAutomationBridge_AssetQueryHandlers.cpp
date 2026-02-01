@@ -295,7 +295,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
   }
 #endif
 
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."),
-                      TEXT("INVALID_SUBACTION"));
+  SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown asset query subAction: %s"), *Action), TEXT("UNKNOWN_ACTION"));
   return true;
 }

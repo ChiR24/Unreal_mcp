@@ -362,13 +362,42 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                            TEXT("SkyLight spawned"), Resp);
     return true;
   } else if (Lower == TEXT("build_lighting")) {
-    if (GEditor && GetActiveWorld()) {
-      if (GEditor && GetActiveWorld())
-        GEditor->Exec(GetActiveWorld(),
-                      TEXT("BuildLighting Production"));
+    UWorld* World = GetActiveWorld();
+    if (!GEditor || !World) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor or World not available"),
+                          TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
     }
+
+#if WITH_EDITOR
+    // Check if precomputed lighting is disabled in world settings
+    // This prevents phantom passes where we return success but nothing happens
+    AWorldSettings* WorldSettings = World->GetWorldSettings();
+    if (WorldSettings && WorldSettings->bForceNoPrecomputedLighting) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Lighting build disabled: WorldSettings.bForceNoPrecomputedLighting is true. "
+                               "Enable 'Force No Precomputed Lighting' in World Settings to build lighting."),
+                          TEXT("LIGHTING_DISABLED"));
+      return true;
+    }
+
+    // Execute the lighting build
+    GEditor->Exec(World, TEXT("BuildLighting Production"));
+    
+    // Verify that the build actually started by checking world state
+    // (Note: We can't fully verify completion as it's async, but we confirmed prerequisites)
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("message"), TEXT("Lighting build started"));
+    Resp->SetBoolField(TEXT("precomputedLightingEnabled"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Lighting build started"), nullptr);
+                           TEXT("Lighting build started"), Resp);
+#else
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Lighting build requires editor"),
+                        TEXT("REQUIRES_EDITOR"));
+#endif
     return true;
   } else if (Lower == TEXT("ensure_single_sky_light")) {
     TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
@@ -1058,17 +1087,40 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("GI settings configured"), Resp);
       return true;
   }
-  else if (Lower == TEXT("bake_lighting_preview")) {
-      FString Quality;
-      Payload->TryGetStringField(TEXT("quality"), Quality);
-      
-      bool bPreview = true;
-      Payload->TryGetBoolField(TEXT("preview"), bPreview);
-      
-      if (GEditor && GetActiveWorld()) {
-          FString Command = bPreview ? TEXT("BUILD LIGHTING QUALITY=Preview") : TEXT("BUILD LIGHTING");
-          GEditor->Exec(GetActiveWorld(), *Command);
-      }
+   else if (Lower == TEXT("bake_lighting_preview")) {
+       FString Quality;
+       Payload->TryGetStringField(TEXT("quality"), Quality);
+       
+       bool bPreview = true;
+       Payload->TryGetBoolField(TEXT("preview"), bPreview);
+       
+       if (GEditor && GetActiveWorld()) {
+           // Normalize quality to lowercase for case-insensitive comparison
+           FString QualityLower = Quality.ToLower();
+           
+           // Determine quality level from parameter (case-insensitive)
+           FString QualityLevel;
+           if (QualityLower.IsEmpty()) {
+               // Default based on preview flag
+               QualityLevel = bPreview ? TEXT("Preview") : TEXT("Production");
+           } else if (QualityLower == TEXT("preview")) {
+               QualityLevel = TEXT("Preview");
+           } else if (QualityLower == TEXT("production")) {
+               QualityLevel = TEXT("Production");
+           } else if (QualityLower == TEXT("high")) {
+               QualityLevel = TEXT("High");
+           } else if (QualityLower == TEXT("medium")) {
+               QualityLevel = TEXT("Medium");
+           } else if (QualityLower == TEXT("low")) {
+               QualityLevel = TEXT("Low");
+           } else {
+               // Unknown quality - use default based on preview flag
+               QualityLevel = bPreview ? TEXT("Preview") : TEXT("Production");
+           }
+           
+           FString Command = FString::Printf(TEXT("BUILD LIGHTING QUALITY=%s"), *QualityLevel);
+           GEditor->Exec(GetActiveWorld(), *Command);
+       }
       
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);

@@ -49,6 +49,15 @@
 #include "Components/ShapeComponent.h"
 #include "Engine/TextureCube.h"
 #include "FoliageType.h"
+
+// Landscape includes (required for ALandscape and ALandscapeProxy)
+#if __has_include("Landscape.h")
+#include "Landscape.h"
+#endif
+#if __has_include("LandscapeProxy.h")
+#include "LandscapeProxy.h"
+#endif
+
 // SkyAtmosphere/ExponentialHeightFog/VolumetricCloud actors - use forward declaration + class lookup
 // These actor headers may not exist in all engine versions
 
@@ -94,8 +103,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   FString EffectiveAction = Action;
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+         TEXT("HandleBuildEnvironmentAction: ENTRY - RequestId=%s, Action='%s'"),
+         *RequestId, *Action);
   if (Action.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase)) {
     Payload->TryGetStringField(TEXT("action"), EffectiveAction);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Extracted action from payload, EffectiveAction='%s'"),
+           *EffectiveAction);
+  } else {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Action is not 'build_environment', using Action as EffectiveAction='%s'"),
+           *EffectiveAction);
   }
   const FString Lower = EffectiveAction.ToLower();
   
@@ -121,9 +140,18 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     TEXT("configure_snow"), TEXT("create_lightning"), TEXT("get_terrain_height_at")
   };
 
-  if (!EnvironmentActions.Contains(Lower) && 
+  if (!EnvironmentActions.Contains(Lower) &&
       !Lower.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase)) {
-    return false;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Action='%s' not in EnvironmentActions, sending error response"),
+           *Lower);
+    // CRITICAL FIX: Return true (consumed) with error response instead of false.
+    // This prevents the request from falling through to other handlers (like volume handler)
+    // which would incorrectly handle it and produce confusing error messages.
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Unknown build_environment subAction: %s"), *Lower),
+                        TEXT("UNKNOWN_ACTION"));
+    return true;
   }
 
   if (!Payload.IsValid()) {
@@ -135,10 +163,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
 
   const FString LowerSub = Lower;
 
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+         TEXT("HandleBuildEnvironmentAction: Dispatching sub-action LowerSub='%s'"),
+         *LowerSub);
+
   // Fast-path foliage sub-actions to dedicated native handlers to avoid double
   // responses
   // add_foliage is an alias for add_foliage_instances
   if (LowerSub == TEXT("add_foliage_instances") || LowerSub == TEXT("add_foliage")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'add_foliage_instances/add_foliage' -> HandlePaintFoliage"));
     // Transform from build_environment schema to foliage handler schema
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
@@ -174,6 +208,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), FoliagePayload,
                               RequestingSocket);
   } else if (LowerSub == TEXT("get_foliage_instances")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'get_foliage_instances' -> HandleGetFoliageInstances"));
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
     TSharedPtr<FJsonObject> FoliagePayload = MakeShared<FJsonObject>();
@@ -183,6 +219,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     return HandleGetFoliageInstances(RequestId, TEXT("get_foliage_instances"),
                                      FoliagePayload, RequestingSocket);
   } else if (LowerSub == TEXT("remove_foliage")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'remove_foliage' -> HandleRemoveFoliage"));
     FString FoliageTypePath;
     Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
     bool bRemoveAll = false;
@@ -198,26 +236,40 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
   // Dispatch landscape operations
   else if (LowerSub == TEXT("paint_landscape") ||
            LowerSub == TEXT("paint_landscape_layer")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'paint_landscape' -> HandlePaintLandscapeLayer"));
     return HandlePaintLandscapeLayer(RequestId, TEXT("paint_landscape_layer"),
                                      Payload, RequestingSocket);
   } else if (LowerSub == TEXT("sculpt_landscape") || LowerSub == TEXT("sculpt")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'sculpt_landscape/sculpt' -> HandleSculptLandscape"));
     // sculpt is an alias for sculpt_landscape
     return HandleSculptLandscape(RequestId, TEXT("sculpt_landscape"), Payload,
                                  RequestingSocket);
   } else if (LowerSub == TEXT("modify_heightmap")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'modify_heightmap' -> HandleModifyHeightmap"));
     return HandleModifyHeightmap(RequestId, TEXT("modify_heightmap"), Payload,
                                  RequestingSocket);
   } else if (LowerSub == TEXT("set_landscape_material")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'set_landscape_material' -> HandleSetLandscapeMaterial"));
     return HandleSetLandscapeMaterial(RequestId, TEXT("set_landscape_material"),
                                       Payload, RequestingSocket);
   } else if (LowerSub == TEXT("create_landscape_grass_type")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'create_landscape_grass_type' -> HandleCreateLandscapeGrassType"));
     return HandleCreateLandscapeGrassType(RequestId,
                                           TEXT("create_landscape_grass_type"),
                                           Payload, RequestingSocket);
   }   else if (LowerSub == TEXT("generate_lods")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'generate_lods' -> HandleGenerateLODs"));
     return HandleGenerateLODs(RequestId, TEXT("generate_lods"), Payload,
                               RequestingSocket);
   } else if (LowerSub == TEXT("bake_lightmap")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'bake_lightmap' -> HandleBakeLightmap"));
     return HandleBakeLightmap(RequestId, TEXT("bake_lightmap"), Payload,
                               RequestingSocket);
   } else if (LowerSub == TEXT("batch_paint_foliage")) {
@@ -2148,9 +2200,74 @@ bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(
   }
 
 #if WITH_EDITOR
+  // Validate that we have an editor and a world
+  if (!GEditor || !GetActiveWorld()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor or World not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Validate that at least one landscape exists in the level
+  // This prevents phantom passes where we return success but nothing was baked
+  bool bLandscapeFound = false;
+  if (UEditorActorSubsystem *ActorSS =
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+    TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+    for (AActor *Actor : AllActors) {
+      if (Actor && (Actor->IsA<ALandscape>() || Actor->IsA<ALandscapeProxy>())) {
+        ALandscapeProxy *LandscapeProxy = Cast<ALandscapeProxy>(Actor);
+        if (LandscapeProxy && LandscapeProxy->GetLandscapeInfo()) {
+          bLandscapeFound = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!bLandscapeFound) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("No initialized landscape found in level. "
+                             "Create a landscape before baking lightmaps."),
+                        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  // Check world settings for precomputed lighting
+  AWorldSettings* WorldSettings = GetActiveWorld()->GetWorldSettings();
+  if (WorldSettings && WorldSettings->bForceNoPrecomputedLighting) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Lightmap baking disabled: WorldSettings.bForceNoPrecomputedLighting is true. "
+                             "Enable 'Force No Precomputed Lighting' in World Settings to bake lightmaps."),
+                        TEXT("LIGHTING_DISABLED"));
+    return true;
+  }
+
   FString QualityStr = TEXT("Preview");
-  if (Payload.IsValid())
+  FString LandscapePath;
+  if (Payload.IsValid()) {
     Payload->TryGetStringField(TEXT("quality"), QualityStr);
+    Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
+  }
+
+  // If specific landscape path provided, verify it exists and is valid
+  if (!LandscapePath.IsEmpty()) {
+    ALandscape *TargetLandscape = Cast<ALandscape>(
+        StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath, nullptr, LOAD_NoWarn));
+    if (!TargetLandscape) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath),
+                          TEXT("LANDSCAPE_NOT_FOUND"));
+      return true;
+    }
+    
+    if (!TargetLandscape->GetLandscapeInfo()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Landscape at %s is not initialized"), *LandscapePath),
+                          TEXT("LANDSCAPE_NOT_INITIALIZED"));
+      return true;
+    }
+  }
 
   // Reuse HandleExecuteEditorFunction logic
   TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();

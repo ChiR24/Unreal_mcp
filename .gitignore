@@ -10,6 +10,7 @@ build/
 *.js.map
 *.d.ts.map
 .tsbuildinfo
+tsconfig.tsbuildinfo
 
 # WASM build outputs (Rust/wasm-pack)
 wasm/target/
