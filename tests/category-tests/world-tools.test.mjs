@@ -13,29 +13,19 @@ import { pathToFileURL } from 'node:url';
  */
 
 // ============================================================================
-// PREREQUISITE ASSETS REQUIRED FOR TESTS
+// TEST ASSET AUTO-CREATION
 // ============================================================================
-// The following assets must exist in the Unreal Engine project before running tests:
+// This test suite automatically creates required assets during test execution.
+// 
+// SETUP tests (marked with 'SETUP:' prefix) create assets programmatically:
+// - Line 311: SETUP: Create TestFoliage asset (uses build_environment/add_foliage_type)
+// - Line 552: SETUP: Create SplineMeshBP blueprint (uses manage_asset/create_blueprint)
 //
-// 1. /Game/Blueprints/SplineMeshBP (Blueprint Actor)
-//    - Required for: create_spline_mesh_component tests (lines ~636-637)
-//    - Create: Right-click in Content Browser > Blueprint Class > Actor
-//    - Name: SplineMeshBP
-//    - Location: /Game/Blueprints/
+// These setup tests run before dependent tests and use the 'success|already exists'
+// expectation pattern, making them idempotent (safe to run multiple times).
 //
-// 2. /Game/Foliage/TestFoliage (Foliage Type)
-//    - Required for: configure_foliage_density tests (lines ~500-501)
-//    - Create: Content Browser > Foliage > Foliage Type
-//    - Name: TestFoliage
-//    - Location: /Game/Foliage/
-//    - Note: Can also use any existing foliage type and update test parameters
-//
-// 3. /Game/WorldToolsTest (Static Mesh) - OPTIONAL
-//    - Required for: create_landscape_grass_type tests with custom mesh (line ~342)
-//    - Alternative: Tests use /Engine/BasicShapes/Plane as fallback
-//    - Create: Import static mesh or use engine basic shapes
-//
-// If these assets don't exist, the affected tests will fail with "ASSET_NOT_FOUND" errors.
+// If SETUP tests fail, subsequent tests that depend on those assets will fail
+// with clear error messages indicating the asset creation failure.
 // ============================================================================
 
 import { runToolTests } from '../test-runner.mjs';
@@ -126,28 +116,28 @@ const manageLightingTests = [
   { scenario: 'Lighting: get_post_process_settings not found', toolName: 'manage_lighting', arguments: { action: 'get_post_process_settings', volumeName: 'NonExistent_PPV' }, expected: 'not found|error' },
   
   // configure_bloom
-  { scenario: 'Lighting: configure_bloom success', toolName: 'manage_lighting', arguments: { action: 'configure_bloom', bloomIntensity: 1.5, bloomThreshold: 1.0 }, expected: 'success' },
-  { scenario: 'Lighting: configure_bloom disabled', toolName: 'manage_lighting', arguments: { action: 'configure_bloom', bloomIntensity: 0 }, expected: 'success' },
+  { scenario: 'Lighting: configure_bloom success', toolName: 'manage_lighting', arguments: { action: 'configure_bloom', volumeName: 'PPV_Global', bloomIntensity: 1.5, bloomThreshold: 1.0 }, expected: 'success' },
+  { scenario: 'Lighting: configure_bloom disabled', toolName: 'manage_lighting', arguments: { action: 'configure_bloom', volumeName: 'PPV_Global', bloomIntensity: 0 }, expected: 'success' },
   
   // configure_dof
-  { scenario: 'Lighting: configure_dof success', toolName: 'manage_lighting', arguments: { action: 'configure_dof', focalDistance: 1000, focalRegion: 500 }, expected: 'success' },
-  { scenario: 'Lighting: configure_dof cinematic', toolName: 'manage_lighting', arguments: { action: 'configure_dof', focalDistance: 500, focalRegion: 100 }, expected: 'success' },
+  { scenario: 'Lighting: configure_dof success', toolName: 'manage_lighting', arguments: { action: 'configure_dof', volumeName: 'PPV_Global', focalDistance: 1000, focalRegion: 500 }, expected: 'success' },
+  { scenario: 'Lighting: configure_dof cinematic', toolName: 'manage_lighting', arguments: { action: 'configure_dof', volumeName: 'PPV_Global', focalDistance: 500, focalRegion: 100 }, expected: 'success' },
   
   // configure_motion_blur
-  { scenario: 'Lighting: configure_motion_blur enable', toolName: 'manage_lighting', arguments: { action: 'configure_motion_blur', motionBlurAmount: 0.5 }, expected: 'success' },
-  { scenario: 'Lighting: configure_motion_blur disable', toolName: 'manage_lighting', arguments: { action: 'configure_motion_blur', motionBlurAmount: 0 }, expected: 'success' },
+  { scenario: 'Lighting: configure_motion_blur enable', toolName: 'manage_lighting', arguments: { action: 'configure_motion_blur', volumeName: 'PPV_Global', motionBlurAmount: 0.5 }, expected: 'success' },
+  { scenario: 'Lighting: configure_motion_blur disable', toolName: 'manage_lighting', arguments: { action: 'configure_motion_blur', volumeName: 'PPV_Global', motionBlurAmount: 0 }, expected: 'success' },
   
   // configure_color_grading
-  { scenario: 'Lighting: configure_color_grading success', toolName: 'manage_lighting', arguments: { action: 'configure_color_grading', globalSaturation: { r: 1.0, g: 1.0, b: 1.0 } }, expected: 'success' },
-  { scenario: 'Lighting: configure_color_grading desaturated', toolName: 'manage_lighting', arguments: { action: 'configure_color_grading', globalSaturation: { r: 0.5, g: 0.5, b: 0.5 } }, expected: 'success' },
+  { scenario: 'Lighting: configure_color_grading success', toolName: 'manage_lighting', arguments: { action: 'configure_color_grading', volumeName: 'PPV_Global', globalSaturation: { r: 1.0, g: 1.0, b: 1.0 } }, expected: 'success' },
+  { scenario: 'Lighting: configure_color_grading desaturated', toolName: 'manage_lighting', arguments: { action: 'configure_color_grading', volumeName: 'PPV_Global', globalSaturation: { r: 0.5, g: 0.5, b: 0.5 } }, expected: 'success' },
   
   // configure_white_balance
-  { scenario: 'Lighting: configure_white_balance warm', toolName: 'manage_lighting', arguments: { action: 'configure_white_balance', whiteTemp: 7000 }, expected: 'success' },
-  { scenario: 'Lighting: configure_white_balance cool', toolName: 'manage_lighting', arguments: { action: 'configure_white_balance', whiteTemp: 4000 }, expected: 'success' },
+  { scenario: 'Lighting: configure_white_balance warm', toolName: 'manage_lighting', arguments: { action: 'configure_white_balance', volumeName: 'PPV_Global', whiteTemp: 7000 }, expected: 'success' },
+  { scenario: 'Lighting: configure_white_balance cool', toolName: 'manage_lighting', arguments: { action: 'configure_white_balance', volumeName: 'PPV_Global', whiteTemp: 4000 }, expected: 'success' },
   
   // configure_vignette
-  { scenario: 'Lighting: configure_vignette success', toolName: 'manage_lighting', arguments: { action: 'configure_vignette', vignetteIntensity: 0.5 }, expected: 'success' },
-  { scenario: 'Lighting: configure_vignette disabled', toolName: 'manage_lighting', arguments: { action: 'configure_vignette', vignetteIntensity: 0 }, expected: 'success' },
+  { scenario: 'Lighting: configure_vignette success', toolName: 'manage_lighting', arguments: { action: 'configure_vignette', volumeName: 'PPV_Global', vignetteIntensity: 0.5 }, expected: 'success' },
+  { scenario: 'Lighting: configure_vignette disabled', toolName: 'manage_lighting', arguments: { action: 'configure_vignette', volumeName: 'PPV_Global', vignetteIntensity: 0 }, expected: 'success' },
 
   // === Post-Process Effects (4 actions) ===
   // configure_chromatic_aberration

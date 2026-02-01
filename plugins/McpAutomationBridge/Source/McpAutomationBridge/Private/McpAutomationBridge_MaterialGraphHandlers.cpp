@@ -50,10 +50,14 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
   FString SubAction;
   if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
       SubAction.IsEmpty()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("Missing 'subAction' for manage_material_graph"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    // Fallback to 'action' field for backward compatibility
+    if (!Payload->TryGetStringField(TEXT("action"), SubAction) ||
+        SubAction.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Missing 'subAction' for manage_material_graph"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
   }
 
   auto FindExpressionByIdOrName =

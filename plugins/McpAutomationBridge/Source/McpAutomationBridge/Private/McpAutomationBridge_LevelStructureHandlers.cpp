@@ -2686,7 +2686,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     FString SubAction;
     if (Payload.IsValid())
     {
-        Payload->TryGetStringField(TEXT("subAction"), SubAction);
+        // Try 'subAction' first, fallback to 'action' for backward compatibility
+        if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
+        {
+            if (!Payload->TryGetStringField(TEXT("action"), SubAction) || SubAction.IsEmpty())
+            {
+                // Both fields empty - will be handled below
+            }
+        }
     }
 
     SubAction = SubAction.ToLower();

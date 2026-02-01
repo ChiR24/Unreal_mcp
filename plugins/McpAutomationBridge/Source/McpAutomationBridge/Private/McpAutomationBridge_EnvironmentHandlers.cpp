@@ -120,7 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
   
   // Static set of all environment actions we handle
   static TSet<FString> EnvironmentActions = {
-    TEXT("add_foliage_instances"), TEXT("add_foliage"), TEXT("get_foliage_instances"),
+    TEXT("add_foliage_instances"), TEXT("add_foliage"), TEXT("add_foliage_type"), TEXT("get_foliage_instances"),
     TEXT("remove_foliage"), TEXT("paint_landscape"), TEXT("paint_landscape_layer"),
     TEXT("sculpt_landscape"), TEXT("sculpt"), TEXT("modify_heightmap"),
     TEXT("set_landscape_material"), TEXT("create_landscape_grass_type"),
@@ -232,6 +232,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     FoliagePayload->SetBoolField(TEXT("removeAll"), bRemoveAll);
     return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"),
                                FoliagePayload, RequestingSocket);
+  } else if (LowerSub == TEXT("add_foliage_type")) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("HandleBuildEnvironmentAction: Taking branch 'add_foliage_type' -> HandleAddFoliageType"));
+    return HandleAddFoliageType(RequestId, TEXT("add_foliage_type"), Payload,
+                                RequestingSocket);
   }
   // Dispatch landscape operations
   else if (LowerSub == TEXT("paint_landscape") ||

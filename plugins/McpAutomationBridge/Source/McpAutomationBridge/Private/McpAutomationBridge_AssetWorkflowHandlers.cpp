@@ -424,6 +424,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // ROUTE BLUEPRINT ACTIONS TO BLUEPRINT HANDLER
   // Actions starting with "bp_" or "blueprint_" should be handled by blueprint handlers
   // ============================================================================
+  // Handle create_blueprint explicitly
+  if (LowerSubAction.Equals(TEXT("create_blueprint"))) {
+    return HandleBlueprintAction(RequestId, LowerSubAction, Payload, RequestingSocket);
+  }
+
   if (LowerSubAction.StartsWith(TEXT("bp_")) || LowerSubAction.StartsWith(TEXT("blueprint_"))) {
     // Transform "bp_" prefix to "blueprint_" for consistency with C++ handler expectations
     FString TransformedAction = LowerSubAction;
@@ -2617,7 +2622,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // This prevents the request from falling through to other handlers (like volume handler)
   // which would incorrectly handle it and produce confusing error messages.
   SendAutomationError(RequestingSocket, RequestId,
-                      FString::Printf(TEXT("Unknown manage_asset subAction: %s"), *LowerSubAction),
+                      FString::Printf(TEXT("Unknown %s subAction: %s"), *Action, *LowerSubAction),
                       TEXT("UNKNOWN_ACTION"));
   return true;
 #else

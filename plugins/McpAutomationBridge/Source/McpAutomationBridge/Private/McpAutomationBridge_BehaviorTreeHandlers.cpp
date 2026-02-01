@@ -64,10 +64,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   FString SubAction;
   if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
       SubAction.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Missing 'subAction' for manage_behavior_tree"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    // Fallback to 'action' field for backward compatibility
+    if (!Payload->TryGetStringField(TEXT("action"), SubAction) ||
+        SubAction.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Missing 'subAction' for manage_behavior_tree"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
   }
 
   // Handle 'create' subAction first - this doesn't need an existing asset

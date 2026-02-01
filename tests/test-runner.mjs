@@ -298,19 +298,37 @@ export function evaluateExpectation(testCase, response) {
   }
 
   // CRITICAL: Check if message says "failed" but success is true (FALSE POSITIVE)
-  // BUT exclude patterns like "(0 failed)" or "0 failed" which indicate success
+  // BUT exclude patterns like "(0 failed)" or "0 failed)" which indicate success
   const hasRealFailure = messageStr.includes('failed') &&
     !messageStr.includes('(0 failed)') &&
     !messageStr.includes('0 failed') &&
-    !messageStr.match(/\(\d+\s+failed\)/); // Exclude patterns like "(N failed)" where N is any number
+    !messageStr.match(/\(0\s+failed\)/); // Fixed: explicitly exclude 0
+
+  // Additional patterns that indicate failure despite success=true
+  // NOTE: "painted 0 instances" may cause false negatives for tests that
+  // legitimately expect to paint 0 instances (e.g., "clear all" operations).
+  // If such tests are added, consider making failure indicators configurable per-test.
+  const failureIndicators = [
+    /actor not found/i,
+    /blueprint not found/i,
+    /painted 0 instances/i,
+    /failed to get/i,
+    /not available on this hardware/i,
+    /skipped.*reason/i
+  ];
+
+  const hasFailureIndicator = failureIndicators.some(pattern => 
+    pattern.test(messageStr) || pattern.test(errorStr)
+  );
   if (actualSuccess && (
     hasRealFailure ||
     messageStr.includes('python execution failed') ||
-    errorStr.includes('failed')
+    errorStr.includes('failed') ||
+    hasFailureIndicator
   )) {
     return {
       passed: false,
-      reason: `False positive: success=true but message indicates failure: ${actualMessage}`
+      reason: `False positive: success=true but indicates failure: ${actualMessage || actualError}`
     };
   }
 

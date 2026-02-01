@@ -11,6 +11,7 @@
 #include "EditorAssetLibrary.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Engine/CollisionProfile.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
@@ -48,7 +49,7 @@ namespace {
 static void CollectAllWaterBodies(UWorld* World, TArray<AWaterBody*>& OutWaterBodies)
 {
     if (!World) return;
-    
+
     // Use TActorIterator for more efficient typed iteration
     for (TActorIterator<AWaterBody> It(World); It; ++It)
     {
@@ -57,6 +58,222 @@ static void CollectAllWaterBodies(UWorld* World, TArray<AWaterBody*>& OutWaterBo
             OutWaterBodies.Add(WaterActor);
         }
     }
+}
+
+/**
+ * CRITICAL FIX: Enhanced dialog suppressor for UE 5.7 Water plugin compatibility.
+ * The Water plugin crashes when spawning water bodies if GIsAutomationTesting alone
+ * is set, because it still tries to show editor visualization dialogs.
+ * Setting both GIsAutomationTesting and GIsRunningUnattendedScript prevents this.
+ */
+struct FEnhancedDialogSuppressor
+{
+    bool bPreviousAutomationTesting;
+    bool bPreviousUnattendedScript;
+    bool bWasActive;
+
+    FEnhancedDialogSuppressor()
+    {
+        bPreviousAutomationTesting = GIsAutomationTesting;
+        bPreviousUnattendedScript = GIsRunningUnattendedScript;
+
+        GIsAutomationTesting = true;
+        GIsRunningUnattendedScript = true;
+        bWasActive = true;
+    }
+
+    ~FEnhancedDialogSuppressor()
+    {
+        if (bWasActive)
+        {
+            GIsAutomationTesting = bPreviousAutomationTesting;
+            GIsRunningUnattendedScript = bPreviousUnattendedScript;
+        }
+    }
+
+    // Prevent copying to avoid double-restore
+    FEnhancedDialogSuppressor(const FEnhancedDialogSuppressor&) = delete;
+    FEnhancedDialogSuppressor& operator=(const FEnhancedDialogSuppressor&) = delete;
+};
+
+/**
+ * CRITICAL FIX: Validates that required collision profiles exist before spawning water bodies.
+ * The WaterBodyCollision profile must exist or water body physics will fail.
+ */
+static bool ValidateWaterCollisionProfile(FString& OutError)
+{
+    // Check if WaterBodyCollision profile exists
+    UCollisionProfile* CollisionProfile = UCollisionProfile::Get();
+    if (!CollisionProfile)
+    {
+        OutError = TEXT("CollisionProfile not available - Water plugin may not be initialized");
+        return false;
+    }
+
+    // Look for WaterBodyCollision profile using GetProfileTemplate
+    FCollisionResponseTemplate Template;
+    if (!CollisionProfile->GetProfileTemplate(FName("WaterBodyCollision"), Template))
+    {
+        OutError = TEXT("WaterBodyCollision profile not found. Ensure Water plugin is enabled and loaded.");
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("%s"), *OutError);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * CRITICAL FIX: Disables water body mesh generation to prevent crashes in unattended mode.
+ * Must be called between deferred spawn and FinishSpawning.
+ */
+static void DisableWaterBodyMeshGeneration(AActor* WaterBodyActor)
+{
+    if (!WaterBodyActor)
+    {
+        return;
+    }
+
+    // Find the water body component
+    UWaterBodyComponent* WaterComp = WaterBodyActor->FindComponentByClass<UWaterBodyComponent>();
+    if (!WaterComp)
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("No WaterBodyComponent found on %s"), *WaterBodyActor->GetName());
+        return;
+    }
+
+    // UE 5.7: Use SetWaterBodyStaticMeshEnabled to disable static mesh generation
+    // The previous properties (bGenerateWaterInfoMesh, bRenderWaterInfoMesh) are no longer exposed
+    WaterComp->SetWaterBodyStaticMeshEnabled(false);
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Disabled static mesh generation for %s"), *WaterBodyActor->GetName());
+}
+
+/**
+ * CRITICAL FIX: Ensures a WaterZone exists in the world.
+ * The Water plugin requires a WaterZone actor to be present before any water bodies
+ * can be spawned. Without it, the Water plugin will trigger assertions and crash.
+ *
+ * @param World The world to check/create the WaterZone in
+ * @param ActorSS The EditorActorSubsystem for spawning
+ * @return Pointer to the WaterZone actor, or nullptr if creation failed
+ */
+static AWaterZone* EnsureWaterZoneExists(UWorld* World, UEditorActorSubsystem* ActorSS)
+{
+    if (!World || !ActorSS)
+        return nullptr;
+
+    // Check if a WaterZone already exists
+    for (TActorIterator<AWaterZone> It(World); It; ++It)
+    {
+        if (AWaterZone* ExistingZone = *It)
+        {
+            return ExistingZone;
+        }
+    }
+
+    // No WaterZone found - create one
+    UClass* WaterZoneClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterZone"));
+    if (!WaterZoneClass)
+        return nullptr;
+
+    // CRITICAL FIX: Suppress modal dialogs during WaterZone spawning
+    FModalDialogSuppressor DialogSuppressor;
+
+    // Spawn the WaterZone at origin
+    AActor* ZoneActor = ActorSS->SpawnActorFromClass(WaterZoneClass, FVector::ZeroVector, FRotator::ZeroRotator);
+    if (ZoneActor)
+    {
+    // Set a recognizable name
+    ZoneActor->SetActorLabel(TEXT("MCP_WaterZone"));
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Created WaterZone"));
+    return Cast<AWaterZone>(ZoneActor);
+    }
+
+    return nullptr;
+}
+
+/**
+ * CRITICAL FIX: Safe water body spawning with comprehensive error handling.
+ * Wraps the spawn operation with additional safety checks to prevent crashes
+ * from Water plugin internal assertions in UE 5.7 unattended mode.
+ *
+ * @param ActorSS The EditorActorSubsystem
+ * @param WaterClass The water body class to spawn
+ * @param Location Spawn location
+ * @param OutError Receives error message if spawn fails
+ * @return The spawned actor, or nullptr on failure
+ */
+static AActor* SafeSpawnWaterBody(UEditorActorSubsystem* ActorSS, UClass* WaterClass, const FVector& Location, FString& OutError)
+{
+    OutError.Empty();
+
+    if (!ActorSS)
+    {
+        OutError = TEXT("EditorActorSubsystem not available");
+        return nullptr;
+    }
+
+    if (!WaterClass)
+    {
+        OutError = TEXT("Water class is null");
+        return nullptr;
+    }
+
+    // CRITICAL FIX: Double-check world validity before spawning
+    UWorld* World = GetActiveWorld();
+    if (!World)
+    {
+        OutError = TEXT("No active world available");
+        return nullptr;
+    }
+
+    // CRITICAL FIX: Validate collision profile (non-blocking warning)
+    FString CollisionError;
+    if (!ValidateWaterCollisionProfile(CollisionError))
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Collision profile validation: %s"), *CollisionError);
+        // Continue anyway - may still work in some configurations
+    }
+
+    AActor* SpawnedActor = nullptr;
+
+    {
+        // CRITICAL FIX: Enhanced dialog suppression for UE 5.7
+        // Uses both GIsAutomationTesting and GIsRunningUnattendedScript
+        FEnhancedDialogSuppressor DialogSuppressor;
+
+        // CRITICAL FIX: Deferred spawning to delay PostRegisterAllComponents
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.bDeferConstruction = true;  // Delays component registration
+        SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+        SpawnParams.Name = FName(*FString::Printf(TEXT("%s_%s"), *WaterClass->GetName(), *FGuid::NewGuid().ToString(EGuidFormats::Short)));
+
+        // Attempt the spawn (deferred)
+        SpawnedActor = World->SpawnActor<AActor>(WaterClass, Location, FRotator::ZeroRotator, SpawnParams);
+
+        if (!SpawnedActor)
+        {
+            OutError = TEXT("SpawnActorFromClass returned null - Water plugin may have rejected the spawn");
+            return nullptr;
+        }
+
+        // CRITICAL FIX: Disable mesh generation BEFORE finishing spawn
+        // This prevents the crash in UpdateWaterInfoMeshComponents
+        DisableWaterBodyMeshGeneration(SpawnedActor);
+
+        // Now complete the spawn - this triggers PostRegisterAllComponents
+        SpawnedActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+
+    } // FEnhancedDialogSuppressor destructor restores flags here
+
+    // Verify the actor is valid after completion
+    if (!IsValid(SpawnedActor))
+    {
+        OutError = TEXT("Spawned actor is not valid after construction");
+        return nullptr;
+    }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Successfully spawned water body: %s"), *SpawnedActor->GetName());
+    return SpawnedActor;
 }
 #endif
 } // namespace
@@ -137,16 +354,18 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
         return true;
       }
-      
-      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
-      FModalDialogSuppressor DialogSuppressor;
-      
-      // Use EditorActorSubsystem for safer actor spawning (matches SpawnActorInActiveWorld pattern)
-      AActor *OceanActor = nullptr;
-      if (ActorSS) {
-        OceanActor = ActorSS->SpawnActorFromClass(OceanClass, Location, FRotator::ZeroRotator);
+
+      // CRITICAL FIX: Ensure WaterZone exists before spawning water bodies
+      // The Water plugin requires a WaterZone actor to be present, or it will crash
+      AWaterZone* WaterZone = EnsureWaterZoneExists(World, ActorSS);
+      if (!WaterZone) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Could not create WaterZone - water body may fail to spawn"));
       }
-      
+
+      // CRITICAL FIX: Use SafeSpawnWaterBody helper with comprehensive error handling
+      FString SpawnError;
+      AActor* OceanActor = SafeSpawnWaterBody(ActorSS, OceanClass, Location, SpawnError);
+
       if (OceanActor) {
         // Set actor name/label with verification
         FString ActualName = Name;
@@ -178,7 +397,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? OceanActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
-        Message = TEXT("Failed to spawn ocean actor");
+        // CRITICAL FIX: Include specific error message from spawn attempt
+        Message = SpawnError.IsEmpty() ? TEXT("Failed to spawn ocean actor") : FString::Printf(TEXT("Failed to spawn ocean actor: %s"), *SpawnError);
         ErrorCode = TEXT("SPAWN_FAILED");
       }
     } else {
@@ -204,15 +424,19 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *LakeClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyLake"));
     if (LakeClass) {
-      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
-      FModalDialogSuppressor DialogSuppressor;
-      
-      // CRITICAL FIX: Use EditorActorSubsystem for safer actor spawning
-      AActor *LakeActor = nullptr;
-      if (ActorSS) {
-        LakeActor = ActorSS->SpawnActorFromClass(LakeClass, Location, FRotator::ZeroRotator);
+      // CRITICAL FIX: Ensure WaterZone exists before spawning water bodies
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        AWaterZone* WaterZone = EnsureWaterZoneExists(World, ActorSS);
+        if (!WaterZone) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Could not create WaterZone - water body may fail to spawn"));
+        }
       }
-      
+
+      // CRITICAL FIX: Use SafeSpawnWaterBody helper with comprehensive error handling
+      FString SpawnError;
+      AActor* LakeActor = SafeSpawnWaterBody(ActorSS, LakeClass, Location, SpawnError);
+
       if (LakeActor) {
         // Set actor name/label with verification
         FString ActualName = Name;
@@ -238,7 +462,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? LakeActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
-        Message = TEXT("Failed to spawn lake actor");
+        // CRITICAL FIX: Include specific error message from spawn attempt
+        Message = SpawnError.IsEmpty() ? TEXT("Failed to spawn lake actor") : FString::Printf(TEXT("Failed to spawn lake actor: %s"), *SpawnError);
         ErrorCode = TEXT("SPAWN_FAILED");
       }
     } else {
@@ -264,14 +489,18 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *RiverClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyRiver"));
     if (RiverClass) {
-      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
-      FModalDialogSuppressor DialogSuppressor;
-
-      // CRITICAL FIX: Use EditorActorSubsystem for safer actor spawning
-      AActor *RiverActor = nullptr;
-      if (ActorSS) {
-        RiverActor = ActorSS->SpawnActorFromClass(RiverClass, Location, FRotator::ZeroRotator);
+      // CRITICAL FIX: Ensure WaterZone exists before spawning water bodies
+      UWorld* World = GetActiveWorld();
+      if (World) {
+        AWaterZone* WaterZone = EnsureWaterZoneExists(World, ActorSS);
+        if (!WaterZone) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Could not create WaterZone - water body may fail to spawn"));
+        }
       }
+
+      // CRITICAL FIX: Use SafeSpawnWaterBody helper with comprehensive error handling
+      FString SpawnError;
+      AActor* RiverActor = SafeSpawnWaterBody(ActorSS, RiverClass, Location, SpawnError);
 
       if (RiverActor) {
         // Set actor name/label with verification
@@ -279,7 +508,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         if (!Name.IsEmpty()) {
           ActualName = SetActorLabelWithVerification(RiverActor, Name, true);
         }
-        
+
         // Configure river-specific properties
         UWaterBodyComponent *RiverComp = RiverActor->FindComponentByClass<UWaterBodyComponent>();
         if (RiverComp) {
@@ -298,7 +527,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
         Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? RiverActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
-        Message = TEXT("Failed to spawn river actor");
+        // CRITICAL FIX: Include specific error message from spawn attempt
+        Message = SpawnError.IsEmpty() ? TEXT("Failed to spawn river actor") : FString::Printf(TEXT("Failed to spawn river actor: %s"), *SpawnError);
         ErrorCode = TEXT("SPAWN_FAILED");
       }
     } else {

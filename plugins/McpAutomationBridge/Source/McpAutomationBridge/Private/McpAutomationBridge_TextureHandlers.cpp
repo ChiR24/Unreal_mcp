@@ -179,7 +179,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageTextureAction(
     const TSharedPtr<FJsonObject>& Params = Payload;
     TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
     
+    // Try 'subAction' first, fallback to 'action' for backward compatibility
     FString SubAction = GetStringFieldSafe(Params, TEXT("subAction"), TEXT(""));
+    if (SubAction.IsEmpty())
+    {
+        SubAction = GetStringFieldSafe(Params, TEXT("action"), TEXT(""));
+    }
     
     // ===== PROCEDURAL GENERATION =====
     
