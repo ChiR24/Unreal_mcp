@@ -50,7 +50,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   
   FString EffectiveAction = Action;
-  if (Action.Equals(TEXT("manage_post_process"), ESearchCase::IgnoreCase)) {
+  if (Action.Equals(TEXT("manage_post_process"), ESearchCase::IgnoreCase) ||
+      Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase)) {
     Payload->TryGetStringField(TEXT("action"), EffectiveAction);
   }
   const FString Lower = EffectiveAction.ToLower();
@@ -135,10 +136,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
       Payload->TryGetStringField(TEXT("volumeName"), Name);
     }
 
-    // Spawn post-process volume
+    // Spawn post-process volume - capture actual name in case of conflicts
+    FString ActualName;
     APostProcessVolume *PPV = SpawnActorInActiveWorld<APostProcessVolume>(
         APostProcessVolume::StaticClass(), Location, FRotator::ZeroRotator,
-        Name.IsEmpty() ? TEXT("PostProcessVolume") : *Name);
+        Name.IsEmpty() ? TEXT("PostProcessVolume") : *Name, &ActualName);
 
     if (PPV) {
       // Configure infinite extent (unbound)
@@ -172,7 +174,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
 
       bSuccess = true;
       Message = TEXT("Post-process volume created");
-      Resp->SetStringField(TEXT("actorName"), PPV->GetActorLabel());
+      Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? PPV->GetActorLabel() : ActualName);
       Resp->SetStringField(TEXT("volumeName"), PPV->GetName());
     } else {
       bSuccess = false;

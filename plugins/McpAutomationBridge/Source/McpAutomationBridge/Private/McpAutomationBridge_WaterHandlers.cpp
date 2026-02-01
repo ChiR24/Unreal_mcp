@@ -127,15 +127,33 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *OceanClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyOcean"));
     if (OceanClass) {
-      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
-      FActorSpawnParameters SpawnParams;
-      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyOcean")) : FName(*Name);
-      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-      SpawnParams.bDeferConstruction = true;
+      // CRITICAL FIX: Check world validity before spawning
+      UWorld* World = GetActiveWorld();
+      if (!World) {
+        bSuccess = false;
+        Message = TEXT("No active world available for spawning");
+        ErrorCode = TEXT("NO_WORLD");
+        Resp->SetStringField(TEXT("error"), Message);
+        SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
+        return true;
+      }
       
-      AActor *OceanActor = GetActiveWorld()->SpawnActor<AActor>(OceanClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
-
+      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
+      FModalDialogSuppressor DialogSuppressor;
+      
+      // Use EditorActorSubsystem for safer actor spawning (matches SpawnActorInActiveWorld pattern)
+      AActor *OceanActor = nullptr;
+      if (ActorSS) {
+        OceanActor = ActorSS->SpawnActorFromClass(OceanClass, Location, FRotator::ZeroRotator);
+      }
+      
       if (OceanActor) {
+        // Set actor name/label with verification
+        FString ActualName = Name;
+        if (!Name.IsEmpty()) {
+          ActualName = SetActorLabelWithVerification(OceanActor, Name, true);
+        }
+
         // Configure ocean-specific properties
         UWaterBodyOceanComponent *OceanComp = OceanActor->FindComponentByClass<UWaterBodyOceanComponent>();
         if (OceanComp) {
@@ -155,25 +173,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
           }
         }
 
-        // Finish spawning after configuration
-        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
-        // during heavy water mesh generation.
-        TWeakObjectPtr<AActor> WeakOceanActor = OceanActor;
-        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
-        
-        if (GEditor) {
-          GEditor->GetTimerManager()->SetTimerForNextTick([WeakOceanActor, FinalTransform]() {
-            if (AActor* Actor = WeakOceanActor.Get()) {
-              Actor->FinishSpawning(FinalTransform);
-            }
-          });
-        } else {
-          OceanActor->FinishSpawning(FinalTransform);
-        }
-
         bSuccess = true;
         Message = TEXT("Water body ocean created");
-        Resp->SetStringField(TEXT("actorName"), OceanActor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? OceanActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
         Message = TEXT("Failed to spawn ocean actor");
@@ -202,15 +204,22 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
 
     UClass *LakeClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyLake"));
     if (LakeClass) {
-      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
-      FActorSpawnParameters SpawnParams;
-      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyLake")) : FName(*Name);
-      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-      SpawnParams.bDeferConstruction = true;
+      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
+      FModalDialogSuppressor DialogSuppressor;
       
-      AActor *LakeActor = GetActiveWorld()->SpawnActor<AActor>(LakeClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
-
+      // CRITICAL FIX: Use EditorActorSubsystem for safer actor spawning
+      AActor *LakeActor = nullptr;
+      if (ActorSS) {
+        LakeActor = ActorSS->SpawnActorFromClass(LakeClass, Location, FRotator::ZeroRotator);
+      }
+      
       if (LakeActor) {
+        // Set actor name/label with verification
+        FString ActualName = Name;
+        if (!Name.IsEmpty()) {
+          ActualName = SetActorLabelWithVerification(LakeActor, Name, true);
+        }
+
         // Configure lake-specific properties
         UWaterBodyLakeComponent *LakeComp = LakeActor->FindComponentByClass<UWaterBodyLakeComponent>();
         if (LakeComp) {
@@ -224,25 +233,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
           }
         }
 
-        // Finish spawning after configuration
-        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
-        // during heavy water mesh generation.
-        TWeakObjectPtr<AActor> WeakLakeActor = LakeActor;
-        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
-        
-        if (GEditor) {
-          GEditor->GetTimerManager()->SetTimerForNextTick([WeakLakeActor, FinalTransform]() {
-            if (AActor* Actor = WeakLakeActor.Get()) {
-              Actor->FinishSpawning(FinalTransform);
-            }
-          });
-        } else {
-          LakeActor->FinishSpawning(FinalTransform);
-        }
-
         bSuccess = true;
         Message = TEXT("Water body lake created");
-        Resp->SetStringField(TEXT("actorName"), LakeActor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? LakeActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
         Message = TEXT("Failed to spawn lake actor");
@@ -265,21 +258,28 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
       (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
       (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
     }
-    
+
     FString Name;
     Payload->TryGetStringField(TEXT("name"), Name);
 
     UClass *RiverClass = LoadClass<AActor>(nullptr, TEXT("/Script/Water.WaterBodyRiver"));
     if (RiverClass) {
-      // UE 5.7+ Fix: Use deferred construction to prevent crashes during component modification
-      FActorSpawnParameters SpawnParams;
-      SpawnParams.Name = Name.IsEmpty() ? FName(TEXT("WaterBodyRiver")) : FName(*Name);
-      SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-      SpawnParams.bDeferConstruction = true;
-      
-      AActor *RiverActor = GetActiveWorld()->SpawnActor<AActor>(RiverClass, FTransform(FRotator::ZeroRotator, Location), SpawnParams);
+      // CRITICAL FIX: Suppress modal dialogs during actor spawning (prevents blueprint compilation error dialogs)
+      FModalDialogSuppressor DialogSuppressor;
+
+      // CRITICAL FIX: Use EditorActorSubsystem for safer actor spawning
+      AActor *RiverActor = nullptr;
+      if (ActorSS) {
+        RiverActor = ActorSS->SpawnActorFromClass(RiverClass, Location, FRotator::ZeroRotator);
+      }
 
       if (RiverActor) {
+        // Set actor name/label with verification
+        FString ActualName = Name;
+        if (!Name.IsEmpty()) {
+          ActualName = SetActorLabelWithVerification(RiverActor, Name, true);
+        }
+        
         // Configure river-specific properties
         UWaterBodyComponent *RiverComp = RiverActor->FindComponentByClass<UWaterBodyComponent>();
         if (RiverComp) {
@@ -293,25 +293,9 @@ bool UMcpAutomationBridgeSubsystem::HandleWaterAction(
           }
         }
 
-        // Finish spawning after configuration
-        // UE 5.7+ Fix: Defer FinishSpawning to next tick to prevent bridge timeouts 
-        // during heavy water mesh generation.
-        TWeakObjectPtr<AActor> WeakRiverActor = RiverActor;
-        const FTransform FinalTransform(FRotator::ZeroRotator, Location);
-        
-        if (GEditor) {
-          GEditor->GetTimerManager()->SetTimerForNextTick([WeakRiverActor, FinalTransform]() {
-            if (AActor* Actor = WeakRiverActor.Get()) {
-              Actor->FinishSpawning(FinalTransform);
-            }
-          });
-        } else {
-          RiverActor->FinishSpawning(FinalTransform);
-        }
-
         bSuccess = true;
         Message = TEXT("Water body river created");
-        Resp->SetStringField(TEXT("actorName"), RiverActor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? RiverActor->GetActorLabel() : ActualName);
       } else {
         bSuccess = false;
         Message = TEXT("Failed to spawn river actor");

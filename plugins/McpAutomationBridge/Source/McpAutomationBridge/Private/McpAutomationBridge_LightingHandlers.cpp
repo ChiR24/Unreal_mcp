@@ -196,15 +196,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     }
  
     AActor *NewLight = World->SpawnActor(LightClass, &Location,
-                                                       &Rotation, SpawnParams);
-
-    // Explicitly set location/rotation
-    if (NewLight) {
-      // Set label immediately
-      NewLight->SetActorLabel(LightClassStr);
-      NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
-                                            ETeleportType::TeleportPhysics);
-    }
+                                                        &Rotation, SpawnParams);
 
     if (!NewLight) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -213,9 +205,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       return true;
     }
 
+    // Explicitly set location/rotation
+    NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
+                                          ETeleportType::TeleportPhysics);
+
+    // Set actor label with verification - use requested name or class name as fallback
     FString Name;
+    FString ActualName;
     if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
-      NewLight->SetActorLabel(Name);
+      ActualName = SetActorLabelWithVerification(NewLight, Name, true);
+    } else {
+      ActualName = SetActorLabelWithVerification(NewLight, LightClassStr, true);
     }
 
     // Default to Movable for immediate feedback
@@ -301,13 +301,15 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), NewLight->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? NewLight->GetActorLabel() : ActualName);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Light spawned"), Resp);
     return true;
   } else if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light")) {
+    FString SkyLightName;
     AActor *SkyLight = SpawnActorInActiveWorld<AActor>(
-        ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
+        ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator,
+        FString(), &SkyLightName);
     if (!SkyLight) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to spawn SkyLight"),
@@ -317,7 +319,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
     FString Name;
     if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty()) {
-      SkyLight->SetActorLabel(Name);
+      SkyLightName = SetActorLabelWithVerification(SkyLight, Name, true);
     }
 
     USkyLightComponent *SkyComp =
@@ -355,7 +357,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), SkyLight->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), SkyLightName.IsEmpty() ? SkyLight->GetActorLabel() : SkyLightName);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SkyLight spawned"), Resp);
     return true;
@@ -509,7 +511,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
   } else if (Lower == TEXT("setup_global_illumination")) {
     FString Method;
     if (Payload->TryGetStringField(TEXT("method"), Method)) {
-      if (Method == TEXT("LumenGI")) {
+      if (Method == TEXT("LumenGI") || Method == TEXT("lumen")) {
         IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
             TEXT("r.DynamicGlobalIlluminationMethod"));
         if (CVar)
@@ -519,16 +521,28 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
             TEXT("r.ReflectionMethod"));
         if (CVarRefl)
           CVarRefl->Set(1); // 1 = Lumen
-      } else if (Method == TEXT("ScreenSpace")) {
+      } else if (Method == TEXT("ScreenSpace") || Method == TEXT("screenspace") || Method == TEXT("ssgi")) {
         IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
             TEXT("r.DynamicGlobalIlluminationMethod"));
         if (CVar)
           CVar->Set(2); // SSGI
-      } else if (Method == TEXT("None")) {
+      } else if (Method == TEXT("None") || Method == TEXT("none")) {
         IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
             TEXT("r.DynamicGlobalIlluminationMethod"));
         if (CVar)
           CVar->Set(0);
+      } else if (Method == TEXT("Lightmass") || Method == TEXT("lightmass") || Method == TEXT("Baked") || Method == TEXT("baked")) {
+        // For baked/lightmass lighting, we disable dynamic GI
+        IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
+            TEXT("r.DynamicGlobalIlluminationMethod"));
+        if (CVar)
+          CVar->Set(0); // 0 = None (baked)
+        
+        // Also disable real-time reflections since we're using baked
+        IConsoleVariable *CVarRefl = IConsoleManager::Get().FindConsoleVariable(
+            TEXT("r.ReflectionMethod"));
+        if (CVarRefl)
+          CVarRefl->Set(0); // 0 = None (SSR fallback)
       }
     }
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

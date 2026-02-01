@@ -2232,11 +2232,76 @@ static inline T *FindActorByLabelOrName(const FString &Target) {
   return FindActorByLabelOrName<T>(GetActiveWorld(), Target);
 }
 
+/**
+ * Sets an actor's label with verification and fallback mechanisms.
+ * Ensures the requested label is actually applied, handling UE's automatic renaming.
+ *
+ * @param Actor The actor to rename
+ * @param DesiredLabel The label we want to set
+ * @param bUseRenameFallback If true, also tries Rename() as fallback when SetActorLabel fails
+ * @return The actual label that was applied (may differ from desired if name conflict exists)
+ */
+static inline FString SetActorLabelWithVerification(AActor *Actor,
+                                                    const FString &DesiredLabel,
+                                                    bool bUseRenameFallback = true) {
+  if (!Actor || DesiredLabel.IsEmpty()) {
+    return Actor ? Actor->GetActorLabel() : FString();
+  }
+
+#if WITH_EDITOR
+  // Try SetActorLabel first (standard approach for editor)
+  Actor->SetActorLabel(DesiredLabel);
+
+  // Verify the label was actually set
+  FString CurrentLabel = Actor->GetActorLabel();
+  if (CurrentLabel.Equals(DesiredLabel, ESearchCase::IgnoreCase)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("SetActorLabel succeeded: %s"), *CurrentLabel);
+    return CurrentLabel;
+  }
+
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+         TEXT("SetActorLabel did not apply requested name '%s', got '%s'. Trying fallback..."),
+         *DesiredLabel, *CurrentLabel);
+
+  // Fallback 1: Try Rename() to change the underlying object name
+  if (bUseRenameFallback) {
+    // Generate a unique name by appending a number if needed
+    FName NewName = FName(*DesiredLabel);
+    Actor->Rename(*NewName.ToString(), nullptr, REN_Test);
+
+    // Actually perform the rename
+    if (Actor->Rename(*NewName.ToString())) {
+      // Update the label after successful rename
+      Actor->SetActorLabel(DesiredLabel);
+      CurrentLabel = Actor->GetActorLabel();
+
+      if (CurrentLabel.Equals(DesiredLabel, ESearchCase::IgnoreCase)) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Rename fallback succeeded: %s"), *CurrentLabel);
+        return CurrentLabel;
+      }
+    }
+  }
+
+  // If all attempts failed, UE has auto-renamed due to conflict
+  // Return the actual name that was assigned
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+         TEXT("Could not set actor label to '%s', using auto-assigned name '%s'"),
+         *DesiredLabel, *CurrentLabel);
+  return CurrentLabel;
+#else
+  // Non-editor builds: just use the actor's current name
+  return Actor->GetActorLabel();
+#endif
+}
+
 template <typename T = AActor>
 static inline T *
 SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
                         const FRotator &Rotation,
-                        const FString &OptionalLabel = FString()) {
+                        const FString &OptionalLabel = FString(),
+                        FString *OutActualName = nullptr) {
   static_assert(std::is_base_of<AActor, T>::value,
                 "T must be derived from AActor");
 
@@ -2271,7 +2336,12 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
 
   // Set optional label for easy identification in World Outliner
   if (Spawned && !OptionalLabel.IsEmpty()) {
-    Spawned->SetActorLabel(OptionalLabel);
+    FString ActualName = SetActorLabelWithVerification(Spawned, OptionalLabel, true);
+    if (OutActualName) {
+      *OutActualName = ActualName;
+    }
+  } else if (OutActualName && Spawned) {
+    *OutActualName = Spawned->GetActorLabel();
   }
 
   return Cast<T>(Spawned);

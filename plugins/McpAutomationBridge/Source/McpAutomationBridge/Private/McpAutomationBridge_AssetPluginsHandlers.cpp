@@ -835,14 +835,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
             return true;
         }
 
-        StageActor->SetActorLabel(ActorLabel);
+        FString ActualName = SetActorLabelWithVerification(StageActor, ActorLabel, true);
         if (!StagePath.IsEmpty())
         {
             StageActor->SetRootLayer(StagePath);
         }
 
         TSharedPtr<FJsonObject> Result = MakeAssetPluginSuccess(TEXT("Created USD stage"), TEXT("USD"));
-        Result->SetStringField(TEXT("stageActor"), StageActor->GetName());
+        Result->SetStringField(TEXT("stageActor"), ActualName.IsEmpty() ? StageActor->GetName() : ActualName);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Result);
         return true;
     }
@@ -874,7 +874,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
             return true;
         }
 
-        StageActor->SetActorLabel(ActorLabel);
+        FString ActualName = SetActorLabelWithVerification(StageActor, ActorLabel, true);
         StageActor->SetRootLayer(UsdFile);
 
         TSharedPtr<FJsonObject> Result = MakeAssetPluginSuccess(
@@ -1164,9 +1164,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
 
         FActorSpawnParameters SpawnParams;
         AUsdStageActor* StageActor = World->SpawnActor<AUsdStageActor>(AUsdStageActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        FString ActualName;
         if (StageActor)
         {
-            StageActor->SetActorLabel(ActorLabel);
+            ActualName = SetActorLabelWithVerification(StageActor, ActorLabel, true);
             if (!UsdFile.IsEmpty())
             {
                 StageActor->SetRootLayer(UsdFile);
@@ -1176,7 +1177,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         TSharedPtr<FJsonObject> Result = MakeAssetPluginSuccess(TEXT("USD stage actor spawned"), TEXT("USD"));
         if (StageActor)
         {
-            Result->SetStringField(TEXT("actorName"), StageActor->GetName());
+            Result->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? StageActor->GetName() : ActualName);
         }
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Result);
         return true;
@@ -2056,9 +2057,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
 
         FActorSpawnParameters SpawnParams;
         AHoudiniAssetActor* HdaActor = World->SpawnActor<AHoudiniAssetActor>(AHoudiniAssetActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        FString ActualName;
         if (HdaActor)
         {
-            HdaActor->SetActorLabel(ActorLabel);
+            ActualName = SetActorLabelWithVerification(HdaActor, ActorLabel, true);
             if (UHoudiniAssetComponent* HAC = HdaActor->GetHoudiniAssetComponent())
             {
                 HAC->SetHoudiniAsset(HDA);
@@ -2068,7 +2070,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
         TSharedPtr<FJsonObject> Result = MakeAssetPluginSuccess(TEXT("HDA instantiated"), TEXT("Houdini"));
         if (HdaActor)
         {
-            Result->SetStringField(TEXT("actorName"), HdaActor->GetName());
+            Result->SetStringField(TEXT("actorName"), ActualName.IsEmpty() ? HdaActor->GetName() : ActualName);
         }
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Result);
         return true;
@@ -2094,9 +2096,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAssetPluginsAction(
 
         FActorSpawnParameters SpawnParams;
         AHoudiniAssetActor* HdaActor = World->SpawnActor<AHoudiniAssetActor>(AHoudiniAssetActor::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+        FString ActualName;
         if (HdaActor)
         {
-            HdaActor->SetActorLabel(ActorLabel);
+            ActualName = SetActorLabelWithVerification(HdaActor, ActorLabel, true);
             if (HDA)
             {
                 if (UHoudiniAssetComponent* HAC = HdaActor->GetHoudiniAssetComponent())
