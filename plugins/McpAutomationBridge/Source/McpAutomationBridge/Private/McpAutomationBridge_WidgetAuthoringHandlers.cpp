@@ -192,7 +192,12 @@ namespace WidgetAuthoringHelpers
         
         // Method 4: Asset Registry lookup
         IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FAssetData AssetData = Registry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
+#else
+        // UE 5.0: GetAssetByObjectPath takes FName
+        FAssetData AssetData = Registry.GetAssetByObjectPath(FName(*ObjectPath));
+#endif
         if (AssetData.IsValid())
         {
             if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(AssetData.GetAsset()))
@@ -297,7 +302,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
         {
             // Try to find custom parent class
+            // Note: FindFirstObject was introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             UClass* FoundClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
+#else
+            // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+            UClass* FoundClass = ResolveClassByName(ParentClass);
+#endif
             if (FoundClass && FoundClass->IsChildOf(UUserWidget::StaticClass()))
             {
                 ParentUClass = FoundClass;
@@ -361,7 +372,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Find parent class
+        // Note: FindFirstObject was introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         UClass* NewParentClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
+#else
+        // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+        UClass* NewParentClass = ResolveClassByName(ParentClass);
+#endif
         if (!NewParentClass || !NewParentClass->IsChildOf(UUserWidget::StaticClass()))
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Parent class not found or invalid"), TEXT("INVALID_CLASS"));
@@ -645,7 +662,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Set optional properties
         if (Payload->HasField(TEXT("fontSize")))
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             FSlateFontInfo FontInfo = TextBlock->GetFont();
+#else
+            // UE 5.0 fallback - create new font info
+            FSlateFontInfo FontInfo = FSlateFontInfo();
+#endif
             FontInfo.Size = static_cast<int32>(GetJsonNumberField(Payload, TEXT("fontSize"), 12.0));
             TextBlock->SetFont(FontInfo);
         }
@@ -1204,10 +1226,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Set explicit wrap size
+        // Note: SetWrapSize was introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (Payload->HasField(TEXT("wrapSize")))
         {
             WrapBox->SetWrapSize(static_cast<float>(GetJsonNumberField(Payload, TEXT("wrapSize"), 0.0)));
         }
+#endif
 
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
@@ -3219,7 +3244,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Add title text
         UTextBlock* TitleText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("TitleText"));
         TitleText->SetText(FText::FromString(Title));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = TitleText->GetFont();
+#else
+        FSlateFontInfo FontInfo = FSlateFontInfo();
+#endif
         FontInfo.Size = 48;
         TitleText->SetFont(FontInfo);
         MenuBox->AddChild(TitleText);
@@ -3289,7 +3318,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Add PAUSED title
         UTextBlock* TitleText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("PausedTitle"));
         TitleText->SetText(FText::FromString(TEXT("PAUSED")));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = TitleText->GetFont();
+#else
+        FSlateFontInfo FontInfo = FSlateFontInfo();
+#endif
         FontInfo.Size = 36;
         TitleText->SetFont(FontInfo);
         MenuBox->AddChild(TitleText);
@@ -3465,7 +3498,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Create crosshair image (uses a simple text-based crosshair, user can swap for image)
         UTextBlock* Crosshair = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Crosshair"));
         Crosshair->SetText(FText::FromString(TEXT("+")));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = Crosshair->GetFont();
+#else
+        FSlateFontInfo FontInfo = FSlateFontInfo();
+#endif
         FontInfo.Size = static_cast<int32>(Size);
         Crosshair->SetFont(FontInfo);
         Crosshair->SetColorAndOpacity(FSlateColor(FLinearColor::White));
@@ -3530,7 +3567,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         // Create ammo counter text
         UTextBlock* AmmoText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("AmmoCounter"));
         AmmoText->SetText(FText::FromString(TEXT("30 / 90")));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = AmmoText->GetFont();
+#else
+        // UE 5.0: Access Font property directly
+        FSlateFontInfo FontInfo = AmmoText->Font;
+#endif
         FontInfo.Size = 24;
         AmmoText->SetFont(FontInfo);
         Parent->AddChild(AmmoText);

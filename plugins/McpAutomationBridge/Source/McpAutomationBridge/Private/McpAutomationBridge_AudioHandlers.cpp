@@ -94,8 +94,14 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
   FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Filter.ClassPaths.Add(USoundWave::StaticClass()->GetClassPathName());
   Filter.ClassPaths.Add(USoundCue::StaticClass()->GetClassPathName());
+#else
+  // UE 5.0 fallback - use ClassNames instead of ClassPaths
+  Filter.ClassNames.Add(USoundWave::StaticClass()->GetFName());
+  Filter.ClassNames.Add(USoundCue::StaticClass()->GetFName());
+#endif
   Filter.bRecursivePaths = true;
   Filter.PackagePaths.Add(TEXT("/Game"));
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
@@ -147,7 +153,11 @@ static USoundMix *ResolveSoundMix(const FString &MixPath) {
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
   FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Filter.ClassPaths.Add(USoundMix::StaticClass()->GetClassPathName());
+#else
+  Filter.ClassNames.Add(USoundMix::StaticClass()->GetFName());
+#endif
   Filter.bRecursivePaths = true;
   Filter.PackagePaths.Add(TEXT("/Game"));
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);
@@ -191,7 +201,11 @@ static USoundClass *ResolveSoundClass(const FString &ClassPath) {
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FAssetData> AssetData;
   FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Filter.ClassPaths.Add(USoundClass::StaticClass()->GetClassPathName());
+#else
+  Filter.ClassNames.Add(USoundClass::StaticClass()->GetFName());
+#endif
   Filter.bRecursivePaths = true;
   Filter.PackagePaths.Add(TEXT("/Game"));
   AssetRegistryModule.Get().GetAssets(Filter, AssetData);

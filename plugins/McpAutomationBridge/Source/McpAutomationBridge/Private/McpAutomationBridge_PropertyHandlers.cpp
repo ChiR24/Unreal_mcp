@@ -2511,8 +2511,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetReferences(
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   // Find the asset
-  FAssetData AssetData =
-      AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#else
+  // UE 5.0: GetAssetByObjectPath takes FName
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
+#endif
   if (!AssetData.IsValid()) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -2588,8 +2592,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   // Find the asset
-  FAssetData AssetData =
-      AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#else
+  // UE 5.0: GetAssetByObjectPath takes FName
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
+#endif
   if (!AssetData.IsValid()) {
     SendAutomationError(
         RequestingSocket, RequestId,

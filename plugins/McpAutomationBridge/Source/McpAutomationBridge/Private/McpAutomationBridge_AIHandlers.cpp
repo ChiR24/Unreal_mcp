@@ -49,8 +49,15 @@
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_ActorsOfClass.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_OnCircle.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_SimpleGrid.h"
+
+// EnvQueryTest headers are in EnvironmentQueryEditor module which may not be available in UE 5.0
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "EnvironmentQuery/Tests/EnvQueryTest_Distance.h"
 #include "EnvironmentQuery/Tests/EnvQueryTest_Trace.h"
+#define MCP_HAS_ENVQUERY_TESTS 1
+#else
+#define MCP_HAS_ENVQUERY_TESTS 0
+#endif
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
@@ -946,6 +953,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
     if (SubAction == TEXT("add_eqs_test"))
     {
+#if !MCP_HAS_ENVQUERY_TESTS
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("EQS Test creation requires UE 5.1+"),
+                            TEXT("NOT_SUPPORTED"));
+        return true;
+#else
         FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
         FString TestType = GetStringFieldAI(Payload, TEXT("testType"));
 
@@ -983,6 +996,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         return true;
+#endif
     }
 
     if (SubAction == TEXT("configure_test_scoring"))
@@ -1644,11 +1658,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         
         // Create and add a new slot using reflection to access private Slots array
         FSmartObjectSlotDefinition NewSlot;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+ uses FVector3f/FRotator3f and has bEnabled/ID members
         NewSlot.Offset = FVector3f(Offset);
         NewSlot.Rotation = FRotator3f(Rotation);
         NewSlot.bEnabled = bEnabled;
 #if WITH_EDITORONLY_DATA
         NewSlot.ID = FGuid::NewGuid();
+#endif
+#else
+        // UE 5.0 uses FVector/FRotator
+        NewSlot.Offset = Offset;
+        NewSlot.Rotation = Rotation;
 #endif
         
         // Access slots via reflection
@@ -1707,6 +1728,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
         
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         if (!Definition->IsValidSlotIndex(SlotIndex))
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -1748,6 +1770,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("behaviorCount"), Slot.BehaviorDefinitions.Num());
         Result->SetStringField(TEXT("message"), TEXT("Slot behavior configured"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior configured"), Result);
+#else
+        // UE 5.0: SmartObject API is limited - skip slot configuration
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("SmartObject slot configuration requires UE 5.1+"), TEXT("UNSUPPORTED_VERSION"));
+        return true;
+#endif
 #elif MCP_HAS_SMART_OBJECTS
         FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
         int32 SlotIndex = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("slotIndex"), 0));
@@ -1929,7 +1957,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             UMassEntityConfigAsset* ParentConfig = LoadObject<UMassEntityConfigAsset>(nullptr, *ParentConfigPath);
             if (ParentConfig)
             {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
                 Config.SetParentAsset(*ParentConfig);
+#endif
             }
         }
         

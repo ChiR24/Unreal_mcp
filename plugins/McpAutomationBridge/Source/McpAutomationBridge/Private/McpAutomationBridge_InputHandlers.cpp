@@ -7,7 +7,11 @@
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
+// Note: EnhancedInputEditorSubsystem.h was introduced in UE 5.1
+// For UE 5.0, we use alternative approaches
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "EnhancedInputEditorSubsystem.h"
+#endif
 #include "Factories/Factory.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"

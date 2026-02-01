@@ -570,7 +570,12 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     TArray<USCS_Node *> Stack;
     Stack.Add(A);
     while (Stack.Num() > 0) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       USCS_Node *Cur = Stack.Pop(EAllowShrinking::No);
+#else
+      // UE 5.0 fallback - Pop() doesn't take EAllowShrinking parameter
+      USCS_Node *Cur = Stack.Pop();
+#endif
       if (!Cur)
         continue;
       const TArray<USCS_Node *> &Kids = Cur->GetChildNodes();

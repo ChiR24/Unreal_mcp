@@ -9,6 +9,17 @@
 #include "Engine/DataAsset.h"
 #include "McpAutomationBridgeSubsystem.generated.h"
 
+// Define MCP_HAS_CONTROLRIG_FACTORY based on UE version
+// ControlRigBlueprintFactory is only available in UE 5.1+
+#ifndef MCP_HAS_CONTROLRIG_FACTORY
+  #include "Runtime/Launch/Resources/Version.h"
+  #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    #define MCP_HAS_CONTROLRIG_FACTORY 1
+  #else
+    #define MCP_HAS_CONTROLRIG_FACTORY 0
+  #endif
+#endif
+
 // Forward declare USkeleton to avoid including heavy animation headers
 class USkeleton;
 

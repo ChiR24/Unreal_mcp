@@ -544,11 +544,20 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
         }
       }
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       LES->BuildLightMaps(QualityEnum, /*bWithReflectionCaptures*/ false);
       TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
       R->SetBoolField(TEXT("requested"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Build lighting requested"), R, FString());
+#else
+      // UE 5.0 fallback - BuildLightMaps not available
+      TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+      R->SetBoolField(TEXT("requested"), false);
+      R->SetStringField(TEXT("error"), TEXT("BuildLightMaps not available in UE 5.0"));
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Build lighting not available in UE 5.0"), R, TEXT("NOT_AVAILABLE"));
+#endif
     } else {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("LevelEditorSubsystem not available"),
@@ -840,8 +849,13 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // Resolve factory
     UClass *FactoryUClass = ResolveClassByName(FactoryClass);
     if (!FactoryUClass) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       // Try finding by short name or full path
       FactoryUClass = UClass::TryFindTypeSlow<UClass>(FactoryClass);
+#else
+      // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+      FactoryUClass = ResolveClassByName(FactoryClass);
+#endif
     }
 
     // Quick factory lookup by short name if full resolution failed

@@ -20,7 +20,6 @@
 #if __has_include("NiagaraSystem.h")
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
-#include "NiagaraSystemFactoryNew.h"
 #endif
 #if __has_include("Engine/PointLight.h")
 #include "Engine/PointLight.h"

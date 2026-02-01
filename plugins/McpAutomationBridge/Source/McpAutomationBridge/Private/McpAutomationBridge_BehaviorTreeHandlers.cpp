@@ -17,6 +17,10 @@
 #include "BehaviorTree/Tasks/BTTask_RotateToFaceBBEntry.h"
 #include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
+
+// BehaviorTreeGraph classes are in BehaviorTreeEditor module, which may not be available in UE 5.0
+// or may have different API. Wrap with version guards.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"
 #include "BehaviorTreeGraphNode_Composite.h"
@@ -24,9 +28,13 @@
 #include "BehaviorTreeGraphNode_Root.h"
 #include "BehaviorTreeGraphNode_Service.h"
 #include "BehaviorTreeGraphNode_Task.h"
+#include "EdGraphSchema_BehaviorTree.h"
+#define MCP_HAS_BEHAVIOR_TREE_GRAPH 1
+#else
+#define MCP_HAS_BEHAVIOR_TREE_GRAPH 0
+#endif
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
-#include "EdGraphSchema_BehaviorTree.h"
 
 
 #endif
@@ -122,6 +130,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
 
     // Initialize the BT graph (EdGraph)
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
     UEdGraph *NewGraph =
         NewObject<UBehaviorTreeGraph>(NewBT, TEXT("BehaviorTree"));
     NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
@@ -129,6 +138,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     // Create default nodes (Root)
     NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
+#else
+    // UE 5.0: BehaviorTreeGraph classes not available in BehaviorTreeEditor module
+    // The graph will be initialized when the asset is first opened in the editor
+    NewBT->BTGraph = nullptr;
+#endif
 
     // Save the asset using safe helper
     FAssetRegistryModule::AssetCreated(NewBT);
@@ -207,6 +221,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   };
 
   if (SubAction == TEXT("add_node")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("NOT_SUPPORTED"));
+    return true;
+#else
     FString NodeType;
     Payload->TryGetStringField(TEXT("nodeType"), NodeType);
     float X = 0.0f;
@@ -332,7 +352,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
           TEXT("UNKNOWN_TYPE"));
     }
     return true;
+#endif
   } else if (SubAction == TEXT("connect_nodes")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("NOT_SUPPORTED"));
+    return true;
+#endif
     // Parent -> Child connection
     FString ParentNodeId, ChildNodeId;
     Payload->TryGetStringField(TEXT("parentNodeId"), ParentNodeId);
@@ -383,6 +410,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
     return true;
   } else if (SubAction == TEXT("remove_node")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("NOT_SUPPORTED"));
+    return true;
+#endif
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
@@ -398,6 +431,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
     return true;
   } else if (SubAction == TEXT("break_connections")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("NOT_SUPPORTED"));
+    return true;
+#endif
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
@@ -413,6 +452,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
     return true;
   } else if (SubAction == TEXT("set_node_properties")) {
+#if !MCP_HAS_BEHAVIOR_TREE_GRAPH
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("NOT_SUPPORTED"));
+    return true;
+#else
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
@@ -491,6 +536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                           TEXT("NODE_NOT_FOUND"));
     }
     return true;
+#endif
   }
 
   SendAutomationError(

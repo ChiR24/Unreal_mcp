@@ -286,9 +286,15 @@ static void ApplyPropertiesToObject(UObject *TargetObj,
     }
 
     if (!TextValue.IsEmpty()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       Property->ImportText_Direct(
           *TextValue, Property->ContainerPtrToValuePtr<void>(TargetObj),
           TargetObj, 0);
+#else
+      // UE 5.0: Use ImportText with different signature
+      Property->ImportText(*TextValue, Property->ContainerPtrToValuePtr<void>(TargetObj),
+          PPF_None, TargetObj);
+#endif
     }
   }
 }

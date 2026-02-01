@@ -21,35 +21,70 @@ public class McpAutomationBridge : ModuleRules
         // requiring system paging file modifications.
         // ============================================================================
         
+        // ============================================================================
+        // DYNAMIC MEMORY-BASED BUILD CONFIGURATION
+        // ============================================================================
+        // Automatically adjust build parallelism based on available system memory
+        // to prevent "compiler is out of heap space" errors (C1060)
+        
+        long AvailableMemoryMB = GetAvailableMemoryMB();
+        bool bIsLowMemorySystem = AvailableMemoryMB < 8192; // Less than 8GB
+        bool bIsVeryLowMemorySystem = AvailableMemoryMB < 4096; // Less than 4GB
+        
+        Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory", AvailableMemoryMB));
+        
         // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
         // This is the most reliable workaround for C3859/C1076 errors
         PCHUsage = PCHUsageMode.NoPCHs;
         
-        // Enable Unity builds to reduce compilation units
-        bUseUnity = true;
-        MinSourceFilesForUnityBuildOverride = 2;
-        
-        // Increase bytes per unity file to combine MORE files into fewer translation units
-        // Default is 384KB; we increase to 2MB to handle our 50+ handler files
-        // This reduces number of compiler invocations, preventing memory exhaustion
-        NumIncludedBytesPerUnityCPPOverride = 2048 * 1024;
-        
+        // Enable Unity builds for faster compilation on systems with sufficient memory
+        // Unity builds combine multiple source files which speeds up compilation significantly
+        // Only disable for very low memory systems (< 8GB) to prevent C1060 heap errors
+        bUseUnity = !bIsLowMemorySystem;
+        Console.WriteLine(string.Format("McpAutomationBridge: Unity builds {0}", bUseUnity ? "enabled" : "disabled (low memory system)"));
+         
         // Disable Adaptive Unity to prevent files from being excluded from unity builds
         // bUseAdaptiveUnityBuild was removed in UE 5.7, use reflection to set it safely
         try
         {
             var prop = GetType().GetProperty("bUseAdaptiveUnityBuild");
-            if (prop != null) { prop.SetValue(this, false); }
+            if (prop != null && !bIsVeryLowMemorySystem) { prop.SetValue(this, false); }
         }
         catch { /* Property doesn't exist in this UE version */ }
-        
+         
         // bMergeUnityFiles was also removed in UE 5.7
         try
         {
             var prop = GetType().GetProperty("bMergeUnityFiles");
-            if (prop != null) { prop.SetValue(this, true); }
+            if (prop != null && !bIsLowMemorySystem) { prop.SetValue(this, true); }
         }
         catch { /* Property doesn't exist in this UE version */ }
+        
+        // Set max parallel actions based on available memory
+        // Each compiler instance needs ~1-2GB of RAM
+        try
+        {
+            var prop = GetType().GetProperty("MaxParallelActions");
+            if (prop != null)
+            {
+                int MaxActions = bIsVeryLowMemorySystem ? 1 : (bIsLowMemorySystem ? 2 : 4);
+                prop.SetValue(this, MaxActions);
+                Console.WriteLine(string.Format("McpAutomationBridge: Max parallel actions set to {0}", MaxActions));
+            }
+        }
+        catch { /* Property doesn't exist in this UE version */ }
+
+        // UE 5.0 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion == 0)
+        {
+            if (Target.Platform == UnrealTargetPlatform.Win64)
+            {
+                // C4668: '__has_feature' is not defined as a preprocessor macro
+                // C4067: unexpected tokens following preprocessor directive
+                PublicDefinitions.Add("__has_feature(x)=0");
+                Console.WriteLine("McpAutomationBridge: Added MSVC warning suppression for UE 5.0");
+            }
+        }
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
@@ -82,7 +117,7 @@ public class McpAutomationBridge : ModuleRules
                 "Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
                 "ControlRig","ControlRigDeveloper","ControlRigEditor","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
-                "BehaviorTreeEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph",
+                "BehaviorTreeEditor", "EnvironmentQueryEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph",
                 "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
                 // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
                 "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
@@ -171,8 +206,8 @@ public class McpAutomationBridge : ModuleRules
                 PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
             }
 
-            // Control Rig Factory Support
-            PublicDefinitions.Add("MCP_HAS_CONTROLRIG_FACTORY=1");
+            // Control Rig Factory Support - detection is handled in source code via __has_include
+            // Do not define MCP_HAS_CONTROLRIG_FACTORY here to avoid redefinition warnings
         }
         else
         {
@@ -288,6 +323,56 @@ public class McpAutomationBridge : ModuleRules
         }
         catch { /* Ignore access denied errors */ }
         return false;
+    }
+
+    /// <summary>
+    /// Gets the approximate available physical memory in MB.
+    /// Uses a simple heuristic based on environment and process info.
+    /// </summary>
+    /// <returns>Available memory in MB.</returns>
+    private long GetAvailableMemoryMB()
+    {
+        try
+        {
+            // Check for UE_BUILD_CONFIGURATION environment variable
+            // This can be set to hint at memory constraints
+            string MemoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
+            if (!string.IsNullOrEmpty(MemoryHint))
+            {
+                long HintValue;
+                if (long.TryParse(MemoryHint, out HintValue) && HintValue > 0)
+                {
+                    return HintValue;
+                }
+            }
+            
+            // Check for MSBuild's max CPU count - if low, system might be constrained
+            string ProcessorCount = Environment.GetEnvironmentVariable("NUMBER_OF_PROCESSORS");
+            if (!string.IsNullOrEmpty(ProcessorCount))
+            {
+                int CpuCount;
+                if (int.TryParse(ProcessorCount, out CpuCount))
+                {
+                    // Rough heuristic: assume 2GB per core minimum, 4GB per core recommended
+                    // For systems with many cores, assume more RAM
+                    long EstimatedMemory = CpuCount * 2048; // 2GB per core minimum
+                    
+                    // Cap the estimate to reasonable bounds
+                    if (EstimatedMemory > 65536) return 65536; // Max 64GB
+                    if (EstimatedMemory < 4096) return 4096;   // Min 4GB
+                    
+                    return EstimatedMemory;
+                }
+            }
+            
+            // Conservative default
+            return 8192; // Assume 8GB if we can't determine
+        }
+        catch
+        {
+            // Default to conservative estimate
+            return 8192; // Assume 8GB
+        }
     }
 
     /// <summary>

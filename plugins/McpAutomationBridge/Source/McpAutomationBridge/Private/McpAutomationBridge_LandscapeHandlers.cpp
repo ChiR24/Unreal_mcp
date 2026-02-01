@@ -309,7 +309,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
 
 #else
             // UE 5.6 and older: Use standard Import() workflow
-            Landscape->Import(FGuid::NewGuid(), 0, 0, CaptComponentsX - 1, CaptComponentsY - 1, CaptSectionsPerComponent, CaptQuadsPerComponent, ImportHeightData, nullptr, ImportLayerInfos, ELandscapeImportAlphamapType::Layered, TArrayView<const FLandscapeLayer>(EditLayers));
+            // UE 5.0-5.6: Import() takes TArray* pointer, not TArrayView
+            Landscape->Import(FGuid::NewGuid(), 0, 0, CaptComponentsX - 1, CaptComponentsY - 1, CaptSectionsPerComponent, CaptQuadsPerComponent, ImportHeightData, nullptr, ImportLayerInfos, ELandscapeImportAlphamapType::Layered, EditLayers.Num() > 0 ? &EditLayers : nullptr);
             Landscape->CreateDefaultLayer();
 #endif
     }

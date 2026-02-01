@@ -1208,11 +1208,16 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                            Property->GetClass()->GetName());
 
     // Return value as string for broad compatibility.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     FString ValueText;
     const void *ValuePtr = Property->ContainerPtrToValuePtr<void>(TargetObject);
     Property->ExportTextItem_Direct(ValueText, ValuePtr, nullptr, TargetObject,
                                     PPF_None);
     Result->SetStringField(TEXT("value"), ValueText);
+#else
+    // UE 5.0: ExportTextItem_Direct not available
+    Result->SetStringField(TEXT("value"), TEXT("(Property value retrieval not supported in UE 5.0)"));
+#endif
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Retrieved property: %s.%s"),
@@ -1903,15 +1908,19 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
       return true;
     }
 
+    Result->SetStringField(TEXT("componentName"), TargetComponent->GetName());
+    Result->SetStringField(TEXT("propertyName"), PropertyName);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     FString ValueText;
     const void *ValuePtr =
         Property->ContainerPtrToValuePtr<void>(TargetComponent);
     Property->ExportTextItem_Direct(ValueText, ValuePtr, nullptr,
                                     TargetComponent, PPF_None);
-
-    Result->SetStringField(TEXT("componentName"), TargetComponent->GetName());
-    Result->SetStringField(TEXT("propertyName"), PropertyName);
     Result->SetStringField(TEXT("value"), ValueText);
+#else
+    // UE 5.0: ExportTextItem_Direct not available
+    Result->SetStringField(TEXT("value"), TEXT("(Property value retrieval not supported in UE 5.0)"));
+#endif
     Result->SetStringField(TEXT("propertyType"),
                            Property->GetClass()->GetName());
     SendAutomationResponse(RequestingSocket, RequestId, true,

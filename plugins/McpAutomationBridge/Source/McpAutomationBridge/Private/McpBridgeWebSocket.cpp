@@ -1319,7 +1319,11 @@ bool FMcpBridgeWebSocket::ReceiveExact(uint8 *Buffer, SIZE_T Length) {
         FMath::Min(static_cast<SIZE_T>(PendingReceived.Num()), Length);
     if (Existing > 0) {
       FMemory::Memcpy(Buffer, PendingReceived.GetData(), Existing);
-      PendingReceived.RemoveAt(0, Existing, EAllowShrinking::No);
+      PendingReceived.RemoveAt(0, Existing
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      , EAllowShrinking::No
+#endif
+      );
       Collected += Existing;
     }
   }

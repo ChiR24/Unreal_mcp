@@ -77,8 +77,9 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         // Emitter script
         for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
         {
-            if (Handle.GetName() == EmitterName)
+            if (Handle.GetName() == FName(*EmitterName))
             {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
                 if (Emitter)
                 {
@@ -88,6 +89,18 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
                     if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
                     {
                         if (ScriptType == TEXT("Update")) TargetScript = Emitter->GetLatestEmitterData()->UpdateScriptProps.Script;
+#else
+                // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+                UNiagaraEmitter* Emitter = Handle.GetInstance();
+                if (Emitter)
+                {
+                    // UE 5.0: Direct access to script props
+                    TargetScript = Emitter->SpawnScriptProps.Script; // Default
+                    FString ScriptType;
+                    if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
+                    {
+                        if (ScriptType == TEXT("Update")) TargetScript = Emitter->UpdateScriptProps.Script;
+#endif
                         // Add ParticleSpawn, ParticleUpdate etc.
                     }
                 }

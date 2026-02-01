@@ -1,4 +1,10 @@
 // Ensure the subsystem type and bridge socket types are available
+// Include helpers first to ensure MCP_HAS_CONTROLRIG_FACTORY is properly defined
+// before McpAutomationBridgeSubsystem.h sets default values
+#if WITH_EDITOR
+#include "McpAutomationBridgeHelpers.h"
+#endif
+
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "Async/TaskGraphInterfaces.h"
@@ -18,7 +24,6 @@
 // Editor-only includes for ExecuteEditorCommands
 #if WITH_EDITOR
 #include "Editor.h"
-#include "McpAutomationBridgeHelpers.h"
 #endif
 
 // Define the subsystem log category declared in the public header.
@@ -960,16 +965,23 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
 // ============================================================================
 // CreateControlRigBlueprint Implementation
 // ============================================================================
-#if MCP_HAS_CONTROLRIG_FACTORY
+// Note: ControlRigBlueprintFactory is only available in UE 5.1+ or as private API
+// The MCP_HAS_CONTROLRIG_FACTORY macro is defined in McpAutomationBridgeHelpers.h
+// Flattened preprocessor checks for ControlRig includes
+#if MCP_HAS_CONTROLRIG_FACTORY && defined(__has_include)
+#  if __has_include("ControlRigBlueprintFactory.h")
 // UE 5.7 renamed ControlRigBlueprint.h to ControlRigBlueprintLegacy.h
-#if __has_include("ControlRigBlueprintLegacy.h")
-#include "ControlRigBlueprintLegacy.h"
-#else
-#include "ControlRigBlueprint.h"
+#    if __has_include("ControlRigBlueprintLegacy.h")
+#      include "ControlRigBlueprintLegacy.h"
+#    else
+#      include "ControlRigBlueprint.h"
+#    endif
+#    include "ControlRigBlueprintFactory.h"
+#    include "AssetRegistry/AssetRegistryModule.h"
+#  endif
 #endif
-#include "ControlRigBlueprintFactory.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 
+#if MCP_HAS_CONTROLRIG_FACTORY
 /**
  * @brief Creates a new Control Rig Blueprint asset.
  *
@@ -1070,6 +1082,6 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 #else
   OutError = TEXT("Control Rig creation only available in editor builds");
   return nullptr;
-#endif
+#endif // WITH_EDITOR
 }
 #endif // MCP_HAS_CONTROLRIG_FACTORY

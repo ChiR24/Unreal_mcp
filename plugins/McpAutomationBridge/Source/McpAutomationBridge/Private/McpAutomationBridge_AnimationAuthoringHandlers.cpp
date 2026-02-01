@@ -427,12 +427,15 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         // Set sequence length
         float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
         
-#if ENGINE_MAJOR_VERSION >= 5
-        // UE 5.7+: Use SetNumberOfFrames with FFrameNumber instead of deprecated SetPlayLength
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         NewSequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
         NewSequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
 #else
+        // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
         NewSequence->SequenceLength = Duration;
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
         
         SaveAnimAsset(NewSequence, bSave);
@@ -458,8 +461,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         
         float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
         
-#if ENGINE_MAJOR_VERSION >= 5
-        // UE 5.7+: Use SetNumberOfFrames with FFrameNumber instead of deprecated SetPlayLength
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
         Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
         if (Params->HasField(TEXT("frameRate")))
@@ -467,7 +470,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             // Frame rate already set above
         }
 #else
+        // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
         Sequence->SequenceLength = Duration;
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
         
         SaveAnimAsset(Sequence, bSave);
@@ -493,15 +499,29 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
-#if ENGINE_MAJOR_VERSION >= 5
-        // UE5 uses IAnimationDataController
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
         
-        // Add bone track if it doesn't exist - UE 5.7+ uses IsValidBoneTrackName instead of deprecated FindBoneTrackByName
         if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
         {
             Controller.AddBoneCurve(BoneFName);
+        }
+#elif ENGINE_MAJOR_VERSION >= 5
+        // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+        
+        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        if (Track == nullptr)
+        {
+            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack directly on the sequence
+            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            FRawAnimSequenceTrack NewTrack;
+            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
         }
 #else
         // UE4 approach
@@ -510,8 +530,11 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         if (TrackIndex == INDEX_NONE)
         {
             // Add raw track
+            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 4.x compatibility
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
             FRawAnimSequenceTrack NewTrack;
             Sequence->AddNewRawTrack(BoneFName, &NewTrack);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
         }
 #endif
         
@@ -543,11 +566,11 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
-#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+ API
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
         
-        // Ensure bone track exists - UE 5.7+ uses IsValidBoneTrackName instead of deprecated FindBoneTrackByName
         if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
         {
             Controller.AddBoneCurve(BoneFName);
@@ -561,6 +584,28 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FTransform Transform(Rotation, Location, Scale);
         
         // Set key at frame
+        FFrameNumber FrameNumber(Frame);
+        Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
+#elif ENGINE_MAJOR_VERSION >= 5
+        // UE 5.0 API - uses FindBoneTrackByName which returns a pointer
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+        
+        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        if (Track == nullptr)
+        {
+            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack
+            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            FRawAnimSequenceTrack NewTrack;
+            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+        }
+        
+        FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
+        FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
+        FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
+        
         FFrameNumber FrameNumber(Frame);
         Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
 #endif
@@ -591,9 +636,27 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
-#if ENGINE_MAJOR_VERSION >= 5
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+ API - FAnimationCurveIdentifier takes FName directly
         IAnimationDataController& Controller = Sequence->GetController();
         FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
+        
+        // Find or create curve
+        const FFloatCurve* ExistingCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
+        if (!ExistingCurve && bCreateIfMissing)
+        {
+            Controller.AddCurve(CurveId, AACF_DefaultCurve);
+        }
+        
+        // Set key value
+        float FrameTime = static_cast<float>(Frame) / Sequence->GetSamplingFrameRate().AsDecimal();
+        Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value));
+#elif ENGINE_MAJOR_VERSION >= 5
+        // UE 5.0 API - FAnimationCurveIdentifier takes FSmartName
+        IAnimationDataController& Controller = Sequence->GetController();
+        FSmartName SmartCurveName;
+        SmartCurveName.DisplayName = FName(*CurveName);
+        FAnimationCurveIdentifier CurveId(SmartCurveName, ERawCurveTrackTypes::RCT_Float);
         
         // Find or create curve
         const FFloatCurve* ExistingCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
@@ -635,7 +698,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FullClassName = TEXT("AnimNotify_") + NotifyClass;
         }
         
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         UClass* NotifyUClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+#else
+        // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+        UClass* NotifyUClass = ResolveClassByName(FullClassName);
+#endif
         if (!NotifyUClass)
         {
             NotifyUClass = UAnimNotify::StaticClass();
@@ -697,7 +765,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FullClassName = TEXT("AnimNotifyState_") + NotifyClass;
         }
         
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         UClass* NotifyStateClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+#else
+        // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+        UClass* NotifyStateClass = ResolveClassByName(FullClassName);
+#endif
         if (!NotifyStateClass)
         {
             NotifyStateClass = UAnimNotifyState::StaticClass();
@@ -996,7 +1069,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         
         // Add animation to slot track
         FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         Segment.SetAnimReference(Animation);
+#else
+        // UE 5.0: Direct member access
+        Segment.AnimReference = Animation;
+#endif
         Segment.StartPos = StartTime;
         Segment.AnimStartTime = 0.0f;
         Segment.AnimEndTime = Animation->GetPlayLength();
@@ -1069,7 +1147,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FullClassName = TEXT("AnimNotify_") + NotifyClass;
         }
         
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         UClass* NotifyUClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::ExactClass);
+#else
+        // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+        UClass* NotifyUClass = ResolveClassByName(FullClassName);
+#endif
         if (!NotifyUClass)
         {
             NotifyUClass = UAnimNotify::StaticClass();

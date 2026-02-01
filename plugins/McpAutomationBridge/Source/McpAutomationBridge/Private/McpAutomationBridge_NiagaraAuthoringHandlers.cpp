@@ -7,6 +7,25 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 
+// Note: FVersionedNiagaraEmitterData and related APIs were introduced in UE 5.1
+// UE 5.0 uses direct emitter pointers, UE 5.1+ uses versioned emitter data
+#if WITH_EDITOR && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_HAS_NIAGARA_VERSIONING_APIS 1
+#define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
+#define MCP_GET_EMITTER_DATA(Handle) (Handle).GetEmitterData()
+#define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)->GetLatestEmitterData()
+#define MCP_GET_EMITTER_VERSION_GUID(Emitter) (Emitter)->GetExposedVersion().VersionGuid
+#else
+#define MCP_HAS_NIAGARA_VERSIONING_APIS 0
+// UE 5.0: Use UNiagaraEmitter* directly instead of MCP_NIAGARA_EMITTER_DATA_TYPE*
+#define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
+// UE 5.0: GetInstance() is a const method, returns UNiagaraEmitter*
+// Use (&(Handle)) to handle both pointers and references uniformly
+#define MCP_GET_EMITTER_DATA(Handle) (&(Handle))->GetInstance()
+#define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)
+#define MCP_GET_EMITTER_VERSION_GUID(Emitter) FGuid()
+#endif
+
 #if WITH_EDITOR
 #include "NiagaraSystem.h"
 #include "NiagaraEmitter.h"
@@ -21,7 +40,14 @@
 #include "NiagaraStackEditorData.h"
 #include "NiagaraEmitterHandle.h"
 #include "NiagaraSimulationStageBase.h"
+
+// FNiagaraStackGraphUtilities is only available in UE 5.1+ (NiagaraEditor module)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
+#define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 1
+#else
+#define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 0
+#endif
 
 // Niagara Data Interfaces
 // UE 5.7+: Data interfaces moved to subfolders or different modules
@@ -54,8 +80,6 @@
 #include "NiagaraDataInterfaceCollisionQuery.h"
 #include "NiagaraScriptVariable.h"
 #include "NiagaraParameterStore.h"
-#include "NiagaraSystemFactoryNew.h"
-#include "NiagaraEmitterFactoryNew.h"
 #include "NiagaraRendererProperties.h"
 #include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraMeshRendererProperties.h"
@@ -165,10 +189,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystemFactoryNew* Factory = NewObject<UNiagaraSystemFactoryNew>();
-        UNiagaraSystem* NewSystem = Cast<UNiagaraSystem>(Factory->FactoryCreateNew(
-            UNiagaraSystem::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
-
+        // Create NiagaraSystem directly without factory (compatible with all UE versions)
+        // Note: Factories are editor-internal and not exported for plugin use
+        UNiagaraSystem* NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone);
+        if (NewSystem)
+        {
+            // Add default emitter using direct API (compatible with all UE versions)
+            UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(NewSystem, FName(TEXT("DefaultEmitter")));
+            if (NewEmitter)
+            {
+                NewSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
+            }
+        }
         if (!NewSystem)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara System."), TEXT("CREATE_FAILED"));
@@ -207,10 +239,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
-        UNiagaraEmitter* NewEmitter = Cast<UNiagaraEmitter>(Factory->FactoryCreateNew(
-            UNiagaraEmitter::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
-
+        // Create NiagaraEmitter directly without factory (compatible with all UE versions)
+        // Note: Factories are editor-internal and not exported for plugin use
+        UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Name), RF_Public | RF_Standalone);
         if (!NewEmitter)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));
@@ -252,9 +283,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        // Add emitter to system - UE 5.7 requires version GUID
+        // Add emitter to system - UE 5.1+ requires version GUID
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FGuid EmitterVersion = Emitter->GetExposedVersion().VersionGuid;
         FNiagaraEmitterHandle NewHandle = System->AddEmitterHandle(*Emitter, FName(*Emitter->GetName()), EmitterVersion);
+#else
+        // UE 5.0 - no version GUID needed
+        FNiagaraEmitterHandle NewHandle = System->AddEmitterHandle(*Emitter, FName(*Emitter->GetName()));
+#endif
         
         if (bSave)
         {
@@ -283,21 +319,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FNiagaraEmitterHandle* Handle = nullptr;
-        for (FNiagaraEmitterHandle& H : System->GetEmitterHandles())
+        for (const FNiagaraEmitterHandle& H : System->GetEmitterHandles())
         {
             if (H.GetName().ToString() == EmitterName)
             {
-                Handle = &H;
+                Handle = const_cast<FNiagaraEmitterHandle*>(&H);
                 break;
             }
         }
-
+        
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found in system."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
             return true;
         }
-
+        
         const TSharedPtr<FJsonObject>* PropsObj;
         if (Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) && PropsObj->IsValid())
         {
@@ -333,7 +369,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Get the versioned emitter data
-        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+#else
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+#endif
         if (!EmitterData)
         {
             return nullptr;
@@ -377,24 +417,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Add the module to the stack using the Stack Graph Utilities
+        // Note: FNiagaraStackGraphUtilities is only available in UE 5.1+
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
         UNiagaraNodeFunctionCall* NewModule = FNiagaraStackGraphUtilities::AddScriptModuleToStack(
             ModuleScript,
             *TargetOutput,
             INDEX_NONE, // Append to end
             SuggestedName.IsEmpty() ? ModuleScript->GetName() : SuggestedName
         );
-
         return NewModule;
+#else
+        // UE 5.0: Stack graph utilities not available
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("AddModule failed: FNiagaraStackGraphUtilities is not available in UE 5.0. Consider upgrading to UE 5.1+ for full Niagara stack graph support."));
+        return nullptr;
+#endif
     };
 
     // Helper lambda to find emitter handle
     auto FindEmitterHandle = [&](UNiagaraSystem* System, const FString& TargetEmitter) -> FNiagaraEmitterHandle*
     {
-        for (FNiagaraEmitterHandle& H : System->GetEmitterHandles())
+        for (const FNiagaraEmitterHandle& H : System->GetEmitterHandles())
         {
             if (H.GetName().ToString() == TargetEmitter)
             {
-                return &H;
+                return const_cast<FNiagaraEmitterHandle*>(&H);
             }
         }
         return nullptr;
@@ -936,9 +982,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FString FacingMode = GetStringFieldNiagAuth(Payload, TEXT("facingMode"), TEXT("FaceCamera"));
 
         // Get the versioned emitter data for the specified emitter (UE 5.7+)
-        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
         UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+#else
+        // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+        UNiagaraEmitter* Emitter = Handle->GetInstance();
+#endif
         if (EmitterData && Emitter)
         {
             // Create sprite renderer if not exists
@@ -960,7 +1012,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create sprite renderer"), TEXT("CREATION_FAILED"));
                     return true;
                 }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 Emitter->AddRenderer(SpriteRenderer, VersionedEmitter.Version);
+#else
+                // UE 5.0: AddRenderer only takes the renderer
+                Emitter->AddRenderer(SpriteRenderer);
+#endif
             }
 
             if (!MaterialPath.IsEmpty())
@@ -1009,9 +1066,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         FString MeshPath = GetStringFieldNiagAuth(Payload, TEXT("meshPath"));
 
         // Get the versioned emitter data (UE 5.7+)
-        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
         UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+#else
+        // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+        UNiagaraEmitter* Emitter = Handle->GetInstance();
+#endif
         if (EmitterData && Emitter)
         {
             UNiagaraMeshRendererProperties* MeshRenderer = nullptr;
@@ -1032,7 +1095,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create mesh renderer"), TEXT("CREATION_FAILED"));
                     return true;
                 }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 Emitter->AddRenderer(MeshRenderer, VersionedEmitter.Version);
+#else
+                // UE 5.0: AddRenderer only takes the renderer
+                Emitter->AddRenderer(MeshRenderer);
+#endif
             }
 
             if (!MeshPath.IsEmpty())
@@ -1082,9 +1150,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Get the versioned emitter data (UE 5.7+)
-        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
         UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+#else
+        // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+        UNiagaraEmitter* Emitter = Handle->GetInstance();
+#endif
         if (EmitterData && Emitter)
         {
             UNiagaraRibbonRendererProperties* RibbonRenderer = nullptr;
@@ -1105,7 +1179,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create ribbon renderer"), TEXT("CREATION_FAILED"));
                     return true;
                 }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 Emitter->AddRenderer(RibbonRenderer, VersionedEmitter.Version);
+#else
+                // UE 5.0: AddRenderer only takes the renderer
+                Emitter->AddRenderer(RibbonRenderer);
+#endif
             }
 
             FString MaterialPath = GetStringFieldNiagAuth(Payload, TEXT("materialPath"));
@@ -1153,9 +1232,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Get the versioned emitter data (UE 5.7+)
-        FVersionedNiagaraEmitterData* EmitterData = Handle->GetEmitterData();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
         UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+#else
+        // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+        UNiagaraEmitter* Emitter = Handle->GetInstance();
+#endif
         if (EmitterData && Emitter)
         {
             UNiagaraLightRendererProperties* LightRenderer = nullptr;
@@ -1176,7 +1261,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create light renderer"), TEXT("CREATION_FAILED"));
                     return true;
                 }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 Emitter->AddRenderer(LightRenderer, VersionedEmitter.Version);
+#else
+                // UE 5.0: AddRenderer only takes the renderer
+                Emitter->AddRenderer(LightRenderer);
+#endif
             }
 
             double LightRadius = GetNumberFieldNiagAuth(Payload, TEXT("lightRadius"), 100.0);
@@ -1752,17 +1842,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         UNiagaraEmitter* Emitter = Handle->GetInstance().Emitter;
         if (Emitter)
         {
             // Enable GPU simulation by setting simulation target
             // This requires accessing the versioned emitter data
-            FVersionedNiagaraEmitterData* EmitterData = Emitter->GetLatestEmitterData();
+            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
             if (EmitterData)
             {
                 EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
             }
         }
+#else
+        // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
+        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        if (Emitter)
+        {
+            Emitter->SimTarget = ENiagaraSimTarget::GPUComputeSim;
+        }
+#endif
 
         bool bFixedBounds = GetBoolFieldNiagAuth(Payload, TEXT("fixedBoundsEnabled"), false);
         bool bDeterministic = GetBoolFieldNiagAuth(Payload, TEXT("deterministicEnabled"), false);
@@ -1858,10 +1957,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                 EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
                 EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
                 
+                #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 UNiagaraEmitter* Em = Handle.GetInstance().Emitter;
+                #else
+                UNiagaraEmitter* Em = Handle.GetInstance();
+                #endif
                 if (Em)
                 {
-                    FVersionedNiagaraEmitterData* EmData = Em->GetLatestEmitterData();
+                    MCP_NIAGARA_EMITTER_DATA_TYPE* EmData = MCP_GET_LATEST_EMITTER_DATA(Em);
                     if (EmData)
                     {
                         EmitterObj->SetStringField(TEXT("simulationTarget"), EmData->SimTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"));
@@ -1893,8 +1996,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             bool bHasGPU = false;
             for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
             {
+                #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 UNiagaraEmitter* Em = Handle.GetInstance().Emitter;
-                if (Em && Em->GetLatestEmitterData() && Em->GetLatestEmitterData()->SimTarget == ENiagaraSimTarget::GPUComputeSim)
+                #else
+                UNiagaraEmitter* Em = Handle.GetInstance();
+                #endif
+                if (Em && MCP_GET_LATEST_EMITTER_DATA(Em) && MCP_GET_LATEST_EMITTER_DATA(Em)->SimTarget == ENiagaraSimTarget::GPUComputeSim)
                 {
                     bHasGPU = true;
                     break;
@@ -1907,7 +2014,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             InfoObj->SetStringField(TEXT("assetType"), TEXT("Emitter"));
             InfoObj->SetStringField(TEXT("name"), Emitter->GetName());
             
-            FVersionedNiagaraEmitterData* EmData = Emitter->GetLatestEmitterData();
+            MCP_NIAGARA_EMITTER_DATA_TYPE* EmData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
             if (EmData)
             {
                 InfoObj->SetStringField(TEXT("simulationTarget"), EmData->SimTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"));
@@ -1956,7 +2063,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
                     FString::Printf(TEXT("Emitter '%s' is disabled."), *Handle.GetName().ToString()))));
             }
 
-            FVersionedNiagaraEmitterData* EmitterData = Handle.GetEmitterData();
+            // Get emitter data - UE 5.1+ uses GetEmitterData(), UE 5.0 uses GetInstance()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetEmitterData();
+#else
+            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetInstance();
+#endif
             if (EmitterData)
             {
                 // Check for renderers (UE 5.7+)
@@ -1985,7 +2097,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 #else
     SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));
     return true;
-#endif
+#endif // WITH_EDITOR
 }
 
 #undef GetStringFieldNiagAuth

@@ -65,8 +65,13 @@ static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const F
             if (Property)
             {
                 void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
-                // UE 5.6+: Use ImportText_Direct instead of deprecated ImportText
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                // UE 5.1+: Use ImportText_Direct
                 Property->ImportText_Direct(*DefaultValue, ValuePtr, CDO, 0);
+#else
+                // UE 5.0: Use ImportText with different signature
+                Property->ImportText(*DefaultValue, ValuePtr, PPF_None, CDO);
+#endif
                 Blueprint->MarkPackageDirty();
             }
         }

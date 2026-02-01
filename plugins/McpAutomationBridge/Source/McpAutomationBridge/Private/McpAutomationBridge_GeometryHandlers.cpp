@@ -41,19 +41,27 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/MeshModelingFunctions.h"
 #include "GeometryScript/MeshNormalsFunctions.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
+// Note: MeshRemeshFunctions.h was introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "GeometryScript/MeshRemeshFunctions.h"
+#endif
 #include "GeometryScript/MeshRepairFunctions.h"
 #include "GeometryScript/MeshSimplifyFunctions.h"
 #include "GeometryScript/MeshSubdivideFunctions.h"
 #include "GeometryScript/MeshUVFunctions.h"
-#include "GeometryScript/CollisionFunctions.h"
-#include "GeometryScript/MeshTransformFunctions.h"
-#include "MeshBoundaryLoops.h"
-#include "EdgeLoop.h"
+
 #include "Editor.h"
 #include "Subsystems/EditorActorSubsystem.h"
 #include "UDynamicMesh.h"
 #include "Components/SplineComponent.h"
+
+// GeometryScript is only fully supported in UE 5.1+
+// UE 5.0 had experimental GeometryScript with limited API
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_HAS_FULL_GEOMETRY_SCRIPT 1
+#else
+#define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
+#endif
  
 // Helper macros for JSON field access
 #define GetStringFieldGeom GetJsonStringField
@@ -172,6 +180,8 @@ static double ClampDimension(double Value, double Default = 100.0)
 // -------------------------------------------------------------------------
 // Primitives
 // -------------------------------------------------------------------------
+
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -4683,6 +4693,8 @@ static bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FStrin
 // Handler Dispatcher
 // -------------------------------------------------------------------------
 
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
+
 bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     const FString& RequestId,
     const FString& Action,
@@ -4693,6 +4705,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     {
         return false;
     }
+
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
     if (!Payload.IsValid())
     {
@@ -4798,6 +4812,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
 
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown geometry subAction: '%s'"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
+#else
+    // UE 5.0 doesn't have full GeometryScript support
+    SendAutomationError(RequestingSocket, RequestId,
+        TEXT("GeometryScript operations require UE 5.1 or later"),
+        TEXT("NOT_SUPPORTED"));
+    return true;
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
 }
 
 #endif // WITH_EDITOR

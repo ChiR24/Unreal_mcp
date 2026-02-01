@@ -41,24 +41,32 @@
 #include "WorldPartition/DataLayer/DataLayer.h"
 #include "WorldPartition/DataLayer/DataLayerSubsystem.h"
 
-// Check for DataLayerEditorSubsystem
-#if defined(__has_include)
-#  if __has_include("DataLayer/DataLayerEditorSubsystem.h")
-#    include "DataLayer/DataLayerEditorSubsystem.h"
-#    define MCP_HAS_DATALAYER_EDITOR 1
-#  elif __has_include("WorldPartition/DataLayer/DataLayerEditorSubsystem.h")
-#    include "WorldPartition/DataLayer/DataLayerEditorSubsystem.h"
-#    define MCP_HAS_DATALAYER_EDITOR 1
+// Check for DataLayerEditorSubsystem (UE 5.1+ only - DataLayer APIs changed significantly)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#  if defined(__has_include)
+#    if __has_include("DataLayer/DataLayerEditorSubsystem.h")
+#      include "DataLayer/DataLayerEditorSubsystem.h"
+#      define MCP_HAS_DATALAYER_EDITOR 1
+#    elif __has_include("WorldPartition/DataLayer/DataLayerEditorSubsystem.h")
+#      include "WorldPartition/DataLayer/DataLayerEditorSubsystem.h"
+#      define MCP_HAS_DATALAYER_EDITOR 1
+#    else
+#      define MCP_HAS_DATALAYER_EDITOR 0
+#    endif
 #  else
 #    define MCP_HAS_DATALAYER_EDITOR 0
 #  endif
 #else
+// UE 5.0: DataLayer APIs not available
 #  define MCP_HAS_DATALAYER_EDITOR 0
 #endif
 
+// Note: DataLayerInstance.h, DataLayerManager.h and DataLayerAsset.h were introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
 #include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
+#endif
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
