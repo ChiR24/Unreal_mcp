@@ -111,6 +111,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "ImageUtils.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
+#include "MaterialDomain.h"
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
@@ -2274,7 +2275,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   // default surface material so tests can exercise parameter handling without
   // requiring a real asset at that path.
   if (ParentPath.Equals(TEXT("/Valid"), ESearchCase::IgnoreCase)) {
-    ParentMaterial = UMaterial::GetDefaultMaterial(EMaterialDomain::MD_Surface);
+    ParentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
   } else {
     if (!UEditorAssetLibrary::DoesAssetExist(ParentPath)) {
       SendAutomationResponse(

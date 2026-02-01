@@ -29,6 +29,7 @@
 #include "BehaviorTreeGraphNode_Service.h"
 #include "BehaviorTreeGraphNode_Task.h"
 #include "EdGraphSchema_BehaviorTree.h"
+#include "EdGraph/EdGraph.h"  // For FGraphNodeCreator
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 1
 #else
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 0
@@ -241,95 +242,101 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     UBehaviorTreeGraphNode *NewNode = nullptr;
 
     // Determine node class
+    // Use runtime class lookup for BehaviorTreeGraphNode classes to avoid GetPrivateStaticClass requirement
     UClass *NodeClass = nullptr;
     UClass *NodeInstanceClass = nullptr;
 
     if (NodeType == TEXT("Sequence")) {
-      NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_Sequence::StaticClass();
     } else if (NodeType == TEXT("Selector")) {
-      NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_Selector::StaticClass();
     } else if (NodeType == TEXT("SimpleParallel")) {
-      NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_SimpleParallel::StaticClass();
     } else if (NodeType == TEXT("Wait")) {
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_Wait::StaticClass();
     } else if (NodeType == TEXT("MoveTo")) {
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_MoveTo::StaticClass();
     } else if (NodeType == TEXT("RotateTo")) {
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_RotateToFaceBBEntry::StaticClass();
     } else if (NodeType == TEXT("RunBehavior")) {
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_RunBehavior::StaticClass();
     } else if (NodeType == TEXT("Fail")) {
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_FinishWithResult::StaticClass();
     } else if (NodeType == TEXT("Succeed")) {
       // Succeed is a FinishWithResult task configured to success
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_FinishWithResult::StaticClass();
     } else if (NodeType == TEXT("Root")) {
-      NodeClass = UBehaviorTreeGraphNode_Root::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
       // Root doesn't have an instance class in the same way
     } else if (NodeType == TEXT("Task")) {
       // Generic Task - creates a Wait task as default
-      NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_Wait::StaticClass();
     } else if (NodeType == TEXT("Decorator") || NodeType == TEXT("Blackboard")) {
       // Generic Decorator - creates a Blackboard decorator as default
-      NodeClass = UBehaviorTreeGraphNode_Decorator::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Decorator"));
       NodeInstanceClass = UBTDecorator_Blackboard::StaticClass();
     } else if (NodeType == TEXT("Service") || NodeType == TEXT("DefaultFocus")) {
       // Generic Service - creates a DefaultFocus service as default
-      NodeClass = UBehaviorTreeGraphNode_Service::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Service"));
       NodeInstanceClass = UBTService_DefaultFocus::StaticClass();
     } else if (NodeType == TEXT("Composite")) {
       // Generic Composite - creates a Sequence as default
-      NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+      NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_Sequence::StaticClass();
     } else {
       // Try to resolve as a class path
       UClass *Resolved = ResolveClassByName(NodeType);
       if (Resolved) {
         if (Resolved->IsChildOf(UBTCompositeNode::StaticClass())) {
-          NodeClass = UBehaviorTreeGraphNode_Composite::StaticClass();
+          NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
           NodeInstanceClass = Resolved;
         } else if (Resolved->IsChildOf(UBTTaskNode::StaticClass())) {
-          NodeClass = UBehaviorTreeGraphNode_Task::StaticClass();
+          NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
           NodeInstanceClass = Resolved;
         } else if (Resolved->IsChildOf(UBTDecorator::StaticClass())) {
-          NodeClass = UBehaviorTreeGraphNode_Decorator::StaticClass();
+          NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Decorator"));
           NodeInstanceClass = Resolved;
         } else if (Resolved->IsChildOf(UBTService::StaticClass())) {
-          NodeClass = UBehaviorTreeGraphNode_Service::StaticClass();
+          NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Service"));
           NodeInstanceClass = Resolved;
         }
       }
     }
 
     if (NodeClass) {
-      NewNode = NewObject<UBehaviorTreeGraphNode>(BTGraph, NodeClass);
-      if (NewNode) {
+      // Use NewObject with UClass* parameter to avoid GetPrivateStaticClass requirement
+      // The templated NewObject<UBehaviorTreeGraphNode>() triggers the unexported symbol issue
+      UObject* NewNodeObj = NewObject<UObject>(BTGraph, NodeClass, NAME_None, RF_Transactional);
+      UClass* BTNodeBaseClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
+      if (NewNodeObj && BTNodeBaseClass && NewNodeObj->GetClass()->IsChildOf(BTNodeBaseClass))
+      {
+        NewNode = static_cast<UBehaviorTreeGraphNode*>(NewNodeObj);
 
-        // Use provided ID if valid, otherwise create new random one
+        // Initialize the node
+        NewNode->CreateNewGuid();
+        
+        // Use provided ID if valid, otherwise keep the generated one
         FGuid NewGuid;
         if (!ProvidedNodeId.IsEmpty() &&
             FGuid::Parse(ProvidedNodeId, NewGuid)) {
           NewNode->NodeGuid = NewGuid;
-        } else {
-          NewNode->CreateNewGuid();
         }
 
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
-
+        
+        // Add node to graph and initialize
         BTGraph->AddNode(NewNode, true, false);
-
-        // Initialize the node instance
         NewNode->PostPlacedNewNode();
         NewNode->AllocateDefaultPins();
 
@@ -472,7 +479,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       }
 
       // Try to set properties on the underlying NodeInstance
-      UBehaviorTreeGraphNode *BTNode = Cast<UBehaviorTreeGraphNode>(TargetNode);
+      // Use runtime class lookup and static_cast instead of Cast<> to avoid GetPrivateStaticClass requirement
+      UBehaviorTreeGraphNode *BTNode = nullptr;
+      UClass* BTNodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode"));
+      if (BTNodeClass && TargetNode->GetClass()->IsChildOf(BTNodeClass))
+      {
+        BTNode = static_cast<UBehaviorTreeGraphNode*>(TargetNode);
+      }
       const TSharedPtr<FJsonObject> *Props = nullptr;
       if (BTNode && BTNode->NodeInstance &&
           Payload->TryGetObjectField(TEXT("properties"), Props)) {

@@ -371,8 +371,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (CDO)
         {
-            CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
-            CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
+            CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
+            CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
         }
 #else
         // UE 5.0 fallback - these APIs not available
@@ -934,7 +934,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (CDO)
         {
-            CDO->SetNetCullDistanceSquared(static_cast<float>(NetCullDistanceSquared));
+            CDO->NetCullDistanceSquared = static_cast<float>(NetCullDistanceSquared);
             CDO->bNetUseOwnerRelevancy = bUseOwnerNetRelevancy;
         }
 #else
@@ -1527,8 +1527,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 NetworkingInfo->SetBoolField(TEXT("bAlwaysRelevant"), CDO->bAlwaysRelevant);
                 NetworkingInfo->SetBoolField(TEXT("bOnlyRelevantToOwner"), CDO->bOnlyRelevantToOwner);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), CDO->GetNetUpdateFrequency());
-                NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), CDO->GetMinNetUpdateFrequency());
+                NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), CDO->NetUpdateFrequency);
+                NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), CDO->MinNetUpdateFrequency);
 #else
                 NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), 0.0);
                 NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), 0.0);
@@ -1536,7 +1536,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 NetworkingInfo->SetNumberField(TEXT("netPriority"), CDO->NetPriority);
                 NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(CDO->NetDormancy));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->GetNetCullDistanceSquared());
+                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->NetCullDistanceSquared);
 #else
                 NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
 #endif
@@ -1562,8 +1562,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             NetworkingInfo->SetBoolField(TEXT("bAlwaysRelevant"), Actor->bAlwaysRelevant);
             NetworkingInfo->SetBoolField(TEXT("bOnlyRelevantToOwner"), Actor->bOnlyRelevantToOwner);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->GetNetUpdateFrequency());
-            NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->GetMinNetUpdateFrequency());
+            NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->NetUpdateFrequency);
+            NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->MinNetUpdateFrequency);
 #else
             NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), 0.0);
             NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), 0.0);
@@ -1571,7 +1571,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             NetworkingInfo->SetNumberField(TEXT("netPriority"), Actor->NetPriority);
             NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(Actor->NetDormancy));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->GetNetCullDistanceSquared());
+            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->NetCullDistanceSquared);
 #else
             NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
 #endif

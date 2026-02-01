@@ -23,6 +23,7 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
+#include "MaterialDomain.h"
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionAdd.h"
 #include "Materials/MaterialExpressionAppendVector.h"
@@ -147,18 +148,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Set properties
     FString MaterialDomain;
     if (Payload->TryGetStringField(TEXT("materialDomain"), MaterialDomain)) {
-      if (MaterialDomain == TEXT("Surface"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_Surface;
+    if (MaterialDomain == TEXT("Surface"))
+        NewMaterial->MaterialDomain = MD_Surface;
       else if (MaterialDomain == TEXT("DeferredDecal"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_DeferredDecal;
+        NewMaterial->MaterialDomain = MD_DeferredDecal;
       else if (MaterialDomain == TEXT("LightFunction"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_LightFunction;
+        NewMaterial->MaterialDomain = MD_LightFunction;
       else if (MaterialDomain == TEXT("Volume"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_Volume;
+        NewMaterial->MaterialDomain = MD_Volume;
       else if (MaterialDomain == TEXT("PostProcess"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_PostProcess;
+        NewMaterial->MaterialDomain = MD_PostProcess;
       else if (MaterialDomain == TEXT("UI"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_UI;
+        NewMaterial->MaterialDomain = MD_UI;
     }
 
     FString BlendMode;
@@ -837,9 +838,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       NodeName = TEXT("Panner");
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     } else if (SubAction == TEXT("add_rotator")) {
-      NewExpr = NewObject<UMaterialExpressionRotator>(
-          Material, UMaterialExpressionRotator::StaticClass(), NAME_None,
-          RF_Transactional);
+      // Use runtime class lookup to avoid GetPrivateStaticClass requirement
+      // StaticClass() calls GetPrivateStaticClass() internally which isn't exported
+      UClass* RotatorClass = FindObject<UClass>(nullptr, TEXT("/Script/Engine.MaterialExpressionRotator"));
+      if (RotatorClass)
+      {
+        UObject* NewExprObj = NewObject<UObject>(Material, RotatorClass, NAME_None, RF_Transactional);
+        NewExpr = static_cast<UMaterialExpressionRotator*>(NewExprObj);
+      }
       NodeName = TEXT("Rotator");
 #endif
     } else if (SubAction == TEXT("add_noise")) {

@@ -59,12 +59,16 @@
 #define MCP_HAS_CONTROLRIG_BLUEPRINT 0
 #endif
 
+// RigVM Blueprint Generated Class (needed for ControlRig creation fallback in UE 5.1-5.4)
+#if __has_include("RigVMBlueprintGeneratedClass.h")
+#include "RigVMBlueprintGeneratedClass.h"
+#endif
+
 // Control Rig Factory (for creating Control Rig assets)
-#if __has_include("ControlRigBlueprintFactory.h")
-#include "ControlRigBlueprintFactory.h"
-#define MCP_HAS_CONTROLRIG_FACTORY 1
-#else
-#define MCP_HAS_CONTROLRIG_FACTORY 0
+// Note: ControlRigBlueprintFactory header is Public only in UE 5.5+
+// For UE 5.1-5.4 we use a fallback implementation
+#if MCP_HAS_CONTROLRIG_FACTORY && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+  #include "ControlRigBlueprintFactory.h"
 #endif
 
 // IK Rig support (UE 5.0+)
@@ -2328,7 +2332,9 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     
     if (SubAction == TEXT("create_control_rig"))
     {
-#if MCP_HAS_CONTROLRIG_FACTORY && MCP_HAS_CONTROLRIG_BLUEPRINT
+// ControlRig factory static methods (CreateNewControlRigAsset, CreateControlRigFromSkeletalMeshOrSkeleton)
+// are only available in UE 5.5+ where ControlRigBlueprintFactory.h is in Public folder
+#if MCP_HAS_CONTROLRIG_FACTORY && MCP_HAS_CONTROLRIG_BLUEPRINT && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
         FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
         FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
@@ -2352,12 +2358,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                 ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeletal mesh: %s"), *SkeletalMeshPath), TEXT("SKELETAL_MESH_NOT_FOUND"));
             }
             
-            // Use static factory method to create from skeletal mesh
+            // Use static factory method to create from skeletal mesh (UE 5.5+ only)
             ControlRigBP = UControlRigBlueprintFactory::CreateControlRigFromSkeletalMeshOrSkeleton(SkeletalMesh, bModularRig);
         }
         else
         {
-            // Create empty control rig at specified path
+            // Create empty control rig at specified path (UE 5.5+ only)
             ControlRigBP = UControlRigBlueprintFactory::CreateNewControlRigAsset(FullPath, bModularRig);
         }
         
@@ -2380,12 +2386,64 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Response->SetBoolField(TEXT("modularRig"), bModularRig);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' created successfully"), *Name));
 #elif MCP_HAS_CONTROLRIG_BLUEPRINT
-        // Factory not available, fall back to informative message
+        // Factory static methods not available in UE 5.1-5.4 (header is in Private folder)
+        // Use the Subsystem's CreateControlRigBlueprint method as fallback
         FString Name = GetStringFieldAnimAuth(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("path"), TEXT("/Game/ControlRigs")));
+        FString SkeletalMeshPath = GetStringFieldAnimAuth(Params, TEXT("skeletalMeshPath"), TEXT(""));
+        
+        if (Name.IsEmpty())
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
+        }
+        
         FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' creation requires ControlRigEditor module"), *Name));
+        
+        // Create Control Rig Blueprint using FKismetEditorUtilities (works in all UE 5.x versions)
+        FString FullPackageName = Path / Name;
+        
+        // Create the package
+        UPackage* Package = CreatePackage(*FullPackageName);
+        if (!Package)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Failed to create package: %s"), *FullPackageName), TEXT("PACKAGE_CREATE_FAILED"));
+        }
+        
+        Package->FullyLoad();
+        
+        // Create the Control Rig Blueprint using FKismetEditorUtilities
+        UControlRigBlueprint* ControlRigBP = Cast<UControlRigBlueprint>(
+            FKismetEditorUtilities::CreateBlueprint(
+                UControlRig::StaticClass(),
+                Package,
+                *Name,
+                BPTYPE_Normal,
+                UControlRigBlueprint::StaticClass(),
+                URigVMBlueprintGeneratedClass::StaticClass(),
+                NAME_None));
+        
+        if (!ControlRigBP)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Failed to create Control Rig Blueprint"), TEXT("CREATION_FAILED"));
+        }
+        
+        // Set the target skeleton if provided (via skeletal mesh)
+        if (!SkeletalMeshPath.IsEmpty())
+        {
+            USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
+            if (SkeletalMesh && SkeletalMesh->GetSkeleton())
+            {
+                USkeletalMesh* PreviewMesh = SkeletalMesh->GetSkeleton()->GetPreviewMesh();
+                if (PreviewMesh)
+                {
+                    ControlRigBP->SetPreviewMesh(PreviewMesh);
+                }
+            }
+        }
+        
+        Response->SetStringField(TEXT("assetPath"), ControlRigBP->GetPathName());
+        Response->SetBoolField(TEXT("modularRig"), false);  // Not supported in fallback
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Control Rig '%s' created successfully (UE 5.1-5.4 compatible mode)"), *Name));
 #else
         ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
 #endif

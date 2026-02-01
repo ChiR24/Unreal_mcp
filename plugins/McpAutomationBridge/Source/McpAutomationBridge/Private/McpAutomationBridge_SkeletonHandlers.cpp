@@ -17,8 +17,8 @@
 #include "Engine/SkeletalMeshSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
-// Note: SkeletalBodySetup.h was introduced in UE 5.1
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+// Note: SkeletalBodySetup.h was introduced in UE 5.4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
 #include "PhysicsEngine/SkeletalBodySetup.h"
 #endif
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"

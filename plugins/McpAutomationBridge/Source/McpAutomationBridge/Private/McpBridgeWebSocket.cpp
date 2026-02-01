@@ -1320,8 +1320,12 @@ bool FMcpBridgeWebSocket::ReceiveExact(uint8 *Buffer, SIZE_T Length) {
     if (Existing > 0) {
       FMemory::Memcpy(Buffer, PendingReceived.GetData(), Existing);
       PendingReceived.RemoveAt(0, Existing
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+      // UE 5.4+: Uses EAllowShrinking enum
       , EAllowShrinking::No
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      // UE 5.1-5.3: Uses bool bAllowShrinking
+      , false
 #endif
       );
       Collected += Existing;

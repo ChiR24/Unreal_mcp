@@ -972,14 +972,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         UEnvQueryTest* NewTest = nullptr;
+#if MCP_HAS_ENVQUERY_TESTS
+        // Use runtime class lookup to avoid GetPrivateStaticClass requirement
+        // StaticClass() calls GetPrivateStaticClass() internally which isn't exported
+        UClass* TestClass = nullptr;
         if (TestType.Equals(TEXT("Distance"), ESearchCase::IgnoreCase))
         {
-            NewTest = NewObject<UEnvQueryTest_Distance>(Query);
+            TestClass = FindObject<UClass>(nullptr, TEXT("/Script/AIModule.EnvQueryTest_Distance"));
         }
         else if (TestType.Equals(TEXT("Trace"), ESearchCase::IgnoreCase))
         {
-            NewTest = NewObject<UEnvQueryTest_Trace>(Query);
+            TestClass = FindObject<UClass>(nullptr, TEXT("/Script/AIModule.EnvQueryTest_Trace"));
         }
+        
+        if (TestClass)
+        {
+            // Use NewObject with runtime UClass parameter to avoid template instantiation
+            UObject* TestObj = NewObject<UObject>(Query, TestClass);
+            if (TestObj && TestObj->GetClass()->IsChildOf(UEnvQueryTest::StaticClass()))
+            {
+                NewTest = static_cast<UEnvQueryTest*>(TestObj);
+            }
+        }
+#endif
 
         if (NewTest)
         {
@@ -1319,7 +1334,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
         else if (StateType.Equals(TEXT("LinkedAsset"), ESearchCase::IgnoreCase))
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
             Type = EStateTreeStateType::LinkedAsset;
+#else
+            UE_LOG(LogMcpAIHandlers, Warning, TEXT("LinkedAsset state type requires UE 5.4+. Falling back to State type."));
+            Type = EStateTreeStateType::State;
+#endif
         }
         
         // Add the child state
@@ -1540,11 +1560,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenAtRandom"), ESearchCase::IgnoreCase))
             {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenAtRandom;
+#else
+                UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenAtRandom requires UE 5.4+. Using TrySelectChildrenInOrder instead."));
+                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
+#endif
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenWithHighestUtility"), ESearchCase::IgnoreCase))
             {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenWithHighestUtility;
+#else
+                UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenWithHighestUtility requires UE 5.4+. Using TryEnterState instead."));
+                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TryEnterState;
+#endif
             }
             else
             {

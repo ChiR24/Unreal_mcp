@@ -89,10 +89,17 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   if (NiagaraSystem)
   {
     // Add default emitter
+    // UE 5.4+ changed AddEmitterHandle signature - requires additional parameters
     UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")));
     if (NewEmitter)
     {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+      // UE 5.4+ signature with FName parameter
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
+#else
+      // UE 5.3 - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
+      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
+#endif
     }
   }
   

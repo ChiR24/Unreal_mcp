@@ -24,6 +24,7 @@
 // Editor-only includes for ExecuteEditorCommands
 #if WITH_EDITOR
 #include "Editor.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #endif
 
 // Define the subsystem log category declared in the public header.
@@ -967,18 +968,25 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
 // ============================================================================
 // Note: ControlRigBlueprintFactory is only available in UE 5.1+ or as private API
 // The MCP_HAS_CONTROLRIG_FACTORY macro is defined in McpAutomationBridgeHelpers.h
-// Flattened preprocessor checks for ControlRig includes
-#if MCP_HAS_CONTROLRIG_FACTORY && defined(__has_include)
-#  if __has_include("ControlRigBlueprintFactory.h")
+
+#if MCP_HAS_CONTROLRIG_FACTORY
+// Animation/Skeleton types needed for ControlRig blueprint creation
+#include "Animation/Skeleton.h"
+#include "Engine/SkeletalMesh.h"
+
+// ControlRig includes - these are only available when ControlRig plugin is enabled
 // UE 5.7 renamed ControlRigBlueprint.h to ControlRigBlueprintLegacy.h
-#    if __has_include("ControlRigBlueprintLegacy.h")
-#      include "ControlRigBlueprintLegacy.h"
-#    else
-#      include "ControlRigBlueprint.h"
-#    endif
-#    include "ControlRigBlueprintFactory.h"
-#    include "AssetRegistry/AssetRegistryModule.h"
-#  endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+#include "ControlRigBlueprintLegacy.h"
+#else
+#include "ControlRigBlueprint.h"
+#endif
+// Note: ControlRigBlueprintFactory header is Public only in UE 5.5+
+// For UE 5.1-5.4 we use a fallback implementation with FKismetEditorUtilities
+#if MCP_HAS_CONTROLRIG_FACTORY && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+  #include "ControlRigBlueprintFactory.h"
+#endif
+#include "AssetRegistry/AssetRegistryModule.h"
 #endif
 
 #if MCP_HAS_CONTROLRIG_FACTORY
@@ -1037,19 +1045,17 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 
   Package->FullyLoad();
 
-  // Create the factory
-  UControlRigBlueprintFactory *Factory =
-      NewObject<UControlRigBlueprintFactory>();
-  if (!Factory) {
-    OutError = TEXT("Failed to create ControlRigBlueprintFactory");
-    return nullptr;
-  }
-
-  // Create the Control Rig Blueprint
+  // Create the Control Rig Blueprint using FKismetEditorUtilities
+  // This works across all UE versions without needing ControlRigBlueprintFactory
   UControlRigBlueprint *NewBlueprint = Cast<UControlRigBlueprint>(
-      Factory->FactoryCreateNew(UControlRigBlueprint::StaticClass(), Package,
-                                *AssetName, RF_Public | RF_Standalone, nullptr,
-                                GWarn));
+      FKismetEditorUtilities::CreateBlueprint(
+          UControlRig::StaticClass(),  // Parent class
+          Package,                      // Outer
+          *AssetName,                   // Name
+          BPTYPE_Normal,                // Blueprint type
+          UControlRigBlueprint::StaticClass(),  // Blueprint class
+          URigVMBlueprintGeneratedClass::StaticClass(),  // Generated class
+          NAME_None));
 
   if (!NewBlueprint) {
     OutError = TEXT("Factory failed to create Control Rig Blueprint");

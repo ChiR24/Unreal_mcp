@@ -1131,21 +1131,22 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
       return;
     }
 
-    FGrassVariety Variety;
+    // Use AddZeroed() to avoid calling the unexported FGrassVariety constructor
+    // AddZeroed() allocates memory and zeros it without invoking any constructor
+    int32 NewIndex = GrassType->GrassVarieties.AddZeroed();
+    FGrassVariety& Variety = GrassType->GrassVarieties[NewIndex];
+    
+    // Explicitly initialize all fields (memory is zero-initialized from AddZeroed)
     Variety.GrassMesh = StaticMesh;
     Variety.GrassDensity.Default = static_cast<float>(Density);
-
     Variety.ScaleX = FFloatInterval(static_cast<float>(MinScale),
                                     static_cast<float>(MaxScale));
     Variety.ScaleY = FFloatInterval(static_cast<float>(MinScale),
                                     static_cast<float>(MaxScale));
     Variety.ScaleZ = FFloatInterval(static_cast<float>(MinScale),
                                     static_cast<float>(MaxScale));
-
     Variety.RandomRotation = true;
     Variety.AlignToSurface = true;
-
-    GrassType->GrassVarieties.Add(Variety);
 
     McpSafeAssetSave(GrassType);
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

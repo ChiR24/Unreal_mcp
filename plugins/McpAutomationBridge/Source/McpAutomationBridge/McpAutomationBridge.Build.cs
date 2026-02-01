@@ -86,10 +86,12 @@ public class McpAutomationBridge : ModuleRules
             }
         }
 
-        PublicDependencyModuleNames.AddRange(new string[]
+PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core","CoreUObject","Engine","Json","JsonUtilities",
-            "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags"
+            "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags",
+            "AIModule",  // Required for UEnvQueryTest_Distance and other EQS classes
+            "Landscape"  // Required for FGrassVariety and other landscape classes
         });
 
         if (Target.bBuildEditor)
@@ -98,14 +100,17 @@ public class McpAutomationBridge : ModuleRules
             PublicDependencyModuleNames.AddRange(new string[] 
             { 
                 "LevelSequenceEditor", "Sequencer", "MovieSceneTools", "Niagara", "NiagaraEditor", "UnrealEd",
-                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor"
+                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor",
+                // Required for linking symbols used in handlers (already in base: AIModule, Landscape, Engine)
+                "BehaviorTreeEditor",  // UBehaviorTreeGraphNode classes
+                "MaterialEditor"  // UMaterialExpressionRotator and other material expressions
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
-                "Kismet","KismetCompiler","AssetRegistry","AssetTools","MaterialEditor","SourceControl",
+                "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
                 "AudioEditor", "DataValidation", "NiagaraEditor",
                 // Phase 24: GAS, Audio, and missing module dependencies
                 "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
@@ -114,10 +119,10 @@ public class McpAutomationBridge : ModuleRules
 
             PrivateDependencyModuleNames.AddRange(new string[]
             {
-                "Landscape","LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
+"LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
-                "ControlRig","ControlRigDeveloper","ControlRigEditor","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
-                "BehaviorTreeEditor", "EnvironmentQueryEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIModule", "AIGraph",
+                "ControlRig","ControlRigDeveloper","ControlRigEditor","RigVM","RigVMDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
+                "EnvironmentQueryEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph",
                 "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
                 // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
                 "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",

@@ -19,7 +19,9 @@
 #include "Runtime/Launch/Resources/Version.h"
 
 // Default definition for MCP_HAS_CONTROLRIG_FACTORY if not defined by build system
-// ControlRigBlueprintFactory is only available in UE 5.1+
+// ControlRigBlueprintFactory is available in all UE 5.x versions
+// Note: In UE 5.1-5.4 the header is in Private folder, but the class is exported with CONTROLRIGEDITOR_API
+// so we use forward declaration instead of including the header
 #ifndef MCP_HAS_CONTROLRIG_FACTORY
   #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     #define MCP_HAS_CONTROLRIG_FACTORY 1

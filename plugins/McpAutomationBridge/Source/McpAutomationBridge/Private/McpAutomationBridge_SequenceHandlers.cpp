@@ -1259,10 +1259,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
       FMovieSceneSequencePlaybackParams PlaybackParams;
       PlaybackParams.Frame = FFrameTime(0);
       PlaybackParams.UpdateMethod = EUpdatePositionMethod::Scrub;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+      // UE 5.4+: SetGlobalPosition available
       ULevelSequenceEditorBlueprintLibrary::SetGlobalPosition(PlaybackParams);
 #else
-      // UE 5.0 fallback - use SetCurrentTime (takes int32 frame number)
+      // UE 5.0-5.3 fallback - use SetCurrentTime (takes int32 frame number)
       ULevelSequenceEditorBlueprintLibrary::SetCurrentTime(0);
 #endif
 

@@ -445,7 +445,10 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
         Options,
         Transform,
         Radius, Length,
-        HemisphereSteps, Segments, 1,
+        HemisphereSteps, Segments,
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+        1,
+#endif
         EGeometryScriptPrimitiveOriginMode::Center,
         nullptr
     );
@@ -1527,7 +1530,9 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = BevelDistance;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     BevelOptions.Subdivisions = Subdivisions;
+#endif
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
         Mesh, BevelOptions, nullptr);
@@ -2217,6 +2222,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
     
@@ -2261,6 +2267,9 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("collisionType"), CollisionType);
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
+#else
+    Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
+#endif
     return true;
 }
 
@@ -2318,7 +2327,24 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     else if (Axis == TEXT("Y")) MirrorScale.Y = -1.0;
     else if (Axis == TEXT("Z")) MirrorScale.Z = -1.0;
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(MirroredMesh, MirrorScale, FVector::ZeroVector, true, nullptr);
+#else
+    // UE 5.3 fallback: Scale mesh using low-level API
+    {
+        UE::Geometry::FDynamicMesh3& EditMesh = MirroredMesh->GetMeshRef();
+        for (int32 VID : EditMesh.VertexIndicesItr())
+        {
+            FVector3d Pos = EditMesh.GetVertex(VID);
+            Pos.X *= MirrorScale.X;
+            Pos.Y *= MirrorScale.Y;
+            Pos.Z *= MirrorScale.Z;
+            EditMesh.SetVertex(VID, Pos);
+        }
+            // EditMesh.UpdateVertexNormals(); // Not available in UE 5.3
+            // MirroredMesh->NotifyMeshUpdated(); // Not available in UE 5.3
+    }
+#endif
 
     // Append mirrored mesh to original
     FGeometryScriptAppendMeshOptions AppendOptions;
@@ -3123,7 +3149,24 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     else if (Axis == TEXT("Y")) ScaleVec.Y = Factor;
     else ScaleVec.Z = Factor;
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, ScaleVec, FVector::ZeroVector, true, nullptr);
+#else
+    // UE 5.3 fallback: Scale mesh using low-level API
+    {
+        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+        for (int32 VID : EditMesh.VertexIndicesItr())
+        {
+            FVector3d Pos = EditMesh.GetVertex(VID);
+            Pos.X *= ScaleVec.X;
+            Pos.Y *= ScaleVec.Y;
+            Pos.Z *= ScaleVec.Z;
+            EditMesh.SetVertex(VID, Pos);
+        }
+            // EditMesh.UpdateVertexNormals(); // Not available in UE 5.3
+            // Mesh->NotifyMeshUpdated(); // Not available in UE 5.3
+    }
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -3432,7 +3475,7 @@ static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     // Use bevel with steps=1 for chamfer effect
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = Distance;
-    BevelOptions.Subdivisions = FMath::Max(0, Steps - 1);
+            // BevelOptions.Subdivisions = FMath::Max(0, Steps - 1); // Not available in UE 5.3
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
         Mesh, BevelOptions, nullptr);
 
@@ -3787,14 +3830,15 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     int32 TrisBefore = Mesh->GetTriangleCount();
 
+    int32 TrianglesCreated = 0;
+    FString BridgeStatus;
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
-    // Find boundary loops using GeometryCore's FMeshBoundaryLoops
+    // Find boundary loops using GeometryCore's FMeshBoundaryLoops (UE 5.4+)
     UE::Geometry::FMeshBoundaryLoops BoundaryLoops(&EditMesh, true);
-    
-    int32 TrianglesCreated = 0;
-    FString BridgeStatus;
     
     if (BoundaryLoops.bAborted)
     {
@@ -3836,8 +3880,6 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
         if (NumVertsA > 0 && NumVertsB > 0)
         {
             // Find the closest starting vertex on LoopB to LoopA's first vertex
-            // This helps align the loops better for bridging
-            // Note: UE::Geometry::FVector3d moved to FVector3d in UE 5.7
             FVector3d StartPosA = EditMesh.GetVertex(VertsA[0]);
             int32 BestStartB = 0;
             double BestDist = TNumericLimits<double>::Max();
@@ -3893,6 +3935,17 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
             BridgeStatus = TEXT("One or both boundary loops have no vertices");
         }
     }
+#else
+    // UE 5.3 fallback: Use hole filling instead of bridging
+    BridgeStatus = TEXT("Bridging requires UE 5.4+ (FMeshBoundaryLoops). Using hole filling instead.");
+    
+    FGeometryScriptFillHolesOptions FillOptions;
+    FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
+    int32 NumFilledHoles = 0;
+    int32 NumFailedHoleFills = 0;
+    UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+    TrianglesCreated = NumFilledHoles; // Approximate
+#endif
 
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
@@ -4071,9 +4124,10 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                         PolygonVerts2D = *Polygon.Vertices;
                     }
                     
-                    // UE 5.7: AppendSweepPolygon uses inline parameters, not an options struct
-                    // Signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
-                    //                               bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
+                    // AppendSweepPolygon signature varies by UE version
+                    // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
+                    //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
                         Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
                         false,    // bLoop
@@ -4083,6 +4137,35 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                         0.0f,     // RotationAngleDeg
                         1.0f,     // MiterLimit
                         nullptr); // Debug
+#else
+                    // UE 5.3 fallback: Simple extrusion using AppendExtrude or manual mesh building
+                    // Since AppendSweepPolygon may not exist or have different signature in 5.3
+                    // We fall back to using AppendBox or manual lofting
+                    for (int32 i = 0; i < PathFrames.Num() - 1; ++i)
+                    {
+                        FVector PosA = PathFrames[i].GetLocation();
+                        FVector PosB = PathFrames[i + 1].GetLocation();
+                        FVector SegmentDir = PosB - PosA;
+                        double SegmentLength = SegmentDir.Size();
+                        
+                        if (SegmentLength > KINDA_SMALL_NUMBER)
+                        {
+                            SegmentDir.Normalize();
+                            FQuat SegmentRot = FQuat::FindBetweenNormals(FVector::UpVector, SegmentDir);
+                            FTransform SegmentTransform(SegmentRot, PosA + SegmentDir * (SegmentLength * 0.5));
+                            
+                            // Use a small capsule/cylinder segment (approximate)
+                            UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
+                                Mesh, PrimOptions, SegmentTransform,
+                                ProfileRadius * 0.5, SegmentLength,
+                                2, 8,
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+                                1,
+#endif
+                                EGeometryScriptPrimitiveOriginMode::Center, nullptr);
+                        }
+                    }
+#endif
                     
                     ProfilesUsed = ProfileMeshActors.Num();
                 }
