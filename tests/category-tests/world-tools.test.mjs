@@ -298,7 +298,7 @@ const manageLightingTests = [
 const buildEnvironmentTests = [
   // === SETUP: Create Required Test Assets ===
   // Create TestFoliage asset for foliage tests
-  { scenario: 'SETUP: Create TestFoliage asset', toolName: 'build_environment', arguments: { action: 'add_foliage_type', foliageTypeName: 'TestFoliage', path: '/Game/Foliage/TestFoliage', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success|already exists' },
+  { scenario: 'SETUP: Create TestFoliage asset', toolName: 'build_environment', arguments: { action: 'add_foliage_type', name: 'TestFoliage', meshPath: '/Engine/BasicShapes/Cube' }, expected: 'success|already exists' },
   
   // === Landscape (20 actions) ===
   // create_landscape

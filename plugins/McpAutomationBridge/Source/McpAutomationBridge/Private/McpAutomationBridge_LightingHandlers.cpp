@@ -1402,7 +1402,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       return true;
   }
 
-  return false;
+  // CRITICAL FIX: Return true with error instead of false to prevent request
+  // from falling through to other handlers (like AssetWorkflow) which would
+  // produce confusing "Unknown subAction" error messages.
+  SendAutomationError(RequestingSocket, RequestId,
+                      FString::Printf(TEXT("Lighting action '%s' is recognized but not fully implemented"), *Lower),
+                      TEXT("NOT_IMPLEMENTED"));
+  return true;
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
                          TEXT("Lighting actions require editor build"), nullptr,

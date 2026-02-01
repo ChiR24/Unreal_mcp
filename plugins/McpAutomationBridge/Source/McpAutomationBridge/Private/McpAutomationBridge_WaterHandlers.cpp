@@ -247,8 +247,10 @@ static AActor* SafeSpawnWaterBody(UEditorActorSubsystem* ActorSS, UClass* WaterC
         SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
         SpawnParams.Name = FName(*FString::Printf(TEXT("%s_%s"), *WaterClass->GetName(), *FGuid::NewGuid().ToString(EGuidFormats::Short)));
 
-        // Attempt the spawn (deferred)
-        SpawnedActor = World->SpawnActor<AActor>(WaterClass, Location, FRotator::ZeroRotator, SpawnParams);
+        // CRITICAL FIX: Use ActorSS->SpawnActorFromClass() instead of World->SpawnActor<AActor>()
+        // The templated SpawnActor<AActor>() uses CastChecked<AActor>() which crashes with WaterBody classes
+        // SpawnActorFromClass() is the safe editor-approved method that works correctly with deferred spawning
+        SpawnedActor = ActorSS->SpawnActorFromClass(WaterClass, Location, FRotator::ZeroRotator, SpawnParams.bDeferConstruction);
 
         if (!SpawnedActor)
         {
@@ -256,12 +258,15 @@ static AActor* SafeSpawnWaterBody(UEditorActorSubsystem* ActorSS, UClass* WaterC
             return nullptr;
         }
 
-        // CRITICAL FIX: Disable mesh generation BEFORE finishing spawn
+        // CRITICAL FIX: Disable mesh generation BEFORE finishing spawn (only if deferred)
         // This prevents the crash in UpdateWaterInfoMeshComponents
         DisableWaterBodyMeshGeneration(SpawnedActor);
 
-        // Now complete the spawn - this triggers PostRegisterAllComponents
-        SpawnedActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+        // Now complete the spawn if deferred - this triggers PostRegisterAllComponents
+        if (SpawnedActor->IsPendingKillPending() == false && SpawnParams.bDeferConstruction)
+        {
+            SpawnedActor->FinishSpawning(FTransform(FRotator::ZeroRotator, Location));
+        }
 
     } // FEnhancedDialogSuppressor destructor restores flags here
 
