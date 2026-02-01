@@ -64,12 +64,26 @@ static inline FString SanitizeForLog(const FString &In) {
  * handlers and a message-received callback, starts the connection manager, and
  * registers a recurring ticker to process pending automation requests.
  *
+ * NOTE: This subsystem is intentionally disabled during commandlet execution
+ * (cooking, packaging, etc.) to prevent the WebSocket server from interfering
+ * with cook operations and blocking writes to the staged build directory.
+ *
  * @param Collection Subsystem collection provided by the engine during
  * initialization.
  */
 void UMcpAutomationBridgeSubsystem::Initialize(
     FSubsystemCollectionBase &Collection) {
   Super::Initialize(Collection);
+
+  // Skip initialization during commandlet execution (cooking, packaging, etc.)
+  // The WebSocket server and background threads can interfere with cook
+  // operations, particularly file I/O to the staged build directory.
+  if (IsRunningCommandlet()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("McpAutomationBridgeSubsystem skipping initialization - running "
+                "as commandlet (cook/package mode)."));
+    return;
+  }
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("McpAutomationBridgeSubsystem initializing."));
@@ -111,15 +125,24 @@ void UMcpAutomationBridgeSubsystem::Initialize(
  * Removes the registered ticker, stops and clears the connection manager,
  * detaches and clears the log capture device, and calls the superclass
  * deinitialization.
+ *
+ * NOTE: During commandlet execution (cooking, packaging), the subsystem
+ * may not have fully initialized, so cleanup checks are defensive.
  */
 void UMcpAutomationBridgeSubsystem::Deinitialize() {
+  // Remove ticker if it was registered (won't be valid if we skipped init
+  // during commandlet)
   if (TickHandle.IsValid()) {
     FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
     TickHandle.Reset();
   }
 
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("McpAutomationBridgeSubsystem deinitializing."));
+  // Skip verbose logging during commandlet mode since we didn't fully
+  // initialize
+  if (!IsRunningCommandlet()) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("McpAutomationBridgeSubsystem deinitializing."));
+  }
 
   if (ConnectionManager.IsValid()) {
     ConnectionManager->Stop();

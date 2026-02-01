@@ -244,15 +244,21 @@ FMcpBridgeWebSocket::~FMcpBridgeWebSocket() {
     FPlatformProcess::ReturnSynchEventToPool(HandlerReadyEvent);
     HandlerReadyEvent = nullptr;
   }
+  
   if (Thread) {
-    Thread->WaitForCompletion();
+    // Wait for thread completion. The Close() call above should have unblocked
+    // any waiting socket operations by destroying ListenSocket/Socket.
+    // Use Kill() first to request the thread to stop, then wait for completion.
+    Thread->Kill(true); // true = wait for completion
     delete Thread;
     Thread = nullptr;
   }
+  
   if (StopEvent) {
     FPlatformProcess::ReturnSynchEventToPool(StopEvent);
     StopEvent = nullptr;
   }
+
   if (FSocket *LocalSocket = DetachSocket()) {
     LocalSocket->Close();
     ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
@@ -325,6 +331,29 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
     StopEvent->Trigger();
   }
 
+  // Close the listen socket to unblock Accept() in RunServer().
+  // IMPORTANT: We only close here, NOT destroy. RunServer() owns the socket and
+  // will destroy it after its loop exits. This avoids a TOCTOU race where we
+  // destroy the socket while RunServer() is between checking ListenSocket and
+  // calling Accept().
+  if (ListenSocket) {
+    ListenSocket->Close();
+  }
+
+  // Close any client sockets that were accepted by this server
+  TArray<TSharedPtr<FMcpBridgeWebSocket>> SocketsToClose;
+  {
+    FScopeLock Lock(&ClientSocketsMutex);
+    SocketsToClose = MoveTemp(ClientSockets);
+  }
+
+  for (TSharedPtr<FMcpBridgeWebSocket>& ClientSock : SocketsToClose) {
+    if (ClientSock.IsValid()) {
+      ClientSock->Close(StatusCode, Reason);
+    }
+  }
+
+  // Close the main socket (for client connections)
   if (FSocket *LocalSocket = DetachSocket()) {
     LocalSocket->Close();
     ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
@@ -521,10 +550,23 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     }
   });
 
-  while (!bStopping) {
-    // Accept incoming connections
+  while (!bStopping && ListenSocket) {
+    // Note: Accept() blocks until a connection arrives or the socket is closed.
+    // Close() calls ListenSocket->Close() to unblock this call during shutdown.
+    // This thread owns ListenSocket destruction (done after loop exits).
     FSocket *ClientSocket =
         ListenSocket->Accept(TEXT("McpAutomationBridgeClient"));
+    
+    // Check again after Accept() returns - socket may have been closed
+    if (bStopping || !ListenSocket) {
+      if (ClientSocket) {
+        // Clean up any socket we accepted during shutdown race
+        ClientSocket->Close();
+        SocketSubsystem->DestroySocket(ClientSocket);
+      }
+      break;
+    }
+    
     if (ClientSocket) {
       // Create a new WebSocket instance for this client connection
       auto ClientWebSocket = MakeShared<FMcpBridgeWebSocket>(ClientSocket);
