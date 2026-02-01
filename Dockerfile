@@ -10,8 +10,8 @@ COPY package*.json ./
 # Install ALL dependencies (including dev) for building - skip prepare script
 RUN npm ci --ignore-scripts
 
-# Copy TypeScript config and source files
-COPY tsconfig.json ./
+# Copy TypeScript config, ESLint config, and source files
+COPY tsconfig.json eslint.config.mjs ./
 COPY src ./src
 
 # Build the TypeScript project
