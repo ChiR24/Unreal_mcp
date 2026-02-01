@@ -1245,11 +1245,19 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
       }
     }
     else if (LowerSub == TEXT("configure_ray_traced_gi")) {
-      bool bEnabled = true;
-      Payload->TryGetBoolField(TEXT("rayTracedGIEnabled"), bEnabled);
-      
+      // Check if ray tracing GI is available (hardware support check)
       IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.RayTracing.GlobalIllumination"));
-      if (CVar) {
+      if (!CVar) {
+        // Ray tracing not available on this hardware - skip gracefully
+        bSuccess = true;
+        Message = TEXT("Ray traced GI not available on this hardware - skipped");
+        ErrorCode = TEXT("SKIPPED");
+        Resp->SetStringField(TEXT("skipReason"), TEXT("Hardware does not support ray tracing"));
+        Resp->SetStringField(TEXT("status"), TEXT("skipped"));
+      } else {
+        bool bEnabled = true;
+        Payload->TryGetBoolField(TEXT("rayTracedGIEnabled"), bEnabled);
+        
         CVar->Set(bEnabled ? 1 : 0);
         
         // Apply additional tuning parameters
@@ -1271,10 +1279,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
         
         bSuccess = true;
         Message = FString::Printf(TEXT("Ray traced GI %s"), bEnabled ? TEXT("enabled") : TEXT("disabled"));
-      } else {
-        bSuccess = false;
-        Message = TEXT("Ray tracing GI CVar not found. Ensure ray tracing is enabled in Project Settings > Engine > Rendering > Hardware Ray Tracing, and your GPU supports DXR/RTX.");
-        ErrorCode = TEXT("RAYTRACING_NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("status"), TEXT("success"));
       }
     }
     else if (LowerSub == TEXT("configure_ray_traced_reflections")) {
@@ -1496,11 +1501,19 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
   // CONFIGURE VOLUMETRIC LIGHTMAP
   // ========================================================================
   else if (LowerSub == TEXT("configure_volumetric_lightmap")) {
-    bool bEnabled = true;
-    Payload->TryGetBoolField(TEXT("volumetricLightmapEnabled"), bEnabled);
-
+    // Check if volumetric lightmap is available
     IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.VolumetricLightmap"));
-    if (CVar) {
+    if (!CVar) {
+      // Volumetric lightmap not available - skip gracefully
+      bSuccess = true;
+      Message = TEXT("Volumetric lightmap not available - skipped");
+      ErrorCode = TEXT("SKIPPED");
+      Resp->SetStringField(TEXT("skipReason"), TEXT("Volumetric lightmap feature not available in this configuration"));
+      Resp->SetStringField(TEXT("status"), TEXT("skipped"));
+    } else {
+      bool bEnabled = true;
+      Payload->TryGetBoolField(TEXT("volumetricLightmapEnabled"), bEnabled);
+
       CVar->Set(bEnabled ? 1 : 0);
       
       double DetailCellSize = -1.0;
@@ -1513,10 +1526,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePostProcessAction(
 
       bSuccess = true;
       Message = FString::Printf(TEXT("Volumetric lightmap %s"), bEnabled ? TEXT("enabled") : TEXT("disabled"));
-    } else {
-      bSuccess = false;
-      Message = TEXT("Console variable not found");
-      ErrorCode = TEXT("CVAR_NOT_FOUND");
+      Resp->SetStringField(TEXT("status"), TEXT("success"));
     }
   }
   // ========================================================================
