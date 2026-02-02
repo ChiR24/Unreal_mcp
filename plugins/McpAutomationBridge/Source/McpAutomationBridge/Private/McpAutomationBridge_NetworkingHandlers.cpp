@@ -371,8 +371,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (CDO)
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+            // UE 5.5+ uses setter methods
+            CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency));
+            CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency));
+#else
+            // UE 5.1-5.4 uses public member variables (deprecated in 5.5)
             CDO->NetUpdateFrequency = static_cast<float>(NetUpdateFrequency);
             CDO->MinNetUpdateFrequency = static_cast<float>(MinNetUpdateFrequency);
+#endif
         }
 #else
         // UE 5.0 fallback - these APIs not available
@@ -934,7 +941,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         if (CDO)
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+            // UE 5.5+ uses setter methods
+            CDO->SetNetCullDistanceSquared(static_cast<float>(NetCullDistanceSquared));
+#else
+            // UE 5.1-5.4 uses public member variables (deprecated in 5.5)
             CDO->NetCullDistanceSquared = static_cast<float>(NetCullDistanceSquared);
+#endif
             CDO->bNetUseOwnerRelevancy = bUseOwnerNetRelevancy;
         }
 #else
@@ -1526,20 +1539,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
                 NetworkingInfo->SetBoolField(TEXT("bReplicates"), CDO->GetIsReplicated());
                 NetworkingInfo->SetBoolField(TEXT("bAlwaysRelevant"), CDO->bAlwaysRelevant);
                 NetworkingInfo->SetBoolField(TEXT("bOnlyRelevantToOwner"), CDO->bOnlyRelevantToOwner);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+                // UE 5.5+ uses getter methods
+                NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), CDO->GetNetUpdateFrequency());
+                NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), CDO->GetMinNetUpdateFrequency());
+                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->GetNetCullDistanceSquared());
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                // UE 5.1-5.4 uses public member variables (deprecated in 5.5)
                 NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), CDO->NetUpdateFrequency);
                 NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), CDO->MinNetUpdateFrequency);
+                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->NetCullDistanceSquared);
 #else
                 NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), 0.0);
                 NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), 0.0);
+                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
 #endif
                 NetworkingInfo->SetNumberField(TEXT("netPriority"), CDO->NetPriority);
                 NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(CDO->NetDormancy));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), CDO->NetCullDistanceSquared);
-#else
-                NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
-#endif
             }
         }
         else if (!ActorName.IsEmpty())
@@ -1561,20 +1577,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             NetworkingInfo->SetBoolField(TEXT("bReplicates"), Actor->GetIsReplicated());
             NetworkingInfo->SetBoolField(TEXT("bAlwaysRelevant"), Actor->bAlwaysRelevant);
             NetworkingInfo->SetBoolField(TEXT("bOnlyRelevantToOwner"), Actor->bOnlyRelevantToOwner);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+            // UE 5.5+ uses getter methods
+            NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->GetNetUpdateFrequency());
+            NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->GetMinNetUpdateFrequency());
+            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->GetNetCullDistanceSquared());
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+            // UE 5.1-5.4 uses public member variables (deprecated in 5.5)
             NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->NetUpdateFrequency);
             NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->MinNetUpdateFrequency);
+            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->NetCullDistanceSquared);
 #else
             NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), 0.0);
             NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), 0.0);
+            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
 #endif
             NetworkingInfo->SetNumberField(TEXT("netPriority"), Actor->NetPriority);
             NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(Actor->NetDormancy));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->NetCullDistanceSquared);
-#else
-            NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
-#endif
             NetworkingInfo->SetStringField(TEXT("role"), NetRoleToString(Actor->GetLocalRole()));
             NetworkingInfo->SetStringField(TEXT("remoteRole"), NetRoleToString(Actor->GetRemoteRole()));
             NetworkingInfo->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());

@@ -1,11 +1,16 @@
 #include "ISettingsModule.h"
-#include "Dom/JsonObject.h"
 #include "ISettingsSection.h"
 #include "McpAutomationBridgeSettings.h"
 
-#define LOCTEXT_NAMESPACE "FMcpAutomationBridgeModule"
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
+
+// JsonObjectConverter.h (included via CoreMinimal.h) may define LOCTEXT_NAMESPACE
+// Undefine it first to avoid redefinition warning, then define our own
+#ifdef LOCTEXT_NAMESPACE
+#undef LOCTEXT_NAMESPACE
+#endif
+#define LOCTEXT_NAMESPACE "FMcpAutomationBridgeModule"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpAutomationBridge, Log, All);
 

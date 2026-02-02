@@ -199,11 +199,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(NewSystem, FName(TEXT("DefaultEmitter")));
             if (NewEmitter)
             {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-                // UE 5.4+ signature with FName parameter
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+                // UE 5.4 signature with 2 parameters
                 NewSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
 #else
-                // UE 5.3 - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
+                // UE 5.3 and 5.5+ - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
                 NewSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
 #endif
             }

@@ -447,7 +447,7 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
         Radius, Length,
         HemisphereSteps, Segments,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        1,
+        1,  // SegmentSteps parameter required in UE 5.4+
 #endif
         EGeometryScriptPrimitiveOriginMode::Center,
         nullptr
@@ -1530,7 +1530,7 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = BevelDistance;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     BevelOptions.Subdivisions = Subdivisions;
 #endif
 
@@ -2222,7 +2222,9 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+// Note: Geometry Script collision API changed in UE 5.5
+// Disabling for UE 5.5+ until updated for new API
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
     
@@ -2268,7 +2270,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
 #else
-    Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
+    Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4 (API changed in 5.5)"), TEXT("VERSION_NOT_SUPPORTED"));
 #endif
     return true;
 }
@@ -2327,7 +2329,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     else if (Axis == TEXT("Y")) MirrorScale.Y = -1.0;
     else if (Axis == TEXT("Z")) MirrorScale.Z = -1.0;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(MirroredMesh, MirrorScale, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -3149,7 +3151,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     else if (Axis == TEXT("Y")) ScaleVec.Y = Factor;
     else ScaleVec.Z = Factor;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, ScaleVec, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -3833,7 +3835,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     int32 TrianglesCreated = 0;
     FString BridgeStatus;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
@@ -4127,7 +4129,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
                         Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
                         false,    // bLoop
@@ -4160,7 +4162,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                                 ProfileRadius * 0.5, SegmentLength,
                                 2, 8,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-                                1,
+                                1,  // SegmentSteps parameter required in UE 5.4+
 #endif
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }

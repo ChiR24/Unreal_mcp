@@ -7,6 +7,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/ScopeExit.h"
+#include "UObject/MetaData.h"
 
 #include "HAL/PlatformFilemanager.h"
 #include "Misc/Paths.h"
@@ -1093,8 +1094,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  // GetMetaData returns the UMetaData object that is owned by this package.
-  UMetaData *Meta = Package->GetMetaData();
+  // GetMetaData returns the FMetaData object that is owned by this package.
+  FMetaData& Meta = Package->GetMetaData();
 
   const TSharedPtr<FJsonObject> &MetadataObj = *MetadataObjPtr;
   int32 UpdatedCount = 0;
@@ -1130,7 +1131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     }
 
     if (!ValueString.IsEmpty()) {
-      Meta->SetValue(Asset, *Key, *ValueString);
+      Meta.SetValue(Asset, *Key, *ValueString);
       ++UpdatedCount;
     }
   }
@@ -2892,11 +2893,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   UPackage *Package = Asset->GetOutermost();
   if (Package) {
 
-    UMetaData *Meta = Package->GetMetaData();
-    bool bHasMeta = Meta->GetMapForObject(Asset) != nullptr;
+    FMetaData& Meta = Package->GetMetaData();
+    bool bHasMeta = FMetaData::GetMapForObject(Asset) != nullptr;
     Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 
-    const TMap<FName, FString> *ObjectMeta = Meta->GetMapForObject(Asset);
+    const TMap<FName, FString> *ObjectMeta = FMetaData::GetMapForObject(Asset);
     if (ObjectMeta) {
       TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
       for (const auto &Entry : *ObjectMeta) {
