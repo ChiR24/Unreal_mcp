@@ -21,8 +21,87 @@ jobs:
       github.actor != 'github-actions[bot]' &&
       github.actor != github.repository_owner
     steps:
-    - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
+    - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        issue_message: '👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.'
-        pr_message: '👋 Thanks for your first Pull Request! We love contributions. Please ensure you have signed off your commits and followed the contribution guidelines.'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const actor = context.actor;
+          const repo = context.repo;
+          
+          // Check if this is a PR or Issue event
+          const isPullRequest = context.payload.pull_request !== undefined;
+          const isIssue = context.payload.issue !== undefined;
+          
+          if (!isPullRequest && !isIssue) {
+            console.log('Not a PR or Issue event, skipping.');
+            return;
+          }
+          
+          // For PRs: Only check PR history (don't check issues - that's the bug in first-interaction)
+          // For Issues: Only check issue history (don't check PRs)
+          let isFirstContribution = false;
+          
+          if (isPullRequest) {
+            // Search for previous PRs by this user
+            const { data: prs } = await github.rest.pulls.list({
+              owner: repo.owner,
+              repo: repo.repo,
+              state: 'all',
+              per_page: 100
+            });
+            
+            // Count PRs by this user (excluding the current one)
+            const userPrs = prs.filter(pr => 
+              pr.user.login === actor && 
+              pr.number !== context.payload.pull_request.number
+            );
+            
+            isFirstContribution = userPrs.length === 0;
+            console.log(`Found ${userPrs.length} previous PRs by ${actor}`);
+            
+            if (isFirstContribution) {
+              const message = '👋 Thanks for your first Pull Request! We love contributions. Please ensure you have signed off your commits and followed the contribution guidelines.';
+              await github.rest.issues.createComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: message
+              });
+              console.log(`Posted first PR greeting for ${actor}`);
+            } else {
+              console.log(`${actor} is not a first-time PR contributor, skipping greeting.`);
+            }
+          }
+          
+          if (isIssue) {
+            // Search for previous issues by this user
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: repo.owner,
+              repo: repo.repo,
+              state: 'all',
+              per_page: 100
+            });
+            
+            // Count issues by this user (excluding the current one and PRs)
+            const userIssues = issues.filter(issue => 
+              issue.user.login === actor && 
+              !issue.pull_request && // Exclude PRs from the issues list
+              issue.number !== context.payload.issue.number
+            );
+            
+            isFirstContribution = userIssues.length === 0;
+            console.log(`Found ${userIssues.length} previous issues by ${actor}`);
+            
+            if (isFirstContribution) {
+              const message = "👋 Thanks for opening this issue! We appreciate your feedback and report. A maintainer will check this out soon.";
+              await github.rest.issues.createComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                issue_number: context.payload.issue.number,
+                body: message
+              });
+              console.log(`Posted first issue greeting for ${actor}`);
+            } else {
+              console.log(`${actor} is not a first-time issue contributor, skipping greeting.`);
+            }
+          }
