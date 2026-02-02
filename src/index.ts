@@ -31,7 +31,7 @@ const DEFAULT_SERVER_NAME = typeof packageInfo.name === 'string' && packageInfo.
   : 'unreal-engine-mcp';
 const DEFAULT_SERVER_VERSION = typeof packageInfo.version === 'string' && packageInfo.version.trim().length > 0
   ? packageInfo.version
-  : '0.6.0';
+  : '0.6.0-beta';
 
 function routeStdoutLogsToStderr(): void {
   if (!config.MCP_ROUTE_STDOUT_LOGS) {

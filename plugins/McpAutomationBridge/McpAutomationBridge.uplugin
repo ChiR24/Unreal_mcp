@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
-  "Version": 1,
-  "VersionName": "0.1.0",
+  "Version": 2,
+  "VersionName": "0.2.0",
   "FriendlyName": "MCP Automation Bridge",
   "Description": "Editor-side bridge that accepts elevated automation requests from the Unreal MCP server.",
   "Category": "Automation",
