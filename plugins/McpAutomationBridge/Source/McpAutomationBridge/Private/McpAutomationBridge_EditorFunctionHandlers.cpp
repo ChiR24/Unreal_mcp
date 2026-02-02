@@ -892,10 +892,8 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     UObject *NewAsset =
         AssetTools.CreateAsset(AssetName, PackagePath, nullptr, Factory);
     if (NewAsset) {
-      // Force save
-      TArray<UPackage *> PackagesToSave;
-      PackagesToSave.Add(NewAsset->GetOutermost());
-      FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, false, false);
+      // Use McpSafeAssetSave instead of modal PromptForCheckoutAndSave to avoid D3D12 crashes
+      McpSafeAssetSave(NewAsset);
 
       TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
       Out->SetStringField(TEXT("name"), NewAsset->GetName());

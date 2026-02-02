@@ -195,7 +195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
     UObject *NewObj = AssetToolsModule.Get().CreateAsset(
         Name, DestFolder, ULevelSequence::StaticClass(), Factory);
     if (NewObj) {
-      UEditorAssetLibrary::SaveAsset(FullPath);
+      McpSafeAssetSave(NewObj);
       GCurrentSequencePath = FullPath;
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("sequencePath"), FullPath);
