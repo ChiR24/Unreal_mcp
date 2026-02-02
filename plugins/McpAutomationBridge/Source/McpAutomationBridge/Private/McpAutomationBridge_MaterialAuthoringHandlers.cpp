@@ -23,7 +23,10 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
+// MaterialDomain.h was introduced in UE 5.5 - in earlier versions EMaterialDomain is in Material.h
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #include "MaterialDomain.h"
+#endif
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionAdd.h"
 #include "Materials/MaterialExpressionAppendVector.h"

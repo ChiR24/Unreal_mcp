@@ -14,6 +14,11 @@
 #include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
+// UE 5.0 deprecation warning suppression - BlendSpaceBase.h is deprecated but transitively included by engine headers
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimBlueprint.h"
@@ -24,6 +29,9 @@
 #include "Animation/AimOffsetBlendSpace.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+#pragma warning(pop)
+#endif
 #include "Engine/SkeletalMesh.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -62,6 +70,11 @@
 // RigVM Blueprint Generated Class (needed for ControlRig creation fallback in UE 5.1-5.4)
 #if __has_include("RigVMBlueprintGeneratedClass.h")
 #include "RigVMBlueprintGeneratedClass.h"
+#endif
+
+// UE 5.0 uses UControlRigBlueprintGeneratedClass (different name from UE 5.1+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+#include "ControlRigBlueprintGeneratedClass.h"
 #endif
 
 // Control Rig Factory (for creating Control Rig assets)
@@ -2419,7 +2432,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                 *Name,
                 BPTYPE_Normal,
                 UControlRigBlueprint::StaticClass(),
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 URigVMBlueprintGeneratedClass::StaticClass(),
+#else
+                // UE 5.0 uses UControlRigBlueprintGeneratedClass instead
+                UControlRigBlueprintGeneratedClass::StaticClass(),
+#endif
                 NAME_None));
         
         if (!ControlRigBP)

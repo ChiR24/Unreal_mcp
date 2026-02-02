@@ -112,8 +112,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "ImageUtils.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
+// MaterialDomain.h was introduced in UE 5.5 - in earlier versions EMaterialDomain is in Material.h
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #include "MaterialDomain.h"
-#include "Materials/MaterialExpression.h"
+#endif
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
 #include "Materials/MaterialExpressionTextureSample.h"
@@ -1094,8 +1096,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  // GetMetaData returns the FMetaData object that is owned by this package.
+  // GetMetaData returns the metadata object that is owned by this package.
+  // UE 5.0 uses UMetaData*, UE 5.6+ uses FMetaData&
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
   FMetaData& Meta = Package->GetMetaData();
+#else
+  UMetaData* Meta = Package->GetMetaData();
+#endif
 
   const TSharedPtr<FJsonObject> &MetadataObj = *MetadataObjPtr;
   int32 UpdatedCount = 0;
@@ -1131,7 +1138,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     }
 
     if (!ValueString.IsEmpty()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
       Meta.SetValue(Asset, *Key, *ValueString);
+#else
+      Meta->SetValue(Asset, *Key, *ValueString);
+#endif
       ++UpdatedCount;
     }
   }
@@ -2893,11 +2904,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   UPackage *Package = Asset->GetOutermost();
   if (Package) {
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
     FMetaData& Meta = Package->GetMetaData();
     bool bHasMeta = FMetaData::GetMapForObject(Asset) != nullptr;
     Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 
     const TMap<FName, FString> *ObjectMeta = FMetaData::GetMapForObject(Asset);
+#else
+    UMetaData* Meta = Package->GetMetaData();
+    bool bHasMeta = Meta->GetMapForObject(Asset) != nullptr;
+    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
+
+    const TMap<FName, FString> *ObjectMeta = Meta->GetMapForObject(Asset);
+#endif
     if (ObjectMeta) {
       TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
       for (const auto &Entry : *ObjectMeta) {
