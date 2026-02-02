@@ -7,6 +7,138 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.13] - 2026-02-02
+
+> [!IMPORTANT]
+> ### 🛡️ Security & Compatibility Release
+> This release includes multiple critical security fixes for command injection and path traversal vulnerabilities, along with full Unreal Engine 5.0 backward compatibility and WebSocket stability improvements.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Command Injection in UITools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/144">#144</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Command injection via unsanitized user input in widget creation |
+| **Fix** | Added `sanitizeConsoleString()` and applied `sanitizeAssetName()` to all user-provided identifiers |
+| **Contributors** | @google-labs-jules[bot] |
+
+</details>
+
+<details>
+<summary><b>🔒 Command Injection in LevelTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/179">#179</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Command injection via level names, event types, and game mode parameters |
+| **Fix** | Added `sanitizeCommandArgument()` and applied to all console command parameters |
+| **Contributors** | @google-labs-jules[bot] |
+
+</details>
+
+<details>
+<summary><b>🔒 Path Traversal in Asset Listing</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/163">#163</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Vulnerability** | Path traversal in `listAssets` via `filter.pathStartsWith` parameter |
+| **Fix** | Applied `normalizeAndSanitizePath()` to GraphQL `listAssets` and asset handler `list` action |
+| **Contributors** | @google-labs-jules[bot] |
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🎮 Unreal Engine 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/183">#183</a>)</summary>
+
+| Component | Description |
+|-----------|-------------|
+| **API Abstractions** | Version-guarded macros for Material, Niagara, AssetRegistry, Animation, and World Partition APIs |
+| **Build System** | Made plugin dependencies optional with dynamic memory-based configuration |
+| **Coverage** | 41 handler files updated with UE 5.0-5.7 compatibility |
+
+**Compatibility Macros Added:**
+- `MCP_GET_MATERIAL_EXPRESSIONS()` - Abstracts material expression access
+- `MCP_DATALAYER_TYPE` / `MCP_DATALAYER_ASSET_TYPE` - Data layer type abstraction
+- `MCP_ASSET_FILTER_CLASS_PATHS` - Asset registry filter abstraction
+- `MCP_ASSET_DATA_GET_CLASS_PATH()` - FAssetData abstraction
+- `MCP_NIAGARA_EMITTER_DATA_TYPE` - Niagara emitter abstraction
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🔌 WebSocket Stability</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/180">#180</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/181">#181</a>)</summary>
+
+| Fix | Description |
+|-----|-------------|
+| **TOCTOU Race** | Fixed Time-of-Check-Time-of-Use race condition in ListenSocket shutdown |
+| **Shutdown Hang** | Fixed WebSocket server blocking cook/package builds |
+| **Version Compatibility** | Fixed `PendingReceived.RemoveAt()` API differences for UE 5.4+ |
+
+**Contributors:** @kalihman
+
+</details>
+
+<details>
+<summary><b>🔧 Resource Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/165">#165</a>)</summary>
+
+- Fixed broken actors and level resource handlers
+- Added missing actors and level resources to MCP resource list
+
+**Contributors:** @kalihman
+
+</details>
+
+<details>
+<summary><b>🔧 Other Fixes</b></summary>
+
+| Fix | Description |
+|-----|-------------|
+| UE 5.7 | Resolved macro handling and ControlRig dynamic loading issues |
+| UE 5.5 | Fixed API compatibility issues in handlers |
+| UE 5.1 | Fixed `MaterialDomain.h` inclusion path |
+| JSON | Refactored JSON handling in McpAutomationBridge |
+
+</details>
+
+### 🧪 Testing
+
+- Added security regression tests for UITools, LevelTools, and asset handlers
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `release-drafter/release-drafter` | 6.1.1 → 6.2.0 | [#160](https://github.com/ChiR24/Unreal_mcp/pull/160) |
+| `actions/checkout` | 6.0.1 → 6.0.2 | [#161](https://github.com/ChiR24/Unreal_mcp/pull/161) |
+| `github/codeql-action` | 4.31.10 → 4.32.0 | [#168](https://github.com/ChiR24/Unreal_mcp/pull/168), [#170](https://github.com/ChiR24/Unreal_mcp/pull/170) |
+| `google-github-actions/run-gemini-cli` | Latest | [#177](https://github.com/ChiR24/Unreal_mcp/pull/177) |
+
+</details>
+
+<details>
+<summary><b>NPM Package Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `@modelcontextprotocol/sdk` | Latest | [#154](https://github.com/ChiR24/Unreal_mcp/pull/154) |
+| `hono` | 4.11.4 → 4.11.7 | [#173](https://github.com/ChiR24/Unreal_mcp/pull/173) |
+| `@types/node` | Various updates | [#158](https://github.com/ChiR24/Unreal_mcp/pull/158), [#162](https://github.com/ChiR24/Unreal_mcp/pull/162), [#175](https://github.com/ChiR24/Unreal_mcp/pull/175) |
+
+</details>
+
+---
+
 ## 🏷️ [0.5.12] - 2026-01-15
 
 > [!NOTE]
