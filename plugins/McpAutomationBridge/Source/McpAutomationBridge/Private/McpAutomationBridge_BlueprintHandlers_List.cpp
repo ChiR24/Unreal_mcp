@@ -71,6 +71,8 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     }
 
     // Class filter
+    // Note: FTopLevelAssetPath and ClassPaths were introduced in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     if (ClassFilter == TEXT("Blueprint"))
     {
         Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("Blueprint")));
@@ -93,6 +95,23 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
             }
         }
     }
+#else
+    // UE 5.0 fallback - use ClassNames
+    if (ClassFilter == TEXT("Blueprint"))
+    {
+        Filter.ClassNames.Add(UBlueprint::StaticClass()->GetFName());
+    }
+    else if (!ClassFilter.IsEmpty())
+    {
+        UClass* FoundClass = FindObject<UClass>(nullptr, *ClassFilter);
+        if (!FoundClass) FoundClass = FindObject<UClass>(nullptr, *(TEXT("/Script/Engine.") + ClassFilter));
+        
+        if (FoundClass)
+        {
+            Filter.ClassNames.Add(FoundClass->GetFName());
+        }
+    }
+#endif
 
     TArray<FAssetData> AssetList;
     AssetRegistry.GetAssets(Filter, AssetList);
@@ -124,8 +143,14 @@ bool UMcpAutomationBridgeSubsystem::HandleListBlueprints(const FString& RequestI
     {
         TSharedPtr<FJsonObject> BpObj = MakeShared<FJsonObject>();
         BpObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         BpObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
         BpObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+#else
+        // UE 5.0 fallback
+        BpObj->SetStringField(TEXT("path"), Asset.ObjectPath.ToString());
+        BpObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
+#endif
         BpObj->SetStringField(TEXT("packagePath"), Asset.PackagePath.ToString());
         
         FString ParentClass;

@@ -30,71 +30,102 @@
     },
     {
       "Name": "LevelSequenceEditor",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "Niagara",
       "Enabled": true
     },
     {
+      "Name": "NiagaraEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "BehaviorTreeEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "EnvironmentQueryEditor",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "ControlRig",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "ProceduralMeshComponent",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "Interchange",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "InterchangeOpenUSD",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "DataValidation",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "EnhancedInput",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "GeometryScripting",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "ChaosCloth",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "GameplayAbilities",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "Metasound",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "StateTree",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "SmartObjects",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "MassGameplay",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "OnlineSubsystem",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     },
     {
       "Name": "OnlineSubsystemUtils",
-      "Enabled": true
+      "Enabled": true,
+      "Optional": true
     }
   ]
 }

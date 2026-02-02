@@ -49,8 +49,15 @@
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_ActorsOfClass.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_OnCircle.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_SimpleGrid.h"
+
+// EnvQueryTest headers are in EnvironmentQueryEditor module which may not be available in UE 5.0
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "EnvironmentQuery/Tests/EnvQueryTest_Distance.h"
 #include "EnvironmentQuery/Tests/EnvQueryTest_Trace.h"
+#define MCP_HAS_ENVQUERY_TESTS 1
+#else
+#define MCP_HAS_ENVQUERY_TESTS 0
+#endif
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
@@ -946,6 +953,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
     if (SubAction == TEXT("add_eqs_test"))
     {
+#if !MCP_HAS_ENVQUERY_TESTS
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("EQS Test creation requires UE 5.1+"),
+                            TEXT("NOT_SUPPORTED"));
+        return true;
+#else
         FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
         FString TestType = GetStringFieldAI(Payload, TEXT("testType"));
 
@@ -959,14 +972,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         UEnvQueryTest* NewTest = nullptr;
+#if MCP_HAS_ENVQUERY_TESTS
+        // Use runtime class lookup to avoid GetPrivateStaticClass requirement
+        // StaticClass() calls GetPrivateStaticClass() internally which isn't exported
+        UClass* TestClass = nullptr;
         if (TestType.Equals(TEXT("Distance"), ESearchCase::IgnoreCase))
         {
-            NewTest = NewObject<UEnvQueryTest_Distance>(Query);
+            TestClass = FindObject<UClass>(nullptr, TEXT("/Script/AIModule.EnvQueryTest_Distance"));
         }
         else if (TestType.Equals(TEXT("Trace"), ESearchCase::IgnoreCase))
         {
-            NewTest = NewObject<UEnvQueryTest_Trace>(Query);
+            TestClass = FindObject<UClass>(nullptr, TEXT("/Script/AIModule.EnvQueryTest_Trace"));
         }
+        
+        if (TestClass)
+        {
+            // Use NewObject with runtime UClass parameter to avoid template instantiation
+            UObject* TestObj = NewObject<UObject>(Query, TestClass);
+            if (TestObj && TestObj->GetClass()->IsChildOf(UEnvQueryTest::StaticClass()))
+            {
+                NewTest = static_cast<UEnvQueryTest*>(TestObj);
+            }
+        }
+#endif
 
         if (NewTest)
         {
@@ -983,6 +1011,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         return true;
+#endif
     }
 
     if (SubAction == TEXT("configure_test_scoring"))
@@ -1305,7 +1334,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
         else if (StateType.Equals(TEXT("LinkedAsset"), ESearchCase::IgnoreCase))
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
             Type = EStateTreeStateType::LinkedAsset;
+#else
+            UE_LOG(LogMcpAIHandlers, Warning, TEXT("LinkedAsset state type requires UE 5.4+. Falling back to State type."));
+            Type = EStateTreeStateType::State;
+#endif
         }
         
         // Add the child state
@@ -1526,11 +1560,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenAtRandom"), ESearchCase::IgnoreCase))
             {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenAtRandom;
+#else
+                UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenAtRandom requires UE 5.4+. Using TrySelectChildrenInOrder instead."));
+                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
+#endif
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenWithHighestUtility"), ESearchCase::IgnoreCase))
             {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenWithHighestUtility;
+#else
+                UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenWithHighestUtility requires UE 5.4+. Using TryEnterState instead."));
+                FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TryEnterState;
+#endif
             }
             else
             {
@@ -1644,11 +1688,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         
         // Create and add a new slot using reflection to access private Slots array
         FSmartObjectSlotDefinition NewSlot;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+ uses FVector3f/FRotator3f and has bEnabled/ID members
         NewSlot.Offset = FVector3f(Offset);
         NewSlot.Rotation = FRotator3f(Rotation);
         NewSlot.bEnabled = bEnabled;
 #if WITH_EDITORONLY_DATA
         NewSlot.ID = FGuid::NewGuid();
+#endif
+#else
+        // UE 5.0 uses FVector/FRotator
+        NewSlot.Offset = Offset;
+        NewSlot.Rotation = Rotation;
 #endif
         
         // Access slots via reflection
@@ -1707,6 +1758,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
         
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         if (!Definition->IsValidSlotIndex(SlotIndex))
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -1748,6 +1800,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("behaviorCount"), Slot.BehaviorDefinitions.Num());
         Result->SetStringField(TEXT("message"), TEXT("Slot behavior configured"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior configured"), Result);
+#else
+        // UE 5.0: SmartObject API is limited - skip slot configuration
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("SmartObject slot configuration requires UE 5.1+"), TEXT("UNSUPPORTED_VERSION"));
+        return true;
+#endif
 #elif MCP_HAS_SMART_OBJECTS
         FString DefinitionPath = GetStringFieldAI(Payload, TEXT("definitionPath"));
         int32 SlotIndex = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("slotIndex"), 0));
@@ -1929,7 +1987,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             UMassEntityConfigAsset* ParentConfig = LoadObject<UMassEntityConfigAsset>(nullptr, *ParentConfigPath);
             if (ParentConfig)
             {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
                 Config.SetParentAsset(*ParentConfig);
+#endif
             }
         }
         

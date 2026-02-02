@@ -38,8 +38,10 @@
 #include "UObject/SavePackage.h"
 #include "WorldPartition/WorldPartition.h"
 #include "WorldPartition/DataLayer/DataLayerSubsystem.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
+#endif
 #include "WorldPartition/DataLayer/WorldDataLayers.h"
 #include "WorldPartition/HLOD/HLODLayer.h"
 #include "WorldPartition/HLOD/HLODActor.h"
@@ -49,7 +51,9 @@
 #include "PackedLevelActor/PackedLevelActor.h"
 #include "DataLayer/DataLayerEditorSubsystem.h"
 #include "AssetToolsModule.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
+#endif
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
 #include "Engine/LevelStreamingVolume.h"
 #endif
@@ -702,7 +706,9 @@ static bool HandleConfigureGridSize(
             NewGrid->LoadingRange = LoadingRange;
             NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
             NewGrid->Priority = Priority;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
             NewGrid->Origin = FVector2D::ZeroVector;
+#endif
             NewGrid->DebugColor = FLinearColor::MakeRandomColor();
             NewGrid->bClientOnlyVisible = false;
             NewGrid->HLODLayer = nullptr;
@@ -808,6 +814,7 @@ static bool HandleCreateDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"), TEXT("NewDataLayer"));
@@ -901,7 +908,10 @@ static bool HandleCreateDataLayer(
     }
 
     // Configure initial visibility and loaded state
+    // Note: SetDataLayerIsInitiallyVisible was removed in UE 5.5
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
     DataLayerEditorSubsystem->SetDataLayerIsInitiallyVisible(NewDataLayerInstance, bIsInitiallyVisible);
+#endif
     DataLayerEditorSubsystem->SetDataLayerIsLoadedInEditor(NewDataLayerInstance, bIsInitiallyLoaded, false);
 
     // Mark world dirty
@@ -918,6 +928,11 @@ static bool HandleCreateDataLayer(
     FString Message = FString::Printf(TEXT("Created data layer '%s' with asset at '%s'"), 
         *DataLayerName, *FullAssetPath);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+#else
+    // UE 5.0 does not support the new DataLayer API
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("Data layer creation requires Unreal Engine 5.1 or later."), nullptr);
+#endif
     return true;
 }
 
@@ -927,6 +942,7 @@ static bool HandleAssignActorToDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT(""));
@@ -1037,6 +1053,11 @@ static bool HandleAssignActorToDataLayer(
             *ActorName, *DataLayerName);
         Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
     }
+#else
+    // UE 5.0 does not support the new DataLayer API
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("Data layer assignment requires Unreal Engine 5.1 or later."), nullptr);
+#endif
     return true;
 }
 
@@ -1081,14 +1102,10 @@ static bool HandleConfigureHlodLayer(
     }
 
     // Configure the HLOD layer
-    // UE 5.7+: SetIsSpatiallyLoaded is deprecated. Streaming grid properties are now in partition settings.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
+    // UE 5.1-5.6: SetIsSpatiallyLoaded is available
+    // UE 5.7+: Deprecated - streaming grid properties are in partition settings
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
     NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
     
     // Set layer type
     if (LayerType == TEXT("Instancing"))
@@ -1107,6 +1124,7 @@ static bool HandleConfigureHlodLayer(
     {
         NewHLODLayer->SetLayerType(EHLODLayerType::MeshMerge);
     }
+#endif
 
     // Mark package dirty and notify asset registry
     AssetPackage->MarkPackageDirty();
@@ -1135,6 +1153,7 @@ static bool HandleCreateMinimapVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));
@@ -1205,6 +1224,10 @@ static bool HandleCreateMinimapVolume(
     FString Message = FString::Printf(TEXT("Created minimap volume '%s' at (%f, %f, %f)"), 
         *VolumeName, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+#else
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("Minimap volume requires Unreal Engine 5.1 or later."), nullptr);
+#endif
     return true;
 }
 
@@ -1757,9 +1780,10 @@ static bool HandleGetLevelStructureInfo(
                 LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
                 
                 // Get parent layer if available
-                if (UHLODLayer* ParentLayer = Layer->GetParentLayer())
+                TSoftObjectPtr<UHLODLayer> ParentLayerSoft = Layer->GetParentLayer();
+                if (ParentLayerSoft.IsValid())
                 {
-                    LayerJson->SetStringField(TEXT("parentLayer"), ParentLayer->GetName());
+                    LayerJson->SetStringField(TEXT("parentLayer"), ParentLayerSoft->GetName());
                 }
                 
                 HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));

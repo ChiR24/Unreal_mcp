@@ -357,7 +357,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     // Create a Blueprint Interface
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     Factory->BlueprintType = BPTYPE_Interface;
+#endif
     Factory->ParentClass = UInterface::StaticClass();
 
     UBlueprint* InterfaceBP = Cast<UBlueprint>(

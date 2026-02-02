@@ -206,7 +206,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
         APlayerCameraManager *Cam = UGameplayStatics::GetPlayerCameraManager(
             GEditor->GetEditorWorldContext().World(), 0);
         if (Cam) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
           IStreamingManager::Get().AddViewLocation(Cam->GetCameraLocation());
+#else
+          // UE 5.0: AddViewLocation not available - use alternative approach
+          // Just notify that streaming is enabled without location boost
+#endif
         }
       }
     }

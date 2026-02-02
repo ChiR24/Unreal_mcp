@@ -104,7 +104,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
 
     for (const FAssetData &Data : AssetDataList) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
       const FString AssetPath = Data.GetSoftObjectPath().ToString();
+#else
+      const FString AssetPath = Data.ToSoftObjectPath().ToString();
+#endif
       UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
       if (!Asset)
         continue;
@@ -124,8 +128,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
         AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
         AssetObj->SetStringField(TEXT("assetPath"), AssetPath);
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         AssetObj->SetStringField(TEXT("classPath"),
                                  Data.AssetClassPath.ToString());
+#else
+        AssetObj->SetStringField(TEXT("classPath"),
+                                 Data.AssetClass.ToString());
+#endif
         AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
         AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
       }
@@ -148,48 +157,97 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         if (!ClassName.IsEmpty()) {
           // Support both full paths and short names
           if (ClassName.Contains(TEXT("/"))) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
             Filter.ClassPaths.Add(FTopLevelAssetPath(ClassName));
+#else
+            // UE 5.0: Extract class name from path like "/Script/Engine.Blueprint"
+            int32 DotIndex;
+            if (ClassName.FindLastChar(TEXT('.'), DotIndex))
+            {
+              Filter.ClassNames.Add(FName(*ClassName.Mid(DotIndex + 1)));
+            }
+            else
+            {
+              Filter.ClassNames.Add(FName(*ClassName));
+            }
+#endif
           } else {
             // Map common short names to full paths
             if (ClassName.Equals(TEXT("Blueprint"), ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                                        TEXT("Blueprint")));
+#else
+              Filter.ClassNames.Add(TEXT("Blueprint"));
+#endif
             } else if (ClassName.Equals(TEXT("StaticMesh"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                                        TEXT("StaticMesh")));
+#else
+              Filter.ClassNames.Add(TEXT("StaticMesh"));
+#endif
             } else if (ClassName.Equals(TEXT("SkeletalMesh"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                                        TEXT("SkeletalMesh")));
+#else
+              Filter.ClassNames.Add(TEXT("SkeletalMesh"));
+#endif
             } else if (ClassName.Equals(TEXT("Material"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(
                   FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("Material")));
+#else
+              Filter.ClassNames.Add(TEXT("Material"));
+#endif
             } else if (ClassName.Equals(TEXT("MaterialInstance"),
                                         ESearchCase::IgnoreCase) ||
                        ClassName.Equals(TEXT("MaterialInstanceConstant"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(
                   TEXT("/Script/Engine"), TEXT("MaterialInstanceConstant")));
+#else
+              Filter.ClassNames.Add(TEXT("MaterialInstanceConstant"));
+#endif
             } else if (ClassName.Equals(TEXT("Texture2D"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                                        TEXT("Texture2D")));
+#else
+              Filter.ClassNames.Add(TEXT("Texture2D"));
+#endif
             } else if (ClassName.Equals(TEXT("Level"),
                                         ESearchCase::IgnoreCase) ||
                        ClassName.Equals(TEXT("World"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(
                   FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("World")));
+#else
+              Filter.ClassNames.Add(TEXT("World"));
+#endif
             } else if (ClassName.Equals(TEXT("SoundCue"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(
                   FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("SoundCue")));
+#else
+              Filter.ClassNames.Add(TEXT("SoundCue"));
+#endif
             } else if (ClassName.Equals(TEXT("SoundWave"),
                                         ESearchCase::IgnoreCase)) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
               Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                                        TEXT("SoundWave")));
+#else
+              Filter.ClassNames.Add(TEXT("SoundWave"));
+#endif
             } else {
               UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                      TEXT("HandleAssetQueryAction: Could not resolve short "
@@ -244,10 +302,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     for (const FAssetData &Data : AssetDataList) {
       TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
       AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
       AssetObj->SetStringField(TEXT("assetPath"),
                                Data.GetSoftObjectPath().ToString());
       AssetObj->SetStringField(TEXT("classPath"),
                                Data.AssetClassPath.ToString());
+#else
+      AssetObj->SetStringField(TEXT("assetPath"),
+                               Data.ToSoftObjectPath().ToString());
+      AssetObj->SetStringField(TEXT("classPath"),
+                               Data.AssetClass.ToString());
+#endif
       AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
     }
 

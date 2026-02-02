@@ -173,6 +173,8 @@ static void ApplyBlendSpaceConfiguration(UObject *BlendSpaceAsset,
   Payload->TryGetNumberField(TEXT("gridX"), GridX);
 
 #if MCP_HAS_BLENDSPACE_BASE
+  // UBlendSpaceBase is deprecated in UE 5.0+ but still needed for backward compatibility
+  PRAGMA_DISABLE_DEPRECATION_WARNINGS
   if (UBlendSpaceBase *BlendBase = Cast<UBlendSpaceBase>(BlendSpaceAsset)) {
     BlendBase->Modify();
 
@@ -197,6 +199,7 @@ static void ApplyBlendSpaceConfiguration(UObject *BlendSpaceAsset,
 
     BlendBase->MarkPackageDirty();
   }
+  PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #else
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("ApplyBlendSpaceConfiguration: BlendSpaceBase headers "
@@ -568,6 +571,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               ApplyBlendSpaceConfiguration(CreatedBlendAsset, Payload,
                                            bTwoDimensional);
 #if MCP_HAS_BLENDSPACE_BASE
+              // UBlendSpaceBase is deprecated in UE 5.0+ but still needed for backward compatibility
+              PRAGMA_DISABLE_DEPRECATION_WARNINGS
               if (UBlendSpaceBase *BlendSpace =
                       Cast<UBlendSpaceBase>(CreatedBlendAsset)) {
 
@@ -583,6 +588,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                 ErrorCode = TEXT("TYPE_MISMATCH");
                 Resp->SetStringField(TEXT("error"), Message);
               }
+              PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #else
 
               bSuccess = true;
@@ -987,7 +993,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         // Try to get skeletal mesh component
         if (USkeletalMeshComponent *SkelComp =
                 FoundActor->FindComponentByClass<USkeletalMeshComponent>()) {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
           TargetMesh = SkelComp->GetSkeletalMeshAsset();
+#else
+          TargetMesh = SkelComp->SkeletalMesh;
+#endif
           if (TargetMesh) {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
                    TEXT("Found skeletal mesh asset: '%s'"),
@@ -1537,7 +1547,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           UClass *LoadedNotifyClass = nullptr;
           FString SearchName = NotifyName;
 
-          // 1. Try exact match
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+          // 1. Try exact match (UE 5.1+ API)
           LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(SearchName);
 
           // 2. Try with U prefix
@@ -1545,6 +1556,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             LoadedNotifyClass =
                 UClass::TryFindTypeSlow<UClass>(TEXT("U") + SearchName);
           }
+#else
+          // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+          LoadedNotifyClass = ResolveClassByName(SearchName);
+          
+          // 2. Try with U prefix
+          if (!LoadedNotifyClass && !SearchName.StartsWith(TEXT("U"))) {
+            LoadedNotifyClass = ResolveClassByName(TEXT("U") + SearchName);
+          }
+#endif
 
           // 3. Try standard Engine path variants
           if (!LoadedNotifyClass) {
@@ -1651,8 +1671,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         // Try to load the class.
         UClass *LoadedNotifyClass = nullptr;
         if (!NotifyName.IsEmpty()) {
-          // Try to find class
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+          // Try to find class (UE 5.1+ API)
           LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(NotifyName);
+#else
+          // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+          LoadedNotifyClass = ResolveClassByName(NotifyName);
+#endif
           if (!LoadedNotifyClass) {
             LoadedNotifyClass = LoadClass<UObject>(nullptr, *NotifyName);
           }
@@ -1668,8 +1693,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           if (!ClassName.StartsWith("U"))
             ClassName = "U" + ClassName;
 
-          // Try finding by name again with U prefix
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+          // Try finding by name again with U prefix (UE 5.1+ API)
           LoadedNotifyClass = UClass::TryFindTypeSlow<UClass>(ClassName);
+#else
+          // UE 5.0: Use ResolveClassByName instead of deprecated ANY_PACKAGE
+          LoadedNotifyClass = ResolveClassByName(ClassName);
+#endif
 
           if (!LoadedNotifyClass) {
             // Try with /Script/Engine.

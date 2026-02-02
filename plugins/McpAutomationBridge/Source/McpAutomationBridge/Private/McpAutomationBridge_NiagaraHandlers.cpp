@@ -13,33 +13,9 @@
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraEmitter.h"
-#include "NiagaraEmitterFactoryNew.h"
 #include "NiagaraParameterCollection.h"
-#include "NiagaraScriptFactoryNew.h"
 #include "NiagaraSystem.h"
-#include "NiagaraSystemFactoryNew.h"
-#if __has_include("Subsystems/EditorActorSubsystem.h")
-#include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
-#endif
-
-#if WITH_EDITOR
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "Async/Async.h"
-#include "EditorAssetLibrary.h"
-#include "Engine/World.h"
-#include "Modules/ModuleManager.h"
-#include "NiagaraActor.h"
-#include "NiagaraComponent.h"
-#include "NiagaraEmitter.h"
-#include "NiagaraEmitterFactoryNew.h"
-#include "NiagaraParameterCollection.h"
-#include "NiagaraScriptFactoryNew.h"
-#include "NiagaraSystem.h"
-#include "NiagaraSystemFactoryNew.h"
+#include "UObject/Package.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -92,21 +68,52 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     return true;
   }
 
-  UNiagaraSystemFactoryNew *Factory = NewObject<UNiagaraSystemFactoryNew>();
-  if (!Factory) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to create Niagara system factory"),
-                        TEXT("FACTORY_FAILED"));
-    return true;
-  }
-
+  // Create package and Niagara system directly (compatible with all UE versions)
+  // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = SystemName;
-  FAssetToolsModule &AssetToolsModule =
-      FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-  UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-      AssetName, PackagePath, UNiagaraSystem::StaticClass(), Factory);
-  UNiagaraSystem *NiagaraSystem = Cast<UNiagaraSystem>(NewAsset);
+  
+  if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
+  FString FullPath = PackagePath + AssetName;
+  FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
+  
+  UPackage *Package = CreatePackage(*ActualPackagePath);
+  if (!Package) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to create package"),
+                        TEXT("PACKAGE_ERROR"));
+    return true;
+  }
+  
+  UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+  if (NiagaraSystem)
+  {
+    // Add default emitter
+    // UE 5.4+ changed AddEmitterHandle signature - requires additional parameters
+    UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")));
+    if (NewEmitter)
+    {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+      // UE 5.0 - AddEmitterHandle takes only 2 parameters
+      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+      // UE 5.4 signature with 2 parameters
+      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
+#else
+      // UE 5.1-5.3 and 5.5+ - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
+      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
+#endif
+    }
+  }
+  
+  if (!NiagaraSystem) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to create Niagara system"),
+                        TEXT("CREATE_FAILED"));
+    return true;
+  }
+  
+  FAssetRegistryModule::AssetCreated(NiagaraSystem);
   McpSafeAssetSave(NiagaraSystem);
 
   if (!NiagaraSystem) {
@@ -176,21 +183,33 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     return true;
   }
 
-  UNiagaraEmitterFactoryNew *Factory = NewObject<UNiagaraEmitterFactoryNew>();
-  if (!Factory) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to create Niagara emitter factory"),
-                        TEXT("FACTORY_FAILED"));
-    return true;
-  }
-
+  // Create package and Niagara emitter directly (compatible with all UE versions)
+  // Note: Factories are editor-internal and not exported for plugin use
   FString PackagePath = SavePath;
   FString AssetName = EmitterName;
-  FAssetToolsModule &AssetToolsModule =
-      FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-  UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-      AssetName, PackagePath, UNiagaraEmitter::StaticClass(), Factory);
-  UNiagaraEmitter *NiagaraEmitter = Cast<UNiagaraEmitter>(NewAsset);
+  
+  if (!PackagePath.EndsWith(TEXT("/"))) PackagePath += TEXT("/");
+  FString FullPath = PackagePath + AssetName;
+  FString ActualPackagePath = FPackageName::ObjectPathToPackageName(FullPath);
+  
+  UPackage *Package = CreatePackage(*ActualPackagePath);
+  if (!Package) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to create package"),
+                        TEXT("PACKAGE_ERROR"));
+    return true;
+  }
+  
+  UNiagaraEmitter *NiagaraEmitter = NewObject<UNiagaraEmitter>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+  
+  if (!NiagaraEmitter) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to create Niagara emitter"),
+                        TEXT("CREATE_FAILED"));
+    return true;
+  }
+  
+  FAssetRegistryModule::AssetCreated(NiagaraEmitter);
   McpSafeAssetSave(NiagaraEmitter);
 
   if (!NiagaraEmitter) {

@@ -2,12 +2,12 @@
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
-#include "MaterialDomain.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/ScopeExit.h"
+#include "UObject/MetaData.h"
 
 #include "HAL/PlatformFilemanager.h"
 #include "Misc/Paths.h"
@@ -112,7 +112,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 #include "ImageUtils.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
-#include "Materials/MaterialExpression.h"
+// MaterialDomain.h was introduced in UE 5.1 - in UE 5.0 EMaterialDomain is in MaterialShared.h
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#include "MaterialDomain.h"
+#endif
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
 #include "Materials/MaterialExpressionTextureSample.h"
@@ -171,8 +174,12 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
 
     // Find all redirectors
     FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/CoreUObject"),
                                              TEXT("ObjectRedirector")));
+#else
+    Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
+#endif
 
     if (!DirectoryPath.IsEmpty()) {
       FString NormalizedPath = DirectoryPath;
@@ -689,8 +696,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
     FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/CoreUObject"),
                                              TEXT("ObjectRedirector")));
+#else
+    Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
+#endif
 
     TArray<FAssetData> RedirectorAssets;
     AssetRegistry.GetAssets(Filter, RedirectorAssets);
@@ -825,8 +836,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       }
 
       TArray<uint8> CompressedData;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
                                                CompressedData);
+#else
+      // UE 5.0: Use CompressImageArray instead
+      FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+#endif
       bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
     }
   }
@@ -1080,8 +1096,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  // GetMetaData returns the FMetaData object that is owned by this package.
-  FMetaData &Meta = Package->GetMetaData();
+  // GetMetaData returns the metadata object that is owned by this package.
+  // UE 5.0 uses UMetaData*, UE 5.6+ uses FMetaData&
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+  FMetaData& Meta = Package->GetMetaData();
+#else
+  UMetaData* Meta = Package->GetMetaData();
+#endif
 
   const TSharedPtr<FJsonObject> &MetadataObj = *MetadataObjPtr;
   int32 UpdatedCount = 0;
@@ -1117,7 +1138,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     }
 
     if (!ValueString.IsEmpty()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
       Meta.SetValue(Asset, *Key, *ValueString);
+#else
+      Meta->SetValue(Asset, *Key, *ValueString);
+#endif
       ++UpdatedCount;
     }
   }
@@ -1829,17 +1854,15 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     FTopLevelAssetPath ClassPath(ClassFilter);
     if (ClassPath.IsValid()) {
       Filter.ClassPaths.Add(ClassPath);
-    } else {
-      // If it's just a class name (e.g. "StaticMesh"), try to find it.
-      // For now, we might need to post-filter if we can't resolve the class
-      // path. Or rely on RecursiveClasses if we had a base class. Let's try
-      // adding it as a class name if the API allows or rely on post-filtering.
-      // FARFilter expects FTopLevelAssetPath.
-      // We will perform post-filtering for simple class names.
     }
+#else
+    // UE 5.0: Use ClassNames instead of ClassPaths
+    Filter.ClassNames.Add(FName(*ClassFilter));
+#endif
   }
 
   // Tags are not standard on assets in the same way as actors.
@@ -1856,8 +1879,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     AssetList.RemoveAll([&](const FAssetData &Asset) {
       if (!ClassFilter.IsEmpty()) {
         // Check full class path or asset class name
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FString AssetClass = Asset.AssetClassPath.ToString();
         FString AssetClassName = Asset.AssetClassPath.GetAssetName().ToString();
+#else
+        FString AssetClass = Asset.AssetClass.ToString();
+        FString AssetClassName = Asset.AssetClass.ToString();
+#endif
         if (!AssetClass.Equals(ClassFilter) &&
             !AssetClassName.Equals(ClassFilter)) {
           return true; // Remove
@@ -1959,9 +1987,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   for (const FAssetData &Asset : AssetList) {
     TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
     AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
-    AssetObj->SetStringField(TEXT("path"),
-                             Asset.GetSoftObjectPath().ToString());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    AssetObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
     AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+#else
+    AssetObj->SetStringField(TEXT("path"), Asset.ToSoftObjectPath().ToString());
+    AssetObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
+#endif
     AssetObj->SetStringField(TEXT("packagePath"), Asset.PackagePath.ToString());
 
     // Add tags for context if requested
@@ -2038,9 +2070,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
 
   TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
   AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
-  AssetObj->SetStringField(TEXT("path"),
-                           AssetData.GetSoftObjectPath().ToString());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  AssetObj->SetStringField(TEXT("path"), AssetData.GetSoftObjectPath().ToString());
   AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.ToString());
+#else
+  AssetObj->SetStringField(TEXT("path"), AssetData.ToSoftObjectPath().ToString());
+  AssetObj->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
+#endif
   AssetObj->SetStringField(TEXT("packagePath"),
                            AssetData.PackagePath.ToString());
 
@@ -2114,8 +2150,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
       AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
       AssetObj->SetStringField(TEXT("path"),
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                                Asset.GetSoftObjectPath().ToString());
       AssetObj->SetStringField(TEXT("class"), Asset.AssetClassPath.ToString());
+#else
+                               Asset.ToSoftObjectPath().ToString());
+      AssetObj->SetStringField(TEXT("class"), Asset.AssetClass.ToString());
+#endif
       AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
     }
 
@@ -2246,7 +2287,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   // default surface material so tests can exercise parameter handling without
   // requiring a real asset at that path.
   if (ParentPath.Equals(TEXT("/Valid"), ESearchCase::IgnoreCase)) {
-    ParentMaterial = UMaterial::GetDefaultMaterial(EMaterialDomain::MD_Surface);
+    ParentMaterial = UMaterial::GetDefaultMaterial(MD_Surface);
   } else {
     if (!UEditorAssetLibrary::DoesAssetExist(ParentPath)) {
       SendAutomationResponse(
@@ -2279,7 +2320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
   if (NewAsset) {
     // Handle parameters if provided
     UMaterialInstanceConstant *MIC = Cast<UMaterialInstanceConstant>(NewAsset);
-    const TSharedPtr<FJsonObject> *ParamsObj;
+    const TSharedPtr<FJsonObject> *ParamsObj = nullptr;
     if (MIC && Payload->TryGetObjectField(TEXT("parameters"), ParamsObj)) {
       // Scalar parameters
       const TSharedPtr<FJsonObject> *Scalars;
@@ -2495,8 +2536,12 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
   // we'll try a filtered query.
 
   FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"),
                                            TEXT("MaterialInstanceConstant")));
+#else
+  Filter.ClassNames.Add(FName(TEXT("MaterialInstanceConstant")));
+#endif
   Filter.bRecursiveClasses = true;
 
   TArray<FAssetData> AssetList;
@@ -2515,8 +2560,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
       // Tag value might be "Material'Path'" or just "Path"
       // It's usually formatted string.
       if (ParentTag.Contains(AssetPath)) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Instances.Add(
             MakeShared<FJsonValueString>(Asset.GetSoftObjectPath().ToString()));
+#else
+        Instances.Add(
+            MakeShared<FJsonValueString>(Asset.ToSoftObjectPath().ToString()));
+#endif
       }
     } else {
       // Fallback: load asset (slow, but accurate)
@@ -2636,7 +2686,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   }
 
   // Ensure material is compiled
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   Material->EnsureIsComplete();
+#else
+  // UE 5.0: Force compilation by accessing the material resource
+  Material->GetMaterial();
+#endif
 
   TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
 
@@ -2678,7 +2733,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   // Count texture samplers used in the material
   int32 SamplerCount = 0;
   if (UMaterial *BaseMat = Material->GetMaterial()) {
-    for (UMaterialExpression *Expr : BaseMat->GetExpressions()) {
+    for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(BaseMat)) {
       if (Expr && Expr->IsA<UMaterialExpressionTextureSample>()) {
         SamplerCount++;
       }
@@ -2849,11 +2904,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   UPackage *Package = Asset->GetOutermost();
   if (Package) {
 
-    FMetaData &Meta = Package->GetMetaData();
-    bool bHasMeta = Meta.GetMapForObject(Asset) != nullptr;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+    FMetaData& Meta = Package->GetMetaData();
+    bool bHasMeta = FMetaData::GetMapForObject(Asset) != nullptr;
     Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 
-    const TMap<FName, FString> *ObjectMeta = Meta.GetMapForObject(Asset);
+    const TMap<FName, FString> *ObjectMeta = FMetaData::GetMapForObject(Asset);
+#else
+    UMetaData* Meta = Package->GetMetaData();
+    bool bHasMeta = Meta->GetMapForObject(Asset) != nullptr;
+    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
+
+    const TMap<FName, FString> *ObjectMeta = Meta->GetMapForObject(Asset);
+#endif
     if (ObjectMeta) {
       TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
       for (const auto &Entry : *ObjectMeta) {

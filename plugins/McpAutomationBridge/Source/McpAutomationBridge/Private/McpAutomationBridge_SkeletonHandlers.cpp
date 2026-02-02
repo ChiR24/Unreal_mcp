@@ -17,7 +17,10 @@
 #include "Engine/SkeletalMeshSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
+// Note: SkeletalBodySetup.h was introduced in UE 5.4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
 #include "PhysicsEngine/SkeletalBodySetup.h"
+#endif
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
 #include "Animation/MorphTarget.h"
 #include "Rendering/SkeletalMeshLODModel.h"  // For FSkelMeshSection used by PopulateDeltas
@@ -1852,14 +1855,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     
     // Find the cloth asset by name if provided
     UClothingAssetBase* TargetClothAsset = nullptr;
-    // UE 5.7 returns TArray<TObjectPtr<>> - iterate directly without storing reference
+    // UE 5.7 returns TArray<TObjectPtr<>> - UE 5.0 returns TArray<UClothingAssetBase*>
     const auto& ClothingAssets = Mesh->GetMeshClothingAssets();
     
     if (!ClothAssetName.IsEmpty())
     {
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+            // UE 5.1+ uses TObjectPtr
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
+#else
+            // UE 5.0 uses raw pointers
+            UClothingAssetBase* ClothAsset = ClothAssetPtr;
+#endif
             if (ClothAsset && ClothAsset->GetName() == ClothAssetName)
             {
                 TargetClothAsset = ClothAsset;
@@ -1904,7 +1913,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
         TArray<TSharedPtr<FJsonValue>> ClothingArray;
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
+#else
+            UClothingAssetBase* ClothAsset = ClothAssetPtr;
+#endif
             if (!ClothAsset) continue;
             
             TSharedPtr<FJsonObject> ClothObj = MakeShareable(new FJsonObject());
@@ -1962,7 +1975,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     TArray<TSharedPtr<FJsonValue>> ClothingArray;
     for (const auto& ClothAssetPtr : Mesh->GetMeshClothingAssets())
     {
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
+        #else
+        UClothingAssetBase* ClothAsset = ClothAssetPtr;
+        #endif
         if (!ClothAsset) continue;
         
         TSharedPtr<FJsonObject> ClothObj = MakeShareable(new FJsonObject());
@@ -2146,7 +2163,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
 #if WITH_EDITORONLY_DATA
         RootBone.ExportName = RootBoneName;
 #endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
+#else
+        // UE 5.0: Add() only takes 2 parameters
+        Modifier.Add(RootBone, FTransform::Identity);
+#endif
         
         McpSafeAssetSave(NewSkeleton);
         
@@ -2223,7 +2245,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         // Allow multiple roots only if no parent is specified and this is the first bone
         bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Modifier.Add(NewBone, BoneTransform, bAllowMultipleRoots);
+#else
+        // UE 5.0: Add() only takes 2 parameters
+        Modifier.Add(NewBone, BoneTransform);
+#endif
         
         McpSafeAssetSave(Skeleton);
         
@@ -2276,9 +2303,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         }
         
         // Remove the bone using FReferenceSkeletonModifier
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FReferenceSkeletonModifier Modifier(Skeleton);
         Modifier.Remove(FName(*BoneName), bRemoveChildren);
-        
         McpSafeAssetSave(Skeleton);
         
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -2289,6 +2316,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Bone '%s' removed from skeleton"), *BoneName), Result);
         return true;
+#else
+        // UE 5.0: FReferenceSkeletonModifier doesn't have Remove() method
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("remove_bone is not supported in UE 5.0. Please use a newer UE version."),
+            TEXT("NOT_SUPPORTED"));
+        return true;
+#endif
     }
     else if (SubAction == TEXT("set_bone_parent"))
     {
@@ -2326,6 +2360,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         // Set new parent using FReferenceSkeletonModifier
         // NewParentName can be empty/NAME_None to unparent (make root)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FReferenceSkeletonModifier Modifier(Skeleton);
         FName ParentFName = NewParentName.IsEmpty() ? NAME_None : FName(*NewParentName);
         int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), ParentFName, true);
@@ -2348,6 +2383,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, NewParentName.IsEmpty() ? TEXT("(none)") : *NewParentName), Result);
         return true;
+#else
+        // UE 5.0: FReferenceSkeletonModifier doesn't have SetParent() method
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("set_bone_parent is not supported in UE 5.0. Please use a newer UE version."), 
+            TEXT("NOT_SUPPORTED"));
+        return true;
+#endif
     }
     // Skin weight operations using FSkinWeightProfileData
     else if (SubAction == TEXT("set_vertex_weights"))

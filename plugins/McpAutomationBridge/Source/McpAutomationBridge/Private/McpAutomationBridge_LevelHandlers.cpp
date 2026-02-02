@@ -498,17 +498,30 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
             .Get();
     TArray<FAssetData> MapAssets;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     AssetRegistry.GetAssetsByClass(
         FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("World")), MapAssets,
         false);
+#else
+    // UE 5.0: Use FName for class path
+    AssetRegistry.GetAssetsByClass(
+        FName(TEXT("World")), MapAssets,
+        false);
+#endif
 
     TArray<TSharedPtr<FJsonValue>> AllMapsArray;
     for (const FAssetData &MapAsset : MapAssets) {
       TSharedPtr<FJsonObject> MapEntry = MakeShared<FJsonObject>();
       MapEntry->SetStringField(TEXT("name"), MapAsset.AssetName.ToString());
       MapEntry->SetStringField(TEXT("path"), MapAsset.PackageName.ToString());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       MapEntry->SetStringField(TEXT("objectPath"),
                                MapAsset.GetObjectPathString());
+#else
+      // UE 5.0: Construct object path from package and asset name
+      MapEntry->SetStringField(TEXT("objectPath"),
+                               FString::Printf(TEXT("%s.%s"), *MapAsset.PackageName.ToString(), *MapAsset.AssetName.ToString()));
+#endif
       AllMapsArray.Add(MakeShared<FJsonValueObject>(MapEntry));
     }
 

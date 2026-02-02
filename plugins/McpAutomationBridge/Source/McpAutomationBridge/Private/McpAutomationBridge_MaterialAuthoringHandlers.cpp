@@ -23,6 +23,10 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
+// MaterialDomain.h was introduced in UE 5.1 - in UE 5.0 EMaterialDomain is in MaterialShared.h
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#include "MaterialDomain.h"
+#endif
 #include "Materials/MaterialExpression.h"
 #include "Materials/MaterialExpressionAdd.h"
 #include "Materials/MaterialExpressionAppendVector.h"
@@ -47,7 +51,10 @@
 #include "Materials/MaterialExpressionPixelDepth.h"
 #include "Materials/MaterialExpressionPower.h"
 #include "Materials/MaterialExpressionReflectionVectorWS.h"
+// MaterialExpressionRotator is not available in UE 5.0
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "Materials/MaterialExpressionRotator.h"
+#endif
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
 #include "Materials/MaterialExpressionSubtract.h"
@@ -64,7 +71,8 @@
 #include "EditorAssetLibrary.h"
 
 // Landscape layer info (for add_landscape_layer)
-#if __has_include("LandscapeLayerInfoObject.h")
+// LandscapeLayerInfoObject is available in UE 5.0+
+#if ENGINE_MAJOR_VERSION >= 5
 #include "LandscapeLayerInfoObject.h"
 #define MCP_HAS_LANDSCAPE_LAYER 1
 #else
@@ -143,18 +151,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Set properties
     FString MaterialDomain;
     if (Payload->TryGetStringField(TEXT("materialDomain"), MaterialDomain)) {
-      if (MaterialDomain == TEXT("Surface"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_Surface;
+    if (MaterialDomain == TEXT("Surface"))
+        NewMaterial->MaterialDomain = MD_Surface;
       else if (MaterialDomain == TEXT("DeferredDecal"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_DeferredDecal;
+        NewMaterial->MaterialDomain = MD_DeferredDecal;
       else if (MaterialDomain == TEXT("LightFunction"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_LightFunction;
+        NewMaterial->MaterialDomain = MD_LightFunction;
       else if (MaterialDomain == TEXT("Volume"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_Volume;
+        NewMaterial->MaterialDomain = MD_Volume;
       else if (MaterialDomain == TEXT("PostProcess"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_PostProcess;
+        NewMaterial->MaterialDomain = MD_PostProcess;
       else if (MaterialDomain == TEXT("UI"))
-        NewMaterial->MaterialDomain = EMaterialDomain::MD_UI;
+        NewMaterial->MaterialDomain = MD_UI;
     }
 
     FString BlendMode;
@@ -468,9 +476,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       PlainSample->MaterialExpressionEditorY = (int32)Y;
       
 #if WITH_EDITORONLY_DATA
-      if (Material->GetEditorOnlyData()) {
-        Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(PlainSample);
-      }
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(PlainSample);
 #endif
       
       Material->PostEditChange();
@@ -510,10 +516,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     TexSample->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          TexSample);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(TexSample);
 #endif
 
     Material->PostEditChange();
@@ -550,10 +553,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     TexCoord->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          TexCoord);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(TexCoord);
 #endif
 
     Material->PostEditChange();
@@ -597,10 +597,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     ScalarParam->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          ScalarParam);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(ScalarParam);
 #endif
 
     Material->PostEditChange();
@@ -655,10 +652,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     VecParam->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          VecParam);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(VecParam);
 #endif
 
     Material->PostEditChange();
@@ -704,10 +698,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     SwitchParam->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          SwitchParam);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(SwitchParam);
 #endif
 
     Material->PostEditChange();
@@ -788,10 +779,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     MathNode->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          MathNode);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(MathNode);
 #endif
 
     Material->PostEditChange();
@@ -851,11 +839,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
           Material, UMaterialExpressionPanner::StaticClass(), NAME_None,
           RF_Transactional);
       NodeName = TEXT("Panner");
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     } else if (SubAction == TEXT("add_rotator")) {
-      NewExpr = NewObject<UMaterialExpressionRotator>(
-          Material, UMaterialExpressionRotator::StaticClass(), NAME_None,
-          RF_Transactional);
+      // Use runtime class lookup to avoid GetPrivateStaticClass requirement
+      // StaticClass() calls GetPrivateStaticClass() internally which isn't exported
+      UClass* RotatorClass = FindObject<UClass>(nullptr, TEXT("/Script/Engine.MaterialExpressionRotator"));
+      if (RotatorClass)
+      {
+        UObject* NewExprObj = NewObject<UObject>(Material, RotatorClass, NAME_None, RF_Transactional);
+        NewExpr = static_cast<UMaterialExpressionRotator*>(NewExprObj);
+      }
       NodeName = TEXT("Rotator");
+#endif
     } else if (SubAction == TEXT("add_noise")) {
       NewExpr = NewObject<UMaterialExpressionNoise>(
           Material, UMaterialExpressionNoise::StaticClass(), NAME_None,
@@ -877,10 +872,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       NewExpr->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-      if (Material->GetEditorOnlyData()) {
-        Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-            NewExpr);
-      }
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(NewExpr);
 #endif
 
       Material->PostEditChange();
@@ -922,10 +914,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     NewExpr->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          NewExpr);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(NewExpr);
 #endif
 
     Material->PostEditChange();
@@ -983,10 +972,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     CustomExpr->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          CustomExpr);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(CustomExpr);
 #endif
 
     Material->PostEditChange();
@@ -1029,37 +1015,37 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       bool bFound = false;
 #if WITH_EDITORONLY_DATA
       if (InputName == TEXT("BaseColor")) {
-        Material->GetEditorOnlyData()->BaseColor.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("EmissiveColor")) {
-        Material->GetEditorOnlyData()->EmissiveColor.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("Roughness")) {
-        Material->GetEditorOnlyData()->Roughness.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("Metallic")) {
-        Material->GetEditorOnlyData()->Metallic.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("Specular")) {
-        Material->GetEditorOnlyData()->Specular.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("Normal")) {
-        Material->GetEditorOnlyData()->Normal.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("Opacity")) {
-        Material->GetEditorOnlyData()->Opacity.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("OpacityMask")) {
-        Material->GetEditorOnlyData()->OpacityMask.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("AmbientOcclusion")) {
-        Material->GetEditorOnlyData()->AmbientOcclusion.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("SubsurfaceColor")) {
-        Material->GetEditorOnlyData()->SubsurfaceColor.Expression = SourceExpr;
+        MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = SourceExpr;
         bFound = true;
       } else if (InputName == TEXT("WorldPositionOffset")) {
-        Material->GetEditorOnlyData()->WorldPositionOffset.Expression =
+MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
             SourceExpr;
         bFound = true;
       }
@@ -1129,34 +1115,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
         bool bFound = false;
 #if WITH_EDITORONLY_DATA
         if (PinName == TEXT("BaseColor")) {
-          Material->GetEditorOnlyData()->BaseColor.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("EmissiveColor")) {
-          Material->GetEditorOnlyData()->EmissiveColor.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("Roughness")) {
-          Material->GetEditorOnlyData()->Roughness.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("Metallic")) {
-          Material->GetEditorOnlyData()->Metallic.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("Specular")) {
-          Material->GetEditorOnlyData()->Specular.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("Normal")) {
-          Material->GetEditorOnlyData()->Normal.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("Opacity")) {
-          Material->GetEditorOnlyData()->Opacity.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("OpacityMask")) {
-          Material->GetEditorOnlyData()->OpacityMask.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("AmbientOcclusion")) {
-          Material->GetEditorOnlyData()->AmbientOcclusion.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = nullptr;
           bFound = true;
         } else if (PinName == TEXT("SubsurfaceColor")) {
-          Material->GetEditorOnlyData()->SubsurfaceColor.Expression = nullptr;
+          MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = nullptr;
           bFound = true;
         }
 #endif
@@ -1318,9 +1304,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     NewExpr->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Func->GetEditorOnlyData()) {
+    // UE 5.0: MaterialFunction uses FunctionExpressions, not Expressions
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       Func->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(NewExpr);
-    }
+    #else
+      Func->FunctionExpressions.Add(NewExpr);
+    #endif
 #endif
     Func->PostEditChange();
     Func->MarkPackageDirty();
@@ -1370,10 +1359,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     FuncCall->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    if (Material->GetEditorOnlyData()) {
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions.Add(
-          FuncCall);
-    }
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(FuncCall);
 #endif
 
     Material->PostEditChange();
@@ -1904,11 +1890,11 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
-    Result->SetNumberField(TEXT("nodeCount"), Material->GetExpressions().Num());
+    Result->SetNumberField(TEXT("nodeCount"), MCP_GET_MATERIAL_EXPRESSIONS(Material).Num());
 
     // List parameters
     TArray<TSharedPtr<FJsonValue>> ParamsArray;
-    for (UMaterialExpression *Expr : Material->GetExpressions()) {
+    for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
       if (UMaterialExpressionParameter *Param =
               Cast<UMaterialExpressionParameter>(Expr)) {
         TSharedPtr<FJsonObject> ParamObj = MakeShared<FJsonObject>();
@@ -1981,7 +1967,7 @@ static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
   }
 
   const FString Needle = IdOrName.TrimStartAndEnd();
-  for (UMaterialExpression *Expr : Material->GetExpressions()) {
+  for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
     if (!Expr) {
       continue;
     }

@@ -128,33 +128,15 @@
 #include "MetasoundFrontendDocumentBuilder.h"
 #include "MetasoundFrontendDocument.h"
 #define MCP_HAS_METASOUND_FRONTEND 1
+// UE 5.4+ has 3-arg constructor and FinishBuilding method
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#define MCP_HAS_METASOUND_FRONTEND_V2 1
+#else
+#define MCP_HAS_METASOUND_FRONTEND_V2 0
+#endif
 #else
 #define MCP_HAS_METASOUND_FRONTEND 0
-#endif
-
-// MetaSound Factory (Editor)
-#if __has_include("MetasoundFactory.h")
-#include "MetasoundFactory.h"
-#define MCP_HAS_METASOUND_FACTORY 1
-#else
-#define MCP_HAS_METASOUND_FACTORY 0
-#endif
-
-// MetaSound Editor Subsystem
-#if __has_include("MetasoundEditorSubsystem.h")
-#include "MetasoundEditorSubsystem.h"
-#define MCP_HAS_METASOUND_EDITOR 1
-#else
-#define MCP_HAS_METASOUND_EDITOR 0
-#endif
-
-// MetaSound Frontend Document Builder (UE 5.3+)
-#if __has_include("MetasoundFrontendDocumentBuilder.h")
-#include "MetasoundFrontendDocumentBuilder.h"
-#include "MetasoundFrontendDocument.h"
-#define MCP_HAS_METASOUND_FRONTEND 1
-#else
-#define MCP_HAS_METASOUND_FRONTEND 0
+#define MCP_HAS_METASOUND_FRONTEND_V2 0
 #endif
 
 // MetaSound Factory (Editor)
@@ -673,7 +655,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         // Create a builder for this MetaSound
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+#else
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
+#endif
         
         // Determine node class name from nodeType if not explicitly provided
         FString ActualClassName = NodeClassName;
@@ -730,7 +716,9 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
         }
         
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
+#endif
         return Response;
 #elif MCP_HAS_METASOUND
         // FIX: Return error when MetaSound Frontend Builder not available
@@ -772,7 +760,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+#else
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
+#endif
         
         // Parse node IDs
         FGuid SourceGuid, TargetGuid;
@@ -810,7 +802,9 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("errorCode"), TEXT("EDGE_FAILED"));
         }
         
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
+#endif
         return Response;
 #elif MCP_HAS_METASOUND
         // FIX: Return error when MetaSound Frontend Builder not available
@@ -853,7 +847,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+#else
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
+#endif
         
         // Create the graph input
         FMetasoundFrontendClassInput ClassInput;
@@ -882,7 +880,9 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("errorCode"), TEXT("INPUT_FAILED"));
         }
         
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
+#endif
         return Response;
 #elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldAudioAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -928,7 +928,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+#else
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
+#endif
         
         // Create the graph output
         FMetasoundFrontendClassOutput ClassOutput;
@@ -957,7 +961,9 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("errorCode"), TEXT("OUTPUT_FAILED"));
         }
         
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
+#endif
         return Response;
 #elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldAudioAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1002,7 +1008,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         // Use the Frontend Document Builder API
         TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
+#else
+        FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
+#endif
         
         // Create the literal value based on provided parameters
         FMetasoundFrontendLiteral Literal;
@@ -1050,7 +1060,9 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
         }
         
+        #if MCP_HAS_METASOUND_FRONTEND_V2
         Builder.FinishBuilding();
+#endif
         return Response;
 #elif MCP_HAS_METASOUND
         FString AssetPath = NormalizeAudioPath(GetStringFieldAudioAuth(Params, TEXT("assetPath"), TEXT("")));

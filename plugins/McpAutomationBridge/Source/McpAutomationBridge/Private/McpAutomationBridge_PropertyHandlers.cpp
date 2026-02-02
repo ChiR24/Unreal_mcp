@@ -1941,10 +1941,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMapClear(
     }
   }
 
-  FSetProperty *SetProp = CastField<FSetProperty>(Property);
-  if (!SetProp) {
+  FMapProperty *MapProp = CastField<FMapProperty>(Property);
+  if (!MapProp) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Property is not a set."), TEXT("NOT_A_SET"));
+                        TEXT("Property is not a map."), TEXT("NOT_A_MAP"));
     return true;
   }
 
@@ -1952,10 +1952,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMapClear(
   RootObject->Modify();
 #endif
 
-  FScriptSetHelper Helper(
-      SetProp, SetProp->ContainerPtrToValuePtr<void>(TargetContainer));
+  FScriptMapHelper Helper(
+      MapProp, MapProp->ContainerPtrToValuePtr<void>(TargetContainer));
   const int32 PrevSize = Helper.Num();
-  Helper.EmptyElements();
+  Helper.EmptyValues();
 
 #if WITH_EDITOR
   RootObject->PostEditChange();
@@ -2511,8 +2511,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetReferences(
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   // Find the asset
-  FAssetData AssetData =
-      AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#else
+  // UE 5.0: GetAssetByObjectPath takes FName
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
+#endif
   if (!AssetData.IsValid()) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -2588,8 +2592,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   // Find the asset
-  FAssetData AssetData =
-      AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
+#else
+  // UE 5.0: GetAssetByObjectPath takes FName
+  FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
+#endif
   if (!AssetData.IsValid()) {
     SendAutomationError(
         RequestingSocket, RequestId,
