@@ -5,11 +5,9 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-// JsonObjectConverter.h (included via CoreMinimal.h) may define LOCTEXT_NAMESPACE
-// Undefine it first to avoid redefinition warning, then define our own
-#ifdef LOCTEXT_NAMESPACE
+// Save current LOCTEXT_NAMESPACE if defined, then set our own
+#pragma push_macro("LOCTEXT_NAMESPACE")
 #undef LOCTEXT_NAMESPACE
-#endif
 #define LOCTEXT_NAMESPACE "FMcpAutomationBridgeModule"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpAutomationBridge, Log, All);
@@ -74,5 +72,8 @@ private:
     // Hold the registered settings section so we can unbind and unregister it cleanly
     TSharedPtr<class ISettingsSection> SettingsSection;
 };
+
+// Restore the previous LOCTEXT_NAMESPACE
+#pragma pop_macro("LOCTEXT_NAMESPACE")
 
 IMPLEMENT_MODULE(FMcpAutomationBridgeModule, McpAutomationBridge)

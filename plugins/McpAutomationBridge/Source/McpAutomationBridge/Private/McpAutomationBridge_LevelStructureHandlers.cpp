@@ -1102,8 +1102,9 @@ static bool HandleConfigureHlodLayer(
     }
 
     // Configure the HLOD layer
-    // UE 5.1+: SetIsSpatiallyLoaded and SetLayerType are available
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    // UE 5.1-5.6: SetIsSpatiallyLoaded is available
+    // UE 5.7+: Deprecated - streaming grid properties are in partition settings
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
     NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
     
     // Set layer type
