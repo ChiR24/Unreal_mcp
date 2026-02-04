@@ -30,12 +30,20 @@ public class McpAutomationBridge : ModuleRules
         
         // Control memory usage by limiting bytes per unity chunk.
         // Smaller chunks = more translation units but less memory per compiler process.
-        // 1.5MB is conservative for 80+ file modules on systems with 16GB RAM.
+        // 1MB is more conservative for 80+ file modules to prevent C1060 heap errors.
         // NOTE: These properties were removed in UE 5.7, use reflection for backward compatibility.
-        TrySetIntMember(this, "NumIncludedBytesPerUnityCPP", 1572864);  // 1.5MB (default is ~384KB, max reasonable ~2MB)
+        TrySetIntMember(this, "NumIncludedBytesPerUnityCPP", 1048576);  // 1MB (reduced from 1.5MB to prevent C1060)
         
         // Ensure files are combined efficiently (2 = combine when 2+ files exist).
         TrySetIntMember(this, "MinSourceFilesForUnityBuild", 2);
+        
+        // Aggressive memory optimization: Exclude massive handlers from unity build
+        // These files are too large and cause C1060 even with unity build
+        TrySetIntMember(this, "MinSourceFilesForUnityBuildOverride", 2);
+        
+        // Note: Windows-specific compiler settings (e.g., 64-bit toolchain) are configured
+        // via BuildConfiguration.xml or the Target platform properties, not through
+        // WindowsPlatform static class which is inaccessible from ModuleRules.
 
         PublicDependencyModuleNames.AddRange(new string[]
         {

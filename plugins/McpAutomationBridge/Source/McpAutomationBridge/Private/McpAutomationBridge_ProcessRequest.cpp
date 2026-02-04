@@ -350,6 +350,12 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                                      RequestingSocket);
           }))
         return;
+      // Phase 8.5: MetaSound (must be after HandleAudioAction)
+      if (HandleAndLog(TEXT("HandleMetaSoundAction"), [&]() {
+            return HandleMetaSoundAction(RequestId, Action, Payload,
+                                         RequestingSocket);
+          }))
+        return;
       // Phase 29: Post-Process & Rendering (MUST be before HandleLightingAction)
       // This handler is called by HandleLightingAction for ray-tracing/post-process actions
       if (HandleAndLog(TEXT("HandlePostProcessAction"), [&]() {

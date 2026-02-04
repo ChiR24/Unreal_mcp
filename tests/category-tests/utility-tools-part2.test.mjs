@@ -1554,6 +1554,6 @@ const main = async () => {
   await runToolTests('utility-tools-part2', utilityToolsTestsPart2);
 };
 
-if (import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main();
 }
