@@ -32,7 +32,7 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Connection")
     bool bAlwaysListen;
 
-    /** Host to bind the listening sockets. Use 0.0.0.0 to accept connections from any interface. */
+    /** Host to bind the listening sockets. Loopback-only (127.0.0.1 or ::1) for safety. */
     UPROPERTY(config, EditAnywhere, Category = "Connection")
     FString ListenHost;
 

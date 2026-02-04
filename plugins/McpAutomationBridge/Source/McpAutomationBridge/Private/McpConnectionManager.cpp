@@ -103,7 +103,7 @@ void FMcpConnectionManager::Stop() {
     }
   }
   ActiveSockets.Empty();
-  ActiveSockets.Empty();
+  AuthenticatedSockets.Empty();
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Empty();
@@ -346,6 +346,7 @@ void FMcpConnectionManager::HandleClientConnected(
     TSharedPtr<FMcpBridgeWebSocket> ClientSocket) {
   if (!ClientSocket.IsValid())
     return;
+  AuthenticatedSockets.Remove(ClientSocket.Get());
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Client socket connected (port=%d)"), ClientSocket->GetPort());
 
@@ -400,6 +401,7 @@ void FMcpConnectionManager::HandleConnectionError(
          TEXT("Automation bridge socket error (port=%d): %s"), Port, *Error);
 
   if (Socket.IsValid()) {
+    AuthenticatedSockets.Remove(Socket.Get());
     Socket->OnMessage().RemoveAll(this);
     Socket->OnClosed().RemoveAll(this);
     Socket->OnConnectionError().RemoveAll(this);
@@ -432,6 +434,7 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
          TEXT("Socket closed: port=%d code=%d reason=%s clean=%s"), Port,
          StatusCode, *Reason, bWasClean ? TEXT("true") : TEXT("false"));
   if (Socket.IsValid()) {
+    AuthenticatedSockets.Remove(Socket.Get());
     ActiveSockets.Remove(Socket);
   }
   if (ActiveSockets.Num() == 0 && bReconnectEnabled) {
@@ -453,6 +456,7 @@ void FMcpConnectionManager::HandleMessage(
     TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Message) {
   if (!Socket.IsValid())
     return;
+  FMcpBridgeWebSocket *SocketPtr = Socket.Get();
 
   TSharedPtr<FJsonObject> RootObj;
   TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Message);
@@ -490,6 +494,23 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
+    if (!SocketPtr || !AuthenticatedSockets.Contains(SocketPtr)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("Automation request received before bridge_hello handshake."));
+      TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
+      Err->SetStringField(TEXT("type"), TEXT("bridge_error"));
+      Err->SetStringField(TEXT("error"), TEXT("HANDSHAKE_REQUIRED"));
+      FString Serialized;
+      const TSharedRef<TJsonWriter<>> Writer =
+          TJsonWriterFactory<>::Create(&Serialized);
+      FJsonSerializer::Serialize(Err, Writer);
+      if (Socket.IsValid() && Socket->IsConnected()) {
+        Socket->Send(Serialized);
+        Socket->Close(4004, TEXT("Handshake required"));
+      }
+      return;
+    }
+
     // Map request to socket for response routing
     {
       FScopeLock Lock(&PendingRequestsMutex);
@@ -510,6 +531,9 @@ void FMcpConnectionManager::HandleMessage(
         (ReceivedToken.IsEmpty() || ReceivedToken != CapabilityToken)) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
+      if (SocketPtr) {
+        AuthenticatedSockets.Remove(SocketPtr);
+      }
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
       Err->SetStringField(TEXT("type"), TEXT("bridge_error"));
       Err->SetStringField(TEXT("error"), TEXT("INVALID_CAPABILITY_TOKEN"));
@@ -522,6 +546,10 @@ void FMcpConnectionManager::HandleMessage(
         Socket->Close(4005, TEXT("Invalid capability token"));
       }
       return;
+    }
+
+    if (SocketPtr) {
+      AuthenticatedSockets.Add(SocketPtr);
     }
 
     TSharedRef<FJsonObject> Ack = MakeShared<FJsonObject>();

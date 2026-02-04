@@ -69,7 +69,37 @@ export class AutomationBridge extends EventEmitter {
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
-        this.host = options.host ?? process.env.MCP_AUTOMATION_WS_HOST ?? DEFAULT_AUTOMATION_HOST;
+        const normalizeLoopbackHost = (value: unknown, label: string): string => {
+            const stringValue = typeof value === 'string'
+                ? value
+                : value === undefined || value === null
+                    ? ''
+                    : String(value);
+
+            const trimmed = stringValue.trim();
+            if (trimmed.length === 0) {
+                return DEFAULT_AUTOMATION_HOST;
+            }
+
+            const lower = trimmed.toLowerCase();
+            if (lower === 'localhost' || lower === '127.0.0.1') {
+                return '127.0.0.1';
+            }
+            if (lower === '::1' || lower === '[::1]') {
+                return '::1';
+            }
+
+            this.log.warn(
+                `${label} '${trimmed}' is not a loopback address. Falling back to ${DEFAULT_AUTOMATION_HOST}.`
+            );
+            return DEFAULT_AUTOMATION_HOST;
+        };
+
+        const rawHost = options.host
+            ?? process.env.MCP_AUTOMATION_WS_HOST
+            ?? process.env.MCP_AUTOMATION_HOST
+            ?? DEFAULT_AUTOMATION_HOST;
+        this.host = normalizeLoopbackHost(rawHost, 'Automation bridge host');
 
         const sanitizePort = (value: unknown): number | null => {
             if (typeof value === 'number' && Number.isInteger(value)) {
@@ -138,7 +168,11 @@ export class AutomationBridge extends EventEmitter {
         const maxConcurrentConnections = Math.max(1, options.maxConcurrentConnections ?? 10);
         this.maxQueuedRequests = Math.max(0, options.maxQueuedRequests ?? DEFAULT_MAX_QUEUED_REQUESTS);
 
-        this.clientHost = options.clientHost ?? process.env.MCP_AUTOMATION_CLIENT_HOST ?? DEFAULT_AUTOMATION_HOST;
+        const rawClientHost = options.clientHost
+            ?? process.env.MCP_AUTOMATION_CLIENT_HOST
+            ?? process.env.MCP_AUTOMATION_HOST
+            ?? DEFAULT_AUTOMATION_HOST;
+        this.clientHost = normalizeLoopbackHost(rawClientHost, 'Automation bridge client host');
         this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
         this.maxConcurrentConnections = maxConcurrentConnections;
 
@@ -180,13 +214,14 @@ export class AutomationBridge extends EventEmitter {
             return;
         }
 
-        this.log.info(`Automation bridge connecting to Unreal server at ws://${this.clientHost}:${this.clientPort}`);
+        const url = this.getClientUrl();
+        this.log.info(`Automation bridge connecting to Unreal server at ${url}`);
         this.startClient();
     }
 
     private startClient(): void {
         try {
-            const url = `ws://${this.clientHost}:${this.clientPort}`;
+            const url = this.getClientUrl();
             this.log.info(`Connecting to Unreal Engine automation server at ${url}`);
 
             this.log.debug(`Negotiated protocols: ${JSON.stringify(this.negotiatedProtocols)}`);
@@ -354,6 +389,14 @@ export class AutomationBridge extends EventEmitter {
                 }
             }
         });
+    }
+
+    private formatHostForUrl(host: string): string {
+        return host.includes(':') ? `[${host}]` : host;
+    }
+
+    private getClientUrl(): string {
+        return `ws://${this.formatHostForUrl(this.clientHost)}:${this.clientPort}`;
     }
 
     stop(): void {

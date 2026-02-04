@@ -51,7 +51,7 @@
         },
         {
           "name": "MCP_AUTOMATION_HOST",
-          "description": "Automation bridge WebSocket host (default: 127.0.0.1)",
+          "description": "Automation bridge WebSocket host (loopback only; default: 127.0.0.1)",
           "isRequired": false,
           "value": "127.0.0.1"
         },

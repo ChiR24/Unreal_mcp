@@ -66,6 +66,7 @@ private:
 private:
 	TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
 	TMap<FString, TSharedPtr<FMcpBridgeWebSocket>> PendingRequestsToSockets;
+	TSet<FMcpBridgeWebSocket*> AuthenticatedSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
 	FMcpMessageReceivedCallback OnMessageReceived;
 
