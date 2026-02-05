@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.14] - 2026-02-05
+
+> [!IMPORTANT]
+> ### 🔐 TLS & Network Security Release
+> This release introduces TLS/SSL support for secure WebSocket connections (`wss://`), per-connection rate limiting, loopback-only network binding enforcement, and authentication state tracking for the Automation Bridge.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Loopback-Only Binding & Handshake Enforcement</b> (<code>70c2745</code>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 HIGH |
+| **Loopback Binding** | Automation Bridge now only binds to loopback addresses (127.0.0.1 or ::1) |
+| **Handshake Required** | Automation requests require completed `bridge_hello` handshake |
+
+**C++ Plugin:**
+- Rejects `0.0.0.0` and `::` bind attempts, falls back to `127.0.0.1` with warning
+- Added `AuthenticatedSockets` tracking set in `McpConnectionManager`
+- Unauthenticated sockets receive `HANDSHAKE_REQUIRED` error and connection close (code 4004)
+
+**TypeScript Bridge:**
+- Added `normalizeLoopbackHost()` to validate and enforce loopback addresses
+- Non-loopback host values rejected with warning and fallback
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🔐 TLS/SSL, Rate Limiting & Schema Validation</b> (<code>d2a94cf</code>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **TLS/SSL Support** | Full `wss://` WebSocket support with OpenSSL/TLS integration (TLS 1.2+) |
+| **Rate Limiting** | Per-connection limits: 600 messages/min, 120 automation requests/min |
+| **Schema Validation** | New Zod schemas in `src/automation/message-schema.ts` for type-safe message parsing |
+
+**New Plugin Settings:**
+- `bEnableTls`, `TlsCertificatePath`, `TlsPrivateKeyPath` - TLS configuration
+- `MaxMessagesPerMinute`, `MaxAutomationRequestsPerMinute` - Rate limit configuration
+
+**C++ Implementation:**
+- `InitializeTlsContext()`, `EstablishTls()`, `SendRaw()`, `RecvRaw()` - TLS-aware I/O
+- Requires UE 5.7+ for native socket release; graceful fallback on older versions
+
+**TypeScript Integration:**
+- Added `rateLimitState` tracking with cleanup on connection close
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🔧 TLS Memory Management</b> (<code>321206e</code>)</summary>
+
+| Fix | Description |
+|-----|-------------|
+| **Struct Initialization** | Fixed `FParsedWebSocketUrl` member initialization order (Port using uninitialized `bUseTls`) |
+| **SSL Context Ownership** | Added `bOwnsSslContext` to prevent double-free of client contexts owned by `ISslManager` |
+
+</details>
+
+<details>
+<summary><b>🔧 Thread Safety & TLS Error Handling</b> (<code>6fd1553</code>)</summary>
+
+| Fix | Description |
+|-----|-------------|
+| **Mutex Protection** | Added `SocketRateLimits` cleanup in `ForceReconnect` with proper mutex locking |
+| **Declaration** | Moved `ShutdownTls()` declaration outside `WITH_SSL` guard for compilation compatibility |
+
+</details>
+
+<details>
+<summary><b>🔧 Review Feedback Fixes</b> (<code>8987a3e</code>)</summary>
+
+| Fix | Description |
+|-----|-------------|
+| **Duplicate Call** | Fixed duplicate `ActiveSockets.Empty()` call in connection manager |
+| **TypeScript Cleanup** | Added `rateLimitState` cleanup in `closeAll()` method |
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>NPM Package Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `@modelcontextprotocol/sdk` | 1.25.3 → 1.26.0 | [#187](https://github.com/ChiR24/Unreal_mcp/pull/187) |
+| `mcp-client-capabilities` | Latest | [#186](https://github.com/ChiR24/Unreal_mcp/pull/186) |
+
+</details>
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `github/codeql-action` | 4.32.0 → 4.32.1 | [#185](https://github.com/ChiR24/Unreal_mcp/pull/185) |
+| `actions/github-script` | 7.0.1 → 8.0.0 | [#184](https://github.com/ChiR24/Unreal_mcp/pull/184) |
+
+</details>
+
+---
+
 ## 🏷️ [0.5.13] - 2026-02-02
 
 > [!IMPORTANT]
