@@ -21,6 +21,12 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     ListenHost = TEXT("127.0.0.1");
     ListenPorts = TEXT("8090,8091");
     bMultiListen = true;
+    bRequireCapabilityToken = false;
+    MaxMessagesPerMinute = 600;
+    MaxAutomationRequestsPerMinute = 120;
+    bEnableTls = false;
+    TlsCertificatePath = TEXT("");
+    TlsPrivateKeyPath = TEXT("");
 
     // Reasonable runtime tuning defaults
     HeartbeatIntervalMs = 1000; // advertise heartbeats every 1s

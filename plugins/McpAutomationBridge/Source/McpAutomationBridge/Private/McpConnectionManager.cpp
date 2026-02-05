@@ -50,6 +50,15 @@ void FMcpConnectionManager::Initialize(
     bRequireCapabilityToken = Settings->bRequireCapabilityToken;
     if (Settings->HeartbeatTimeoutSeconds > 0.0f)
       HeartbeatTimeoutSeconds = Settings->HeartbeatTimeoutSeconds;
+    if (Settings->MaxMessagesPerMinute >= 0)
+      MaxMessagesPerMinute = Settings->MaxMessagesPerMinute;
+    if (Settings->MaxAutomationRequestsPerMinute >= 0)
+      MaxAutomationRequestsPerMinute = Settings->MaxAutomationRequestsPerMinute;
+    bEnableTls = Settings->bEnableTls;
+    if (!Settings->TlsCertificatePath.IsEmpty())
+      TlsCertificatePath = Settings->TlsCertificatePath;
+    if (!Settings->TlsPrivateKeyPath.IsEmpty())
+      TlsPrivateKeyPath = Settings->TlsPrivateKeyPath;
   }
 }
 
@@ -104,6 +113,10 @@ void FMcpConnectionManager::Stop() {
   }
   ActiveSockets.Empty();
   AuthenticatedSockets.Empty();
+  {
+    FScopeLock Lock(&RateLimitMutex);
+    SocketRateLimits.Empty();
+  }
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Empty();
@@ -218,7 +231,9 @@ void FMcpConnectionManager::AttemptConnection() {
       TSharedPtr<FMcpBridgeWebSocket> ServerSocket =
           MakeShared<FMcpBridgeWebSocket>(Port, HostToBind,
                                           Settings->ListenBacklog,
-                                          Settings->AcceptSleepSeconds);
+                                          Settings->AcceptSleepSeconds,
+                                          bEnableTls, TlsCertificatePath,
+                                          TlsPrivateKeyPath);
       ServerSocket->InitializeWeakSelf(ServerSocket);
 
       ServerSocket->OnConnected().AddLambda(
@@ -268,7 +283,9 @@ void FMcpConnectionManager::AttemptConnection() {
       }
       TSharedPtr<FMcpBridgeWebSocket> ClientSocket =
           MakeShared<FMcpBridgeWebSocket>(EndpointUrl, TEXT("mcp-automation"),
-                                          Headers);
+                                          Headers, bEnableTls,
+                                          TlsCertificatePath,
+                                          TlsPrivateKeyPath);
       ClientSocket->InitializeWeakSelf(ClientSocket);
 
       TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
@@ -310,7 +327,10 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
     }
   }
   ActiveSockets.Empty();
-  ActiveSockets.Empty();
+  {
+    FScopeLock Lock(&RateLimitMutex);
+    SocketRateLimits.Empty();
+  }
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Empty();
@@ -402,6 +422,10 @@ void FMcpConnectionManager::HandleConnectionError(
 
   if (Socket.IsValid()) {
     AuthenticatedSockets.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&RateLimitMutex);
+      SocketRateLimits.Remove(Socket.Get());
+    }
     Socket->OnMessage().RemoveAll(this);
     Socket->OnClosed().RemoveAll(this);
     Socket->OnConnectionError().RemoveAll(this);
@@ -435,6 +459,10 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
          StatusCode, *Reason, bWasClean ? TEXT("true") : TEXT("false"));
   if (Socket.IsValid()) {
     AuthenticatedSockets.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&RateLimitMutex);
+      SocketRateLimits.Remove(Socket.Get());
+    }
     ActiveSockets.Remove(Socket);
   }
   if (ActiveSockets.Num() == 0 && bReconnectEnabled) {
@@ -457,6 +485,25 @@ void FMcpConnectionManager::HandleMessage(
   if (!Socket.IsValid())
     return;
   FMcpBridgeWebSocket *SocketPtr = Socket.Get();
+  FString RateLimitReason;
+  if (!UpdateRateLimit(SocketPtr, true, false, RateLimitReason)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+           TEXT("Rate limit exceeded for incoming messages: %s"),
+           *RateLimitReason);
+    TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
+    Err->SetStringField(TEXT("type"), TEXT("bridge_error"));
+    Err->SetStringField(TEXT("error"), TEXT("RATE_LIMIT_EXCEEDED"));
+    Err->SetStringField(TEXT("message"), RateLimitReason);
+    FString Serialized;
+    const TSharedRef<TJsonWriter<>> Writer =
+        TJsonWriterFactory<>::Create(&Serialized);
+    FJsonSerializer::Serialize(Err, Writer);
+    if (Socket.IsValid() && Socket->IsConnected()) {
+      Socket->Send(Serialized);
+      Socket->Close(4008, TEXT("Rate limit exceeded"));
+    }
+    return;
+  }
 
   TSharedPtr<FJsonObject> RootObj;
   TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Message);
@@ -476,6 +523,25 @@ void FMcpConnectionManager::HandleMessage(
   }
 
   if (Type.Equals(TEXT("automation_request"), ESearchCase::IgnoreCase)) {
+    if (!UpdateRateLimit(SocketPtr, false, true, RateLimitReason)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("Rate limit exceeded for automation requests: %s"),
+             *RateLimitReason);
+      TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
+      Err->SetStringField(TEXT("type"), TEXT("bridge_error"));
+      Err->SetStringField(TEXT("error"), TEXT("RATE_LIMIT_EXCEEDED"));
+      Err->SetStringField(TEXT("message"), RateLimitReason);
+      FString Serialized;
+      const TSharedRef<TJsonWriter<>> Writer =
+          TJsonWriterFactory<>::Create(&Serialized);
+      FJsonSerializer::Serialize(Err, Writer);
+      if (Socket.IsValid() && Socket->IsConnected()) {
+        Socket->Send(Serialized);
+        Socket->Close(4008, TEXT("Rate limit exceeded"));
+      }
+      return;
+    }
+
     FString RequestId;
     FString Action;
     RootObj->TryGetStringField(TEXT("requestId"), RequestId);
@@ -485,12 +551,22 @@ void FMcpConnectionManager::HandleMessage(
         RootObj->Values.Find(TEXT("payload"));
     if (PayloadVal && (*PayloadVal)->Type == EJson::Object) {
       Payload = (*PayloadVal)->AsObject();
+    } else if (PayloadVal) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("automation_request payload must be a JSON object."));
+      return;
     }
 
     if (RequestId.IsEmpty() || Action.IsEmpty()) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request missing requestId or action: %s"),
              *SanitizeForLogConnMgr(Message));
+      return;
+    }
+
+    if (RequestId.Len() > 128 || Action.Len() > 128) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("automation_request fields exceed expected size."));
       return;
     }
 
@@ -510,6 +586,10 @@ void FMcpConnectionManager::HandleMessage(
       }
       return;
     }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Accepted automation_request action=%s requestId=%s"),
+           *Action, *RequestId);
 
     // Map request to socket for response routing
     {
@@ -588,6 +668,56 @@ void FMcpConnectionManager::HandleMessage(
     FJsonSerializer::Serialize(Ack, Writer);
     Socket->Send(Serialized);
   }
+}
+
+bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr,
+                                           bool bIncrementMessage,
+                                           bool bIncrementAutomation,
+                                           FString& OutReason) {
+  if (!SocketPtr) {
+    return true;
+  }
+
+  if (MaxMessagesPerMinute <= 0 && MaxAutomationRequestsPerMinute <= 0) {
+    return true;
+  }
+
+  FScopeLock Lock(&RateLimitMutex);
+
+  const double NowSeconds = FPlatformTime::Seconds();
+  FSocketRateState& State = SocketRateLimits.FindOrAdd(SocketPtr);
+  if (State.WindowStartSeconds <= 0.0) {
+    State.WindowStartSeconds = NowSeconds;
+  }
+
+  if ((NowSeconds - State.WindowStartSeconds) >= 60.0) {
+    State.WindowStartSeconds = NowSeconds;
+    State.MessageCount = 0;
+    State.AutomationRequestCount = 0;
+  }
+
+  if (bIncrementMessage) {
+    ++State.MessageCount;
+  }
+  if (bIncrementAutomation) {
+    ++State.AutomationRequestCount;
+  }
+
+  if (MaxMessagesPerMinute > 0 && State.MessageCount >= MaxMessagesPerMinute) {
+    OutReason = FString::Printf(TEXT("message rate %d/%d per minute"),
+                                State.MessageCount, MaxMessagesPerMinute);
+    return false;
+  }
+
+  if (bIncrementAutomation && MaxAutomationRequestsPerMinute > 0 &&
+      State.AutomationRequestCount >= MaxAutomationRequestsPerMinute) {
+    OutReason = FString::Printf(TEXT("automation request rate %d/%d per minute"),
+                                State.AutomationRequestCount,
+                                MaxAutomationRequestsPerMinute);
+    return false;
+  }
+
+  return true;
 }
 
 bool FMcpConnectionManager::SendRawMessage(const FString &Message) {

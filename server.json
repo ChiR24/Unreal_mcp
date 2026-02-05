@@ -62,6 +62,12 @@
           "value": "false"
         },
         {
+          "name": "MCP_AUTOMATION_USE_TLS",
+          "description": "Use wss:// for the automation bridge client connection (default: false)",
+          "isRequired": false,
+          "value": "false"
+        },
+        {
           "name": "MCP_CONNECTION_TIMEOUT_MS",
           "description": "Connection timeout in milliseconds (default: 5000)",
           "isRequired": false,
@@ -72,6 +78,18 @@
           "description": "Request timeout in milliseconds (default: 30000)",
           "isRequired": false,
           "value": "30000"
+        },
+        {
+          "name": "MCP_AUTOMATION_MAX_MESSAGES_PER_MINUTE",
+          "description": "Max inbound automation bridge messages per minute before disconnect (default: 600)",
+          "isRequired": false,
+          "value": "600"
+        },
+        {
+          "name": "MCP_AUTOMATION_MAX_AUTOMATION_REQUESTS_PER_MINUTE",
+          "description": "Max inbound automation request messages per minute before disconnect (default: 120)",
+          "isRequired": false,
+          "value": "120"
         }
       ]
     }

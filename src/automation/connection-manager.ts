@@ -10,9 +10,12 @@ export class ConnectionManager extends EventEmitter {
     private heartbeatTimer?: NodeJS.Timeout;
     private lastMessageAt?: Date;
     private log = new Logger('ConnectionManager');
+    private rateLimitState = new Map<WebSocket, { windowStartMs: number; messageCount: number; automationCount: number }>();
 
     constructor(
-        private heartbeatIntervalMs: number
+        private heartbeatIntervalMs: number,
+        private maxMessagesPerMinute: number,
+        private maxAutomationRequestsPerMinute: number
     ) {
         super();
     }
@@ -45,6 +48,7 @@ export class ConnectionManager extends EventEmitter {
         };
 
         this.activeSockets.set(socket, socketInfo);
+        this.rateLimitState.set(socket, { windowStartMs: Date.now(), messageCount: 0, automationCount: 0 });
 
         // Set as primary socket if this is the first connection
         if (!this.primarySocket) {
@@ -71,6 +75,7 @@ export class ConnectionManager extends EventEmitter {
         const info = this.activeSockets.get(socket);
         if (info) {
             this.activeSockets.delete(socket);
+            this.rateLimitState.delete(socket);
             if (socket === this.primarySocket) {
                 this.primarySocket = this.activeSockets.size > 0 ? this.activeSockets.keys().next().value : undefined;
                 if (this.activeSockets.size === 0) {
@@ -79,6 +84,41 @@ export class ConnectionManager extends EventEmitter {
             }
         }
         return info;
+    }
+
+    public recordInboundMessage(socket: WebSocket, isAutomationRequest: boolean): boolean {
+        if (this.maxMessagesPerMinute <= 0 && this.maxAutomationRequestsPerMinute <= 0) {
+            return true;
+        }
+
+        const nowMs = Date.now();
+        const state = this.rateLimitState.get(socket) ?? { windowStartMs: nowMs, messageCount: 0, automationCount: 0 };
+        const windowElapsedMs = nowMs - state.windowStartMs;
+
+        if (windowElapsedMs >= 60000) {
+            state.windowStartMs = nowMs;
+            state.messageCount = 0;
+            state.automationCount = 0;
+        }
+
+        state.messageCount += 1;
+        if (isAutomationRequest) {
+            state.automationCount += 1;
+        }
+
+        this.rateLimitState.set(socket, state);
+
+        if (this.maxMessagesPerMinute > 0 && state.messageCount >= this.maxMessagesPerMinute) {
+            this.log.warn(`Inbound message rate exceeded (${state.messageCount}/${this.maxMessagesPerMinute} per minute).`);
+            return false;
+        }
+
+        if (isAutomationRequest && this.maxAutomationRequestsPerMinute > 0 && state.automationCount >= this.maxAutomationRequestsPerMinute) {
+            this.log.warn(`Inbound automation request rate exceeded (${state.automationCount}/${this.maxAutomationRequestsPerMinute} per minute).`);
+            return false;
+        }
+
+        return true;
     }
 
     public getActiveSockets(): Map<WebSocket, SocketInfo> {
@@ -143,6 +183,7 @@ export class ConnectionManager extends EventEmitter {
             socket.close(code, reason);
         }
         this.activeSockets.clear();
+        this.rateLimitState.clear();
         this.primarySocket = undefined;
     }
 }

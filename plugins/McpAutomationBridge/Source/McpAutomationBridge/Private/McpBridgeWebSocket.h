@@ -13,6 +13,13 @@ class FInternetAddr;
 class FRunnableThread;
 class FEvent;
 
+#if WITH_SSL
+struct ssl_ctx_st;
+typedef struct ssl_ctx_st SSL_CTX;
+struct ssl_st;
+typedef struct ssl_st SSL;
+#endif
+
 class FMcpBridgeWebSocket;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketConnectedEvent, TSharedPtr<FMcpBridgeWebSocket>);
@@ -24,14 +31,14 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FMcpBridgeWebSocketClientConnectedEvent, TSh
 
 /**
  * Minimal WebSocket client/server used by the MCP Automation Bridge subsystem.
- * Supports text frames over unsecured ws:// transports for local automation traffic.
+ * Supports text frames over ws:// and optional wss:// transports for local automation traffic.
  */
 class FMcpBridgeWebSocket final : public TSharedFromThis<FMcpBridgeWebSocket>, public FRunnable
 {
 public:
-    FMcpBridgeWebSocket(const FString& InUrl, const FString& InProtocols, const TMap<FString, FString>& InHeaders);
-    FMcpBridgeWebSocket(int32 InPort, const FString& InHost = FString(), int32 InListenBacklog = 10, float InAcceptSleepSeconds = 0.01f);
-    FMcpBridgeWebSocket(FSocket* InClientSocket);
+    FMcpBridgeWebSocket(const FString& InUrl, const FString& InProtocols, const TMap<FString, FString>& InHeaders, bool bInEnableTls = false, const FString& InTlsCertificatePath = FString(), const FString& InTlsPrivateKeyPath = FString());
+    FMcpBridgeWebSocket(int32 InPort, const FString& InHost = FString(), int32 InListenBacklog = 10, float InAcceptSleepSeconds = 0.01f, bool bInEnableTls = false, const FString& InTlsCertificatePath = FString(), const FString& InTlsPrivateKeyPath = FString());
+    FMcpBridgeWebSocket(FSocket* InClientSocket, bool bInEnableTls = false, const FString& InTlsCertificatePath = FString(), const FString& InTlsPrivateKeyPath = FString());
     virtual ~FMcpBridgeWebSocket() override;
 
     void InitializeWeakSelf(const TSharedPtr<FMcpBridgeWebSocket>& InShared);
@@ -97,6 +104,14 @@ private:
     void ResetFragmentState();
     bool ReceiveFrame();
     bool ReceiveExact(uint8* Buffer, SIZE_T Length);
+    bool SendRaw(const uint8* Data, int32 Length, int32& OutBytesSent);
+    bool RecvRaw(uint8* Data, int32 Length, int32& OutBytesRead);
+#if WITH_SSL
+    bool InitializeTlsContext(bool bServer);
+    bool EstablishTls(bool bServer);
+#endif
+    void ShutdownTls();
+    void CloseNativeSocket();
     FSocket* DetachSocket();
 
     FString Url;
@@ -136,6 +151,22 @@ private:
     FString HostHeader;
     FString HandshakePath;
     FString HandshakeKey;
+
+    bool bUseTls;
+    bool bTlsServer;
+    bool bSslInitialized;
+    bool bOwnsSslContext;
+#if WITH_SSL
+    SSL_CTX* SslContext;
+    SSL* SslHandle;
+#else
+    void* SslContext;
+    void* SslHandle;
+#endif
+    UPTRINT NativeSocketHandle;
+    bool bNativeSocketReleased;
+    FString TlsCertificatePath;
+    FString TlsPrivateKeyPath;
     
     // Synchronization event used to coordinate between the server socket
     // worker thread and the game thread. When a server-accepted connection

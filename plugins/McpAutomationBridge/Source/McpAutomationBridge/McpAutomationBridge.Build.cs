@@ -109,13 +109,16 @@ PublicDependencyModuleNames.AddRange(new string[]
             PrivateDependencyModuleNames.AddRange(new string[]
             {
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
-                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph",
+                "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
                 "AudioEditor", "DataValidation", "NiagaraEditor",
                 // Phase 24: GAS, Audio, and missing module dependencies
                 "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
                 "AudioMixer"          // Required for FAudioEQEffect::ClampValues
             });
+
+            // Add OpenSSL for TLS support (requires WITH_SSL)
+            AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
             PrivateDependencyModuleNames.AddRange(new string[]
             {
