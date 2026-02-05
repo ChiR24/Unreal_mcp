@@ -69,7 +69,7 @@ constexpr int32 WebSocketCloseCodeMessageTooBig = 1009;
 
 struct FParsedWebSocketUrl {
   FString Host;
-  int32 Port = bUseTls ? 443 : 80;
+  int32 Port = 80;
   FString PathWithQuery;
   bool bUseTls = false;
 };
@@ -250,7 +250,7 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(
       ClientSockets(), ListenBacklog(10), AcceptSleepSeconds(0.01f),
       bConnected(false), bListening(false), bStopping(false),
       bUseTls(bInEnableTls), bTlsServer(false), bSslInitialized(false),
-      SslContext(nullptr), SslHandle(nullptr), NativeSocketHandle(0),
+      bOwnsSslContext(false), SslContext(nullptr), SslHandle(nullptr), NativeSocketHandle(0),
       bNativeSocketReleased(false), TlsCertificatePath(InTlsCertificatePath),
       TlsPrivateKeyPath(InTlsPrivateKeyPath) {
   HandlerReadyEvent = nullptr;
@@ -270,7 +270,8 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort, const FString &InHost,
       StopEvent(nullptr), ClientSockets(), ListenBacklog(InListenBacklog),
       AcceptSleepSeconds(InAcceptSleepSeconds), bConnected(false),
       bListening(false), bStopping(false), bUseTls(bInEnableTls),
-      bTlsServer(true), bSslInitialized(false), SslContext(nullptr),
+      bTlsServer(true), bSslInitialized(false), bOwnsSslContext(false),
+      SslContext(nullptr),
       SslHandle(nullptr), NativeSocketHandle(0), bNativeSocketReleased(false),
       TlsCertificatePath(InTlsCertificatePath),
       TlsPrivateKeyPath(InTlsPrivateKeyPath) {
@@ -289,7 +290,8 @@ FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket *InClientSocket,
       StopEvent(nullptr), ClientSockets(), ListenBacklog(10),
       AcceptSleepSeconds(0.01f), bConnected(true), bListening(false),
       bStopping(false), bUseTls(bInEnableTls), bTlsServer(true),
-      bSslInitialized(false), SslContext(nullptr), SslHandle(nullptr),
+      bSslInitialized(false), bOwnsSslContext(false), SslContext(nullptr),
+      SslHandle(nullptr),
       NativeSocketHandle(0), bNativeSocketReleased(false),
       TlsCertificatePath(InTlsCertificatePath),
       TlsPrivateKeyPath(InTlsPrivateKeyPath) {
@@ -362,6 +364,7 @@ bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
              TEXT("Failed to create SSL client context."));
       return false;
     }
+    bOwnsSslContext = false;
     SSL_CTX_set_verify(SslContext, SSL_VERIFY_PEER, nullptr);
     return true;
   }
@@ -379,6 +382,7 @@ bool FMcpBridgeWebSocket::InitializeTlsContext(bool bServer) {
            TEXT("Failed to create SSL server context."));
     return false;
   }
+  bOwnsSslContext = true;
 
   SSL_CTX_set_min_proto_version(SslContext, TLS1_2_VERSION);
   SSL_CTX_set_options(SslContext, SSL_OP_NO_COMPRESSION);
@@ -483,7 +487,7 @@ void FMcpBridgeWebSocket::ShutdownTls() {
     SslHandle = nullptr;
   }
 
-  if (SslContext) {
+  if (SslContext && bOwnsSslContext) {
     SSL_CTX_free(SslContext);
     SslContext = nullptr;
   }

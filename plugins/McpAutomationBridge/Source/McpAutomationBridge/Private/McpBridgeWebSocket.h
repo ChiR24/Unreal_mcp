@@ -155,6 +155,7 @@ private:
     bool bUseTls;
     bool bTlsServer;
     bool bSslInitialized;
+    bool bOwnsSslContext;
 #if WITH_SSL
     SSL_CTX* SslContext;
     SSL* SslHandle;
