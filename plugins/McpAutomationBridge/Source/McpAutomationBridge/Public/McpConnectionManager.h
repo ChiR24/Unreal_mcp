@@ -62,6 +62,7 @@ private:
 	void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
+	bool UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr, bool bIncrementMessage, bool bIncrementAutomation, FString& OutReason);
 
 private:
 	TArray<TSharedPtr<FMcpBridgeWebSocket>> ActiveSockets;
@@ -78,12 +79,15 @@ private:
 	FString ServerName;
 	FString ServerVersion;
 	FString ActiveSessionId;
+	FString TlsCertificatePath;
+	FString TlsPrivateKeyPath;
 	
 	int32 ClientPort = 0;
 	float AutoReconnectDelaySeconds = 5.0f;
 	float HeartbeatTimeoutSeconds = 0.0f;
 	
 	bool bRequireCapabilityToken = false;
+	bool bEnableTls = false;
 	bool bEnvListenPortsSet = false;
 	bool bHeartbeatTrackingEnabled = false;
 
@@ -92,6 +96,8 @@ private:
 	bool bReconnectEnabled = true;
 	float TimeUntilReconnect = 0.0f;
 	double LastHeartbeatTimestamp = 0.0;
+	int32 MaxMessagesPerMinute = 0;
+	int32 MaxAutomationRequestsPerMinute = 0;
 
 	// Telemetry
 	struct FAutomationRequestTelemetry
@@ -110,8 +116,16 @@ private:
 		double LastUpdatedSeconds = 0.0;
 	};
 
+	struct FSocketRateState
+	{
+		double WindowStartSeconds = 0.0;
+		int32 MessageCount = 0;
+		int32 AutomationRequestCount = 0;
+	};
+
 	TMap<FString, FAutomationRequestTelemetry> ActiveRequestTelemetry;
 	TMap<FString, FAutomationActionStats> AutomationActionTelemetry;
+	TMap<FMcpBridgeWebSocket*, FSocketRateState> SocketRateLimits;
 	double TelemetrySummaryIntervalSeconds = 120.0;
 	double LastTelemetrySummaryLogSeconds = 0.0;
 

@@ -13,6 +13,9 @@ export interface AutomationBridgeOptions {
     maxPendingRequests?: number;
     maxConcurrentConnections?: number;
     maxQueuedRequests?: number;
+    maxInboundMessagesPerMinute?: number;
+    maxInboundAutomationRequestsPerMinute?: number;
+    useTls?: boolean;
     clientMode?: boolean;
     clientHost?: string;
     clientPort?: number;

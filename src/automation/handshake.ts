@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { Logger } from '../utils/logger.js';
 import { AutomationBridgeMessage } from './types.js';
+import { bridgeAckSchema } from './message-schema.js';
 import { EventEmitter } from 'node:events';
 
 export class HandshakeHandler extends EventEmitter {
@@ -38,17 +39,20 @@ export class HandshakeHandler extends EventEmitter {
                     return;
                 }
 
-                if (parsed.type === 'bridge_ack') {
+                const validation = bridgeAckSchema.safeParse(parsed);
+                if (validation.success) {
                     handshakeComplete = true;
                     cleanup();
-                    const metadata = this.sanitizeHandshakeMetadata(parsed as Record<string, unknown>);
+                    const metadata = this.sanitizeHandshakeMetadata(validation.data as Record<string, unknown>);
                     resolve(metadata);
-                } else {
-                    this.log.warn(`Expected bridge_ack handshake, received ${parsed.type}`);
-                    socket.close(4004, 'Handshake expected bridge_ack');
-                    cleanup();
-                    reject(new Error(`Handshake expected bridge_ack, got ${parsed.type}`));
+                    return;
                 }
+
+                const typeHint = typeof parsed.type === 'string' ? parsed.type : 'unknown';
+                this.log.warn(`Expected bridge_ack handshake, received ${typeHint}`, validation.error.format());
+                socket.close(4004, 'Handshake expected bridge_ack');
+                cleanup();
+                reject(new Error(`Handshake expected bridge_ack, got ${typeHint}`));
             };
 
             const onError = (error: Error) => {

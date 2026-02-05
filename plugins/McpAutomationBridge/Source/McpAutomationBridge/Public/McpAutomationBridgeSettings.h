@@ -57,6 +57,26 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bRequireCapabilityToken;
 
+    /** Enable TLS for the automation bridge WebSocket server. */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    bool bEnableTls;
+
+    /** PEM certificate path used for TLS (server). */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    FString TlsCertificatePath;
+
+    /** PEM private key path used for TLS (server). */
+    UPROPERTY(config, EditAnywhere, Category = "Security")
+    FString TlsPrivateKeyPath;
+
+    /** Max inbound WebSocket messages per minute before disconnect (0 = disabled). */
+    UPROPERTY(config, EditAnywhere, Category = "Security", meta = (ClampMin = "0"))
+    int32 MaxMessagesPerMinute;
+
+    /** Max inbound automation_request messages per minute before disconnect (0 = disabled). */
+    UPROPERTY(config, EditAnywhere, Category = "Security", meta = (ClampMin = "0"))
+    int32 MaxAutomationRequestsPerMinute;
+
     /** Optional runtime log verbosity override exposed via Project Settings. */
 
     UPROPERTY(config, EditAnywhere, Category = "Debug")
