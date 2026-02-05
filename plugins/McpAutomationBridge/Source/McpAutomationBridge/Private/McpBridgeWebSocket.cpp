@@ -69,7 +69,7 @@ constexpr int32 WebSocketCloseCodeMessageTooBig = 1009;
 
 struct FParsedWebSocketUrl {
   FString Host;
-  int32 Port = 80;
+  int32 Port = bUseTls ? 443 : 80;
   FString PathWithQuery;
   bool bUseTls = false;
 };
@@ -469,11 +469,10 @@ bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
   bTlsServer = bServer;
   return true;
 #else
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("TLS requires UE 5.7 or later. Current version: %d.%d. Falling back to non-TLS connection."),
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+         TEXT("TLS requires UE 5.7 or later. Current version: %d.%d. Cannot establish TLS connection."),
          ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION);
-  bUseTls = false;
-  return true;
+  return false;
 #endif
 }
 
@@ -1767,6 +1766,9 @@ bool FMcpBridgeWebSocket::ReceiveExact(uint8 *Buffer, SIZE_T Length) {
         return false;
       }
       if (BytesRead <= 0) {
+        if (StopEvent && StopEvent->Wait(FTimespan::FromMilliseconds(10))) {
+          return false;
+        }
         continue;
       }
       Collected += static_cast<SIZE_T>(BytesRead);

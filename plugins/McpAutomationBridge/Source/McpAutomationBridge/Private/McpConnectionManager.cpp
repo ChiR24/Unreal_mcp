@@ -113,7 +113,10 @@ void FMcpConnectionManager::Stop() {
   }
   ActiveSockets.Empty();
   AuthenticatedSockets.Empty();
-  SocketRateLimits.Empty();
+  {
+    FScopeLock Lock(&RateLimitMutex);
+    SocketRateLimits.Empty();
+  }
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Empty();
@@ -416,7 +419,10 @@ void FMcpConnectionManager::HandleConnectionError(
 
   if (Socket.IsValid()) {
     AuthenticatedSockets.Remove(Socket.Get());
-    SocketRateLimits.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&RateLimitMutex);
+      SocketRateLimits.Remove(Socket.Get());
+    }
     Socket->OnMessage().RemoveAll(this);
     Socket->OnClosed().RemoveAll(this);
     Socket->OnConnectionError().RemoveAll(this);
@@ -450,7 +456,10 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
          StatusCode, *Reason, bWasClean ? TEXT("true") : TEXT("false"));
   if (Socket.IsValid()) {
     AuthenticatedSockets.Remove(Socket.Get());
-    SocketRateLimits.Remove(Socket.Get());
+    {
+      FScopeLock Lock(&RateLimitMutex);
+      SocketRateLimits.Remove(Socket.Get());
+    }
     ActiveSockets.Remove(Socket);
   }
   if (ActiveSockets.Num() == 0 && bReconnectEnabled) {
@@ -670,6 +679,8 @@ bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr,
     return true;
   }
 
+  FScopeLock Lock(&RateLimitMutex);
+
   const double NowSeconds = FPlatformTime::Seconds();
   FSocketRateState& State = SocketRateLimits.FindOrAdd(SocketPtr);
   if (State.WindowStartSeconds <= 0.0) {
@@ -689,14 +700,14 @@ bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr,
     ++State.AutomationRequestCount;
   }
 
-  if (MaxMessagesPerMinute > 0 && State.MessageCount > MaxMessagesPerMinute) {
+  if (MaxMessagesPerMinute > 0 && State.MessageCount >= MaxMessagesPerMinute) {
     OutReason = FString::Printf(TEXT("message rate %d/%d per minute"),
                                 State.MessageCount, MaxMessagesPerMinute);
     return false;
   }
 
   if (bIncrementAutomation && MaxAutomationRequestsPerMinute > 0 &&
-      State.AutomationRequestCount > MaxAutomationRequestsPerMinute) {
+      State.AutomationRequestCount >= MaxAutomationRequestsPerMinute) {
     OutReason = FString::Printf(TEXT("automation request rate %d/%d per minute"),
                                 State.AutomationRequestCount,
                                 MaxAutomationRequestsPerMinute);

@@ -130,4 +130,5 @@ private:
 	double LastTelemetrySummaryLogSeconds = 0.0;
 
 	mutable FCriticalSection PendingRequestsMutex;
+	mutable FCriticalSection RateLimitMutex;
 };

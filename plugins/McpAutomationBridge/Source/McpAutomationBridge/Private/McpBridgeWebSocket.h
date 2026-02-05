@@ -13,10 +13,12 @@ class FInternetAddr;
 class FRunnableThread;
 class FEvent;
 
+#if WITH_SSL
 struct ssl_ctx_st;
 typedef struct ssl_ctx_st SSL_CTX;
 struct ssl_st;
 typedef struct ssl_st SSL;
+#endif
 
 class FMcpBridgeWebSocket;
 
@@ -104,9 +106,11 @@ private:
     bool ReceiveExact(uint8* Buffer, SIZE_T Length);
     bool SendRaw(const uint8* Data, int32 Length, int32& OutBytesSent);
     bool RecvRaw(uint8* Data, int32 Length, int32& OutBytesRead);
+#if WITH_SSL
     bool InitializeTlsContext(bool bServer);
     bool EstablishTls(bool bServer);
     void ShutdownTls();
+#endif
     void CloseNativeSocket();
     FSocket* DetachSocket();
 
@@ -151,8 +155,13 @@ private:
     bool bUseTls;
     bool bTlsServer;
     bool bSslInitialized;
+#if WITH_SSL
     SSL_CTX* SslContext;
     SSL* SslHandle;
+#else
+    void* SslContext;
+    void* SslHandle;
+#endif
     UPTRINT NativeSocketHandle;
     bool bNativeSocketReleased;
     FString TlsCertificatePath;

@@ -108,12 +108,12 @@ export class ConnectionManager extends EventEmitter {
 
         this.rateLimitState.set(socket, state);
 
-        if (this.maxMessagesPerMinute > 0 && state.messageCount > this.maxMessagesPerMinute) {
+        if (this.maxMessagesPerMinute > 0 && state.messageCount >= this.maxMessagesPerMinute) {
             this.log.warn(`Inbound message rate exceeded (${state.messageCount}/${this.maxMessagesPerMinute} per minute).`);
             return false;
         }
 
-        if (isAutomationRequest && this.maxAutomationRequestsPerMinute > 0 && state.automationCount > this.maxAutomationRequestsPerMinute) {
+        if (isAutomationRequest && this.maxAutomationRequestsPerMinute > 0 && state.automationCount >= this.maxAutomationRequestsPerMinute) {
             this.log.warn(`Inbound automation request rate exceeded (${state.automationCount}/${this.maxAutomationRequestsPerMinute} per minute).`);
             return false;
         }
