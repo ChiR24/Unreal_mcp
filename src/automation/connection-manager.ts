@@ -183,6 +183,7 @@ export class ConnectionManager extends EventEmitter {
             socket.close(code, reason);
         }
         this.activeSockets.clear();
+        this.rateLimitState.clear();
         this.primarySocket = undefined;
     }
 }

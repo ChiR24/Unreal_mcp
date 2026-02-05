@@ -109,8 +109,8 @@ private:
 #if WITH_SSL
     bool InitializeTlsContext(bool bServer);
     bool EstablishTls(bool bServer);
-    void ShutdownTls();
 #endif
+    void ShutdownTls();
     void CloseNativeSocket();
     FSocket* DetachSocket();
 

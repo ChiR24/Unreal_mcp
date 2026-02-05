@@ -327,7 +327,10 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
     }
   }
   ActiveSockets.Empty();
-  ActiveSockets.Empty();
+  {
+    FScopeLock Lock(&RateLimitMutex);
+    SocketRateLimits.Empty();
+  }
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Empty();
