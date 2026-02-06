@@ -497,14 +497,40 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   // Block dangerous commands (Defense-in-Depth)
   FString LowerCommand = Command.ToLower();
 
-  // 1. Explicit command blocking
+  // IMPORTANT: Log commands are safe UE console commands for outputting text.
+  // They may contain otherwise forbidden words in quoted strings, so bypass security checks.
+  // This matches the TypeScript command-validator.ts logic.
+  auto NormalizeForLogDetection = [](const FString &InLowerCommand) {
+    FString Working = InLowerCommand.TrimStartAndEnd();
+    while (!Working.IsEmpty() && (Working[0] == TEXT('"') || Working[0] == TEXT('\''))) {
+      Working.RightChopInline(1);
+      Working = Working.TrimStartAndEnd();
+    }
+    return Working;
+  };
+
+  const FString LogDetectionCommand = NormalizeForLogDetection(LowerCommand);
+  const FString TrimmedLowerCommand = LowerCommand.TrimStartAndEnd();
+
+  bool bIsLogCommand = false;
+  if (LogDetectionCommand.StartsWith(TEXT("log"))) {
+    if (LogDetectionCommand.Len() == 3) {
+      bIsLogCommand = true;
+    } else {
+      const TCHAR NextChar = LogDetectionCommand[3];
+      bIsLogCommand = FChar::IsWhitespace(NextChar) || NextChar == TEXT('"') ||
+                      NextChar == TEXT('\'') || NextChar == TEXT('(');
+    }
+  }
+
+  // 1. Explicit command blocking (always applies, even to log commands)
   TArray<FString> ExplicitBlockedCommands = {
       TEXT("quit"),    TEXT("exit"),   TEXT("crash"),     TEXT("shutdown"),
       TEXT("restart"), TEXT("reboot"), TEXT("debug exec")};
 
   for (const FString &Blocked : ExplicitBlockedCommands) {
-    if (LowerCommand.Equals(Blocked) ||
-        LowerCommand.StartsWith(Blocked + TEXT(" "))) {
+    if (TrimmedLowerCommand.Equals(Blocked) ||
+        TrimmedLowerCommand.StartsWith(Blocked + TEXT(" "))) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Command '%s' is explicitly blocked for safety"),
@@ -514,55 +540,58 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     }
   }
 
-  // 2. Token-based blocking
-  // Note: We use word-boundary checking for tokens that might appear as
-  // substrings in legitimate UE commands (e.g., "rm " in "warm ", "transform")
-  TArray<FString> ForbiddenTokens = {TEXT("del "),
-                                     TEXT("format "),
-                                     TEXT("rmdir"),
-                                     TEXT("mklink"),
-                                     TEXT("copy "),
-                                     TEXT("move "),
-                                     TEXT("start \""),
-                                     TEXT("system("),
-                                     TEXT("import os"),
-                                     TEXT("import subprocess"),
-                                     TEXT("subprocess."),
-                                     TEXT("os.system"),
-                                     TEXT("exec("),
-                                     TEXT("eval("),
-                                     TEXT("__import__"),
-                                     TEXT("import sys"),
-                                     TEXT("import importlib"),
-                                     TEXT("with open"),
-                                     TEXT("open(")};
+  // 2. Token-based blocking - SKIP ENTIRELY for Log commands
+  // Log commands may contain forbidden words in their quoted string arguments (e.g., "copy", "move" in test names)
+  if (!bIsLogCommand) {
+    // Note: We use word-boundary checking for tokens that might appear as
+    // substrings in legitimate UE commands (e.g., "rm " in "warm ", "transform")
+    TArray<FString> ForbiddenTokens = {TEXT("del "),
+                                       TEXT("format "),
+                                       TEXT("rmdir"),
+                                       TEXT("mklink"),
+                                       TEXT("copy "),
+                                       TEXT("move "),
+                                       TEXT("start \""),
+                                       TEXT("system("),
+                                       TEXT("import os"),
+                                       TEXT("import subprocess"),
+                                       TEXT("subprocess."),
+                                       TEXT("os.system"),
+                                       TEXT("exec("),
+                                       TEXT("eval("),
+                                       TEXT("__import__"),
+                                       TEXT("import sys"),
+                                       TEXT("import importlib"),
+                                       TEXT("with open"),
+                                       TEXT("open(")};
 
-  for (const FString &Token : ForbiddenTokens) {
-    if (LowerCommand.Contains(Token)) {
+    for (const FString &Token : ForbiddenTokens) {
+      if (LowerCommand.Contains(Token)) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(
+                TEXT("Command '%s' contains forbidden token '%s' and is blocked"),
+                *Command, *Token),
+            nullptr, TEXT("COMMAND_BLOCKED"));
+        return true;
+      }
+    }
+
+    // Special handling for "rm" - use word-boundary check to avoid blocking
+    // legitimate UE commands like "warm", "transform", "uniform", etc.
+    // Check if "rm " appears at start or after a space (word boundary)
+    if (LowerCommand.StartsWith(TEXT("rm ")) ||
+        LowerCommand.StartsWith(TEXT("rm-")) ||
+        LowerCommand.Contains(TEXT(" rm ")) ||
+        LowerCommand.Contains(TEXT(" rm-"))) {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(
-              TEXT("Command '%s' contains forbidden token '%s' and is blocked"),
-              *Command, *Token),
+              TEXT("Command '%s' contains forbidden 'rm' command and is blocked"),
+              *Command),
           nullptr, TEXT("COMMAND_BLOCKED"));
       return true;
     }
-  }
-
-  // Special handling for "rm" - use word-boundary check to avoid blocking
-  // legitimate UE commands like "warm", "transform", "uniform", etc.
-  // Check if "rm " appears at start or after a space (word boundary)
-  if (LowerCommand.StartsWith(TEXT("rm ")) ||
-      LowerCommand.StartsWith(TEXT("rm-")) ||
-      LowerCommand.Contains(TEXT(" rm ")) ||
-      LowerCommand.Contains(TEXT(" rm-"))) {
-    SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        FString::Printf(
-            TEXT("Command '%s' contains forbidden 'rm' command and is blocked"),
-            *Command),
-        nullptr, TEXT("COMMAND_BLOCKED"));
-    return true;
   }
 
   // 3. Block Chaining

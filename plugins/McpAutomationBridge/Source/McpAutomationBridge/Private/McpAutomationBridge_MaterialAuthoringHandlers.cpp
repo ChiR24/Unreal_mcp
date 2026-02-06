@@ -11,6 +11,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Misc/PackageName.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -1568,17 +1569,49 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       Path = TEXT("/Game/Materials");
     }
 
-    UMaterial *Parent = LoadObject<UMaterial>(nullptr, *ParentMaterial);
-    if (!Parent) {
+    // Load parent material - handle both /Game/ and /Engine/ paths
+    // Engine paths like /Engine/EngineMaterials/DefaultMaterial may omit the object suffix, so normalize to package.object first
+    auto BuildParentObjectPath = [](const FString &InPath) {
+      if (InPath.Contains(TEXT("."))) {
+        return InPath;
+      }
+      const FString AssetName = FPackageName::GetShortName(InPath);
+      return InPath + TEXT(".") + AssetName;
+    };
+
+    const FString ParentObjectPath = BuildParentObjectPath(ParentMaterial);
+    const bool bIsEngineParent = ParentMaterial.StartsWith(TEXT("/Engine/"));
+    UMaterialInterface *ParentInterface = nullptr;
+
+    if (bIsEngineParent) {
+      // For engine content, use StaticLoadObject which handles engine packages correctly
+      ParentInterface = Cast<UMaterialInterface>(
+          StaticLoadObject(UMaterialInterface::StaticClass(), nullptr, *ParentObjectPath));
+    } else {
+      // For game content, standard LoadObject works
+      ParentInterface = LoadObject<UMaterialInterface>(nullptr, *ParentObjectPath);
+    }
+
+    // If we couldn't find as material interface, try loading as base UMaterial
+    if (!ParentInterface) {
+      if (bIsEngineParent) {
+        ParentInterface = Cast<UMaterial>(
+            StaticLoadObject(UMaterial::StaticClass(), nullptr, *ParentObjectPath));
+      } else {
+        ParentInterface = LoadObject<UMaterial>(nullptr, *ParentObjectPath);
+      }
+    }
+
+    if (!ParentInterface) {
       SendAutomationError(Socket, RequestId,
-                          TEXT("Could not load parent material."),
-                          TEXT("ASSET_NOT_FOUND"));
+                          FString::Printf(TEXT("Could not load parent material: %s (normalized to %s)."), *ParentMaterial, *ParentObjectPath),
+                          TEXT("PARENT_NOT_FOUND"));
       return true;
     }
 
     UMaterialInstanceConstantFactoryNew *Factory =
         NewObject<UMaterialInstanceConstantFactoryNew>();
-    Factory->InitialParent = Parent;
+    Factory->InitialParent = ParentInterface;
 
     FString PackagePath = Path / Name;
     UPackage *Package = CreatePackage(*PackagePath);

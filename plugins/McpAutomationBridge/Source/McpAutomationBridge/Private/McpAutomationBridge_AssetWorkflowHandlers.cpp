@@ -9,6 +9,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
+#include "AssetImportTask.h"
 #include "Factories/Factory.h"
 #include "ObjectTools.h"
 #include "Misc/PackageName.h"
@@ -22,6 +23,11 @@
 #include "ThumbnailRendering/ThumbnailManager.h"
 #include "ObjectTools.h"
 #include "WidgetBlueprint.h"
+
+// UE 5.7: Interchange synchronous import to avoid TaskGraph RecursionGuard
+#include "InterchangeManager.h"
+#include "InterchangeSourceData.h"
+#include "FileHelpers.h"
 
 #if WITH_EDITOR
 #include "ISourceControlModule.h"
@@ -57,17 +63,27 @@ bool UMcpAutomationBridgeSubsystem::HandleEnableNaniteMesh(
   bool bEnable = true;
   Payload->TryGetBoolField(TEXT("enableNanite"), bEnable);
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Asset not found"),
-                        TEXT("ASSET_NOT_FOUND"));
+  // Use helper that handles both direct StaticMesh and Blueprint with StaticMeshComponent
+  UStaticMesh *Mesh = nullptr;
+  FString ResolveError;
+  if (!ResolveStaticMeshFromAsset(AssetPath, Mesh, ResolveError)) {
+    // Check if this is an Engine Basic Shape - these are read-only
+    if (AssetPath.StartsWith(TEXT("/Engine/BasicShapes/"))) {
+      SendAutomationError(RequestingSocket, RequestId, 
+                          FString::Printf(TEXT("Engine Basic Shape '%s' cannot be modified. Engine assets are read-only. Create a copy in your project to enable Nanite."), *AssetPath),
+                          TEXT("ENGINE_ASSET_READ_ONLY"));
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, ResolveError,
+                          TEXT("INVALID_ASSET_TYPE"));
+    }
     return true;
   }
-
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  UStaticMesh *Mesh = Cast<UStaticMesh>(Asset);
-  if (!Mesh) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Asset is not a StaticMesh"),
-                        TEXT("INVALID_ASSET_TYPE"));
+  
+  // Check if this is an Engine asset (read-only)
+  if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Engine asset '%s' is read-only and cannot be modified. Create a copy in your project to enable Nanite."), *AssetPath),
+                        TEXT("ENGINE_ASSET_READ_ONLY"));
     return true;
   }
 
@@ -102,6 +118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEnableNaniteMesh(
 #endif
 
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetStringField(TEXT("resolvedMeshPath"), Mesh->GetPathName());
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          bEnable ? TEXT("Nanite enabled") : TEXT("Nanite disabled"),
@@ -135,11 +152,27 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  UStaticMesh *Mesh = Cast<UStaticMesh>(Asset);
-  if (!Mesh) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Asset is not a StaticMesh"),
-                        TEXT("INVALID_ASSET_TYPE"));
+  // Use helper that handles both direct StaticMesh and Blueprint with StaticMeshComponent
+  UStaticMesh *Mesh = nullptr;
+  FString ResolveError;
+  if (!ResolveStaticMeshFromAsset(AssetPath, Mesh, ResolveError)) {
+    // Check if this is an Engine Basic Shape - these are read-only
+    if (AssetPath.StartsWith(TEXT("/Engine/BasicShapes/"))) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Engine Basic Shape '%s' cannot be modified. Engine assets are read-only. Create a copy in your project to modify Nanite settings."), *AssetPath),
+                          TEXT("ENGINE_ASSET_READ_ONLY"));
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, ResolveError,
+                          TEXT("INVALID_ASSET_TYPE"));
+    }
+    return true;
+  }
+
+  // Check if this is an Engine asset (read-only)
+  if (Mesh->GetOutermost()->GetName().StartsWith(TEXT("/Engine/"))) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Engine asset '%s' is read-only and cannot be modified. Create a copy in your project to modify Nanite settings."), *AssetPath),
+                        TEXT("ENGINE_ASSET_READ_ONLY"));
     return true;
   }
 
@@ -199,8 +232,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetNaniteSettings(
   Resp->SetNumberField(TEXT("positionPrecision"), Mesh->NaniteSettings.PositionPrecision);
   Resp->SetNumberField(TEXT("percentTriangles"), Mesh->NaniteSettings.KeepPercentTriangles);
 #endif
-
-  
+  Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetStringField(TEXT("resolvedMeshPath"), Mesh->GetPathName());
+   
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Nanite settings updated"), Resp);
   return true;
@@ -321,6 +355,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   
   // Normalize subAction to lowercase for comparison
   const FString LowerSubAction = SubAction.ToLower();
+
+  // Validate subAction is not empty
+  if (LowerSubAction.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Missing required 'subAction' or 'action' field in payload"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   // ============================================================================
   // BP_LIST_NODE_TYPES - List available Blueprint node types
@@ -873,6 +915,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     if (FolderPath.StartsWith(TEXT("/Content"))) {
       FolderPath = FString::Printf(TEXT("/Game%s"), *FolderPath.RightChop(8));
     }
+
+    if (FolderPath.StartsWith(TEXT("/Engine"))) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Cannot create folders inside /Engine"), TEXT("FORBIDDEN_PATH"));
+      return true;
+    }
     
     bool bSuccess = UEditorAssetLibrary::MakeDirectory(FolderPath);
     
@@ -961,50 +1008,103 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    
+
     // Normalize path
     if (AssetPath.StartsWith(TEXT("/Content"))) {
       AssetPath = FString::Printf(TEXT("/Game%s"), *AssetPath.RightChop(8));
     }
-    
+
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Asset not found"),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
-    
+
     UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
     if (!Asset) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to load asset"),
                           TEXT("LOAD_FAILED"));
       return true;
     }
-    
-    // Get tags object from payload
-    const TSharedPtr<FJsonObject>* TagsPtr = nullptr;
+
+    auto AddTagEntry = [&](const FString& Key, const FString& Value, int32& Counter) {
+      FString TrimmedKey = Key;
+      TrimmedKey.TrimStartAndEndInline();
+      if (TrimmedKey.IsEmpty()) {
+        return;
+      }
+
+      FString TrimmedValue = Value;
+      TrimmedValue.TrimStartAndEndInline();
+      if (TrimmedValue.IsEmpty()) {
+        TrimmedValue = TrimmedKey;
+      }
+
+      UEditorAssetLibrary::SetMetadataTag(Asset, FName(*TrimmedKey), TrimmedValue);
+      ++Counter;
+    };
+
     int32 TagsSet = 0;
-    
-    if (Payload->TryGetObjectField(TEXT("tags"), TagsPtr) && TagsPtr) {
-      for (const auto& Pair : (*TagsPtr)->Values) {
+    const TSharedPtr<FJsonObject>* TagsObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("tags"), TagsObj) && TagsObj) {
+      for (const auto& Pair : (*TagsObj)->Values) {
         FString TagValue;
         if (Pair.Value->TryGetString(TagValue)) {
-          UEditorAssetLibrary::SetMetadataTag(Asset, FName(*Pair.Key), TagValue);
-          TagsSet++;
+          AddTagEntry(Pair.Key, TagValue, TagsSet);
+        } else if (Pair.Value->Type == EJson::Boolean) {
+          AddTagEntry(Pair.Key, Pair.Value->AsBool() ? TEXT("true") : TEXT("false"), TagsSet);
+        } else if (Pair.Value->Type == EJson::Number) {
+          AddTagEntry(Pair.Key, FString::SanitizeFloat(Pair.Value->AsNumber()), TagsSet);
+        } else if (Pair.Value->Type == EJson::Null) {
+          AddTagEntry(Pair.Key, Pair.Key, TagsSet);
+        }
+      }
+    } else {
+      const TArray<TSharedPtr<FJsonValue>>* TagsArray = nullptr;
+      if (Payload->TryGetArrayField(TEXT("tags"), TagsArray) && TagsArray) {
+        for (const TSharedPtr<FJsonValue>& Value : *TagsArray) {
+          if (!Value.IsValid()) {
+            continue;
+          }
+          if (Value->Type == EJson::String) {
+            AddTagEntry(Value->AsString(), Value->AsString(), TagsSet);
+          }
         }
       }
     }
-    
-    // Save after setting metadata
-    if (!McpSafeAssetSave(Asset)) {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save asset after updating metadata"), TEXT("SAVE_FAILED"));
-        return true;
+
+    const TArray<TSharedPtr<FJsonValue>>* TagListArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("tagList"), TagListArray) && TagListArray) {
+      for (const TSharedPtr<FJsonValue>& Value : *TagListArray) {
+        if (!Value.IsValid()) {
+          continue;
+        }
+        if (Value->Type == EJson::String) {
+          AddTagEntry(Value->AsString(), Value->AsString(), TagsSet);
+        }
+      }
     }
-    
+
+    FString SingleTag;
+    if (Payload->TryGetStringField(TEXT("tag"), SingleTag) && !SingleTag.TrimStartAndEnd().IsEmpty()) {
+      AddTagEntry(SingleTag, SingleTag, TagsSet);
+    }
+
+    if (TagsSet == 0) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required argument: tags"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (!McpSafeAssetSave(Asset)) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save asset after updating metadata"), TEXT("SAVE_FAILED"));
+      return true;
+    }
+
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetNumberField(TEXT("tagsSet"), TagsSet);
-    
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Set %d metadata tags"), TagsSet), Result);
     return true;
@@ -1012,6 +1112,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
 
   // ============================================================================
   // IMPORT ASSET - Imports an external file into the project
+  // UE 5.7 Fix: Use SetTimerForNextTick to defer import to next frame, escaping
+  // the current TaskGraph context. Even with bRunSynchronous=true, Interchange
+  // schedules TaskGraph tasks internally which causes RecursionGuard assertions
+  // when called from within TaskGraph execution (e.g., WebSocket handlers).
   // ============================================================================
   if (LowerSubAction == TEXT("import")) {
     FString SourcePath, DestinationPath;
@@ -1039,48 +1143,89 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
       return true;
     }
 
-    // Get asset tools for import
-    IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
-    
-    // Determine destination directory and asset name
+    // Determine destination directory
     FString DestinationDir = FPackageName::GetLongPackagePath(DestinationPath);
     if (DestinationDir.IsEmpty()) {
       DestinationDir = TEXT("/Game");
     }
 
-    // Create import task
-    TArray<FString> FilesToImport;
-    FilesToImport.Add(SourcePath);
+    // Extract save preference
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
 
-    // Import the asset(s)
-    TArray<UObject*> ImportedAssets = AssetTools.ImportAssets(FilesToImport, DestinationDir);
+    // UE 5.7 Fix: Defer import to next tick to escape TaskGraph context
+    // Capture all necessary data for the deferred execution
+    TWeakPtr<FMcpBridgeWebSocket> WeakSocket = RequestingSocket;
+    FString CapturedRequestId = RequestId;
+    FString CapturedSourcePath = SourcePath;
+    FString CapturedDestinationPath = DestinationPath;
+    FString CapturedDestinationDir = DestinationDir;
+    bool bCapturedSave = bSave;
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSelf(this);
 
-    if (ImportedAssets.Num() > 0 && ImportedAssets[0] != nullptr) {
-      UObject* ImportedAsset = ImportedAssets[0];
+    FTimerDelegate ImportDelegate;
+    ImportDelegate.BindLambda([WeakSelf, WeakSocket, CapturedRequestId, CapturedSourcePath, 
+                               CapturedDestinationPath, CapturedDestinationDir, bCapturedSave]()
+    {
+      UMcpAutomationBridgeSubsystem* Self = WeakSelf.Get();
+      TSharedPtr<FMcpBridgeWebSocket> Socket = WeakSocket.Pin();
+      if (!Self || !Socket.IsValid()) {
+        return;  // Object or socket destroyed before timer fired
+      }
+
+      // Perform the actual import on the next tick (outside TaskGraph context)
+      UInterchangeSourceData* SourceData = NewObject<UInterchangeSourceData>();
+      SourceData->SetFilename(CapturedSourcePath);
+
+      FImportAssetParameters ImportParams;
+      ImportParams.bRunSynchronous = true;  // Still use synchronous mode
+      ImportParams.DestinationName = FPaths::GetBaseFilename(CapturedDestinationPath);
+      ImportParams.bReplaceExisting = true;
+
+      UInterchangeManager& InterchangeManager = UInterchangeManager::GetInterchangeManager();
       
-      // Save the imported asset
-      bool bSave = true;
-      Payload->TryGetBoolField(TEXT("save"), bSave);
-      if (bSave) {
-        if (!McpSafeAssetSave(ImportedAsset)) {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save imported asset"), TEXT("SAVE_FAILED"));
-            return true;
+      TArray<UObject*> ImportedObjects;
+      bool bSuccess = InterchangeManager.ImportAsset(CapturedDestinationDir, SourceData, ImportParams, ImportedObjects);
+
+      // Check results and send response
+      if (bSuccess && ImportedObjects.Num() > 0) {
+        UObject* ImportedAsset = ImportedObjects[0];
+        if (ImportedAsset) {
+          // Save the asset if requested
+          if (bCapturedSave) {
+            McpSafeAssetSave(ImportedAsset);
+          }
+
+          TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+          Result->SetBoolField(TEXT("success"), true);
+          Result->SetStringField(TEXT("sourcePath"), CapturedSourcePath);
+          Result->SetStringField(TEXT("importedPath"), ImportedAsset->GetPathName());
+          Result->SetStringField(TEXT("assetName"), ImportedAsset->GetName());
+          Result->SetStringField(TEXT("className"), ImportedAsset->GetClass()->GetName());
+
+          Self->SendAutomationResponse(Socket, CapturedRequestId, true,
+                                 TEXT("Asset imported successfully"), Result);
+          return;
         }
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetBoolField(TEXT("success"), true);
-      Result->SetStringField(TEXT("sourcePath"), SourcePath);
-      Result->SetStringField(TEXT("importedPath"), ImportedAsset->GetPathName());
-      Result->SetStringField(TEXT("assetName"), ImportedAsset->GetName());
-      Result->SetStringField(TEXT("className"), ImportedAsset->GetClass()->GetName());
-
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Asset imported successfully"), Result);
-    } else {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to import asset"),
+      // Import failed
+      Self->SendAutomationError(Socket, CapturedRequestId, 
+                          FString::Printf(TEXT("Failed to import asset from: %s"), *CapturedSourcePath), 
                           TEXT("IMPORT_FAILED"));
+    });
+
+    // Schedule the import for next tick - this escapes the current TaskGraph context
+    if (GEditor)
+    {
+      GEditor->GetTimerManager()->SetTimerForNextTick(ImportDelegate);
     }
+    else
+    {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
+    }
+
+    // Return immediately - response will be sent asynchronously from the timer callback
     return true;
   }
 
@@ -1917,12 +2062,22 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // ============================================================================
   if (LowerSubAction == TEXT("fixup_redirectors")) {
     FString DirectoryPath = TEXT("/Game");
-    Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
-    if (DirectoryPath.IsEmpty()) {
+    bool bProvidedDirectory = false;
+
+    if (Payload->HasField(TEXT("directoryPath"))) {
+      bProvidedDirectory = true;
+      Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
+    } else if (Payload->HasField(TEXT("directory"))) {
+      bProvidedDirectory = true;
       Payload->TryGetStringField(TEXT("directory"), DirectoryPath);
     }
-    
-    // Normalize path
+
+    DirectoryPath.TrimStartAndEndInline();
+    if (bProvidedDirectory && DirectoryPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("directoryPath is required when provided"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     if (DirectoryPath.StartsWith(TEXT("/Content"))) {
       DirectoryPath = FString::Printf(TEXT("/Game%s"), *DirectoryPath.RightChop(8));
     }

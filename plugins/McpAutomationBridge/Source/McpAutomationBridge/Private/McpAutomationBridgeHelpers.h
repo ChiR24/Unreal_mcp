@@ -25,6 +25,10 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UObjectIterator.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "GameFramework/Actor.h"
+#include "UObject/SoftObjectPath.h"
 
 #if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
@@ -38,6 +42,11 @@
 /**
  * RAII helper to suppress modal dialogs by temporarily setting GIsAutomationTesting.
  */
+#if WITH_EDITOR
+static inline bool StripGeneratedBlueprintClassSuffixFromName(FString &Name);
+static inline void NormalizeBlueprintClassPathSegments(FString &Path);
+#endif
+
 struct FModalDialogSuppressor {
   bool bPreviousValue;
   FModalDialogSuppressor() {
@@ -426,6 +435,178 @@ inline TSharedPtr<FJsonObject> MakeFeatureUnavailableResponse(const FString& Fea
     Response->SetStringField(TEXT("minVersion"), MinVersion);
     return Response;
 }
+
+/**
+ * Resolve a StaticMesh from an asset path.
+ * Handles both direct StaticMesh assets and Blueprint assets that contain a StaticMeshComponent.
+ * Engine paths like /Engine/BasicShapes/Cube are actually Blueprints with mesh components.
+ *
+ * @param AssetPath The asset path to resolve.
+ * @param OutStaticMesh Output pointer to the resolved StaticMesh.
+ * @param OutError Output error message if resolution fails.
+ * @returns true if a StaticMesh was resolved, false otherwise.
+ */
+static inline bool ResolveStaticMeshFromAsset(const FString& AssetPath, UStaticMesh*& OutStaticMesh, FString& OutError)
+{
+    OutStaticMesh = nullptr;
+
+    if (AssetPath.IsEmpty()) {
+        OutError = TEXT("Asset path is empty");
+        return false;
+    }
+
+    auto NormalizeBasePath = [](FString InPath) {
+        InPath.TrimStartAndEndInline();
+        if (InPath.IsEmpty()) {
+            return InPath;
+        }
+
+        InPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+        if (InPath.StartsWith(TEXT("/Content"))) {
+            InPath = TEXT("/Game") + InPath.RightChop(8);
+        } else if (InPath.StartsWith(TEXT("Content/"))) {
+            InPath = TEXT("/Game/") + InPath.RightChop(8);
+        } else if (InPath.StartsWith(TEXT("Game/")) || InPath.StartsWith(TEXT("Engine/"))) {
+            InPath = TEXT("/") + InPath;
+        } else if (!InPath.StartsWith(TEXT("/"))) {
+            InPath = TEXT("/Game/") + InPath;
+        }
+
+        if (InPath.EndsWith(TEXT(".uasset"))) {
+            InPath = InPath.LeftChop(7);
+        }
+
+        while (InPath.Contains(TEXT("//"))) {
+            InPath = InPath.Replace(TEXT("//"), TEXT("/"));
+        }
+
+        return InPath;
+    };
+
+    auto TryLoadAssetAtPath = [](const FString& PathToLoad) -> UObject* {
+        if (PathToLoad.IsEmpty()) {
+            return nullptr;
+        }
+
+        UObject* Loaded = nullptr;
+#if WITH_EDITOR
+        Loaded = UEditorAssetLibrary::LoadAsset(PathToLoad);
+#endif
+        if (!Loaded) {
+            FSoftObjectPath SoftPath(PathToLoad);
+            if (SoftPath.IsValid()) {
+                Loaded = SoftPath.TryLoad();
+            }
+        }
+        if (!Loaded) {
+            Loaded = LoadObject<UObject>(nullptr, *PathToLoad);
+        }
+        if (!Loaded && PathToLoad.EndsWith(TEXT("_C"))) {
+            Loaded = LoadObject<UClass>(nullptr, *PathToLoad);
+        }
+        return Loaded;
+    };
+
+    auto AddCandidate = [&](const FString& Candidate, TArray<FString>& OutCandidates) {
+        FString Normalized = NormalizeBasePath(Candidate);
+        if (Normalized.IsEmpty()) {
+            return;
+        }
+
+        TArray<FString> LocalVariants;
+        LocalVariants.Add(Normalized);
+
+        FString WithoutClassSuffix = Normalized;
+        if (StripGeneratedBlueprintClassSuffixFromName(WithoutClassSuffix) && !WithoutClassSuffix.IsEmpty()) {
+            LocalVariants.Add(WithoutClassSuffix);
+        }
+
+        for (const FString& Variant : LocalVariants) {
+            if (Variant.IsEmpty()) {
+                continue;
+            }
+
+            OutCandidates.AddUnique(Variant);
+
+            if (!Variant.Contains(TEXT("."))) {
+                const FString AssetName = FPaths::GetCleanFilename(Variant);
+                if (!AssetName.IsEmpty()) {
+                    OutCandidates.AddUnique(Variant + TEXT(".") + AssetName);
+                }
+            } else {
+                int32 DotIdx = INDEX_NONE;
+                if (Variant.FindLastChar(TEXT('.'), DotIdx) && DotIdx > 0) {
+                    OutCandidates.AddUnique(Variant.Left(DotIdx));
+                }
+            }
+        }
+    };
+
+    TArray<FString> PathCandidates;
+    AddCandidate(AssetPath, PathCandidates);
+
+    UObject* Asset = nullptr;
+    for (const FString& Candidate : PathCandidates) {
+        Asset = TryLoadAssetAtPath(Candidate);
+        if (Asset) {
+            break;
+        }
+    }
+
+    if (!Asset) {
+        OutError = FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath);
+        return false;
+    }
+
+    if (UClass* LoadedClass = Cast<UClass>(Asset)) {
+        if (UBlueprint* GeneratedBy = Cast<UBlueprint>(LoadedClass->ClassGeneratedBy)) {
+            Asset = GeneratedBy;
+        }
+    }
+
+    if (UStaticMesh* Mesh = Cast<UStaticMesh>(Asset)) {
+        OutStaticMesh = Mesh;
+        return true;
+    }
+
+    if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset)) {
+        if (Blueprint->SimpleConstructionScript) {
+            const TArray<USCS_Node*> Nodes = Blueprint->SimpleConstructionScript->GetAllNodes();
+            for (USCS_Node* Node : Nodes) {
+                if (!Node || !Node->ComponentTemplate) {
+                    continue;
+                }
+                if (UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Node->ComponentTemplate)) {
+                    if (MeshComp->GetStaticMesh()) {
+                        OutStaticMesh = MeshComp->GetStaticMesh();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (Blueprint->GeneratedClass) {
+            if (AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject())) {
+                TArray<UStaticMeshComponent*> MeshComponents;
+                CDO->GetComponents<UStaticMeshComponent>(MeshComponents);
+                for (UStaticMeshComponent* MeshComp : MeshComponents) {
+                    if (MeshComp && MeshComp->GetStaticMesh()) {
+                        OutStaticMesh = MeshComp->GetStaticMesh();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        OutError = FString::Printf(TEXT("Blueprint '%s' does not contain a StaticMeshComponent with a valid mesh"), *AssetPath);
+        return false;
+    }
+
+    OutError = FString::Printf(TEXT("Asset '%s' is not a StaticMesh or Blueprint with StaticMeshComponent (type: %s)"),
+        *AssetPath, *Asset->GetClass()->GetName());
+    return false;
+}
+
 #endif
 
 // Unity build safety: prevent leaked helper macros from earlier translation units.
@@ -1825,8 +2006,9 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     return nullptr;
   }
 
-  // Build normalized paths
+  // Strip _C suffix from input path if present (e.g., /Game/MyBP.MyBP_C -> /Game/MyBP.MyBP)
   FString Path = Req;
+  NormalizeBlueprintClassPathSegments(Path);
   if (!Path.StartsWith(TEXT("/"))) {
     Path = TEXT("/Game/") + Path;
   }
@@ -1891,6 +2073,45 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     }
   }
 
+  // Method 6: Force Asset Registry scan for newly created assets
+  // Assets created in the same session may not be immediately visible
+  ARM.Get().SearchAllAssets(/*bSynchronousSearch=*/true);
+  
+  // Retry Asset Registry lookup after scan
+  Results.Empty();
+  ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
+  if (Results.Num() > 0) {
+    Found = Results[0];
+    UBlueprint* BP = Cast<UBlueprint>(Found.GetSoftObjectPath().TryLoad());
+    if (!BP) {
+      const FString PathStr = Found.ToSoftObjectPath().ToString();
+      BP = LoadObject<UBlueprint>(nullptr, *PathStr);
+    }
+    if (BP) {
+      OutNormalized = Found.ToSoftObjectPath().ToString();
+      if (OutNormalized.Contains(TEXT(".")))
+        OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT(".")));
+      return BP;
+    }
+  }
+
+  // Method 7: Try loading with _C suffix for blueprint generated class
+  // When a blueprint is created, its generated class has _C suffix
+  FString GeneratedClassPath = ObjectPath + TEXT("_C");
+  if (UClass* GeneratedClass = LoadObject<UClass>(nullptr, *GeneratedClassPath)) {
+    // Found the generated class, get the blueprint from it
+    if (UBlueprint* BP = Cast<UBlueprint>(GeneratedClass->ClassGeneratedBy)) {
+      OutNormalized = PackagePath;
+      return BP;
+    }
+  }
+
+  // Method 8: Direct LoadObject as final fallback (handles in-flight packages)
+  if (UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
+    OutNormalized = PackagePath;
+    return BP;
+  }
+
   OutError = FString::Printf(TEXT("Blueprint asset not found: %s"), *Req);
   return nullptr;
 }
@@ -1920,11 +2141,60 @@ static inline FString ConvertToString(const FText &In) { return In.ToString(); }
 /**
  * Find a normalized Blueprint package path for the given request string without
  * loading the asset.
+ */
+static inline bool StripGeneratedBlueprintClassSuffixFromName(FString &Name) {
+  if (Name.IsEmpty()) {
+    return false;
+  }
+
+  const FString Upper = Name.ToUpper();
+  const int32 SuffixIdx = Upper.Find(TEXT("_C"), ESearchCase::CaseSensitive,
+                                     ESearchDir::FromEnd);
+  if (SuffixIdx == INDEX_NONE || SuffixIdx + 2 > Upper.Len()) {
+    return false;
+  }
+
+  for (int32 Idx = SuffixIdx + 2; Idx < Upper.Len(); ++Idx) {
+    const TCHAR C = Upper[Idx];
+    if (C != TEXT('_') && !FChar::IsDigit(C)) {
+      return false;
+    }
+  }
+
+  Name.LeftInline(SuffixIdx, EAllowShrinking::No);
+  return true;
+}
+
+static inline void NormalizeBlueprintClassPathSegments(FString &Path) {
+  if (Path.IsEmpty()) {
+    return;
+  }
+
+  int32 DotIdx = INDEX_NONE;
+  if (Path.FindLastChar(TEXT('.'), DotIdx)) {
+    FString BeforeDot = Path.Left(DotIdx);
+    FString AfterDot = Path.Mid(DotIdx + 1);
+    if (StripGeneratedBlueprintClassSuffixFromName(AfterDot) && !AfterDot.IsEmpty()) {
+      Path = BeforeDot + TEXT('.') + AfterDot;
+    }
+  }
+
+  int32 SlashIdx = INDEX_NONE;
+  if (Path.FindLastChar(TEXT('/'), SlashIdx)) {
+    FString Leaf = Path.Mid(SlashIdx + 1);
+    if (StripGeneratedBlueprintClassSuffixFromName(Leaf) && !Leaf.IsEmpty()) {
+      Path = Path.Left(SlashIdx + 1) + Leaf;
+    }
+  }
+}
+
+/**
+ * Find a normalized Blueprint package path for the given request string without
+ * loading the asset.
  *
  * Normalizes common forms (prepends /Game when missing a root, strips a
- * trailing `.uasset` extension, and removes object-path suffixes like
- * `/PackageName.ObjectName`) and checks for the asset's existence using a
- * lightweight existence test.
+ * trailing `.uasset` extension, removes object suffixes, and tolerates
+ * Blueprint generated class suffixes like `_C` or `_C_1`).
  *
  * @param Req Input path or identifier (may be relative, start with `/`, include
  * `.uasset`, or be an object path).
@@ -1936,47 +2206,68 @@ static inline FString ConvertToString(const FText &In) { return In.ToString(); }
 static inline bool FindBlueprintNormalizedPath(const FString &Req,
                                                FString &OutNormalized) {
   OutNormalized.Empty();
-  if (Req.IsEmpty())
+  if (Req.IsEmpty()) {
     return false;
+  }
 #if WITH_EDITOR
-  // Use lightweight existence check - DO NOT use LoadBlueprintAsset here
-  // as it causes Editor hangs when called repeatedly in polling loops
-  FString CheckPath = Req;
-
-  // Ensure path starts with /Game if it doesn't have a valid root
-  if (!CheckPath.StartsWith(TEXT("/Game")) &&
-      !CheckPath.StartsWith(TEXT("/Engine")) &&
-      !CheckPath.StartsWith(TEXT("/Script"))) {
-    if (CheckPath.StartsWith(TEXT("/"))) {
-      CheckPath = TEXT("/Game") + CheckPath;
-    } else {
-      CheckPath = TEXT("/Game/") + CheckPath;
+  auto PrepareCandidate = [&](const FString &Input, bool bStripGenerated) {
+    FString CheckPath = Input.TrimStartAndEnd();
+    if (CheckPath.IsEmpty()) {
+      return CheckPath;
     }
-  }
 
-  // Remove .uasset extension if present
-  if (CheckPath.EndsWith(TEXT(".uasset"))) {
-    CheckPath = CheckPath.LeftChop(7);
-  }
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
 
-  // Remove object path suffix (e.g., /Game/BP.BP -> /Game/BP)
-  int32 DotIdx;
-  if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
-    // Check if this looks like an object path (PackagePath.ObjectName)
-    FString AfterDot = CheckPath.Mid(DotIdx + 1);
-    FString BeforeDot = CheckPath.Left(DotIdx);
-    // If the part after the dot matches the asset name, strip it
-    int32 LastSlashIdx;
-    if (BeforeDot.FindLastChar(TEXT('/'), LastSlashIdx)) {
-      FString AssetName = BeforeDot.Mid(LastSlashIdx + 1);
-      if (AssetName.Equals(AfterDot, ESearchCase::IgnoreCase)) {
+    if (CheckPath.StartsWith(TEXT("/Game//"))) {
+      CheckPath = TEXT("/Game/") + CheckPath.Mid(7);
+    }
+
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+
+    if (bStripGenerated) {
+      NormalizeBlueprintClassPathSegments(CheckPath);
+    }
+
+    int32 DotIdx = INDEX_NONE;
+    if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
+      FString BeforeDot = CheckPath.Left(DotIdx);
+      FString AfterDot = CheckPath.Mid(DotIdx + 1);
+      FString AssetName = FPaths::GetBaseFilename(BeforeDot);
+      if (AfterDot.Equals(AssetName, ESearchCase::IgnoreCase)) {
         CheckPath = BeforeDot;
       }
     }
-  }
 
-  if (UEditorAssetLibrary::DoesAssetExist(CheckPath)) {
-    OutNormalized = CheckPath;
+    return CheckPath;
+  };
+
+  auto TryCandidate = [&](const FString &Input, bool bStripGenerated) {
+    FString Candidate = PrepareCandidate(Input, bStripGenerated);
+    if (Candidate.IsEmpty()) {
+      return false;
+    }
+
+    if (UEditorAssetLibrary::DoesAssetExist(Candidate)) {
+      OutNormalized = Candidate;
+      return true;
+    }
+    return false;
+  };
+
+  if (TryCandidate(Req, true)) {
+    return true;
+  }
+  if (TryCandidate(Req, false)) {
     return true;
   }
   return false;

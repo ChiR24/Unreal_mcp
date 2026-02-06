@@ -443,7 +443,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
-  Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+  // Return the Blueprint path (without _C suffix), not the class path
+  // NormalizedPath is set by LoadBlueprintAsset() and contains the clean Blueprint path
+  FString ResponseBlueprintPath = NormalizedPath.IsEmpty() ? BlueprintPath : NormalizedPath;
+  if (ResponseBlueprintPath.IsEmpty()) {
+    // Fallback: strip _C suffix from class path if we couldn't get the Blueprint path
+    ResponseBlueprintPath = ResolvedClass->GetPathName();
+    NormalizeBlueprintClassPathSegments(ResponseBlueprintPath);
+  }
+  Resp->SetStringField(TEXT("classPath"), ResponseBlueprintPath);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned blueprint '%s'"),
          *Spawned->GetActorLabel());

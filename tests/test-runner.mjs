@@ -278,8 +278,29 @@ export function evaluateExpectation(testCase, response) {
         continue;
       }
 
-      if (combined.includes(condition)) {
-        return { passed: true, reason: `Expected condition met: ${condition}` };
+      // CRITICAL FIX: For error/failure conditions in pipe-separated expectations,
+      // require that the response actually indicates failure (success !== true)
+      // This prevents false positives where error text appears in a success response
+      const isErrorCondition = failureKeywords.some((kw) => condition.includes(kw)) ||
+        condition.includes('not_found') || condition.includes('not found') ||
+        condition.includes('invalid') || condition.includes('failed') ||
+        condition.includes('error') || condition.includes('timeout');
+      
+      if (isErrorCondition) {
+        // Error conditions require actualSuccess to NOT be true
+        if (actualSuccess === true) {
+          // Skip this condition - we got success but test expects an error type
+          continue;
+        }
+        // Check if the error condition matches the actual error/message
+        if (combined.includes(condition)) {
+          return { passed: true, reason: `Expected error condition met: ${condition}` };
+        }
+      } else {
+        // Non-error, non-success conditions (e.g., "already exists", "no_instances")
+        if (combined.includes(condition)) {
+          return { passed: true, reason: `Expected condition met: ${condition}` };
+        }
       }
     }
     // If none of the OR/pipe conditions matched, it's a failure

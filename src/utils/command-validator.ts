@@ -26,16 +26,18 @@ export class CommandValidator {
 
     /**
      * Tokens that indicate shell injection or external system access attempts.
-     * Any command containing these is blocked.
+     * Any command containing these is blocked (except for Log commands which may contain these in messages).
      * 
      * NOTE: These patterns are designed to avoid false positives:
      * - 'rm ' and 'move ' would match log strings like "transform" or "Asset: move asset"
-     * - Instead, we check for actual shell command patterns at word boundaries or start of line
+     * - Log commands are explicitly bypassed in the validate() method to allow test names with these words
      */
     private static readonly FORBIDDEN_TOKENS = [
         // Shell commands (Windows/Unix) - use patterns that avoid matching inside words
         'del ', 'format ', 'shutdown', 'reboot',
         'rmdir', 'mklink', 'start "', 'system(',
+        // File system operations that could be dangerous
+        'move ', 'copy ', 'rename ', 'remove ',
         // Python injection attempts
         'import os', 'import subprocess', 'subprocess.', 'os.system',
         'exec(', 'eval(', '__import__', 'import sys', 'import importlib',
@@ -114,7 +116,10 @@ export class CommandValidator {
 
         // Log commands are safe UE console commands for outputting text.
         // They may contain otherwise forbidden words in quoted strings, so bypass the check.
-        const isLogCommand = cmdLower.startsWith('log "') || cmdLower.startsWith('log \'');
+        const normalizedLogCandidate = cmdLower.trim().replace(/^['"]+/, '').trimStart();
+        const isLogCommand =
+            normalizedLogCandidate.startsWith('log') &&
+            (normalizedLogCandidate.length === 3 || /\s|["'(]/.test(normalizedLogCandidate[3] ?? ''));
 
         // Use word-boundary patterns to avoid false positives like 'ShadingModel' matching 'del '
         if (!isLogCommand && this.FORBIDDEN_PATTERNS.some(pattern => pattern.test(cmdLower))) {
@@ -124,9 +129,12 @@ export class CommandValidator {
         // Check for shell commands with word boundary matching to avoid false positives
         // like matching "rm " inside "transform " or "move " inside "Asset: move asset"
         // Only match when command STARTS with these patterns (actual shell injection)
-        const cmdStart = cmdLower.split(' ')[0] ?? '';
-        if (cmdStart === 'rm' || cmdStart === 'copy' || cmdStart === 'move') {
-            throw new Error(`Command '${cmdStart}' contains forbidden shell command and is blocked`);
+        // BUT allow Log commands to pass through (they may contain test names with these words)
+        if (!isLogCommand) {
+            const cmdStart = cmdLower.split(' ')[0] ?? '';
+            if (cmdStart === 'rm' || cmdStart === 'copy' || cmdStart === 'move') {
+                throw new Error(`Command '${cmdStart}' contains forbidden shell command and is blocked`);
+            }
         }
 
         // Block backticks which can be used for shell execution

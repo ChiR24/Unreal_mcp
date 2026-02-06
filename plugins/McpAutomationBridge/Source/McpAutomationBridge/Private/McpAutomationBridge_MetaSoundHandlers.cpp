@@ -28,7 +28,104 @@
 #if __has_include("MetasoundNodeInterface.h")
 #include "MetasoundNodeInterface.h"
 #endif
-#endif
+
+/**
+ * Load a MetaSound asset by path, trying multiple path formats.
+ * Handles both package paths (/Game/Path/Asset) and object paths (/Game/Path/Asset.Asset).
+ * Also tries UMetaSoundPatch as fallback if UMetaSoundSource fails.
+ *
+ * @param InPath The input asset path (package or object path format)
+ * @return The loaded UMetaSoundSource, or nullptr if not found
+ */
+static UMetaSoundSource* LoadMetaSoundAsset(const FString& InPath)
+{
+    FString NormalizedInput = InPath;
+    NormalizedInput.TrimStartAndEndInline();
+
+    if (!NormalizedInput.IsEmpty())
+    {
+        if (NormalizedInput.StartsWith(TEXT("Game/")) || NormalizedInput.StartsWith(TEXT("Engine/")))
+        {
+            NormalizedInput = TEXT("/") + NormalizedInput;
+        }
+        else if (!NormalizedInput.StartsWith(TEXT("/")))
+        {
+            NormalizedInput = TEXT("/Game/") + NormalizedInput;
+        }
+
+        if (NormalizedInput.EndsWith(TEXT(".uasset")))
+        {
+            NormalizedInput = NormalizedInput.LeftChop(7);
+        }
+    }
+
+    const FString& EffectivePath = NormalizedInput.IsEmpty() ? InPath : NormalizedInput;
+    if (EffectivePath.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    // First, try loading directly with the provided path
+    UMetaSoundSource* Asset = LoadObject<UMetaSoundSource>(nullptr, *EffectivePath);
+    if (Asset)
+    {
+        return Asset;
+    }
+
+    // If path doesn't contain '.', it's likely a package path - convert to object path
+    // Format: /Game/Path/AssetName -> /Game/Path/AssetName.AssetName
+    if (!EffectivePath.Contains(TEXT(".")))
+    {
+        FString AssetName = FPaths::GetBaseFilename(EffectivePath);
+        FString ObjectPath = EffectivePath + TEXT(".") + AssetName;
+        Asset = LoadObject<UMetaSoundSource>(nullptr, *ObjectPath);
+        if (Asset)
+        {
+            return Asset;
+        }
+    }
+
+    // Try stripping any existing object suffix and reformatting
+    // Handle paths like /Game/Path/Asset.Asset or /Game/Path/Asset.OtherName
+    int32 DotIndex = INDEX_NONE;
+    if (EffectivePath.FindLastChar(TEXT('.'), DotIndex))
+    {
+        FString PackagePath = EffectivePath.Left(DotIndex);
+        FString AssetName = FPaths::GetBaseFilename(PackagePath);
+        FString CorrectObjectPath = PackagePath + TEXT(".") + AssetName;
+
+        if (CorrectObjectPath != EffectivePath)
+        {
+            Asset = LoadObject<UMetaSoundSource>(nullptr, *CorrectObjectPath);
+            if (Asset)
+            {
+                return Asset;
+            }
+        }
+    }
+
+    // Try using StaticLoadObject as last resort (can handle more path formats)
+    Asset = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *EffectivePath));
+    if (Asset)
+    {
+        return Asset;
+    }
+
+    // If path had dots, also try the package path alone
+    if (DotIndex != INDEX_NONE)
+    {
+        FString PackagePath = EffectivePath.Left(DotIndex);
+        FString AssetName = FPaths::GetBaseFilename(PackagePath);
+        FString ObjectPath = PackagePath + TEXT(".") + AssetName;
+        Asset = LoadObject<UMetaSoundSource>(nullptr, *ObjectPath);
+        if (Asset)
+        {
+            return Asset;
+        }
+    }
+
+    return nullptr;
+}
 
 // Helper function to map user-friendly node type names to MetaSound node class names
 static FName MapNodeTypeToMetaSoundClass(const FString& NodeType)
@@ -137,30 +234,99 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
 
         if (bBuilderValid && BuilderResult == EMetaSoundBuilderResult::Succeeded)
         {
-            FString FullPath = FPaths::Combine(PackagePath, Name + TEXT(".") + Name);
-            UObject* Asset = LoadObject<UObject>(nullptr, *FullPath);
+            // Build the MetaSound to actually create the asset
+            // The builder creates an in-memory representation, but we need to build it to serialize
+            // Use a unique name to avoid conflict with the builder's own name
+            FName UniqueAssetName = FName(*(Name + TEXT("_Asset")));
+            TScriptInterface<IMetaSoundDocumentInterface> BuiltMetaSound = Builder->BuildNewMetaSound(UniqueAssetName);
             
-            if (Asset)
+            if (!BuiltMetaSound.GetObject())
             {
-                Asset->GetOutermost()->MarkPackageDirty();
-                FAssetRegistryModule::AssetCreated(Asset);
-                if (!McpSafeAssetSave(Asset)) {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to build MetaSound asset"), TEXT("BUILD_FAILED"));
+                return true;
+            }
+            
+            // The built MetaSound is returned as a UMetaSoundSource, save it to the desired package
+            UMetaSoundSource* MetaSoundAsset = Cast<UMetaSoundSource>(BuiltMetaSound.GetObject());
+            if (!MetaSoundAsset)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Built asset is not a MetaSoundSource"), TEXT("BUILD_FAILED"));
+                return true;
+            }
+            
+            // Try to find the created asset - it may have a different path than expected
+            // The builder creates the asset at /Game/Audio/MetaSounds/Name or the specified packagePath
+            FString ExpectedPath = PackagePath / Name;
+            FString ObjectPath = ExpectedPath + TEXT(".") + Name;
+            
+            // Force asset registry update before trying to load
+            FlushAsyncLoading();
+            FAssetRegistryModule& AssetRegistryRef = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+            AssetRegistryRef.Get().ScanPathsSynchronous({PackagePath}, true);
+            
+            // Try to load the MetaSound asset
+            MetaSoundAsset = LoadMetaSoundAsset(ObjectPath);
+            
+            if (MetaSoundAsset)
+            {
+                // Mark the package dirty and save it
+                MetaSoundAsset->GetOutermost()->MarkPackageDirty();
+                FAssetRegistryModule::AssetCreated(MetaSoundAsset);
+                if (!McpSafeAssetSave(MetaSoundAsset)) {
                     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save MetaSound asset"), TEXT("SAVE_FAILED"));
                     return true;
                 }
+                
+                // Scan again to ensure it's registered
+                AssetRegistryRef.Get().ScanPathsSynchronous({PackagePath}, true);
+                
                 TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                 Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("path"), Asset->GetPathName());
+                Resp->SetStringField(TEXT("path"), MetaSoundAsset->GetPathName());
                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MetaSound created"), Resp);
             }
             else
             {
-                // Builder was created but asset path may differ
-                TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("builderName"), Name);
-                Resp->SetStringField(TEXT("note"), TEXT("MetaSound builder created. Asset may need to be built explicitly."));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MetaSound builder created"), Resp);
+                // Builder was created but asset path may differ - try alternative paths
+                // Sometimes the builder creates the asset with a different naming convention
+                TArray<FString> PossiblePaths;
+                PossiblePaths.Add(PackagePath / Name + TEXT(".") + Name);
+                PossiblePaths.Add(PackagePath / Name);
+                PossiblePaths.Add(TEXT("/Game/Audio/MetaSounds/") + Name + TEXT(".") + Name);
+                PossiblePaths.Add(TEXT("/Game/Audio/MetaSounds/") + Name);
+                
+                UObject* FoundAsset = nullptr;
+                for (const FString& Path : PossiblePaths)
+                {
+                    FoundAsset = LoadObject<UObject>(nullptr, *Path);
+                    if (FoundAsset)
+                    {
+                        break;
+                    }
+                }
+                
+                if (FoundAsset)
+                {
+                    FoundAsset->GetOutermost()->MarkPackageDirty();
+                    FAssetRegistryModule::AssetCreated(FoundAsset);
+                    McpSafeAssetSave(FoundAsset);
+                    
+                    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                    Resp->SetBoolField(TEXT("success"), true);
+                    Resp->SetStringField(TEXT("path"), FoundAsset->GetPathName());
+                    Resp->SetStringField(TEXT("note"), TEXT("MetaSound created at alternative path"));
+                    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MetaSound created"), Resp);
+                }
+                else
+                {
+                    // Builder was created but we couldn't find the asset - it may need manual building
+                    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+                    Resp->SetBoolField(TEXT("success"), true);
+                    Resp->SetStringField(TEXT("builderName"), Name);
+                    Resp->SetStringField(TEXT("expectedPath"), ObjectPath);
+                    Resp->SetStringField(TEXT("note"), TEXT("MetaSound builder created and built, but asset path may differ. Check Content Browser."));
+                    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("MetaSound builder created"), Resp);
+                }
             }
         }
         else
@@ -201,7 +367,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         FlushAsyncLoading();
 
         // Try to find or attach a builder to the existing asset
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(AssetPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -306,7 +472,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         if (FromPin.IsEmpty()) FromPin = TEXT("Audio");
         if (ToPin.IsEmpty()) ToPin = TEXT("Audio");
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(AssetPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -379,7 +545,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             return true;
         }
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(AssetPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -474,7 +640,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             return true;
         }
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *AssetPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(AssetPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -601,7 +767,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
             return true;
         }
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(MetaSoundPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -673,7 +839,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         }
         Payload->TryGetStringField(TEXT("exportPath"), ExportPath);
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(MetaSoundPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -719,7 +885,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
         Payload->TryGetNumberField(TEXT("frequency"), Frequency);
         Payload->TryGetNumberField(TEXT("depth"), Depth);
 
-        UMetaSoundSource* MetaSoundAsset = LoadObject<UMetaSoundSource>(nullptr, *MetaSoundPath);
+        UMetaSoundSource* MetaSoundAsset = LoadMetaSoundAsset(MetaSoundPath);
         if (!MetaSoundAsset)
         {
             SendAutomationError(RequestingSocket, RequestId, 
@@ -787,3 +953,4 @@ bool UMcpAutomationBridgeSubsystem::HandleMetaSoundAction(
     return false;
 #endif
 }
+#endif // MCP_HAS_METASOUND

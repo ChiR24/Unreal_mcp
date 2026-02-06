@@ -282,21 +282,60 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'set_tags': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true },
-          { key: 'tags', required: true }
+          { key: 'tags' },
+          { key: 'tag' },
+          { key: 'metadata' }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const tags = extractOptionalArray<string>(params, 'tags') ?? [];
-
         if (!assetPath) {
           return ResponseFactory.error('INVALID_ARGUMENT', 'assetPath is required');
         }
 
-        // Note: Array.isArray check is unnecessary - extractOptionalArray always returns an array
+        const normalizedTags: Record<string, string> = {};
+        const addTag = (tagName?: string, tagValue?: string) => {
+          if (!tagName) return;
+          const trimmedName = tagName.trim();
+          if (!trimmedName) return;
+          const resolvedValue = (tagValue ?? trimmedName).toString().trim() || trimmedName;
+          normalizedTags[trimmedName] = resolvedValue;
+        };
 
-        // Forward to C++ automation bridge which uses UEditorAssetLibrary::SetMetadataTag
+        const rawTags = params.tags;
+        if (Array.isArray(rawTags)) {
+          for (const entry of rawTags) {
+            if (typeof entry === 'string') {
+              addTag(entry, entry);
+            } else if (entry && typeof entry === 'object' && 'name' in entry) {
+              const tagName = (entry as { name?: string }).name;
+              const value = (entry as { value?: string }).value;
+              addTag(tagName, value ?? tagName);
+            }
+          }
+        } else if (rawTags && typeof rawTags === 'object') {
+          for (const [key, value] of Object.entries(rawTags as Record<string, unknown>)) {
+            addTag(key, typeof value === 'string' ? value : value?.toString());
+          }
+        }
+
+        const metadata = params.metadata;
+        if (metadata && typeof metadata === 'object') {
+          for (const [key, value] of Object.entries(metadata as Record<string, unknown>)) {
+            addTag(key, typeof value === 'string' ? value : value?.toString());
+          }
+        }
+
+        const singleTag = typeof params.tag === 'string' ? params.tag : undefined;
+        if (singleTag) {
+          addTag(singleTag, singleTag);
+        }
+
+        if (Object.keys(normalizedTags).length === 0) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'At least one tag must be provided');
+        }
+
         const res = await executeAutomationRequest(tools, 'set_tags', {
           assetPath,
-          tags
+          tags: normalizedTags
         });
         return ResponseFactory.success(res, 'Tags set successfully');
       }

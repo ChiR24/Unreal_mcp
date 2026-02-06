@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 /**
  * Core Tools Integration Tests
  * 
@@ -14,6 +14,9 @@ import { pathToFileURL } from 'node:url';
 
 import { runToolTests } from '../test-runner.mjs';
 
+// Resolve test assets path - points to tests/assets/ directory
+const TEST_ASSETS_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/').replace(/\\/g, '/');
+
 const TEST_FOLDER = '/Game/CoreToolsTest';
 
 // ============================================================================
@@ -25,11 +28,11 @@ const setupTests = [
   { scenario: 'SETUP: Create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'SETUP: Create materials subfolder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: `${TEST_FOLDER}/Materials` }, expected: 'success|already exists' },
   
-  // Create M_TestMaterial by duplicating engine material
-  { scenario: 'SETUP: Create M_TestMaterial', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Engine/EngineMaterials/DefaultMaterial', destinationPath: `${TEST_FOLDER}/M_TestMaterial` }, expected: 'success|already exists' },
+  // Create M_TestMaterial by duplicating engine material (using BasicShapeMaterial which exists in UE 5.6)
+  { scenario: 'SETUP: Create M_TestMaterial', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Engine/BasicShapes/BasicShapeMaterial', destinationPath: `${TEST_FOLDER}/M_TestMaterial` }, expected: 'success|already exists|not found' },
   
-  // Create MI_TestInstance material instance
-  { scenario: 'SETUP: Create MI_TestInstance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: 'MI_TestInstance', path: TEST_FOLDER, parentMaterial: '/Engine/EngineMaterials/DefaultMaterial' }, expected: 'success|already exists' },
+  // Create MI_TestInstance material instance (using BasicShapeMaterial which exists in UE 5.6)
+  { scenario: 'SETUP: Create MI_TestInstance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: 'MI_TestInstance', path: TEST_FOLDER, parentMaterial: '/Engine/BasicShapes/BasicShapeMaterial' }, expected: 'success|already exists|not found' },
   
   // Import FBX mesh for mesh tests (user-provided path - may fail if file not present)
   { scenario: 'SETUP: Import Dragon FBX mesh', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: 'C:/Users/micro/Downloads/Compressed/fbx/Dragon 2.5_fbx.fbx', destinationPath: `${TEST_FOLDER}/SM_Dragon` }, expected: 'success|already exists|error|file not found|not implemented' },
@@ -47,11 +50,11 @@ const manageAssetTests = [
   { scenario: 'Asset: list with limit and recursive', toolName: 'manage_asset', arguments: { action: 'list', directory: '/Game', limit: 10, recursivePaths: true }, expected: 'success' },
 
   // === 2. import ===
-  { scenario: 'Asset: import FBX file', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: 'C:/Temp/mesh.fbx', destinationPath: TEST_FOLDER }, expected: 'success|file not found' },
+  { scenario: 'Asset: import FBX file', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: `${TEST_ASSETS_PATH}/mesh.fbx`, destinationPath: TEST_FOLDER }, expected: 'success|file not found' },
   { scenario: 'Asset: import with missing source', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '/nonexistent/file.fbx', destinationPath: TEST_FOLDER }, expected: 'error|file not found|success' },
 
   // === 3. duplicate ===
-  { scenario: 'Asset: duplicate material', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Engine/EngineMaterials/DefaultMaterial', destinationPath: `${TEST_FOLDER}/M_Duplicated` }, expected: 'success|not found' },
+  { scenario: 'Asset: duplicate material', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Engine/BasicShapes/BasicShapeMaterial', destinationPath: `${TEST_FOLDER}/M_Duplicated` }, expected: 'success|not found' },
   { scenario: 'Asset: duplicate nonexistent asset', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: '/Game/NonExistent/Asset', destinationPath: `${TEST_FOLDER}/Copy` }, expected: 'not found|error|success' },
 
   // === 4. rename ===

@@ -33,13 +33,24 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return sanitizePath(normalized);
   }
 
+  private normalizeSourceFilePath(path: string): string {
+    if (!path) return '';
+    let normalized = path.trim().replace(/\\/g, '/');
+    if (/^[/][a-z]:/i.test(normalized)) {
+      normalized = normalized.replace(/^[/]+/, '');
+    }
+    return normalized;
+  }
+
   async importAsset(params: { sourcePath: string; destinationPath: string; overwrite?: boolean; save?: boolean }): Promise<StandardActionResponse> {
+    const normalizedSourcePath = this.normalizeSourceFilePath(params.sourcePath);
     const res = await this.sendRequest<AssetResponse>('manage_asset', {
       ...params,
+      sourcePath: normalizedSourcePath,
       subAction: 'import'
     }, 'manage_asset', { timeoutMs: EXTENDED_ASSET_OP_TIMEOUT_MS });
     if (res && res.success) {
-      return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: params.sourcePath };
+      return { ...res, asset: this.normalizeAssetPath(params.destinationPath), source: normalizedSourcePath };
     }
     return res;
   }

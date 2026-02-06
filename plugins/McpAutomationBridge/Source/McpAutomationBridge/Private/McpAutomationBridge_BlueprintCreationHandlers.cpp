@@ -623,6 +623,8 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     // Force immediate save and registry scan to ensure availability
     SaveLoadedAssetThrottled(BP, -1.0, true);
     ScanPathSynchronous(BP->GetOutermost()->GetName());
+    // Ensure blueprint is fully registered before next operation
+    FlushAsyncLoading();
 #endif
   }
 
