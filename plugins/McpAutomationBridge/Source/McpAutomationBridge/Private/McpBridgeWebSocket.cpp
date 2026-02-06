@@ -856,6 +856,15 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     bool bIsValidIp = false;
     ListenAddr->SetIp(*HostToBind, bIsValidIp);
     bResolvedHost = bIsValidIp;
+
+    // Fallback to 127.0.0.1 if IPv6 loopback (::1) fails on systems without IPv6 support
+    if (!bResolvedHost && HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
+      bool bFallbackIsValidIp = false;
+      ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+      bResolvedHost = bFallbackIsValidIp;
+    }
   }
   else if (bAllowNonLoopback) {
     // LAN binding enabled - allow non-loopback addresses with security warning
