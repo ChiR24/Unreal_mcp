@@ -107,7 +107,7 @@ export class AutomationBridge extends EventEmitter {
                 if (ipv4Regex.test(trimmed) || lower === '0.0.0.0') {
                     this.log.warn(
                         `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
-                        `The automation bridge will be accessible from your local network.`
+                        'The automation bridge will be accessible from your local network.'
                     );
                     return trimmed;
                 }

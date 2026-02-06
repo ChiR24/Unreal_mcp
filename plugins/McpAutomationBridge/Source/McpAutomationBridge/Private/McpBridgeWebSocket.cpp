@@ -880,7 +880,7 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     // Loopback-only mode (default) - reject non-loopback addresses
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loopback' in Project Settings to use LAN addresses."),
-           *ListenHost);
+           *HostToBind);
 
     bool bFallbackIsValidIp = false;
     ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
