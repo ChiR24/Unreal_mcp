@@ -73,7 +73,12 @@ export class AutomationBridge extends EventEmitter {
 
     constructor(options: AutomationBridgeOptions = {}) {
         super();
-        const normalizeLoopbackHost = (value: unknown, label: string): string => {
+        
+        // Check if non-loopback binding is allowed (opt-in for LAN access)
+        const allowNonLoopback = options.allowNonLoopback
+            ?? (process.env.MCP_AUTOMATION_ALLOW_NON_LOOPBACK?.toLowerCase() === 'true');
+
+        const normalizeHost = (value: unknown, label: string): string => {
             const stringValue = typeof value === 'string'
                 ? value
                 : value === undefined || value === null
@@ -86,6 +91,8 @@ export class AutomationBridge extends EventEmitter {
             }
 
             const lower = trimmed.toLowerCase();
+            
+            // Always allow loopback addresses
             if (lower === 'localhost' || lower === '127.0.0.1') {
                 return '127.0.0.1';
             }
@@ -93,8 +100,27 @@ export class AutomationBridge extends EventEmitter {
                 return '::1';
             }
 
+            // Non-loopback: check if allowed
+            if (allowNonLoopback) {
+                // Validate IP format (IPv4 or 0.0.0.0 for all interfaces)
+                const ipv4Regex = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+                if (ipv4Regex.test(trimmed) || lower === '0.0.0.0') {
+                    this.log.warn(
+                        `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
+                        'The automation bridge will be accessible from your local network.'
+                    );
+                    return trimmed;
+                }
+                this.log.warn(
+                    `${label} '${trimmed}' is not a valid IP address. Falling back to ${DEFAULT_AUTOMATION_HOST}.`
+                );
+                return DEFAULT_AUTOMATION_HOST;
+            }
+
+            // Default: loopback-only mode
             this.log.warn(
-                `${label} '${trimmed}' is not a loopback address. Falling back to ${DEFAULT_AUTOMATION_HOST}.`
+                `${label} '${trimmed}' is not a loopback address and MCP_AUTOMATION_ALLOW_NON_LOOPBACK is not set. ` +
+                `Falling back to ${DEFAULT_AUTOMATION_HOST}. Set MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true for LAN access.`
             );
             return DEFAULT_AUTOMATION_HOST;
         };
@@ -103,7 +129,7 @@ export class AutomationBridge extends EventEmitter {
             ?? process.env.MCP_AUTOMATION_WS_HOST
             ?? process.env.MCP_AUTOMATION_HOST
             ?? DEFAULT_AUTOMATION_HOST;
-        this.host = normalizeLoopbackHost(rawHost, 'Automation bridge host');
+        this.host = normalizeHost(rawHost, 'Automation bridge host');
 
         const sanitizePort = (value: unknown): number | null => {
             if (typeof value === 'number' && Number.isInteger(value)) {
@@ -210,7 +236,7 @@ export class AutomationBridge extends EventEmitter {
             ?? process.env.MCP_AUTOMATION_CLIENT_HOST
             ?? process.env.MCP_AUTOMATION_HOST
             ?? DEFAULT_AUTOMATION_HOST;
-        this.clientHost = normalizeLoopbackHost(rawClientHost, 'Automation bridge client host');
+        this.clientHost = normalizeHost(rawClientHost, 'Automation bridge client host');
         this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
         this.maxConcurrentConnections = maxConcurrentConnections;
 

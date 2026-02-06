@@ -51,9 +51,15 @@
         },
         {
           "name": "MCP_AUTOMATION_HOST",
-          "description": "Automation bridge WebSocket host (loopback only; default: 127.0.0.1)",
+          "description": "Automation bridge WebSocket host (default: 127.0.0.1). Set to 0.0.0.0 for LAN access (requires MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true)",
           "isRequired": false,
           "value": "127.0.0.1"
+        },
+        {
+          "name": "MCP_AUTOMATION_ALLOW_NON_LOOPBACK",
+          "description": "SECURITY: Allow binding to non-loopback addresses (e.g., 0.0.0.0) for LAN access. Only enable if you understand the security implications. (default: false)",
+          "isRequired": false,
+          "value": "false"
         },
         {
           "name": "MCP_AUTOMATION_CLIENT_MODE",

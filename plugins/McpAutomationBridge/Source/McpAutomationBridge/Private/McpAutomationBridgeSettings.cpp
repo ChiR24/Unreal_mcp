@@ -22,6 +22,7 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     ListenPorts = TEXT("8090,8091");
     bMultiListen = true;
     bRequireCapabilityToken = false;
+    bAllowNonLoopback = false; // Security: default to loopback-only binding
     MaxMessagesPerMinute = 600;
     MaxAutomationRequestsPerMinute = 120;
     bEnableTls = false;
