@@ -162,6 +162,11 @@ UE_PROJECT_PATH="C:/Path/To/YourProject"
 MCP_AUTOMATION_HOST=127.0.0.1
 MCP_AUTOMATION_PORT=8091
 
+# LAN Access (optional)
+# SECURITY: Set to true to allow binding to non-loopback addresses (e.g., 0.0.0.0)
+# Only enable if you understand the security implications.
+MCP_AUTOMATION_ALLOW_NON_LOOPBACK=false
+
 # Logging
 LOG_LEVEL=info  # debug | info | warn | error
 
@@ -170,6 +175,24 @@ WASM_ENABLED=true
 MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
 ASSET_LIST_TTL_MS=10000
 ```
+
+### LAN Access Configuration
+
+By default, the automation bridge only binds to loopback addresses (127.0.0.1) for security. To enable access from other machines on your network:
+
+**TypeScript (MCP Server):**
+```env
+MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true
+MCP_AUTOMATION_HOST=0.0.0.0
+```
+
+**Unreal Engine Plugin:**
+1. Go to **Edit → Project Settings → Plugins → MCP Automation Bridge**
+2. Under **Security**, enable **"Allow Non Loopback"**
+3. Under **Connection**, set **"Listen Host"** to `0.0.0.0`
+4. Restart the editor
+
+⚠️ **Security Warning:** Enabling LAN access exposes the automation bridge to your local network. Only use on trusted networks with appropriate firewall rules.
 
 ---
 
