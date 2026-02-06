@@ -2772,6 +2772,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return true;
   }
 
+  // ============================================================================
+  // BATCH NANITE CONVERT - Enable/disable Nanite on multiple meshes
+  // ============================================================================
+  if (LowerSubAction == TEXT("batch_nanite_convert")) {
+    return HandleBatchNaniteConvert(RequestId, Action, Payload, RequestingSocket);
+  }
+
+  // ============================================================================
+  // GENERATE LODS - Generate LODs for a static mesh
+  // ============================================================================
+  if (LowerSubAction == TEXT("generate_lods")) {
+    return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
+  }
+
   // If we reach here, the subAction was not recognized by this handler
   // CRITICAL FIX: Return true (consumed) with error response instead of false.
   // This prevents the request from falling through to other handlers (like volume handler)

@@ -2095,8 +2095,50 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     }
   }
 
-  // Method 7: Try loading with _C suffix for blueprint generated class
+  // Method 6.5: Force flush async loading and sync Asset Registry
+  // Fixes BLUEPRINT_NOT_FOUND for assets created in same session
+  FlushAsyncLoading();
+  TArray<FString> PathsToScan;
+  PathsToScan.Add(PackagePath);
+  ARM.Get().ScanPathsSynchronous(PathsToScan, /*bRecursive=*/false);
+  FPlatformProcess::Sleep(0.01f); // Allow Asset Registry to process
+  
+  // Retry lookup after sync
+  Results.Empty();
+  ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
+  if (Results.Num() > 0) {
+    Found = Results[0];
+    UBlueprint* BP = Cast<UBlueprint>(Found.GetSoftObjectPath().TryLoad());
+    if (!BP) {
+      const FString PathStr = Found.ToSoftObjectPath().ToString();
+      BP = LoadObject<UBlueprint>(nullptr, *PathStr);
+    }
+    if (BP) {
+      OutNormalized = Found.ToSoftObjectPath().ToString();
+      if (OutNormalized.Contains(TEXT(".")))
+        OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT(".")));
+      return BP;
+    }
+  }
+
+  // Method 7: Try loading the package directly first, then find Blueprint within it
+  // This handles cases where the Blueprint was just created but AssetRegistry hasn't updated
+  if (UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None)) {
+    if (UBlueprint* BP = FindObject<UBlueprint>(LoadedPackage, *AssetName)) {
+      OutNormalized = PackagePath;
+      return BP;
+    }
+    // Also try finding by full object path within the loaded package
+    FString FullObjectPath = PackagePath + TEXT(".") + AssetName;
+    if (UBlueprint* BP = FindObject<UBlueprint>(nullptr, *FullObjectPath)) {
+      OutNormalized = PackagePath;
+      return BP;
+    }
+  }
+
+  // Method 8: Try loading with _C suffix for blueprint generated class
   // When a blueprint is created, its generated class has _C suffix
+  // This is a fallback for compiled blueprints
   FString GeneratedClassPath = ObjectPath + TEXT("_C");
   if (UClass* GeneratedClass = LoadObject<UClass>(nullptr, *GeneratedClassPath)) {
     // Found the generated class, get the blueprint from it
@@ -2106,7 +2148,7 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     }
   }
 
-  // Method 8: Direct LoadObject as final fallback (handles in-flight packages)
+  // Method 9: Direct LoadObject as final fallback (handles in-flight packages)
   if (UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
     OutNormalized = PackagePath;
     return BP;

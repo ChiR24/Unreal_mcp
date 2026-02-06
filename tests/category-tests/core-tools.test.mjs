@@ -34,8 +34,8 @@ const setupTests = [
   // Create MI_TestInstance material instance (using BasicShapeMaterial which exists in UE 5.6)
   { scenario: 'SETUP: Create MI_TestInstance', toolName: 'manage_asset', arguments: { action: 'create_material_instance', name: 'MI_TestInstance', path: TEST_FOLDER, parentMaterial: '/Engine/BasicShapes/BasicShapeMaterial' }, expected: 'success|already exists|not found' },
   
-  // Import FBX mesh for mesh tests (user-provided path - may fail if file not present)
-  { scenario: 'SETUP: Import Dragon FBX mesh', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: 'C:/Users/micro/Downloads/Compressed/fbx/Dragon 2.5_fbx.fbx', destinationPath: `${TEST_FOLDER}/SM_Dragon` }, expected: 'success|already exists|error|file not found|not implemented' },
+  // Import FBX mesh for mesh tests
+  { scenario: 'SETUP: Import Dragon FBX mesh', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: `${TEST_ASSETS_PATH}/Dragon 2.5_fbx.fbx`, destinationPath: `${TEST_FOLDER}/SM_Dragon` }, expected: 'success|already exists|error|file not found|not implemented' },
   
   // Create test Blueprint (may not be implemented - allow error)
   { scenario: 'SETUP: Create BP_TestActor', toolName: 'manage_asset', arguments: { action: 'bp_create', name: 'BP_TestActor', path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists|not implemented|error' },

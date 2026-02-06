@@ -1,5 +1,83 @@
-; FBX 7.7.0 project file
-; Created by Unreal MCP Test Assets
-; Minimal small cube mesh for import testing
+; FBX 7.5.0 project file
+; Created by Unreal MCP Test Suite
 
-Objects: 0
+FBXHeaderExtension:  {
+    FBXHeaderVersion: 1003
+    FBXVersion: 7500
+    CreationTimeStamp:  {
+        Version: 1000
+        Year: 2026
+        Month: 1
+        Day: 29
+        Hour: 12
+        Minute: 0
+        Second: 0
+        Millisecond: 0
+    }
+    Creator: "Unreal MCP Test"
+}
+
+GlobalSettings:  {
+    Version: 1000
+    Properties70:  {
+        P: "UpAxis", "int", "Integer", "",1
+        P: "UpAxisSign", "int", "Integer", "",1
+        P: "FrontAxis", "int", "Integer", "",2
+        P: "FrontAxisSign", "int", "Integer", "",1
+        P: "CoordAxis", "int", "Integer", "",0
+        P: "CoordAxisSign", "int", "Integer", "",1
+        P: "OriginalUpAxis", "int", "Integer", "",-1
+        P: "OriginalUpAxisSign", "int", "Integer", "",1
+        P: "UnitScaleFactor", "double", "Number", "",1
+        P: "OriginalUnitScaleFactor", "double", "Number", "",1
+    }
+}
+
+Documents:  {
+    Count: 1
+    Document: 1000000000, "", "Scene" {
+        Properties70:  {
+            P: "SourceObject", "object", "", ""
+            P: "ActiveAnimStackName", "KString", "", "", ""
+        }
+        RootNode: 0
+    }
+}
+
+References:  {
+}
+
+Definitions:  {
+    Version: 100
+    Count: 1
+    ObjectType: "GlobalSettings" {
+        Count: 1
+    }
+}
+
+Objects:  {
+    Geometry: 1000000001, "Geometry::Mesh", "Mesh" {
+        Vertices: *9 {
+            a: 0,0,0,1,0,0,0,1,0
+        }
+        PolygonVertexIndex: *3 {
+            a: 0,1,-3
+        }
+        GeometryVersion: 124
+    }
+    Model: 1000000002, "Model::Mesh", "Mesh" {
+        Version: 232
+        Properties70:  {
+            P: "Lcl Translation", "Lcl Translation", "", "A",0,0,0
+            P: "Lcl Rotation", "Lcl Rotation", "", "A",0,0,0
+            P: "Lcl Scaling", "Lcl Scaling", "", "A",1,1,1
+        }
+        Shading: Y
+        Culling: "CullingOff"
+    }
+}
+
+Connections:  {
+    C: "OO",1000000001,1000000002
+    C: "OO",1000000002,0
+}

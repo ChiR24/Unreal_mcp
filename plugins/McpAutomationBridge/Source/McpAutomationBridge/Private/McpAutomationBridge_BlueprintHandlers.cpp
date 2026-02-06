@@ -19,6 +19,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/GameModeBase.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #if __has_include("ScopedTransaction.h")
 #include "ScopedTransaction.h"
@@ -1288,6 +1289,8 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
         !Norm.TrimStartAndEnd().IsEmpty()) {
       return Norm;
     }
+    // Normalize fallback path to strip _C suffix before returning
+    NormalizeBlueprintClassPathSegments(Req);
     return Req;
   }
 
@@ -1299,6 +1302,8 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
         !Norm.TrimStartAndEnd().IsEmpty()) {
       return Norm;
     }
+    // Normalize fallback path to strip _C suffix before returning
+    NormalizeBlueprintClassPathSegments(Req);
     return Req;
   }
 
@@ -1310,6 +1315,8 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
         !Norm.TrimStartAndEnd().IsEmpty()) {
       return Norm;
     }
+    // Normalize fallback path to strip _C suffix before returning
+    NormalizeBlueprintClassPathSegments(Req);
     return Req;
   }
 
@@ -1321,6 +1328,8 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
         !Norm.TrimStartAndEnd().IsEmpty()) {
       return Norm;
     }
+    // Normalize fallback path to strip _C suffix before returning
+    NormalizeBlueprintClassPathSegments(Req);
     return Req;
   }
 
@@ -1336,6 +1345,8 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
         !Norm.TrimStartAndEnd().IsEmpty()) {
       return Norm;
     }
+    // Normalize fallback path to strip _C suffix before returning
+    NormalizeBlueprintClassPathSegments(Req);
     return Req;
   }
 
@@ -1349,6 +1360,9 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
       FString Norm;
       if (FindBlueprintNormalizedPath(Candidate, Norm))
         return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
+      // Normalize fallback candidate to strip _C suffix
+      NormalizeBlueprintClassPathSegments(Candidate);
+      return Candidate;
     }
   }
   if (Payload->TryGetArrayField(TEXT("candidates"), CandidateArray) &&
@@ -1360,6 +1374,9 @@ FString UMcpAutomationBridgeSubsystem::ResolveBlueprintRequestedPath(const TShar
       FString Norm;
       if (FindBlueprintNormalizedPath(Candidate, Norm))
         return !Norm.TrimStartAndEnd().IsEmpty() ? Norm : Candidate;
+      // Normalize fallback candidate to strip _C suffix
+      NormalizeBlueprintClassPathSegments(Candidate);
+      return Candidate;
     }
   }
   return FString();
@@ -6419,6 +6436,147 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
                              TEXT("PROPERTY_SET_FAILED"));
     }
     return true;
+  }
+
+  // ============================================================================
+  // CREATE BLUEPRINT - Create a new Blueprint asset
+  // ============================================================================
+  if (ActionMatchesPattern(TEXT("blueprint_create")) ||
+      ActionMatchesPattern(TEXT("create_blueprint")) ||
+      ActionMatchesPattern(TEXT("bp_create")) ||
+      AlphaNumLower.Contains(TEXT("blueprintcreate")) ||
+      AlphaNumLower.Contains(TEXT("createblueprint"))) {
+    
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("name required for blueprint creation"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString Path;
+    if (!Payload->TryGetStringField(TEXT("path"), Path) || Path.IsEmpty()) {
+      Path = TEXT("/Game");
+    }
+
+    FString ParentClassSpec;
+    Payload->TryGetStringField(TEXT("parentClass"), ParentClassSpec);
+    if (ParentClassSpec.IsEmpty()) {
+      ParentClassSpec = TEXT("Actor");
+    }
+
+#if WITH_EDITOR
+    // Normalize path
+    if (Path.StartsWith(TEXT("/Content"))) {
+      Path = FString::Printf(TEXT("/Game%s"), *Path.RightChop(8));
+    }
+    if (!Path.StartsWith(TEXT("/"))) {
+      Path = TEXT("/") + Path;
+    }
+
+    // Resolve parent class
+    UClass* ParentClass = nullptr;
+    if (!ParentClassSpec.IsEmpty()) {
+      // Try to find the class by name
+      ParentClass = FindObject<UClass>(nullptr, *ParentClassSpec);
+      if (!ParentClass) {
+        ParentClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ParentClassSpec));
+      }
+      if (!ParentClass) {
+        // Try common class paths
+        if (ParentClassSpec == TEXT("Actor")) {
+          ParentClass = AActor::StaticClass();
+        } else if (ParentClassSpec == TEXT("Pawn")) {
+          ParentClass = APawn::StaticClass();
+        } else if (ParentClassSpec == TEXT("Character")) {
+          ParentClass = ACharacter::StaticClass();
+        } else if (ParentClassSpec == TEXT("Controller")) {
+          ParentClass = AController::StaticClass();
+        } else if (ParentClassSpec == TEXT("PlayerController")) {
+          ParentClass = APlayerController::StaticClass();
+        } else if (ParentClassSpec == TEXT("GameMode")) {
+          ParentClass = AGameModeBase::StaticClass();
+        }
+      }
+    }
+
+    if (!ParentClass) {
+      ParentClass = AActor::StaticClass();
+    }
+
+    FString FullPath = Path / Name;
+    
+    // Check if Blueprint already exists
+    if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetBoolField(TEXT("success"), true);
+      Result->SetStringField(TEXT("blueprintPath"), FullPath);
+      Result->SetBoolField(TEXT("alreadyExists"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Blueprint already exists"), Result);
+      return true;
+    }
+
+    // Create the package
+    UPackage* Package = CreatePackage(*FullPath);
+    if (!Package) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create package for Blueprint"), nullptr,
+                             TEXT("PACKAGE_CREATE_FAILED"));
+      return true;
+    }
+
+    // Create the Blueprint using factory
+    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
+    if (!Factory) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create BlueprintFactory"), nullptr,
+                             TEXT("FACTORY_CREATE_FAILED"));
+      return true;
+    }
+
+    Factory->ParentClass = ParentClass;
+
+    UBlueprint* Blueprint = Cast<UBlueprint>(
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name,
+                                  RF_Public | RF_Standalone, nullptr, GWarn));
+
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to create Blueprint"), nullptr,
+                             TEXT("BLUEPRINT_CREATE_FAILED"));
+      return true;
+    }
+
+    // Notify Asset Registry
+    FAssetRegistryModule::AssetCreated(Blueprint);
+    
+    // Mark package dirty and save
+    Blueprint->MarkPackageDirty();
+    
+    // Compile the Blueprint
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    
+    // Save the asset
+    bool bSaved = McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), true);
+    Result->SetStringField(TEXT("blueprintPath"), FullPath);
+    Result->SetStringField(TEXT("name"), Name);
+    Result->SetStringField(TEXT("parentClass"), ParentClass->GetName());
+    Result->SetBoolField(TEXT("saved"), bSaved);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Blueprint created successfully"), Result);
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Blueprint creation requires editor build"), nullptr,
+                           TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
   }
 
   return false; // Let the main handler deal with unknown actions

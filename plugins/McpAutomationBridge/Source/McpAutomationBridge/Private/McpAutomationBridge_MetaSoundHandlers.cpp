@@ -42,6 +42,26 @@ static UMetaSoundSource* LoadMetaSoundAsset(const FString& InPath)
     FString NormalizedInput = InPath;
     NormalizedInput.TrimStartAndEndInline();
 
+    // Sanitize malformed paths from null outer objects
+    // Fixes paths like "None./Game/ChunkTests/Chunk01/MS_TestSound"
+    if (NormalizedInput.StartsWith(TEXT("None.")))
+    {
+        NormalizedInput = NormalizedInput.RightChop(5); // Remove "None."
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+               TEXT("LoadMetaSoundAsset: Repaired malformed path by stripping 'None.' prefix: %s"), 
+               *NormalizedInput);
+    }
+
+    // REJECT paths containing "None" - indicates null outer object reference
+    // This prevents errors like: "MetaSoundSource None./Game/..."
+    if (NormalizedInput.Contains(TEXT("None.")) || NormalizedInput.Contains(TEXT("/None/")))
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+               TEXT("LoadMetaSoundAsset: Rejecting malformed path containing 'None': %s"), 
+               *NormalizedInput);
+        return nullptr;
+    }
+
     if (!NormalizedInput.IsEmpty())
     {
         if (NormalizedInput.StartsWith(TEXT("Game/")) || NormalizedInput.StartsWith(TEXT("Engine/")))
@@ -63,6 +83,23 @@ static UMetaSoundSource* LoadMetaSoundAsset(const FString& InPath)
     if (EffectivePath.IsEmpty())
     {
         return nullptr;
+    }
+
+    // First, try to explicitly load the package to ensure it's in memory
+    FString PackagePath = EffectivePath;
+    int32 DotIndex = INDEX_NONE;
+    if (PackagePath.FindLastChar(TEXT('.'), DotIndex))
+    {
+        PackagePath = PackagePath.Left(DotIndex);
+    }
+    
+    if (!PackagePath.IsEmpty() && !PackagePath.Contains(TEXT("None")))
+    {
+        UPackage* Package = LoadPackage(nullptr, *PackagePath, LOAD_NoWarn | LOAD_Quiet);
+        if (Package)
+        {
+            Package->FullyLoad();
+        }
     }
 
     // First, try loading directly with the provided path
@@ -87,12 +124,12 @@ static UMetaSoundSource* LoadMetaSoundAsset(const FString& InPath)
 
     // Try stripping any existing object suffix and reformatting
     // Handle paths like /Game/Path/Asset.Asset or /Game/Path/Asset.OtherName
-    int32 DotIndex = INDEX_NONE;
+    // Reuse PackagePath and DotIndex from earlier
     if (EffectivePath.FindLastChar(TEXT('.'), DotIndex))
     {
-        FString PackagePath = EffectivePath.Left(DotIndex);
-        FString AssetName = FPaths::GetBaseFilename(PackagePath);
-        FString CorrectObjectPath = PackagePath + TEXT(".") + AssetName;
+        FString ReformattedPackagePath = EffectivePath.Left(DotIndex);
+        FString AssetName = FPaths::GetBaseFilename(ReformattedPackagePath);
+        FString CorrectObjectPath = ReformattedPackagePath + TEXT(".") + AssetName;
 
         if (CorrectObjectPath != EffectivePath)
         {
@@ -114,9 +151,9 @@ static UMetaSoundSource* LoadMetaSoundAsset(const FString& InPath)
     // If path had dots, also try the package path alone
     if (DotIndex != INDEX_NONE)
     {
-        FString PackagePath = EffectivePath.Left(DotIndex);
-        FString AssetName = FPaths::GetBaseFilename(PackagePath);
-        FString ObjectPath = PackagePath + TEXT(".") + AssetName;
+        FString FallbackPackagePath = EffectivePath.Left(DotIndex);
+        FString AssetName = FPaths::GetBaseFilename(FallbackPackagePath);
+        FString ObjectPath = FallbackPackagePath + TEXT(".") + AssetName;
         Asset = LoadObject<UMetaSoundSource>(nullptr, *ObjectPath);
         if (Asset)
         {

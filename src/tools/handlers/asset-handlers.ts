@@ -333,7 +333,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           return ResponseFactory.error('INVALID_ARGUMENT', 'At least one tag must be provided');
         }
 
-        const res = await executeAutomationRequest(tools, 'set_tags', {
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          subAction: 'set_tags',
           assetPath,
           tags: normalizedTags
         });
