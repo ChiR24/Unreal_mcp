@@ -20,6 +20,8 @@ export interface AutomationBridgeOptions {
     clientHost?: string;
     clientPort?: number;
     serverLegacyEnabled?: boolean;
+    /** SECURITY: Allow non-loopback host binding for LAN access. Default: false (loopback-only). */
+    allowNonLoopback?: boolean;
 }
 
 export interface AutomationBridgeMessage {

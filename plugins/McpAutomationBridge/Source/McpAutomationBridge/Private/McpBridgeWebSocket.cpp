@@ -1,6 +1,7 @@
 #include "McpBridgeWebSocket.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeSettings.h"
 
 #include "Async/Async.h"
 #include "Containers/StringConv.h"
@@ -846,15 +847,39 @@ uint32 FMcpBridgeWebSocket::RunServer() {
 
   const bool bIsLoopback = HostToBind.Equals(TEXT("127.0.0.1"), ESearchCase::IgnoreCase) ||
                            HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase);
+
+  // Check if non-loopback binding is allowed via settings
+  const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+  const bool bAllowNonLoopback = Settings ? Settings->bAllowNonLoopback : false;
+
   if (bIsLoopback) {
     bool bIsValidIp = false;
     ListenAddr->SetIp(*HostToBind, bIsValidIp);
     bResolvedHost = bIsValidIp;
   }
-
-  if (!bResolvedHost) {
+  else if (bAllowNonLoopback) {
+    // LAN binding enabled - allow non-loopback addresses with security warning
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("ListenHost '%s' is not a loopback address. Falling back to 127.0.0.1 for safety."),
+           TEXT("SECURITY: Binding to non-loopback address '%s'. The automation bridge is exposed to your local network."),
+           *HostToBind);
+
+    bool bIsValidIp = false;
+    ListenAddr->SetIp(*HostToBind, bIsValidIp);
+    bResolvedHost = bIsValidIp;
+
+    if (!bResolvedHost) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+             TEXT("Invalid IP address '%s'. Falling back to 127.0.0.1."),
+             *HostToBind);
+      bool bFallbackIsValidIp = false;
+      ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+      bResolvedHost = bFallbackIsValidIp;
+    }
+  }
+  else {
+    // Loopback-only mode (default) - reject non-loopback addresses
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+           TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loopback' in Project Settings to use LAN addresses."),
            *ListenHost);
 
     bool bFallbackIsValidIp = false;
