@@ -961,8 +961,32 @@ private:
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorConsoleCommand(const FString &RequestId,
+                                          const TSharedPtr<FJsonObject> &Payload,
+                                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStepFrame(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStartRecording(const FString &RequestId,
                                          const TSharedPtr<FJsonObject> &Payload,
                                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStopRecording(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorCreateBookmark(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorJumpToBookmark(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetPreferences(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetViewportRealtime(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSimulateInput(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Asset handlers
   bool HandleImportAsset(const FString &RequestId,

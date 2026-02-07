@@ -2878,6 +2878,607 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       Resp->SetStringField(TEXT("error"), Message);
 #endif
     }
+  }
+  // ============================================================
+  // Animation Blueprint Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_anim_blueprint")) {
+    // Delegate to existing handler
+    return HandleCreateAnimBlueprint(RequestId, TEXT("create_animation_blueprint"), Payload, RequestingSocket);
+  } else if (LowerSub == TEXT("add_state_machine")) {
+    // Add a state machine to an animation blueprint (delegate to create_state_machine)
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_state_machine");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimStateMachine %s %s"), *BlueprintPath, *MachineName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add state machine") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("State machine '%s' added to %s"), *MachineName, *BlueprintPath);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_state")) {
+    // Add a state to a state machine
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString StateName;
+    Payload->TryGetStringField(TEXT("stateName"), StateName);
+
+    FString AnimationPath;
+    Payload->TryGetStringField(TEXT("animationPath"), AnimationPath);
+
+    if (BlueprintPath.IsEmpty() || StateName.IsEmpty()) {
+      Message = TEXT("blueprintPath and stateName required for add_state");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimState %s %s %s %s"),
+          *BlueprintPath, *MachineName, *StateName, *AnimationPath));
+
+      bool bIsEntry = false;
+      bool bIsExit = false;
+      Payload->TryGetBoolField(TEXT("isEntry"), bIsEntry);
+      Payload->TryGetBoolField(TEXT("isExit"), bIsExit);
+
+      if (bIsEntry) {
+        Commands.Add(FString::Printf(TEXT("SetAnimStateEntry %s %s %s"),
+            *BlueprintPath, *MachineName, *StateName));
+      }
+      if (bIsExit) {
+        Commands.Add(FString::Printf(TEXT("SetAnimStateExit %s %s %s"),
+            *BlueprintPath, *MachineName, *StateName));
+      }
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add state") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("State '%s' added to %s"), *StateName, *MachineName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("stateName"), StateName);
+        if (!AnimationPath.IsEmpty()) {
+          Resp->SetStringField(TEXT("animationPath"), AnimationPath);
+        }
+        Resp->SetBoolField(TEXT("isEntry"), bIsEntry);
+        Resp->SetBoolField(TEXT("isExit"), bIsExit);
+      }
+    }
+  } else if (LowerSub == TEXT("add_transition")) {
+    // Add a transition between states
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString SourceState;
+    Payload->TryGetStringField(TEXT("sourceState"), SourceState);
+
+    FString TargetState;
+    Payload->TryGetStringField(TEXT("targetState"), TargetState);
+
+    if (BlueprintPath.IsEmpty() || SourceState.IsEmpty() || TargetState.IsEmpty()) {
+      Message = TEXT("blueprintPath, sourceState, and targetState required for add_transition");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimTransition %s %s %s %s"),
+          *BlueprintPath, *MachineName, *SourceState, *TargetState));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add transition") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Transition '%s' -> '%s' added"), *SourceState, *TargetState);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("sourceState"), SourceState);
+        Resp->SetStringField(TEXT("targetState"), TargetState);
+      }
+    }
+  } else if (LowerSub == TEXT("set_transition_rules")) {
+    // Set transition rules/conditions
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString SourceState;
+    Payload->TryGetStringField(TEXT("sourceState"), SourceState);
+
+    FString TargetState;
+    Payload->TryGetStringField(TEXT("targetState"), TargetState);
+
+    FString Condition;
+    Payload->TryGetStringField(TEXT("condition"), Condition);
+
+    if (BlueprintPath.IsEmpty() || SourceState.IsEmpty() || TargetState.IsEmpty()) {
+      Message = TEXT("blueprintPath, sourceState, and targetState required for set_transition_rules");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("SetAnimTransitionRule %s %s %s %s %s"),
+          *BlueprintPath, *MachineName, *SourceState, *TargetState, *Condition));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to set transition rules") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Transition rule set for '%s' -> '%s'"), *SourceState, *TargetState);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("sourceState"), SourceState);
+        Resp->SetStringField(TEXT("targetState"), TargetState);
+        Resp->SetStringField(TEXT("condition"), Condition);
+      }
+    }
+  } else if (LowerSub == TEXT("add_blend_node")) {
+    // Add a blend node to an animation blueprint
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString NodeType;
+    Payload->TryGetStringField(TEXT("nodeType"), NodeType);
+    if (NodeType.IsEmpty()) {
+      NodeType = TEXT("BlendByBool");
+    }
+
+    FString NodeName;
+    Payload->TryGetStringField(TEXT("nodeName"), NodeName);
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_blend_node");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimBlendNode %s %s %s"),
+          *BlueprintPath, *NodeType, *NodeName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add blend node") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Blend node '%s' of type '%s' added"), *NodeName, *NodeType);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("nodeType"), NodeType);
+        Resp->SetStringField(TEXT("nodeName"), NodeName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_cached_pose")) {
+    // Add a cached pose node
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString PoseName;
+    Payload->TryGetStringField(TEXT("poseName"), PoseName);
+    if (PoseName.IsEmpty()) {
+      PoseName = TEXT("CachedPose");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_cached_pose");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimCachedPose %s %s"), *BlueprintPath, *PoseName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add cached pose") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Cached pose '%s' added"), *PoseName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("poseName"), PoseName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_slot_node")) {
+    // Add a slot node to an animation blueprint
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString SlotName;
+    Payload->TryGetStringField(TEXT("slotName"), SlotName);
+    if (SlotName.IsEmpty()) {
+      SlotName = TEXT("DefaultSlot");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_slot_node");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimSlotNode %s %s"), *BlueprintPath, *SlotName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add slot node") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Slot node '%s' added"), *SlotName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("slotName"), SlotName);
+      }
+    }
+  }
+  // ============================================================
+  // Control Rig Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_control_rig")) {
+    // Create a new Control Rig blueprint
+    FString RigName;
+    if (!Payload->TryGetStringField(TEXT("name"), RigName) || RigName.IsEmpty()) {
+      Message = TEXT("name required for create_control_rig");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Rigs");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_control_rig");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+#if MCP_HAS_CONTROLRIG_FACTORY
+        FString FactoryError;
+        UBlueprint *ControlRigBP = CreateControlRigBlueprint(RigName, SavePath, TargetSkeleton, FactoryError);
+        if (ControlRigBP) {
+          bSuccess = true;
+          Message = TEXT("Control Rig created successfully");
+          Resp->SetStringField(TEXT("assetPath"), ControlRigBP->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create Control Rig") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("Control Rig factory not available in this engine version");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_control")) {
+    // Add a control to a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString ControlName;
+    Payload->TryGetStringField(TEXT("controlName"), ControlName);
+
+    FString ControlType;
+    Payload->TryGetStringField(TEXT("controlType"), ControlType);
+    if (ControlType.IsEmpty()) {
+      ControlType = TEXT("Transform");
+    }
+
+    if (AssetPath.IsEmpty() || ControlName.IsEmpty()) {
+      Message = TEXT("assetPath and controlName required for add_control");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddControlRigControl %s %s %s"),
+          *AssetPath, *ControlName, *ControlType));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add control") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Control '%s' added to rig"), *ControlName);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("controlName"), ControlName);
+        Resp->SetStringField(TEXT("controlType"), ControlType);
+      }
+    }
+  } else if (LowerSub == TEXT("add_rig_unit")) {
+    // Add a rig unit to a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString UnitType;
+    Payload->TryGetStringField(TEXT("unitType"), UnitType);
+
+    FString UnitName;
+    Payload->TryGetStringField(TEXT("unitName"), UnitName);
+
+    if (AssetPath.IsEmpty() || UnitType.IsEmpty()) {
+      Message = TEXT("assetPath and unitType required for add_rig_unit");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddControlRigUnit %s %s %s"),
+          *AssetPath, *UnitType, *UnitName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add rig unit") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Rig unit '%s' of type '%s' added"), *UnitName, *UnitType);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("unitType"), UnitType);
+        Resp->SetStringField(TEXT("unitName"), UnitName);
+      }
+    }
+  } else if (LowerSub == TEXT("connect_rig_elements")) {
+    // Connect elements in a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString SourceElement;
+    Payload->TryGetStringField(TEXT("sourceElement"), SourceElement);
+
+    FString TargetElement;
+    Payload->TryGetStringField(TEXT("targetElement"), TargetElement);
+
+    FString SourcePin;
+    Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
+
+    FString TargetPin;
+    Payload->TryGetStringField(TEXT("targetPin"), TargetPin);
+
+    if (AssetPath.IsEmpty() || SourceElement.IsEmpty() || TargetElement.IsEmpty()) {
+      Message = TEXT("assetPath, sourceElement, and targetElement required for connect_rig_elements");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("ConnectControlRigElements %s %s %s %s %s"),
+          *AssetPath, *SourceElement, *SourcePin, *TargetElement, *TargetPin));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to connect rig elements") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Connected '%s' to '%s'"), *SourceElement, *TargetElement);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("sourceElement"), SourceElement);
+        Resp->SetStringField(TEXT("targetElement"), TargetElement);
+        if (!SourcePin.IsEmpty()) Resp->SetStringField(TEXT("sourcePin"), SourcePin);
+        if (!TargetPin.IsEmpty()) Resp->SetStringField(TEXT("targetPin"), TargetPin);
+      }
+    }
+  } else if (LowerSub == TEXT("create_pose_library")) {
+    // Create a pose library asset
+    FString LibraryName;
+    if (!Payload->TryGetStringField(TEXT("name"), LibraryName) || LibraryName.IsEmpty()) {
+      Message = TEXT("name required for create_pose_library");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations/PoseLibraries");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      if (SkeletonPath.IsEmpty()) {
+        Message = TEXT("skeletonPath required for create_pose_library");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        USkeleton *TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+        if (!TargetSkeleton) {
+          Message = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
+          ErrorCode = TEXT("ASSET_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+            UEditorAssetLibrary::MakeDirectory(SavePath);
+          }
+
+          // Create a Data Asset to serve as a pose library container
+          FAssetToolsModule &AssetToolsModule =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+              LibraryName, SavePath, UMcpGenericDataAsset::StaticClass(), nullptr);
+
+          if (NewAsset) {
+            if (UMcpGenericDataAsset* PoseLibrary = Cast<UMcpGenericDataAsset>(NewAsset)) {
+              PoseLibrary->ItemName = LibraryName;
+              PoseLibrary->Description = TEXT("Pose Library for animation poses");
+              PoseLibrary->Properties.Add(TEXT("SkeletonPath"), SkeletonPath);
+              PoseLibrary->MarkPackageDirty();
+              McpSafeAssetSave(PoseLibrary);
+            }
+
+            bSuccess = true;
+            Message = TEXT("Pose library created successfully");
+            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+          } else {
+            Message = TEXT("Failed to create pose library asset");
+            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+        }
+      }
+    }
+  }
+  // ============================================================
+  // IK Rig Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_ik_rig")) {
+    // Create an IK Rig asset
+    FString RigName;
+    if (!Payload->TryGetStringField(TEXT("name"), RigName) || RigName.IsEmpty()) {
+      Message = TEXT("name required for create_ik_rig");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Rigs");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      FString MeshPath;
+      Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      USkeletalMesh *TargetMesh = nullptr;
+
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+      if (!MeshPath.IsEmpty()) {
+        TargetMesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+        if (TargetMesh && !TargetSkeleton) {
+          TargetSkeleton = TargetMesh->GetSkeleton();
+        }
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath or meshPath required for create_ik_rig");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Use the existing setup_ik flow for IK Rig creation
+#if MCP_HAS_CONTROLRIG_FACTORY
+        FString FactoryError;
+        UBlueprint *IKRigBP = CreateControlRigBlueprint(RigName, SavePath, TargetSkeleton, FactoryError);
+        if (IKRigBP) {
+          bSuccess = true;
+          Message = TEXT("IK Rig created successfully");
+          Resp->SetStringField(TEXT("assetPath"), IKRigBP->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), TargetSkeleton->GetPathName());
+          if (TargetMesh) {
+            Resp->SetStringField(TEXT("meshPath"), TargetMesh->GetPathName());
+          }
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create IK Rig") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("IK Rig creation requires Control Rig factory (UE 5.1+)");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_ik_chain")) {
+    // Add an IK chain to an IK Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString ChainName;
+    Payload->TryGetStringField(TEXT("chainName"), ChainName);
+
+    FString RootBone;
+    Payload->TryGetStringField(TEXT("rootBone"), RootBone);
+
+    FString EndBone;
+    Payload->TryGetStringField(TEXT("endBone"), EndBone);
+
+    if (AssetPath.IsEmpty() || ChainName.IsEmpty() || RootBone.IsEmpty() || EndBone.IsEmpty()) {
+      Message = TEXT("assetPath, chainName, rootBone, and endBone required for add_ik_chain");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddIKChain %s %s %s %s"),
+          *AssetPath, *ChainName, *RootBone, *EndBone));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add IK chain") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("IK chain '%s' added from '%s' to '%s'"), *ChainName, *RootBone, *EndBone);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("chainName"), ChainName);
+        Resp->SetStringField(TEXT("rootBone"), RootBone);
+        Resp->SetStringField(TEXT("endBone"), EndBone);
+      }
+    }
   } else {
     Message = FString::Printf(
         TEXT("Animation/Physics action '%s' not implemented"), *LowerSub);

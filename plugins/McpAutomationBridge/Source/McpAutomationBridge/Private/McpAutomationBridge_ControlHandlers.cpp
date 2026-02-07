@@ -2445,6 +2445,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorResume(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command"))
     return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("step_frame"))
+    return HandleControlEditorStepFrame(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("start_recording"))
+    return HandleControlEditorStartRecording(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("stop_recording"))
+    return HandleControlEditorStopRecording(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("create_bookmark"))
+    return HandleControlEditorCreateBookmark(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("jump_to_bookmark"))
+    return HandleControlEditorJumpToBookmark(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_preferences"))
+    return HandleControlEditorSetPreferences(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_viewport_realtime"))
+    return HandleControlEditorSetViewportRealtime(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("simulate_input"))
+    return HandleControlEditorSimulateInput(RequestId, Payload, RequestingSocket);
 
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
@@ -2693,6 +2709,436 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
 #else
   SendAutomationResponse(Socket, RequestId, false,
                          TEXT("Console command requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Check if we're in PIE
+  if (!GEditor->PlayWorld) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active PIE session to step"), nullptr,
+                           TEXT("NO_ACTIVE_SESSION"));
+    return true;
+  }
+
+  // Step one frame - set debug step flag and unpause momentarily
+  GEditor->PlayWorld->bDebugFrameStepExecution = true;
+  GEditor->PlayWorld->bDebugPauseExecution = false;
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("message"), TEXT("Stepped one frame"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Frame stepped"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Step frame requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  FString RecordingName;
+  Payload->TryGetStringField(TEXT("name"), RecordingName);
+  if (RecordingName.IsEmpty()) {
+    RecordingName = FString::Printf(TEXT("Recording_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  // Use console command to start demo recording
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld : GEditor->GetEditorWorldContext().World();
+  if (World) {
+    FString Command = FString::Printf(TEXT("DemoRec %s"), *RecordingName);
+    GEditor->Exec(World, *Command);
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("recordingName"), RecordingName);
+  Resp->SetStringField(TEXT("message"), TEXT("Recording started"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Recording started"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Recording requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Use console command to stop demo recording
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld : GEditor->GetEditorWorldContext().World();
+  if (World) {
+    GEditor->Exec(World, TEXT("DemoStop"));
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("message"), TEXT("Recording stopped"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Recording stopped"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Recording requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  int32 BookmarkIndex = 0;
+  Payload->TryGetNumberField(TEXT("index"), BookmarkIndex);
+
+  // Clamp to valid bookmark range (0-9)
+  BookmarkIndex = FMath::Clamp(BookmarkIndex, 0, 9);
+
+  // Use console command to set bookmark
+  FString Command = FString::Printf(TEXT("SetBookmark %d"), BookmarkIndex);
+  UWorld* World = GEditor->GetEditorWorldContext().World();
+  GEditor->Exec(World, *Command);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetNumberField(TEXT("index"), BookmarkIndex);
+  Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Bookmark %d created"), BookmarkIndex));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Bookmark created"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Bookmarks require editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  int32 BookmarkIndex = 0;
+  Payload->TryGetNumberField(TEXT("index"), BookmarkIndex);
+
+  // Clamp to valid bookmark range (0-9)
+  BookmarkIndex = FMath::Clamp(BookmarkIndex, 0, 9);
+
+  // Use console command to jump to bookmark
+  FString Command = FString::Printf(TEXT("JumpToBookmark %d"), BookmarkIndex);
+  UWorld* World = GEditor->GetEditorWorldContext().World();
+  GEditor->Exec(World, *Command);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetNumberField(TEXT("index"), BookmarkIndex);
+  Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Jumped to bookmark %d"), BookmarkIndex));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Jumped to bookmark"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Bookmarks require editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  TArray<FString> AppliedSettings;
+  TArray<FString> FailedSettings;
+
+  // Get preferences object from payload
+  const TSharedPtr<FJsonObject>* PrefsPtr = nullptr;
+  if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid()) {
+    for (const auto& Pair : (*PrefsPtr)->Values) {
+      // Try to set via console variable first
+      IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(*Pair.Key);
+      if (CVar) {
+        FString Value;
+        if (Pair.Value->TryGetString(Value)) {
+          CVar->Set(*Value);
+          AppliedSettings.Add(Pair.Key);
+        } else {
+          double NumVal;
+          if (Pair.Value->TryGetNumber(NumVal)) {
+            CVar->Set((float)NumVal);
+            AppliedSettings.Add(Pair.Key);
+          } else {
+            bool BoolVal;
+            if (Pair.Value->TryGetBool(BoolVal)) {
+              CVar->Set(BoolVal ? 1 : 0);
+              AppliedSettings.Add(Pair.Key);
+            } else {
+              FailedSettings.Add(Pair.Key);
+            }
+          }
+        }
+      } else {
+        FailedSettings.Add(Pair.Key);
+      }
+    }
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), FailedSettings.Num() == 0);
+  Resp->SetNumberField(TEXT("appliedCount"), AppliedSettings.Num());
+
+  if (AppliedSettings.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> AppliedArray;
+    for (const FString& Name : AppliedSettings)
+      AppliedArray.Add(MakeShared<FJsonValueString>(Name));
+    Resp->SetArrayField(TEXT("applied"), AppliedArray);
+  }
+
+  if (FailedSettings.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> FailedArray;
+    for (const FString& Name : FailedSettings)
+      FailedArray.Add(MakeShared<FJsonValueString>(Name));
+    Resp->SetArrayField(TEXT("failed"), FailedArray);
+  }
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Preferences updated"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Preferences require editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  bool bRealtime = true;
+  Payload->TryGetBoolField(TEXT("realtime"), bRealtime);
+
+#if MCP_HAS_LEVEL_EDITOR_MODULE
+  // Get the level editor module and active viewport
+  FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+  TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
+  
+  if (ActiveViewport.IsValid()) {
+    FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
+    ViewportClient.SetRealtime(bRealtime);
+    
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("realtime"), bRealtime);
+    Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Viewport realtime updated"), Resp, FString());
+    return true;
+  }
+#endif
+
+  // Fallback: use console command
+  FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
+  UWorld* World = GEditor->GetEditorWorldContext().World();
+  GEditor->Exec(World, *Command);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("realtime"), bRealtime);
+  Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Viewport realtime updated"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Viewport realtime requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  FString InputType;
+  Payload->TryGetStringField(TEXT("type"), InputType);
+  InputType = InputType.ToLower();
+
+  FString Key;
+  Payload->TryGetStringField(TEXT("key"), Key);
+
+  bool bSuccess = false;
+  FString Message;
+
+  if (InputType == TEXT("key_down") || InputType == TEXT("keydown")) {
+    if (!Key.IsEmpty()) {
+      FKey InputKey(*Key);
+      if (InputKey.IsValid()) {
+        FSlateApplication& SlateApp = FSlateApplication::Get();
+        FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
+        SlateApp.ProcessKeyDownEvent(KeyEvent);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Key down: %s"), *Key);
+      } else {
+        Message = FString::Printf(TEXT("Invalid key: %s"), *Key);
+      }
+    } else {
+      Message = TEXT("Key parameter required for key_down");
+    }
+  } else if (InputType == TEXT("key_up") || InputType == TEXT("keyup")) {
+    if (!Key.IsEmpty()) {
+      FKey InputKey(*Key);
+      if (InputKey.IsValid()) {
+        FSlateApplication& SlateApp = FSlateApplication::Get();
+        FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
+        SlateApp.ProcessKeyUpEvent(KeyEvent);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Key up: %s"), *Key);
+      } else {
+        Message = FString::Printf(TEXT("Invalid key: %s"), *Key);
+      }
+    } else {
+      Message = TEXT("Key parameter required for key_up");
+    }
+  } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
+    double X = 0, Y = 0;
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
+
+    FString Button = TEXT("left");
+    Payload->TryGetStringField(TEXT("button"), Button);
+
+    EKeys::Type MouseButton = EKeys::LeftMouseButton;
+    if (Button.ToLower() == TEXT("right")) MouseButton = EKeys::RightMouseButton;
+    else if (Button.ToLower() == TEXT("middle")) MouseButton = EKeys::MiddleMouseButton;
+
+    FSlateApplication& SlateApp = FSlateApplication::Get();
+    FVector2D Position((float)X, (float)Y);
+    
+    // Simulate mouse down then up for a click
+    FPointerEvent MouseDownEvent(
+        0, Position, Position, TSet<FKey>(), FKey(MouseButton),
+        0, FModifierKeysState());
+    SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
+    
+    FPointerEvent MouseUpEvent(
+        0, Position, Position, TSet<FKey>(), FKey(MouseButton),
+        0, FModifierKeysState());
+    SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
+    
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y);
+  } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
+    double X = 0, Y = 0;
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
+
+    FSlateApplication& SlateApp = FSlateApplication::Get();
+    FVector2D Position((float)X, (float)Y);
+    SlateApp.SetCursorPos(Position);
+    
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Mouse moved to (%f, %f)"), X, Y);
+  } else {
+    Message = FString::Printf(TEXT("Unknown input type: %s. Supported: key_down, key_up, mouse_click, mouse_move"), *InputType);
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), bSuccess);
+  Resp->SetStringField(TEXT("type"), InputType);
+  Resp->SetStringField(TEXT("message"), Message);
+
+  if (bSuccess) {
+    SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
+  } else {
+    SendAutomationResponse(Socket, RequestId, false, Message, Resp, TEXT("INPUT_FAILED"));
+  }
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Simulate input requires editor build."), nullptr,
                          TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif

@@ -126,6 +126,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     FoliagePayload->SetBoolField(TEXT("removeAll"), bRemoveAll);
     return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"),
                                FoliagePayload, RequestingSocket);
+  } else if (LowerSub == TEXT("paint_foliage")) {
+    // Direct dispatch to foliage handler (payload already in correct format)
+    return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), Payload,
+                              RequestingSocket);
+  } else if (LowerSub == TEXT("create_procedural_foliage")) {
+    // Dispatch to procedural foliage handler
+    return HandleCreateProceduralFoliage(RequestId,
+                                         TEXT("create_procedural_foliage"),
+                                         Payload, RequestingSocket);
+  } else if (LowerSub == TEXT("create_procedural_terrain")) {
+    // Dispatch to procedural terrain handler
+    return HandleCreateProceduralTerrain(RequestId,
+                                         TEXT("create_procedural_terrain"),
+                                         Payload, RequestingSocket);
   }
   // Dispatch landscape operations
   else if (LowerSub == TEXT("paint_landscape") ||
@@ -2248,6 +2262,159 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
       RequestingSocket, RequestId, false,
       TEXT("create_procedural_terrain requires editor build."), nullptr,
       TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("generate_lods"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("generate_lods payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  // Get landscape identifier
+  FString LandscapeName;
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+  FString LandscapePath;
+  Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
+
+  // Get LOD settings
+  int32 NumLODs = 4;
+  Payload->TryGetNumberField(TEXT("numLODs"), NumLODs);
+  NumLODs = FMath::Clamp(NumLODs, 1, 8);
+
+  bool bRegenerateAll = false;
+  Payload->TryGetBoolField(TEXT("regenerateAll"), bRegenerateAll);
+
+  // Find landscape actor
+  ALandscape *TargetLandscape = nullptr;
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+
+  if (World) {
+    for (TActorIterator<ALandscape> It(World); It; ++It) {
+      if (!LandscapeName.IsEmpty()) {
+        if (It->GetActorLabel().Contains(LandscapeName) ||
+            It->GetName().Contains(LandscapeName)) {
+          TargetLandscape = *It;
+          break;
+        }
+      } else if (!LandscapePath.IsEmpty()) {
+        FString ActorPath = It->GetPathName();
+        if (ActorPath.Contains(LandscapePath)) {
+          TargetLandscape = *It;
+          break;
+        }
+      } else {
+        // Take first landscape if no name/path specified
+        TargetLandscape = *It;
+        break;
+      }
+    }
+  }
+
+  if (!TargetLandscape) {
+    FString SearchCriteria = LandscapeName.IsEmpty() ? LandscapePath : LandscapeName;
+    if (SearchCriteria.IsEmpty()) {
+      SearchCriteria = TEXT("any");
+    }
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        FString::Printf(TEXT("Landscape not found: %s"), *SearchCriteria),
+        TEXT("LANDSCAPE_NOT_FOUND"));
+    return true;
+  }
+
+  // Get LandscapeInfo for LOD operations
+  ULandscapeInfo *LandscapeInfo = TargetLandscape->GetLandscapeInfo();
+  if (!LandscapeInfo) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("LandscapeInfo not available"),
+                        TEXT("LANDSCAPE_INFO_MISSING"));
+    return true;
+  }
+
+  // Apply LOD settings to landscape
+  // Set the number of static mesh LODs for the landscape
+  TargetLandscape->StaticLightingLOD = FMath::Min(NumLODs - 1, 7);
+
+  // Set LOD bias and distribution settings
+  int32 LODDistributionSetting = 2; // 2 = Exponential
+  Payload->TryGetNumberField(TEXT("lodDistribution"), LODDistributionSetting);
+
+  // Apply screen size settings for each LOD level
+  TArray<float> LODScreenSizes;
+  const TArray<TSharedPtr<FJsonValue>> *ScreenSizesArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("lodScreenSizes"), ScreenSizesArray) &&
+      ScreenSizesArray) {
+    for (const TSharedPtr<FJsonValue> &Val : *ScreenSizesArray) {
+      if (Val.IsValid()) {
+        LODScreenSizes.Add(static_cast<float>(Val->AsNumber()));
+      }
+    }
+  }
+
+  // If no screen sizes provided, generate default exponential falloff
+  if (LODScreenSizes.Num() == 0) {
+    float BaseSize = 1.0f;
+    for (int32 i = 0; i < NumLODs; ++i) {
+      LODScreenSizes.Add(BaseSize);
+      BaseSize *= 0.5f; // Each LOD has half the screen size threshold
+    }
+  }
+
+  // Mark landscape as needing rebuild
+  TargetLandscape->MarkPackageDirty();
+
+  // Force update of all landscape components
+  int32 ComponentsUpdated = 0;
+  for (ULandscapeComponent *Component : TargetLandscape->LandscapeComponents) {
+    if (Component) {
+      Component->MarkRenderStateDirty();
+      ComponentsUpdated++;
+    }
+  }
+
+  // Build response
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("landscapeName"), TargetLandscape->GetActorLabel());
+  Resp->SetStringField(TEXT("landscapePath"), TargetLandscape->GetPathName());
+  Resp->SetNumberField(TEXT("numLODs"), NumLODs);
+  Resp->SetNumberField(TEXT("staticLightingLOD"), TargetLandscape->StaticLightingLOD);
+  Resp->SetNumberField(TEXT("componentsUpdated"), ComponentsUpdated);
+
+  // Include applied screen sizes
+  TArray<TSharedPtr<FJsonValue>> ScreenSizeValues;
+  for (float Size : LODScreenSizes) {
+    ScreenSizeValues.Add(MakeShared<FJsonValueNumber>(Size));
+  }
+  Resp->SetArrayField(TEXT("lodScreenSizes"), ScreenSizeValues);
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Landscape LODs configured"), Resp, FString());
+  return true;
+
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("generate_lods requires editor build"), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif
 }

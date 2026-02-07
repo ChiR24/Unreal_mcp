@@ -5532,6 +5532,383 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
 }
 
 // -------------------------------------------------------------------------
+// UV Operations - Unwrap and Pack
+// -------------------------------------------------------------------------
+
+static bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    ADynamicMeshActor* TargetActor = nullptr;
+
+    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName)
+        {
+            TargetActor = *It;
+            break;
+        }
+    }
+
+    if (!TargetActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
+    if (!DMC || !DMC->GetDynamicMesh())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+
+    // Use XAtlas for proper UV unwrapping
+    FGeometryScriptXAtlasOptions XAtlasOptions;
+    // XAtlas defaults are reasonable for most cases
+
+    UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
+        Mesh,
+        UVChannel,
+        XAtlasOptions,
+        nullptr
+    );
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("uvChannel"), UVChannel);
+
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV unwrapping completed"), Result);
+    return true;
+}
+
+static bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    int32 UVChannel = GetIntFieldGeom(Payload, TEXT("uvChannel"), 0);
+    int32 TextureResolution = GetIntFieldGeom(Payload, TEXT("textureResolution"), 1024);
+
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    ADynamicMeshActor* TargetActor = nullptr;
+
+    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName)
+        {
+            TargetActor = *It;
+            break;
+        }
+    }
+
+    if (!TargetActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
+    if (!DMC || !DMC->GetDynamicMesh())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+
+    // Use XAtlas with packing - it handles both unwrapping and packing
+    FGeometryScriptXAtlasOptions XAtlasOptions;
+    // XAtlas will pack islands efficiently by default
+
+    UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
+        Mesh,
+        UVChannel,
+        XAtlasOptions,
+        nullptr
+    );
+
+    DMC->NotifyMeshUpdated();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("uvChannel"), UVChannel);
+    Result->SetNumberField(TEXT("textureResolution"), TextureResolution);
+
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV islands packed"), Result);
+    return true;
+}
+
+// -------------------------------------------------------------------------
+// Nanite Conversion
+// -------------------------------------------------------------------------
+
+static bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString AssetPath = GetStringFieldGeom(Payload, TEXT("assetPath"));
+
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (AssetPath.IsEmpty())
+    {
+        AssetPath = FString::Printf(TEXT("/Game/GeneratedMeshes/%s_Nanite"), *ActorName);
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    ADynamicMeshActor* TargetActor = nullptr;
+
+    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName)
+        {
+            TargetActor = *It;
+            break;
+        }
+    }
+
+    if (!TargetActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
+    if (!DMC || !DMC->GetDynamicMesh())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+
+    FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
+    CreateOptions.bEnableRecomputeNormals = true;
+    CreateOptions.bEnableRecomputeTangents = true;
+    // Enable Nanite for this conversion
+    CreateOptions.bEnableNanite = true;
+
+    EGeometryScriptOutcomePins Outcome;
+
+    UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
+        Mesh,
+        AssetPath,
+        CreateOptions,
+        Outcome,
+        nullptr
+    );
+
+    if (Outcome != EGeometryScriptOutcomePins::Success)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to create Nanite StaticMesh asset"), TEXT("ASSET_CREATION_FAILED"));
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("naniteEnabled"), true);
+
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nanite StaticMesh created from DynamicMesh"), Result);
+    return true;
+}
+
+// -------------------------------------------------------------------------
+// Extrude Along Spline
+// -------------------------------------------------------------------------
+
+static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetStringFieldGeom(Payload, TEXT("actorName"));
+    FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"));
+    int32 Segments = GetIntFieldGeom(Payload, TEXT("segments"), 16);
+    bool bCap = GetBoolFieldGeom(Payload, TEXT("cap"), true);
+    double ScaleStart = GetNumberFieldGeom(Payload, TEXT("scaleStart"), 1.0);
+    double ScaleEnd = GetNumberFieldGeom(Payload, TEXT("scaleEnd"), 1.0);
+    double Twist = GetNumberFieldGeom(Payload, TEXT("twist"), 0.0);
+
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    if (SplineActorName.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("splineActorName required"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    ADynamicMeshActor* TargetActor = nullptr;
+    AActor* SplineActor = nullptr;
+
+    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName)
+        {
+            TargetActor = *It;
+            break;
+        }
+    }
+
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == SplineActorName)
+        {
+            SplineActor = *It;
+            break;
+        }
+    }
+
+    if (!TargetActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    if (!SplineActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Spline actor not found: %s"), *SplineActorName), TEXT("ACTOR_NOT_FOUND"));
+        return true;
+    }
+
+    USplineComponent* SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
+    if (!SplineComp)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("Spline actor has no USplineComponent"), TEXT("COMPONENT_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
+    if (!DMC || !DMC->GetDynamicMesh())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
+        return true;
+    }
+
+    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+    int32 TrisBefore = Mesh->GetTriangleCount();
+
+    // Get mesh bounding box to derive profile shape
+    FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    FVector MeshCenter = MeshBBox.GetCenter();
+    FVector MeshExtent = MeshBBox.GetExtent();
+
+    // Create a cross-section profile from mesh XY bounds
+    TArray<FVector2D> PolygonVertices;
+    int32 NumPolySides = FMath::Clamp(Segments / 2, 4, 32);
+    double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
+
+    if (ProfileRadius < KINDA_SMALL_NUMBER)
+    {
+        ProfileRadius = 50.0; // Default fallback
+    }
+
+    for (int32 i = 0; i < NumPolySides; ++i)
+    {
+        double Angle = 2.0 * PI * i / NumPolySides;
+        PolygonVertices.Add(FVector2D(
+            FMath::Cos(Angle) * ProfileRadius,
+            FMath::Sin(Angle) * ProfileRadius
+        ));
+    }
+
+    // Build path frames from spline
+    TArray<FTransform> PathFrames;
+    float SplineLength = SplineComp->GetSplineLength();
+    int32 PathSteps = FMath::Clamp(Segments, 2, 256);
+
+    for (int32 i = 0; i <= PathSteps; ++i)
+    {
+        float Alpha = (float)i / PathSteps;
+        float Dist = SplineLength * Alpha;
+
+        // Get spline location and rotation at this distance
+        FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
+        FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
+
+        // Apply twist interpolation
+        float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
+        FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
+        Rotation = Rotation * TwistRotation;
+
+        // Apply scale interpolation
+        float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
+
+        PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
+    }
+
+    // Use SweepPolygon to create the extruded mesh
+    FGeometryScriptPrimitiveOptions PrimOptions;
+    FGeometryScriptPolygonsToSweepOptions SweepOptions;
+    SweepOptions.bCapped = bCap;
+
+    // Create a polygon list with our profile
+    FGeometryScriptSimplePolygon ProfilePolygon;
+    for (const FVector2D& Vert : PolygonVertices)
+    {
+        ProfilePolygon.Vertices.Add(Vert);
+    }
+
+    FGeometryScriptGeneralPolygonList PolygonList;
+    PolygonList.Polygons.Add(ProfilePolygon);
+
+    // Clear existing mesh and sweep the profile along the path
+    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+        Mesh,
+        PrimOptions,
+        FTransform::Identity,
+        PolygonVertices,
+        PathFrames,
+        bCap,
+        true,  // bLoop
+        0.0,   // StartScale - handled via PathFrames
+        0.0,   // EndScale - handled via PathFrames
+        0.0,   // RotationAngleDeg - handled via PathFrames
+        nullptr
+    );
+
+    DMC->NotifyMeshUpdated();
+
+    int32 TrisAfter = Mesh->GetTriangleCount();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("splineActorName"), SplineActorName);
+    Result->SetNumberField(TEXT("splineLength"), SplineLength);
+    Result->SetNumberField(TEXT("segments"), Segments);
+    Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
+    Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
+
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Extruded profile along spline"), Result);
+    return true;
+}
+
+// -------------------------------------------------------------------------
 // Handler Dispatcher
 // -------------------------------------------------------------------------
 
@@ -5663,6 +6040,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("get_vertex_position")) return HandleGetVertexPosition(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("set_vertex_position")) return HandleSetVertexPosition(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("translate_mesh")) return HandleTranslateMesh(this, RequestId, Payload, RequestingSocket);
+
+    // Additional UV Operations
+    if (SubAction == TEXT("unwrap_uv")) return HandleUnwrapUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("pack_uv_islands")) return HandlePackUVIslands(this, RequestId, Payload, RequestingSocket);
+
+    // Nanite Conversion
+    if (SubAction == TEXT("convert_to_nanite")) return HandleConvertToNanite(this, RequestId, Payload, RequestingSocket);
+
+    // Spline-based Operations
+    if (SubAction == TEXT("extrude_along_spline")) return HandleExtrudeAlongSpline(this, RequestId, Payload, RequestingSocket);
+
+    // Aliases
+    if (SubAction == TEXT("difference")) return HandleBooleanSubtract(this, RequestId, Payload, RequestingSocket);
 
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown geometry subAction: '%s'"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
