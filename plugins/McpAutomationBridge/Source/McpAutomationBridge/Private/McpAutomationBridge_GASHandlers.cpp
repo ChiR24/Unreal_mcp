@@ -1,7 +1,19 @@
 #include "Dom/JsonObject.h"
 // McpAutomationBridge_GASHandlers.cpp
 // Phase 13: Gameplay Ability System (GAS)
-// Implements 27 actions for abilities, effects, attributes, and gameplay cues.
+// Implements 31 actions for abilities, effects, attributes, and gameplay cues.
+// 
+// Actions:
+// 13.1 Components & Attributes: add_ability_system_component, configure_asc, create_attribute_set,
+//      add_attribute, set_attribute_base_value, set_attribute_clamping
+// 13.2 Abilities: create_gameplay_ability, set_ability_tags, set_ability_costs, set_ability_cooldown,
+//      set_ability_targeting, add_ability_task, set_activation_policy, set_instancing_policy
+// 13.3 Effects: create_gameplay_effect, set_effect_duration, add_effect_modifier, set_modifier_magnitude,
+//      add_effect_execution_calculation, add_effect_cue, set_effect_stacking, set_effect_tags
+// 13.4 Cues: create_gameplay_cue_notify, configure_cue_trigger, set_cue_effects
+// 13.5 Tags/Utility: add_tag_to_asset, get_gas_info
+// 13.6 Ability Sets: create_ability_set, add_ability, grant_ability
+// 13.7 Execution Calculations: create_execution_calculation
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -2491,6 +2503,85 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Result->SetStringField(TEXT("note"), TEXT("Add ability to InitialAbilities array. Call GiveAbility on ASC in BeginPlay to grant."));
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability grant configured"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // 13.7 EXECUTION CALCULATIONS
+    // ============================================================
+
+    // create_execution_calculation - Create UGameplayEffectExecutionCalculation blueprint
+    if (SubAction == TEXT("create_execution_calculation"))
+    {
+        if (Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayEffectExecutionCalculation::StaticClass(), Error);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+            return true;
+        }
+
+        // Add common execution calculation variables for configuration
+        
+        // 1. RelevantAttributesToCapture - array of FGameplayAttribute references for captured attributes
+        FEdGraphPinType StructArrayType;
+        StructArrayType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+        StructArrayType.PinSubCategoryObject = FGameplayAttribute::StaticStruct();
+        StructArrayType.ContainerType = EPinContainerType::Array;
+        
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedSourceAttributes"), StructArrayType);
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedSourceAttributes"), nullptr, 
+            FText::FromString(TEXT("Execution Calculation")));
+        
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedTargetAttributes"), StructArrayType);
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedTargetAttributes"), nullptr, 
+            FText::FromString(TEXT("Execution Calculation")));
+
+        // 2. bRequiresPassedInTags - whether the calculation needs gameplay tags passed in
+        FEdGraphPinType BoolPinType;
+        BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bRequiresPassedInTags"), BoolPinType);
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("bRequiresPassedInTags"), nullptr, 
+            FText::FromString(TEXT("Execution Calculation")));
+
+        // 3. CalculationDescription - human readable description
+        FEdGraphPinType StringPinType;
+        StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CalculationDescription"), StringPinType);
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CalculationDescription"), nullptr, 
+            FText::FromString(TEXT("Execution Calculation")));
+
+        // 4. OutputModifiers - array to configure output modifier attributes
+        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OutputModifierAttributes"), StructArrayType);
+        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("OutputModifierAttributes"), nullptr, 
+            FText::FromString(TEXT("Execution Calculation")));
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("assetPath"), Path / Name);
+        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffectExecutionCalculation"));
+        
+        TArray<TSharedPtr<FJsonValue>> VariablesArray;
+        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CapturedSourceAttributes"))));
+        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CapturedTargetAttributes"))));
+        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("bRequiresPassedInTags"))));
+        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CalculationDescription"))));
+        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("OutputModifierAttributes"))));
+        Result->SetArrayField(TEXT("variablesAdded"), VariablesArray);
+        
+        Result->SetStringField(TEXT("note"), TEXT("Override Execute_Implementation in Blueprint to implement custom calculation logic. Use CapturedSourceAttributes and CapturedTargetAttributes to define which attributes to capture."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Execution calculation created"), Result);
         return true;
     }
 

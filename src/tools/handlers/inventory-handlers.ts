@@ -231,6 +231,47 @@ export async function handleInventoryTools(
     }
 
     // =========================================================================
+    // 17.7 Additional Actions (6 actions)
+    // =========================================================================
+
+    case 'configure_item_stacking': {
+      requireNonEmptyString(argsRecord.itemPath, 'itemPath', 'Missing required parameter: itemPath');
+      // Accepts: stackable (bool), maxStackSize, uniqueItems (bool)
+      return sendRequest('configure_item_stacking');
+    }
+
+    case 'set_item_icon': {
+      requireNonEmptyString(argsRecord.itemPath, 'itemPath', 'Missing required parameter: itemPath');
+      // Accepts: iconPath (texture/material path)
+      return sendRequest('set_item_icon');
+    }
+
+    case 'add_recipe_ingredient': {
+      requireNonEmptyString(argsRecord.recipePath, 'recipePath', 'Missing required parameter: recipePath');
+      requireNonEmptyString(argsRecord.ingredientItemPath, 'ingredientItemPath', 'Missing required parameter: ingredientItemPath');
+      // Accepts: quantity
+      return sendRequest('add_recipe_ingredient');
+    }
+
+    case 'remove_loot_entry': {
+      requireNonEmptyString(argsRecord.lootTablePath, 'lootTablePath', 'Missing required parameter: lootTablePath');
+      // Accepts: entryIndex OR itemPath
+      return sendRequest('remove_loot_entry');
+    }
+
+    case 'configure_inventory_weight': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      // Accepts: maxWeight, enableWeight (bool), encumberanceSystem (bool), encumberanceThreshold
+      return sendRequest('configure_inventory_weight');
+    }
+
+    case 'configure_station_recipes': {
+      requireNonEmptyString(argsRecord.stationPath, 'stationPath', 'Missing required parameter: stationPath');
+      // Accepts: recipePaths (array), stationType, craftingSpeedMultiplier
+      return sendRequest('configure_station_recipes');
+    }
+
+    // =========================================================================
     // Utility (1 action)
     // =========================================================================
 
