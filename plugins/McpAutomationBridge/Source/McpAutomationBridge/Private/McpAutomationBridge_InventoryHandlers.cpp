@@ -1,6 +1,7 @@
-#include "Dom/JsonObject.h"
 // Copyright Epic Games, Inc. All Rights Reserved.
 // Phase 17: Inventory & Items System Handlers
+
+#include "Dom/JsonObject.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
