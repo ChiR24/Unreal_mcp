@@ -58,6 +58,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       return true;
     }
 
+    if (!Blueprint->SimpleConstructionScript) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_BP"));
+      return true;
+    }
+
     USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(USphereComponent::StaticClass(), *ComponentName);
     if (Node) {
       USphereComponent* Template = Cast<USphereComponent>(Node->ComponentTemplate);

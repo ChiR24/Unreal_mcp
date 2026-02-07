@@ -88,10 +88,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(ItemAsset);
 
       if (GetPayloadBool(Payload, TEXT("save"), true)) {
-        FString AssetPathForSave = ItemAsset->GetPathName();
-        int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-        if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-        ItemAsset->MarkPackageDirty();
+        McpSafeAssetSave(ItemAsset);
       }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -214,13 +211,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(CategoryAsset);
 
       if (GetPayloadBool(Payload, TEXT("save"), true)) {
-        FString AssetPathForSave = CategoryAsset->GetPathName();
-        int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-        if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-        CategoryAsset->MarkPackageDirty();
+        McpSafeAssetSave(CategoryAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject>());
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item category created"), Result);
