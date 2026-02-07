@@ -915,6 +915,27 @@ uint32 FMcpBridgeWebSocket::RunServer() {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
                TEXT("Successfully resolved '%s' to address '%s'."),
                *HostToBind, *ListenAddr->ToString(true));
+        
+        // Check if resolved address family matches socket family
+        const bool bResolvedIsIpv6 = ListenAddr->GetProtocolFamily() == ESocketProtocolFamily::IPv6;
+        if (bResolvedIsIpv6 != bIsIpv6Host) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                 TEXT("DNS resolved to %s but socket is %s. Recreating socket..."),
+                 bResolvedIsIpv6 ? TEXT("IPv6") : TEXT("IPv4"),
+                 bIsIpv6Host ? TEXT("IPv6") : TEXT("IPv4"));
+          
+          SocketSubsystem->DestroySocket(ListenSocket);
+          const FName NewProtocolName = bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName();
+          ListenSocket = SocketSubsystem->CreateSocket(
+              NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), NewProtocolName);
+          if (!ListenSocket) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, 
+                   TEXT("Failed to re-create socket for resolved address family."));
+            return 0;
+          }
+          ListenSocket->SetReuseAddr(true);
+          ListenSocket->SetNonBlocking(false);
+        }
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
                TEXT("Failed to resolve hostname '%s'. Falling back to 127.0.0.1."),
@@ -928,8 +949,22 @@ uint32 FMcpBridgeWebSocket::RunServer() {
   else {
     // Loopback-only mode (default) - reject non-loopback addresses
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loopback' in Project Settings to use LAN addresses."),
+           TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loop Back' in Project Settings to use LAN addresses."),
            *HostToBind);
+
+    // If socket was created as IPv6 but we're falling back to IPv4, recreate it
+    if (bIsIpv6Host) {
+      SocketSubsystem->DestroySocket(ListenSocket);
+      ListenSocket = SocketSubsystem->CreateSocket(
+          NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
+      if (!ListenSocket) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to re-create IPv4 socket for fallback."));
+        return 0;
+      }
+      ListenSocket->SetReuseAddr(true);
+      ListenSocket->SetNonBlocking(false);
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Re-created socket for IPv4 fallback (non-loopback path)."));
+    }
 
     bool bFallbackIsValidIp = false;
     ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);

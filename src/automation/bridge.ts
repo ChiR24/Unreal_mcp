@@ -516,10 +516,12 @@ export class AutomationBridge extends EventEmitter {
         if (!host.includes(':')) {
             return host;
         }
-        // Percent-encode zone ID delimiter (%) per RFC 6874
-        // e.g., fe80::1%eth0 becomes [fe80::1%25eth0]
-        const encodedHost = host.replace(/%/g, '%25');
-        return `[${encodedHost}]`;
+        // Strip zone ID if present (e.g., fe80::1%eth0 -> fe80::1)
+        // Zone IDs are not supported by Node.js URL parser and are only
+        // meaningful for link-local addresses on the local machine
+        const zoneIndex = host.indexOf('%');
+        const hostWithoutZone = zoneIndex >= 0 ? host.slice(0, zoneIndex) : host;
+        return `[${hostWithoutZone}]`;
     }
 
     private getClientUrl(): string {
