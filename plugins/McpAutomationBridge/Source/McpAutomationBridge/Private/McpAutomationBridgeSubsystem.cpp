@@ -892,6 +892,52 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleManageNavigationAction(R, A, P, S);
                   });
+
+  // Phase 27: Misc (camera, viewport, bookmarks, post-process, networking helpers)
+  RegisterHandler(TEXT("manage_misc"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+
+  // Direct action aliases for misc handlers
+  RegisterHandler(TEXT("create_post_process_volume"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("create_camera"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_camera_fov"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_viewport_resolution"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("set_game_speed"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("create_bookmark"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMiscAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
