@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import net from 'node:net';
 import { WebSocket } from 'ws';
 import { Logger } from '../utils/logger.js';
 import {
@@ -102,17 +103,55 @@ export class AutomationBridge extends EventEmitter {
 
             // Non-loopback: check if allowed
             if (allowNonLoopback) {
-                // Validate IP format (IPv4 or 0.0.0.0 for all interfaces)
-                const ipv4Regex = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
-                if (ipv4Regex.test(trimmed) || lower === '0.0.0.0') {
+                // Strip brackets from IPv6 if present
+                let addressToValidate = trimmed;
+                if (addressToValidate.startsWith('[') && addressToValidate.endsWith(']')) {
+                    addressToValidate = addressToValidate.slice(1, -1);
+                }
+                
+                // Strip zone ID if present (e.g., fe80::1%eth0 -> fe80::1)
+                const zoneIndex = addressToValidate.indexOf('%');
+                const addressWithoutZone = zoneIndex >= 0 
+                    ? addressToValidate.slice(0, zoneIndex) 
+                    : addressToValidate;
+                
+                // Use Node.js net module for validation (IPv4 and IPv6)
+                const ipVersion = net.isIP(addressWithoutZone);
+                
+                if (ipVersion === 4 || ipVersion === 6) {
                     this.log.warn(
                         `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
                         'The automation bridge will be accessible from your local network.'
                     );
-                    return trimmed;
+                    // Return address without brackets (consistent with loopback handling)
+                    // Brackets will be re-added by formatHostForUrl if needed
+                    return addressToValidate;
                 }
-                this.log.warn(
-                    `${label} '${trimmed}' is not a valid IP address. Falling back to ${DEFAULT_AUTOMATION_HOST}.`
+                
+                // Check if it's a valid hostname (domain name)
+                // Allow hostnames like "example.com", "server.local", "unreal-pc"
+                // Must contain at least one letter (to distinguish from IPs)
+                const hasLetters = /[a-zA-Z]/.test(trimmed);
+                if (hasLetters) {
+                    // Robust hostname validation: split into labels and validate each
+                    // Each label must: not be empty, start/end with alphanumeric, allow hyphens in middle
+                    const labels = trimmed.split('.');
+                    const isValidHostname = labels.every(
+                        (label) => label.length > 0 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label)
+                    );
+                    if (isValidHostname) {
+                        this.log.warn(
+                            `SECURITY: ${label} set to hostname '${trimmed}'. ` +
+                            'The automation bridge will be accessible from your local network.'
+                        );
+                        return trimmed;
+                    }
+                }
+                
+                // Invalid IP format or hostname
+                this.log.error(
+                    `${label} '${trimmed}' is not a valid IPv4/IPv6 address or hostname. ` +
+                    `Falling back to ${DEFAULT_AUTOMATION_HOST}.`
                 );
                 return DEFAULT_AUTOMATION_HOST;
             }
@@ -474,7 +513,15 @@ export class AutomationBridge extends EventEmitter {
     }
 
     private formatHostForUrl(host: string): string {
-        return host.includes(':') ? `[${host}]` : host;
+        if (!host.includes(':')) {
+            return host;
+        }
+        // Strip zone ID if present (e.g., fe80::1%eth0 -> fe80::1)
+        // Zone IDs are not supported by Node.js URL parser and are only
+        // meaningful for link-local addresses on the local machine
+        const zoneIndex = host.indexOf('%');
+        const hostWithoutZone = zoneIndex >= 0 ? host.slice(0, zoneIndex) : host;
+        return `[${hostWithoutZone}]`;
     }
 
     private getClientUrl(): string {
