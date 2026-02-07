@@ -62,8 +62,17 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Perception/AISenseConfig_Damage.h"
+#include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Hearing.h"
+#include "Perception/AISense_Damage.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SCS_Node.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NavModifierComponent.h"
+#include "NavAreas/NavArea.h"
+#include "NavAreas/NavArea_Default.h"
+#include "NavAreas/NavArea_Null.h"
+#include "NavAreas/NavArea_Obstacle.h"
 #endif
 
 // Attempt to include State Tree (UE 5.3+)
@@ -2127,6 +2136,417 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetObjectField(TEXT("aiInfo"), AIInfo);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI info retrieved"), Result);
+        return true;
+    }
+
+    // =========================================================================
+    // Configuration Actions (3 new actions)
+    // =========================================================================
+
+    // set_ai_perception - Unified perception configuration (sight/hearing/damage in one call)
+    if (SubAction == TEXT("set_ai_perception"))
+    {
+        FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
+        if (ControllerPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+        if (!ControllerBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!ControllerBP->SimpleConstructionScript)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
+            return true;
+        }
+
+        // Find or create AIPerceptionComponent
+        UAIPerceptionComponent* PerceptionComp = nullptr;
+        USCS_Node* PerceptionNode = nullptr;
+        
+        for (USCS_Node* Node : ControllerBP->SimpleConstructionScript->GetAllNodes())
+        {
+            if (Node && Node->ComponentTemplate)
+            {
+                if (UAIPerceptionComponent* Comp = Cast<UAIPerceptionComponent>(Node->ComponentTemplate))
+                {
+                    PerceptionComp = Comp;
+                    PerceptionNode = Node;
+                    break;
+                }
+            }
+        }
+
+        bool bCreatedNew = false;
+        if (!PerceptionComp)
+        {
+            // Create new perception component
+            PerceptionNode = ControllerBP->SimpleConstructionScript->CreateNode(
+                UAIPerceptionComponent::StaticClass(), TEXT("AIPerceptionComponent"));
+            if (!PerceptionNode)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create perception component node"), TEXT("CREATION_FAILED"));
+                return true;
+            }
+            ControllerBP->SimpleConstructionScript->AddNode(PerceptionNode);
+            PerceptionComp = Cast<UAIPerceptionComponent>(PerceptionNode->ComponentTemplate);
+            bCreatedNew = true;
+        }
+
+        TArray<FString> SensesConfigured;
+
+        // Configure sight sense
+        bool bEnableSight = GetBoolFieldAI(Payload, TEXT("enableSight"));
+        if (bEnableSight)
+        {
+            float SightRadius = GetNumberFieldAI(Payload, TEXT("sightRadius"), 3000.0f);
+            float LoseSightRadius = GetNumberFieldAI(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
+            float PeripheralVisionAngle = GetNumberFieldAI(Payload, TEXT("peripheralVisionAngle"), 90.0f);
+            
+            UAISenseConfig_Sight* SightConfig = NewObject<UAISenseConfig_Sight>(PerceptionComp);
+            SightConfig->SightRadius = SightRadius;
+            SightConfig->LoseSightRadius = LoseSightRadius;
+            SightConfig->PeripheralVisionAngleDegrees = PeripheralVisionAngle;
+            SightConfig->DetectionByAffiliation.bDetectEnemies = true;
+            SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
+            SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
+            SightConfig->SetMaxAge(5.0f);
+            
+            PerceptionComp->ConfigureSense(*SightConfig);
+            SensesConfigured.Add(TEXT("Sight"));
+        }
+
+        // Configure hearing sense
+        bool bEnableHearing = GetBoolFieldAI(Payload, TEXT("enableHearing"));
+        if (bEnableHearing)
+        {
+            float HearingRange = GetNumberFieldAI(Payload, TEXT("hearingRange"), 3000.0f);
+            
+            UAISenseConfig_Hearing* HearingConfig = NewObject<UAISenseConfig_Hearing>(PerceptionComp);
+            HearingConfig->HearingRange = HearingRange;
+            HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
+            HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
+            HearingConfig->DetectionByAffiliation.bDetectFriendlies = false;
+            HearingConfig->SetMaxAge(5.0f);
+            
+            PerceptionComp->ConfigureSense(*HearingConfig);
+            SensesConfigured.Add(TEXT("Hearing"));
+        }
+
+        // Configure damage sense
+        bool bEnableDamage = GetBoolFieldAI(Payload, TEXT("enableDamage"));
+        if (bEnableDamage)
+        {
+            UAISenseConfig_Damage* DamageConfig = NewObject<UAISenseConfig_Damage>(PerceptionComp);
+            DamageConfig->SetMaxAge(10.0f);
+            
+            PerceptionComp->ConfigureSense(*DamageConfig);
+            SensesConfigured.Add(TEXT("Damage"));
+        }
+
+        // Set dominant sense if specified
+        FString DominantSense = GetStringFieldAI(Payload, TEXT("dominantSense"));
+        if (!DominantSense.IsEmpty())
+        {
+            if (DominantSense.Equals(TEXT("Sight"), ESearchCase::IgnoreCase))
+            {
+                PerceptionComp->SetDominantSense(UAISense_Sight::StaticClass());
+            }
+            else if (DominantSense.Equals(TEXT("Hearing"), ESearchCase::IgnoreCase))
+            {
+                PerceptionComp->SetDominantSense(UAISense_Hearing::StaticClass());
+            }
+            else if (DominantSense.Equals(TEXT("Damage"), ESearchCase::IgnoreCase))
+            {
+                PerceptionComp->SetDominantSense(UAISense_Damage::StaticClass());
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
+        McpSafeAssetSave(ControllerBP);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("controllerPath"), ControllerPath);
+        Result->SetBoolField(TEXT("createdNew"), bCreatedNew);
+        
+        TArray<TSharedPtr<FJsonValue>> SensesArray;
+        for (const FString& Sense : SensesConfigured)
+        {
+            SensesArray.Add(MakeShareable(new FJsonValueString(Sense)));
+        }
+        Result->SetArrayField(TEXT("sensesConfigured"), SensesArray);
+        
+        if (!DominantSense.IsEmpty())
+        {
+            Result->SetStringField(TEXT("dominantSense"), DominantSense);
+        }
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI perception configured"), Result);
+        return true;
+    }
+
+    // create_nav_modifier - Create navigation modifier component on actor
+    if (SubAction == TEXT("create_nav_modifier"))
+    {
+        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!Blueprint->SimpleConstructionScript)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
+            return true;
+        }
+
+        FString ComponentName = GetStringFieldAI(Payload, TEXT("componentName"));
+        if (ComponentName.IsEmpty())
+        {
+            ComponentName = TEXT("NavModifierComponent");
+        }
+
+        // Create nav modifier component
+        USCS_Node* NavModNode = Blueprint->SimpleConstructionScript->CreateNode(
+            UNavModifierComponent::StaticClass(), *ComponentName);
+        if (!NavModNode)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create nav modifier node"), TEXT("CREATION_FAILED"));
+            return true;
+        }
+
+        Blueprint->SimpleConstructionScript->AddNode(NavModNode);
+        UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate);
+        
+        if (NavModComp)
+        {
+            // Configure fail-safe defaults
+            bool bFailsafe = GetBoolFieldAI(Payload, TEXT("failsafeToDefaultNavmesh"));
+            NavModComp->SetAreaClass(bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass());
+            
+            // Set area class if specified
+            FString AreaClassName = GetStringFieldAI(Payload, TEXT("areaClass"));
+            if (!AreaClassName.IsEmpty())
+            {
+                UClass* AreaClass = FindObject<UClass>(nullptr, *AreaClassName);
+                if (!AreaClass)
+                {
+                    // Try common area classes
+                    if (AreaClassName.Equals(TEXT("NavArea_Null"), ESearchCase::IgnoreCase) ||
+                        AreaClassName.Equals(TEXT("Null"), ESearchCase::IgnoreCase))
+                    {
+                        AreaClass = UNavArea_Null::StaticClass();
+                    }
+                    else if (AreaClassName.Equals(TEXT("NavArea_Obstacle"), ESearchCase::IgnoreCase) ||
+                             AreaClassName.Equals(TEXT("Obstacle"), ESearchCase::IgnoreCase))
+                    {
+                        AreaClass = UNavArea_Obstacle::StaticClass();
+                    }
+                    else if (AreaClassName.Equals(TEXT("NavArea_Default"), ESearchCase::IgnoreCase) ||
+                             AreaClassName.Equals(TEXT("Default"), ESearchCase::IgnoreCase))
+                    {
+                        AreaClass = UNavArea_Default::StaticClass();
+                    }
+                }
+                
+                if (AreaClass && AreaClass->IsChildOf(UNavArea::StaticClass()))
+                {
+                    NavModComp->SetAreaClass(AreaClass);
+                }
+            }
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetStringField(TEXT("componentName"), ComponentName);
+        Result->SetStringField(TEXT("areaClass"), NavModComp ? NavModComp->GetAreaClass()->GetName() : TEXT("Unknown"));
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), Result);
+        return true;
+    }
+
+    // set_ai_movement - Configure AI movement parameters (speed, acceleration, etc.)
+    if (SubAction == TEXT("set_ai_movement"))
+    {
+        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!Blueprint->SimpleConstructionScript)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
+            return true;
+        }
+
+        // Find CharacterMovementComponent
+        UCharacterMovementComponent* MovementComp = nullptr;
+        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        {
+            if (Node && Node->ComponentTemplate)
+            {
+                if (UCharacterMovementComponent* Comp = Cast<UCharacterMovementComponent>(Node->ComponentTemplate))
+                {
+                    MovementComp = Comp;
+                    break;
+                }
+            }
+        }
+
+        if (!MovementComp)
+        {
+            // Check CDO for native component
+            if (Blueprint->GeneratedClass)
+            {
+                if (AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()))
+                {
+                    MovementComp = CDO->FindComponentByClass<UCharacterMovementComponent>();
+                }
+            }
+        }
+
+        if (!MovementComp)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("No CharacterMovementComponent found in blueprint"), TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
+
+        TArray<FString> PropertiesSet;
+
+        // Walking speed
+        float MaxWalkSpeed = GetNumberFieldAI(Payload, TEXT("maxWalkSpeed"), -1.0f);
+        if (MaxWalkSpeed > 0.0f)
+        {
+            MovementComp->MaxWalkSpeed = MaxWalkSpeed;
+            PropertiesSet.Add(TEXT("MaxWalkSpeed"));
+        }
+
+        // Max acceleration
+        float MaxAcceleration = GetNumberFieldAI(Payload, TEXT("maxAcceleration"), -1.0f);
+        if (MaxAcceleration > 0.0f)
+        {
+            MovementComp->MaxAcceleration = MaxAcceleration;
+            PropertiesSet.Add(TEXT("MaxAcceleration"));
+        }
+
+        // Braking deceleration walking
+        float BrakingDeceleration = GetNumberFieldAI(Payload, TEXT("brakingDeceleration"), -1.0f);
+        if (BrakingDeceleration > 0.0f)
+        {
+            MovementComp->BrakingDecelerationWalking = BrakingDeceleration;
+            PropertiesSet.Add(TEXT("BrakingDecelerationWalking"));
+        }
+
+        // Rotation rate
+        float RotationRate = GetNumberFieldAI(Payload, TEXT("rotationRate"), -1.0f);
+        if (RotationRate > 0.0f)
+        {
+            MovementComp->RotationRate = FRotator(0.0f, RotationRate, 0.0f);
+            PropertiesSet.Add(TEXT("RotationRate"));
+        }
+
+        // Use acceleration for paths
+        bool bUseAcceleration = GetBoolFieldAI(Payload, TEXT("useAccelerationForPaths"));
+        if (Payload->HasField(TEXT("useAccelerationForPaths")))
+        {
+            MovementComp->bUseAccelerationForPaths = bUseAcceleration;
+            PropertiesSet.Add(TEXT("bUseAccelerationForPaths"));
+        }
+
+        // Orient rotation to movement
+        bool bOrientToMovement = GetBoolFieldAI(Payload, TEXT("orientRotationToMovement"));
+        if (Payload->HasField(TEXT("orientRotationToMovement")))
+        {
+            MovementComp->bOrientRotationToMovement = bOrientToMovement;
+            PropertiesSet.Add(TEXT("bOrientRotationToMovement"));
+        }
+
+        // Use RVO avoidance
+        bool bUseRVOAvoidance = GetBoolFieldAI(Payload, TEXT("useRVOAvoidance"));
+        if (Payload->HasField(TEXT("useRVOAvoidance")))
+        {
+            MovementComp->bUseRVOAvoidance = bUseRVOAvoidance;
+            PropertiesSet.Add(TEXT("bUseRVOAvoidance"));
+        }
+
+        // Avoidance weight
+        float AvoidanceWeight = GetNumberFieldAI(Payload, TEXT("avoidanceWeight"), -1.0f);
+        if (AvoidanceWeight >= 0.0f)
+        {
+            MovementComp->AvoidanceWeight = AvoidanceWeight;
+            PropertiesSet.Add(TEXT("AvoidanceWeight"));
+        }
+
+        // Max fly speed (for flying AI)
+        float MaxFlySpeed = GetNumberFieldAI(Payload, TEXT("maxFlySpeed"), -1.0f);
+        if (MaxFlySpeed > 0.0f)
+        {
+            MovementComp->MaxFlySpeed = MaxFlySpeed;
+            PropertiesSet.Add(TEXT("MaxFlySpeed"));
+        }
+
+        // Jump Z velocity
+        float JumpZVelocity = GetNumberFieldAI(Payload, TEXT("jumpZVelocity"), -1.0f);
+        if (JumpZVelocity > 0.0f)
+        {
+            MovementComp->JumpZVelocity = JumpZVelocity;
+            PropertiesSet.Add(TEXT("JumpZVelocity"));
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        
+        TArray<TSharedPtr<FJsonValue>> PropsArray;
+        for (const FString& Prop : PropertiesSet)
+        {
+            PropsArray.Add(MakeShareable(new FJsonValueString(Prop)));
+        }
+        Result->SetArrayField(TEXT("propertiesSet"), PropsArray);
+        Result->SetNumberField(TEXT("propertyCount"), PropertiesSet.Num());
+
+        // Include current values
+        TSharedPtr<FJsonObject> CurrentValues = MakeShareable(new FJsonObject());
+        CurrentValues->SetNumberField(TEXT("maxWalkSpeed"), MovementComp->MaxWalkSpeed);
+        CurrentValues->SetNumberField(TEXT("maxAcceleration"), MovementComp->MaxAcceleration);
+        CurrentValues->SetNumberField(TEXT("rotationRateYaw"), MovementComp->RotationRate.Yaw);
+        CurrentValues->SetBoolField(TEXT("orientRotationToMovement"), MovementComp->bOrientRotationToMovement);
+        CurrentValues->SetBoolField(TEXT("useRVOAvoidance"), MovementComp->bUseRVOAvoidance);
+        Result->SetObjectField(TEXT("currentValues"), CurrentValues);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI movement configured"), Result);
         return true;
     }
 

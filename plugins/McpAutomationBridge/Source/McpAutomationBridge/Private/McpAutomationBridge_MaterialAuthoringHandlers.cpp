@@ -64,6 +64,10 @@
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialExpressionVertexNormalWS.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialExpressionComponentMask.h"
+#include "Materials/MaterialExpressionDotProduct.h"
+#include "Materials/MaterialExpressionCrossProduct.h"
+#include "Materials/MaterialExpressionDesaturation.h"
 #include "Materials/MaterialFunction.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
@@ -926,6 +930,167 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("%s node added."), *NodeName),
                            Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_component_mask
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_component_mask")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    bool bR = true, bG = true, bB = true, bA = false;
+    Payload->TryGetBoolField(TEXT("r"), bR);
+    Payload->TryGetBoolField(TEXT("g"), bG);
+    Payload->TryGetBoolField(TEXT("b"), bB);
+    Payload->TryGetBoolField(TEXT("a"), bA);
+
+    UMaterialExpressionComponentMask *MaskExpr =
+        NewObject<UMaterialExpressionComponentMask>(
+            Material, UMaterialExpressionComponentMask::StaticClass(), NAME_None,
+            RF_Transactional);
+    MaskExpr->R = bR ? 1 : 0;
+    MaskExpr->G = bG ? 1 : 0;
+    MaskExpr->B = bB ? 1 : 0;
+    MaskExpr->A = bA ? 1 : 0;
+    MaskExpr->MaterialExpressionEditorX = (int32)X;
+    MaskExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(MaskExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           MaskExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("ComponentMask node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_dot_product
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_dot_product")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionDotProduct *DotExpr =
+        NewObject<UMaterialExpressionDotProduct>(
+            Material, UMaterialExpressionDotProduct::StaticClass(), NAME_None,
+            RF_Transactional);
+    DotExpr->MaterialExpressionEditorX = (int32)X;
+    DotExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(DotExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           DotExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("DotProduct node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_cross_product
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_cross_product")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionCrossProduct *CrossExpr =
+        NewObject<UMaterialExpressionCrossProduct>(
+            Material, UMaterialExpressionCrossProduct::StaticClass(), NAME_None,
+            RF_Transactional);
+    CrossExpr->MaterialExpressionEditorX = (int32)X;
+    CrossExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(CrossExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           CrossExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("CrossProduct node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_desaturation
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_desaturation")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionDesaturation *DesatExpr =
+        NewObject<UMaterialExpressionDesaturation>(
+            Material, UMaterialExpressionDesaturation::StaticClass(), NAME_None,
+            RF_Transactional);
+    
+    // Set optional luminance factors
+    const TSharedPtr<FJsonObject> *LumObj;
+    if (Payload->TryGetObjectField(TEXT("luminanceFactors"), LumObj)) {
+      double R = 0.3, G = 0.59, B = 0.11;
+      (*LumObj)->TryGetNumberField(TEXT("r"), R);
+      (*LumObj)->TryGetNumberField(TEXT("g"), G);
+      (*LumObj)->TryGetNumberField(TEXT("b"), B);
+      DesatExpr->LuminanceFactors = FLinearColor(R, G, B, 1.0f);
+    }
+    
+    DesatExpr->MaterialExpressionEditorX = (int32)X;
+    DesatExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(DesatExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           DesatExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Desaturation node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_append (dedicated handler for convenience)
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_append")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionAppendVector *AppendExpr =
+        NewObject<UMaterialExpressionAppendVector>(
+            Material, UMaterialExpressionAppendVector::StaticClass(), NAME_None,
+            RF_Transactional);
+    AppendExpr->MaterialExpressionEditorX = (int32)X;
+    AppendExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(AppendExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           AppendExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Append node added."), Result);
     return true;
   }
 

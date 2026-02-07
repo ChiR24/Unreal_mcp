@@ -1999,6 +1999,840 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
 
 
 // ============================================================================
+// set_physics_asset - Assign existing physics asset to skeletal mesh
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    if (SkeletalMeshPath.IsEmpty())
+    {
+        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("meshPath"));
+    }
+    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
+    
+    if (SkeletalMeshPath.IsEmpty() || PhysicsAssetPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("skeletalMeshPath and physicsAssetPath are required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    // Load skeletal mesh
+    FString Error;
+    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+    if (!Mesh)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return false;
+    }
+    
+    // Load physics asset
+    UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
+        StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+    if (!PhysAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Physics asset not found: %s"), *PhysicsAssetPath), 
+            TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        return false;
+    }
+    
+    // Assign physics asset to skeletal mesh
+    Mesh->SetPhysicsAsset(PhysAsset);
+    Mesh->MarkPackageDirty();
+    McpSafeAssetSave(Mesh);
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+    Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
+    Result->SetStringField(TEXT("physicsAssetName"), PhysAsset->GetName());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Physics asset '%s' assigned to skeletal mesh"), *PhysAsset->GetName()), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("set_physics_asset requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// remove_physics_body - Remove physics body from physics asset
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
+    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    
+    if (PhysicsAssetPath.IsEmpty() || BoneName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("physicsAssetPath and boneName are required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    // Load physics asset
+    UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
+        StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+    if (!PhysAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Physics asset not found: %s"), *PhysicsAssetPath), 
+            TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        return false;
+    }
+    
+    // Find and remove the body setup for this bone
+    int32 BodyIndex = INDEX_NONE;
+    for (int32 i = 0; i < PhysAsset->SkeletalBodySetups.Num(); ++i)
+    {
+        if (PhysAsset->SkeletalBodySetups[i] && 
+            PhysAsset->SkeletalBodySetups[i]->BoneName == FName(*BoneName))
+        {
+            BodyIndex = i;
+            break;
+        }
+    }
+    
+    if (BodyIndex == INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("No physics body found for bone: %s"), *BoneName), 
+            TEXT("BODY_NOT_FOUND"));
+        return false;
+    }
+    
+    // Remove the body setup and any associated constraints
+    PhysAsset->Modify();
+    
+    // Remove constraints that reference this body
+    FName BoneFName(*BoneName);
+    for (int32 i = PhysAsset->ConstraintSetup.Num() - 1; i >= 0; --i)
+    {
+        UPhysicsConstraintTemplate* Constraint = PhysAsset->ConstraintSetup[i];
+        if (Constraint)
+        {
+            FConstraintInstance& CI = Constraint->DefaultInstance;
+            if (CI.ConstraintBone1 == BoneFName || CI.ConstraintBone2 == BoneFName)
+            {
+                PhysAsset->ConstraintSetup.RemoveAt(i);
+            }
+        }
+    }
+    
+    // Remove the body setup
+    PhysAsset->SkeletalBodySetups.RemoveAt(BodyIndex);
+    PhysAsset->UpdateBoundsBodiesArray();
+    PhysAsset->UpdateBodySetupIndexMap();
+    PhysAsset->MarkPackageDirty();
+    McpSafeAssetSave(PhysAsset);
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
+    Result->SetStringField(TEXT("boneName"), BoneName);
+    Result->SetNumberField(TEXT("remainingBodies"), PhysAsset->SkeletalBodySetups.Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Physics body for bone '%s' removed"), *BoneName), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("remove_physics_body requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// set_morph_target_value - Set morph target weight on skeletal mesh component
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString ActorName = GetStringFieldSkel(Payload, TEXT("actorName"));
+    FString MorphTargetName = GetStringFieldSkel(Payload, TEXT("morphTargetName"));
+    double Value = GetNumberFieldSkel(Payload, TEXT("value"), 0.0);
+    bool bAddMissing = GetBoolFieldSkel(Payload, TEXT("addMissing"), false);
+    
+    if (ActorName.IsEmpty() || MorphTargetName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("actorName and morphTargetName are required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    // Clamp value to valid range
+    Value = FMath::Clamp(Value, 0.0, 1.0);
+    
+    // Find the actor
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    if (!World)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+        return false;
+    }
+    
+    AActor* FoundActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
+        {
+            FoundActor = *It;
+            break;
+        }
+    }
+    
+    if (!FoundActor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+        return false;
+    }
+    
+    // Find skeletal mesh component
+    USkeletalMeshComponent* SkelMeshComp = FoundActor->FindComponentByClass<USkeletalMeshComponent>();
+    if (!SkelMeshComp)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("Actor does not have a SkeletalMeshComponent"), TEXT("NO_SKEL_MESH_COMP"));
+        return false;
+    }
+    
+    // Check if morph target exists on the mesh
+    USkeletalMesh* SkelMesh = SkelMeshComp->GetSkeletalMeshAsset();
+    if (SkelMesh)
+    {
+        bool bHasMorphTarget = false;
+        for (const UMorphTarget* MT : SkelMesh->GetMorphTargets())
+        {
+            if (MT && MT->GetFName() == FName(*MorphTargetName))
+            {
+                bHasMorphTarget = true;
+                break;
+            }
+        }
+        
+        if (!bHasMorphTarget && !bAddMissing)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Morph target '%s' not found on mesh"), *MorphTargetName), 
+                TEXT("MORPH_TARGET_NOT_FOUND"));
+            return false;
+        }
+    }
+    
+    // Set the morph target value
+    SkelMeshComp->SetMorphTarget(FName(*MorphTargetName), static_cast<float>(Value));
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
+    Result->SetNumberField(TEXT("value"), Value);
+    
+    // Get current morph target weights for reporting
+    TArray<TSharedPtr<FJsonValue>> ActiveMorphs;
+    TMap<FName, float> MorphWeights;
+    SkelMeshComp->GetMorphTargetCurves().GenerateValueArray(MorphWeights);
+    for (const auto& Pair : MorphWeights)
+    {
+        if (Pair.Value > 0.0f)
+        {
+            TSharedPtr<FJsonObject> MorphObj = MakeShareable(new FJsonObject());
+            MorphObj->SetStringField(TEXT("name"), Pair.Key.ToString());
+            MorphObj->SetNumberField(TEXT("weight"), Pair.Value);
+            ActiveMorphs.Add(MakeShareable(new FJsonValueObject(MorphObj)));
+        }
+    }
+    Result->SetArrayField(TEXT("activeMorphTargets"), ActiveMorphs);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Morph target '%s' set to %.3f"), *MorphTargetName, Value), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("set_morph_target_value requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// delete_socket - Remove a socket from skeletal mesh or skeleton
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteSocket(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString SocketName = GetStringFieldSkel(Payload, TEXT("socketName"));
+    
+    if (SocketName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    // Try skeletal mesh first
+    if (!SkeletalMeshPath.IsEmpty())
+    {
+        FString Error;
+        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+        if (!Mesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+            return false;
+        }
+        
+        USkeleton* Skeleton = Mesh->GetSkeleton();
+        if (Skeleton)
+        {
+            int32 SocketIndex = Skeleton->Sockets.IndexOfByPredicate(
+                [&SocketName](const USkeletalMeshSocket* S) { return S && S->SocketName == FName(*SocketName); });
+            
+            if (SocketIndex != INDEX_NONE)
+            {
+                Skeleton->Modify();
+                Skeleton->Sockets.RemoveAt(SocketIndex);
+                McpSafeAssetSave(Skeleton);
+                
+                TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+                Result->SetStringField(TEXT("socketName"), SocketName);
+                Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
+                Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
+                
+                SendAutomationResponse(RequestingSocket, RequestId, true, 
+                    FString::Printf(TEXT("Socket '%s' deleted"), *SocketName), Result);
+                return true;
+            }
+        }
+        
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Socket '%s' not found"), *SocketName), TEXT("SOCKET_NOT_FOUND"));
+        return false;
+    }
+    else if (!SkeletonPath.IsEmpty())
+    {
+        FString Error;
+        USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
+        if (!Skeleton)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
+            return false;
+        }
+        
+        int32 SocketIndex = Skeleton->Sockets.IndexOfByPredicate(
+            [&SocketName](const USkeletalMeshSocket* S) { return S && S->SocketName == FName(*SocketName); });
+        
+        if (SocketIndex != INDEX_NONE)
+        {
+            Skeleton->Modify();
+            Skeleton->Sockets.RemoveAt(SocketIndex);
+            McpSafeAssetSave(Skeleton);
+            
+            TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+            Result->SetStringField(TEXT("socketName"), SocketName);
+            Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+            Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
+            
+            SendAutomationResponse(RequestingSocket, RequestId, true, 
+                FString::Printf(TEXT("Socket '%s' deleted"), *SocketName), Result);
+            return true;
+        }
+        
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Socket '%s' not found"), *SocketName), TEXT("SOCKET_NOT_FOUND"));
+        return false;
+    }
+    
+    SendAutomationError(RequestingSocket, RequestId, 
+        TEXT("skeletalMeshPath or skeletonPath is required"), TEXT("MISSING_PARAM"));
+    return false;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("delete_socket requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// list_morph_targets - List all morph targets on a skeletal mesh
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    if (SkeletalMeshPath.IsEmpty())
+    {
+        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("meshPath"));
+    }
+    
+    if (SkeletalMeshPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    FString Error;
+    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+    if (!Mesh)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return false;
+    }
+    
+    TArray<TSharedPtr<FJsonValue>> MorphTargetArray;
+    for (const UMorphTarget* MT : Mesh->GetMorphTargets())
+    {
+        if (MT)
+        {
+            TSharedPtr<FJsonObject> MTObj = MakeShareable(new FJsonObject());
+            MTObj->SetStringField(TEXT("name"), MT->GetName());
+            MTObj->SetNumberField(TEXT("numDeltas"), MT->GetMorphLODModels().Num() > 0 ? 
+                MT->GetMorphLODModels()[0].Vertices.Num() : 0);
+            MorphTargetArray.Add(MakeShareable(new FJsonValueObject(MTObj)));
+        }
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+    Result->SetArrayField(TEXT("morphTargets"), MorphTargetArray);
+    Result->SetNumberField(TEXT("count"), MorphTargetArray.Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Found %d morph targets"), MorphTargetArray.Num()), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("list_morph_targets requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// delete_morph_target - Remove a morph target from skeletal mesh
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString MorphTargetName = GetStringFieldSkel(Payload, TEXT("morphTargetName"));
+    
+    if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("skeletalMeshPath and morphTargetName are required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    FString Error;
+    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+    if (!Mesh)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return false;
+    }
+    
+    // Find the morph target
+    UMorphTarget* TargetToRemove = nullptr;
+    int32 Index = INDEX_NONE;
+    for (int32 i = 0; i < Mesh->GetMorphTargets().Num(); ++i)
+    {
+        if (Mesh->GetMorphTargets()[i] && Mesh->GetMorphTargets()[i]->GetFName() == FName(*MorphTargetName))
+        {
+            TargetToRemove = Mesh->GetMorphTargets()[i];
+            Index = i;
+            break;
+        }
+    }
+    
+    if (!TargetToRemove || Index == INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' not found"), *MorphTargetName), TEXT("MORPH_NOT_FOUND"));
+        return false;
+    }
+    
+    // Remove the morph target
+    Mesh->Modify();
+    Mesh->UnregisterMorphTarget(TargetToRemove);
+    Mesh->MarkPackageDirty();
+    McpSafeAssetSave(Mesh);
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+    Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
+    Result->SetNumberField(TEXT("remainingMorphTargets"), Mesh->GetMorphTargets().Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Morph target '%s' deleted"), *MorphTargetName), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("delete_morph_target requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// get_bone_transform - Get transform of a specific bone
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
+    int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
+    
+    if (BoneName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    const FReferenceSkeleton* RefSkeleton = nullptr;
+    FString SourcePath;
+    
+    if (!SkeletalMeshPath.IsEmpty())
+    {
+        FString Error;
+        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+        if (!Mesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+            return false;
+        }
+        RefSkeleton = &Mesh->GetRefSkeleton();
+        SourcePath = SkeletalMeshPath;
+    }
+    else if (!SkeletonPath.IsEmpty())
+    {
+        FString Error;
+        USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
+        if (!Skeleton)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
+            return false;
+        }
+        RefSkeleton = &Skeleton->GetReferenceSkeleton();
+        SourcePath = SkeletonPath;
+    }
+    else
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("skeletalMeshPath or skeletonPath is required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    int32 BoneIndex = RefSkeleton->FindBoneIndex(FName(*BoneName));
+    if (BoneIndex == INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Bone '%s' not found"), *BoneName), TEXT("BONE_NOT_FOUND"));
+        return false;
+    }
+    
+    FTransform BoneTransform = RefSkeleton->GetRefBonePose()[BoneIndex];
+    FVector Location = BoneTransform.GetLocation();
+    FRotator Rotation = BoneTransform.Rotator();
+    FVector Scale = BoneTransform.GetScale3D();
+    
+    // Get parent info
+    int32 ParentIndex = RefSkeleton->GetParentIndex(BoneIndex);
+    FString ParentName = ParentIndex != INDEX_NONE ? 
+        RefSkeleton->GetBoneName(ParentIndex).ToString() : TEXT("");
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("boneName"), BoneName);
+    Result->SetNumberField(TEXT("boneIndex"), BoneIndex);
+    Result->SetStringField(TEXT("parentBone"), ParentName);
+    Result->SetNumberField(TEXT("parentIndex"), ParentIndex);
+    
+    TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject());
+    LocationObj->SetNumberField(TEXT("x"), Location.X);
+    LocationObj->SetNumberField(TEXT("y"), Location.Y);
+    LocationObj->SetNumberField(TEXT("z"), Location.Z);
+    Result->SetObjectField(TEXT("location"), LocationObj);
+    
+    TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject());
+    RotationObj->SetNumberField(TEXT("pitch"), Rotation.Pitch);
+    RotationObj->SetNumberField(TEXT("yaw"), Rotation.Yaw);
+    RotationObj->SetNumberField(TEXT("roll"), Rotation.Roll);
+    Result->SetObjectField(TEXT("rotation"), RotationObj);
+    
+    TSharedPtr<FJsonObject> ScaleObj = MakeShareable(new FJsonObject());
+    ScaleObj->SetNumberField(TEXT("x"), Scale.X);
+    ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
+    ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
+    Result->SetObjectField(TEXT("scale"), ScaleObj);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Retrieved transform for bone '%s'"), *BoneName), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("get_bone_transform requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// list_virtual_bones - List all virtual bones on a skeleton
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleListVirtualBones(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    
+    USkeleton* Skeleton = nullptr;
+    
+    if (!SkeletonPath.IsEmpty())
+    {
+        FString Error;
+        Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
+        if (!Skeleton)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
+            return false;
+        }
+    }
+    else if (!SkeletalMeshPath.IsEmpty())
+    {
+        FString Error;
+        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+        if (!Mesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+            return false;
+        }
+        Skeleton = Mesh->GetSkeleton();
+    }
+    
+    if (!Skeleton)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("skeletonPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    TArray<TSharedPtr<FJsonValue>> VirtualBoneArray;
+    for (const FVirtualBone& VB : Skeleton->GetVirtualBones())
+    {
+        TSharedPtr<FJsonObject> VBObj = MakeShareable(new FJsonObject());
+        VBObj->SetStringField(TEXT("name"), VB.VirtualBoneName.ToString());
+        VBObj->SetStringField(TEXT("sourceBone"), VB.SourceBoneName.ToString());
+        VBObj->SetStringField(TEXT("targetBone"), VB.TargetBoneName.ToString());
+        VirtualBoneArray.Add(MakeShareable(new FJsonValueObject(VBObj)));
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
+    Result->SetArrayField(TEXT("virtualBones"), VirtualBoneArray);
+    Result->SetNumberField(TEXT("count"), VirtualBoneArray.Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Found %d virtual bones"), VirtualBoneArray.Num()), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("list_virtual_bones requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// delete_virtual_bone - Remove a virtual bone from skeleton
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString SkeletonPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    FString VirtualBoneName = GetStringFieldSkel(Payload, TEXT("virtualBoneName"));
+    
+    if (SkeletonPath.IsEmpty() || VirtualBoneName.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("skeletonPath and virtualBoneName are required"), TEXT("MISSING_PARAM"));
+        return false;
+    }
+    
+    FString Error;
+    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
+    if (!Skeleton)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
+        return false;
+    }
+    
+    // Find and remove the virtual bone
+    const TArray<FVirtualBone>& VirtualBones = Skeleton->GetVirtualBones();
+    int32 FoundIndex = INDEX_NONE;
+    for (int32 i = 0; i < VirtualBones.Num(); ++i)
+    {
+        if (VirtualBones[i].VirtualBoneName == FName(*VirtualBoneName))
+        {
+            FoundIndex = i;
+            break;
+        }
+    }
+    
+    if (FoundIndex == INDEX_NONE)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Virtual bone '%s' not found"), *VirtualBoneName), TEXT("VBONE_NOT_FOUND"));
+        return false;
+    }
+    
+    // Remove using the skeleton's API
+    TArray<FName> BonesToRemove;
+    BonesToRemove.Add(FName(*VirtualBoneName));
+    Skeleton->RemoveVirtualBones(BonesToRemove);
+    McpSafeAssetSave(Skeleton);
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+    Result->SetStringField(TEXT("virtualBoneName"), VirtualBoneName);
+    Result->SetNumberField(TEXT("remainingVirtualBones"), Skeleton->GetVirtualBones().Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Virtual bone '%s' deleted"), *VirtualBoneName), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("delete_virtual_bone requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
+// get_physics_asset_info - Get detailed info about a physics asset
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    FString PhysicsAssetPath = GetStringFieldSkel(Payload, TEXT("physicsAssetPath"));
+    FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    
+    UPhysicsAsset* PhysAsset = nullptr;
+    
+    if (!PhysicsAssetPath.IsEmpty())
+    {
+        PhysAsset = Cast<UPhysicsAsset>(
+            StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+    }
+    else if (!SkeletalMeshPath.IsEmpty())
+    {
+        FString Error;
+        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
+        if (Mesh)
+        {
+            PhysAsset = Mesh->GetPhysicsAsset();
+        }
+    }
+    
+    if (!PhysAsset)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("Physics asset not found. Provide physicsAssetPath or skeletalMeshPath"), TEXT("NOT_FOUND"));
+        return false;
+    }
+    
+    // Gather physics bodies info
+    TArray<TSharedPtr<FJsonValue>> BodiesArray;
+    for (USkeletalBodySetup* BodySetup : PhysAsset->SkeletalBodySetups)
+    {
+        if (BodySetup)
+        {
+            TSharedPtr<FJsonObject> BodyObj = MakeShareable(new FJsonObject());
+            BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
+            BodyObj->SetStringField(TEXT("physicsType"), 
+                BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic ? TEXT("Kinematic") :
+                BodySetup->PhysicsType == EPhysicsType::PhysType_Simulated ? TEXT("Simulated") : TEXT("Default"));
+            BodyObj->SetNumberField(TEXT("numSpheres"), BodySetup->AggGeom.SphereElems.Num());
+            BodyObj->SetNumberField(TEXT("numBoxes"), BodySetup->AggGeom.BoxElems.Num());
+            BodyObj->SetNumberField(TEXT("numCapsules"), BodySetup->AggGeom.SphylElems.Num());
+            BodyObj->SetNumberField(TEXT("numConvex"), BodySetup->AggGeom.ConvexElems.Num());
+            BodiesArray.Add(MakeShareable(new FJsonValueObject(BodyObj)));
+        }
+    }
+    
+    // Gather constraints info
+    TArray<TSharedPtr<FJsonValue>> ConstraintsArray;
+    for (UPhysicsConstraintTemplate* Constraint : PhysAsset->ConstraintSetup)
+    {
+        if (Constraint)
+        {
+            TSharedPtr<FJsonObject> ConObj = MakeShareable(new FJsonObject());
+            const FConstraintInstance& CI = Constraint->DefaultInstance;
+            ConObj->SetStringField(TEXT("name"), Constraint->GetName());
+            ConObj->SetStringField(TEXT("bone1"), CI.ConstraintBone1.ToString());
+            ConObj->SetStringField(TEXT("bone2"), CI.ConstraintBone2.ToString());
+            ConstraintsArray.Add(MakeShareable(new FJsonValueObject(ConObj)));
+        }
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    Result->SetStringField(TEXT("physicsAssetPath"), PhysAsset->GetPathName());
+    Result->SetStringField(TEXT("name"), PhysAsset->GetName());
+    Result->SetNumberField(TEXT("numBodies"), BodiesArray.Num());
+    Result->SetNumberField(TEXT("numConstraints"), ConstraintsArray.Num());
+    Result->SetArrayField(TEXT("bodies"), BodiesArray);
+    Result->SetArrayField(TEXT("constraints"), ConstraintsArray);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, 
+        FString::Printf(TEXT("Physics asset info: %d bodies, %d constraints"), 
+            BodiesArray.Num(), ConstraintsArray.Num()), Result);
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("get_physics_asset_info requires editor mode"), TEXT("NOT_EDITOR"));
+    return false;
+#endif
+}
+
+
+// ============================================================================
 // Main Skeleton Action Dispatcher
 // ============================================================================
 
@@ -2074,6 +2908,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     {
         return HandleConfigureConstraintLimits(RequestId, Payload, RequestingSocket);
     }
+    else if (SubAction == TEXT("set_physics_asset"))
+    {
+        return HandleSetPhysicsAsset(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("remove_physics_body"))
+    {
+        return HandleRemovePhysicsBody(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("get_physics_asset_info"))
+    {
+        return HandleGetPhysicsAssetInfo(RequestId, Payload, RequestingSocket);
+    }
     // Bone operations
     else if (SubAction == TEXT("rename_bone"))
     {
@@ -2095,6 +2941,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     else if (SubAction == TEXT("import_morph_targets"))
     {
         return HandleImportMorphTargets(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("set_morph_target_value"))
+    {
+        return HandleSetMorphTargetValue(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("list_morph_targets"))
+    {
+        return HandleListMorphTargets(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("delete_morph_target"))
+    {
+        return HandleDeleteMorphTarget(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("delete_socket"))
+    {
+        return HandleDeleteSocket(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("get_bone_transform"))
+    {
+        return HandleGetBoneTransform(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("list_virtual_bones"))
+    {
+        return HandleListVirtualBones(RequestId, Payload, RequestingSocket);
+    }
+    else if (SubAction == TEXT("delete_virtual_bone"))
+    {
+        return HandleDeleteVirtualBone(RequestId, Payload, RequestingSocket);
     }
     // Skin weight operations
     else if (SubAction == TEXT("normalize_weights"))
