@@ -326,6 +326,25 @@ private:
   HandleCreateSubmixEffect(const FString &RequestId,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Interaction related automation actions
+  bool HandleCreateInteractionComponent(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureInteractionTrace(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureInteractionWidget(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateDoorActor(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateSwitchActor(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateChestActor(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Lighting related automation actions
   bool HandleLightingAction(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,
