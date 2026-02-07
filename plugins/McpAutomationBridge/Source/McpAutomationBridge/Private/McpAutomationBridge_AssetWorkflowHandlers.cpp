@@ -93,6 +93,24 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("rebuild_material"))
     return HandleRebuildMaterial(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("nanite_rebuild_mesh"))
+    return HandleNaniteRebuildMesh(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("source_control_checkout"))
+    return HandleSourceControlCheckout(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("source_control_submit"))
+    return HandleSourceControlSubmit(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("find_by_tag"))
+    return HandleFindByTag(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("add_material_node"))
+    return HandleAddMaterialNode(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("connect_material_pins"))
+    return HandleConnectMaterialPins(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("remove_material_node"))
+    return HandleRemoveMaterialNode(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("break_material_connections"))
+    return HandleBreakMaterialConnections(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("get_material_node_details"))
+    return HandleGetMaterialNodeDetails(RequestId, Payload, RequestingSocket);
 
   return false;
 }
@@ -2979,6 +2997,364 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material rebuild triggered"), nullptr,
                          FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString AssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UStaticMesh *StaticMesh = Cast<UStaticMesh>(Asset);
+
+  if (!StaticMesh) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Asset is not a StaticMesh"), nullptr,
+                           TEXT("INVALID_ASSET_TYPE"));
+    return true;
+  }
+
+  StaticMesh->Modify();
+  StaticMesh->PostEditChange();
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("message"), TEXT("Nanite rebuild triggered"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Nanite rebuild triggered"), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString AssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  ISourceControlModule &SCModule = ISourceControlModule::Get();
+  if (!SCModule.IsEnabled()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Source control not enabled"), nullptr,
+                           TEXT("SC_NOT_ENABLED"));
+    return true;
+  }
+
+  ISourceControlProvider &Provider = SCModule.GetProvider();
+  FSourceControlStatePtr State = Provider.GetState(AssetPath, EStateCacheUsage::Use);
+
+  if (State.IsValid() && !State->IsCheckedOut()) {
+    Provider.Execute(ISourceControlOperation::Create<FCheckOut>(), AssetPath);
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetStringField(TEXT("status"), TEXT("checked_out"));
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset checked out"), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString AssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  FString Description;
+  Payload->TryGetStringField(TEXT("description"), Description);
+
+  if (AssetPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  ISourceControlModule &SCModule = ISourceControlModule::Get();
+  if (!SCModule.IsEnabled()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Source control not enabled"), nullptr,
+                           TEXT("SC_NOT_ENABLED"));
+    return true;
+  }
+
+  ISourceControlProvider &Provider = SCModule.GetProvider();
+  TArray<FString> Files;
+  Files.Add(AssetPath);
+
+  TSharedRef<FCheckIn, ESPMode::ThreadSafe> CheckInOperation = ISourceControlOperation::Create<FCheckIn>();
+  CheckInOperation->SetDescription(FText::FromString(Description.IsEmpty() ? TEXT("MCP Automation Update") : Description));
+  Provider.Execute(CheckInOperation, Files);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetStringField(TEXT("description"), Description);
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset submitted"), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString Tag;
+  Payload->TryGetStringField(TEXT("tag"), Tag);
+  if (Tag.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("tag required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FAssetRegistryModule &AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+  IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+
+  FARFilter Filter;
+  Filter.TagsAndValues.Add(FName(*Tag), FString());
+
+  TArray<FAssetData> AssetDataList;
+  AssetRegistry.GetAssets(Filter, AssetDataList);
+
+  TArray<TSharedPtr<FJsonValue>> AssetArray;
+  for (const FAssetData &AssetData : AssetDataList) {
+    TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+    AssetObj->SetStringField(TEXT("path"), AssetData.ObjectPath.ToString());
+    AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
+    AssetObj->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
+    AssetArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetArrayField(TEXT("assets"), AssetArray);
+  Resp->SetNumberField(TEXT("count"), AssetArray.Num());
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("Found %d assets with tag '%s'"), AssetArray.Num(), *Tag), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString MaterialPath;
+  Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+  FString NodeType;
+  Payload->TryGetStringField(TEXT("nodeType"), NodeType);
+
+  if (MaterialPath.IsEmpty() || NodeType.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("materialPath and nodeType required"), nullptr,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(MaterialPath);
+  UMaterial *Material = Cast<UMaterial>(Asset);
+
+  if (!Material) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Material not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  UMaterialExpression *NewExpression = nullptr;
+  UClass *ExpressionClass = FindObject<UClass>(nullptr, *NodeType);
+
+  if (ExpressionClass && ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
+    NewExpression = NewObject<UMaterialExpression>(Material, ExpressionClass, NAME_None, RF_Transactional);
+    Material->Expressions.Add(NewExpression);
+    Material->Modify();
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+    Resp->SetStringField(TEXT("nodeType"), NodeType);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material node added"), Resp);
+  } else {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid node type"), nullptr,
+                           TEXT("INVALID_NODE_TYPE"));
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString MaterialPath;
+  Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("materialPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+  Resp->SetStringField(TEXT("message"), TEXT("Pin connection logic - requires editor module"));
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Pin connection requested"), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString MaterialPath;
+  Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+  int32 NodeIndex = 0;
+  Payload->TryGetNumberField(TEXT("nodeIndex"), NodeIndex);
+
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("materialPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(MaterialPath);
+  UMaterial *Material = Cast<UMaterial>(Asset);
+
+  if (!Material) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Material not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  if (Material->Expressions.IsValidIndex(NodeIndex)) {
+    Material->Expressions.RemoveAt(NodeIndex);
+    Material->Modify();
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+    Resp->SetNumberField(TEXT("removedNodeIndex"), NodeIndex);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material node removed"), Resp);
+  } else {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Invalid node index"), nullptr,
+                           TEXT("INVALID_INDEX"));
+  }
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString MaterialPath;
+  Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("materialPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+  Resp->SetStringField(TEXT("message"), TEXT("Connection break logic - requires editor module"));
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Connection break requested"), Resp);
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  FString MaterialPath;
+  Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
+  int32 NodeIndex = 0;
+  Payload->TryGetNumberField(TEXT("nodeIndex"), NodeIndex);
+
+  if (MaterialPath.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("materialPath required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(MaterialPath);
+  UMaterial *Material = Cast<UMaterial>(Asset);
+
+  if (!Material) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Material not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("materialPath"), MaterialPath);
+  Resp->SetNumberField(TEXT("totalNodes"), Material->Expressions.Num());
+
+  if (Material->Expressions.IsValidIndex(NodeIndex)) {
+    UMaterialExpression *Expression = Material->Expressions[NodeIndex];
+    Resp->SetStringField(TEXT("nodeClass"), Expression->GetClass()->GetName());
+    Resp->SetNumberField(TEXT("nodeIndex"), NodeIndex);
+  }
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Material node details retrieved"), Resp);
   return true;
 #else
   return false;

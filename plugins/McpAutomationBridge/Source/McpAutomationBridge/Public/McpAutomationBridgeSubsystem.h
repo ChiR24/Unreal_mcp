@@ -350,6 +350,37 @@ private:
   HandleGenerateThumbnail(const FString &RequestId, const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleNaniteRebuildMesh(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleFindByTag(const FString &RequestId, const FString &Action,
+                  const TSharedPtr<FJsonObject> &Payload,
+                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleAddMaterialNode(const FString &RequestId, const FString &Action,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleConnectMaterialPins(const FString &RequestId, const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleRemoveMaterialNode(const FString &RequestId, const FString &Action,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleBreakMaterialConnections(const FString &RequestId,
+                                 const FString &Action,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket>
+                                     RequestingSocket);
+  bool
+  HandleGetMaterialNodeDetails(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket>
+                                   RequestingSocket);
   // Landscape, foliage, and Niagara handlers
   bool HandleCreateLandscape(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
