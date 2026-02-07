@@ -69,6 +69,7 @@
 #include "Engine/World.h"
 #include "Exporters/Exporter.h"
 #include "Misc/OutputDevice.h"
+#include "UnrealClient.h" // For FScreenshotRequest
 
 #endif
 
@@ -2436,6 +2437,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetViewMode(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_asset"))
     return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("screenshot") || LowerSub == TEXT("take_screenshot"))
+    return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("pause"))
+    return HandleControlEditorPause(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("resume"))
+    return HandleControlEditorResume(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command"))
+    return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
 
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
@@ -2509,6 +2518,183 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
   return true;
 #else
   return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Get optional filename from payload
+  FString Filename;
+  Payload->TryGetStringField(TEXT("filename"), Filename);
+  if (Filename.IsEmpty()) {
+    // Generate default filename with timestamp
+    Filename = FString::Printf(TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  // Ensure filename ends with .png
+  if (!Filename.EndsWith(TEXT(".png"))) {
+    Filename += TEXT(".png");
+  }
+
+  // Build the full path - save to project's Saved/Screenshots folder
+  const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
+  IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
+  const FString FullPath = ScreenshotDir / Filename;
+
+  // Get the active viewport
+  FViewport* Viewport = GEditor->GetActiveViewport();
+  if (!Viewport) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active viewport available"), nullptr,
+                           TEXT("VIEWPORT_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Request a screenshot
+  bool bCaptured = false;
+  FScreenshotRequest::RequestScreenshot(FullPath, false, false);
+  
+  // Since screenshot is async, we respond with the expected path
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("filename"), Filename);
+  Resp->SetStringField(TEXT("path"), FullPath);
+  Resp->SetStringField(TEXT("message"), TEXT("Screenshot request submitted"));
+  
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Screenshot requested"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Screenshot requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Check if we're in PIE
+  if (!GEditor->PlayWorld) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active PIE session to pause"), nullptr,
+                           TEXT("NO_ACTIVE_SESSION"));
+    return true;
+  }
+
+  // Pause PIE execution
+  GEditor->PlayWorld->bDebugPauseExecution = true;
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("state"), TEXT("paused"));
+  Resp->SetStringField(TEXT("message"), TEXT("PIE session paused"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("PIE session paused"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Pause requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  // Check if we're in PIE
+  if (!GEditor->PlayWorld) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("No active PIE session to resume"), nullptr,
+                           TEXT("NO_ACTIVE_SESSION"));
+    return true;
+  }
+
+  // Resume PIE execution
+  GEditor->PlayWorld->bDebugPauseExecution = false;
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("state"), TEXT("resumed"));
+  Resp->SetStringField(TEXT("message"), TEXT("PIE session resumed"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("PIE session resumed"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Resume requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  FString Command;
+  Payload->TryGetStringField(TEXT("command"), Command);
+  if (Command.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("command parameter is required"), nullptr,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Execute the console command in editor context
+  UWorld* World = GEditor->GetEditorWorldContext().World();
+  GEditor->Exec(World, *Command);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("command"), Command);
+  Resp->SetStringField(TEXT("message"), TEXT("Console command executed"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Console command executed"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(Socket, RequestId, false,
+                         TEXT("Console command requires editor build."), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
 #endif
 }
 

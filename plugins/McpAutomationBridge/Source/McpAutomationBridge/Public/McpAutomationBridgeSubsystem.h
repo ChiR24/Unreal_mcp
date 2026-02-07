@@ -916,6 +916,18 @@ private:
   bool HandleControlEditorOpenAsset(const FString &RequestId,
                                     const TSharedPtr<FJsonObject> &Payload,
                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorScreenshot(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorPause(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorResume(const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorConsoleCommand(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Asset handlers
   bool HandleImportAsset(const FString &RequestId,

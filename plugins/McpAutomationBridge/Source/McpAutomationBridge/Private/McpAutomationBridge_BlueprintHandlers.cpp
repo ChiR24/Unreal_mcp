@@ -12,6 +12,7 @@
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Factories/BlueprintFactory.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UObjectIterator.h"
@@ -4927,6 +4928,246 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                            TEXT("blueprint_connect_pins requires editor build "
                                 "with EdGraphSchema_K2"),
                            nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_ensure_exists: Check if blueprint exists, create if not
+  if (ActionMatchesPattern(TEXT("blueprint_ensure_exists")) ||
+      ActionMatchesPattern(TEXT("ensure_exists")) ||
+      AlphaNumLower.Contains(TEXT("blueprintensureexists")) ||
+      AlphaNumLower.Contains(TEXT("ensureexists"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_ensure_exists handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_ensure_exists requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString ParentClass;
+    LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClass);
+    bool bCreateIfMissing = true;
+    if (LocalPayload->HasField(TEXT("createIfMissing"))) {
+      LocalPayload->TryGetBoolField(TEXT("createIfMissing"), bCreateIfMissing);
+    }
+
+#if WITH_EDITOR
+    // Check if blueprint exists using lightweight check
+    FString CheckPath = Path;
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+
+    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    bool bCreated = false;
+
+    if (!bExists && bCreateIfMissing) {
+      // Delegate to HandleBlueprintCreate for creation
+      TSharedPtr<FJsonObject> CreatePayload = MakeShared<FJsonObject>();
+      CreatePayload->SetStringField(TEXT("blueprintPath"), Path);
+      if (!ParentClass.IsEmpty()) {
+        CreatePayload->SetStringField(TEXT("parentClass"), ParentClass);
+      }
+      // Use FBlueprintCreationHandlers to create the blueprint
+      bool bCreateResult = FBlueprintCreationHandlers::HandleBlueprintCreate(
+          this, RequestId, CreatePayload, RequestingSocket);
+      // If creation handler returned true, it sent its own response
+      if (bCreateResult) {
+        return true;
+      }
+      // Check again after creation attempt
+      bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+      bCreated = bExists;
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("exists"), bExists);
+    Resp->SetBoolField(TEXT("created"), bCreated);
+    Resp->SetStringField(TEXT("blueprintPath"), bExists ? CheckPath : Path);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        bCreated ? TEXT("Blueprint created")
+                 : (bExists ? TEXT("Blueprint exists")
+                            : TEXT("Blueprint not found")),
+        Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_ensure_exists requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_probe_handle: Lightweight check for blueprint existence without loading
+  if (ActionMatchesPattern(TEXT("blueprint_probe_handle")) ||
+      ActionMatchesPattern(TEXT("probe_handle")) ||
+      AlphaNumLower.Contains(TEXT("blueprintprobehandle")) ||
+      AlphaNumLower.Contains(TEXT("probehandle"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_probe_handle handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_probe_handle requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    // Normalize path
+    FString CheckPath = Path;
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+
+    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    FString AssetClass;
+
+    if (bExists) {
+      // Try to get asset class without fully loading - use FindAssetData
+      IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(CheckPath));
+      if (AssetData.IsValid()) {
+        AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("exists"), bExists);
+    Resp->SetStringField(TEXT("path"), bExists ? CheckPath : Path);
+    if (!AssetClass.IsEmpty()) {
+      Resp->SetStringField(TEXT("assetClass"), AssetClass);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           bExists ? TEXT("Blueprint handle found")
+                                   : TEXT("Blueprint not found"),
+                           Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_probe_handle requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_set_metadata: Set metadata on a blueprint asset
+  if (ActionMatchesPattern(TEXT("blueprint_set_metadata")) ||
+      ActionMatchesPattern(TEXT("set_metadata")) ||
+      AlphaNumLower.Contains(TEXT("blueprintsetmetadata")) ||
+      AlphaNumLower.Contains(TEXT("setmetadata"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_set_metadata handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_metadata requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    const TSharedPtr<FJsonObject>* MetadataObj = nullptr;
+    if (!LocalPayload->TryGetObjectField(TEXT("metadata"), MetadataObj) ||
+        !MetadataObj || !(*MetadataObj).IsValid()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("metadata object required"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint* BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
+
+    // Set metadata on the blueprint package or asset
+    TArray<FString> MetadataSet;
+    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair :
+         (*MetadataObj)->Values) {
+      if (!Pair.Value.IsValid()) {
+        continue;
+      }
+      const FName MetaKey = FMcpAutomationBridge_ResolveMetadataKey(Pair.Key);
+      FString MetaValue;
+      if (Pair.Value->Type == EJson::String) {
+        MetaValue = Pair.Value->AsString();
+      } else if (Pair.Value->Type == EJson::Boolean) {
+        MetaValue = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+      } else if (Pair.Value->Type == EJson::Number) {
+        MetaValue = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+      } else {
+        continue;
+      }
+
+      // Set metadata on the blueprint class
+      if (BP->GeneratedClass) {
+        BP->GeneratedClass->SetMetaData(MetaKey, *MetaValue);
+      }
+      // Also set on the blueprint itself if it supports metadata
+      BP->SetMetaData(MetaKey, *MetaValue);
+      MetadataSet.Add(Pair.Key);
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
+    const bool bSaved = SaveLoadedAssetThrottled(BP);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
+    TArray<TSharedPtr<FJsonValue>> MetaArray;
+    for (const FString& Key : MetadataSet) {
+      MetaArray.Add(MakeShared<FJsonValueString>(Key));
+    }
+    Resp->SetArrayField(TEXT("metadataSet"), MetaArray);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Metadata set"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_set_metadata requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
     return true;
 #endif
   }

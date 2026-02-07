@@ -35,7 +35,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       !Lower.StartsWith(TEXT("set_vsync")) &&
       !Lower.StartsWith(TEXT("set_frame_rate_limit")) &&
       !Lower.StartsWith(TEXT("configure_nanite")) &&
-      !Lower.StartsWith(TEXT("configure_lod"))) {
+      !Lower.StartsWith(TEXT("configure_lod")) &&
+      !Lower.StartsWith(TEXT("run_benchmark")) &&
+      !Lower.StartsWith(TEXT("enable_gpu_timing")) &&
+      !Lower.StartsWith(TEXT("apply_baseline_settings")) &&
+      !Lower.StartsWith(TEXT("optimize_draw_calls")) &&
+      !Lower.StartsWith(TEXT("configure_occlusion_culling")) &&
+      !Lower.StartsWith(TEXT("optimize_shaders")) &&
+      !Lower.StartsWith(TEXT("configure_world_partition"))) {
     return false;
   }
 
@@ -395,6 +402,252 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actors merged using Merge Actors tool"), Resp,
                            FString());
+    return true;
+  } else if (Lower == TEXT("run_benchmark")) {
+    // Run performance benchmark
+    double Duration = 60.0;
+    Payload->TryGetNumberField(TEXT("duration"), Duration);
+
+    FString BenchmarkType = TEXT("all");
+    Payload->TryGetStringField(TEXT("type"), BenchmarkType);
+
+    // Start profiling for benchmark
+    GEngine->Exec(GEditor->GetEditorWorldContext().World(),
+                  TEXT("stat startfile"));
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetNumberField(TEXT("duration"), Duration);
+    Resp->SetStringField(TEXT("type"), BenchmarkType);
+    Resp->SetStringField(TEXT("status"), TEXT("started"));
+
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Benchmark started (type: %s, duration: %.0fs)"),
+                        *BenchmarkType, Duration),
+        Resp);
+    return true;
+  } else if (Lower == TEXT("enable_gpu_timing")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+    IConsoleVariable *CVar =
+        IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled"));
+    if (CVar) {
+      CVar->Set(bEnabled ? 1 : 0);
+    }
+
+    // Also toggle stat gpu for visual feedback
+    if (bEnabled) {
+      GEngine->Exec(GEditor->GetEditorWorldContext().World(),
+                    TEXT("stat gpu"));
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("GPU timing %s"),
+                        bEnabled ? TEXT("enabled") : TEXT("disabled")),
+        Resp);
+    return true;
+  } else if (Lower == TEXT("apply_baseline_settings")) {
+    // Apply common baseline optimization settings
+    FString Profile = TEXT("balanced");
+    Payload->TryGetStringField(TEXT("profile"), Profile);
+
+    // Common optimization CVars
+    auto SetCVar = [](const TCHAR *Name, int32 Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    if (Profile.Equals(TEXT("performance"), ESearchCase::IgnoreCase)) {
+      SetCVar(TEXT("r.VSync"), 0);
+      SetCVar(TEXT("r.AllowHDR"), 0);
+      SetCVar(TEXT("r.MotionBlurQuality"), 0);
+      SetCVar(TEXT("r.DepthOfFieldQuality"), 0);
+      SetCVar(TEXT("r.BloomQuality"), 0);
+      SetCVar(TEXT("r.ShadowQuality"), 1);
+      SetCVar(TEXT("r.MaxAnisotropy"), 4);
+    } else if (Profile.Equals(TEXT("quality"), ESearchCase::IgnoreCase)) {
+      SetCVar(TEXT("r.VSync"), 1);
+      SetCVar(TEXT("r.AllowHDR"), 1);
+      SetCVar(TEXT("r.MotionBlurQuality"), 4);
+      SetCVar(TEXT("r.DepthOfFieldQuality"), 2);
+      SetCVar(TEXT("r.BloomQuality"), 5);
+      SetCVar(TEXT("r.ShadowQuality"), 5);
+      SetCVar(TEXT("r.MaxAnisotropy"), 16);
+    } else {
+      // Balanced defaults
+      SetCVar(TEXT("r.VSync"), 1);
+      SetCVar(TEXT("r.AllowHDR"), 1);
+      SetCVar(TEXT("r.MotionBlurQuality"), 2);
+      SetCVar(TEXT("r.DepthOfFieldQuality"), 1);
+      SetCVar(TEXT("r.BloomQuality"), 3);
+      SetCVar(TEXT("r.ShadowQuality"), 3);
+      SetCVar(TEXT("r.MaxAnisotropy"), 8);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("profile"), Profile);
+
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Baseline settings applied: %s"), *Profile), Resp);
+    return true;
+  } else if (Lower == TEXT("optimize_draw_calls")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+    bool bInstancing = true;
+    Payload->TryGetBoolField(TEXT("instancing"), bInstancing);
+
+    auto SetCVar = [](const TCHAR *Name, int32 Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    // Draw call optimization CVars
+    SetCVar(TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? 1 : 0);
+    SetCVar(TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? 1 : 0);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("optimized"), bEnabled);
+    Resp->SetBoolField(TEXT("instancing"), bInstancing);
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Draw call optimizations configured"), Resp);
+    return true;
+  } else if (Lower == TEXT("configure_occlusion_culling")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+    double OcclusionSlop = 0.0;
+    bool bHasSlop = Payload->TryGetNumberField(TEXT("slop"), OcclusionSlop);
+
+    double MinScreenRadiusForOcclusion = 0.0;
+    bool bHasMinRadius = Payload->TryGetNumberField(
+        TEXT("minScreenRadius"), MinScreenRadiusForOcclusion);
+
+    auto SetCVar = [](const TCHAR *Name, int32 Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    auto SetCVarFloat = [](const TCHAR *Name, float Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    SetCVar(TEXT("r.AllowOcclusionQueries"), bEnabled ? 1 : 0);
+
+    if (bHasSlop) {
+      SetCVarFloat(TEXT("r.OcclusionSlop"), (float)OcclusionSlop);
+    }
+
+    if (bHasMinRadius) {
+      SetCVarFloat(TEXT("r.OcclusionCullMinScreenRadius"),
+                   (float)MinScreenRadiusForOcclusion);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    if (bHasSlop) {
+      Resp->SetNumberField(TEXT("slop"), OcclusionSlop);
+    }
+    if (bHasMinRadius) {
+      Resp->SetNumberField(TEXT("minScreenRadius"), MinScreenRadiusForOcclusion);
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Occlusion culling configured"), Resp);
+    return true;
+  } else if (Lower == TEXT("optimize_shaders")) {
+    FString Mode = TEXT("changed");
+    Payload->TryGetStringField(TEXT("mode"), Mode);
+
+    bool bForceRecompile = false;
+    Payload->TryGetBoolField(TEXT("forceRecompile"), bForceRecompile);
+
+    FString Cmd;
+    if (bForceRecompile) {
+      Cmd = TEXT("recompileshaders all");
+    } else if (Mode.Equals(TEXT("material"), ESearchCase::IgnoreCase)) {
+      Cmd = TEXT("recompileshaders material");
+    } else if (Mode.Equals(TEXT("global"), ESearchCase::IgnoreCase)) {
+      Cmd = TEXT("recompileshaders global");
+    } else {
+      Cmd = TEXT("recompileshaders changed");
+    }
+
+    GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Cmd);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("mode"), Mode);
+    Resp->SetBoolField(TEXT("forceRecompile"), bForceRecompile);
+    Resp->SetStringField(TEXT("command"), Cmd);
+
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Shader optimization initiated: %s"), *Cmd),
+        Resp);
+    return true;
+  } else if (Lower == TEXT("configure_world_partition")) {
+    bool bEnabled = true;
+    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+
+    double CellSize = 0.0;
+    bool bHasCellSize = Payload->TryGetNumberField(TEXT("cellSize"), CellSize);
+
+    double LoadingRange = 0.0;
+    bool bHasLoadingRange =
+        Payload->TryGetNumberField(TEXT("loadingRange"), LoadingRange);
+
+    auto SetCVar = [](const TCHAR *Name, int32 Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    auto SetCVarFloat = [](const TCHAR *Name, float Value) {
+      if (IConsoleVariable *CVar =
+              IConsoleManager::Get().FindConsoleVariable(Name)) {
+        CVar->Set(Value);
+      }
+    };
+
+    SetCVar(TEXT("wp.Runtime.EnableStreaming"), bEnabled ? 1 : 0);
+
+    if (bHasCellSize) {
+      SetCVarFloat(TEXT("wp.Runtime.RuntimeCellSize"), (float)CellSize);
+    }
+
+    if (bHasLoadingRange) {
+      SetCVarFloat(TEXT("wp.Runtime.RuntimeStreamingRange"),
+                   (float)LoadingRange);
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("streamingEnabled"), bEnabled);
+    if (bHasCellSize) {
+      Resp->SetNumberField(TEXT("cellSize"), CellSize);
+    }
+    if (bHasLoadingRange) {
+      Resp->SetNumberField(TEXT("loadingRange"), LoadingRange);
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("World Partition settings configured"), Resp);
     return true;
   }
 
