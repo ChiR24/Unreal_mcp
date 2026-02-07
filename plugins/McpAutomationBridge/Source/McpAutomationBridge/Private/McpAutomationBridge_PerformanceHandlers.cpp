@@ -63,6 +63,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
 
     // Execute memreport command
     FString Cmd = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
+    }
+
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Cmd);
 
     // If output path provided, we might want to move the log file, but
@@ -74,6 +80,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     return true;
   } else if (Lower == TEXT("start_profiling")) {
     // "stat startfile"
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
+    }
+
     GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                   TEXT("stat startfile"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -81,6 +93,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     return true;
   } else if (Lower == TEXT("stop_profiling")) {
     // "stat stopfile"
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
+    }
+
     GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                   TEXT("stat stopfile"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -94,6 +112,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     // want to run the command. For explicit set, we can use "stat fps 1" or
     // "stat fps 0" if supported, but typically it's a toggle. Better: use
     // GAreyouSure? No, just exec.
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
+    }
+
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat fps"));
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("FPS stat toggled"), nullptr);
@@ -102,6 +126,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     FString Category;
     if (Payload->TryGetStringField(TEXT("category"), Category) &&
         !Category.IsEmpty()) {
+      if (!GEditor)
+      {
+          SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+          return true;
+      }
+
       GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                     *FString::Printf(TEXT("stat %s"), *Category));
       SendAutomationResponse(
@@ -412,6 +442,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     Payload->TryGetStringField(TEXT("type"), BenchmarkType);
 
     // Start profiling for benchmark
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
+    }
+
     GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                   TEXT("stat startfile"));
 
@@ -438,6 +474,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
 
     // Also toggle stat gpu for visual feedback
     if (bEnabled) {
+      if (!GEditor)
+      {
+          SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+          return true;
+      }
+
       GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                     TEXT("stat gpu"));
     }
@@ -587,6 +629,12 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       Cmd = TEXT("recompileshaders global");
     } else {
       Cmd = TEXT("recompileshaders changed");
+    }
+
+    if (!GEditor)
+    {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
+        return true;
     }
 
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Cmd);

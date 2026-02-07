@@ -611,6 +611,13 @@ static bool HandleSetReplication(
         return true;
     }
 
+        if (!Blueprint->GeneratedClass)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
+        return true;
+    }
+
     AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
     if (CDO)
     {
@@ -735,6 +742,13 @@ static bool HandleSetNetUpdateFrequency(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+        if (!Blueprint->GeneratedClass)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
         return true;
     }
 
@@ -874,6 +888,13 @@ static bool HandleConfigureNetCullDistance(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+        if (!Blueprint->GeneratedClass)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
         return true;
     }
 

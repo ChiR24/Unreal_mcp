@@ -2695,7 +2695,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
   }
 
   // Execute the console command in editor context
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -2844,7 +2844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
 
   // Use console command to set bookmark
   FString Command = FString::Printf(TEXT("SetBookmark %d"), BookmarkIndex);
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -2882,7 +2882,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
 
   // Use console command to jump to bookmark
   FString Command = FString::Printf(TEXT("JumpToBookmark %d"), BookmarkIndex);
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
@@ -3012,7 +3012,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
 
   // Fallback: use console command
   FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

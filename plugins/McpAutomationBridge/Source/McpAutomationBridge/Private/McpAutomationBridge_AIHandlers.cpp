@@ -2197,7 +2197,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
             ControllerBP->SimpleConstructionScript->AddNode(PerceptionNode);
             PerceptionComp = Cast<UAIPerceptionComponent>(PerceptionNode->ComponentTemplate);
+            if (!PerceptionComp)
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to cast perception component"), TEXT("CAST_FAILED"));
+                return true;
+            }
             bCreatedNew = true;
+        }
+
+        if (!PerceptionComp)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Perception component is null"), TEXT("NULL_COMPONENT"));
+            return true;
         }
 
         TArray<FString> SensesConfigured;
