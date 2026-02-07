@@ -665,7 +665,7 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -777,7 +777,7 @@ static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -844,7 +844,7 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -908,7 +908,7 @@ static bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -957,7 +957,7 @@ static bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1029,7 +1029,7 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1092,7 +1092,7 @@ static bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1152,7 +1152,7 @@ static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const
         AssetPath = FString::Printf(TEXT("/Game/GeneratedMeshes/%s"), *ActorName);
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1382,7 +1382,7 @@ static bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1442,7 +1442,7 @@ static bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1501,7 +1501,7 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1558,7 +1558,7 @@ static bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1615,7 +1615,7 @@ static bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1674,7 +1674,7 @@ double BendAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1730,7 +1730,7 @@ double TwistAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1787,7 +1787,7 @@ double FlarePercentX = GetNumberFieldGeom(Payload, TEXT("flareX"), 50.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1841,7 +1841,7 @@ double Magnitude = GetNumberFieldGeom(Payload, TEXT("magnitude"), 5.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1907,7 +1907,7 @@ int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 10);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -1968,7 +1968,7 @@ static bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FStrin
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2021,7 +2021,7 @@ static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2079,7 +2079,7 @@ static bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2132,7 +2132,7 @@ static bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2195,7 +2195,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2292,7 +2292,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2388,7 +2388,7 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2457,7 +2457,7 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2716,7 +2716,7 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2768,7 +2768,7 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2834,7 +2834,7 @@ static bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2895,7 +2895,7 @@ FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEX
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -2974,7 +2974,7 @@ static bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3118,7 +3118,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3192,7 +3192,7 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3293,7 +3293,7 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3446,7 +3446,7 @@ static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3508,7 +3508,7 @@ static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3587,7 +3587,7 @@ double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3669,7 +3669,7 @@ static bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
     ADynamicMeshActor* TrimActor = nullptr;
 
@@ -3741,7 +3741,7 @@ static bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3804,7 +3804,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -3994,7 +3994,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -4270,7 +4270,7 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
     AActor* SplineActor = nullptr;
 
@@ -4469,7 +4469,7 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* SourceActor = nullptr;
     AActor* SplineActor = nullptr;
 
@@ -4574,7 +4574,7 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -4725,7 +4725,7 @@ static bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FStrin
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -4844,7 +4844,7 @@ static bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
     FVector V2 = ReadVectorFromPayload(Payload, TEXT("v2"), FVector(50, 100, 0));
     int32 GroupID = GetIntFieldGeom(Payload, TEXT("groupID"), 0);
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -4921,7 +4921,7 @@ static bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FStr
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -5016,7 +5016,7 @@ static bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -5135,7 +5135,7 @@ static bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     FVector Position = ReadVectorFromPayload(Payload, TEXT("position"), FVector::ZeroVector);
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -5196,7 +5196,7 @@ static bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -5267,7 +5267,7 @@ static bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
@@ -5337,7 +5337,7 @@ static bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5405,7 +5405,7 @@ static bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5473,7 +5473,7 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5533,7 +5533,7 @@ static bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& R
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5594,7 +5594,7 @@ static bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5663,7 +5663,7 @@ static bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FSt
         AssetPath = FString::Printf(TEXT("/Game/GeneratedMeshes/%s_Nanite"), *ActorName);
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
     for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
@@ -5748,7 +5748,7 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
     AActor* SplineActor = nullptr;
 
