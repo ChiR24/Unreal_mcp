@@ -2026,8 +2026,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 #if WITH_EDITOR
         if (IAnimationDataController* Controller = AnimSeq->GetController()) {
           FName BoneFName(*BoneName);
-          FFrameRate FrameRate = AnimSeq->GetSamplingFrameRate();
-          FFrameNumber FrameNumber = FrameRate.AsFrameNumber(Time);
 
           FTransform BoneTransform;
           BoneTransform.SetLocation(FVector(PosX, PosY, PosZ));
@@ -2095,8 +2093,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Controller->AddCurve(CurveId, AACF_DefaultCurve);
           
           // Add key to curve
-          FFrameRate FrameRate = AnimSeq->GetSamplingFrameRate();
-          FFrameNumber FrameNumber = FrameRate.AsFrameNumber(Time);
           Controller->SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
 
           bSuccess = true;
@@ -2301,6 +2297,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
           float OutStartTime, OutEndTime;
           Montage->GetSectionStartAndEndTime(SectionIndex, OutStartTime, OutEndTime);
+
+          // Actually set the section start time if provided
+          if (StartTime >= 0.0) {
+            Montage->SetSectionStartTime(SectionIndex, static_cast<float>(StartTime));
+            OutStartTime = static_cast<float>(StartTime);
+            Montage->MarkPackageDirty();
+            McpSafeAssetSave(Montage);
+          }
 
           bSuccess = true;
           Message = FString::Printf(TEXT("Section '%s' timing: %.2f - %.2f"), *SectionName, OutStartTime, OutEndTime);

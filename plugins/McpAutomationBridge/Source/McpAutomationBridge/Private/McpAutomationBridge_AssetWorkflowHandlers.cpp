@@ -1046,7 +1046,10 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   }
 
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1175,7 +1178,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset metadata updated"), Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1309,7 +1315,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
                            nullptr, TEXT("DUPLICATE_FAILED"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1382,7 +1391,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
         nullptr, TEXT("RENAME_FAILED"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleMoveAsset(
@@ -1444,7 +1456,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp,
                          FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1493,7 +1508,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
                            TEXT("CREATE_FAILED"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1544,7 +1562,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Dependencies retrieved"), Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1624,7 +1645,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
                          Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1714,7 +1738,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
   });
 
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -1769,7 +1796,10 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
                            Resp, FString());
   });
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -2020,7 +2050,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets listed"), Resp,
                          FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -2083,7 +2116,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset details retrieved"), Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 /**
@@ -2188,7 +2224,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
                            TEXT("Asset report generated"), Resp, FString());
   });
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 // ============================================================================
@@ -2251,7 +2290,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterial(
                            TEXT("CREATE_FAILED"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
@@ -2368,7 +2410,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
                            TEXT("CREATE_FAILED"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 // ============================================================================
@@ -2496,7 +2541,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
   }
 
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
@@ -2567,7 +2615,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Instances listed"),
                          Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
@@ -2608,7 +2659,10 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Instance parameters reset"), Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
@@ -2634,7 +2688,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
                                  : TEXT("Asset does not exist"),
                          Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
@@ -2727,7 +2784,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material stats retrieved"), Resp, FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
@@ -2958,7 +3018,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
                          TEXT("Material rebuild triggered"), nullptr,
                          FString());
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
@@ -2999,7 +3062,10 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Nanite rebuild triggered"), Resp);
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
@@ -3036,7 +3102,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset checked out"), Resp);
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
@@ -3077,7 +3146,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset submitted"), Resp);
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
@@ -3118,7 +3190,10 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
   SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Found %d assets with tag '%s'"), AssetArray.Num(), *Tag), Resp);
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
@@ -3167,7 +3242,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
                            TEXT("INVALID_NODE_TYPE"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
@@ -3194,10 +3272,12 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   Payload->TryGetStringField(TEXT("toPinName"), ToPinName);
   
   // Also support inputIndex/outputIndex for simpler connections
-  int32 OutputIndex = 0;
-  int32 InputIndex = 0;
-  Payload->TryGetNumberField(TEXT("outputIndex"), OutputIndex);
-  Payload->TryGetNumberField(TEXT("inputIndex"), InputIndex);
+  double OutputIndexD = 0.0;
+  double InputIndexD = 0.0;
+  Payload->TryGetNumberField(TEXT("outputIndex"), OutputIndexD);
+  Payload->TryGetNumberField(TEXT("inputIndex"), InputIndexD);
+  int32 OutputIndex = static_cast<int32>(OutputIndexD);
+  int32 InputIndex = static_cast<int32>(InputIndexD);
 
   if (FromNodeIndex < 0 || ToNodeIndex < 0) {
     SendAutomationResponse(Socket, RequestId, false,
@@ -3343,7 +3423,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
                            TEXT("INVALID_INDEX"));
   }
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
@@ -3502,5 +3585,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Material node details retrieved"), Resp);
   return true;
-#else  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));  return true;#endif
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }

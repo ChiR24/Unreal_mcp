@@ -2695,7 +2695,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
   }
 
   // Execute the console command in editor context
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  if (!GEditor) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Editor not available"), nullptr,
+                           TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+  UWorld* World = GEditor->GetEditorWorldContext().World();
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
