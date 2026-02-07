@@ -867,6 +867,18 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     if (!bResolvedHost && HostToBind.Equals(TEXT("::1"), ESearchCase::IgnoreCase)) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
+      
+      // Re-create socket as IPv4 since we're falling back to IPv4 address
+      ListenSocket->Close();
+      ISocketSubsystem *SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+      ListenSocket = SocketSubsystem->CreateSocket(
+          NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
+      if (ListenSocket) {
+        ListenSocket->SetReuseAddr(true);
+        ListenSocket->SetNonBlocking(false);
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Re-created socket for IPv4 fallback."));
+      }
+      
       bool bFallbackIsValidIp = false;
       ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
       bResolvedHost = bFallbackIsValidIp;
@@ -900,8 +912,8 @@ uint32 FMcpBridgeWebSocket::RunServer() {
         ListenAddr = AddrInfoResult.Results[0].Address;
         bResolvedHost = true;
         UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Successfully resolved '%s' to address."),
-               *HostToBind);
+               TEXT("Successfully resolved '%s' to address '%s'."),
+               *HostToBind, *ListenAddr->ToString(true));
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
                TEXT("Failed to resolve hostname '%s'. Falling back to 127.0.0.1."),

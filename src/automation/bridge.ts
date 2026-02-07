@@ -123,8 +123,9 @@ export class AutomationBridge extends EventEmitter {
                         `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
                         'The automation bridge will be accessible from your local network.'
                     );
-                    // Return original trimmed value (preserving brackets/zone if provided)
-                    return trimmed;
+                    // Return address without brackets (consistent with loopback handling)
+                    // Brackets will be re-added by formatHostForUrl if needed
+                    return addressToValidate;
                 }
                 
                 // Check if it's a valid hostname (domain name)

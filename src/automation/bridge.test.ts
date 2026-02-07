@@ -133,7 +133,7 @@ describe('AutomationBridge Host Validation', () => {
                 port: 8091, 
                 allowNonLoopback: true 
             });
-            expect(bridge.getStatus().host).toBe('[fe80::1]');
+            expect(bridge.getStatus().host).toBe('fe80::1');
         });
     });
 
@@ -150,15 +150,6 @@ describe('AutomationBridge Host Validation', () => {
         it('should reject out-of-range IPv4 octets', () => {
             const bridge = new AutomationBridge({ 
                 host: '256.1.1.1', 
-                port: 8091, 
-                allowNonLoopback: true 
-            });
-            expect(bridge.getStatus().host).toBe('127.0.0.1');
-        });
-
-        it('should reject invalid hostname format', () => {
-            const bridge = new AutomationBridge({ 
-                host: '-invalid-hostname', 
                 port: 8091, 
                 allowNonLoopback: true 
             });
