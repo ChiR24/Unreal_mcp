@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import net from 'node:net';
 import { WebSocket } from 'ws';
 import { Logger } from '../utils/logger.js';
 import {
@@ -102,17 +103,51 @@ export class AutomationBridge extends EventEmitter {
 
             // Non-loopback: check if allowed
             if (allowNonLoopback) {
-                // Validate IP format (IPv4 or 0.0.0.0 for all interfaces)
-                const ipv4Regex = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
-                if (ipv4Regex.test(trimmed) || lower === '0.0.0.0') {
+                // Strip brackets from IPv6 if present
+                let addressToValidate = trimmed;
+                if (addressToValidate.startsWith('[') && addressToValidate.endsWith(']')) {
+                    addressToValidate = addressToValidate.slice(1, -1);
+                }
+                
+                // Strip zone ID if present (e.g., fe80::1%eth0 -> fe80::1)
+                const zoneIndex = addressToValidate.indexOf('%');
+                const addressWithoutZone = zoneIndex >= 0 
+                    ? addressToValidate.slice(0, zoneIndex) 
+                    : addressToValidate;
+                
+                // Use Node.js net module for validation (IPv4 and IPv6)
+                const ipVersion = net.isIP(addressWithoutZone);
+                
+                if (ipVersion === 4 || ipVersion === 6) {
                     this.log.warn(
                         `SECURITY: ${label} set to non-loopback address '${trimmed}'. ` +
                         'The automation bridge will be accessible from your local network.'
                     );
+                    // Return original trimmed value (preserving brackets/zone if provided)
                     return trimmed;
                 }
-                this.log.warn(
-                    `${label} '${trimmed}' is not a valid IP address. Falling back to ${DEFAULT_AUTOMATION_HOST}.`
+                
+                // Check if it's a valid hostname (domain name)
+                // Allow hostnames like "example.com", "server.local", "unreal-pc"
+                // Must contain at least one letter (to distinguish from IPs)
+                const hasLetters = /[a-zA-Z]/.test(trimmed);
+                if (hasLetters) {
+                    // Simple hostname validation: no spaces, no leading/trailing hyphens or dots
+                    const isValidHostname = /^[a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]$/.test(trimmed) ||
+                                           /^[a-zA-Z0-9]$/.test(trimmed);
+                    if (isValidHostname && !trimmed.includes('..')) {
+                        this.log.warn(
+                            `SECURITY: ${label} set to hostname '${trimmed}'. ` +
+                            'The automation bridge will be accessible from your local network.'
+                        );
+                        return trimmed;
+                    }
+                }
+                
+                // Invalid IP format or hostname
+                this.log.error(
+                    `${label} '${trimmed}' is not a valid IPv4/IPv6 address or hostname. ` +
+                    `Falling back to ${DEFAULT_AUTOMATION_HOST}.`
                 );
                 return DEFAULT_AUTOMATION_HOST;
             }

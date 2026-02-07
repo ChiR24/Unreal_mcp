@@ -810,13 +810,19 @@ uint32 FMcpBridgeWebSocket::RunClient() {
 }
 
 uint32 FMcpBridgeWebSocket::RunServer() {
-  ISocketSubsystem *SocketSubsystem =
-      ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+  // Determine if we need IPv6 socket based on host address
+  const bool bIsIpv6Host = ListenHost.Contains(TEXT(":"));
+  
+  ISocketSubsystem *SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d)"),
-         *ListenHost, Port);
+         TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d, IPv6=%s)"),
+         *ListenHost, Port, bIsIpv6Host ? TEXT("true") : TEXT("false"));
+  
+  // Create socket with proper protocol family for IPv6 support
+  // Use FName-based protocol specification (non-deprecated API)
+  const FName ProtocolName = bIsIpv6Host ? FName(TEXT("IPv6")) : FName();
   ListenSocket = SocketSubsystem->CreateSocket(
-      NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), false);
+      NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), ProtocolName);
   if (!ListenSocket) {
     const FString ErrorMessage = DescribeSocketError(
         SocketSubsystem, TEXT("Failed to create listen socket"));
@@ -876,13 +882,34 @@ uint32 FMcpBridgeWebSocket::RunServer() {
     ListenAddr->SetIp(*HostToBind, bIsValidIp);
     bResolvedHost = bIsValidIp;
 
+    // If not a valid IP, try to resolve as hostname via DNS
     if (!bResolvedHost) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-             TEXT("Invalid IP address '%s'. Falling back to 127.0.0.1."),
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("'%s' is not a valid IP address. Attempting DNS resolution..."),
              *HostToBind);
-      bool bFallbackIsValidIp = false;
-      ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
-      bResolvedHost = bFallbackIsValidIp;
+      
+      FAddressInfoResult AddrInfoResult = SocketSubsystem->GetAddressInfo(
+          *HostToBind, 
+          nullptr, 
+          EAddressInfoFlags::Default,
+          NAME_None,
+          ESocketType::SOCKTYPE_Streaming);
+      
+      if (AddrInfoResult.ReturnCode == SE_NO_ERROR && AddrInfoResult.Results.Num() > 0) {
+        // Use the first resolved address
+        ListenAddr = AddrInfoResult.Results[0].Address;
+        bResolvedHost = true;
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Successfully resolved '%s' to address."),
+               *HostToBind);
+      } else {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+               TEXT("Failed to resolve hostname '%s'. Falling back to 127.0.0.1."),
+               *HostToBind);
+        bool bFallbackIsValidIp = false;
+        ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
+        bResolvedHost = bFallbackIsValidIp;
+      }
     }
   }
   else {
