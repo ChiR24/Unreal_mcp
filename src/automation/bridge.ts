@@ -133,7 +133,7 @@ export class AutomationBridge extends EventEmitter {
                 const hasLetters = /[a-zA-Z]/.test(trimmed);
                 if (hasLetters) {
                     // Simple hostname validation: no spaces, no leading/trailing hyphens or dots
-                    const isValidHostname = /^[a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]$/.test(trimmed) ||
+                    const isValidHostname = /^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$/.test(trimmed) ||
                                            /^[a-zA-Z0-9]$/.test(trimmed);
                     if (isValidHostname && !trimmed.includes('..')) {
                         this.log.warn(
