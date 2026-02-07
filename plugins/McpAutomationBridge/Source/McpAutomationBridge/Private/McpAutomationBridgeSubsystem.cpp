@@ -902,12 +902,7 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                   });
 
   // Direct action aliases for misc handlers
-  RegisterHandler(TEXT("create_post_process_volume"),
-                  [this](const FString &R, const FString &A,
-                         const TSharedPtr<FJsonObject> &P,
-                         TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleMiscAction(R, A, P, S);
-                  });
+  // Note: create_post_process_volume is handled via manage_volumes tool
   RegisterHandler(TEXT("create_camera"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
