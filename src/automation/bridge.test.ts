@@ -155,6 +155,15 @@ describe('AutomationBridge Host Validation', () => {
             });
             expect(bridge.getStatus().host).toBe('127.0.0.1');
         });
+
+        it('should reject hostname with consecutive dots', () => {
+            const bridge = new AutomationBridge({ 
+                host: 'example..com', 
+                port: 8091, 
+                allowNonLoopback: true 
+            });
+            expect(bridge.getStatus().host).toBe('127.0.0.1');
+        });
     });
 
     describe('Domain names/hostnames with allowNonLoopback=true', () => {

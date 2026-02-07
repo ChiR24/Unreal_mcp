@@ -869,15 +869,16 @@ uint32 FMcpBridgeWebSocket::RunServer() {
              TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
       
       // Re-create socket as IPv4 since we're falling back to IPv4 address
-      ListenSocket->Close();
-      ISocketSubsystem *SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+      SocketSubsystem->DestroySocket(ListenSocket);
       ListenSocket = SocketSubsystem->CreateSocket(
           NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
-      if (ListenSocket) {
-        ListenSocket->SetReuseAddr(true);
-        ListenSocket->SetNonBlocking(false);
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Re-created socket for IPv4 fallback."));
+      if (!ListenSocket) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("Failed to re-create IPv4 socket for fallback."));
+        return 0;
       }
+      ListenSocket->SetReuseAddr(true);
+      ListenSocket->SetNonBlocking(false);
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Re-created socket for IPv4 fallback."));
       
       bool bFallbackIsValidIp = false;
       ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);

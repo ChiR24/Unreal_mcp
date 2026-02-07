@@ -133,10 +133,13 @@ export class AutomationBridge extends EventEmitter {
                 // Must contain at least one letter (to distinguish from IPs)
                 const hasLetters = /[a-zA-Z]/.test(trimmed);
                 if (hasLetters) {
-                    // Simple hostname validation: no spaces, no leading/trailing hyphens or dots
-                    const isValidHostname = /^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$/.test(trimmed) ||
-                                           /^[a-zA-Z0-9]$/.test(trimmed);
-                    if (isValidHostname && !trimmed.includes('..')) {
+                    // Robust hostname validation: split into labels and validate each
+                    // Each label must: not be empty, start/end with alphanumeric, allow hyphens in middle
+                    const labels = trimmed.split('.');
+                    const isValidHostname = labels.every(
+                        (label) => label.length > 0 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label)
+                    );
+                    if (isValidHostname) {
                         this.log.warn(
                             `SECURITY: ${label} set to hostname '${trimmed}'. ` +
                             'The automation bridge will be accessible from your local network.'
@@ -510,7 +513,13 @@ export class AutomationBridge extends EventEmitter {
     }
 
     private formatHostForUrl(host: string): string {
-        return host.includes(':') ? `[${host}]` : host;
+        if (!host.includes(':')) {
+            return host;
+        }
+        // Percent-encode zone ID delimiter (%) per RFC 6874
+        // e.g., fe80::1%eth0 becomes [fe80::1%25eth0]
+        const encodedHost = host.replace(/%/g, '%25');
+        return `[${encodedHost}]`;
     }
 
     private getClientUrl(): string {
