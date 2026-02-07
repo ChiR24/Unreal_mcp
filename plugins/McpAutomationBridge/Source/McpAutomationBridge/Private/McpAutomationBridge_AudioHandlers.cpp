@@ -1139,18 +1139,20 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
     OutputPath = TEXT("/Game/Audio/Dialogues");
   }
 
+  // Parse gender setting
   FString GenderStr;
-  UDialogueVoice *Voice = NewObject<UDialogueVoice>();
-  Voice->VoiceName = FName(*VoiceName);
+  ETextGender Gender = ETextGender::Masculine;
   if (Payload->TryGetStringField(TEXT("gender"), GenderStr)) {
-    Voice->Gender = GenderStr.Equals(TEXT("Female"), ESearchCase::IgnoreCase)
-                        ? ETextGender::Feminine
-                        : ETextGender::Masculine;
+    Gender = GenderStr.Equals(TEXT("Female"), ESearchCase::IgnoreCase)
+                 ? ETextGender::Feminine
+                 : ETextGender::Masculine;
   }
 
+  // Parse pluralization setting
   FString PluralStr;
+  bool bIsPlural = false;
   if (Payload->TryGetStringField(TEXT("pluralization"), PluralStr)) {
-    Voice->bIsPlural = PluralStr.Equals(TEXT("Plural"), ESearchCase::IgnoreCase);
+    bIsPlural = PluralStr.Equals(TEXT("Plural"), ESearchCase::IgnoreCase);
   }
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *VoiceName);
@@ -1174,8 +1176,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
   }
 
   NewVoice->VoiceName = FName(*VoiceName);
-  NewVoice->Gender = Voice->Gender;
-  NewVoice->bIsPlural = Voice->bIsPlural;
+  NewVoice->Gender = Gender;
+  NewVoice->bIsPlural = bIsPlural;
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(NewVoice);

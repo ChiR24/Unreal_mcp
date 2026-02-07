@@ -4876,21 +4876,7 @@ static bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-    // Use AppendTriangle via the Geometry Script library
-    int32 NewTriangleIndex = -1;
-    bool bDeferChangeNotifications = false;
-    
-    UGeometryScriptLibrary_MeshBasicEditFunctions::AppendTriangle(
-        Mesh,
-        FIntVector(0, 1, 2), // Triangle indices (will be mapped to new vertices)
-        NewTriangleIndex,
-        GroupID,
-        bDeferChangeNotifications,
-        nullptr
-    );
-
-    // Actually we need to use lower-level access since AppendTriangle expects existing vertex indices
-    // Let's use the internal mesh directly
+    // Use the internal mesh directly to append triangle
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
     // Append vertices
