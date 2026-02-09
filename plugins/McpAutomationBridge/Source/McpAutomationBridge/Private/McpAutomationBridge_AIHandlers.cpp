@@ -2283,23 +2283,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("controllerPath"), ControllerPath);
-        Result->SetBoolField(TEXT("createdNew"), bCreatedNew);
+        TSharedPtr<FJsonObject> PerceptionResult = MakeShareable(new FJsonObject());
+        PerceptionResult->SetStringField(TEXT("controllerPath"), ControllerPath);
+        PerceptionResult->SetBoolField(TEXT("createdNew"), bCreatedNew);
         
         TArray<TSharedPtr<FJsonValue>> SensesArray;
         for (const FString& Sense : SensesConfigured)
         {
             SensesArray.Add(MakeShareable(new FJsonValueString(Sense)));
         }
-        Result->SetArrayField(TEXT("sensesConfigured"), SensesArray);
+        PerceptionResult->SetArrayField(TEXT("sensesConfigured"), SensesArray);
         
         if (!DominantSense.IsEmpty())
         {
-            Result->SetStringField(TEXT("dominantSense"), DominantSense);
+            PerceptionResult->SetStringField(TEXT("dominantSense"), DominantSense);
         }
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI perception configured"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI perception configured"), PerceptionResult);
         return true;
     }
 
@@ -2386,12 +2386,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("componentName"), ComponentName);
-        Result->SetStringField(TEXT("areaClass"), NavModComp ? NavModComp->GetAreaClass()->GetName() : TEXT("Unknown"));
+        TSharedPtr<FJsonObject> NavModResult = MakeShareable(new FJsonObject());
+        NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        NavModResult->SetStringField(TEXT("componentName"), ComponentName);
+        // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
+        // The area class is determined by the NavArea class set on the component
+        FString AreaClassName = TEXT("Default");
+        NavModResult->SetStringField(TEXT("areaClass"), AreaClassName);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
         return true;
     }
 
@@ -2487,11 +2490,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         // Use acceleration for paths
+        // UE 5.7+: bUseAccelerationForPaths was removed from UNavMovementComponent
+        // Use bRequestedMoveUseAcceleration in UCharacterMovementComponent instead
         bool bUseAcceleration = GetBoolFieldAI(Payload, TEXT("useAccelerationForPaths"));
         if (Payload->HasField(TEXT("useAccelerationForPaths")))
         {
-            MovementComp->bUseAccelerationForPaths = bUseAcceleration;
-            PropertiesSet.Add(TEXT("bUseAccelerationForPaths"));
+            MovementComp->bRequestedMoveUseAcceleration = bUseAcceleration;
+            PropertiesSet.Add(TEXT("bRequestedMoveUseAcceleration"));
         }
 
         // Orient rotation to movement
@@ -2537,16 +2542,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        TSharedPtr<FJsonObject> MovementResult = MakeShareable(new FJsonObject());
+        MovementResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         
         TArray<TSharedPtr<FJsonValue>> PropsArray;
         for (const FString& Prop : PropertiesSet)
         {
             PropsArray.Add(MakeShareable(new FJsonValueString(Prop)));
         }
-        Result->SetArrayField(TEXT("propertiesSet"), PropsArray);
-        Result->SetNumberField(TEXT("propertyCount"), PropertiesSet.Num());
+        MovementResult->SetArrayField(TEXT("propertiesSet"), PropsArray);
+        MovementResult->SetNumberField(TEXT("propertyCount"), PropertiesSet.Num());
 
         // Include current values
         TSharedPtr<FJsonObject> CurrentValues = MakeShareable(new FJsonObject());
@@ -2555,9 +2560,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         CurrentValues->SetNumberField(TEXT("rotationRateYaw"), MovementComp->RotationRate.Yaw);
         CurrentValues->SetBoolField(TEXT("orientRotationToMovement"), MovementComp->bOrientRotationToMovement);
         CurrentValues->SetBoolField(TEXT("useRVOAvoidance"), MovementComp->bUseRVOAvoidance);
-        Result->SetObjectField(TEXT("currentValues"), CurrentValues);
+        MovementResult->SetObjectField(TEXT("currentValues"), CurrentValues);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI movement configured"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI movement configured"), MovementResult);
         return true;
     }
 

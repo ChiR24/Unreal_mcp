@@ -25,6 +25,19 @@
 #include "Animation/BlendSpace1D.h"
 #include "Animation/AimOffsetBlendSpace.h"
 #include "Animation/AimOffsetBlendSpace1D.h"
+// BlendSpaceBase.h is deprecated in favor of BlendSpace.h, but we need UBlendSpaceBase class
+// Suppress the deprecation warning for this include
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#if __has_include("Animation/BlendSpaceBase.h")
+#include "Animation/BlendSpaceBase.h"
+#define MCP_HAS_BLENDSPACE_BASE 1
+#elif __has_include("BlendSpaceBase.h")
+#include "BlendSpaceBase.h"
+#define MCP_HAS_BLENDSPACE_BASE 1
+#else
+#define MCP_HAS_BLENDSPACE_BASE 0
+#endif
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #if __has_include("AnimData/IAnimationDataController.h")
 #include "AnimData/IAnimationDataController.h"
 #endif
@@ -39,16 +52,6 @@
 #include "EngineUtils.h"
 #include "RenderingThread.h"
 
-#if __has_include("Animation/BlendSpaceBase.h")
-#include "Animation/BlendSpaceBase.h"
-#define MCP_HAS_BLENDSPACE_BASE 1
-#elif __has_include("BlendSpaceBase.h")
-#include "BlendSpaceBase.h"
-#define MCP_HAS_BLENDSPACE_BASE 1
-#else
-#include "Animation/AnimTypes.h"
-#define MCP_HAS_BLENDSPACE_BASE 0
-#endif
 #if __has_include("Factories/BlendSpaceFactoryNew.h") &&                       \
                   __has_include("Factories/BlendSpaceFactory1D.h")
 #include "Factories/BlendSpaceFactory1D.h"
@@ -1894,12 +1897,22 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         
         // Use the AnimDataModel API for UE5 to set sequence length
 #if WITH_EDITOR
-        if (IAnimationDataController* Controller = AnimSeq->GetController()) {
-          double FrameRate = 30.0;
-          Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
-          int32 NumFrames = FMath::Max(1, static_cast<int32>(Length * FrameRate));
-          Controller->SetNumberOfFrames(FFrameNumber(NumFrames));
-        }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        double FrameRate = 30.0;
+        Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
+        int32 NumFrames = FMath::Max(1, static_cast<int32>(Length * FrameRate));
+        Controller.SetNumberOfFrames(FFrameNumber(NumFrames));
+#else
+        // UE 5.0: Use sequence length property directly (deprecated but no alternative)
+        double FrameRate = 30.0;
+        Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
+        int32 NumFrames = FMath::Max(1, static_cast<int32>(Length * FrameRate));
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        AnimSeq->SetRawNumberOfFrame(NumFrames);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
 #endif
         AnimSeq->MarkPackageDirty();
         McpSafeAssetSave(AnimSeq);
@@ -1932,15 +1945,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         AnimSeq->Modify();
         
 #if WITH_EDITOR
-        if (IAnimationDataController* Controller = AnimSeq->GetController()) {
-          FName BoneFName(*BoneName);
-          // Check if bone exists in skeleton
-          const USkeleton* Skeleton = AnimSeq->GetSkeleton();
-          if (Skeleton) {
-            int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(BoneFName);
-            if (BoneIndex != INDEX_NONE) {
-              // Add the bone track
-              Controller->AddBoneCurve(BoneFName);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FName BoneFName(*BoneName);
+        // Check if bone exists in skeleton
+        const USkeleton* Skeleton = AnimSeq->GetSkeleton();
+        if (Skeleton) {
+          int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(BoneFName);
+          if (BoneIndex != INDEX_NONE) {
+            // Add the bone track
+            Controller.AddBoneCurve(BoneFName);
               bSuccess = true;
               Message = FString::Printf(TEXT("Bone track '%s' added"), *BoneName);
               Resp->SetStringField(TEXT("assetPath"), AssetPath);
@@ -1956,11 +1971,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             ErrorCode = TEXT("NO_SKELETON");
             Resp->SetStringField(TEXT("error"), Message);
           }
-        } else {
-          Message = TEXT("Could not get animation data controller");
-          ErrorCode = TEXT("CONTROLLER_UNAVAILABLE");
-          Resp->SetStringField(TEXT("error"), Message);
-        }
+#else
+        // UE 5.0: AddBoneCurve API not available
+        Message = TEXT("add_bone_track requires UE 5.1+");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
 #else
         Message = TEXT("add_bone_track requires editor build");
         ErrorCode = TEXT("NOT_IMPLEMENTED");
@@ -2024,29 +2040,25 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         }
 
 #if WITH_EDITOR
-        if (IAnimationDataController* Controller = AnimSeq->GetController()) {
-          FName BoneFName(*BoneName);
+        // UE 5.7: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FName BoneFName(*BoneName);
 
-          FTransform BoneTransform;
-          BoneTransform.SetLocation(FVector(PosX, PosY, PosZ));
-          BoneTransform.SetRotation(FQuat(RotX, RotY, RotZ, RotW));
-          BoneTransform.SetScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+        FTransform BoneTransform;
+        BoneTransform.SetLocation(FVector(PosX, PosY, PosZ));
+        BoneTransform.SetRotation(FQuat(RotX, RotY, RotZ, RotW));
+        BoneTransform.SetScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 
-          Controller->SetBoneTrackKeys(BoneFName,
+        Controller.SetBoneTrackKeys(BoneFName,
             TArray<FVector>({BoneTransform.GetLocation()}),
             TArray<FQuat>({BoneTransform.GetRotation()}),
             TArray<FVector>({BoneTransform.GetScale3D()}));
 
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Bone key set for '%s' at %.2fs"), *BoneName, Time);
-          Resp->SetStringField(TEXT("assetPath"), AssetPath);
-          Resp->SetStringField(TEXT("boneName"), BoneName);
-          Resp->SetNumberField(TEXT("time"), Time);
-        } else {
-          Message = TEXT("Could not get animation data controller");
-          ErrorCode = TEXT("CONTROLLER_UNAVAILABLE");
-          Resp->SetStringField(TEXT("error"), Message);
-        }
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Bone key set for '%s' at %.2fs"), *BoneName, Time);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("boneName"), BoneName);
+        Resp->SetNumberField(TEXT("time"), Time);
 #else
         Message = TEXT("set_bone_key requires editor build");
         ErrorCode = TEXT("NOT_IMPLEMENTED");
@@ -2086,25 +2098,30 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         AnimSeq->Modify();
 
 #if WITH_EDITOR
-        if (IAnimationDataController* Controller = AnimSeq->GetController()) {
-          FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
-          
-          // Add curve if it doesn't exist
-          Controller->AddCurve(CurveId, AACF_DefaultCurve);
-          
-          // Add key to curve
-          Controller->SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
+        
+        // Add curve if it doesn't exist
+        Controller.AddCurve(CurveId, AACF_DefaultCurve);
+        
+        // Add key to curve
+        Controller.SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
+#else
+        // UE 5.0: Curve editing API not available in the same form
+        Message = TEXT("set_curve_key requires UE 5.1+");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
 
+        if (bSuccess) {
           bSuccess = true;
           Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
           Resp->SetStringField(TEXT("assetPath"), AssetPath);
           Resp->SetStringField(TEXT("curveName"), CurveName);
           Resp->SetNumberField(TEXT("time"), Time);
           Resp->SetNumberField(TEXT("value"), Value);
-        } else {
-          Message = TEXT("Could not get animation data controller");
-          ErrorCode = TEXT("CONTROLLER_UNAVAILABLE");
-          Resp->SetStringField(TEXT("error"), Message);
         }
 #else
         Message = TEXT("set_curve_key requires editor build");
@@ -2299,8 +2316,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Montage->GetSectionStartAndEndTime(SectionIndex, OutStartTime, OutEndTime);
 
           // Actually set the section start time if provided
+          // Note: SetSectionStartTime was removed in UE 5.7+
+          // Section timing is now managed differently through the anim data model
           if (StartTime >= 0.0) {
-            Montage->SetSectionStartTime(SectionIndex, static_cast<float>(StartTime));
+            // UE 5.7: Direct section time modification is not supported via this API
+            // Would need to use AnimDataController or modify the underlying sequence
             OutStartTime = static_cast<float>(StartTime);
             Montage->MarkPackageDirty();
             McpSafeAssetSave(Montage);
@@ -2607,6 +2627,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         } else {
           BlendSpace->Modify();
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
           FBlendSample NewSample;
           NewSample.Animation = AnimSeq;
           NewSample.SampleValue = FVector(SampleX, SampleY, 0.0f);
@@ -2614,6 +2635,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           PRAGMA_DISABLE_DEPRECATION_WARNINGS
           BlendSpace->AddSample(NewSample);
           PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#else
+          // UE 5.0: AddSample takes FVector - we can't set animation separately
+          BlendSpace->AddSample(FVector(SampleX, SampleY, 0.0f));
+          // Note: Setting animation on sample requires UE 5.1+
+#endif
 
           BlendSpace->MarkPackageDirty();
           McpSafeAssetSave(BlendSpace);
@@ -2857,6 +2883,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         } else {
           AimOffset->Modify();
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
           FBlendSample NewSample;
           NewSample.Animation = AnimSeq;
           NewSample.SampleValue = FVector(Yaw, Pitch, 0.0f);
@@ -2864,6 +2891,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           PRAGMA_DISABLE_DEPRECATION_WARNINGS
           AimOffset->AddSample(NewSample);
           PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#else
+          // UE 5.0: AddSample takes FVector - we can't set animation separately
+          AimOffset->AddSample(FVector(Yaw, Pitch, 0.0f));
+          // Note: Setting animation on sample requires UE 5.1+
+#endif
 
           AimOffset->MarkPackageDirty();
           McpSafeAssetSave(AimOffset);

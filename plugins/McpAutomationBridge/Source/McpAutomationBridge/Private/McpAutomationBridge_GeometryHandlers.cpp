@@ -50,6 +50,12 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/MeshSubdivideFunctions.h"
 #include "GeometryScript/MeshUVFunctions.h"
 
+// UE 5.5+: MeshTransformFunctions was added for TranslateMesh, ScaleMesh, etc.
+// In earlier versions these were in MeshDeformFunctions
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#include "GeometryScript/MeshTransformFunctions.h"
+#endif
+
 #include "Editor.h"
 #include "Subsystems/EditorActorSubsystem.h"
 #include "UDynamicMesh.h"
@@ -5501,7 +5507,9 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
     
     // Use Geometry Script to translate the mesh
-    UGeometryScriptLibrary_MeshDeformFunctions::TranslateMesh(Mesh, Translation, nullptr);
+    // UE 5.7+: TranslateMesh is in MeshTransformFunctions
+    // UE 5.5+: TranslateMesh is in MeshTransformFunctions
+    UGeometryScriptLibrary_MeshTransformFunctions::TranslateMesh(Mesh, Translation, nullptr);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -5849,32 +5857,24 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     }
 
     // Use SweepPolygon to create the extruded mesh
+    // UE 5.7: FGeometryScriptPolygonsToSweepOptions removed, use direct parameters
     FGeometryScriptPrimitiveOptions PrimOptions;
-    FGeometryScriptPolygonsToSweepOptions SweepOptions;
-    SweepOptions.bCapped = bCap;
-
-    // Create a polygon list with our profile
-    FGeometryScriptSimplePolygon ProfilePolygon;
-    for (const FVector2D& Vert : PolygonVertices)
-    {
-        ProfilePolygon.Vertices.Add(Vert);
-    }
-
-    FGeometryScriptGeneralPolygonList PolygonList;
-    PolygonList.Polygons.Add(ProfilePolygon);
 
     // Clear existing mesh and sweep the profile along the path
+    // UE 5.7: AppendSweepPolygon signature changed - now takes TArray<FTransform> for SweepPath
+    // and has additional MiterLimit parameter
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
         Mesh,
         PrimOptions,
         FTransform::Identity,
         PolygonVertices,
         PathFrames,
-        bCap,
         true,  // bLoop
-        0.0,   // StartScale - handled via PathFrames
-        0.0,   // EndScale - handled via PathFrames
-        0.0,   // RotationAngleDeg - handled via PathFrames
+        bCap,  // bCapped
+        1.0f,  // StartScale
+        1.0f,  // EndScale
+        0.0f,  // RotationAngleDeg
+        1.0f,  // MiterLimit
         nullptr
     );
 

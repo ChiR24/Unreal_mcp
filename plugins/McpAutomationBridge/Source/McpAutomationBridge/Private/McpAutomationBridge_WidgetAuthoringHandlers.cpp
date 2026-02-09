@@ -48,6 +48,8 @@
 #include "Components/SpinBox.h"
 #include "Components/ListView.h"
 #include "Components/TreeView.h"
+#include "Components/EditableText.h"
+#include "Components/TileView.h"
 #include "WidgetBlueprint.h"
 #include "UObject/UObjectIterator.h"
 #include "Animation/WidgetAnimation.h"
@@ -250,6 +252,9 @@ using namespace WidgetAuthoringHelpers;
 // Main Handler Implementation
 // ============================================================================
 
+// Suppress function size warning - this is a large handler function with many sub-actions
+#pragma warning(push)
+#pragma warning(disable: 4883)
 bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     const FString& RequestId,
     const FString& Action,
@@ -5285,7 +5290,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         bool bFontApplied = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             FSlateFontInfo FontInfo = TextWidget->GetFont();
+#else
+            // UE 5.0: Font property is directly accessible
+            FSlateFontInfo FontInfo = TextWidget->Font;
+#endif
             FontInfo.Size = FontSize;
             if (!FontPath.IsEmpty())
             {
@@ -5296,7 +5306,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                     FontInfo.FontObject = FontObject;
                 }
             }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             TextWidget->SetFont(FontInfo);
+#else
+            // UE 5.0: Font property is directly accessible
+            TextWidget->Font = FontInfo;
+#endif
             bFontApplied = true;
         }
         else if (URichTextBlock* RichText = Cast<URichTextBlock>(TargetWidget))
@@ -5473,10 +5488,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         // Animation playback speed is set at runtime, but we can store it as metadata
         // For design-time, we adjust the playback rate via the MovieScene settings
-        TargetAnim->MovieScene->SetPlaybackRange(
-            TargetAnim->MovieScene->GetPlaybackRange().GetLowerBoundValue(),
-            TargetAnim->MovieScene->GetPlaybackRange().GetUpperBoundValue()
-        );
+        // UE 5.7: SetPlaybackRange takes TRange<FFrameNumber>
+        TRange<FFrameNumber> PlaybackRange = TargetAnim->MovieScene->GetPlaybackRange();
+        TargetAnim->MovieScene->SetPlaybackRange(PlaybackRange);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
@@ -5525,7 +5539,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                         FFrameNumber End = Anim->MovieScene->GetPlaybackRange().GetUpperBoundValue();
                         float Duration = (End - Start).Value / FrameRate.AsDecimal();
                         AnimInfo->SetNumberField(TEXT("durationSeconds"), Duration);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                        AnimInfo->SetNumberField(TEXT("trackCount"), Anim->MovieScene->GetTracks().Num());
+#else
                         AnimInfo->SetNumberField(TEXT("trackCount"), Anim->MovieScene->GetMasterTracks().Num());
+#endif
                     }
                     AnimationsArray.Add(MakeShareable(new FJsonValueObject(AnimInfo)));
                 }
@@ -5571,14 +5589,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 ResultJson->SetNumberField(TEXT("endFrame"), End.Value);
 
                 TArray<TSharedPtr<FJsonValue>> TracksArray;
-                for (UMovieSceneTrack* Track : TargetAnim->MovieScene->GetMasterTracks())
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                // UE 5.1+: GetMasterTracks() replaced with GetTracks()
+                const TArray<UMovieSceneTrack*>& MasterTracks = TargetAnim->MovieScene->GetTracks();
+#else
+                // UE 5.0: Use GetMasterTracks()
+                const TArray<UMovieSceneTrack*>& MasterTracks = TargetAnim->MovieScene->GetMasterTracks();
+#endif
+                for (UMovieSceneTrack* Track : MasterTracks)
                 {
                     if (Track)
                     {
-                        TSharedPtr<FJsonObject> TrackInfo = MakeShareable(new FJsonObject());
+                        TSharedPtr<FJsonObject> TrackInfo = MakeShared<FJsonObject>();
                         TrackInfo->SetStringField(TEXT("name"), Track->GetTrackName().ToString());
                         TrackInfo->SetStringField(TEXT("type"), Track->GetClass()->GetName());
-                        TracksArray.Add(MakeShareable(new FJsonValueObject(TrackInfo)));
+                        TracksArray.Add(MakeShared<FJsonValueObject>(TrackInfo));
                     }
                 }
                 ResultJson->SetArrayField(TEXT("tracks"), TracksArray);
@@ -6033,3 +6058,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     // Action not recognized
     return false;
 }
+#pragma warning(pop)

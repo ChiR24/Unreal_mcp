@@ -1141,18 +1141,20 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
 
   // Parse gender setting
   FString GenderStr;
-  ETextGender Gender = ETextGender::Masculine;
+  TEnumAsByte<EGrammaticalGender::Type> Gender = EGrammaticalGender::Masculine;
   if (Payload->TryGetStringField(TEXT("gender"), GenderStr)) {
     Gender = GenderStr.Equals(TEXT("Female"), ESearchCase::IgnoreCase)
-                 ? ETextGender::Feminine
-                 : ETextGender::Masculine;
+                 ? EGrammaticalGender::Feminine
+                 : EGrammaticalGender::Masculine;
   }
 
   // Parse pluralization setting
   FString PluralStr;
-  bool bIsPlural = false;
+  TEnumAsByte<EGrammaticalNumber::Type> Plurality = EGrammaticalNumber::Singular;
   if (Payload->TryGetStringField(TEXT("pluralization"), PluralStr)) {
-    bIsPlural = PluralStr.Equals(TEXT("Plural"), ESearchCase::IgnoreCase);
+    Plurality = PluralStr.Equals(TEXT("Plural"), ESearchCase::IgnoreCase)
+                    ? EGrammaticalNumber::Plural
+                    : EGrammaticalNumber::Singular;
   }
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *VoiceName);
@@ -1175,9 +1177,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
     return true;
   }
 
-  NewVoice->VoiceName = FName(*VoiceName);
+  // UE 5.7: VoiceName removed, Gender uses EGrammaticalGender, bIsPlural replaced with Plurality
   NewVoice->Gender = Gender;
-  NewVoice->bIsPlural = bIsPlural;
+  NewVoice->Plurality = Plurality;
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(NewVoice);
@@ -1248,9 +1250,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
+  // UE 5.7: DialogueVoice renamed to Speaker, SoundWave needs explicit cast from USoundBase
   FDialogueContextMapping Context;
-  Context.Context.DialogueVoice = nullptr;
-  Context.SoundWave = Sound;
+  Context.Context.Speaker = nullptr;
+  Context.SoundWave = Cast<USoundWave>(Sound);
   DialogueWave->ContextMappings.Add(Context);
 
   Package->MarkPackageDirty();
@@ -1314,7 +1317,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetDialogueContext(
     return true;
   }
 
-  DialogueWave->ContextMappings[ContextIndex].Context.DialogueVoice = Voice;
+  // UE 5.7: DialogueVoice renamed to Speaker
+  DialogueWave->ContextMappings[ContextIndex].Context.Speaker = Voice;
   DialogueWave->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

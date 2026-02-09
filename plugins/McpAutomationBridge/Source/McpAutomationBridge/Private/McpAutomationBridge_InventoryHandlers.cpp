@@ -1,7 +1,6 @@
+#include "Dom/JsonObject.h"
 // Copyright Epic Games, Inc. All Rights Reserved.
 // Phase 17: Inventory & Items System Handlers
-
-#include "Dom/JsonObject.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -215,7 +214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
         McpSafeAssetSave(CategoryAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject>());
+      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item category created"), Result);

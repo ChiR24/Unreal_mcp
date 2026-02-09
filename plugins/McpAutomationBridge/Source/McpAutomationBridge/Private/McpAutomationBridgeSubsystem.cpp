@@ -789,12 +789,8 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAssetAction(R, A, P, S);
                   });
 
-  RegisterHandler(TEXT("rebuild_material"),
-                  [this](const FString &R, const FString &A,
-                         const TSharedPtr<FJsonObject> &P,
-                         TSharedPtr<FMcpBridgeWebSocket> S) {
-                    return HandleRebuildMaterial(R, P, S);
-                  });
+  // Note: rebuild_material handler removed - function implementation removed
+  // Material operations should use manage_material_authoring instead
 
   RegisterHandler(TEXT("manage_behavior_tree"),
                   [this](const FString &R, const FString &A,

@@ -38,6 +38,7 @@
 #include "Components/LightComponent.h"
 #include "Editor.h"
 #include "Modules/ModuleManager.h"
+#include "IAssetViewport.h"  // For IAssetViewport::GetAssetViewportClient()
 
 #if __has_include("LevelEditor.h")
 #include "LevelEditor.h"
@@ -2777,7 +2778,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   }
 
   // Use console command to start demo recording
-  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld : GEditor->GetEditorWorldContext().World();
+  // UE 5.7: TObjectPtr requires explicit cast to UWorld*
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
   if (World) {
     FString Command = FString::Printf(TEXT("DemoRec %s"), *RecordingName);
     GEditor->Exec(World, *Command);
@@ -2811,7 +2813,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
   }
 
   // Use console command to stop demo recording
-  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld : GEditor->GetEditorWorldContext().World();
+  // UE 5.7: TObjectPtr requires explicit cast to UWorld*
+  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
   if (World) {
     GEditor->Exec(World, TEXT("DemoStop"));
   }
@@ -3096,22 +3099,39 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     FString Button = TEXT("left");
     Payload->TryGetStringField(TEXT("button"), Button);
 
-    EKeys::Type MouseButton = EKeys::LeftMouseButton;
-    if (Button.ToLower() == TEXT("right")) MouseButton = EKeys::RightMouseButton;
-    else if (Button.ToLower() == TEXT("middle")) MouseButton = EKeys::MiddleMouseButton;
+    // UE 5.7: EKeys::Type is deprecated, use FKey directly
+    FKey MouseButtonKey = EKeys::LeftMouseButton;
+    if (Button.ToLower() == TEXT("right")) MouseButtonKey = EKeys::RightMouseButton;
+    else if (Button.ToLower() == TEXT("middle")) MouseButtonKey = EKeys::MiddleMouseButton;
 
     FSlateApplication& SlateApp = FSlateApplication::Get();
     FVector2D Position((float)X, (float)Y);
     
+    // UE 5.7: FPointerEvent constructor signature changed
+    // FPointerEvent(uint32 InPointerIndex, ScreenSpacePosition, LastScreenSpacePosition, Delta, PressedButtons, ModifierKeys)
+    TSet<FKey> PressedButtons;
+    PressedButtons.Add(MouseButtonKey);
+    
     // Simulate mouse down then up for a click
     FPointerEvent MouseDownEvent(
-        0, Position, Position, TSet<FKey>(), FKey(MouseButton),
-        0, FModifierKeysState());
+        0,  // PointerIndex
+        Position,  // ScreenSpacePosition
+        Position,  // LastScreenSpacePosition
+        FVector2D(0.0f, 0.0f),  // Delta
+        PressedButtons,
+        FModifierKeysState()
+    );
     SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
     
+    TSet<FKey> ReleasedButtons;  // Empty set for mouse up
     FPointerEvent MouseUpEvent(
-        0, Position, Position, TSet<FKey>(), FKey(MouseButton),
-        0, FModifierKeysState());
+        0,  // PointerIndex
+        Position,  // ScreenSpacePosition
+        Position,  // LastScreenSpacePosition
+        FVector2D(0.0f, 0.0f),  // Delta
+        ReleasedButtons,
+        FModifierKeysState()
+    );
     SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
     
     bSuccess = true;

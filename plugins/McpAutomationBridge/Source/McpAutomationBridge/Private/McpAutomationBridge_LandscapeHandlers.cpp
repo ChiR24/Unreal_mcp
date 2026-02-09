@@ -307,10 +307,31 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
                HeightArray.Num());
       }
 
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+      // UE 5.5-5.6: Use FLandscapeEditDataInterface to avoid deprecated Import() warning
+      ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
+      if (LandscapeInfo && HeightArray.Num() > 0) {
+        if (Landscape->GetRootComponent() &&
+            !Landscape->GetRootComponent()->IsRegistered()) {
+          Landscape->RegisterAllComponents();
+        }
+        FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+        LandscapeEdit.SetHeightData(
+            InMinX, InMinY,
+            InMaxX, InMaxY,
+            HeightArray.GetData(),
+            0,
+            true
+        );
+        LandscapeEdit.Flush();
+      }
+      Landscape->CreateDefaultLayer();
 #else
-            // UE 5.0-5.6: Use standard Import() workflow with TMap parameters
-            Landscape->Import(FGuid::NewGuid(), 0, 0, CaptComponentsX - 1, CaptComponentsY - 1, CaptSectionsPerComponent, CaptQuadsPerComponent, ImportHeightData, nullptr, ImportLayerInfos, ELandscapeImportAlphamapType::Layered, EditLayers.Num() > 0 ? &EditLayers : nullptr);
-            Landscape->CreateDefaultLayer();
+      // UE 5.0-5.4: Use standard Import() workflow
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      Landscape->Import(FGuid::NewGuid(), 0, 0, CaptComponentsX - 1, CaptComponentsY - 1, CaptSectionsPerComponent, CaptQuadsPerComponent, ImportHeightData, nullptr, ImportLayerInfos, ELandscapeImportAlphamapType::Layered, EditLayers.Num() > 0 ? &EditLayers : nullptr);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      Landscape->CreateDefaultLayer();
 #endif
     }
 

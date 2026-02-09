@@ -5053,9 +5053,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     if (bExists) {
       // Try to get asset class without fully loading - use FindAssetData
       IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(CheckPath));
+#else
+      // UE 5.0: GetAssetByObjectPath takes FName
+      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*CheckPath));
+#endif
       if (AssetData.IsValid()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
+#else
+        // UE 5.0: AssetClass is FName
+        AssetClass = AssetData.AssetClass.ToString();
+#endif
       }
     }
 
@@ -5143,8 +5153,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       if (BP->GeneratedClass) {
         BP->GeneratedClass->SetMetaData(MetaKey, *MetaValue);
       }
-      // Also set on the blueprint itself if it supports metadata
-      BP->SetMetaData(MetaKey, *MetaValue);
+      // Note: UBlueprint itself doesn't have SetMetaData in UE 5.7+
+      // Metadata is stored on the GeneratedClass
       MetadataSet.Add(Pair.Key);
     }
 

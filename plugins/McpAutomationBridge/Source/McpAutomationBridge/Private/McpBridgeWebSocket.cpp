@@ -917,7 +917,9 @@ uint32 FMcpBridgeWebSocket::RunServer() {
                *HostToBind, *ListenAddr->ToString(true));
         
         // Check if resolved address family matches socket family
-        const bool bResolvedIsIpv6 = ListenAddr->GetProtocolFamily() == ESocketProtocolFamily::IPv6;
+        // UE 5.7 uses GetProtocolType() which returns FName instead of GetProtocolFamily()
+        const FName ProtocolType = ListenAddr->GetProtocolType();
+        const bool bResolvedIsIpv6 = (ProtocolType == FName(TEXT("IPv6")));
         if (bResolvedIsIpv6 != bIsIpv6Host) {
           UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                  TEXT("DNS resolved to %s but socket is %s. Recreating socket..."),

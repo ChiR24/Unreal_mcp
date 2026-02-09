@@ -42,6 +42,13 @@
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
+// PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.7+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION <= 6
+#include "PostProcess/PostProcessVolume.h"
+#define MCP_HAS_POSTPROCESS_VOLUME 1
+#else
+#define MCP_HAS_POSTPROCESS_VOLUME 0
+#endif
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpVolumeHandlers, Log, All);
@@ -705,6 +712,7 @@ static bool HandleCreateReverbVolume(
     return true;
 }
 
+#if MCP_HAS_POSTPROCESS_VOLUME
 static bool HandleCreatePostProcessVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -819,6 +827,7 @@ static bool HandleCreatePostProcessVolume(
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
     return true;
 }
+#endif // MCP_HAS_POSTPROCESS_VOLUME
 
 static bool HandleCreateCullDistanceVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -1459,10 +1468,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     }
 
     // Rendering Volumes
+#if MCP_HAS_POSTPROCESS_VOLUME
     if (SubAction == TEXT("create_post_process_volume"))
     {
         return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
     }
+#endif
     if (SubAction == TEXT("create_cull_distance_volume"))
     {
         return HandleCreateCullDistanceVolume(this, RequestId, Payload, Socket);

@@ -28,6 +28,7 @@
 #include "Animation/SkinWeightProfile.h"     // For FSkinWeightProfileInfo, FImportedSkinWeightProfileData
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#include "EngineUtils.h"  // For TActorIterator
 #include "EditorAssetLibrary.h"
 #include "Factories/PhysicsAssetFactory.h"
 #include "ReferenceSkeleton.h"
@@ -42,6 +43,8 @@
 #define GetStringFieldSkel GetJsonStringField
 #define GetNumberFieldSkel GetJsonNumberField
 #define GetBoolFieldSkel GetJsonBoolField
+// Helper to get int field with default value
+#define GetIntFieldSkel(JsonObj, FieldName, DefaultValue) (JsonObj.IsValid() && JsonObj->HasField(FieldName) ? static_cast<int32>(JsonObj->GetNumberField(FieldName)) : DefaultValue)
 
 // For skeleton modification
 #if __has_include("Animation/SkeletonModifier.h")
@@ -2213,7 +2216,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     }
     
     // Check if morph target exists on the mesh
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     USkeletalMesh* SkelMesh = SkelMeshComp->GetSkeletalMeshAsset();
+#else
+    // UE 5.0: Use SkeletalMesh property directly
+    USkeletalMesh* SkelMesh = SkelMeshComp->SkeletalMesh;
+#endif
     if (SkelMesh)
     {
         bool bHasMorphTarget = false;
@@ -2245,9 +2253,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     
     // Get current morph target weights for reporting
     TArray<TSharedPtr<FJsonValue>> ActiveMorphs;
-    TMap<FName, float> MorphWeights;
-    SkelMeshComp->GetMorphTargetCurves().GenerateValueArray(MorphWeights);
-    for (const auto& Pair : MorphWeights)
+    const TMap<FName, float>& MorphCurves = SkelMeshComp->GetMorphTargetCurves();
+    for (const auto& Pair : MorphCurves)
     {
         if (Pair.Value > 0.0f)
         {
