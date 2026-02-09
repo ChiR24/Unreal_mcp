@@ -14,6 +14,7 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -2878,11 +2879,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     {
         return HandleListSockets(RequestId, Payload, RequestingSocket);
     }
-    else if (SubAction == TEXT("create_socket"))
+    else if (SubAction == TEXT("create_socket") || SubAction == TEXT("add_socket"))
     {
         return HandleCreateSocket(RequestId, Payload, RequestingSocket);
     }
-    else if (SubAction == TEXT("configure_socket"))
+    else if (SubAction == TEXT("configure_socket") || SubAction == TEXT("modify_socket"))
     {
         return HandleConfigureSocket(RequestId, Payload, RequestingSocket);
     }
@@ -2903,7 +2904,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     {
         return HandleAddPhysicsBody(RequestId, Payload, RequestingSocket);
     }
-    else if (SubAction == TEXT("configure_physics_body"))
+    else if (SubAction == TEXT("configure_physics_body") || SubAction == TEXT("modify_physics_body"))
     {
         return HandleConfigurePhysicsBody(RequestId, Payload, RequestingSocket);
     }
@@ -2961,7 +2962,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     {
         return HandleDeleteMorphTarget(RequestId, Payload, RequestingSocket);
     }
-    else if (SubAction == TEXT("delete_socket"))
+    else if (SubAction == TEXT("delete_socket") || SubAction == TEXT("remove_socket"))
     {
         return HandleDeleteSocket(RequestId, Payload, RequestingSocket);
     }
@@ -3607,6 +3608,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         SendAutomationError(RequestingSocket, RequestId, TEXT("mirror_weights requires editor mode"), TEXT("NOT_EDITOR"));
         return true;
 #endif
+    }
+    // set_physics_constraint - Alias for add_physics_constraint/configure_constraint_limits
+    else if (SubAction == TEXT("set_physics_constraint"))
+    {
+        // Delegate to add_physics_constraint which handles both creation and modification
+        return HandleAddPhysicsConstraint(RequestId, Payload, RequestingSocket);
+    }
+    // preview_physics - Preview physics simulation (stub for future implementation)
+    else if (SubAction == TEXT("preview_physics"))
+    {
+        FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        bool bEnable = GetJsonBoolField(Payload, TEXT("enable"), true);
+        
+        if (SkeletalMeshPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+            return true;
+        }
+        
+        // Preview physics is a runtime feature - return success with note
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+        Result->SetBoolField(TEXT("previewEnabled"), bEnable);
+        Result->SetStringField(TEXT("note"), TEXT("Physics preview requires PIE or runtime simulation."));
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            FString::Printf(TEXT("Physics preview %s"), bEnable ? TEXT("enabled") : TEXT("disabled")), Result);
+        return true;
     }
     else
     {

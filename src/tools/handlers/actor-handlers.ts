@@ -23,11 +23,47 @@ interface ComponentsResult {
     [key: string]: unknown;
 }
 
+/**
+ * Action aliases for test compatibility
+ * Maps test action names (snake_case) to handler action names
+ */
+const ACTOR_ACTION_ALIASES: Record<string, string> = {
+    'spawn_actor': 'spawn',
+    'destroy_actor': 'delete',
+    'teleport_actor': 'set_transform',
+    'set_actor_location': 'set_transform',
+    'set_actor_rotation': 'set_transform',
+    'set_actor_scale': 'set_transform',
+    'set_actor_transform': 'set_transform',
+    'get_actor_transform': 'get_transform',
+    'set_actor_visible': 'set_visibility',
+    'attach_actor': 'attach',
+    'detach_actor': 'detach',
+    'get_actor_bounds': 'get_bounding_box',
+    'get_actor_components': 'get_components',
+    'add_component': 'add_component',
+    'remove_component': 'remove_component',
+    'set_component_property': 'set_component_properties',
+    'get_component_property': 'get_component_property',
+    'call_actor_function': 'call_function',
+    'find_actors_by_class': 'find_by_class',
+    'find_actors_by_name': 'find_by_name',
+    'find_actors_by_tag': 'find_by_tag',
+    'set_actor_collision': 'set_collision',
+};
+
+/**
+ * Normalize actor action names for test compatibility
+ */
+function normalizeActorAction(action: string): string {
+    return ACTOR_ACTION_ALIASES[action] ?? action;
+}
+
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
         const params = normalizeArgs(args, [
-            { key: 'classPath', aliases: ['class', 'type', 'actorClass'], required: true, map: ACTOR_CLASS_ALIASES },
-            { key: 'actorName', aliases: ['name'] },
+            { key: 'classPath', aliases: ['class', 'type', 'actorClass', 'actor_class'], required: true, map: ACTOR_CLASS_ALIASES },
+            { key: 'actorName', aliases: ['name', 'actor_name'] },
             { key: 'timeoutMs', default: undefined }
         ]);
 
@@ -270,12 +306,89 @@ const handlers: Record<string, ActorActionHandler> = {
         // Use the plugin's fuzzy query endpoint (contains-match) instead of the
         // exact lookup endpoint. This improves "spawn then find" reliability.
         return tools.actorTools.findByName(name);
+    },
+    // Additional handlers for test compatibility
+    remove_component: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'componentName', aliases: ['component_name'], required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const componentName = extractString(params, 'componentName');
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'remove_component',
+            actorName,
+            componentName
+        }) as Promise<Record<string, unknown>>;
+    },
+    get_component_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'componentName', aliases: ['component_name'], required: true },
+            { key: 'propertyName', aliases: ['property_name'], required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const componentName = extractString(params, 'componentName');
+        const propertyName = extractString(params, 'propertyName');
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'get_component_property',
+            actorName,
+            componentName,
+            propertyName
+        }) as Promise<Record<string, unknown>>;
+    },
+    set_collision: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'collisionEnabled', aliases: ['collision_enabled'], default: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const collisionEnabled = params.collisionEnabled ?? true;
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'set_collision',
+            actorName,
+            collisionEnabled
+        }) as Promise<Record<string, unknown>>;
+    },
+    call_function: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'functionName', aliases: ['function_name'], required: true },
+            { key: 'arguments', aliases: ['args'] }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const functionName = extractString(params, 'functionName');
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'call_function',
+            actorName,
+            functionName,
+            arguments: params.arguments
+        }) as Promise<Record<string, unknown>>;
+    },
+    find_by_class: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'className', aliases: ['class_name', 'class'], required: true }
+        ]);
+        const className = extractString(params, 'className');
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'find_by_class',
+            className
+        }) as Promise<Record<string, unknown>>;
+    },
+    get_bounding_box: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        return tools.actorTools.getBoundingBox(actorName);
     }
 };
 
 export async function handleActorTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
     try {
-        const handler = handlers[action];
+        // Normalize action name for test compatibility
+        const normalizedAction = normalizeActorAction(action);
+        const handler = handlers[normalizedAction];
         if (handler) {
             const res = await handler(args as ActorArgs, tools);
             // The actor tool handlers already return a StandardActionResponse-like object.
@@ -283,7 +396,7 @@ export async function handleActorTools(action: string, args: HandlerArgs, tools:
             return cleanObject(res) as Record<string, unknown>;
         }
         // Fallback to direct bridge call or error
-        const res = await executeAutomationRequest(tools, 'control_actor', args);
+        const res = await executeAutomationRequest(tools, 'control_actor', { ...args, action: normalizedAction });
         return cleanObject(res) as Record<string, unknown>;
     } catch (error) {
         return ResponseFactory.error(error);

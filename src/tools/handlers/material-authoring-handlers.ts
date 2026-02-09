@@ -809,6 +809,173 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
       }
 
+      // ===== 8.6 Aliases and Additional Actions =====
+
+      // Alias: add_material_node -> add_math_node
+      case 'add_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeType', aliases: ['type'], required: true },
+          { key: 'x', default: 0 },
+          { key: 'y', default: 0 },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeType = extractString(params, 'nodeType');
+        const x = extractOptionalNumber(params, 'x') ?? 0;
+        const y = extractOptionalNumber(params, 'y') ?? 0;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'add_material_node',
+          assetPath,
+          nodeType,
+          x,
+          y,
+          ...args,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to add material node', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Material node '${nodeType}' added`);
+      }
+
+      // Alias: connect_material_pins -> connect_nodes
+      case 'connect_material_pins':
+        return handleMaterialAuthoringTools('connect_nodes', args, tools);
+
+      // Alias: break_material_connections -> disconnect_nodes
+      case 'break_material_connections':
+        return handleMaterialAuthoringTools('disconnect_nodes', args, tools);
+
+      // Alias: rebuild_material -> compile_material
+      case 'rebuild_material':
+        return handleMaterialAuthoringTools('compile_material', args, tools);
+
+      // Generic parameter setter
+      case 'set_material_parameter': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['instancePath'], required: true },
+          { key: 'parameterName', required: true },
+          { key: 'value', required: true },
+          { key: 'parameterType', default: 'scalar' },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const parameterName = extractString(params, 'parameterName');
+        const parameterType = extractOptionalString(params, 'parameterType') ?? 'scalar';
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'set_material_parameter',
+          assetPath,
+          parameterName,
+          value: params.value,
+          parameterType,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to set parameter', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Parameter '${parameterName}' set`);
+      }
+
+      // Get node details
+      case 'get_material_node_details': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'get_material_node_details',
+          assetPath,
+          nodeId,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get node details', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node details retrieved');
+      }
+
+      // Remove material node
+      case 'remove_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'remove_material_node',
+          assetPath,
+          nodeId,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to remove node', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Material node removed');
+      }
+
+      // Set two-sided property
+      case 'set_two_sided': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'twoSided', aliases: ['enabled'], default: true },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const twoSided = extractOptionalBoolean(params, 'twoSided') ?? true;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'set_two_sided',
+          assetPath,
+          twoSided,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to set two-sided', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Two-sided set to ${twoSided}`);
+      }
+
+      // Set cast shadows property
+      case 'set_cast_shadows': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'castShadows', aliases: ['enabled'], default: true },
+          { key: 'save', default: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const castShadows = extractOptionalBoolean(params, 'castShadows') ?? true;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, 'manage_material_authoring', {
+          subAction: 'set_cast_shadows',
+          assetPath,
+          castShadows,
+          save,
+        })) as MaterialAuthoringResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to set cast shadows', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? `Cast shadows set to ${castShadows}`);
+      }
+
       default:
         return ResponseFactory.error(
           `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, connect_nodes, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info`,

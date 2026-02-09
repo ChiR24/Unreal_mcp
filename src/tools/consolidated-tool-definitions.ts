@@ -4008,12 +4008,26 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'create_trigger_volume', 'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
-            'create_blocking_volume', 'create_kill_z_volume', 'create_pain_causing_volume', 'create_physics_volume',
+            // Trigger Volumes
+            'create_trigger_volume', 'add_trigger_volume',
+            'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
+            // Gameplay Volumes
+            'create_blocking_volume', 'add_blocking_volume',
+            'create_kill_z_volume', 'add_kill_z_volume',
+            'create_pain_causing_volume', 'create_physics_volume', 'add_physics_volume',
             'create_audio_volume', 'create_reverb_volume',
-            'create_cull_distance_volume', 'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
+            // Rendering Volumes
+            'create_cull_distance_volume', 'add_cull_distance_volume',
+            'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
+            // Navigation Volumes
             'create_nav_mesh_bounds_volume', 'create_nav_modifier_volume', 'create_camera_blocking_volume',
-            'set_volume_extent', 'set_volume_properties',
+            // Post Process Volume (UE 5.1-5.6 only)
+            'create_post_process_volume', 'add_post_process_volume',
+            // Volume Configuration
+            'set_volume_extent', 'set_volume_bounds', 'set_volume_properties',
+            // Volume Removal
+            'remove_volume',
+            // Utility
             'get_volumes_info'
           ],
           description: 'Volume action to perform'

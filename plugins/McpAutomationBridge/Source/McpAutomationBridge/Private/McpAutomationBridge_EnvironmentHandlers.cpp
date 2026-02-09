@@ -623,9 +623,11 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   }
   
   // Block destructive file operations
+  // Note: These tokens have trailing spaces to avoid matching
+  // valid MCP action names like "remove_volume" or "delete_actor"
   TArray<FString> BlockedTokens = {
     TEXT("rm "), TEXT("del "), TEXT("format"), TEXT("rmdir"), TEXT("rd "),
-    TEXT("delete"), TEXT("remove"), TEXT("erase")
+    TEXT("delete "), TEXT("remove "), TEXT("erase ")
   };
   
   for (const FString& Token : BlockedTokens) {

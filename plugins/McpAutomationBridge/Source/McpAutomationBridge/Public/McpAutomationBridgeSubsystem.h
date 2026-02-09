@@ -1001,6 +1001,22 @@ private:
   bool HandleControlActorGetMetadata(const FString &RequestId,
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  // Additional actor handlers for test compatibility
+  bool HandleControlActorFindByClass(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorRemoveComponent(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetComponentProperty(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorSetCollision(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorCallFunction(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control Editor Subhandlers
   bool HandleControlEditorPlay(const FString &RequestId,
@@ -1063,6 +1079,40 @@ private:
   bool HandleControlEditorSimulateInput(const FString &RequestId,
                                         const TSharedPtr<FJsonObject> &Payload,
                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  // Additional editor handlers for test compatibility
+  bool HandleControlEditorCloseAsset(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSaveAll(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorUndo(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorRedo(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetEditorMode(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorShowStats(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorHideStats(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetGameView(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetImmersiveMode(const FString &RequestId,
+                                           const TSharedPtr<FJsonObject> &Payload,
+                                           TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetFixedDeltaTime(const FString &RequestId,
+                                            const TSharedPtr<FJsonObject> &Payload,
+                                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorOpenLevel(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Asset handlers
   bool HandleImportAsset(const FString &RequestId,

@@ -1404,6 +1404,60 @@ static bool HandleGetVolumesInfo(
     return true;
 }
 
+// ============================================================================
+// Volume Removal Handler (1 action)
+// ============================================================================
+
+static bool HandleRemoveVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+
+    if (VolumeName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("volumeName is required for remove_volume"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    // Find the volume by name
+    AActor* VolumeActor = FindVolumeByName(World, VolumeName);
+    if (!VolumeActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Store info before destroying
+    FString VolumeClass = VolumeActor->GetClass()->GetName();
+    FString VolumeLabel = VolumeActor->GetActorLabel();
+
+    // Destroy the volume actor
+    World->DestroyActor(VolumeActor, true);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
+    ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -1473,6 +1527,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     {
         return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
     }
+#else
+    // PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.0 and 5.7+)
+    if (SubAction == TEXT("create_post_process_volume"))
+    {
+        SendAutomationResponse(Socket, RequestId, false,
+            TEXT("PostProcessVolume is only available in UE 5.1-5.6"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
 #endif
     if (SubAction == TEXT("create_cull_distance_volume"))
     {
@@ -1509,6 +1571,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("set_volume_properties"))
     {
         return HandleSetVolumeProperties(this, RequestId, Payload, Socket);
+    }
+
+    // Volume Removal
+    if (SubAction == TEXT("remove_volume"))
+    {
+        return HandleRemoveVolume(this, RequestId, Payload, Socket);
     }
 
     // Utility

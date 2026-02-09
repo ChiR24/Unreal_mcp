@@ -391,13 +391,18 @@ export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Prom
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
   
-  const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string } | null;
+  const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string; [key: string]: unknown } | null;
   if (res && res.success) {
     const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
+    // Extract blueprint data from response and wrap in 'blueprint' property for schema compliance
+    const { success, message, error, blueprintPath: _, ...blueprintData } = res;
     return cleanObject({
-      ...res,
+      success,
+      message: message || 'Blueprint fetched',
+      error,
       blueprintPath: typeof blueprintPath === 'string' ? blueprintPath : undefined,
-      message: res.message || 'Blueprint fetched'
+      // Include blueprint object for schema compliance - contains all blueprint-specific data
+      blueprint: Object.keys(blueprintData).length > 0 ? blueprintData : { path: blueprintPath }
     }) as Record<string, unknown>;
   }
   return cleanObject(res) as Record<string, unknown>;

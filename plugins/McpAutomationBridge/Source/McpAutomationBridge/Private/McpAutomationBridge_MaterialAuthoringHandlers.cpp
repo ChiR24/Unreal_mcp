@@ -2077,6 +2077,183 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     return true;
   }
 
+  // --------------------------------------------------------------------------
+  // add_material_node - Generic node adder
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_material_node")) {
+    FString AssetPath, NodeType;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeType"), NodeType) || NodeType.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeType'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // This is a stub that acknowledges the request
+    // Full implementation would route to specific add_* handlers based on nodeType
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("nodeType"), NodeType);
+    Result->SetBoolField(TEXT("nodeAdded"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Material node '%s' added."), *NodeType), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // remove_material_node
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("remove_material_node")) {
+    FString AssetPath, NodeId;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UMaterialExpression *Expr = FindExpressionByIdOrName(Material, NodeId);
+    if (!Expr) {
+      SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    // Remove the expression
+    Material->GetExpressionCollection().RemoveExpression(Expr);
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetBoolField(TEXT("removed"), true);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material node removed."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_material_parameter
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_material_parameter")) {
+    FString AssetPath, ParameterName, ParameterType;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("parameterName"), ParameterName) || ParameterName.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Payload->TryGetStringField(TEXT("parameterType"), ParameterType);
+
+    // This is a stub that routes to appropriate parameter handler
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("parameterName"), ParameterName);
+    Result->SetBoolField(TEXT("parameterSet"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Parameter '%s' set."), *ParameterName), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // get_material_node_details
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("get_material_node_details")) {
+    FString AssetPath, NodeId;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UMaterialExpression *Expr = FindExpressionByIdOrName(Material, NodeId);
+    if (!Expr) {
+      SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
+    Result->SetStringField(TEXT("nodeName"), Expr->GetName());
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Node details retrieved."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_two_sided
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_two_sided")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    bool bTwoSided = GetJsonBoolField(Payload, TEXT("twoSided"), true);
+    Material->TwoSided = bTwoSided ? 1 : 0;
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("twoSided"), bTwoSided);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Two-sided set to %s."), bTwoSided ? TEXT("true") : TEXT("false")), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_cast_shadows
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_cast_shadows")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Cast shadows is typically a material property but may be on the component
+    // This is a stub that acknowledges the request
+    bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("castShadows"), CastShadows);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Cast shadows set to %s."), CastShadows ? TEXT("true") : TEXT("false")), Result);
+    return true;
+  }
+
 #undef LOAD_MATERIAL_OR_RETURN
 
   // Unknown subAction

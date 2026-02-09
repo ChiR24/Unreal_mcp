@@ -766,11 +766,12 @@ void FMcpConnectionManager::SendAutomationResponse(
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Response, Writer);
 
-  // Log the payload size to help debug large response failures
+  // Log compact JSON for debugging (strip indentation)
+  FString CompactLog = Serialized.Replace(TEXT("\n"), TEXT("")).Replace(TEXT("\r"), TEXT("")).Replace(TEXT("\t"), TEXT(""));
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("Sending automation_response for RequestId=%s. Payload Size: %d "
-              "chars"),
-         *RequestId, Serialized.Len());
+         TEXT("Response [%s]: %s"),
+         *RequestId.Left(8),
+         *CompactLog.Left(500));
 
   RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
 
