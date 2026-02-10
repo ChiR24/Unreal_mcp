@@ -42,6 +42,7 @@ import { handleLevelStructureTools } from './handlers/level-structure-handlers.j
 import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
+import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -313,7 +314,10 @@ function registerDefaultHandlers() {
   // 11. INTROSPECTION
   toolRegistry.register('inspect', async (args, tools) => await handleInspectTools(getAction(args), args, tools));
 
-  // 12. AUDIO (merged with manage_audio_authoring - Phase 53)
+  // 12. DYNAMIC TOOLS MANAGEMENT
+  toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getAction(args), args, tools));
+
+  // 13. AUDIO (merged with manage_audio_authoring - Phase 53)
   const AUDIO_AUTHORING_ACTIONS = new Set([
     'add_cue_node', 'connect_cue_nodes', 'set_cue_attenuation', 'set_cue_concurrency',
     'create_metasound', 'add_metasound_node', 'connect_metasound_nodes',

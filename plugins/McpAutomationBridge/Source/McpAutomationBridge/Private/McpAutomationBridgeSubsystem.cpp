@@ -789,8 +789,111 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAssetAction(R, A, P, S);
                   });
 
-  // Note: rebuild_material handler removed - function implementation removed
-  // Material operations should use manage_material_authoring instead
+  RegisterHandler(TEXT("manage_material_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageMaterialAuthoringAction(R, A, P, S);
+                  });
+
+  // === Missing registrations for Phase 35+ tools ===
+  RegisterHandler(TEXT("manage_blueprint"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleBlueprintAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_geometry"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGeometryAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_skeleton"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSkeleton(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_texture"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageTextureAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_gas"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageGASAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_character"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCharacterAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_combat"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageCombatAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_ai"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAIAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_inventory"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageInventoryAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_interaction"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageInteractionAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_widget_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageWidgetAuthoringAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_networking"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageNetworkingAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_splines"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageSplinesAction(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("manage_pipeline"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandlePipelineAction(R, A, P, S);
+                  });
 
   RegisterHandler(TEXT("manage_behavior_tree"),
                   [this](const FString &R, const FString &A,

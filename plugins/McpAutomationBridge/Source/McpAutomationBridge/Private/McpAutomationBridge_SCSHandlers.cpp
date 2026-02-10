@@ -42,10 +42,16 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   FKismetEditorUtilities::CompileBlueprint(Blueprint);
   bOutCompiled = true;
-  bOutSaved = SaveLoadedAssetThrottled(Blueprint);
+  
+  // UE 5.7+ Fix: Use McpSafeAssetSave instead of SaveLoadedAssetThrottled.
+  // SaveLoadedAssetThrottled triggers UEditorAssetLibrary::SaveLoadedAsset() which
+  // causes thumbnail generation and recursive FlushRenderingCommands calls (11+ times).
+  // This corrupts render thread state and causes access violations in RenderCore.dll.
+  // McpSafeAssetSave marks package dirty without triggering disk save operations.
+  bOutSaved = McpSafeAssetSave(Blueprint);
   if (!bOutSaved) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("SaveLoadedAssetThrottled reported failure for '%s' after SCS "
+           TEXT("McpSafeAssetSave reported failure for '%s' after SCS "
                 "change"),
            *Blueprint->GetPathName());
   }

@@ -1969,8 +1969,57 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                 }
                 if (bHandleValid) {
                   if constexpr (bHasRename) {
+                    // Generate unique name if target already exists
+                    FString UniqueName = ComponentName;
+                    FName TargetVarName = FName(*UniqueName);
+                    
+                    // Check if variable already exists in blueprint
+                    if (LocalBP->GeneratedClass) {
+                      // Check for existing member variable with same name
+                      bool bNameExists = false;
+                      for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                        if (It->GetFName() == TargetVarName) {
+                          bNameExists = true;
+                          break;
+                        }
+                      }
+                      
+                      // Also check the _GEN_VARIABLE suffix naming
+                      FString GenVarName = UniqueName + TEXT("_GEN_VARIABLE");
+                      FName GenVarFName = FName(*GenVarName);
+                      for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                        if (It->GetFName() == GenVarFName) {
+                          bNameExists = true;
+                          break;
+                        }
+                      }
+                      
+                      if (bNameExists) {
+                        // Generate unique name by appending number
+                        int32 Suffix = 1;
+                        while (Suffix < 1000) {
+                          UniqueName = FString::Printf(TEXT("%s_%d"), *ComponentName, Suffix);
+                          TargetVarName = FName(*UniqueName);
+                          
+                          bNameExists = false;
+                          for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                            if (It->GetFName() == TargetVarName) {
+                              bNameExists = true;
+                              break;
+                            }
+                          }
+                          
+                          if (!bNameExists) break;
+                          Suffix++;
+                        }
+                        
+                        OpSummary->SetStringField(TEXT("originalName"), ComponentName);
+                        OpSummary->SetStringField(TEXT("renamedTo"), UniqueName);
+                      }
+                    }
+                    
                     Subsystem->RenameSubobjectMemberVariable(
-                        LocalBP, NewHandle, FName(*ComponentName));
+                        LocalBP, NewHandle, TargetVarName);
                   }
 #if WITH_EDITOR
                   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(

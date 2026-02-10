@@ -11,13 +11,16 @@ export interface ToolDefinition {
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',
-    description: 'Filter visible tools by category. Actions: list_categories (show available), set_categories (enable specific), get_status (current state). Categories: core, world, authoring, gameplay, utility, all.',
+    description: 'Build automation and pipeline control. Actions: run_ubt (compile targets), list_categories (show tool categories), get_status (bridge status). Routes to system_control internally.',
     category: 'core',
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['set_categories', 'list_categories', 'get_status'], description: 'list_categories: show available. set_categories: enable categories. get_status: current state.' },
-        categories: { type: 'array', items: commonSchemas.stringProp, description: 'Categories: core, world, authoring, gameplay, utility, all' }
+        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: show available tool categories. get_status: get bridge status.' },
+        target: { type: 'string', description: 'Build target name (e.g., MyProjectEditor)' },
+        platform: { type: 'string', description: 'Target platform (Win64, Linux, Mac)' },
+        configuration: { type: 'string', description: 'Build configuration (Development, Shipping, Debug)' },
+        arguments: { type: 'string', description: 'Additional UBT arguments' }
       },
       required: ['action']
     },
@@ -25,7 +28,36 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        categories: { type: 'array', items: commonSchemas.stringProp }
+        output: { type: 'string', description: 'Build output' },
+        command: { type: 'string', description: 'Executed command' }
+      }
+    }
+  },
+  {
+    name: 'manage_tools',
+    description: 'Dynamic MCP tool management. Enable/disable tools and categories at runtime. Actions: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset.',
+    category: 'core',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { 
+          type: 'string', 
+          enum: ['list_tools', 'list_categories', 'enable_tools', 'disable_tools', 'enable_category', 'disable_category', 'get_status', 'reset'],
+          description: 'list_tools: show all tools with status. list_categories: show categories. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
+        },
+        tools: { type: 'array', items: commonSchemas.stringProp, description: 'Tool names to enable/disable' },
+        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility)' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        tools: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, enabled: { type: 'boolean' }, category: { type: 'string' } } } },
+        categories: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, enabled: { type: 'boolean' }, toolCount: { type: 'number' } } } },
+        enabledCount: { type: 'number' },
+        disabledCount: { type: 'number' }
       }
     }
   },
@@ -882,7 +914,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_input_action',
             'create_input_mapping_context',
             'add_mapping',
-            'remove_mapping'
+            'remove_mapping',
+            'map_input_action',
+            'set_input_trigger',
+            'set_input_modifier',
+            'enable_input_mapping',
+            'disable_input_action',
+            'get_input_info'
           ],
           description: 'Action to perform'
         },
@@ -890,7 +928,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         path: commonSchemas.directoryPath,
         contextPath: commonSchemas.assetPath,
         actionPath: commonSchemas.assetPath,
-        key: commonSchemas.stringProp
+        key: commonSchemas.stringProp,
+        triggerType: commonSchemas.stringProp,
+        modifierType: commonSchemas.stringProp,
+        assetPath: commonSchemas.assetPath,
+        priority: { type: 'number', description: 'Priority for input mapping context (default: 0).' }
       },
       required: ['action']
     },

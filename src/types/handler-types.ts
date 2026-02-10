@@ -630,6 +630,10 @@ export interface InputArgs extends HandlerArgs {
     actionPath?: string;
     contextPath?: string;
     key?: string;
+    triggerType?: string;
+    modifierType?: string;
+    assetPath?: string;
+    priority?: number;
 }
 
 // ============================================================================

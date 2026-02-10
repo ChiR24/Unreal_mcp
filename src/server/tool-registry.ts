@@ -40,6 +40,7 @@ import { LogTools } from '../tools/logs.js';
 import { getProjectSetting } from '../utils/ini-reader.js';
 import { config } from '../config.js';
 import { mcpClients } from 'mcp-client-capabilities';
+import { dynamicToolManager } from '../tools/dynamic-tool-manager.js';
 
 // Parse default categories from config
 function parseDefaultCategories(): string[] {
@@ -105,20 +106,219 @@ export class ToolRegistry {
 
             return { success: true, message: `Categories updated to ${this.currentCategories.join(', ')}`, categories: this.currentCategories };
         } else if (action === 'list_categories') {
+            const categories = dynamicToolManager.listCategories();
             return { 
                 success: true, 
                 categories: this.currentCategories, 
-                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'] 
+                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'],
+                categoryDetails: categories.map(c => ({
+                    name: c.name,
+                    enabled: c.enabled,
+                    toolCount: c.toolCount,
+                    enabledCount: c.enabledCount
+                }))
             };
         } else if (action === 'get_status') {
+            const status = dynamicToolManager.getStatus();
             return { 
                 success: true, 
                 categories: this.currentCategories,
-                toolCount: consolidatedToolDefinitions.length,
-                filteredCount: consolidatedToolDefinitions.filter((t: ToolDefinition) => !t.category || this.currentCategories.includes(t.category) || this.currentCategories.includes('all')).length
+                toolCount: status.totalTools,
+                enabledCount: status.enabledTools,
+                disabledCount: status.disabledTools,
+                filteredCount: dynamicToolManager.getEnabledToolDefinitions().length
             };
         }
         return { success: false, error: `Unknown pipeline action: ${action}` };
+    }
+
+    private async handleManageToolsCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+        const action = args.action as string;
+        type ToolCategory = 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
+        
+        // Helper to safely extract string array
+        const getStringArray = (key: string): string[] => {
+            const val = args[key];
+            if (Array.isArray(val)) {
+                return val.filter((v): v is string => typeof v === 'string');
+            }
+            return [];
+        };
+
+        // Helper to safely extract string
+        const getString = (key: string): string | undefined => {
+            const val = args[key];
+            return typeof val === 'string' ? val : undefined;
+        };
+
+        switch (action) {
+            case 'list_tools': {
+                const toolStates = dynamicToolManager.listTools();
+                const tools = toolStates.map(state => ({
+                    name: state.name,
+                    enabled: state.enabled,
+                    category: state.category,
+                    description: state.description.substring(0, 100) + (state.description.length > 100 ? '...' : '')
+                }));
+                const status = dynamicToolManager.getStatus();
+                return {
+                    success: true,
+                    tools,
+                    totalTools: status.totalTools,
+                    enabledCount: status.enabledTools,
+                    disabledCount: status.disabledTools,
+                    message: `Listed ${tools.length} tools (${status.enabledTools} enabled, ${status.disabledTools} disabled)`
+                };
+            }
+
+            case 'list_categories': {
+                const categories = dynamicToolManager.listCategories();
+                return {
+                    success: true,
+                    categories: categories.map(cat => ({
+                        name: cat.name,
+                        enabled: cat.enabled,
+                        toolCount: cat.toolCount,
+                        enabledCount: cat.enabledCount
+                    })),
+                    totalCategories: categories.length,
+                    message: `Listed ${categories.length} categories`
+                };
+            }
+
+            case 'enable_tools': {
+                const toolNames = getStringArray('tools');
+                if (toolNames.length === 0) {
+                    return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
+                }
+                const result = dynamicToolManager.enableTools(toolNames);
+                return {
+                    success: true,
+                    enabled: result.enabled,
+                    notFound: result.notFound,
+                    message: result.notFound.length > 0 
+                        ? `Enabled ${result.enabled.length} tools. ${result.notFound.length} not found.`
+                        : `Enabled ${result.enabled.length} tools`
+                };
+            }
+
+            case 'disable_tools': {
+                const toolNames = getStringArray('tools');
+                if (toolNames.length === 0) {
+                    return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
+                }
+                const result = dynamicToolManager.disableTools(toolNames);
+                if (result.protected.length > 0 && result.disabled.length === 0) {
+                    return { 
+                        success: false, 
+                        error: `Cannot disable protected tools: ${result.protected.join(', ')}`,
+                        errorCode: 'PROTECTED_TOOLS'
+                    };
+                }
+                const messages: string[] = [];
+                if (result.disabled.length > 0) messages.push(`Disabled ${result.disabled.length} tools`);
+                if (result.notFound.length > 0) messages.push(`${result.notFound.length} not found`);
+                if (result.protected.length > 0) messages.push(`${result.protected.length} protected`);
+                return {
+                    success: true,
+                    disabled: result.disabled,
+                    notFound: result.notFound,
+                    protected: result.protected,
+                    message: messages.join('. ')
+                };
+            }
+
+            case 'enable_category': {
+                const category = getString('category') as ToolCategory | undefined;
+                if (!category) {
+                    return { success: false, error: 'No category specified.', errorCode: 'MISSING_CATEGORY' };
+                }
+                const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
+                if (!validCategories.includes(category)) {
+                    return { 
+                        success: false, 
+                        error: `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
+                        errorCode: 'INVALID_CATEGORY'
+                    };
+                }
+                const result = dynamicToolManager.enableCategory(category);
+                if (result.notFound) {
+                    return { success: false, error: `Category '${category}' not found`, errorCode: 'CATEGORY_NOT_FOUND' };
+                }
+                return {
+                    success: true,
+                    category,
+                    enabled: result.enabled,
+                    message: `Enabled category '${category}' (${result.enabled.length} tools)`
+                };
+            }
+
+            case 'disable_category': {
+                const category = getString('category') as ToolCategory | undefined;
+                if (!category) {
+                    return { success: false, error: 'No category specified.', errorCode: 'MISSING_CATEGORY' };
+                }
+                const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
+                if (!validCategories.includes(category)) {
+                    return { 
+                        success: false, 
+                        error: `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
+                        errorCode: 'INVALID_CATEGORY'
+                    };
+                }
+                const result = dynamicToolManager.disableCategory(category);
+                if (result.notFound) {
+                    return { success: false, error: `Category '${category}' not found`, errorCode: 'CATEGORY_NOT_FOUND' };
+                }
+                if (result.protected.length > 0 && result.disabled.length === 0) {
+                    return { 
+                        success: false, 
+                        error: `Cannot fully disable protected category '${category}'. Protected tools: ${result.protected.join(', ')}`,
+                        errorCode: 'PROTECTED_CATEGORY'
+                    };
+                }
+                return {
+                    success: true,
+                    category,
+                    disabled: result.disabled,
+                    protected: result.protected,
+                    message: `Disabled category '${category}' (${result.disabled.length} tools disabled)`
+                };
+            }
+
+            case 'get_status': {
+                const status = dynamicToolManager.getStatus();
+                return {
+                    success: true,
+                    totalTools: status.totalTools,
+                    enabledTools: status.enabledTools,
+                    disabledTools: status.disabledTools,
+                    categories: status.categories.map(cat => ({
+                        name: cat.name,
+                        enabled: cat.enabled,
+                        toolCount: cat.toolCount,
+                        enabledCount: cat.enabledCount
+                    })),
+                    message: `${status.enabledTools}/${status.totalTools} tools enabled`
+                };
+            }
+
+            case 'reset': {
+                const result = dynamicToolManager.reset();
+                return {
+                    success: true,
+                    enabled: result.enabled,
+                    message: `Reset complete. ${result.enabled} tools re-enabled.`
+                };
+            }
+
+            default:
+                return { 
+                    success: false, 
+                    error: `Unknown action: ${action}. Available: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset`,
+                    errorCode: 'UNKNOWN_ACTION'
+                };
+        }
     }
 
     register() {
@@ -285,14 +485,29 @@ export class ToolRegistry {
 
             this.logger.info(`Serving tools for categories: ${effectiveCategories.join(', ')} (client=${clientName || 'unknown'}, supportsListChanged=${supportsListChanged})`);
             
-            // Filter by category AND hide manage_pipeline from clients that can't use it
-            const filtered = consolidatedToolDefinitions
-                .filter((t: ToolDefinition) => 
-                    !t.category || effectiveCategories.includes(t.category) || effectiveCategories.includes('all')
-                )
-                .filter((t: ToolDefinition) => 
-                    supportsListChanged || t.name !== 'manage_pipeline'
-                );
+            // Use DynamicToolManager for filtering
+            const allTools = dynamicToolManager.getAllToolDefinitions();
+            const status = dynamicToolManager.getStatus();
+            
+            // Filter by: 1) tool enabled in DynamicToolManager, 2) category, 3) hide manage_pipeline from non-dynamic clients
+            const filtered = allTools
+                .filter((t: ToolDefinition) => {
+                    // Check if tool is enabled
+                    if (!dynamicToolManager.isToolEnabled(t.name)) return false;
+                    
+                    // Check category filter
+                    const category = t.category;
+                    if (category && !effectiveCategories.includes(category) && !effectiveCategories.includes('all')) {
+                        return false;
+                    }
+                    
+                    // Hide manage_pipeline from clients that can't use it
+                    if (!supportsListChanged && t.name === 'manage_pipeline') return false;
+                    
+                    return true;
+                });
+            
+            this.logger.debug(`Tool filtering: ${status.enabledTools}/${status.totalTools} enabled, ${filtered.length} visible`);
             
             const sanitized = filtered.map((t: ToolDefinition) => {
                 try {
@@ -312,6 +527,20 @@ export class ToolRegistry {
 
             if (name === 'manage_pipeline') {
                 return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
+            }
+
+            // Handle manage_tools for dynamic tool management
+            if (name === 'manage_tools') {
+                const result = await this.handleManageToolsCall(args);
+                // Trigger list_changed notification if tools were modified
+                const action = args.action as string;
+                if (['enable_tools', 'disable_tools', 'enable_category', 'disable_category', 'reset'].includes(action || '')) {
+                    this.server.notification({
+                        method: 'notifications/tools/list_changed',
+                        params: {}
+                    }).catch(err => this.logger.error('Failed to send list_changed notification', err));
+                }
+                return { content: [{ type: 'text', text: JSON.stringify(result) }] };
             }
 
             const startTime = Date.now();
