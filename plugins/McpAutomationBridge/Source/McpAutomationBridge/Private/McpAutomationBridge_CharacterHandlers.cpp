@@ -64,6 +64,21 @@ static void SetBPVarDefaultValue(UBlueprint* Blueprint, FName VarName, const FSt
 static UBlueprint* CreateCharacterBlueprint(const FString& Path, const FString& Name, FString& OutError)
 {
     FString FullPath = Path / Name;
+
+    // Validate path before CreatePackage (prevents crashes from // and path traversal)
+    if (!IsValidAssetPath(FullPath))
+    {
+        OutError = FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."), *FullPath);
+        return nullptr;
+    }
+
+    // Check if asset already exists to prevent assertion failures
+    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    {
+        OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath);
+        return nullptr;
+    }
+
     UPackage* Package = CreatePackage(*FullPath);
     if (!Package)
     {
@@ -1253,6 +1268,328 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         }
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Character info retrieved"), Result);
+        return true;
+    }
+
+    // ============================================================
+    // ALIASES & NEW SUB-ACTIONS
+    // ============================================================
+
+    // setup_movement -> alias for configure_movement_speeds
+    if (SubAction == TEXT("setup_movement"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
+            if (Payload->HasField(TEXT("walkSpeed")))
+                Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("walkSpeed"), 600.0));
+            if (Payload->HasField(TEXT("runSpeed")))
+                Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
+            if (Payload->HasField(TEXT("acceleration")))
+                Movement->MaxAcceleration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("acceleration"), 2048.0));
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement configured"), Result);
+        return true;
+    }
+
+    // set_walk_speed
+    if (SubAction == TEXT("set_walk_speed"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double WalkSpeed = GetNumberFieldChar(Payload, TEXT("walkSpeed"), 600.0);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            CharCDO->GetCharacterMovement()->MaxWalkSpeed = static_cast<float>(WalkSpeed);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("walkSpeed"), WalkSpeed);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Walk speed set"), Result);
+        return true;
+    }
+
+    // set_jump_height
+    if (SubAction == TEXT("set_jump_height"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double JumpHeight = GetNumberFieldChar(Payload, TEXT("jumpHeight"), 600.0);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            CharCDO->GetCharacterMovement()->JumpZVelocity = static_cast<float>(JumpHeight);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("jumpHeight"), JumpHeight);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Jump height set"), Result);
+        return true;
+    }
+
+    // set_gravity_scale
+    if (SubAction == TEXT("set_gravity_scale"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double GravityScale = GetNumberFieldChar(Payload, TEXT("gravityScale"), 1.0);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            CharCDO->GetCharacterMovement()->GravityScale = static_cast<float>(GravityScale);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("gravityScale"), GravityScale);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Gravity scale set"), Result);
+        return true;
+    }
+
+    // set_ground_friction
+    if (SubAction == TEXT("set_ground_friction"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double GroundFriction = GetNumberFieldChar(Payload, TEXT("groundFriction"), 8.0);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            CharCDO->GetCharacterMovement()->GroundFriction = static_cast<float>(GroundFriction);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("groundFriction"), GroundFriction);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ground friction set"), Result);
+        return true;
+    }
+
+    // set_braking_deceleration
+    if (SubAction == TEXT("set_braking_deceleration"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double Deceleration = GetNumberFieldChar(Payload, TEXT("brakingDeceleration"), 2048.0);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            CharCDO->GetCharacterMovement()->BrakingDecelerationWalking = static_cast<float>(Deceleration);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("brakingDeceleration"), Deceleration);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Braking deceleration set"), Result);
+        return true;
+    }
+
+    // configure_crouch
+    if (SubAction == TEXT("configure_crouch"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double CrouchSpeed = GetNumberFieldChar(Payload, TEXT("crouchSpeed"), 300.0);
+        double CrouchedHalfHeight = GetNumberFieldChar(Payload, TEXT("crouchedHalfHeight"), 44.0);
+        bool CanCrouch = GetBoolFieldChar(Payload, TEXT("canCrouch"), true);
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
+            Movement->MaxWalkSpeedCrouched = static_cast<float>(CrouchSpeed);
+            Movement->SetCrouchedHalfHeight(static_cast<float>(CrouchedHalfHeight));
+            Movement->NavAgentProps.bCanCrouch = CanCrouch;
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("crouchSpeed"), CrouchSpeed);
+        Result->SetNumberField(TEXT("crouchedHalfHeight"), CrouchedHalfHeight);
+        Result->SetBoolField(TEXT("canCrouch"), CanCrouch);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Crouch configured"), Result);
+        return true;
+    }
+
+    // configure_sprint
+    if (SubAction == TEXT("configure_sprint"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double SprintSpeed = GetNumberFieldChar(Payload, TEXT("sprintSpeed"), 900.0);
+
+        // Add sprint state variables
+        FEdGraphPinType BoolPinType;
+        BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+        AddBlueprintVariableChar(Blueprint, TEXT("bIsSprinting"), BoolPinType, TEXT("Sprint"));
+
+        FEdGraphPinType FloatPinType;
+        FloatPinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+        FloatPinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+        AddBlueprintVariableChar(Blueprint, TEXT("SprintSpeed"), FloatPinType, TEXT("Sprint"));
+
+        ACharacter* CharCDO = Blueprint->GeneratedClass
+            ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject())
+            : nullptr;
+
+        if (CharCDO && CharCDO->GetCharacterMovement())
+        {
+            // Sprint speed is stored as a variable; base MaxWalkSpeed stays unchanged
+            CharCDO->GetCharacterMovement()->MaxCustomMovementSpeed = static_cast<float>(SprintSpeed);
+        }
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Result->SetNumberField(TEXT("sprintSpeed"), SprintSpeed);
+        Result->SetStringField(TEXT("stateVariable"), TEXT("bIsSprinting"));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sprint configured with state variables"), Result);
         return true;
     }
 

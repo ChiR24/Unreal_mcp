@@ -49,6 +49,21 @@
 static UBlueprint* CreateActorBlueprint(UClass* ParentClass, const FString& Path, const FString& Name, FString& OutError)
 {
     FString FullPath = Path / Name;
+
+    // Validate path before CreatePackage (prevents crashes from // and path traversal)
+    if (!IsValidAssetPath(FullPath))
+    {
+        OutError = FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."), *FullPath);
+        return nullptr;
+    }
+
+    // Check if asset already exists to prevent assertion failures
+    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    {
+        OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath);
+        return nullptr;
+    }
+
     UPackage* Package = CreatePackage(*FullPath);
     if (!Package)
     {
@@ -1015,6 +1030,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         {
             // Try creating as UObject-based blueprint
             FString FullPath = Path / Name;
+
+            // Validate path before fallback CreatePackage
+            if (!IsValidAssetPath(FullPath))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."), *FullPath),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+
+            // Check if asset already exists
+            if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath),
+                    TEXT("ASSET_EXISTS"));
+                return true;
+            }
+
             UPackage* Package = CreatePackage(*FullPath);
             if (!Package)
             {
@@ -2358,6 +2392,370 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetObjectField(TEXT("combatInfo"), Info);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat info retrieved."), Result);
+        return true;
+    }
+
+    // ============================================================
+    // ALIASES
+    // ============================================================
+
+    // setup_damage_type -> alias for create_damage_type
+    if (SubAction == TEXT("setup_damage_type"))
+    {
+        if (Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UBlueprint* Blueprint = CreateActorBlueprint(UDamageType::StaticClass(), Path, Name, Error);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error.IsEmpty() ? TEXT("Failed to create damage type.") : Error, TEXT("CREATION_FAILED"));
+            return true;
+        }
+
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
+        return true;
+    }
+
+    // configure_hit_detection -> alias for setup_hitbox_component
+    if (SubAction == TEXT("configure_hit_detection"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        FString HitboxType = GetStringFieldCombat(Payload, TEXT("hitboxType"), TEXT("Capsule"));
+        double DamageMultiplier = GetNumberFieldCombat(Payload, TEXT("damageMultiplier"), 1.0);
+
+        // Create collision component based on type
+        if (HitboxType == TEXT("Capsule"))
+        {
+            GetOrCreateSCSComponent<UCapsuleComponent>(Blueprint, TEXT("HitboxCapsule"));
+        }
+        else if (HitboxType == TEXT("Box"))
+        {
+            GetOrCreateSCSComponent<UBoxComponent>(Blueprint, TEXT("HitboxBox"));
+        }
+        else
+        {
+            GetOrCreateSCSComponent<USphereComponent>(Blueprint, TEXT("HitboxSphere"));
+        }
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetStringField(TEXT("hitboxType"), HitboxType);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit detection configured."), Result);
+        return true;
+    }
+
+    // get_combat_stats -> alias for get_combat_info
+    if (SubAction == TEXT("get_combat_stats"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> Info = MakeShareable(new FJsonObject());
+        Info->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
+
+        TArray<TSharedPtr<FJsonValue>> VariableList;
+        for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+        {
+            VariableList.Add(MakeShareable(new FJsonValueString(Var.VarName.ToString())));
+        }
+        Info->SetArrayField(TEXT("variables"), VariableList);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetObjectField(TEXT("combatInfo"), Info);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat stats retrieved."), Result);
+        return true;
+    }
+
+    // ============================================================
+    // NEW SUB-ACTIONS
+    // ============================================================
+
+    // create_damage_effect - creates a blueprint with damage effect variables
+    if (SubAction == TEXT("create_damage_effect"))
+    {
+        if (Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        FString Error;
+        UBlueprint* Blueprint = CreateActorBlueprint(AActor::StaticClass(), Path, Name, Error);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, Error.IsEmpty() ? TEXT("Failed to create damage effect.") : Error, TEXT("CREATION_FAILED"));
+            return true;
+        }
+
+        double Duration = GetNumberFieldCombat(Payload, TEXT("duration"), 5.0);
+        double DamagePerSecond = GetNumberFieldCombat(Payload, TEXT("damagePerSecond"), 10.0);
+        FString EffectType = GetStringFieldCombat(Payload, TEXT("effectType"), TEXT("DamageOverTime"));
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("EffectDuration"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("DamagePerSecond"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("EffectType"), MakeStringPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bIsActive"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* DurProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("EffectDuration")))
+                    DurProp->SetPropertyValue_InContainer(CDO, Duration);
+                if (FDoubleProperty* DpsProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("DamagePerSecond")))
+                    DpsProp->SetPropertyValue_InContainer(CDO, DamagePerSecond);
+                if (FStrProperty* TypeProp = FindFProperty<FStrProperty>(BPGC, TEXT("EffectType")))
+                    TypeProp->SetPropertyValue_InContainer(CDO, EffectType);
+            }
+        }
+
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetNumberField(TEXT("duration"), Duration);
+        Result->SetNumberField(TEXT("damagePerSecond"), DamagePerSecond);
+        Result->SetStringField(TEXT("effectType"), EffectType);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage effect created."), Result);
+        return true;
+    }
+
+    // apply_damage - adds damage application variables to a blueprint
+    if (SubAction == TEXT("apply_damage"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double DamageAmount = GetNumberFieldCombat(Payload, TEXT("damageAmount"), 25.0);
+        FString DamageTypeName = GetStringFieldCombat(Payload, TEXT("damageType"), TEXT("Default"));
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("AppliedDamageAmount"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("AppliedDamageType"), MakeStringPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* AmtProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("AppliedDamageAmount")))
+                    AmtProp->SetPropertyValue_InContainer(CDO, DamageAmount);
+                if (FStrProperty* TypeProp = FindFProperty<FStrProperty>(BPGC, TEXT("AppliedDamageType")))
+                    TypeProp->SetPropertyValue_InContainer(CDO, DamageTypeName);
+            }
+        }
+
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetNumberField(TEXT("damageAmount"), DamageAmount);
+        Result->SetStringField(TEXT("damageType"), DamageTypeName);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage application configured."), Result);
+        return true;
+    }
+
+    // heal - adds healing variables to a blueprint
+    if (SubAction == TEXT("heal"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double HealAmount = GetNumberFieldCombat(Payload, TEXT("healAmount"), 25.0);
+        double MaxHealth = GetNumberFieldCombat(Payload, TEXT("maxHealth"), 100.0);
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentHealth"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MaxHealth"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("HealAmount"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* HealthProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("CurrentHealth")))
+                    HealthProp->SetPropertyValue_InContainer(CDO, MaxHealth);
+                if (FDoubleProperty* MaxProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MaxHealth")))
+                    MaxProp->SetPropertyValue_InContainer(CDO, MaxHealth);
+                if (FDoubleProperty* HealProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HealAmount")))
+                    HealProp->SetPropertyValue_InContainer(CDO, HealAmount);
+            }
+        }
+
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetNumberField(TEXT("healAmount"), HealAmount);
+        Result->SetNumberField(TEXT("maxHealth"), MaxHealth);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Healing configured."), Result);
+        return true;
+    }
+
+    // create_shield - adds shield/barrier variables to a blueprint
+    if (SubAction == TEXT("create_shield"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double ShieldAmount = GetNumberFieldCombat(Payload, TEXT("shieldAmount"), 50.0);
+        double MaxShield = GetNumberFieldCombat(Payload, TEXT("maxShield"), 100.0);
+        double ShieldRegenRate = GetNumberFieldCombat(Payload, TEXT("shieldRegenRate"), 5.0);
+        double ShieldRegenDelay = GetNumberFieldCombat(Payload, TEXT("shieldRegenDelay"), 3.0);
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("CurrentShield"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("MaxShield"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ShieldRegenRate"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ShieldRegenDelay"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("bShieldActive"), MakeBoolPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* CurProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("CurrentShield")))
+                    CurProp->SetPropertyValue_InContainer(CDO, ShieldAmount);
+                if (FDoubleProperty* MaxProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MaxShield")))
+                    MaxProp->SetPropertyValue_InContainer(CDO, MaxShield);
+                if (FDoubleProperty* RegenProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ShieldRegenRate")))
+                    RegenProp->SetPropertyValue_InContainer(CDO, ShieldRegenRate);
+                if (FDoubleProperty* DelayProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ShieldRegenDelay")))
+                    DelayProp->SetPropertyValue_InContainer(CDO, ShieldRegenDelay);
+                if (FBoolProperty* ActiveProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bShieldActive")))
+                    ActiveProp->SetPropertyValue_InContainer(CDO, true);
+            }
+        }
+
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetNumberField(TEXT("shieldAmount"), ShieldAmount);
+        Result->SetNumberField(TEXT("maxShield"), MaxShield);
+        Result->SetNumberField(TEXT("shieldRegenRate"), ShieldRegenRate);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Shield system configured."), Result);
+        return true;
+    }
+
+    // modify_armor - adds armor/damage reduction variables to a blueprint
+    if (SubAction == TEXT("modify_armor"))
+    {
+        if (BlueprintPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        double ArmorValue = GetNumberFieldCombat(Payload, TEXT("armorValue"), 50.0);
+        double DamageReduction = GetNumberFieldCombat(Payload, TEXT("damageReduction"), 0.25);
+
+        AddBlueprintVariableCombat(Blueprint, TEXT("ArmorValue"), MakeFloatPinType());
+        AddBlueprintVariableCombat(Blueprint, TEXT("ArmorDamageReduction"), MakeFloatPinType());
+
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* ArmorProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ArmorValue")))
+                    ArmorProp->SetPropertyValue_InContainer(CDO, ArmorValue);
+                if (FDoubleProperty* RedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ArmorDamageReduction")))
+                    RedProp->SetPropertyValue_InContainer(CDO, DamageReduction);
+            }
+        }
+
+        McpSafeAssetSave(Blueprint);
+
+        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
+        Result->SetNumberField(TEXT("armorValue"), ArmorValue);
+        Result->SetNumberField(TEXT("damageReduction"), DamageReduction);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Armor configured."), Result);
         return true;
     }
 

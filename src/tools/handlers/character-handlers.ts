@@ -163,6 +163,50 @@ export async function handleCharacterTools(
     }
 
     // =========================================================================
+    // 14.5 Movement Shortcuts & Configuration (8 actions)
+    // =========================================================================
+
+    case 'setup_movement': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('setup_movement');
+    }
+
+    case 'set_walk_speed': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_walk_speed');
+    }
+
+    case 'set_jump_height': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_jump_height');
+    }
+
+    case 'set_gravity_scale': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_gravity_scale');
+    }
+
+    case 'set_ground_friction': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_ground_friction');
+    }
+
+    case 'set_braking_deceleration': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_braking_deceleration');
+    }
+
+    case 'configure_crouch': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_crouch');
+    }
+
+    case 'configure_sprint': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_sprint');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 

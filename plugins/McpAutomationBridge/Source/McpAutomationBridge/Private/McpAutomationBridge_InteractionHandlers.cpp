@@ -420,9 +420,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
 #if WITH_EDITOR
-    FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interactables") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { PackagePath = TEXT("/Game/") + PackagePath; }
-    FString PackageName = PackagePath / Name;
+    // Validate and sanitize the asset creation path
+    FString PackageName;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Folder, Name, PackageName, PathError)) {
+      SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
@@ -431,7 +436,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* DoorBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name, RF_Public | RF_Standalone, nullptr, GWarn));
+    FString SanitizedName = SanitizeAssetName(Name);
+    UBlueprint* DoorBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *SanitizedName, RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (DoorBP) {
       USimpleConstructionScript* SCS = DoorBP->SimpleConstructionScript;
@@ -606,9 +612,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
 #if WITH_EDITOR
-    FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interactables") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { PackagePath = TEXT("/Game/") + PackagePath; }
-    FString PackageName = PackagePath / Name;
+    // Validate and sanitize the asset creation path
+    FString PackageName;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Folder, Name, PackageName, PathError)) {
+      SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
@@ -617,7 +628,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* SwitchBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name, RF_Public | RF_Standalone, nullptr, GWarn));
+    FString SanitizedName = SanitizeAssetName(Name);
+    UBlueprint* SwitchBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *SanitizedName, RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (SwitchBP) {
       USimpleConstructionScript* SCS = SwitchBP->SimpleConstructionScript;

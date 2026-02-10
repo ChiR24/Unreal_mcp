@@ -31,13 +31,32 @@
 #define GetPayloadNumber GetJsonNumberField
 #define GetPayloadBool GetJsonBoolField
 
-// Helper to create a new package
+// Helper to create a new package with path validation
+// Returns nullptr and sets OutError if path is invalid
+static UPackage* CreateValidatedAssetPackage(const FString& Path, const FString& Name, FString& OutError) {
+  FString PackageName;
+  FString SanitizedName = SanitizeAssetName(Name);
+  
+  if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, OutError)) {
+    return nullptr;
+  }
+  
+  return CreatePackage(*PackageName);
+}
+
+// Legacy helper for backward compatibility - validates internally
 static UPackage* CreateAssetPackage(const FString& Path, const FString& Name) {
   FString PackagePath = Path.IsEmpty() ? TEXT("/Game/Items") : Path;
-  if (!PackagePath.StartsWith(TEXT("/"))) {
-    PackagePath = TEXT("/Game/") + PackagePath;
+  
+  // Normalize and validate
+  FString PackageName;
+  FString PathError;
+  FString SanitizedName = SanitizeAssetName(Name);
+  if (!ValidateAssetCreationPath(PackagePath, SanitizedName, PackageName, PathError)) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("CreateAssetPackage: %s"), *PathError);
+    return nullptr;
   }
-  FString PackageName = PackagePath / Name;
+  
   return CreatePackage(*PackageName);
 }
 
@@ -70,18 +89,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       return true;
     }
 
-    // Create a primary data asset for item
-    UPackage* Package = CreateAssetPackage(Path, Name);
+    // Create a primary data asset for item with validated path
+    FString PathError;
+    FString SanitizedName = SanitizeAssetName(Name);
+    UPackage* Package = CreateValidatedAssetPackage(Path, SanitizedName, PathError);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create package"),
+                          PathError.IsEmpty() ? TEXT("Failed to create package") : PathError,
                           TEXT("PACKAGE_CREATE_FAILED"));
       return true;
     }
 
     // Create UMcpGenericDataAsset (UDataAsset/UPrimaryDataAsset are abstract in UE5)
     UMcpGenericDataAsset* ItemAsset =
-        NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
+        NewObject<UMcpGenericDataAsset>(Package, FName(*SanitizedName), RF_Public | RF_Standalone);
 
     if (ItemAsset) {
       ItemAsset->MarkPackageDirty();
@@ -93,7 +114,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetStringField(TEXT("itemPath"), Package->GetName());
-      Result->SetStringField(TEXT("assetName"), Name);
+      Result->SetStringField(TEXT("assetName"), SanitizedName);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item data asset created"), Result);
     } else {

@@ -9,7 +9,12 @@ export function sanitizePath(path: string, allowedRoots: string[] = ['/Game', '/
     }
 
     // Normalize separators
-    const normalized = trimmed.replace(/\\/g, '/');
+    let normalized = trimmed.replace(/\\/g, '/');
+
+    // Normalize double slashes (prevents engine crash from paths like /Game//Test)
+    while (normalized.includes('//')) {
+        normalized = normalized.replace(/\/\//g, '/');
+    }
 
     // Prevent directory traversal
     if (normalized.includes('..')) {

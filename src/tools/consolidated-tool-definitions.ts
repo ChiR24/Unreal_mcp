@@ -2003,7 +2003,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'setup_footstep_system',
             'map_surface_to_sound',
             'configure_footstep_fx',
-            'get_character_info'
+            'get_character_info',
+            'setup_movement', 'set_walk_speed', 'set_jump_height', 'set_gravity_scale',
+            'set_ground_friction', 'set_braking_deceleration', 'configure_crouch', 'configure_sprint'
           ],
           description: 'Character action to perform.'
         },
@@ -2157,7 +2159,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'setup_reload_system', 'setup_ammo_system', 'setup_attachment_system', 'setup_weapon_switching',
             'configure_muzzle_flash', 'configure_tracer', 'configure_impact_effects', 'configure_shell_ejection',
             'create_melee_trace', 'configure_combo_system', 'create_hit_pause', 'configure_hit_reaction', 'setup_parry_block_system', 'configure_weapon_trails',
-            'get_combat_info'
+            'get_combat_info',
+            'setup_damage_type', 'configure_hit_detection', 'get_combat_stats',
+            'create_damage_effect', 'apply_damage', 'heal', 'create_shield', 'modify_armor'
           ],
           description: 'Combat action to perform'
         },
@@ -2335,7 +2339,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_state_tree', 'add_state_tree_state', 'add_state_tree_transition', 'configure_state_tree_task',
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
             'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner',
-            'get_ai_info'
+            'get_ai_info',
+            'create_blackboard', 'setup_perception',
+            'create_nav_link_proxy', 'set_focus', 'clear_focus',
+            'set_blackboard_value', 'get_blackboard_value',
+            'run_behavior_tree', 'stop_behavior_tree'
           ],
           description: 'AI action to perform'
         },

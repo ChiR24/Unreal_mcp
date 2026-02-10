@@ -119,7 +119,7 @@ static bool AddTagToAbilityContainer(UGameplayAbility* Ability, const FName& Pro
     return true;
 }
 
-// Helper to create blueprint asset
+// Helper to create blueprint asset with validated path
 static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError)
 {
     if (!ParentClass)
@@ -128,11 +128,27 @@ static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, 
         return nullptr;
     }
 
-    FString FullPath = Path / Name;
-    UPackage* Package = CreatePackage(*FullPath);
+    // Validate and sanitize the asset creation path
+    FString PackageName;
+    FString PathError;
+    FString SanitizedName = SanitizeAssetName(Name);
+    if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError))
+    {
+        OutError = PathError;
+        return nullptr;
+    }
+
+    // Verify the path doesn't contain double slashes (redundant check for safety)
+    if (!IsValidAssetPath(PackageName))
+    {
+        OutError = FString::Printf(TEXT("Invalid asset path: %s"), *PackageName);
+        return nullptr;
+    }
+
+    UPackage* Package = CreatePackage(*PackageName);
     if (!Package)
     {
-        OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);
+        OutError = FString::Printf(TEXT("Failed to create package: %s"), *PackageName);
         return nullptr;
     }
 
@@ -140,7 +156,7 @@ static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, 
     Factory->ParentClass = ParentClass;
 
     UBlueprint* Blueprint = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name),
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*SanitizedName),
                                   RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (!Blueprint)

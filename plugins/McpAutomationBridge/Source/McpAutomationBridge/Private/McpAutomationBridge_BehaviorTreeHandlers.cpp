@@ -102,6 +102,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     FString PackagePath = SavePath / Name;
 
+    // Validate path before CreatePackage (prevents crashes from // and path traversal)
+    if (!IsValidAssetPath(PackagePath)) {
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."),
+                          *PackagePath),
+          TEXT("INVALID_PATH"));
+      return true;
+    }
+
     // Check if already exists
     if (UEditorAssetLibrary::DoesAssetExist(PackagePath)) {
       SendAutomationError(
@@ -163,8 +173,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
       AssetPath.IsEmpty()) {
+    // Fallback: try behaviorTreePath (common test convention)
+    if (!Payload->TryGetStringField(TEXT("behaviorTreePath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      // Fallback: try path
+      Payload->TryGetStringField(TEXT("path"), AssetPath);
+    }
+  }
+  if (AssetPath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Missing 'assetPath'. Use 'create' subAction to "
+                        TEXT("Missing 'assetPath' (or 'behaviorTreePath'/'path'). Use 'create' subAction to "
                              "create a new Behavior Tree first."),
                         TEXT("INVALID_ARGUMENT"));
     return true;

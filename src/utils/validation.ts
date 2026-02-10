@@ -17,9 +17,16 @@ const MAX_ASSET_NAME_LENGTH = 64;
 /**
  * Invalid characters for Unreal Engine asset names
  * Note: Dashes are allowed in Unreal asset names
+ * Includes SQL injection pattern protection (semicolons, quotes, double-dashes)
  */
 // eslint-disable-next-line no-useless-escape
 const INVALID_CHARS = /[@#%$&*()+=\[\]{}<>?|\\;:'"`,~!\s]/g;
+
+/**
+ * SQL injection patterns to reject in asset names
+ * These patterns could be dangerous if passed to database queries or eval contexts
+ */
+const SQL_INJECTION_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/i;
 
 /**
  * Reserved keywords that shouldn't be used as names
@@ -42,6 +49,12 @@ export function sanitizeAssetName(name: string): string {
 
   // Remove leading/trailing whitespace
   let sanitized = name.trim();
+
+  // Check for SQL injection patterns and reject early
+  if (SQL_INJECTION_PATTERNS.test(sanitized)) {
+    // Replace dangerous patterns with underscores instead of throwing
+    sanitized = sanitized.replace(SQL_INJECTION_PATTERNS, '_');
+  }
 
   // Replace invalid characters with underscores
   sanitized = sanitized.replace(INVALID_CHARS, '_');
@@ -87,6 +100,11 @@ export function sanitizePath(path: string): string {
 
   // Normalize slashes
   path = path.replace(/\\/g, '/');
+
+  // Normalize double slashes (prevents engine crash from paths like /Game//Test)
+  while (path.includes('//')) {
+    path = path.replace(/\/\//g, '/');
+  }
 
   // Ensure path starts with /
   if (!path.startsWith('/')) {

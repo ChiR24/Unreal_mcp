@@ -2381,7 +2381,16 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
 #endif // WITH_EDITOR
 
-  return false;
+  // Catch-all: If we reach here, the action was not recognized
+  // Send error response instead of returning false to avoid client timeout
+  {
+    FString UnhandledAction = Action;
+    LocalPayload->TryGetStringField(TEXT("action"), UnhandledAction);
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           FString::Printf(TEXT("Unhandled manage_effect action: %s"), *UnhandledAction),
+                           nullptr, TEXT("UNKNOWN_ACTION"));
+    return true;
+  }
 }
 
 // Helper function to create Niagara effects with default systems

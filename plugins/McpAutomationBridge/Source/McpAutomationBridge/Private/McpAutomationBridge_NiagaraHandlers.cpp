@@ -15,11 +15,16 @@
 #include "NiagaraEmitter.h"
 #include "NiagaraParameterCollection.h"
 #include "NiagaraSystem.h"
+#include "NiagaraScriptSource.h"
+#include "NiagaraGraph.h"
 #include "UObject/Package.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
+#endif
+#if __has_include("ViewModels/Stack/NiagaraStackGraphUtilities.h")
+#include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #endif
 #endif
 
@@ -85,22 +90,63 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     return true;
   }
   
-  UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+  // Create Niagara system with proper initialization
+  UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   if (NiagaraSystem)
   {
-    // Add default emitter
-    // UE 5.4+ changed AddEmitterHandle signature - requires additional parameters
-    UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")));
+    // Initialize system scripts
+    UNiagaraScript* SystemSpawnScript = NiagaraSystem->GetSystemSpawnScript();
+    UNiagaraScript* SystemUpdateScript = NiagaraSystem->GetSystemUpdateScript();
+    
+    // Create script source and graph for system
+    UNiagaraScriptSource* SystemScriptSource = NewObject<UNiagaraScriptSource>(SystemSpawnScript, TEXT("SystemScriptSource"), RF_Transactional);
+    if (SystemScriptSource)
+    {
+      UNiagaraGraph* SystemGraph = NewObject<UNiagaraGraph>(SystemScriptSource, TEXT("SystemScriptGraph"), RF_Transactional);
+      SystemScriptSource->NodeGraph = SystemGraph;
+      
+      // Set source on both system scripts
+      SystemSpawnScript->SetLatestSource(SystemScriptSource);
+      SystemUpdateScript->SetLatestSource(SystemScriptSource);
+    }
+    
+    // Add default emitter with proper GraphSource initialization
+    UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")), RF_Transactional);
     if (NewEmitter)
     {
+      // Initialize emitter version data and GraphSource
+      NewEmitter->CheckVersionDataAvailable();
+      FVersionedNiagaraEmitterData* EmitterData = NewEmitter->GetLatestEmitterData();
+      if (EmitterData)
+      {
+        // Create script source and graph for emitter
+        UNiagaraScriptSource* EmitterSource = NewObject<UNiagaraScriptSource>(NewEmitter, NAME_None, RF_Transactional);
+        if (EmitterSource)
+        {
+          UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
+          EmitterSource->NodeGraph = EmitterGraph;
+          
+          // CRITICAL: Set GraphSource before adding to system
+          EmitterData->GraphSource = EmitterSource;
+          
+          // Set source on all emitter scripts
+          if (EmitterData->SpawnScriptProps.Script)
+            EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
+          if (EmitterData->UpdateScriptProps.Script)
+            EmitterData->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
+          if (EmitterData->EmitterSpawnScriptProps.Script)
+            EmitterData->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
+          if (EmitterData->EmitterUpdateScriptProps.Script)
+            EmitterData->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
+        }
+      }
+      
+      // Now safe to add emitter handle
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-      // UE 5.0 - AddEmitterHandle takes only 2 parameters
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
 #elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
-      // UE 5.4 signature with 2 parameters
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
 #else
-      // UE 5.1-5.3 and 5.5+ - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
 #endif
     }
@@ -200,13 +246,40 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     return true;
   }
   
-  UNiagaraEmitter *NiagaraEmitter = NewObject<UNiagaraEmitter>(Package, FName(*AssetName), RF_Public | RF_Standalone);
+  UNiagaraEmitter *NiagaraEmitter = NewObject<UNiagaraEmitter>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   
   if (!NiagaraEmitter) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create Niagara emitter"),
                         TEXT("CREATE_FAILED"));
     return true;
+  }
+  
+  // Initialize emitter with GraphSource to prevent crashes
+  NiagaraEmitter->CheckVersionDataAvailable();
+  FVersionedNiagaraEmitterData* EmitterData = NiagaraEmitter->GetLatestEmitterData();
+  if (EmitterData)
+  {
+    // Create script source and graph
+    UNiagaraScriptSource* EmitterSource = NewObject<UNiagaraScriptSource>(NiagaraEmitter, NAME_None, RF_Transactional);
+    if (EmitterSource)
+    {
+      UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
+      EmitterSource->NodeGraph = EmitterGraph;
+      
+      // CRITICAL: Set GraphSource
+      EmitterData->GraphSource = EmitterSource;
+      
+      // Set source on all emitter scripts
+      if (EmitterData->SpawnScriptProps.Script)
+        EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
+      if (EmitterData->UpdateScriptProps.Script)
+        EmitterData->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
+      if (EmitterData->EmitterSpawnScriptProps.Script)
+        EmitterData->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
+      if (EmitterData->EmitterUpdateScriptProps.Script)
+        EmitterData->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
+    }
   }
   
   FAssetRegistryModule::AssetCreated(NiagaraEmitter);

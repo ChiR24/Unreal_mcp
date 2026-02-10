@@ -143,8 +143,12 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   // Map simulation control actions
   if (action === 'activate' || action === 'activate_effect') {
     mutableArgs.action = 'activate_niagara';
-    mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
-    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    // Accept effectHandle, niagaraHandle, actorName, or systemName as the identifier
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.niagaraHandle as string | undefined) ||
+                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.systemName as string | undefined);
+    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName/effectHandle)');
     // Use user's reset value if provided, default to true for activate
     if (mutableArgs.reset === undefined) {
       mutableArgs.reset = true;
@@ -153,14 +157,21 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   }
   if (action === 'deactivate') {
     mutableArgs.action = 'deactivate_niagara';
-    mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
-    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    // Accept effectHandle, niagaraHandle, actorName, or systemName as the identifier
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.niagaraHandle as string | undefined) ||
+                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.systemName as string | undefined);
+    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName/effectHandle)');
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
   if (action === 'reset') {
     mutableArgs.action = 'activate_niagara';
-    mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
-    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.niagaraHandle as string | undefined) ||
+                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.systemName as string | undefined);
+    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName/effectHandle)');
     // Reset action defaults to reset=true, but user can override if needed
     if (mutableArgs.reset === undefined) {
       mutableArgs.reset = true;
@@ -169,24 +180,28 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   }
   if (action === 'advance_simulation') {
     mutableArgs.action = 'advance_simulation';
-    mutableArgs.systemName = (mutableArgs.actorName as string | undefined) || (mutableArgs.systemName as string | undefined);
-    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.niagaraHandle as string | undefined) ||
+                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.systemName as string | undefined);
+    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName/effectHandle)');
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
 
   // Map parameter setting
   if (action === 'set_niagara_parameter') {
     mutableArgs.action = 'set_niagara_parameter';
-    // If actorName is provided, use it as systemName (which C++ expects for actor label)
-    if ((mutableArgs.actorName as string | undefined) && !(mutableArgs.systemName as string | undefined)) {
-      mutableArgs.systemName = mutableArgs.actorName;
-    }
+    // Accept effectHandle, niagaraHandle, actorName, or systemName as the identifier
+    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+                             (mutableArgs.niagaraHandle as string | undefined) ||
+                             (mutableArgs.actorName as string | undefined) || 
+                             (mutableArgs.systemName as string | undefined);
     // Map 'type' to 'parameterType' if provided and parameterType is missing
     const typeVal = mutableArgs.type as string | undefined;
     if (typeVal && !(mutableArgs.parameterType as string | undefined)) {
       mutableArgs.parameterType = typeVal.charAt(0).toUpperCase() + typeVal.slice(1);
     }
-    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName)');
+    requireNonEmptyString(mutableArgs.systemName as string | undefined, 'systemName', 'Missing required parameter: systemName (or actorName/effectHandle)');
     requireNonEmptyString(mutableArgs.parameterName as string | undefined, 'parameterName', 'Missing required parameter: parameterName');
     requireNonEmptyString(mutableArgs.parameterType as string | undefined, 'parameterType', 'Missing required parameter: parameterType');
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
