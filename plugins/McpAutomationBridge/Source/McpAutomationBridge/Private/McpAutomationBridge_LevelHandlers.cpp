@@ -202,6 +202,29 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
   }
 
 #if WITH_EDITOR
+  // Helper lambda to get all levels from a world (替代 UEditorLevelUtils::GetLevels which has linker issues)
+  auto GetAllLevelsFromWorld = [](UWorld* World) -> TArray<ULevel*> {
+    TArray<ULevel*> Levels;
+    if (!World) return Levels;
+    
+    // Add persistent level
+    if (World->PersistentLevel) {
+      Levels.Add(World->PersistentLevel);
+    }
+    
+    // Add streaming levels
+    for (const ULevelStreaming* StreamingLevel : World->GetStreamingLevels()) {
+      if (StreamingLevel) {
+        ULevel* LoadedLevel = StreamingLevel->GetLoadedLevel();
+        if (LoadedLevel) {
+          Levels.Add(LoadedLevel);
+        }
+      }
+    }
+    
+    return Levels;
+  };
+
   if (EffectiveAction == TEXT("save_current_level")) {
     if (!GEditor) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -931,7 +954,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     
     ULevel* TargetLevel = nullptr;
     if (!LevelPath.IsEmpty()) {
-      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
       for (ULevel* Level : Levels) {
         if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
           TargetLevel = Level;
@@ -1040,7 +1063,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
     
-    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
       if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
@@ -1083,7 +1106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
     
-    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
       if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
@@ -1121,7 +1144,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
     
-    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     ULevel* TargetLevel = nullptr;
     for (ULevel* Level : Levels) {
       if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
@@ -1161,7 +1184,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     
     ULevel* TargetLevel = nullptr;
     if (!LevelPath.IsEmpty()) {
-      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
       for (ULevel* Level : Levels) {
         if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
           TargetLevel = Level;
@@ -1210,7 +1233,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     
     ULevel* TargetLevel = nullptr;
     if (!LevelPath.IsEmpty()) {
-      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
       for (ULevel* Level : Levels) {
         if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
           TargetLevel = Level;
@@ -1250,7 +1273,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     }
     
     TArray<TSharedPtr<FJsonValue>> Scenarios;
-    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     for (ULevel* Level : Levels) {
       if (Level && Level->bIsLightingScenario) {
         TSharedPtr<FJsonObject> ScenarioInfo = MakeShared<FJsonObject>();
