@@ -606,6 +606,22 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   // Security: Block dangerous commands
   FString LowerCommand = Command.ToLower();
   
+  // Whitelist safe commands that should bypass token filtering
+  // "Log" is a read-only command that prints to console - always safe
+  bool bIsWhitelistedCommand = LowerCommand.StartsWith(TEXT("log "));
+  if (bIsWhitelistedCommand) {
+    // Safe to execute - skip all security checks below
+    GEngine->Exec(nullptr, *Command);
+    
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("command"), Command);
+    Resp->SetBoolField(TEXT("success"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Console command executed"), Resp, FString());
+    return true;
+  }
+  
   // Block explicit dangerous commands
   TArray<FString> BlockedCommands = {
     TEXT("quit"), TEXT("exit"), TEXT("crash"), TEXT("shutdown"),

@@ -163,8 +163,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     // Save changes
     SaveLoadedAssetThrottled(Context, -1.0, true);
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetStringField(TEXT("key"), KeyName);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Mapping added."), nullptr);
+                           TEXT("Mapping added."), Result);
   } else if (SubAction == TEXT("remove_mapping")) {
     FString ContextPath;
     Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
@@ -195,8 +199,17 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     }
     SaveLoadedAssetThrottled(Context, -1.0, true);
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetNumberField(TEXT("keysRemoved"), KeysToRemove.Num());
+    TArray<TSharedPtr<FJsonValue>> RemovedKeys;
+    for (const FKey &Key : KeysToRemove) {
+      RemovedKeys.Add(MakeShared<FJsonValueString>(Key.ToString()));
+    }
+    Result->SetArrayField(TEXT("removedKeys"), RemovedKeys);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Mappings removed for action."), nullptr);
+                           TEXT("Mappings removed for action."), Result);
   } else if (SubAction == TEXT("map_input_action")) {
     // Alias for add_mapping - maps an input action to a key in a context
     FString ContextPath;

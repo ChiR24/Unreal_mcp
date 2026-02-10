@@ -587,9 +587,31 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("Accepted automation_request action=%s requestId=%s"),
-           *Action, *RequestId);
+    // Log incoming request: action + filtered payload (exclude type/requestId)
+    FString PayloadPreview;
+    if (Payload.IsValid()) {
+      TArray<FString> Parts;
+      for (auto& Pair : Payload->Values) {
+        if (Pair.Key != TEXT("type") && Pair.Key != TEXT("requestId")) {
+          FString Val;
+          if (Pair.Value->Type == EJson::String) {
+            Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(50));
+          } else if (Pair.Value->Type == EJson::Boolean) {
+            Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+          } else if (Pair.Value->Type == EJson::Number) {
+            Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+          } else {
+            Val = TEXT("...");
+          }
+          Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
+        }
+      }
+      PayloadPreview = Parts.Num() > 0 ? FString::Join(Parts, TEXT(" ")) : TEXT("{}");
+    }
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("Request: %s %s"),
+           *Action,
+           *PayloadPreview.Left(200));
 
     // Map request to socket for response routing
     {
@@ -766,12 +788,41 @@ void FMcpConnectionManager::SendAutomationResponse(
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Response, Writer);
 
-  // Log compact JSON for debugging (strip indentation)
-  FString CompactLog = Serialized.Replace(TEXT("\n"), TEXT("")).Replace(TEXT("\r"), TEXT("")).Replace(TEXT("\t"), TEXT(""));
+  // Get action from telemetry for better logging context
+  FString ActionName = TEXT("unknown");
+  if (FAutomationRequestTelemetry* Entry = ActiveRequestTelemetry.Find(RequestId)) {
+    ActionName = Entry->Action;
+  }
+
+  // Log result with actual values for verification
+  FString ResultPreview;
+  if (Result.IsValid() && Result->Values.Num() > 0) {
+    TArray<FString> Parts;
+    for (auto& Pair : Result->Values) {
+      FString Val;
+      if (Pair.Value->Type == EJson::String) {
+        Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(40));
+      } else if (Pair.Value->Type == EJson::Boolean) {
+        Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+      } else if (Pair.Value->Type == EJson::Number) {
+        Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+      } else if (Pair.Value->Type == EJson::Array) {
+        Val = FString::Printf(TEXT("[%d]"), Pair.Value->AsArray().Num());
+      } else if (Pair.Value->Type == EJson::Object) {
+        Val = TEXT("{...}");
+      } else {
+        Val = TEXT("?");
+      }
+      Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
+    }
+    ResultPreview = FString::Printf(TEXT(" (%s)"), *FString::Join(Parts, TEXT(" ")));
+  }
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("Response [%s]: %s"),
-         *RequestId.Left(8),
-         *CompactLog.Left(500));
+         TEXT("Response: %s %s%s%s"),
+         *ActionName,
+         bSuccess ? TEXT("OK") : TEXT("FAILED"),
+         !Message.IsEmpty() ? *FString::Printf(TEXT(" \"%s\""), *Message.Left(80)) : TEXT(""),
+         *ResultPreview);
 
   RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
 

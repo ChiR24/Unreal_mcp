@@ -1982,7 +1982,11 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       SaveMaterialAsset(Material);
     }
 
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Material compiled."));
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("compiled"), true);
+    Result->SetBoolField(TEXT("saved"), bSave);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material compiled."), Result);
     return true;
   }
 

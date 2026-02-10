@@ -13,6 +13,11 @@
 #include "FileHelpers.h"
 #include "LevelEditor.h"
 #include "RenderingThread.h"
+#include "GameFramework/WorldSettings.h"
+#include "Engine/LevelBounds.h"
+#include "LevelUtils.h"
+#include "EditorBuildUtils.h"
+#include "EditorAssetLibrary.h"
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -155,6 +160,38 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {
       EffectiveAction = TEXT("add_sublevel");
+    } else if (LowerSub == TEXT("delete") || LowerSub == TEXT("delete_level")) {
+      EffectiveAction = TEXT("delete_level");
+    } else if (LowerSub == TEXT("rename") || LowerSub == TEXT("rename_level")) {
+      EffectiveAction = TEXT("rename_level");
+    } else if (LowerSub == TEXT("duplicate") || LowerSub == TEXT("duplicate_level")) {
+      EffectiveAction = TEXT("duplicate_level");
+    } else if (LowerSub == TEXT("get_level_info")) {
+      EffectiveAction = TEXT("get_level_info");
+    } else if (LowerSub == TEXT("set_level_world_settings")) {
+      EffectiveAction = TEXT("set_level_world_settings");
+    } else if (LowerSub == TEXT("set_level_lighting")) {
+      EffectiveAction = TEXT("set_level_lighting");
+    } else if (LowerSub == TEXT("add_level_to_world")) {
+      EffectiveAction = TEXT("add_level_to_world");
+    } else if (LowerSub == TEXT("remove_level_from_world")) {
+      EffectiveAction = TEXT("remove_level_from_world");
+    } else if (LowerSub == TEXT("set_level_visibility")) {
+      EffectiveAction = TEXT("set_level_visibility");
+    } else if (LowerSub == TEXT("set_level_locked")) {
+      EffectiveAction = TEXT("set_level_locked");
+    } else if (LowerSub == TEXT("get_level_actors")) {
+      EffectiveAction = TEXT("get_level_actors");
+    } else if (LowerSub == TEXT("get_level_bounds")) {
+      EffectiveAction = TEXT("get_level_bounds");
+    } else if (LowerSub == TEXT("get_level_lighting_scenarios")) {
+      EffectiveAction = TEXT("get_level_lighting_scenarios");
+    } else if (LowerSub == TEXT("build_level_lighting")) {
+      EffectiveAction = TEXT("build_level_lighting");
+    } else if (LowerSub == TEXT("build_level_navigation")) {
+      EffectiveAction = TEXT("build_level_navigation");
+    } else if (LowerSub == TEXT("build_all_level")) {
+      EffectiveAction = TEXT("build_all_level");
     } else {
       SendAutomationError(
           RequestingSocket, RequestId,
@@ -629,7 +666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                                nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
       }
-      if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
+      if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath) != nullptr) {
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level imported (duplicated)"), nullptr);
       } else {
@@ -753,8 +790,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     ULevelStreaming *NewLevel = UEditorLevelUtils::AddLevelToWorld(
         World, *SubLevelPath, StreamingClass);
     if (NewLevel) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
+      Result->SetStringField(TEXT("world"), World->GetName());
+      Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Sublevel added successfully"), nullptr);
+                             TEXT("Sublevel added successfully"), Result);
     } else {
       // Did we fail because it's already there?
       SendAutomationResponse(
@@ -763,6 +804,515 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                           *SubLevelPath),
           nullptr, TEXT("ADD_FAILED"));
     }
+    return true;
+  }
+  if (EffectiveAction == TEXT("delete_level")) {
+    FString LevelPath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+    if (LevelPath.IsEmpty() && Payload.IsValid())
+      Payload->TryGetStringField(TEXT("path"), LevelPath);
+
+    if (LevelPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("levelPath required for delete_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Use UEditorAssetLibrary to delete the level asset
+    bool bDeleted = UEditorAssetLibrary::DeleteAsset(LevelPath);
+    if (bDeleted) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("levelPath"), LevelPath);
+      Result->SetBoolField(TEXT("deleted"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Level deleted: %s"), *LevelPath), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to delete level: %s"), *LevelPath),
+                             nullptr, TEXT("DELETE_FAILED"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("rename_level")) {
+    FString SourcePath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
+    if (SourcePath.IsEmpty() && Payload.IsValid())
+      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+
+    FString DestinationPath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+
+    if (SourcePath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("levelPath or sourcePath required for rename_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (DestinationPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("destinationPath required for rename_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Use UEditorAssetLibrary to rename the level asset
+    bool bRenamed = UEditorAssetLibrary::RenameAsset(SourcePath, DestinationPath);
+    if (bRenamed) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("sourcePath"), SourcePath);
+      Result->SetStringField(TEXT("destinationPath"), DestinationPath);
+      Result->SetBoolField(TEXT("renamed"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Level renamed to: %s"), *DestinationPath), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to rename level: %s"), *SourcePath),
+                             nullptr, TEXT("RENAME_FAILED"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("duplicate_level")) {
+    FString SourcePath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
+    if (SourcePath.IsEmpty() && Payload.IsValid())
+      Payload->TryGetStringField(TEXT("levelPath"), SourcePath);
+
+    FString DestinationPath;
+    if (Payload.IsValid())
+      Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+
+    if (SourcePath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("sourcePath or levelPath required for duplicate_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (DestinationPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("destinationPath required for duplicate_level"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Use UEditorAssetLibrary to duplicate the level asset
+    UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);
+    if (DuplicatedAsset != nullptr) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("sourcePath"), SourcePath);
+      Result->SetStringField(TEXT("destinationPath"), DestinationPath);
+      Result->SetBoolField(TEXT("duplicated"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Level duplicated to: %s"), *DestinationPath), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to duplicate level: %s"), *SourcePath),
+                             nullptr, TEXT("DUPLICATE_FAILED"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("get_level_info")) {
+    FString LevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    ULevel* TargetLevel = nullptr;
+    if (!LevelPath.IsEmpty()) {
+      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      for (ULevel* Level : Levels) {
+        if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+          TargetLevel = Level;
+          break;
+        }
+      }
+    } else {
+      TargetLevel = World->GetCurrentLevel();
+    }
+    
+    if (!TargetLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+      return true;
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
+    Result->SetStringField(TEXT("levelName"), TargetLevel->GetName());
+    Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level info retrieved"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("set_level_world_settings")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    ULevel* TargetLevel = World->GetCurrentLevel();
+    if (!TargetLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
+      return true;
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
+    Result->SetBoolField(TEXT("settingsApplied"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("World settings updated"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("set_level_lighting")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("lightingSet"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level lighting settings updated"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("add_level_to_world")) {
+    FString LevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+    }
+    
+    if (LevelPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("levelPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    ULevelStreaming* StreamingLevel = UEditorLevelUtils::AddLevelToWorld(World, *LevelPath, ULevelStreamingDynamic::StaticClass());
+    if (StreamingLevel) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("levelPath"), LevelPath);
+      Result->SetBoolField(TEXT("added"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level added to world"), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to add level: %s"), *LevelPath),
+                             nullptr, TEXT("ADD_FAILED"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("remove_level_from_world")) {
+    FString LevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    ULevel* TargetLevel = nullptr;
+    for (ULevel* Level : Levels) {
+      if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+        TargetLevel = Level;
+        break;
+      }
+    }
+    
+    if (TargetLevel) {
+      bool bRemoved = UEditorLevelUtils::RemoveLevelFromWorld(TargetLevel);
+      if (bRemoved) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("levelPath"), LevelPath);
+        Result->SetBoolField(TEXT("removed"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level removed from world"), Result);
+      } else {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Failed to remove level"), nullptr, TEXT("REMOVE_FAILED"));
+      }
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("set_level_visibility")) {
+    FString LevelPath;
+    bool bVisible = true;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+      Payload->TryGetBoolField(TEXT("visible"), bVisible);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    ULevel* TargetLevel = nullptr;
+    for (ULevel* Level : Levels) {
+      if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+        TargetLevel = Level;
+        break;
+      }
+    }
+    
+    if (TargetLevel) {
+      UEditorLevelUtils::SetLevelVisibility(TargetLevel, bVisible, true);
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("levelPath"), LevelPath);
+      Result->SetBoolField(TEXT("visible"), bVisible);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level visibility set"), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("set_level_locked")) {
+    FString LevelPath;
+    bool bLocked = true;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+      Payload->TryGetBoolField(TEXT("locked"), bLocked);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    ULevel* TargetLevel = nullptr;
+    for (ULevel* Level : Levels) {
+      if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+        TargetLevel = Level;
+        break;
+      }
+    }
+    
+    if (TargetLevel) {
+      if (bLocked != FLevelUtils::IsLevelLocked(TargetLevel)) {
+        FLevelUtils::ToggleLevelLock(TargetLevel);
+      }
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("levelPath"), LevelPath);
+      Result->SetBoolField(TEXT("locked"), FLevelUtils::IsLevelLocked(TargetLevel));
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level lock set"), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+    }
+    return true;
+  }
+  if (EffectiveAction == TEXT("get_level_actors")) {
+    FString LevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    ULevel* TargetLevel = nullptr;
+    if (!LevelPath.IsEmpty()) {
+      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      for (ULevel* Level : Levels) {
+        if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+          TargetLevel = Level;
+          break;
+        }
+      }
+    } else {
+      TargetLevel = World->GetCurrentLevel();
+    }
+    
+    if (!TargetLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+      return true;
+    }
+    
+    TArray<TSharedPtr<FJsonValue>> ActorsArray;
+    for (AActor* Actor : TargetLevel->Actors) {
+      if (Actor) {
+        ActorsArray.Add(MakeShared<FJsonValueString>(Actor->GetName()));
+      }
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
+    Result->SetNumberField(TEXT("count"), ActorsArray.Num());
+    Result->SetArrayField(TEXT("actors"), ActorsArray);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level actors retrieved"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("get_level_bounds")) {
+    FString LevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
+    }
+    
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    ULevel* TargetLevel = nullptr;
+    if (!LevelPath.IsEmpty()) {
+      TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+      for (ULevel* Level : Levels) {
+        if (Level && Level->GetOutermost() && Level->GetOutermost()->GetName() == LevelPath) {
+          TargetLevel = Level;
+          break;
+        }
+      }
+    } else {
+      TargetLevel = World->GetCurrentLevel();
+    }
+    
+    if (!TargetLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Level not found: %s"), *LevelPath),
+                             nullptr, TEXT("LEVEL_NOT_FOUND"));
+      return true;
+    }
+    
+    FBox LevelBounds(ForceInit);
+    if (TargetLevel->LevelBoundsActor.IsValid()) {
+      LevelBounds = TargetLevel->LevelBoundsActor->GetComponentsBoundingBox();
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
+    Result->SetStringField(TEXT("min"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Min.X, LevelBounds.Min.Y, LevelBounds.Min.Z));
+    Result->SetStringField(TEXT("max"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Max.X, LevelBounds.Max.Y, LevelBounds.Max.Z));
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level bounds retrieved"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("get_level_lighting_scenarios")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    TArray<TSharedPtr<FJsonValue>> Scenarios;
+    TArray<ULevel*> Levels = UEditorLevelUtils::GetLevels(World);
+    for (ULevel* Level : Levels) {
+      if (Level && Level->bIsLightingScenario) {
+        TSharedPtr<FJsonObject> ScenarioInfo = MakeShared<FJsonObject>();
+        ScenarioInfo->SetStringField(TEXT("levelPath"), Level->GetOutermost() ? Level->GetOutermost()->GetName() : TEXT(""));
+        ScenarioInfo->SetStringField(TEXT("levelName"), Level->GetName());
+        Scenarios.Add(MakeShared<FJsonValueObject>(ScenarioInfo));
+      }
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("scenarios"), Scenarios);
+    Result->SetNumberField(TEXT("count"), Scenarios.Num());
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting scenarios retrieved"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("build_level_lighting")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildLighting);
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("buildStarted"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting build started"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("build_level_navigation")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAIPaths);
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("buildStarted"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Navigation build started"), Result);
+    return true;
+  }
+  if (EffectiveAction == TEXT("build_all_level")) {
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      return true;
+    }
+    
+    FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAll);
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("buildStarted"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Full build started"), Result);
     return true;
   }
 

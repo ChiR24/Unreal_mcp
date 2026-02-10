@@ -270,6 +270,8 @@ export interface LevelArgs extends HandlerArgs {
     exportPath?: string;
     packagePath?: string;
     sourcePath?: string;
+    newName?: string;
+    template?: string;
     lightType?: 'Directional' | 'Point' | 'Spot' | 'Rect';
     name?: string;
     location?: Vector3;

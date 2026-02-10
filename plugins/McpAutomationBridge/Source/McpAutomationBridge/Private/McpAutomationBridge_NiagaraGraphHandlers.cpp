@@ -151,8 +151,11 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         UNiagaraNodeFunctionCall* FuncNode = NewObject<UNiagaraNodeFunctionCall>(TargetGraph);
         FuncNode->FunctionScript = ModuleScript;
         TargetGraph->AddNode(FuncNode, true, false);
-        
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Module node added."));
+
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("modulePath"), ModulePath);
+        Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Module node added."), Result);
         return true;
     }
     // Implement other subactions: connect, remove, etc.
@@ -217,7 +220,13 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         const bool bConnected = TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin);
         if (bConnected)
         {
-             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Pins connected successfully."));
+             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+             Result->SetStringField(TEXT("fromNode"), FromNodeId);
+             Result->SetStringField(TEXT("fromPin"), FromPinName);
+             Result->SetStringField(TEXT("toNode"), ToNodeId);
+             Result->SetStringField(TEXT("toPin"), ToPinName);
+             Result->SetBoolField(TEXT("connected"), true);
+             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Pins connected successfully."), Result);
         }
         else
         {
@@ -243,7 +252,10 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         if (TargetNode)
         {
             TargetGraph->RemoveNode(TargetNode);
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node removed."));
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("nodeId"), NodeId);
+            Result->SetBoolField(TEXT("removed"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node removed."), Result);
         }
         else
         {

@@ -3551,7 +3551,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("Undo"));
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("action"), TEXT("undo"));
+  Resp->SetStringField(TEXT("command"), TEXT("Undo"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Undo executed"), Resp, FString());
   return true;
 #else
@@ -3574,7 +3575,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("Redo"));
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("action"), TEXT("redo"));
+  Resp->SetStringField(TEXT("command"), TEXT("Redo"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Redo executed"), Resp, FString());
   return true;
 #else
@@ -3621,13 +3623,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
   }
 
   UWorld* World = GEditor->GetEditorWorldContext().World();
+  TArray<FString> StatsShown;
   if (World) {
     GEditor->Exec(World, TEXT("Stat FPS"));
+    StatsShown.Add(TEXT("FPS"));
     GEditor->Exec(World, TEXT("Stat Unit"));
+    StatsShown.Add(TEXT("Unit"));
   }
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("action"), TEXT("showStats"));
+  TArray<TSharedPtr<FJsonValue>> StatsArray;
+  for (const FString& Stat : StatsShown) {
+    StatsArray.Add(MakeShared<FJsonValueString>(Stat));
+  }
+  Resp->SetArrayField(TEXT("statsShown"), StatsArray);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Stats displayed"), Resp, FString());
   return true;
 #else
@@ -3652,7 +3662,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
   }
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("action"), TEXT("hideStats"));
+  Resp->SetStringField(TEXT("command"), TEXT("Stat None"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Stats hidden"), Resp, FString());
   return true;
 #else

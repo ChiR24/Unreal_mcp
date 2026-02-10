@@ -64,7 +64,13 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(const FString& RequestI
         {
              // We can't easily get the PID on all platforms from the handle immediately without more code,
              // but we know it started.
-             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("UBT process started."));
+             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+             Result->SetStringField(TEXT("action"), TEXT("run_ubt"));
+             Result->SetStringField(TEXT("target"), Target);
+             Result->SetStringField(TEXT("platform"), Platform);
+             Result->SetStringField(TEXT("configuration"), Configuration);
+             Result->SetBoolField(TEXT("processStarted"), true);
+             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("UBT process started."), Result);
         }
         else
         {
