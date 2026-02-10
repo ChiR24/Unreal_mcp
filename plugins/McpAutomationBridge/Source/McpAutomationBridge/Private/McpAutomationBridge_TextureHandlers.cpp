@@ -2122,6 +2122,25 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     {
         FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
         FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        
+        // Support renderTargetPath as alternative to name+path
+        FString RenderTargetPath = GetStringFieldTextAuth(Params, TEXT("renderTargetPath"), TEXT(""));
+        if (!RenderTargetPath.IsEmpty())
+        {
+            // Extract name and path from renderTargetPath (e.g., "/Game/MCPTest/RT_Test" -> name="RT_Test", path="/Game/MCPTest")
+            RenderTargetPath = NormalizeTexturePath(RenderTargetPath);
+            int32 LastSlashIndex;
+            if (RenderTargetPath.FindLastChar(TEXT('/'), LastSlashIndex))
+            {
+                Name = RenderTargetPath.RightChop(LastSlashIndex + 1);
+                Path = RenderTargetPath.Left(LastSlashIndex);
+            }
+            else
+            {
+                Name = RenderTargetPath;
+            }
+        }
+        
         int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
         int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
         
@@ -2130,8 +2149,31 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
         }
         
-        // Create render target using UKismetRenderingLibrary
-        UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(GetTransientPackage(), *Name);
+        FString FullPath = Path / Name;
+        
+        // Check for existing asset collision before creating
+        UObject* ExistingAsset = StaticLoadObject(UTextureRenderTarget2D::StaticClass(), nullptr, *FullPath);
+        if (ExistingAsset)
+        {
+            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Render target already exists: %s"), *FullPath));
+        }
+        
+        // Also check for any asset with same name (different class collision)
+        UPackage* ExistingPackage = FindPackage(nullptr, *FullPath);
+        if (ExistingPackage)
+        {
+            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Asset with this name already exists: %s"), *FullPath));
+        }
+        
+        // Create package first
+        UPackage* Package = CreatePackage(*FullPath);
+        if (!Package)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to create package"));
+        }
+        
+        // Create render target directly in the package
+        UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(Package, UTextureRenderTarget2D::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
         if (!RenderTarget)
         {
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create render target"));
@@ -2139,14 +2181,8 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
         RenderTarget->InitCustomFormat(Width, Height, PF_B8G8R8A8, true);
         
-        FString FullPath = Path / Name;
-        UPackage* Package = CreatePackage(*FullPath);
-        if (Package)
-        {
-            RenderTarget->Rename(*Name, Package);
-            FAssetRegistryModule::AssetCreated(RenderTarget);
-            McpSafeAssetSave(RenderTarget);
-        }
+        FAssetRegistryModule::AssetCreated(RenderTarget);
+        McpSafeAssetSave(RenderTarget);
         
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Render target '%s' created"), *Name));

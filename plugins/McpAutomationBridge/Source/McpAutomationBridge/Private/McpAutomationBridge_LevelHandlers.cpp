@@ -112,6 +112,22 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // something, else fallback to input.
       const FString FileToLoad = bGotFilename ? Filename : LevelPath;
 
+      // Verify file exists before attempting load to avoid false positives
+      FString FilenameToCheck;
+      bool bFileExists = false;
+      if (FPackageName::TryConvertLongPackageNameToFilename(
+              LevelPath, FilenameToCheck, FPackageName::GetMapPackageExtension())) {
+        bFileExists = IFileManager::Get().FileExists(*FilenameToCheck);
+      }
+      // Also check if it's a valid package path
+      if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Level file not found: %s"), *LevelPath),
+            nullptr, TEXT("FILE_NOT_FOUND"));
+        return true;
+      }
+
       // Force any pending work to complete
       FlushRenderingCommands();
 
@@ -121,7 +137,22 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // without clearing dirty flags manually. We will proceed with LoadMap.
       const bool bLoaded = FEditorFileUtils::LoadMap(FileToLoad);
 
+      // Post-load verification: check that the loaded world matches the requested path
       if (bLoaded) {
+        UWorld* LoadedWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        if (LoadedWorld) {
+          FString LoadedPath = LoadedWorld->GetOutermost()->GetName();
+          // Normalize paths for comparison (handle case differences)
+          if (LoadedPath.ToLower() != LevelPath.ToLower()) {
+            // The requested level was not actually loaded - engine fell back to default
+            SendAutomationResponse(
+                RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Level path mismatch: requested %s but loaded %s"), *LevelPath, *LoadedPath),
+                nullptr, TEXT("LOAD_MISMATCH"));
+            return true;
+          }
+        }
+        
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("levelPath"), LevelPath);
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -319,16 +350,21 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       }
 #endif
       if (bSaved) {
+        // Refresh Asset Registry so the saved level is immediately visible for rename/duplicate operations
+        IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+        FString SavedFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(SavePath, SavedFilename, FPackageName::GetMapPackageExtension())) {
+          TArray<FString> FilesToScan;
+          FilesToScan.Add(SavedFilename);
+          AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+        }
+
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         SendAutomationResponse(
             RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
             FString());
-      } else {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Failed to save level as"), nullptr,
-                               TEXT("SAVE_FAILED"));
       }
       return true;
     }
@@ -981,6 +1017,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     return true;
   }
   if (EffectiveAction == TEXT("set_level_world_settings")) {
+    FString RequestedLevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), RequestedLevelPath);
+      if (RequestedLevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), RequestedLevelPath);
+    }
+    
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -995,14 +1037,34 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
     
+    FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
+    
+    // If a specific level path was requested, validate it matches the current level
+    if (!RequestedLevelPath.IsEmpty()) {
+      if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"), 
+                           *RequestedLevelPath, *CurrentLevelPath),
+            nullptr, TEXT("LEVEL_NOT_LOADED"));
+        return true;
+      }
+    }
+    
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
+    Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("settingsApplied"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("World settings updated"), Result);
     return true;
   }
   if (EffectiveAction == TEXT("set_level_lighting")) {
+    FString RequestedLevelPath;
+    if (Payload.IsValid()) {
+      Payload->TryGetStringField(TEXT("levelPath"), RequestedLevelPath);
+      if (RequestedLevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), RequestedLevelPath);
+    }
+    
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -1010,7 +1072,29 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
     
+    ULevel* TargetLevel = World->GetCurrentLevel();
+    if (!TargetLevel) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
+      return true;
+    }
+    
+    FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
+    
+    // If a specific level path was requested, validate it matches the current level
+    if (!RequestedLevelPath.IsEmpty()) {
+      if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"), 
+                           *RequestedLevelPath, *CurrentLevelPath),
+            nullptr, TEXT("LEVEL_NOT_LOADED"));
+        return true;
+      }
+    }
+    
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("lightingSet"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level lighting settings updated"), Result);
@@ -1026,6 +1110,21 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     if (LevelPath.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("levelPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    // Verify level package exists before adding to avoid false positives
+    FString FilenameToCheck;
+    bool bFileExists = false;
+    if (FPackageName::TryConvertLongPackageNameToFilename(
+            LevelPath, FilenameToCheck, FPackageName::GetMapPackageExtension())) {
+      bFileExists = IFileManager::Get().FileExists(*FilenameToCheck);
+    }
+    if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Level file not found: %s"), *LevelPath),
+          nullptr, TEXT("PACKAGE_NOT_FOUND"));
       return true;
     }
     

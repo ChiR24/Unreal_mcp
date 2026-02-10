@@ -704,11 +704,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    // Also accept skeletonPath for backward compatibility
+    if (SkeletalMeshPath.IsEmpty())
+    {
+        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    }
     FString OutputPath = GetStringFieldSkel(Payload, TEXT("outputPath"));
 
     if (SkeletalMeshPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath (or skeletonPath) is required"), TEXT("MISSING_PARAM"));
         return true;
     }
 
@@ -1412,12 +1417,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+    // Also accept skeletonPath for backward compatibility
+    if (SkeletalMeshPath.IsEmpty())
+    {
+        SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+    }
     FString BoneName = GetStringFieldSkel(Payload, TEXT("boneName"));
 
     if (SkeletalMeshPath.IsEmpty() || BoneName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId, 
-            TEXT("skeletalMeshPath and boneName are required"), TEXT("MISSING_PARAM"));
+            TEXT("skeletalMeshPath (or skeletonPath) and boneName are required"), TEXT("MISSING_PARAM"));
         return true;
     }
 
@@ -3109,6 +3119,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
                 return true;
             }
         }
+        else if (RefSkeleton.GetRawBoneNum() > 0)
+        {
+            // Cannot add a root bone if the skeleton already has bones - need to specify a parent
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Cannot add root bone; Skeleton already has bones. Specify parentBone."), TEXT("PARENT_REQUIRED"));
+            return true;
+        }
         
         // Parse transform from payload
         FVector Location = ParseVectorFromJson(Payload, TEXT("location"));
@@ -3619,11 +3636,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     else if (SubAction == TEXT("preview_physics"))
     {
         FString SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        // Also accept skeletonPath for backward compatibility
+        if (SkeletalMeshPath.IsEmpty())
+        {
+            SkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletonPath"));
+        }
         bool bEnable = GetJsonBoolField(Payload, TEXT("enable"), true);
         
         if (SkeletalMeshPath.IsEmpty())
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath (or skeletonPath) is required"), TEXT("MISSING_PARAM"));
             return true;
         }
         

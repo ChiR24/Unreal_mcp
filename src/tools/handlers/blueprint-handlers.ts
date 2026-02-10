@@ -39,8 +39,12 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
 
       if (!savePath) savePath = '/Game';
 
+      if (!name || (typeof name !== 'string') || name.trim() === '') {
+        throw new Error('Missing or invalid required parameter: name (must be a non-empty string for create action)');
+      }
+
       const res = await tools.blueprintTools.createBlueprint({
-        name: name ?? 'NewBlueprint',
+        name: name,
         blueprintType: argsTyped.blueprintType,
         savePath: savePath,
         parentClass: argsRecord.parentClass as string | undefined,
@@ -331,10 +335,12 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_default': {
+      // Accept 'propertyValue' as alias for 'value' (common caller convention)
+      const resolvedValue = argsTyped.value !== undefined ? argsTyped.value : argsRecord.propertyValue;
       const res = await tools.blueprintTools.setBlueprintDefault({
         blueprintName: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         propertyName: argsTyped.propertyName ?? '',
-        value: argsTyped.value
+        value: resolvedValue
       });
       return cleanObject(res) as Record<string, unknown>;
     }

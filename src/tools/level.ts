@@ -487,59 +487,70 @@ export class LevelTools extends BaseTool implements ILevelTools {
             level: normalizedPath,
             streaming: false
           } as StandardActionResponse;
+        } else {
+          // Automation bridge returned failure - return the error, don't fallback
+          return {
+            ...response,
+            success: false,
+            error: response.error || 'LOAD_FAILED',
+            message: response.message || `Failed to load level: ${params.levelPath}`,
+            level: normalizedPath
+          } as StandardActionResponse;
         }
-      } catch (_e) {
-        // Fallback to console logic
-      }
-
-      try {
-        // Best-effort existence check using the Automation Bridge when available.
+      } catch (bridgeError) {
+        // Only fallback to console if bridge is unavailable
+        let isBridgeConnected = false;
         try {
           const automation = this.getAutomationBridge();
-          if (automation && typeof automation.sendAutomationRequest === 'function' && automation.isConnected()) {
-            const targetPath = (params.levelPath ?? '').toString();
-            const existsResp = await automation.sendAutomationRequest('execute_editor_function', {
-              functionName: 'ASSET_EXISTS_SIMPLE',
-              path: targetPath
-            }, {
-              timeoutMs: 5000
-            }) as Record<string, unknown>;
-            const result = (existsResp?.result ?? existsResp ?? {}) as Record<string, unknown>;
-            const exists = Boolean(result.exists);
-
-            if (!exists) {
-              const message = typeof result.message === 'string' ? result.message : 'Level not found';
-              return {
-                success: false,
-                error: 'not_found',
-                message,
-                level: normalizedPath
-              } as StandardActionResponse;
-            }
-          }
+          isBridgeConnected = automation && typeof automation.sendAutomationRequest === 'function' && automation.isConnected();
         } catch {
-          // If the existence check fails for any reason, fall back to the console command path below.
+          // getAutomationBridge not available - bridge is not connected
+          isBridgeConnected = false;
         }
 
-        await this.bridge.executeConsoleCommand(`Open ${normalizedPath}`);
-        this.setCurrentLevel(normalizedPath);
-        this.mutateRecord(normalizedPath, {
-          streaming: false,
-          loaded: true,
-          visible: true
-        });
-        return {
-          success: true,
-          message: `Level loaded: ${params.levelPath}`,
-          level: normalizedPath,
-          streaming: false
-        } as StandardActionResponse;
-      } catch (err) {
-        return {
-          success: false,
-          error: `Failed to load level: ${err}`,
-          level: normalizedPath
-        };
+        if (isBridgeConnected) {
+          // Bridge is connected but threw - this is a real error, not a connection issue
+          return {
+            success: false,
+            error: `Bridge error: ${bridgeError instanceof Error ? bridgeError.message : String(bridgeError)}`,
+            level: normalizedPath
+          } as StandardActionResponse;
+        }
+
+        // Bridge not available - use console fallback with existence validation
+        try {
+          // Validate level exists before attempting console load
+          const existsResp = await this.bridge.executeConsoleCommand(`GetLevelPath ${normalizedPath}`);
+          // If GetLevelPath doesn't return a valid path, the level doesn't exist
+          if (!existsResp || (typeof existsResp.message === 'string' && existsResp.message.includes('not found'))) {
+            return {
+              success: false,
+              error: 'LEVEL_NOT_FOUND',
+              message: `Level not found: ${params.levelPath}`,
+              level: normalizedPath
+            } as StandardActionResponse;
+          }
+
+          await this.bridge.executeConsoleCommand(`Open ${normalizedPath}`);
+          this.setCurrentLevel(normalizedPath);
+          this.mutateRecord(normalizedPath, {
+            streaming: false,
+            loaded: true,
+            visible: true
+          });
+          return {
+            success: true,
+            message: `Level loaded: ${params.levelPath}`,
+            level: normalizedPath,
+            streaming: false
+          } as StandardActionResponse;
+        } catch (err) {
+          return {
+            success: false,
+            error: `Failed to load level: ${err}`,
+            level: normalizedPath
+          };
+        }
       }
     }
   }

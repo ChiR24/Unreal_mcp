@@ -909,9 +909,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material node '${nodeType}' added`);
       }
 
-      // Alias: connect_material_pins -> connect_nodes
-      case 'connect_material_pins':
-        return handleMaterialAuthoringTools('connect_nodes', args, tools);
+      // Alias connect_material_pins -> connect_nodes is handled via fallthrough at the connect_nodes case above
 
       // Alias: rebuild_material -> compile_material
       case 'rebuild_material':

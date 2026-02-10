@@ -71,7 +71,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'list', 'import', 'duplicate', 'rename', 'move', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
+            'list', 'import', 'duplicate', 'duplicate_asset', 'rename', 'rename_asset', 'move', 'move_asset', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_material', 'create_material_instance', 'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
             'nanite_rebuild_mesh', 'bulk_rename', 'bulk_delete', 'source_control_checkout', 'source_control_submit',
@@ -283,11 +283,25 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'spawn', 'spawn_blueprint', 'delete', 'delete_by_tag', 'duplicate',
-            'apply_force', 'set_transform', 'get_transform', 'set_visibility',
-            'add_component', 'set_component_properties', 'get_components',
-            'add_tag', 'remove_tag', 'find_by_tag', 'find_by_name', 'list', 'set_blueprint_variables',
-            'create_snapshot', 'attach', 'detach'
+            'spawn', 'spawn_actor', 'spawn_blueprint',
+            'delete', 'destroy_actor', 'delete_by_tag', 'duplicate',
+            'apply_force',
+            'set_transform', 'teleport_actor', 'set_actor_location', 'set_actor_rotation', 'set_actor_scale', 'set_actor_transform',
+            'get_transform', 'get_actor_transform',
+            'set_visibility', 'set_actor_visible',
+            'add_component', 'remove_component',
+            'set_component_properties', 'set_component_property', 'get_component_property',
+            'get_components', 'get_actor_components',
+            'get_actor_bounds',
+            'add_tag', 'remove_tag',
+            'find_by_tag', 'find_actors_by_tag',
+            'find_by_name', 'find_actors_by_name',
+            'find_by_class', 'find_actors_by_class',
+            'list', 'set_blueprint_variables',
+            'create_snapshot',
+            'attach', 'attach_actor',
+            'detach', 'detach_actor',
+            'set_actor_collision', 'call_actor_function'
           ],
           description: 'Action'
         },
@@ -343,11 +357,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'play', 'stop', 'stop_pie', 'pause', 'resume', 'set_game_speed', 'eject', 'possess',
-            'set_camera', 'set_camera_position', 'set_camera_fov', 'set_view_mode',
-            'set_viewport_resolution', 'console_command', 'execute_command', 'screenshot', 'step_frame',
-            'start_recording', 'stop_recording', 'create_bookmark', 'jump_to_bookmark',
-            'set_preferences', 'set_viewport_realtime', 'open_asset', 'simulate_input'
+            'play', 'stop', 'stop_pie', 'pause', 'resume', 'eject', 'possess',
+            'set_game_speed', 'set_fixed_delta_time',
+            'set_camera', 'set_camera_position', 'set_viewport_camera', 'set_camera_fov',
+            'set_view_mode', 'set_viewport_resolution',
+            'console_command', 'execute_command',
+            'screenshot', 'take_screenshot', 'step_frame', 'single_frame_step',
+            'start_recording', 'stop_recording',
+            'create_bookmark', 'jump_to_bookmark',
+            'set_preferences', 'set_viewport_realtime',
+            'open_asset', 'close_asset', 'simulate_input',
+            'open_level', 'focus_actor',
+            'show_stats', 'hide_stats',
+            'set_editor_mode', 'set_immersive_mode', 'set_game_view',
+            'undo', 'redo', 'save_all'
           ],
           description: 'Editor action'
         },
@@ -954,9 +977,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'inspect_object', 'set_property', 'get_property', 'get_components', 'inspect_class', 'list_objects',
-            'get_component_property', 'set_component_property', 'get_metadata', 'add_tag', 'find_by_tag',
-            'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box'
+            'inspect_object', 'get_actor_details', 'get_blueprint_details', 'get_mesh_details',
+            'get_texture_details', 'get_material_details', 'get_level_details', 'get_component_details',
+            'set_property', 'get_property',
+            'get_components', 'get_component_property', 'set_component_property',
+            'inspect_class', 'list_objects',
+            'get_metadata', 'add_tag', 'find_by_tag',
+            'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
+            'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
+            'get_scene_stats', 'get_performance_stats', 'get_memory_stats', 'get_editor_settings'
           ],
           description: 'Action'
         },

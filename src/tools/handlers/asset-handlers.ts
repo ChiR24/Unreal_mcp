@@ -129,6 +129,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Asset imported successfully');
       }
+      case 'duplicate_asset':
       case 'duplicate': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },
@@ -162,6 +163,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Asset duplicated successfully');
       }
+      case 'rename_asset':
       case 'rename': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },
@@ -200,6 +202,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         }
         return cleanObject(res);
       }
+      case 'move_asset':
       case 'move': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },

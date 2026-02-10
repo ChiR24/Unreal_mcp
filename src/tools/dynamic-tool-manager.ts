@@ -59,6 +59,7 @@ class DynamicToolManager {
           enabledCount: 0
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed set above
       const catState = this.categoryStates.get(category)!;
       catState.toolCount++;
       catState.enabledCount++;

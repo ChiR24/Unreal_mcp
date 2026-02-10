@@ -83,35 +83,39 @@ export async function handleTextureTools(
       // ===== 9.1 Procedural Generation =====
       case 'create_noise_texture':
       case 'create_texture': {
-        const params = normalizeArgs(args, [
-          { key: 'name', required: true },
-          { key: 'path', aliases: ['directory'], default: '/Game/Textures' },
-          { key: 'noiseType', default: 'Perlin' }, // Perlin, Simplex, Worley, Voronoi
-          { key: 'width', default: 1024 },
-          { key: 'height', default: 1024 },
-          { key: 'scale', default: 1.0 },
-          { key: 'octaves', default: 4 },
-          { key: 'persistence', default: 0.5 },
-          { key: 'lacunarity', default: 2.0 },
-          { key: 'seed', default: 0 },
-          { key: 'seamless', default: false },
-          { key: 'hdr', default: false },
-          { key: 'save', default: true },
-        ]);
+        // Support texturePath as alternative to name+path
+        let name: string;
+        let path: string;
+        const texturePath = extractOptionalString(args, 'texturePath');
+        if (texturePath) {
+          const lastSlash = texturePath.lastIndexOf('/');
+          if (lastSlash >= 0) {
+            name = texturePath.substring(lastSlash + 1);
+            path = texturePath.substring(0, lastSlash);
+          } else {
+            name = texturePath;
+            path = '/Game/Textures';
+          }
+        } else {
+          const params = normalizeArgs(args, [
+            { key: 'name', required: true },
+            { key: 'path', aliases: ['directory'], default: '/Game/Textures' },
+          ]);
+          name = extractString(params, 'name');
+          path = extractOptionalString(params, 'path') ?? '/Game/Textures';
+        }
 
-        const name = extractString(params, 'name');
-        const path = extractOptionalString(params, 'path') ?? '/Game/Textures';
-        const noiseType = extractOptionalString(params, 'noiseType') ?? 'Perlin';
-        const width = extractOptionalNumber(params, 'width') ?? 1024;
-        const height = extractOptionalNumber(params, 'height') ?? 1024;
-        const scale = extractOptionalNumber(params, 'scale') ?? 1.0;
-        const octaves = extractOptionalNumber(params, 'octaves') ?? 4;
-        const persistence = extractOptionalNumber(params, 'persistence') ?? 0.5;
-        const lacunarity = extractOptionalNumber(params, 'lacunarity') ?? 2.0;
-        const seed = extractOptionalNumber(params, 'seed') ?? 0;
-        const seamless = extractOptionalBoolean(params, 'seamless') ?? false;
-        const hdr = extractOptionalBoolean(params, 'hdr') ?? false;
-        const save = extractOptionalBoolean(params, 'save') ?? true;
+        const noiseType = extractOptionalString(args, 'noiseType') ?? 'Perlin';
+        const width = extractOptionalNumber(args, 'width') ?? 1024;
+        const height = extractOptionalNumber(args, 'height') ?? 1024;
+        const scale = extractOptionalNumber(args, 'scale') ?? 1.0;
+        const octaves = extractOptionalNumber(args, 'octaves') ?? 4;
+        const persistence = extractOptionalNumber(args, 'persistence') ?? 0.5;
+        const lacunarity = extractOptionalNumber(args, 'lacunarity') ?? 2.0;
+        const seed = extractOptionalNumber(args, 'seed') ?? 0;
+        const seamless = extractOptionalBoolean(args, 'seamless') ?? false;
+        const hdr = extractOptionalBoolean(args, 'hdr') ?? false;
+        const save = extractOptionalBoolean(args, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'create_noise_texture',
@@ -902,19 +906,31 @@ export async function handleTextureTools(
       }
 
       case 'create_render_target': {
-        const params = normalizeArgs(args, [
-          { key: 'name', required: true },
-          { key: 'path', aliases: ['texturePath', 'directory'], default: '/Game/Textures' },
-          { key: 'width', default: 1024 },
-          { key: 'height', default: 1024 },
-          { key: 'format', default: 'RGBA8' },
-        ]);
+        // Support renderTargetPath as alternative to name+path
+        let name: string;
+        let path: string;
+        const renderTargetPath = extractOptionalString(args, 'renderTargetPath');
+        if (renderTargetPath) {
+          const lastSlash = renderTargetPath.lastIndexOf('/');
+          if (lastSlash >= 0) {
+            name = renderTargetPath.substring(lastSlash + 1);
+            path = renderTargetPath.substring(0, lastSlash);
+          } else {
+            name = renderTargetPath;
+            path = '/Game/Textures';
+          }
+        } else {
+          const params = normalizeArgs(args, [
+            { key: 'name', required: true },
+            { key: 'path', aliases: ['texturePath', 'directory'], default: '/Game/Textures' },
+          ]);
+          name = extractString(params, 'name');
+          path = extractOptionalString(params, 'path') ?? '/Game/Textures';
+        }
 
-        const name = extractString(params, 'name');
-        const path = extractOptionalString(params, 'path') ?? '/Game/Textures';
-        const width = extractOptionalNumber(params, 'width') ?? 1024;
-        const height = extractOptionalNumber(params, 'height') ?? 1024;
-        const format = extractOptionalString(params, 'format') ?? 'RGBA8';
+        const width = extractOptionalNumber(args, 'width') ?? 1024;
+        const height = extractOptionalNumber(args, 'height') ?? 1024;
+        const format = extractOptionalString(args, 'format') ?? 'RGBA8';
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'create_render_target',
