@@ -127,9 +127,35 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    // Check if sanitization significantly changed the name (indicates invalid characters)
+    // If the sanitized name is different and doesn't just have underscores added/removed
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
+    }
+
+    // Validate path doesn't contain traversal sequences
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
     }
 
     // Create material using factory
@@ -2095,9 +2121,159 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
 
-    // This is a stub that acknowledges the request
-    // Full implementation would route to specific add_* handlers based on nodeType
+    // Normalize and validate asset path
+    FNormalizedAssetPath NormalizedPath = NormalizeAssetPath(AssetPath);
+    if (!NormalizedPath.bIsValid) {
+      SendAutomationError(Socket, RequestId, 
+                          NormalizedPath.ErrorMessage.IsEmpty() ? TEXT("Invalid asset path.") : NormalizedPath.ErrorMessage,
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *NormalizedPath.Path);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Get position from payload
+    float X = 0.0f;
+    float Y = 0.0f;
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
+
+    // Resolve the expression class based on nodeType
+    UClass *ExpressionClass = nullptr;
+    if (NodeType == TEXT("TextureSample"))
+      ExpressionClass = UMaterialExpressionTextureSample::StaticClass();
+    else if (NodeType == TEXT("VectorParameter") || NodeType == TEXT("ConstantVectorParameter"))
+      ExpressionClass = UMaterialExpressionVectorParameter::StaticClass();
+    else if (NodeType == TEXT("ScalarParameter") || NodeType == TEXT("ConstantScalarParameter"))
+      ExpressionClass = UMaterialExpressionScalarParameter::StaticClass();
+    else if (NodeType == TEXT("Add"))
+      ExpressionClass = UMaterialExpressionAdd::StaticClass();
+    else if (NodeType == TEXT("Multiply"))
+      ExpressionClass = UMaterialExpressionMultiply::StaticClass();
+    else if (NodeType == TEXT("Constant") || NodeType == TEXT("Float") || NodeType == TEXT("Scalar"))
+      ExpressionClass = UMaterialExpressionConstant::StaticClass();
+    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") || 
+             NodeType == TEXT("Color") || NodeType == TEXT("Vector3"))
+      ExpressionClass = UMaterialExpressionConstant3Vector::StaticClass();
+    else if (NodeType == TEXT("Lerp") || NodeType == TEXT("LinearInterpolate"))
+      ExpressionClass = UMaterialExpressionLinearInterpolate::StaticClass();
+    else if (NodeType == TEXT("Divide"))
+      ExpressionClass = UMaterialExpressionDivide::StaticClass();
+    else if (NodeType == TEXT("Subtract"))
+      ExpressionClass = UMaterialExpressionSubtract::StaticClass();
+    else if (NodeType == TEXT("Power"))
+      ExpressionClass = UMaterialExpressionPower::StaticClass();
+    else if (NodeType == TEXT("Clamp"))
+      ExpressionClass = UMaterialExpressionClamp::StaticClass();
+    else if (NodeType == TEXT("Frac"))
+      ExpressionClass = UMaterialExpressionFrac::StaticClass();
+    else if (NodeType == TEXT("OneMinus"))
+      ExpressionClass = UMaterialExpressionOneMinus::StaticClass();
+    else if (NodeType == TEXT("Panner"))
+      ExpressionClass = UMaterialExpressionPanner::StaticClass();
+    else if (NodeType == TEXT("TextureCoordinate") || NodeType == TEXT("TexCoord"))
+      ExpressionClass = UMaterialExpressionTextureCoordinate::StaticClass();
+    else if (NodeType == TEXT("ComponentMask"))
+      ExpressionClass = UMaterialExpressionComponentMask::StaticClass();
+    else if (NodeType == TEXT("DotProduct"))
+      ExpressionClass = UMaterialExpressionDotProduct::StaticClass();
+    else if (NodeType == TEXT("CrossProduct"))
+      ExpressionClass = UMaterialExpressionCrossProduct::StaticClass();
+    else if (NodeType == TEXT("Desaturation"))
+      ExpressionClass = UMaterialExpressionDesaturation::StaticClass();
+    else if (NodeType == TEXT("Fresnel"))
+      ExpressionClass = UMaterialExpressionFresnel::StaticClass();
+    else if (NodeType == TEXT("Noise"))
+      ExpressionClass = UMaterialExpressionNoise::StaticClass();
+    else if (NodeType == TEXT("WorldPosition"))
+      ExpressionClass = UMaterialExpressionWorldPosition::StaticClass();
+    else if (NodeType == TEXT("VertexNormalWS") || NodeType == TEXT("VertexNormal"))
+      ExpressionClass = UMaterialExpressionVertexNormalWS::StaticClass();
+    else if (NodeType == TEXT("ReflectionVectorWS") || NodeType == TEXT("ReflectionVector"))
+      ExpressionClass = UMaterialExpressionReflectionVectorWS::StaticClass();
+    else if (NodeType == TEXT("PixelDepth"))
+      ExpressionClass = UMaterialExpressionPixelDepth::StaticClass();
+    else if (NodeType == TEXT("AppendVector"))
+      ExpressionClass = UMaterialExpressionAppendVector::StaticClass();
+    else if (NodeType == TEXT("If"))
+      ExpressionClass = UMaterialExpressionIf::StaticClass();
+    else if (NodeType == TEXT("MaterialFunctionCall"))
+      ExpressionClass = UMaterialExpressionMaterialFunctionCall::StaticClass();
+    else if (NodeType == TEXT("FunctionInput"))
+      ExpressionClass = UMaterialExpressionFunctionInput::StaticClass();
+    else if (NodeType == TEXT("FunctionOutput"))
+      ExpressionClass = UMaterialExpressionFunctionOutput::StaticClass();
+    else if (NodeType == TEXT("Custom"))
+      ExpressionClass = UMaterialExpressionCustom::StaticClass();
+    else if (NodeType == TEXT("StaticSwitchParameter") || NodeType == TEXT("StaticSwitch"))
+      ExpressionClass = UMaterialExpressionStaticSwitchParameter::StaticClass();
+    else if (NodeType == TEXT("TextureSampleParameter2D"))
+      ExpressionClass = UMaterialExpressionTextureSampleParameter2D::StaticClass();
+    else {
+      // Try to resolve by full class path or with MaterialExpression prefix
+      ExpressionClass = ResolveClassByName(NodeType);
+      if (!ExpressionClass || !ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
+        FString PrefixedName = FString::Printf(TEXT("MaterialExpression%s"), *NodeType);
+        ExpressionClass = ResolveClassByName(PrefixedName);
+      }
+      if (!ExpressionClass || !ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
+        SendAutomationError(
+            Socket, RequestId,
+            FString::Printf(
+                TEXT("Unknown node type: %s. Available types: TextureSample, VectorParameter, "
+                     "ScalarParameter, Add, Multiply, Constant, Constant3Vector, Color, Lerp, "
+                     "Divide, Subtract, Power, Clamp, Frac, OneMinus, Panner, TextureCoordinate, "
+                     "ComponentMask, DotProduct, CrossProduct, Desaturation, Fresnel, Noise, "
+                     "WorldPosition, VertexNormalWS, ReflectionVectorWS, PixelDepth, AppendVector, "
+                     "If, MaterialFunctionCall, FunctionInput, FunctionOutput, Custom, "
+                     "StaticSwitchParameter, TextureSampleParameter2D. Or use full class name "
+                     "like 'MaterialExpressionLerp'."),
+                *NodeType),
+            TEXT("UNKNOWN_TYPE"));
+        return true;
+      }
+    }
+
+    // Create the expression
+    UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
+        Material, ExpressionClass, NAME_None, RF_Transactional);
+    if (!NewExpr) {
+      SendAutomationError(Socket, RequestId, TEXT("Failed to create expression."), TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    // Set editor position
+    NewExpr->MaterialExpressionEditorX = (int32)X;
+    NewExpr->MaterialExpressionEditorY = (int32)Y;
+
+    // Add to material's expression collection
+#if WITH_EDITORONLY_DATA
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    if (Material->GetEditorOnlyData()) {
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(NewExpr);
+    }
+#else
+    Material->Expressions.Add(NewExpr);
+#endif
+#endif
+
+    // If parameter node, set the parameter name
+    FString ParamName;
+    if (Payload->TryGetStringField(TEXT("name"), ParamName) && !ParamName.IsEmpty()) {
+      if (UMaterialExpressionParameter *ParamExpr = Cast<UMaterialExpressionParameter>(NewExpr)) {
+        ParamExpr->ParameterName = FName(*ParamName);
+      }
+    }
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetStringField(TEXT("nodeType"), NodeType);
     Result->SetBoolField(TEXT("nodeAdded"), true);

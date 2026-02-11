@@ -290,6 +290,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        
+        // SECURITY: Validate folder path for traversal attacks
+        FString SanitizedFolder = SanitizeProjectRelativePath(Folder);
+        if (SanitizedFolder.IsEmpty() && !Folder.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid folder path: path traversal or invalid characters detected"), 
+                TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        Folder = SanitizedFolder;
+        
         FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
 
         // Build full path
@@ -368,6 +380,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
+        
+        // SECURITY: Validate widget path
+        FString SanitizedWidgetPath = SanitizeProjectRelativePath(WidgetPath);
+        if (SanitizedWidgetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid widgetPath: path traversal or invalid characters detected"), 
+                TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        WidgetPath = SanitizedWidgetPath;
+        
         if (ParentClass.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: parentClass"), TEXT("MISSING_PARAMETER"));

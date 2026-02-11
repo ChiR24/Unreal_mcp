@@ -417,11 +417,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
     FString Path = GetStringField(Payload, TEXT("path"), TEXT("/Game"));
     bool bSave = GetBoolField(Payload, TEXT("save"), false);
     
+    // SECURITY: Validate path to prevent traversal attacks
+    FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    if (SanitizedPath.IsEmpty() && !Path.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("Invalid path: path traversal or invalid characters detected. Path must start with /Game/, /Engine/, or /Script/"), 
+            TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+    if (!SanitizedPath.IsEmpty())
+    {
+        Path = SanitizedPath;
+    }
+    
     // Support both gameModeBlueprint and blueprintPath as aliases
     FString GameModeBlueprint = GetStringField(Payload, TEXT("gameModeBlueprint"));
     if (GameModeBlueprint.IsEmpty())
     {
         GameModeBlueprint = GetStringField(Payload, TEXT("blueprintPath"));
+    }
+    
+    // SECURITY: Validate blueprint paths
+    if (!GameModeBlueprint.IsEmpty())
+    {
+        FString SanitizedBPPath = SanitizeProjectRelativePath(GameModeBlueprint);
+        if (SanitizedBPPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid gameModeBlueprint path: path traversal or invalid characters detected"), 
+                TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        GameModeBlueprint = SanitizedBPPath;
     }
     FString BlueprintPath = GameModeBlueprint; // Keep in sync for configure_player_start
 

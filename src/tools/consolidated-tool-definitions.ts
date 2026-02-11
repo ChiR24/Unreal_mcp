@@ -269,7 +269,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         blueprintPath: commonSchemas.blueprintPath,
-        blueprint: commonSchemas.objectProp
+        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' }
       }
     }
   },

@@ -11,9 +11,32 @@ interface BlueprintResponse {
   [key: string]: unknown;
 }
 
+/**
+ * Normalize blueprint path by converting backslashes to forward slashes.
+ * This ensures consistent path handling across all blueprint operations.
+ */
+function normalizeBlueprintPath(path: string | undefined): string | undefined {
+  if (!path || typeof path !== 'string') return path;
+  // Convert backslashes to forward slashes
+  let normalized = path.replace(/\\/g, '/');
+  // Collapse double slashes
+  while (normalized.includes('//')) {
+    normalized = normalized.replace(/\/\//g, '/');
+  }
+  return normalized;
+}
+
 export async function handleBlueprintTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
+  
+  // Normalize any blueprintPath in the arguments
+  if (argsTyped.blueprintPath) {
+    argsTyped.blueprintPath = normalizeBlueprintPath(argsTyped.blueprintPath);
+  }
+  if (argsRecord.path) {
+    argsRecord.path = normalizeBlueprintPath(argsRecord.path as string);
+  }
   
   switch (action) {
     case 'create': {
@@ -371,11 +394,18 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
     case 'set_node_property':
     case 'get_node_details':
     case 'get_pin_details':
-    case 'get_graph_details': {
+    case 'get_graph_details':
+    case 'create_node':
+    case 'list_node_types':
+    case 'set_pin_default_value': {
+      // Normalize blueprintPath to assetPath for C++ handler compatibility
+      const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
       const processedArgs = {
         ...args,
         subAction: action,
-        blueprintPath: argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name
+        // Ensure both blueprintPath and assetPath are set for C++ compatibility
+        blueprintPath,
+        assetPath: argsRecord.assetPath || blueprintPath
       };
       const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
       return cleanObject(res) as Record<string, unknown>;

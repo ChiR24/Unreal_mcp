@@ -174,10 +174,20 @@ namespace {
 #define GetBoolFieldAudioAuth GetJsonBoolField
 #define GetStringFieldAudioAuth GetJsonStringField
 
-// Helper to normalize asset path
+// Helper to normalize asset path with security validation
 static FString NormalizeAudioPath(const FString& Path)
 {
-    FString Normalized = Path;
+    // SECURITY: First validate path for traversal attacks
+    FString Sanitized = SanitizeProjectRelativePath(Path);
+    if (Sanitized.IsEmpty() && !Path.IsEmpty())
+    {
+        // Path was rejected due to traversal or invalid characters
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+            TEXT("NormalizeAudioPath: Rejected malicious path: %s"), *Path);
+        return FString();
+    }
+    
+    FString Normalized = Sanitized;
     Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
     Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
     

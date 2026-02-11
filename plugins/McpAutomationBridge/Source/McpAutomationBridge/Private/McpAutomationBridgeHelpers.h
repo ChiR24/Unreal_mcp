@@ -314,7 +314,8 @@ static inline FString SanitizeAssetName(const FString &InName) {
   };
   
   for (TCHAR C : InvalidChars) {
-    Sanitized = Sanitized.Replace(FString(1, &C), TEXT("_"));
+    TCHAR CharStr[2] = { C, TEXT('\0') };
+    Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
   }
   
   // Remove consecutive underscores
