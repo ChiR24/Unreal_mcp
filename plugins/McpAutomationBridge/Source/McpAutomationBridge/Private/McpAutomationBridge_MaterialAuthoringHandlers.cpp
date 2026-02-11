@@ -158,10 +158,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
-    // Create material using factory
+    // Additional validation: reject Windows absolute paths (contain colon)
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: verify mount point using engine API
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Create material using factory - use ValidatedPath, not original Path!
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));

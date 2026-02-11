@@ -224,7 +224,21 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     return FString();
 
   FString CleanPath = InPath;
+  
+  // Reject Windows absolute paths early (contain drive letter colon)
+  if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectRelativePath: Rejected Windows absolute path: %s"),
+        *InPath);
+    return FString();
+  }
+  
   FPaths::NormalizeFilename(CleanPath);
+
+  // CRITICAL: FPaths::NormalizeFilename converts / to \ on Windows
+  // We need to convert back to forward slashes for UE asset paths
+  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
 
   // Normalize double slashes (prevents engine crash from paths like /Game//Test)
   while (CleanPath.Contains(TEXT("//"))) {
@@ -245,27 +259,28 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     CleanPath = TEXT("/") + CleanPath;
   }
 
-  // Whitelist valid roots
+  // Whitelist valid roots - MUST start with one of these
   const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game")) ||
                           CleanPath.StartsWith(TEXT("/Engine")) ||
                           CleanPath.StartsWith(TEXT("/Script"));
 
-  // Allow plugin content paths too (e.g. /MyPlugin/) - heuristic: starts with /
-  // and has second /
-  bool bLooksLikePlugin = false;
-  if (!bValidRoot && CleanPath.Len() > 1) {
-    int32 SecondSlash = -1;
-    if (CleanPath.FindChar(TEXT('/'), SecondSlash)) {
-      // Check if we have a second slash, e.g. /PluginName/Folder
-      // FindChar finds the *first* char. We want the second one.
-      if (CleanPath.FindLastChar(TEXT('/'), SecondSlash) && SecondSlash > 0) {
-        bLooksLikePlugin = true;
-      }
+  // Reject paths that start with / but don't have a valid root
+  // This catches paths like /etc/passwd or /invalid/path
+  if (!bValidRoot) {
+    // Check if it looks like a plugin path (e.g., /MyPlugin/Content/Asset)
+    // Plugin paths must have at least 3 segments: /PluginName/Content/...
+    TArray<FString> Segments;
+    CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
+    bool bLooksLikePluginPath = Segments.Num() >= 2;
+    
+    if (!bLooksLikePluginPath) {
+      UE_LOG(
+          LogMcpAutomationBridgeSubsystem, Warning,
+          TEXT("SanitizeProjectRelativePath: Rejected path without valid root (not /Game, /Engine, /Script, or valid plugin path): %s"),
+          *InPath);
+      return FString();
     }
   }
-
-  // For strict safety, we might enforce /Game or /Engine, but plugins are
-  // common. The critical part is no ".." and it looks like an asset path.
 
   return CleanPath;
 }
@@ -273,13 +288,16 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
 /**
  * Validate a basic asset path format.
  *
- * @returns `true` if Path is non-empty, begins with a leading '/', and does not
- * contain the parent-traversal segment ("..") or consecutive slashes ("//");
- * `false` otherwise.
+ * @returns `true` if Path is non-empty, begins with a leading '/', does not
+ * contain the parent-traversal segment (".."), consecutive slashes ("//"),
+ * or Windows drive letters (":"); `false` otherwise.
  */
 static inline bool IsValidAssetPath(const FString &Path) {
-  return !Path.IsEmpty() && Path.StartsWith(TEXT("/")) &&
-         !Path.Contains(TEXT("..")) && !Path.Contains(TEXT("//"));
+  return !Path.IsEmpty() && 
+         Path.StartsWith(TEXT("/")) &&
+         !Path.Contains(TEXT("..")) && 
+         !Path.Contains(TEXT("//")) &&
+         !Path.Contains(TEXT(":"));  // Reject Windows absolute paths
 }
 
 /**
