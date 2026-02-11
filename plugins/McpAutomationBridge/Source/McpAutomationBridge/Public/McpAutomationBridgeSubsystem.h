@@ -515,6 +515,9 @@ private:
   bool HandleSetupRagdoll(const FString &RequestId, const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleActivateRagdoll(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Material graph handlers
   bool HandleAddMaterialTextureSample(
       const FString &RequestId, const FString &Action,

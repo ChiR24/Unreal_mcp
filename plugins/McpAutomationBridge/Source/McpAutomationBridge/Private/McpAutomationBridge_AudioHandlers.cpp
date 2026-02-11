@@ -24,6 +24,10 @@
 #include "Sound/SoundNodeModulator.h"
 #include "Sound/SoundNodeWavePlayer.h"
 #include "Sound/SoundWave.h"
+#include "Sound/DialogueVoice.h"
+#include "Sound/DialogueWave.h"
+#include "Sound/ReverbEffect.h"
+#include "Sound/SoundEffectSubmix.h"
 
 #endif
 

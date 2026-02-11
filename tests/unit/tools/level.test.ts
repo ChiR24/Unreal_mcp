@@ -8,7 +8,13 @@ describe('LevelTools Security', () => {
 
     beforeEach(() => {
         bridge = {
-            executeConsoleCommand: vi.fn().mockResolvedValue({ success: true, message: 'OK' }),
+            executeConsoleCommand: vi.fn().mockImplementation((cmd: string) => {
+                // GetLevelPath returns valid path for existing levels
+                if (cmd.startsWith('GetLevelPath')) {
+                    return Promise.resolve({ success: true, message: '/Game/Maps/MyMap' });
+                }
+                return Promise.resolve({ success: true, message: 'OK' });
+            }),
             sendAutomationRequest: vi.fn().mockRejectedValue(new Error('Automation unavailable')),
             isConnected: false
         } as unknown as UnrealBridge;
@@ -27,10 +33,11 @@ describe('LevelTools Security', () => {
         const executeCommandMock = bridge.executeConsoleCommand as any;
         expect(executeCommandMock).toHaveBeenCalled();
 
-        const command = executeCommandMock.mock.calls[0][0];
-
-        // This assertion checks if we are using the normalized path.
-        expect(command).toBe(`Open ${expectedPath}`);
+        // First call is GetLevelPath validation, second is Open
+        const calls = executeCommandMock.mock.calls;
+        const openCall = calls.find((call: string[]) => call[0].startsWith('Open'));
+        expect(openCall).toBeDefined();
+        expect(openCall[0]).toBe(`Open ${expectedPath}`);
     });
 
     it('should validate level path before falling back to console', async () => {
@@ -42,5 +49,18 @@ describe('LevelTools Security', () => {
 
         const executeCommandMock = bridge.executeConsoleCommand as any;
         expect(executeCommandMock).not.toHaveBeenCalled();
+    });
+
+    it('should return error when level not found via GetLevelPath', async () => {
+        // Override mock to simulate level not found
+        (bridge.executeConsoleCommand as any).mockResolvedValueOnce({ 
+            success: false, 
+            message: 'Level not found: /Game/Maps/NonExistent' 
+        });
+
+        const result = await levelTools.loadLevel({ levelPath: '/Game/Maps/NonExistent' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('LEVEL_NOT_FOUND');
     });
 });

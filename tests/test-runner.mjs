@@ -134,10 +134,29 @@ function evaluateExpectation(testCase, response) {
   const containsFailure = failureKeywords.some((word) => lowerExpected.includes(word));
   const containsSuccess = successKeywords.some((word) => lowerExpected.includes(word));
 
+  // CRITICAL FIX: Determine PRIMARY intent (first condition in pipe-separated list)
+  // Tests like "success|error" should have PRIMARY intent of success, meaning
+  // if we get success=false, it should FAIL even though "error" is in the alternatives.
+  const primaryCondition = lowerExpected.split('|')[0].split(' or ')[0].trim();
+  const primaryExpectsSuccess = successKeywords.some((word) => primaryCondition.includes(word));
+  const primaryExpectsFailure = failureKeywords.some((word) => primaryCondition.includes(word));
+
   const structuredSuccess = typeof response.structuredContent?.success === 'boolean'
     ? response.structuredContent.success
     : undefined;
   const actualSuccess = structuredSuccess ?? !response.isError;
+
+  // CRITICAL: If response explicitly indicates an error (isError: true or structuredContent.success: false)
+  // and the PRIMARY expectation is success (not just a fallback alternative), FAIL immediately.
+  // This prevents false positives where tests like "success|handled|error" pass even when
+  // the engine returns success: false.
+  if ((response.isError === true || structuredSuccess === false) && !primaryExpectsFailure) {
+    const errorReason = response.structuredContent?.error || response.structuredContent?.message || 'Unknown error';
+    return {
+      passed: false,
+      reason: `Response indicates error but test expected success (primary intent: ${primaryCondition}): ${errorReason}`
+    };
+  }
 
   // Extract actual error/message from response
   let actualError = null;

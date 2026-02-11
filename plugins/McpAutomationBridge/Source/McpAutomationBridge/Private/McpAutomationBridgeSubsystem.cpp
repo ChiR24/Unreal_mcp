@@ -639,6 +639,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleSetupRagdoll(R, A, P, S);
                   });
+  RegisterHandler(TEXT("activate_ragdoll"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleActivateRagdoll(R, A, P, S);
+                  });
 
   // Material Graph
   RegisterHandler(TEXT("add_material_texture_sample"),
