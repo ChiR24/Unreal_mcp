@@ -11,7 +11,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
 // Common failure keywords to check against
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown'];
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden'];
 const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok'];
 
 // Defaults for spawning the MCP server.
@@ -510,6 +510,7 @@ export async function runToolTests(toolName, testCases) {
     // Single-attempt call helper (no retries). This forwards a timeoutMs
     // argument to the server so server-side automation calls use the same
     // timeout the test harness expects.
+    // NOTE: This MUST be defined before the setup code below uses it.
     callToolOnce = async function (callOptions, baseTimeoutMs) {
       const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
       const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
@@ -565,7 +566,78 @@ export async function runToolTests(toolName, testCases) {
       }
     };
 
+    // Setup test assets before running tests
+    console.log('🔧 Setting up test assets...');
+    try {
+      // Create test folder
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: { action: 'create_folder', path: '/Game/MCPTest' }
+      }, 10000).catch(() => { /* Folder may already exist */ });
+
+      // Spawn TestActor
+      await callToolOnce({
+        name: 'control_actor',
+        arguments: {
+          action: 'spawn',
+          classPath: '/Script/Engine.StaticMeshActor',
+          actorName: 'TestActor',
+          location: { x: 0, y: 0, z: 0 },
+          rotation: { pitch: 0, yaw: 0, roll: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestActor may already exist:', err?.message || err));
+
+      // Create Test Blueprint
+      await callToolOnce({
+        name: 'manage_blueprint',
+        arguments: {
+          action: 'create',
+          name: 'BP_Test',
+          path: '/Game/MCPTest',
+          parentClass: 'Actor'
+        }
+      }, 15000).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
+
+      // Create Test Material
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'create_material',
+          name: 'TestMaterial',
+          path: '/Game/MCPTest'
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestMaterial may already exist:', err?.message || err));
+
+      // Create Parent Material for create_material_instance tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'create_material',
+          name: 'Parent',
+          path: '/Game/MCPTest'
+        }
+      }, 15000).catch(err => console.warn('⚠️  Parent material may already exist:', err?.message || err));
+
+      // Create M_Test Material for material authoring tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'create_material',
+          name: 'M_Test',
+          path: '/Game/MCPTest'
+        }
+      }, 15000).catch(err => console.warn('⚠️  M_Test material may already exist:', err?.message || err));
+
+      console.log('✅ Test assets setup complete\n');
+    } catch (setupErr) {
+      console.warn('⚠️  Test asset setup had issues (tests may fail if assets missing):', setupErr?.message || setupErr);
+    }
+
     // Run each test case
+    // Rate limit: 600 req/min = 10 req/sec, so add 100ms delay between tests
+    const TEST_THROTTLE_MS = Number(process.env.UNREAL_MCP_TEST_THROTTLE_MS ?? 100);
+    
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
       const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '180000');
@@ -597,7 +669,24 @@ export async function runToolTests(toolName, testCases) {
         if (RESPONSE_LOGGING_ENABLED) {
           logMcpResponse(testCase.toolName + " :: " + testCase.scenario, normalizeMcpResponse(normalizedResponse));
         }
-        const { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
+        let { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
+
+        // CRITICAL FIX: For performance tests (tests with timeoutMs), if the response
+        // has success=false, the test should FAIL even if the expectation string
+        // includes "error" as an alternative. Performance tests are meant to verify
+        // that an operation completes successfully within the timeout, not that it
+        // fails within the timeout window.
+        const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined || 
+                                  testCase.scenario?.includes('performance');
+        const responseSuccess = normalizedResponse?.structuredContent?.success;
+        
+        if (isPerformanceTest && responseSuccess === false) {
+          passed = false;
+          const errorMsg = normalizedResponse?.structuredContent?.error || 
+                          normalizedResponse?.structuredContent?.message || 
+                          'Operation failed during performance test';
+          reason = `Performance test failed: Operation returned success=false. Error: ${errorMsg}`;
+        }
 
         if (!passed) {
           console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => ${reason}`);
@@ -655,6 +744,11 @@ export async function runToolTests(toolName, testCases) {
           durationMs,
           detail: errorMessage
         });
+      }
+      
+      // Throttle to avoid rate limiting (600 req/min = 10 req/sec)
+      if (TEST_THROTTLE_MS > 0 && i < testCases.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, TEST_THROTTLE_MS));
       }
     }
 
