@@ -3063,8 +3063,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                 bKeyFound = true;
                 
                 // Set the default value based on key type
-                // Note: DefaultValue properties on BlackboardKeyType are only available in UE 5.3+
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+                // Note: DefaultValue properties on BlackboardKeyType are only available in UE 5.5+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
                 if (Key.KeyType && !ValueStr.IsEmpty())
                 {
                     if (UBlackboardKeyType_Bool* BoolKey = Cast<UBlackboardKeyType_Bool>(Key.KeyType))
@@ -3111,8 +3111,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                     }
                 }
 #else
-                // UE 5.0-5.2: DefaultValue properties not available on BlackboardKeyType
-                // Value setting requires UE 5.3+
+                // UE 5.0-5.4: DefaultValue properties not available on BlackboardKeyType
+                // Value setting requires UE 5.5+
                 bValueSet = false;
 #endif
                 break;
@@ -3134,12 +3134,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         SetResult->SetStringField(TEXT("value"), ValueStr);
         SetResult->SetBoolField(TEXT("valueSet"), bValueSet);
         
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             bValueSet ? TEXT("Blackboard value set") : TEXT("Key found but value not set (unsupported type)"), SetResult);
 #else
         SendAutomationResponse(RequestingSocket, RequestId, true, 
-            TEXT("Key found. Note: set_blackboard_value requires UE 5.3+ for value setting."), SetResult);
+            TEXT("Key found. Note: set_blackboard_value requires UE 5.5+ for value setting."), SetResult);
 #endif
         return true;
     }
