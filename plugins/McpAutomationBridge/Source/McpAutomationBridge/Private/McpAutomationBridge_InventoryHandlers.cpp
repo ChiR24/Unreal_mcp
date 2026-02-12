@@ -2448,11 +2448,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
 
     if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(IngredientsProp)) {
       FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(RecipeAsset));
-      IngredientIndex = ArrayHelper.Num();
-      bIngredientAdded = true;
+      // Actually add a new element to the array
+      int32 NewIdx = ArrayHelper.AddValue();
+      if (NewIdx != INDEX_NONE) {
+        IngredientIndex = NewIdx;
+        bIngredientAdded = true;
+        // Note: The new element's inner fields (item path, quantity)
+        // would need to be populated via reflection based on the struct definition
+      } else {
+        bIngredientAdded = false;
+      }
     } else {
-      // For generic data assets, mark as added
-      bIngredientAdded = true;
+      // For generic data assets without proper array properties
+      bIngredientAdded = false;
     }
 
     RecipeAsset->MarkPackageDirty();

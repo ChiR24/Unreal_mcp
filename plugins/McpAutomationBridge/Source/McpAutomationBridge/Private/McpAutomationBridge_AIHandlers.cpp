@@ -3051,13 +3051,63 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        // Find the key
+        // Find the key and set its value
         bool bKeyFound = false;
-        for (const FBlackboardEntry& Key : BBData->Keys)
+        bool bValueSet = false;
+        FString ValueStr = GetStringFieldAI(Payload, TEXT("value"));
+        
+        for (FBlackboardEntry& Key : BBData->Keys)
         {
             if (Key.EntryName.ToString() == KeyName)
             {
                 bKeyFound = true;
+                
+                // Set the default value based on key type
+                if (Key.KeyType && !ValueStr.IsEmpty())
+                {
+                    if (UBlackboardKeyType_Bool* BoolKey = Cast<UBlackboardKeyType_Bool>(Key.KeyType))
+                    {
+                        BoolKey->bDefaultValue = ValueStr.ToLower() == TEXT("true") || ValueStr == TEXT("1");
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_Int* IntKey = Cast<UBlackboardKeyType_Int>(Key.KeyType))
+                    {
+                        IntKey->DefaultValue = FCString::Atoi(*ValueStr);
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_Float* FloatKey = Cast<UBlackboardKeyType_Float>(Key.KeyType))
+                    {
+                        FloatKey->DefaultValue = FCString::Atof(*ValueStr);
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_Vector* VectorKey = Cast<UBlackboardKeyType_Vector>(Key.KeyType))
+                    {
+                        VectorKey->DefaultValue.InitFromString(ValueStr);
+                        VectorKey->bUseDefaultValue = true;
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_Rotator* RotatorKey = Cast<UBlackboardKeyType_Rotator>(Key.KeyType))
+                    {
+                        RotatorKey->DefaultValue.InitFromString(ValueStr);
+                        RotatorKey->bUseDefaultValue = true;
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_Name* NameKey = Cast<UBlackboardKeyType_Name>(Key.KeyType))
+                    {
+                        NameKey->DefaultValue = FName(*ValueStr);
+                        bValueSet = true;
+                    }
+                    else if (UBlackboardKeyType_String* StringKey = Cast<UBlackboardKeyType_String>(Key.KeyType))
+                    {
+                        StringKey->DefaultValue = ValueStr;
+                        bValueSet = true;
+                    }
+                    else
+                    {
+                        // Unsupported key type - note in response
+                        bValueSet = false;
+                    }
+                }
                 break;
             }
         }
@@ -3074,8 +3124,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         TSharedPtr<FJsonObject> SetResult = MakeShareable(new FJsonObject());
         SetResult->SetStringField(TEXT("blackboardPath"), BBPath);
         SetResult->SetStringField(TEXT("keyName"), KeyName);
-        SetResult->SetBoolField(TEXT("valueSet"), true);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard value set"), SetResult);
+        SetResult->SetStringField(TEXT("value"), ValueStr);
+        SetResult->SetBoolField(TEXT("valueSet"), bValueSet);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bValueSet ? TEXT("Blackboard value set") : TEXT("Key found but value not set (unsupported type)"), SetResult);
         return true;
     }
 

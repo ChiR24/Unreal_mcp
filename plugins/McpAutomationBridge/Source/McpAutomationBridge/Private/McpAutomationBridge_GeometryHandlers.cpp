@@ -2937,25 +2937,28 @@ FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEX
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
+    // Create projection transform with scale applied
+    FTransform ProjectionTransform(FQuat::Identity, FVector::ZeroVector, FVector(Scale));
+
     // UE 5.7: UV projection option structs removed. Use new function signatures directly.
     // Different projection types now have different function signatures.
     if (ProjectionType == TEXT("box") || ProjectionType == TEXT("cube"))
     {
         // UE 5.7: SetMeshUVsFromBoxProjection(Mesh, UVSetIndex, BoxTransform, Selection, MinIslandTriCount, Debug)
         UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromBoxProjection(
-            Mesh, UVChannel, FTransform::Identity, FGeometryScriptMeshSelection(), 2, nullptr);
+            Mesh, UVChannel, ProjectionTransform, FGeometryScriptMeshSelection(), 2, nullptr);
     }
     else if (ProjectionType == TEXT("planar"))
     {
         // UE 5.7: SetMeshUVsFromPlanarProjection(Mesh, UVSetIndex, PlaneTransform, Selection, Debug)
         UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromPlanarProjection(
-            Mesh, UVChannel, FTransform::Identity, FGeometryScriptMeshSelection(), nullptr);
+            Mesh, UVChannel, ProjectionTransform, FGeometryScriptMeshSelection(), nullptr);
     }
     else if (ProjectionType == TEXT("cylindrical"))
     {
         // UE 5.7: SetMeshUVsFromCylinderProjection(Mesh, UVSetIndex, CylinderTransform, Selection, SplitAngle, Debug)
         UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromCylinderProjection(
-            Mesh, UVChannel, FTransform::Identity, FGeometryScriptMeshSelection(), 45.0f, nullptr);
+            Mesh, UVChannel, ProjectionTransform, FGeometryScriptMeshSelection(), 45.0f, nullptr);
     }
     else
     {

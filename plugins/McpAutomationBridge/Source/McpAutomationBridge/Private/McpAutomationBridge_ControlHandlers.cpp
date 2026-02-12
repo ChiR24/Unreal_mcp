@@ -2278,8 +2278,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   // Find and call the function
   UFunction* Function = Actor->FindFunction(*FunctionName);
   if (Function) {
-    // Note: Full parameter passing would require more complex serialization
-    Actor->ProcessEvent(Function, nullptr);
+    // Check if function has parameters - passing nullptr to a function expecting
+    // parameters can cause crashes or undefined behavior
+    if (Function->ParmsSize > 0) {
+      // Function has parameters - we need to provide a buffer
+      // Allocate zeroed memory for parameters
+      void* ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
+      FMemory::Memzero(ParmsBuffer, Function->ParmsSize);
+      
+      // Call with parameter buffer
+      Actor->ProcessEvent(Function, ParmsBuffer);
+      
+      // Free the buffer
+      FMemory::Free(ParmsBuffer);
+    } else {
+      // No parameters, safe to pass nullptr
+      Actor->ProcessEvent(Function, nullptr);
+    }
     
     TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
     Data->SetStringField(TEXT("actorName"), ActorName);
@@ -2897,6 +2912,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   Payload->TryGetStringField(TEXT("filename"), Filename);
   if (Filename.IsEmpty()) {
     // Generate default filename with timestamp
+    Filename = FString::Printf(TEXT("Screenshot_%s"),
+        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+  }
+
+  // SECURITY: Sanitize filename to prevent path traversal
+  // Remove any path components and keep only the base filename
+  Filename = FPaths::GetCleanFilename(Filename);
+  
+  // Validate filename doesn't contain suspicious patterns
+  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
+    // Reject suspicious filename and use default
     Filename = FString::Printf(TEXT("Screenshot_%s"),
         *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
   }
