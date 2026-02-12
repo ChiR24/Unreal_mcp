@@ -3063,6 +3063,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                 bKeyFound = true;
                 
                 // Set the default value based on key type
+                // Note: DefaultValue properties on BlackboardKeyType are only available in UE 5.3+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
                 if (Key.KeyType && !ValueStr.IsEmpty())
                 {
                     if (UBlackboardKeyType_Bool* BoolKey = Cast<UBlackboardKeyType_Bool>(Key.KeyType))
@@ -3108,6 +3110,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                         bValueSet = false;
                     }
                 }
+#else
+                // UE 5.0-5.2: DefaultValue properties not available on BlackboardKeyType
+                // Value setting requires UE 5.3+
+                bValueSet = false;
+#endif
                 break;
             }
         }
@@ -3126,8 +3133,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         SetResult->SetStringField(TEXT("keyName"), KeyName);
         SetResult->SetStringField(TEXT("value"), ValueStr);
         SetResult->SetBoolField(TEXT("valueSet"), bValueSet);
+        
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             bValueSet ? TEXT("Blackboard value set") : TEXT("Key found but value not set (unsupported type)"), SetResult);
+#else
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            TEXT("Key found. Note: set_blackboard_value requires UE 5.3+ for value setting."), SetResult);
+#endif
         return true;
     }
 
