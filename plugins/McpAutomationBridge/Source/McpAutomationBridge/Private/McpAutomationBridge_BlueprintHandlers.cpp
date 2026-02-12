@@ -12,6 +12,7 @@
 #if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Factories/BlueprintFactory.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UObjectIterator.h"
@@ -1968,8 +1969,57 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                 }
                 if (bHandleValid) {
                   if constexpr (bHasRename) {
+                    // Generate unique name if target already exists
+                    FString UniqueName = ComponentName;
+                    FName TargetVarName = FName(*UniqueName);
+                    
+                    // Check if variable already exists in blueprint
+                    if (LocalBP->GeneratedClass) {
+                      // Check for existing member variable with same name
+                      bool bNameExists = false;
+                      for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                        if (It->GetFName() == TargetVarName) {
+                          bNameExists = true;
+                          break;
+                        }
+                      }
+                      
+                      // Also check the _GEN_VARIABLE suffix naming
+                      FString GenVarName = UniqueName + TEXT("_GEN_VARIABLE");
+                      FName GenVarFName = FName(*GenVarName);
+                      for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                        if (It->GetFName() == GenVarFName) {
+                          bNameExists = true;
+                          break;
+                        }
+                      }
+                      
+                      if (bNameExists) {
+                        // Generate unique name by appending number
+                        int32 Suffix = 1;
+                        while (Suffix < 1000) {
+                          UniqueName = FString::Printf(TEXT("%s_%d"), *ComponentName, Suffix);
+                          TargetVarName = FName(*UniqueName);
+                          
+                          bNameExists = false;
+                          for (TFieldIterator<FProperty> It(LocalBP->GeneratedClass); It; ++It) {
+                            if (It->GetFName() == TargetVarName) {
+                              bNameExists = true;
+                              break;
+                            }
+                          }
+                          
+                          if (!bNameExists) break;
+                          Suffix++;
+                        }
+                        
+                        OpSummary->SetStringField(TEXT("originalName"), ComponentName);
+                        OpSummary->SetStringField(TEXT("renamedTo"), UniqueName);
+                      }
+                    }
+                    
                     Subsystem->RenameSubobjectMemberVariable(
-                        LocalBP, NewHandle, FName(*ComponentName));
+                        LocalBP, NewHandle, TargetVarName);
                   }
 #if WITH_EDITOR
                   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
@@ -2665,6 +2715,53 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                              ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                              : false;
 
+    // Validate variableType BEFORE checking existence to ensure parameter
+    // validation occurs even if variable already exists
+    FEdGraphPinType PinType;
+    const FString LowerType = VarType.ToLower();
+    if (LowerType == TEXT("float") || LowerType == TEXT("double")) {
+      PinType.PinCategory = MCP_PC_Float;
+    } else if (LowerType == TEXT("int") || LowerType == TEXT("integer")) {
+      PinType.PinCategory = MCP_PC_Int;
+    } else if (LowerType == TEXT("bool") || LowerType == TEXT("boolean")) {
+      PinType.PinCategory = MCP_PC_Boolean;
+    } else if (LowerType == TEXT("string")) {
+      PinType.PinCategory = MCP_PC_String;
+    } else if (LowerType == TEXT("name")) {
+      PinType.PinCategory = MCP_PC_Name;
+    } else if (LowerType == TEXT("text")) {
+      PinType.PinCategory = MCP_PC_Text;
+    } else if (LowerType == TEXT("vector")) {
+      PinType.PinCategory = MCP_PC_Struct;
+      PinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
+    } else if (LowerType == TEXT("rotator")) {
+      PinType.PinCategory = MCP_PC_Struct;
+      PinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get();
+    } else if (LowerType == TEXT("transform")) {
+      PinType.PinCategory = MCP_PC_Struct;
+      PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
+    } else if (LowerType == TEXT("object")) {
+      PinType.PinCategory = MCP_PC_Object;
+      PinType.PinSubCategoryObject = UObject::StaticClass();
+    } else if (LowerType == TEXT("class")) {
+      PinType.PinCategory = MCP_PC_Class;
+      PinType.PinSubCategoryObject = UObject::StaticClass();
+    } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
+      PinType.PinCategory = MCP_PC_Object;
+      UClass *FoundClass = ResolveUClass(VarType);
+      if (FoundClass) {
+        PinType.PinSubCategoryObject = FoundClass;
+      } else {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not resolve class '%s'"), *VarType),
+            TEXT("CLASS_NOT_FOUND"));
+        return true;
+      }
+    } else {
+      PinType.PinCategory = MCP_PC_Wildcard;
+    }
+
     const FString RequestedPath = Path;
     FString RegKey = Path;
     FString NormPath;
@@ -2714,50 +2811,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     const FString RegistryKey =
         !LocalNormalized.IsEmpty() ? LocalNormalized : RequestedPath;
 
-    FEdGraphPinType PinType;
-    const FString LowerType = VarType.ToLower();
-    if (LowerType == TEXT("float") || LowerType == TEXT("double")) {
-      PinType.PinCategory = MCP_PC_Float;
-    } else if (LowerType == TEXT("int") || LowerType == TEXT("integer")) {
-      PinType.PinCategory = MCP_PC_Int;
-    } else if (LowerType == TEXT("bool") || LowerType == TEXT("boolean")) {
-      PinType.PinCategory = MCP_PC_Boolean;
-    } else if (LowerType == TEXT("string")) {
-      PinType.PinCategory = MCP_PC_String;
-    } else if (LowerType == TEXT("name")) {
-      PinType.PinCategory = MCP_PC_Name;
-    } else if (LowerType == TEXT("text")) {
-      PinType.PinCategory = MCP_PC_Text;
-    } else if (LowerType == TEXT("vector")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-    } else if (LowerType == TEXT("rotator")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FRotator>::Get();
-    } else if (LowerType == TEXT("transform")) {
-      PinType.PinCategory = MCP_PC_Struct;
-      PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
-    } else if (LowerType == TEXT("object")) {
-      PinType.PinCategory = MCP_PC_Object;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
-    } else if (LowerType == TEXT("class")) {
-      PinType.PinCategory = MCP_PC_Class;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
-    } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
-      PinType.PinCategory = MCP_PC_Object;
-      UClass *FoundClass = ResolveUClass(VarType);
-      if (FoundClass) {
-        PinType.PinSubCategoryObject = FoundClass;
-      } else {
-        SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("Could not resolve class '%s'"), *VarType),
-            TEXT("CLASS_NOT_FOUND"));
-        return true;
-      }
-    } else {
-      PinType.PinCategory = MCP_PC_Wildcard;
-    }
+    // PinType was already validated before loading the blueprint
 
     bool bAlreadyExists = false;
     for (const FBPVariableDescription &Existing : Blueprint->NewVariables) {
@@ -4931,6 +4985,256 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #endif
   }
 
+  // blueprint_ensure_exists: Check if blueprint exists, create if not
+  if (ActionMatchesPattern(TEXT("blueprint_ensure_exists")) ||
+      ActionMatchesPattern(TEXT("ensure_exists")) ||
+      AlphaNumLower.Contains(TEXT("blueprintensureexists")) ||
+      AlphaNumLower.Contains(TEXT("ensureexists"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_ensure_exists handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_ensure_exists requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString ParentClass;
+    LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClass);
+    bool bCreateIfMissing = true;
+    if (LocalPayload->HasField(TEXT("createIfMissing"))) {
+      LocalPayload->TryGetBoolField(TEXT("createIfMissing"), bCreateIfMissing);
+    }
+
+#if WITH_EDITOR
+    // Check if blueprint exists using lightweight check
+    FString CheckPath = Path;
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+
+    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    bool bCreated = false;
+
+    if (!bExists && bCreateIfMissing) {
+      // Delegate to HandleBlueprintCreate for creation
+      TSharedPtr<FJsonObject> CreatePayload = MakeShared<FJsonObject>();
+      CreatePayload->SetStringField(TEXT("blueprintPath"), Path);
+      if (!ParentClass.IsEmpty()) {
+        CreatePayload->SetStringField(TEXT("parentClass"), ParentClass);
+      }
+      // Use FBlueprintCreationHandlers to create the blueprint
+      bool bCreateResult = FBlueprintCreationHandlers::HandleBlueprintCreate(
+          this, RequestId, CreatePayload, RequestingSocket);
+      // If creation handler returned true, it sent its own response
+      if (bCreateResult) {
+        return true;
+      }
+      // Check again after creation attempt
+      bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+      bCreated = bExists;
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("exists"), bExists);
+    Resp->SetBoolField(TEXT("created"), bCreated);
+    Resp->SetStringField(TEXT("blueprintPath"), bExists ? CheckPath : Path);
+    SendAutomationResponse(
+        RequestingSocket, RequestId, true,
+        bCreated ? TEXT("Blueprint created")
+                 : (bExists ? TEXT("Blueprint exists")
+                            : TEXT("Blueprint not found")),
+        Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_ensure_exists requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_probe_handle: Lightweight check for blueprint existence without loading
+  if (ActionMatchesPattern(TEXT("blueprint_probe_handle")) ||
+      ActionMatchesPattern(TEXT("probe_handle")) ||
+      AlphaNumLower.Contains(TEXT("blueprintprobehandle")) ||
+      AlphaNumLower.Contains(TEXT("probehandle"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_probe_handle handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_probe_handle requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    // Normalize path
+    FString CheckPath = Path;
+    if (!CheckPath.StartsWith(TEXT("/Game")) &&
+        !CheckPath.StartsWith(TEXT("/Engine")) &&
+        !CheckPath.StartsWith(TEXT("/Script"))) {
+      if (CheckPath.StartsWith(TEXT("/"))) {
+        CheckPath = TEXT("/Game") + CheckPath;
+      } else {
+        CheckPath = TEXT("/Game/") + CheckPath;
+      }
+    }
+    if (CheckPath.EndsWith(TEXT(".uasset"))) {
+      CheckPath = CheckPath.LeftChop(7);
+    }
+
+    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    FString AssetClass;
+
+    if (bExists) {
+      // Try to get asset class without fully loading - use FindAssetData
+      IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(CheckPath));
+#else
+      // UE 5.0: GetAssetByObjectPath takes FName
+      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*CheckPath));
+#endif
+      if (AssetData.IsValid()) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
+#else
+        // UE 5.0: AssetClass is FName
+        AssetClass = AssetData.AssetClass.ToString();
+#endif
+      }
+    }
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("exists"), bExists);
+    Resp->SetStringField(TEXT("path"), bExists ? CheckPath : Path);
+    if (!AssetClass.IsEmpty()) {
+      Resp->SetStringField(TEXT("assetClass"), AssetClass);
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           bExists ? TEXT("Blueprint handle found")
+                                   : TEXT("Blueprint not found"),
+                           Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_probe_handle requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // blueprint_set_metadata: Set metadata on a blueprint asset
+  if (ActionMatchesPattern(TEXT("blueprint_set_metadata")) ||
+      ActionMatchesPattern(TEXT("set_metadata")) ||
+      AlphaNumLower.Contains(TEXT("blueprintsetmetadata")) ||
+      AlphaNumLower.Contains(TEXT("setmetadata"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_set_metadata handler: RequestId=%s"),
+           *RequestId);
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_set_metadata requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    const TSharedPtr<FJsonObject>* MetadataObj = nullptr;
+    if (!LocalPayload->TryGetObjectField(TEXT("metadata"), MetadataObj) ||
+        !MetadataObj || !(*MetadataObj).IsValid()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("metadata object required"), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    FString Normalized;
+    FString LoadErr;
+    UBlueprint* BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    if (!BP) {
+      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      Err->SetStringField(TEXT("error"), LoadErr);
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load blueprint"), Err,
+                             TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
+
+    // Set metadata on the blueprint package or asset
+    TArray<FString> MetadataSet;
+    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair :
+         (*MetadataObj)->Values) {
+      if (!Pair.Value.IsValid()) {
+        continue;
+      }
+      const FName MetaKey = FMcpAutomationBridge_ResolveMetadataKey(Pair.Key);
+      FString MetaValue;
+      if (Pair.Value->Type == EJson::String) {
+        MetaValue = Pair.Value->AsString();
+      } else if (Pair.Value->Type == EJson::Boolean) {
+        MetaValue = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+      } else if (Pair.Value->Type == EJson::Number) {
+        MetaValue = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+      } else {
+        continue;
+      }
+
+      // Set metadata on the blueprint class
+      if (BP->GeneratedClass) {
+        BP->GeneratedClass->SetMetaData(MetaKey, *MetaValue);
+      }
+      // Note: UBlueprint itself doesn't have SetMetaData in UE 5.7+
+      // Metadata is stored on the GeneratedClass
+      MetadataSet.Add(Pair.Key);
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
+    const bool bSaved = SaveLoadedAssetThrottled(BP);
+
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
+    TArray<TSharedPtr<FJsonValue>> MetaArray;
+    for (const FString& Key : MetadataSet) {
+      MetaArray.Add(MakeShared<FJsonValueString>(Key));
+    }
+    Resp->SetArrayField(TEXT("metadataSet"), MetaArray);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Metadata set"), Resp, FString());
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_set_metadata requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
   // Handle SCS (Simple Construction Script) operations - must be called before
   // the final fallback
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
@@ -5742,7 +6046,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
     return true;
   }
 
-  return false; // Let the main handler deal with unknown actions
+  // Unknown blueprint action - send explicit error instead of returning false
+  // to prevent client timeouts waiting for a response
+  SendAutomationError(
+      RequestingSocket, RequestId,
+      FString::Printf(TEXT("Unknown blueprint action: %s"), *CleanAction),
+      TEXT("UNKNOWN_ACTION"));
+  return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("SCS operations require editor build"), nullptr,

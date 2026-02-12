@@ -42,6 +42,13 @@
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
+// PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.7+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION <= 6
+#include "Engine/PostProcessVolume.h"
+#define MCP_HAS_POSTPROCESS_VOLUME 1
+#else
+#define MCP_HAS_POSTPROCESS_VOLUME 0
+#endif
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpVolumeHandlers, Log, All);
@@ -705,6 +712,123 @@ static bool HandleCreateReverbVolume(
     return true;
 }
 
+#if MCP_HAS_POSTPROCESS_VOLUME
+static bool HandleCreatePostProcessVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PostProcessVolume"));
+    FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f));
+    float Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
+    float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
+    float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
+    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    APostProcessVolume* Volume = SpawnVolumeActor<APostProcessVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn PostProcessVolume"), nullptr);
+        return true;
+    }
+
+    // Configure post process settings
+    Volume->Priority = Priority;
+    Volume->BlendRadius = BlendRadius;
+    Volume->BlendWeight = BlendWeight;
+    Volume->bEnabled = bEnabled;
+    Volume->bUnbound = bUnbound;
+
+    // Parse post process settings if provided
+    if (Payload->HasTypedField<EJson::Object>(TEXT("postProcessSettings")))
+    {
+        TSharedPtr<FJsonObject> SettingsJson = Payload->GetObjectField(TEXT("postProcessSettings"));
+        
+        // Bloom
+        if (SettingsJson->HasTypedField<EJson::Boolean>(TEXT("bloomEnabled")))
+        {
+            Volume->Settings.bOverride_BloomIntensity = true;
+            Volume->Settings.BloomIntensity = SettingsJson->GetBoolField(TEXT("bloomEnabled")) ? 1.0f : 0.0f;
+        }
+        
+        // Exposure
+        if (SettingsJson->HasTypedField<EJson::Number>(TEXT("exposureBias")))
+        {
+            Volume->Settings.bOverride_AutoExposureBias = true;
+            Volume->Settings.AutoExposureBias = SettingsJson->GetNumberField(TEXT("exposureBias"));
+        }
+        
+        // Vignette
+        if (SettingsJson->HasTypedField<EJson::Number>(TEXT("vignetteIntensity")))
+        {
+            Volume->Settings.bOverride_VignetteIntensity = true;
+            Volume->Settings.VignetteIntensity = SettingsJson->GetNumberField(TEXT("vignetteIntensity"));
+        }
+        
+        // Saturation
+        if (SettingsJson->HasTypedField<EJson::Number>(TEXT("saturation")))
+        {
+            Volume->Settings.bOverride_ColorSaturation = true;
+            FVector4 Saturation = Volume->Settings.ColorSaturation;
+            Saturation.X = SettingsJson->GetNumberField(TEXT("saturation"));
+            Saturation.Y = SettingsJson->GetNumberField(TEXT("saturation"));
+            Saturation.Z = SettingsJson->GetNumberField(TEXT("saturation"));
+            Volume->Settings.ColorSaturation = Saturation;
+        }
+        
+        // Contrast
+        if (SettingsJson->HasTypedField<EJson::Number>(TEXT("contrast")))
+        {
+            Volume->Settings.bOverride_ColorContrast = true;
+            FVector4 Contrast = Volume->Settings.ColorContrast;
+            Contrast.X = SettingsJson->GetNumberField(TEXT("contrast"));
+            Contrast.Y = SettingsJson->GetNumberField(TEXT("contrast"));
+            Contrast.Z = SettingsJson->GetNumberField(TEXT("contrast"));
+            Volume->Settings.ColorContrast = Contrast;
+        }
+        
+        // Gamma
+        if (SettingsJson->HasTypedField<EJson::Number>(TEXT("gamma")))
+        {
+            Volume->Settings.bOverride_ColorGamma = true;
+            FVector4 Gamma = Volume->Settings.ColorGamma;
+            Gamma.X = SettingsJson->GetNumberField(TEXT("gamma"));
+            Gamma.Y = SettingsJson->GetNumberField(TEXT("gamma"));
+            Gamma.Z = SettingsJson->GetNumberField(TEXT("gamma"));
+            Volume->Settings.ColorGamma = Gamma;
+        }
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
+    ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    ResponseJson->SetNumberField(TEXT("blendRadius"), BlendRadius);
+    ResponseJson->SetNumberField(TEXT("blendWeight"), BlendWeight);
+    ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
+    ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
+    return true;
+}
+#endif // MCP_HAS_POSTPROCESS_VOLUME
+
 static bool HandleCreateCullDistanceVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -1280,6 +1404,60 @@ static bool HandleGetVolumesInfo(
     return true;
 }
 
+// ============================================================================
+// Volume Removal Handler (1 action)
+// ============================================================================
+
+static bool HandleRemoveVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+
+    if (VolumeName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("volumeName is required for remove_volume"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    // Find the volume by name
+    AActor* VolumeActor = FindVolumeByName(World, VolumeName);
+    if (!VolumeActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Store info before destroying
+    FString VolumeClass = VolumeActor->GetClass()->GetName();
+    FString VolumeLabel = VolumeActor->GetActorLabel();
+
+    // Destroy the volume actor
+    World->DestroyActor(VolumeActor, true);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
+    ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -1344,6 +1522,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     }
 
     // Rendering Volumes
+#if MCP_HAS_POSTPROCESS_VOLUME
+    if (SubAction == TEXT("create_post_process_volume"))
+    {
+        return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
+    }
+#else
+    // PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.0 and 5.7+)
+    if (SubAction == TEXT("create_post_process_volume"))
+    {
+        SendAutomationResponse(Socket, RequestId, false,
+            TEXT("PostProcessVolume is only available in UE 5.1-5.6"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+#endif
     if (SubAction == TEXT("create_cull_distance_volume"))
     {
         return HandleCreateCullDistanceVolume(this, RequestId, Payload, Socket);
@@ -1379,6 +1571,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("set_volume_properties"))
     {
         return HandleSetVolumeProperties(this, RequestId, Payload, Socket);
+    }
+
+    // Volume Removal
+    if (SubAction == TEXT("remove_volume"))
+    {
+        return HandleRemoveVolume(this, RequestId, Payload, Socket);
     }
 
     // Utility

@@ -587,9 +587,36 @@ void FMcpConnectionManager::HandleMessage(
       return;
     }
 
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("Accepted automation_request action=%s requestId=%s"),
-           *Action, *RequestId);
+    // Skip logging for console_command - Unreal already logs the command
+    const bool bSkipLogging = Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
+
+    // Log incoming request: action + filtered payload (exclude type/requestId)
+    if (!bSkipLogging) {
+      FString PayloadPreview;
+      if (Payload.IsValid()) {
+        TArray<FString> Parts;
+        for (auto& Pair : Payload->Values) {
+          if (Pair.Key != TEXT("type") && Pair.Key != TEXT("requestId")) {
+            FString Val;
+            if (Pair.Value->Type == EJson::String) {
+              Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(50));
+            } else if (Pair.Value->Type == EJson::Boolean) {
+              Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+            } else if (Pair.Value->Type == EJson::Number) {
+              Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+            } else {
+              Val = TEXT("...");
+            }
+            Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
+          }
+        }
+        PayloadPreview = Parts.Num() > 0 ? FString::Join(Parts, TEXT(" ")) : TEXT("{}");
+      }
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("Request: %s %s"),
+             *Action,
+             *PayloadPreview.Left(200));
+    }
 
     // Map request to socket for response routing
     {
@@ -766,11 +793,46 @@ void FMcpConnectionManager::SendAutomationResponse(
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Response, Writer);
 
-  // Log the payload size to help debug large response failures
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("Sending automation_response for RequestId=%s. Payload Size: %d "
-              "chars"),
-         *RequestId, Serialized.Len());
+  // Get action from telemetry for better logging context
+  FString ActionName = TEXT("unknown");
+  if (FAutomationRequestTelemetry* Entry = ActiveRequestTelemetry.Find(RequestId)) {
+    ActionName = Entry->Action;
+  }
+
+  // Skip logging for console_command - Unreal already logs the command
+  const bool bSkipLogging = ActionName.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
+
+  // Log result with actual values for verification
+  if (!bSkipLogging) {
+    FString ResultPreview;
+    if (Result.IsValid() && Result->Values.Num() > 0) {
+      TArray<FString> Parts;
+      for (auto& Pair : Result->Values) {
+        FString Val;
+        if (Pair.Value->Type == EJson::String) {
+          Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(40));
+        } else if (Pair.Value->Type == EJson::Boolean) {
+          Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
+        } else if (Pair.Value->Type == EJson::Number) {
+          Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
+        } else if (Pair.Value->Type == EJson::Array) {
+          Val = FString::Printf(TEXT("[%d]"), Pair.Value->AsArray().Num());
+        } else if (Pair.Value->Type == EJson::Object) {
+          Val = TEXT("{...}");
+        } else {
+          Val = TEXT("?");
+        }
+        Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
+      }
+      ResultPreview = FString::Printf(TEXT(" (%s)"), *FString::Join(Parts, TEXT(" ")));
+    }
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("Response: %s %s%s%s"),
+           *ActionName,
+           bSuccess ? TEXT("OK") : TEXT("FAILED"),
+           !Message.IsEmpty() ? *FString::Printf(TEXT(" \"%s\""), *Message.Left(80)) : TEXT(""),
+           *ResultPreview);
+  }
 
   RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
 
@@ -844,6 +906,58 @@ void FMcpConnectionManager::SendAutomationResponse(
   {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Remove(RequestId);
+  }
+}
+
+void FMcpConnectionManager::SendProgressUpdate(
+    const FString& RequestId, float Percent, const FString& Message, bool bStillWorking) {
+  TSharedRef<FJsonObject> Update = MakeShared<FJsonObject>();
+  Update->SetStringField(TEXT("type"), TEXT("progress_update"));
+  Update->SetStringField(TEXT("requestId"), RequestId);
+  
+  if (Percent >= 0.0f) {
+    Update->SetNumberField(TEXT("percent"), Percent);
+  }
+  
+  if (!Message.IsEmpty()) {
+    Update->SetStringField(TEXT("message"), Message);
+  }
+  
+  Update->SetBoolField(TEXT("stillWorking"), bStillWorking);
+  
+  // Add timestamp in ISO format
+  const FDateTime Now = FDateTime::UtcNow();
+  const FString Timestamp = FString::Printf(TEXT("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ"),
+    Now.GetYear(), Now.GetMonth(), Now.GetDay(),
+    Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
+    Now.GetMillisecond());
+  Update->SetStringField(TEXT("timestamp"), Timestamp);
+  
+  FString Serialized;
+  const TSharedRef<TJsonWriter<>> Writer =
+      TJsonWriterFactory<>::Create(&Serialized);
+  FJsonSerializer::Serialize(Update, Writer);
+  
+  // Find the socket for this request and send the progress update
+  TSharedPtr<FMcpBridgeWebSocket> TargetSocket;
+  {
+    FScopeLock Lock(&PendingRequestsMutex);
+    if (TSharedPtr<FMcpBridgeWebSocket>* Found = PendingRequestsToSockets.Find(RequestId)) {
+      TargetSocket = *Found;
+    }
+  }
+  
+  if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
+    if (!TargetSocket->Send(Serialized)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("Failed to send progress update for RequestId=%s"),
+             *RequestId);
+    } else {
+      // Verbose logging only for progress updates to avoid flooding logs
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("Progress update for %s: %.1f%% %s"),
+             *RequestId, Percent, *Message.Left(40));
+    }
   }
 }
 

@@ -24,7 +24,7 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     bRequireCapabilityToken = false;
     bAllowNonLoopback = false; // Security: default to loopback-only binding
     MaxMessagesPerMinute = 600;
-    MaxAutomationRequestsPerMinute = 120;
+    MaxAutomationRequestsPerMinute = 600;
     bEnableTls = false;
     TlsCertificatePath = TEXT("");
     TlsPrivateKeyPath = TEXT("");

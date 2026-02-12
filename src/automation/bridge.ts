@@ -701,7 +701,8 @@ export class AutomationBridge extends EventEmitter {
         payload: Record<string, unknown>,
         options: { timeoutMs?: number }
     ): Promise<T> {
-        const timeoutMs = options.timeoutMs ?? 60000; // Increased default timeout to 60s
+        // Default timeout reduced to 30s - timeout extensions via progress updates keep long operations alive
+        const timeoutMs = options.timeoutMs ?? 30000;
 
         // Check for coalescing
         const coalesceKey = this.requestTracker.createCoalesceKey(action, payload);

@@ -15,8 +15,33 @@ interface AutomationResponse {
   [key: string]: unknown;
 }
 
+/**
+ * Normalize level arguments to support both camelCase and snake_case
+ */
+function normalizeLevelArgs(args: LevelArgs): LevelArgs {
+  const raw = args as Record<string, unknown>;
+  return {
+    ...args,
+    // Map snake_case to camelCase
+    levelPath: (raw.level_path as string | undefined) ?? args.levelPath,
+    levelName: (raw.level_name as string | undefined) ?? args.levelName,
+    savePath: (raw.save_path as string | undefined) ?? args.savePath,
+    destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath,
+    subLevelPath: (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
+    parentLevel: (raw.parent_level as string | undefined) ?? args.parentLevel,
+    parentPath: (raw.parent_path as string | undefined) ?? args.parentPath,
+    streamingMethod: (raw.streaming_method as 'Blueprint' | 'AlwaysLoaded' | undefined) ?? args.streamingMethod,
+    sourcePath: (raw.source_path as string | undefined) ?? args.sourcePath,
+    newName: (raw.new_name as string | undefined) ?? (args as Record<string, unknown>).newName as string | undefined,
+    levelPaths: (raw.level_paths as string[] | undefined) ?? args.levelPaths,
+    packagePath: (raw.package_path as string | undefined) ?? args.packagePath,
+    exportPath: (raw.export_path as string | undefined) ?? args.exportPath,
+  };
+}
+
 export async function handleLevelTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
-  const argsTyped = args as LevelArgs;
+  // Normalize args to support both camelCase and snake_case
+  const argsTyped = normalizeLevelArgs(args as LevelArgs);
   
   switch (action) {
     case 'load':
@@ -25,7 +50,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const res = await tools.levelTools.loadLevel({ levelPath, streaming: !!argsTyped.streaming });
       return cleanObject(res) as Record<string, unknown>;
     }
-    case 'save': {
+    case 'save':
+    case 'save_level': {
       const targetPath = argsTyped.levelPath || argsTyped.savePath;
       if (targetPath) {
         const res = await tools.levelTools.saveLevelAs({ targetPath });
@@ -157,12 +183,77 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const res = await tools.levelTools.getLevelSummary(argsTyped.levelPath);
       return cleanObject(res) as Record<string, unknown>;
     }
-    case 'delete': {
+    case 'delete':
+    case 'delete_level': {
       const levelPaths = Array.isArray(argsTyped.levelPaths) 
         ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string') 
         : (argsTyped.levelPath ? [argsTyped.levelPath] : []);
       const res = await tools.levelTools.deleteLevels({ levelPaths });
       return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'rename_level': {
+      const sourcePath = argsTyped.levelPath || argsTyped.sourcePath;
+      if (!sourcePath) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'levelPath or sourcePath is required for rename_level',
+          action
+        });
+      }
+      if (!argsTyped.newName) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'newName is required for rename_level',
+          action
+        });
+      }
+      // Calculate destination path from source path and new name
+      const lastSlash = sourcePath.lastIndexOf('/');
+      const parentDir = lastSlash > 0 ? sourcePath.substring(0, lastSlash) : '/Game';
+      const destinationPath = `${parentDir}/${argsTyped.newName}`;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'rename',
+        levelPath: sourcePath,
+        destinationPath
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'duplicate_level': {
+      const sourcePath = argsTyped.sourcePath || argsTyped.levelPath;
+      if (!sourcePath) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'sourcePath or levelPath is required for duplicate_level',
+          action
+        });
+      }
+      if (!argsTyped.destinationPath) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'destinationPath is required for duplicate_level',
+          action
+        });
+      }
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'duplicate',
+        sourcePath,
+        destinationPath: argsTyped.destinationPath
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_current_level': {
+      const res = await tools.levelTools.listLevels();
+      const resTyped = res as { currentMap?: string; currentMapPath?: string };
+      return cleanObject({
+        success: true,
+        levelName: resTyped.currentMap,
+        levelPath: resTyped.currentMapPath,
+        ...(res as Record<string, unknown>)
+      }) as Record<string, unknown>;
     }
     case 'set_metadata': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');

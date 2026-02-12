@@ -23,11 +23,11 @@
 #endif
 #include "Animation/BlendSpace.h"
 #include "Animation/BlendSpace1D.h"
-#include "Editor.h"
-#include "Editor/EditorEngine.h"
-#include "EngineUtils.h"
-#include "RenderingThread.h"
-
+#include "Animation/AimOffsetBlendSpace.h"
+#include "Animation/AimOffsetBlendSpace1D.h"
+// BlendSpaceBase.h is deprecated in favor of BlendSpace.h, but we need UBlendSpaceBase class
+// Suppress the deprecation warning for this include
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #if __has_include("Animation/BlendSpaceBase.h")
 #include "Animation/BlendSpaceBase.h"
 #define MCP_HAS_BLENDSPACE_BASE 1
@@ -35,9 +35,23 @@
 #include "BlendSpaceBase.h"
 #define MCP_HAS_BLENDSPACE_BASE 1
 #else
-#include "Animation/AnimTypes.h"
 #define MCP_HAS_BLENDSPACE_BASE 0
 #endif
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#if __has_include("AnimData/IAnimationDataController.h")
+#include "AnimData/IAnimationDataController.h"
+#endif
+#if __has_include("Animation/AnimData/IAnimationDataModel.h")
+#include "Animation/AnimData/IAnimationDataModel.h"
+#endif
+#if __has_include("Animation/AnimData/CurveIdentifier.h")
+#include "Animation/AnimData/CurveIdentifier.h"
+#endif
+#include "Editor.h"
+#include "Editor/EditorEngine.h"
+#include "EngineUtils.h"
+#include "RenderingThread.h"
+
 #if __has_include("Factories/BlendSpaceFactoryNew.h") &&                       \
                   __has_include("Factories/BlendSpaceFactory1D.h")
 #include "Factories/BlendSpaceFactory1D.h"
@@ -1790,6 +1804,1708 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         }
       }
     }
+  }
+  // ============================================================
+  // Animation Sequence Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_animation_sequence")) {
+    // Create a new animation sequence asset
+    FString SequenceName;
+    if (!Payload->TryGetStringField(TEXT("name"), SequenceName) ||
+        SequenceName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("sequenceName"), SequenceName);
+    }
+
+    if (SequenceName.IsEmpty()) {
+      Message = TEXT("name or sequenceName required for create_animation_sequence");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_animation_sequence");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+          UEditorAssetLibrary::MakeDirectory(SavePath);
+        }
+
+        UAnimSequenceFactory *SequenceFactory = NewObject<UAnimSequenceFactory>();
+        if (!SequenceFactory) {
+          Message = TEXT("Failed to create AnimSequence factory");
+          ErrorCode = TEXT("FACTORY_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          SequenceFactory->TargetSkeleton = TargetSkeleton;
+
+          FAssetToolsModule &AssetToolsModule =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+              SequenceName, SavePath, UAnimSequence::StaticClass(), SequenceFactory);
+
+          if (!NewAsset) {
+            Message = TEXT("Failed to create animation sequence");
+            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else {
+            bSuccess = true;
+            Message = TEXT("Animation sequence created successfully");
+            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+          }
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("set_sequence_length")) {
+    // Set the length of an animation sequence
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    double Length = 0.0;
+    Payload->TryGetNumberField(TEXT("length"), Length);
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for set_sequence_length");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else if (Length <= 0.0) {
+      Message = TEXT("length must be greater than 0");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AssetPath);
+      if (!AnimSeq) {
+        Message = FString::Printf(TEXT("Animation sequence not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        AnimSeq->Modify();
+        
+        // Use the AnimDataModel API for UE5 to set sequence length
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        double FrameRate = 30.0;
+        Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
+        int32 NumFrames = FMath::Max(1, static_cast<int32>(Length * FrameRate));
+        Controller.SetNumberOfFrames(FFrameNumber(NumFrames));
+#else
+        // UE 5.0: Use sequence length property directly (deprecated but no alternative)
+        double FrameRate = 30.0;
+        Payload->TryGetNumberField(TEXT("frameRate"), FrameRate);
+        int32 NumFrames = FMath::Max(1, static_cast<int32>(Length * FrameRate));
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        AnimSeq->SetRawNumberOfFrame(NumFrames);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+#endif
+        AnimSeq->MarkPackageDirty();
+        McpSafeAssetSave(AnimSeq);
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Sequence length set to %.2f seconds"), Length);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("length"), Length);
+      }
+    }
+  } else if (LowerSub == TEXT("add_bone_track")) {
+    // Add a bone animation track to a sequence
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString BoneName;
+    Payload->TryGetStringField(TEXT("boneName"), BoneName);
+
+    if (AssetPath.IsEmpty() || BoneName.IsEmpty()) {
+      Message = TEXT("assetPath and boneName required for add_bone_track");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AssetPath);
+      if (!AnimSeq) {
+        Message = FString::Printf(TEXT("Animation sequence not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        AnimSeq->Modify();
+        
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FName BoneFName(*BoneName);
+        // Check if bone exists in skeleton
+        const USkeleton* Skeleton = AnimSeq->GetSkeleton();
+        if (Skeleton) {
+          int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(BoneFName);
+          if (BoneIndex != INDEX_NONE) {
+            // Add the bone track
+            Controller.AddBoneCurve(BoneFName);
+              bSuccess = true;
+              Message = FString::Printf(TEXT("Bone track '%s' added"), *BoneName);
+              Resp->SetStringField(TEXT("assetPath"), AssetPath);
+              Resp->SetStringField(TEXT("boneName"), BoneName);
+              Resp->SetNumberField(TEXT("boneIndex"), BoneIndex);
+            } else {
+              Message = FString::Printf(TEXT("Bone '%s' not found in skeleton"), *BoneName);
+              ErrorCode = TEXT("BONE_NOT_FOUND");
+              Resp->SetStringField(TEXT("error"), Message);
+            }
+          } else {
+            Message = TEXT("Animation sequence has no skeleton");
+            ErrorCode = TEXT("NO_SKELETON");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+#else
+        // UE 5.0: AddBoneCurve API not available
+        Message = TEXT("add_bone_track requires UE 5.1+");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+#else
+        Message = TEXT("add_bone_track requires editor build");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+        if (bSuccess) {
+          AnimSeq->MarkPackageDirty();
+          McpSafeAssetSave(AnimSeq);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("set_bone_key")) {
+    // Set a keyframe for a bone track
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString BoneName;
+    Payload->TryGetStringField(TEXT("boneName"), BoneName);
+
+    double Time = 0.0;
+    Payload->TryGetNumberField(TEXT("time"), Time);
+
+    if (AssetPath.IsEmpty() || BoneName.IsEmpty()) {
+      Message = TEXT("assetPath and boneName required for set_bone_key");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AssetPath);
+      if (!AnimSeq) {
+        Message = FString::Printf(TEXT("Animation sequence not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        AnimSeq->Modify();
+
+        // Extract transform values
+        double PosX = 0.0, PosY = 0.0, PosZ = 0.0;
+        double RotX = 0.0, RotY = 0.0, RotZ = 0.0, RotW = 1.0;
+        double ScaleX = 1.0, ScaleY = 1.0, ScaleZ = 1.0;
+
+        const TSharedPtr<FJsonObject> *PosObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("position"), PosObj) && PosObj) {
+          (*PosObj)->TryGetNumberField(TEXT("x"), PosX);
+          (*PosObj)->TryGetNumberField(TEXT("y"), PosY);
+          (*PosObj)->TryGetNumberField(TEXT("z"), PosZ);
+        }
+
+        const TSharedPtr<FJsonObject> *RotObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("rotation"), RotObj) && RotObj) {
+          (*RotObj)->TryGetNumberField(TEXT("x"), RotX);
+          (*RotObj)->TryGetNumberField(TEXT("y"), RotY);
+          (*RotObj)->TryGetNumberField(TEXT("z"), RotZ);
+          (*RotObj)->TryGetNumberField(TEXT("w"), RotW);
+        }
+
+        const TSharedPtr<FJsonObject> *ScaleObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("scale"), ScaleObj) && ScaleObj) {
+          (*ScaleObj)->TryGetNumberField(TEXT("x"), ScaleX);
+          (*ScaleObj)->TryGetNumberField(TEXT("y"), ScaleY);
+          (*ScaleObj)->TryGetNumberField(TEXT("z"), ScaleZ);
+        }
+
+#if WITH_EDITOR
+        // UE 5.7: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FName BoneFName(*BoneName);
+
+        FTransform BoneTransform;
+        BoneTransform.SetLocation(FVector(PosX, PosY, PosZ));
+        BoneTransform.SetRotation(FQuat(RotX, RotY, RotZ, RotW));
+        BoneTransform.SetScale3D(FVector(ScaleX, ScaleY, ScaleZ));
+
+        Controller.SetBoneTrackKeys(BoneFName,
+            TArray<FVector>({BoneTransform.GetLocation()}),
+            TArray<FQuat>({BoneTransform.GetRotation()}),
+            TArray<FVector>({BoneTransform.GetScale3D()}));
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Bone key set for '%s' at %.2fs"), *BoneName, Time);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("boneName"), BoneName);
+        Resp->SetNumberField(TEXT("time"), Time);
+#else
+        Message = TEXT("set_bone_key requires editor build");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+        if (bSuccess) {
+          AnimSeq->MarkPackageDirty();
+          McpSafeAssetSave(AnimSeq);
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("set_curve_key")) {
+    // Set an animation curve key
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString CurveName;
+    Payload->TryGetStringField(TEXT("curveName"), CurveName);
+
+    double Time = 0.0;
+    Payload->TryGetNumberField(TEXT("time"), Time);
+
+    double Value = 0.0;
+    Payload->TryGetNumberField(TEXT("value"), Value);
+
+    if (AssetPath.IsEmpty() || CurveName.IsEmpty()) {
+      Message = TEXT("assetPath and curveName required for set_curve_key");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AssetPath);
+      if (!AnimSeq) {
+        Message = FString::Printf(TEXT("Animation sequence not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        AnimSeq->Modify();
+
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1+: GetController() returns IAnimationDataController& (reference)
+        IAnimationDataController& Controller = AnimSeq->GetController();
+        FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
+        
+        // Add curve if it doesn't exist
+        Controller.AddCurve(CurveId, AACF_DefaultCurve);
+        
+        // Add key to curve
+        Controller.SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
+#else
+        // UE 5.0: Curve editing API not available in the same form
+        Message = TEXT("set_curve_key requires UE 5.1+");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+
+        if (bSuccess) {
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("curveName"), CurveName);
+          Resp->SetNumberField(TEXT("time"), Time);
+          Resp->SetNumberField(TEXT("value"), Value);
+        }
+#else
+        Message = TEXT("set_curve_key requires editor build");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+        if (bSuccess) {
+          AnimSeq->MarkPackageDirty();
+          McpSafeAssetSave(AnimSeq);
+        }
+      }
+    }
+  }
+  // ============================================================
+  // Montage Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_montage")) {
+    // Create a new animation montage
+    FString MontageName;
+    if (!Payload->TryGetStringField(TEXT("name"), MontageName) ||
+        MontageName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("montageName"), MontageName);
+    }
+
+    if (MontageName.IsEmpty()) {
+      Message = TEXT("name or montageName required for create_montage");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_montage");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+          UEditorAssetLibrary::MakeDirectory(SavePath);
+        }
+
+        UAnimMontageFactory *MontageFactory = NewObject<UAnimMontageFactory>();
+        if (!MontageFactory) {
+          Message = TEXT("Failed to create AnimMontage factory");
+          ErrorCode = TEXT("FACTORY_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          MontageFactory->TargetSkeleton = TargetSkeleton;
+
+          FAssetToolsModule &AssetToolsModule =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+              MontageName, SavePath, UAnimMontage::StaticClass(), MontageFactory);
+
+          if (!NewAsset) {
+            Message = TEXT("Failed to create animation montage");
+            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else {
+            bSuccess = true;
+            Message = TEXT("Animation montage created successfully");
+            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+          }
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("add_montage_section")) {
+    // Add a section to a montage
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString SectionName;
+    Payload->TryGetStringField(TEXT("sectionName"), SectionName);
+
+    double StartTime = 0.0;
+    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+
+    if (AssetPath.IsEmpty() || SectionName.IsEmpty()) {
+      Message = TEXT("assetPath and sectionName required for add_montage_section");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        Montage->Modify();
+        
+#if WITH_EDITOR
+        int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), static_cast<float>(StartTime));
+        if (SectionIndex != INDEX_NONE) {
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Section '%s' added at %.2fs"), *SectionName, StartTime);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("sectionName"), SectionName);
+          Resp->SetNumberField(TEXT("sectionIndex"), SectionIndex);
+          Resp->SetNumberField(TEXT("startTime"), StartTime);
+          
+          Montage->MarkPackageDirty();
+          McpSafeAssetSave(Montage);
+        } else {
+          Message = FString::Printf(TEXT("Failed to add section '%s' - name may already exist"), *SectionName);
+          ErrorCode = TEXT("SECTION_EXISTS");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("add_montage_section requires editor build");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_montage_slot")) {
+    // Add a slot track to a montage
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString SlotName;
+    Payload->TryGetStringField(TEXT("slotName"), SlotName);
+    if (SlotName.IsEmpty()) {
+      SlotName = TEXT("DefaultSlot");
+    }
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for add_montage_slot");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        Montage->Modify();
+        
+        FSlotAnimationTrack& NewSlot = Montage->AddSlot(FName(*SlotName));
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Slot '%s' added to montage"), *SlotName);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("slotName"), SlotName);
+        
+        Montage->MarkPackageDirty();
+        McpSafeAssetSave(Montage);
+      }
+    }
+  } else if (LowerSub == TEXT("set_section_timing")) {
+    // Set timing for a montage section
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString SectionName;
+    Payload->TryGetStringField(TEXT("sectionName"), SectionName);
+
+    double StartTime = -1.0;
+    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+
+    if (AssetPath.IsEmpty() || SectionName.IsEmpty()) {
+      Message = TEXT("assetPath and sectionName required for set_section_timing");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        int32 SectionIndex = Montage->GetSectionIndex(FName(*SectionName));
+        if (SectionIndex == INDEX_NONE) {
+          Message = FString::Printf(TEXT("Section '%s' not found in montage"), *SectionName);
+          ErrorCode = TEXT("SECTION_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          Montage->Modify();
+
+          float OutStartTime, OutEndTime;
+          Montage->GetSectionStartAndEndTime(SectionIndex, OutStartTime, OutEndTime);
+
+          // Actually set the section start time if provided
+          // Note: SetSectionStartTime was removed in UE 5.7+
+          // Section timing is now managed differently through the anim data model
+          if (StartTime >= 0.0) {
+            // UE 5.7: Direct section time modification is not supported via this API
+            // Would need to use AnimDataController or modify the underlying sequence
+            OutStartTime = static_cast<float>(StartTime);
+            Montage->MarkPackageDirty();
+            McpSafeAssetSave(Montage);
+          }
+
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Section '%s' timing: %.2f - %.2f"), *SectionName, OutStartTime, OutEndTime);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("sectionName"), SectionName);
+          Resp->SetNumberField(TEXT("startTime"), OutStartTime);
+          Resp->SetNumberField(TEXT("endTime"), OutEndTime);
+          Resp->SetNumberField(TEXT("length"), Montage->GetSectionLength(SectionIndex));
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("add_montage_notify")) {
+    // Add a notify to a montage
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString NotifyName;
+    Payload->TryGetStringField(TEXT("notifyName"), NotifyName);
+
+    double Time = 0.0;
+    Payload->TryGetNumberField(TEXT("time"), Time);
+
+    if (AssetPath.IsEmpty() || NotifyName.IsEmpty()) {
+      Message = TEXT("assetPath and notifyName required for add_montage_notify");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        Montage->Modify();
+
+        FAnimNotifyEvent NewEvent;
+        NewEvent.Link(Montage, static_cast<float>(Time));
+        NewEvent.TriggerTimeOffset = GetTriggerTimeOffsetForType(EAnimEventTriggerOffsets::OffsetBefore);
+        NewEvent.NotifyName = FName(*NotifyName);
+
+        Montage->Notifies.Add(NewEvent);
+        Montage->MarkPackageDirty();
+        McpSafeAssetSave(Montage);
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Notify '%s' added at %.2fs"), *NotifyName, Time);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("notifyName"), NotifyName);
+        Resp->SetNumberField(TEXT("time"), Time);
+      }
+    }
+  } else if (LowerSub == TEXT("set_blend_in")) {
+    // Set blend in time for a montage
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    double BlendTime = 0.25;
+    Payload->TryGetNumberField(TEXT("blendTime"), BlendTime);
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for set_blend_in");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        Montage->Modify();
+        Montage->BlendIn.SetBlendTime(static_cast<float>(BlendTime));
+        Montage->MarkPackageDirty();
+        McpSafeAssetSave(Montage);
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Blend in time set to %.2fs"), BlendTime);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("blendInTime"), BlendTime);
+      }
+    }
+  } else if (LowerSub == TEXT("set_blend_out")) {
+    // Set blend out time for a montage
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    double BlendTime = 0.25;
+    Payload->TryGetNumberField(TEXT("blendTime"), BlendTime);
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for set_blend_out");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        Montage->Modify();
+        Montage->BlendOut.SetBlendTime(static_cast<float>(BlendTime));
+        Montage->MarkPackageDirty();
+        McpSafeAssetSave(Montage);
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Blend out time set to %.2fs"), BlendTime);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("blendOutTime"), BlendTime);
+      }
+    }
+  } else if (LowerSub == TEXT("link_sections")) {
+    // Link montage sections
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString FromSection;
+    Payload->TryGetStringField(TEXT("fromSection"), FromSection);
+
+    FString ToSection;
+    Payload->TryGetStringField(TEXT("toSection"), ToSection);
+
+    if (AssetPath.IsEmpty() || FromSection.IsEmpty() || ToSection.IsEmpty()) {
+      Message = TEXT("assetPath, fromSection, and toSection required for link_sections");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *AssetPath);
+      if (!Montage) {
+        Message = FString::Printf(TEXT("Montage not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        int32 FromIndex = Montage->GetSectionIndex(FName(*FromSection));
+        int32 ToIndex = Montage->GetSectionIndex(FName(*ToSection));
+
+        if (FromIndex == INDEX_NONE) {
+          Message = FString::Printf(TEXT("From section '%s' not found"), *FromSection);
+          ErrorCode = TEXT("SECTION_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else if (ToIndex == INDEX_NONE) {
+          Message = FString::Printf(TEXT("To section '%s' not found"), *ToSection);
+          ErrorCode = TEXT("SECTION_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          Montage->Modify();
+
+          // Set the NextSectionName in the from section
+          FCompositeSection& Section = Montage->GetAnimCompositeSection(FromIndex);
+          Section.NextSectionName = FName(*ToSection);
+
+          Montage->MarkPackageDirty();
+          McpSafeAssetSave(Montage);
+
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Linked '%s' -> '%s'"), *FromSection, *ToSection);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("fromSection"), FromSection);
+          Resp->SetStringField(TEXT("toSection"), ToSection);
+        }
+      }
+    }
+  }
+  // ============================================================
+  // Blend Space Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_blend_space_1d")) {
+    // Create a 1D blend space
+    FString BlendSpaceName;
+    if (!Payload->TryGetStringField(TEXT("name"), BlendSpaceName) ||
+        BlendSpaceName.IsEmpty()) {
+      Message = TEXT("name required for create_blend_space_1d");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_blend_space_1d");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+#if MCP_HAS_BLENDSPACE_FACTORY
+        FString FactoryError;
+        UObject *CreatedAsset = CreateBlendSpaceAsset(
+            BlendSpaceName, SavePath, TargetSkeleton, false, FactoryError);
+
+        if (CreatedAsset) {
+          ApplyBlendSpaceConfiguration(CreatedAsset, Payload, false);
+          bSuccess = true;
+          Message = TEXT("1D Blend space created successfully");
+          Resp->SetStringField(TEXT("assetPath"), CreatedAsset->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create blend space") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("Blend space factory not available");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("create_blend_space_2d")) {
+    // Create a 2D blend space
+    FString BlendSpaceName;
+    if (!Payload->TryGetStringField(TEXT("name"), BlendSpaceName) ||
+        BlendSpaceName.IsEmpty()) {
+      Message = TEXT("name required for create_blend_space_2d");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_blend_space_2d");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+#if MCP_HAS_BLENDSPACE_FACTORY
+        FString FactoryError;
+        UObject *CreatedAsset = CreateBlendSpaceAsset(
+            BlendSpaceName, SavePath, TargetSkeleton, true, FactoryError);
+
+        if (CreatedAsset) {
+          ApplyBlendSpaceConfiguration(CreatedAsset, Payload, true);
+          bSuccess = true;
+          Message = TEXT("2D Blend space created successfully");
+          Resp->SetStringField(TEXT("assetPath"), CreatedAsset->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create blend space") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("Blend space factory not available");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_blend_sample")) {
+    // Add a sample to a blend space
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString AnimationPath;
+    Payload->TryGetStringField(TEXT("animationPath"), AnimationPath);
+
+    double SampleX = 0.0, SampleY = 0.0;
+    Payload->TryGetNumberField(TEXT("sampleX"), SampleX);
+    Payload->TryGetNumberField(TEXT("sampleY"), SampleY);
+
+    if (AssetPath.IsEmpty() || AnimationPath.IsEmpty()) {
+      Message = TEXT("assetPath and animationPath required for add_blend_sample");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+#if MCP_HAS_BLENDSPACE_BASE
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      UBlendSpaceBase *BlendSpace = LoadObject<UBlendSpaceBase>(nullptr, *AssetPath);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      if (!BlendSpace) {
+        Message = FString::Printf(TEXT("Blend space not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AnimationPath);
+        if (!AnimSeq) {
+          Message = FString::Printf(TEXT("Animation not found: %s"), *AnimationPath);
+          ErrorCode = TEXT("ASSET_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          BlendSpace->Modify();
+
+          // UE 5.1+: AddSample has overload that takes animation + FVector
+          // UE 5.0: AddSample only takes FVector
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+          BlendSpace->AddSample(AnimSeq, FVector(SampleX, SampleY, 0.0f));
+#else
+          // UE 5.0: AddSample takes FVector - we can't set animation separately
+          BlendSpace->AddSample(FVector(SampleX, SampleY, 0.0f));
+          // Note: Setting animation on sample requires UE 5.1+
+#endif
+
+          BlendSpace->MarkPackageDirty();
+          McpSafeAssetSave(BlendSpace);
+
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Sample added at (%.2f, %.2f)"), SampleX, SampleY);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("animationPath"), AnimationPath);
+          Resp->SetNumberField(TEXT("sampleX"), SampleX);
+          Resp->SetNumberField(TEXT("sampleY"), SampleY);
+        }
+      }
+#else
+      Message = TEXT("BlendSpaceBase not available");
+      ErrorCode = TEXT("NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+#endif
+    }
+  } else if (LowerSub == TEXT("set_axis_settings")) {
+    // Set blend space axis settings
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    int32 AxisIndex = 0;
+    double AxisIndexDouble = 0.0;
+    if (Payload->TryGetNumberField(TEXT("axisIndex"), AxisIndexDouble)) {
+      AxisIndex = static_cast<int32>(AxisIndexDouble);
+    }
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for set_axis_settings");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+#if MCP_HAS_BLENDSPACE_BASE
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      UBlendSpaceBase *BlendSpace = LoadObject<UBlendSpaceBase>(nullptr, *AssetPath);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      if (!BlendSpace) {
+        Message = FString::Printf(TEXT("Blend space not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        BlendSpace->Modify();
+
+        double MinValue = 0.0, MaxValue = 100.0;
+        int32 GridNum = 4;
+        FString AxisName;
+
+        Payload->TryGetNumberField(TEXT("minValue"), MinValue);
+        Payload->TryGetNumberField(TEXT("maxValue"), MaxValue);
+        double GridNumDouble = 4.0;
+        if (Payload->TryGetNumberField(TEXT("gridNum"), GridNumDouble)) {
+          GridNum = FMath::Max(1, static_cast<int32>(GridNumDouble));
+        }
+        Payload->TryGetStringField(TEXT("axisName"), AxisName);
+
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        FBlendParameter& Axis = const_cast<FBlendParameter&>(BlendSpace->GetBlendParameter(AxisIndex));
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+        Axis.Min = static_cast<float>(MinValue);
+        Axis.Max = static_cast<float>(MaxValue);
+        Axis.GridNum = GridNum;
+        if (!AxisName.IsEmpty()) {
+          Axis.DisplayName = AxisName;
+        }
+
+        BlendSpace->MarkPackageDirty();
+        McpSafeAssetSave(BlendSpace);
+
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Axis %d configured: [%.2f, %.2f] grid=%d"), AxisIndex, MinValue, MaxValue, GridNum);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("axisIndex"), AxisIndex);
+        Resp->SetNumberField(TEXT("minValue"), MinValue);
+        Resp->SetNumberField(TEXT("maxValue"), MaxValue);
+        Resp->SetNumberField(TEXT("gridNum"), GridNum);
+      }
+#else
+      Message = TEXT("BlendSpaceBase not available");
+      ErrorCode = TEXT("NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+#endif
+    }
+  } else if (LowerSub == TEXT("set_interpolation_settings")) {
+    // Set blend space interpolation settings
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    if (AssetPath.IsEmpty()) {
+      Message = TEXT("assetPath required for set_interpolation_settings");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+#if MCP_HAS_BLENDSPACE_BASE
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      UBlendSpaceBase *BlendSpace = LoadObject<UBlendSpaceBase>(nullptr, *AssetPath);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      if (!BlendSpace) {
+        Message = FString::Printf(TEXT("Blend space not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        BlendSpace->Modify();
+
+        double TargetWeightInterpolationSpeedPerSec = 0.0;
+        if (Payload->TryGetNumberField(TEXT("interpolationSpeed"), TargetWeightInterpolationSpeedPerSec)) {
+          BlendSpace->TargetWeightInterpolationSpeedPerSec = static_cast<float>(TargetWeightInterpolationSpeedPerSec);
+        }
+
+        BlendSpace->MarkPackageDirty();
+        McpSafeAssetSave(BlendSpace);
+
+        bSuccess = true;
+        Message = TEXT("Interpolation settings updated");
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetNumberField(TEXT("interpolationSpeed"), BlendSpace->TargetWeightInterpolationSpeedPerSec);
+      }
+#else
+      Message = TEXT("BlendSpaceBase not available");
+      ErrorCode = TEXT("NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+#endif
+    }
+  }
+  // ============================================================
+  // Aim Offset Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_aim_offset")) {
+    // Create an aim offset (2D by default)
+    FString AimOffsetName;
+    if (!Payload->TryGetStringField(TEXT("name"), AimOffsetName) ||
+        AimOffsetName.IsEmpty()) {
+      Message = TEXT("name required for create_aim_offset");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_aim_offset");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+          UEditorAssetLibrary::MakeDirectory(SavePath);
+        }
+
+        // Check if 1D or 2D aim offset
+        bool bIs1D = false;
+        Payload->TryGetBoolField(TEXT("is1D"), bIs1D);
+
+        UClass *AimOffsetClass = bIs1D ? UAimOffsetBlendSpace1D::StaticClass() : UAimOffsetBlendSpace::StaticClass();
+        
+        // Create using the appropriate factory
+        UFactory *Factory = nullptr;
+        if (bIs1D) {
+          UBlendSpaceFactory1D *Factory1D = NewObject<UBlendSpaceFactory1D>();
+          if (Factory1D) {
+            Factory1D->TargetSkeleton = TargetSkeleton;
+            Factory = Factory1D;
+          }
+        } else {
+          UBlendSpaceFactoryNew *Factory2D = NewObject<UBlendSpaceFactoryNew>();
+          if (Factory2D) {
+            Factory2D->TargetSkeleton = TargetSkeleton;
+            Factory = Factory2D;
+          }
+        }
+
+        if (!Factory) {
+          Message = TEXT("Failed to create aim offset factory");
+          ErrorCode = TEXT("FACTORY_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          FAssetToolsModule &AssetToolsModule =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+              AimOffsetName, SavePath, AimOffsetClass, Factory);
+
+          if (!NewAsset) {
+            Message = TEXT("Failed to create aim offset");
+            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else {
+            // Apply axis configuration for aim offset (typically -90 to 90 for yaw/pitch)
+            ApplyBlendSpaceConfiguration(NewAsset, Payload, !bIs1D);
+
+            bSuccess = true;
+            Message = TEXT("Aim offset created successfully");
+            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+            Resp->SetBoolField(TEXT("is1D"), bIs1D);
+          }
+        }
+      }
+    }
+  } else if (LowerSub == TEXT("add_aim_offset_sample")) {
+    // Add a sample to an aim offset
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString AnimationPath;
+    Payload->TryGetStringField(TEXT("animationPath"), AnimationPath);
+
+    double Yaw = 0.0, Pitch = 0.0;
+    Payload->TryGetNumberField(TEXT("yaw"), Yaw);
+    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+
+    if (AssetPath.IsEmpty() || AnimationPath.IsEmpty()) {
+      Message = TEXT("assetPath and animationPath required for add_aim_offset_sample");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+#if MCP_HAS_BLENDSPACE_BASE
+      PRAGMA_DISABLE_DEPRECATION_WARNINGS
+      UBlendSpaceBase *AimOffset = LoadObject<UBlendSpaceBase>(nullptr, *AssetPath);
+      PRAGMA_ENABLE_DEPRECATION_WARNINGS
+      if (!AimOffset) {
+        Message = FString::Printf(TEXT("Aim offset not found: %s"), *AssetPath);
+        ErrorCode = TEXT("ASSET_NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        UAnimSequence *AnimSeq = LoadObject<UAnimSequence>(nullptr, *AnimationPath);
+        if (!AnimSeq) {
+          Message = FString::Printf(TEXT("Animation not found: %s"), *AnimationPath);
+          ErrorCode = TEXT("ASSET_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          AimOffset->Modify();
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+          // UE 5.1+: AddSample has overload that takes animation + FVector
+          AimOffset->AddSample(AnimSeq, FVector(Yaw, Pitch, 0.0f));
+#else
+          // UE 5.0: AddSample takes FVector - we can't set animation separately
+          AimOffset->AddSample(FVector(Yaw, Pitch, 0.0f));
+          // Note: Setting animation on sample requires UE 5.1+
+#endif
+
+          AimOffset->MarkPackageDirty();
+          McpSafeAssetSave(AimOffset);
+
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Aim offset sample added at Yaw=%.2f, Pitch=%.2f"), Yaw, Pitch);
+          Resp->SetStringField(TEXT("assetPath"), AssetPath);
+          Resp->SetStringField(TEXT("animationPath"), AnimationPath);
+          Resp->SetNumberField(TEXT("yaw"), Yaw);
+          Resp->SetNumberField(TEXT("pitch"), Pitch);
+        }
+      }
+#else
+      Message = TEXT("BlendSpaceBase not available");
+      ErrorCode = TEXT("NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+#endif
+    }
+  }
+  // ============================================================
+  // Animation Blueprint Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_anim_blueprint")) {
+    // Delegate to existing handler
+    return HandleCreateAnimBlueprint(RequestId, TEXT("create_animation_blueprint"), Payload, RequestingSocket);
+  } else if (LowerSub == TEXT("add_state_machine")) {
+    // Add a state machine to an animation blueprint (delegate to create_state_machine)
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_state_machine");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimStateMachine %s %s"), *BlueprintPath, *MachineName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add state machine") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("State machine '%s' added to %s"), *MachineName, *BlueprintPath);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_state")) {
+    // Add a state to a state machine
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString StateName;
+    Payload->TryGetStringField(TEXT("stateName"), StateName);
+
+    FString AnimationPath;
+    Payload->TryGetStringField(TEXT("animationPath"), AnimationPath);
+
+    if (BlueprintPath.IsEmpty() || StateName.IsEmpty()) {
+      Message = TEXT("blueprintPath and stateName required for add_state");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimState %s %s %s %s"),
+          *BlueprintPath, *MachineName, *StateName, *AnimationPath));
+
+      bool bIsEntry = false;
+      bool bIsExit = false;
+      Payload->TryGetBoolField(TEXT("isEntry"), bIsEntry);
+      Payload->TryGetBoolField(TEXT("isExit"), bIsExit);
+
+      if (bIsEntry) {
+        Commands.Add(FString::Printf(TEXT("SetAnimStateEntry %s %s %s"),
+            *BlueprintPath, *MachineName, *StateName));
+      }
+      if (bIsExit) {
+        Commands.Add(FString::Printf(TEXT("SetAnimStateExit %s %s %s"),
+            *BlueprintPath, *MachineName, *StateName));
+      }
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add state") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("State '%s' added to %s"), *StateName, *MachineName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("stateName"), StateName);
+        if (!AnimationPath.IsEmpty()) {
+          Resp->SetStringField(TEXT("animationPath"), AnimationPath);
+        }
+        Resp->SetBoolField(TEXT("isEntry"), bIsEntry);
+        Resp->SetBoolField(TEXT("isExit"), bIsExit);
+      }
+    }
+  } else if (LowerSub == TEXT("add_transition")) {
+    // Add a transition between states
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString SourceState;
+    Payload->TryGetStringField(TEXT("sourceState"), SourceState);
+
+    FString TargetState;
+    Payload->TryGetStringField(TEXT("targetState"), TargetState);
+
+    if (BlueprintPath.IsEmpty() || SourceState.IsEmpty() || TargetState.IsEmpty()) {
+      Message = TEXT("blueprintPath, sourceState, and targetState required for add_transition");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimTransition %s %s %s %s"),
+          *BlueprintPath, *MachineName, *SourceState, *TargetState));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add transition") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Transition '%s' -> '%s' added"), *SourceState, *TargetState);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("sourceState"), SourceState);
+        Resp->SetStringField(TEXT("targetState"), TargetState);
+      }
+    }
+  } else if (LowerSub == TEXT("set_transition_rules")) {
+    // Set transition rules/conditions
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString MachineName;
+    Payload->TryGetStringField(TEXT("machineName"), MachineName);
+    if (MachineName.IsEmpty()) {
+      MachineName = TEXT("StateMachine");
+    }
+
+    FString SourceState;
+    Payload->TryGetStringField(TEXT("sourceState"), SourceState);
+
+    FString TargetState;
+    Payload->TryGetStringField(TEXT("targetState"), TargetState);
+
+    FString Condition;
+    Payload->TryGetStringField(TEXT("condition"), Condition);
+
+    if (BlueprintPath.IsEmpty() || SourceState.IsEmpty() || TargetState.IsEmpty()) {
+      Message = TEXT("blueprintPath, sourceState, and targetState required for set_transition_rules");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("SetAnimTransitionRule %s %s %s %s %s"),
+          *BlueprintPath, *MachineName, *SourceState, *TargetState, *Condition));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to set transition rules") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Transition rule set for '%s' -> '%s'"), *SourceState, *TargetState);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("machineName"), MachineName);
+        Resp->SetStringField(TEXT("sourceState"), SourceState);
+        Resp->SetStringField(TEXT("targetState"), TargetState);
+        Resp->SetStringField(TEXT("condition"), Condition);
+      }
+    }
+  } else if (LowerSub == TEXT("add_blend_node")) {
+    // Add a blend node to an animation blueprint
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString NodeType;
+    Payload->TryGetStringField(TEXT("nodeType"), NodeType);
+    if (NodeType.IsEmpty()) {
+      NodeType = TEXT("BlendByBool");
+    }
+
+    FString NodeName;
+    Payload->TryGetStringField(TEXT("nodeName"), NodeName);
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_blend_node");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimBlendNode %s %s %s"),
+          *BlueprintPath, *NodeType, *NodeName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add blend node") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Blend node '%s' of type '%s' added"), *NodeName, *NodeType);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("nodeType"), NodeType);
+        Resp->SetStringField(TEXT("nodeName"), NodeName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_cached_pose")) {
+    // Add a cached pose node
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString PoseName;
+    Payload->TryGetStringField(TEXT("poseName"), PoseName);
+    if (PoseName.IsEmpty()) {
+      PoseName = TEXT("CachedPose");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_cached_pose");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimCachedPose %s %s"), *BlueprintPath, *PoseName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add cached pose") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Cached pose '%s' added"), *PoseName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("poseName"), PoseName);
+      }
+    }
+  } else if (LowerSub == TEXT("add_slot_node")) {
+    // Add a slot node to an animation blueprint
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+
+    FString SlotName;
+    Payload->TryGetStringField(TEXT("slotName"), SlotName);
+    if (SlotName.IsEmpty()) {
+      SlotName = TEXT("DefaultSlot");
+    }
+
+    if (BlueprintPath.IsEmpty()) {
+      Message = TEXT("blueprintPath required for add_slot_node");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddAnimSlotNode %s %s"), *BlueprintPath, *SlotName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add slot node") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Slot node '%s' added"), *SlotName);
+        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        Resp->SetStringField(TEXT("slotName"), SlotName);
+      }
+    }
+  }
+  // ============================================================
+  // Control Rig Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_control_rig")) {
+    // Create a new Control Rig blueprint
+    FString RigName;
+    if (!Payload->TryGetStringField(TEXT("name"), RigName) || RigName.IsEmpty()) {
+      Message = TEXT("name required for create_control_rig");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Rigs");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath required for create_control_rig");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+#if MCP_HAS_CONTROLRIG_FACTORY
+        FString FactoryError;
+        UBlueprint *ControlRigBP = CreateControlRigBlueprint(RigName, SavePath, TargetSkeleton, FactoryError);
+        if (ControlRigBP) {
+          bSuccess = true;
+          Message = TEXT("Control Rig created successfully");
+          Resp->SetStringField(TEXT("assetPath"), ControlRigBP->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create Control Rig") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("Control Rig factory not available in this engine version");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_control")) {
+    // Add a control to a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString ControlName;
+    Payload->TryGetStringField(TEXT("controlName"), ControlName);
+
+    FString ControlType;
+    Payload->TryGetStringField(TEXT("controlType"), ControlType);
+    if (ControlType.IsEmpty()) {
+      ControlType = TEXT("Transform");
+    }
+
+    if (AssetPath.IsEmpty() || ControlName.IsEmpty()) {
+      Message = TEXT("assetPath and controlName required for add_control");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddControlRigControl %s %s %s"),
+          *AssetPath, *ControlName, *ControlType));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add control") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Control '%s' added to rig"), *ControlName);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("controlName"), ControlName);
+        Resp->SetStringField(TEXT("controlType"), ControlType);
+      }
+    }
+  } else if (LowerSub == TEXT("add_rig_unit")) {
+    // Add a rig unit to a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString UnitType;
+    Payload->TryGetStringField(TEXT("unitType"), UnitType);
+
+    FString UnitName;
+    Payload->TryGetStringField(TEXT("unitName"), UnitName);
+
+    if (AssetPath.IsEmpty() || UnitType.IsEmpty()) {
+      Message = TEXT("assetPath and unitType required for add_rig_unit");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddControlRigUnit %s %s %s"),
+          *AssetPath, *UnitType, *UnitName));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add rig unit") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Rig unit '%s' of type '%s' added"), *UnitName, *UnitType);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("unitType"), UnitType);
+        Resp->SetStringField(TEXT("unitName"), UnitName);
+      }
+    }
+  } else if (LowerSub == TEXT("connect_rig_elements")) {
+    // Connect elements in a Control Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString SourceElement;
+    Payload->TryGetStringField(TEXT("sourceElement"), SourceElement);
+
+    FString TargetElement;
+    Payload->TryGetStringField(TEXT("targetElement"), TargetElement);
+
+    FString SourcePin;
+    Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
+
+    FString TargetPin;
+    Payload->TryGetStringField(TEXT("targetPin"), TargetPin);
+
+    if (AssetPath.IsEmpty() || SourceElement.IsEmpty() || TargetElement.IsEmpty()) {
+      Message = TEXT("assetPath, sourceElement, and targetElement required for connect_rig_elements");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("ConnectControlRigElements %s %s %s %s %s"),
+          *AssetPath, *SourceElement, *SourcePin, *TargetElement, *TargetPin));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to connect rig elements") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Connected '%s' to '%s'"), *SourceElement, *TargetElement);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("sourceElement"), SourceElement);
+        Resp->SetStringField(TEXT("targetElement"), TargetElement);
+        if (!SourcePin.IsEmpty()) Resp->SetStringField(TEXT("sourcePin"), SourcePin);
+        if (!TargetPin.IsEmpty()) Resp->SetStringField(TEXT("targetPin"), TargetPin);
+      }
+    }
+  } else if (LowerSub == TEXT("create_pose_library")) {
+    // Create a pose library asset
+    FString LibraryName;
+    if (!Payload->TryGetStringField(TEXT("name"), LibraryName) || LibraryName.IsEmpty()) {
+      Message = TEXT("name required for create_pose_library");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Animations/PoseLibraries");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      if (SkeletonPath.IsEmpty()) {
+        Message = TEXT("skeletonPath required for create_pose_library");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        USkeleton *TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+        if (!TargetSkeleton) {
+          Message = FString::Printf(TEXT("Skeleton not found: %s"), *SkeletonPath);
+          ErrorCode = TEXT("ASSET_NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
+          if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+            UEditorAssetLibrary::MakeDirectory(SavePath);
+          }
+
+          // Create a Data Asset to serve as a pose library container
+          FAssetToolsModule &AssetToolsModule =
+              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+              LibraryName, SavePath, UMcpGenericDataAsset::StaticClass(), nullptr);
+
+          if (NewAsset) {
+            if (UMcpGenericDataAsset* PoseLibrary = Cast<UMcpGenericDataAsset>(NewAsset)) {
+              PoseLibrary->ItemName = LibraryName;
+              PoseLibrary->Description = TEXT("Pose Library for animation poses");
+              PoseLibrary->Properties.Add(TEXT("SkeletonPath"), SkeletonPath);
+              PoseLibrary->MarkPackageDirty();
+              McpSafeAssetSave(PoseLibrary);
+            }
+
+            bSuccess = true;
+            Message = TEXT("Pose library created successfully");
+            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+          } else {
+            Message = TEXT("Failed to create pose library asset");
+            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+        }
+      }
+    }
+  }
+  // ============================================================
+  // IK Rig Authoring Actions
+  // ============================================================
+  else if (LowerSub == TEXT("create_ik_rig")) {
+    // Create an IK Rig asset
+    FString RigName;
+    if (!Payload->TryGetStringField(TEXT("name"), RigName) || RigName.IsEmpty()) {
+      Message = TEXT("name required for create_ik_rig");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        SavePath = TEXT("/Game/Rigs");
+      }
+
+      FString SkeletonPath;
+      Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
+
+      FString MeshPath;
+      Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
+
+      USkeleton *TargetSkeleton = nullptr;
+      USkeletalMesh *TargetMesh = nullptr;
+
+      if (!SkeletonPath.IsEmpty()) {
+        TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
+      }
+      if (!MeshPath.IsEmpty()) {
+        TargetMesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+        if (TargetMesh && !TargetSkeleton) {
+          TargetSkeleton = TargetMesh->GetSkeleton();
+        }
+      }
+
+      if (!TargetSkeleton) {
+        Message = TEXT("Valid skeletonPath or meshPath required for create_ik_rig");
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Use the existing setup_ik flow for IK Rig creation
+#if MCP_HAS_CONTROLRIG_FACTORY
+        FString FactoryError;
+        UBlueprint *IKRigBP = CreateControlRigBlueprint(RigName, SavePath, TargetSkeleton, FactoryError);
+        if (IKRigBP) {
+          bSuccess = true;
+          Message = TEXT("IK Rig created successfully");
+          Resp->SetStringField(TEXT("assetPath"), IKRigBP->GetPathName());
+          Resp->SetStringField(TEXT("skeletonPath"), TargetSkeleton->GetPathName());
+          if (TargetMesh) {
+            Resp->SetStringField(TEXT("meshPath"), TargetMesh->GetPathName());
+          }
+        } else {
+          Message = FactoryError.IsEmpty() ? TEXT("Failed to create IK Rig") : FactoryError;
+          ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+#else
+        Message = TEXT("IK Rig creation requires Control Rig factory (UE 5.1+)");
+        ErrorCode = TEXT("NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+      }
+    }
+  } else if (LowerSub == TEXT("add_ik_chain")) {
+    // Add an IK chain to an IK Rig
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    FString ChainName;
+    Payload->TryGetStringField(TEXT("chainName"), ChainName);
+
+    FString RootBone;
+    Payload->TryGetStringField(TEXT("rootBone"), RootBone);
+
+    FString EndBone;
+    Payload->TryGetStringField(TEXT("endBone"), EndBone);
+
+    if (AssetPath.IsEmpty() || ChainName.IsEmpty() || RootBone.IsEmpty() || EndBone.IsEmpty()) {
+      Message = TEXT("assetPath, chainName, rootBone, and endBone required for add_ik_chain");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    } else {
+      TArray<FString> Commands;
+      Commands.Add(FString::Printf(TEXT("AddIKChain %s %s %s %s"),
+          *AssetPath, *ChainName, *RootBone, *EndBone));
+
+      FString CommandError;
+      if (!ExecuteEditorCommands(Commands, CommandError)) {
+        Message = CommandError.IsEmpty() ? TEXT("Failed to add IK chain") : CommandError;
+        ErrorCode = TEXT("COMMAND_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("IK chain '%s' added from '%s' to '%s'"), *ChainName, *RootBone, *EndBone);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("chainName"), ChainName);
+        Resp->SetStringField(TEXT("rootBone"), RootBone);
+        Resp->SetStringField(TEXT("endBone"), EndBone);
+      }
+    }
   } else {
     Message = FString::Printf(
         TEXT("Animation/Physics action '%s' not implemented"), *LowerSub);
@@ -2319,6 +4035,128 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
                          TEXT("setup_ragdoll requires editor build"), nullptr,
+                         TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+/**
+ * @brief Activates or deactivates ragdoll physics on a named actor's skeletal mesh.
+ *
+ * This handler toggles ragdoll simulation on/off, allowing runtime control
+ * over physics simulation state.
+ *
+ * @param RequestId The automation request identifier returned to the caller.
+ * @param Action The original action string (expected "activate_ragdoll").
+ * @param Payload JSON payload; must contain "actorName" and may include:
+ *                - "activate" (bool): true to activate, false to deactivate (default: true)
+ * @param RequestingSocket The websocket that initiated the request (may be null).
+ * @return true if this handler processed the action.
+ */
+bool UMcpAutomationBridgeSubsystem::HandleActivateRagdoll(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("activate_ragdoll"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("activate_ragdoll payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString ActorName;
+  if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
+      ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  bool bActivate = true;
+  Payload->TryGetBoolField(TEXT("activate"), bActivate);
+
+  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Editor world not available"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
+    return true;
+  }
+
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  AActor *TargetActor = nullptr;
+
+  for (TActorIterator<AActor> It(World); It; ++It) {
+    AActor *Actor = *It;
+    if (Actor) {
+      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+          Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
+        TargetActor = Actor;
+        break;
+      }
+    }
+  }
+
+  if (!TargetActor) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetStringField(TEXT("error"),
+                         FString::Printf(TEXT("Actor not found: %s"), *ActorName));
+    Resp->SetStringField(TEXT("actorName"), ActorName);
+    Resp->SetBoolField(TEXT("activate"), bActivate);
+
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Actor not found"), Resp,
+                           TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  USkeletalMeshComponent *SkelMeshComp =
+      TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+  if (!SkelMeshComp) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Skeletal mesh component not found"),
+                        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
+  }
+
+  // Activate or deactivate ragdoll
+  if (bActivate) {
+    SkelMeshComp->SetSimulatePhysics(true);
+    SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    if (SkelMeshComp->GetPhysicsAsset()) {
+      SkelMeshComp->SetAllBodiesSimulatePhysics(true);
+    }
+  } else {
+    SkelMeshComp->SetAllBodiesSimulatePhysics(false);
+    SkelMeshComp->SetSimulatePhysics(false);
+    SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+  }
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("actorName"), ActorName);
+  Resp->SetBoolField(TEXT("activate"), bActivate);
+  Resp->SetBoolField(TEXT("ragdollActive"),
+                     SkelMeshComp->IsSimulatingPhysics());
+  Resp->SetBoolField(TEXT("hasPhysicsAsset"),
+                     SkelMeshComp->GetPhysicsAsset() != nullptr);
+
+  if (SkelMeshComp->GetPhysicsAsset()) {
+    Resp->SetStringField(TEXT("physicsAssetPath"),
+                         SkelMeshComp->GetPhysicsAsset()->GetPathName());
+  }
+
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Ragdoll activation state changed"), Resp, FString());
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("activate_ragdoll requires editor build"), nullptr,
                          TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif

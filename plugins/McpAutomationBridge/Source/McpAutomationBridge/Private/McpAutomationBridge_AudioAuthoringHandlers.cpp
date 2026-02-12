@@ -174,11 +174,32 @@ namespace {
 #define GetBoolFieldAudioAuth GetJsonBoolField
 #define GetStringFieldAudioAuth GetJsonStringField
 
-// Helper to normalize asset path
+// Helper to normalize asset path with security validation
 static FString NormalizeAudioPath(const FString& Path)
 {
-    FString Normalized = Path;
-    Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
+    // SECURITY: First validate path for traversal attacks
+    FString Sanitized = SanitizeProjectRelativePath(Path);
+    if (Sanitized.IsEmpty() && !Path.IsEmpty())
+    {
+        // Path was rejected due to traversal or invalid characters
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, 
+            TEXT("NormalizeAudioPath: Rejected malicious path: %s"), *Path);
+        return FString();
+    }
+    
+    FString Normalized = Sanitized;
+    
+    // Only replace /Content at the start to avoid corrupting plugin paths
+    // Plugin paths like /MyPlugin/Content/Audio should NOT become /MyPlugin/Game/Audio
+    if (Normalized.StartsWith(TEXT("/Content/")))
+    {
+        Normalized = TEXT("/Game/") + Normalized.Mid(9);  // Skip "/Content/"
+    }
+    else if (Normalized == TEXT("/Content"))
+    {
+        Normalized = TEXT("/Game");
+    }
+    
     Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
     
     // Remove trailing slashes

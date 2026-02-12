@@ -58,6 +58,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       return true;
     }
 
+    if (!Blueprint->SimpleConstructionScript) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_BP"));
+      return true;
+    }
+
     USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(USphereComponent::StaticClass(), *ComponentName);
     if (Node) {
       USphereComponent* Template = Cast<USphereComponent>(Node->ComponentTemplate);
@@ -415,9 +420,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
 #if WITH_EDITOR
-    FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interactables") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { PackagePath = TEXT("/Game/") + PackagePath; }
-    FString PackageName = PackagePath / Name;
+    // Validate and sanitize the asset creation path
+    FString PackageName;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Folder, Name, PackageName, PathError)) {
+      SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
@@ -426,7 +436,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* DoorBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name, RF_Public | RF_Standalone, nullptr, GWarn));
+    FString SanitizedName = SanitizeAssetName(Name);
+    UBlueprint* DoorBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *SanitizedName, RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (DoorBP) {
       USimpleConstructionScript* SCS = DoorBP->SimpleConstructionScript;
@@ -601,9 +612,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     }
 
 #if WITH_EDITOR
-    FString PackagePath = Folder.IsEmpty() ? TEXT("/Game/Interactables") : Folder;
-    if (!PackagePath.StartsWith(TEXT("/"))) { PackagePath = TEXT("/Game/") + PackagePath; }
-    FString PackageName = PackagePath / Name;
+    // Validate and sanitize the asset creation path
+    FString PackageName;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Folder, Name, PackageName, PathError)) {
+      SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
@@ -612,7 +628,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* SwitchBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name, RF_Public | RF_Standalone, nullptr, GWarn));
+    FString SanitizedName = SanitizeAssetName(Name);
+    UBlueprint* SwitchBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *SanitizedName, RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (SwitchBP) {
       USimpleConstructionScript* SCS = SwitchBP->SimpleConstructionScript;
@@ -1282,5 +1299,394 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     return true;
   }
 
+  if (SubAction == TEXT("create_interaction_component")) {
+    return HandleCreateInteractionComponent(RequestId, Payload, RequestingSocket);
+  }
+
+  if (SubAction == TEXT("configure_interaction_trace")) {
+    return HandleConfigureInteractionTrace(RequestId, Payload, RequestingSocket);
+  }
+
+  if (SubAction == TEXT("configure_interaction_widget")) {
+    return HandleConfigureInteractionWidget(RequestId, Payload, RequestingSocket);
+  }
+
+  if (SubAction == TEXT("create_door_actor")) {
+    return HandleCreateDoorActor(RequestId, Payload, RequestingSocket);
+  }
+
+  if (SubAction == TEXT("create_switch_actor")) {
+    return HandleCreateSwitchActor(RequestId, Payload, RequestingSocket);
+  }
+
+  if (SubAction == TEXT("create_chest_actor")) {
+    return HandleCreateChestActor(RequestId, Payload, RequestingSocket);
+  }
+
   return false;
+}
+
+// Create Interaction Component handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleCreateInteractionComponent(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString ActorName;
+  if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
+      ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  AActor *Actor = nullptr;
+  for (TActorIterator<AActor> It(World); It; ++It) {
+    if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) {
+      Actor = *It;
+      break;
+    }
+  }
+
+  if (!Actor) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Actor not found"),
+                        TEXT("ACTOR_NOT_FOUND"));
+    return true;
+  }
+
+  // Create interaction component (using SceneComponent as base)
+  USceneComponent *InteractionComp = NewObject<USceneComponent>(Actor, FName(TEXT("InteractionComponent")));
+  if (!InteractionComp) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to create interaction component"),
+                        TEXT("CREATE_FAILED"));
+    return true;
+  }
+
+  InteractionComp->RegisterComponent();
+  Actor->AddInstanceComponent(InteractionComp);
+
+  double InteractionDistance = 200.0;
+  Payload->TryGetNumberField(TEXT("interactionDistance"), InteractionDistance);
+
+  bool RequiresLineOfSight = true;
+  Payload->TryGetBoolField(TEXT("requiresLineOfSight"), RequiresLineOfSight);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("actorName"), ActorName);
+  Resp->SetStringField(TEXT("componentName"), InteractionComp->GetName());
+  Resp->SetNumberField(TEXT("interactionDistance"), InteractionDistance);
+  Resp->SetBoolField(TEXT("requiresLineOfSight"), RequiresLineOfSight);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Interaction component created"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
+}
+
+// Configure Interaction Trace handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionTrace(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString ActorName;
+  if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
+      ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  double TraceDistance = 500.0;
+  Payload->TryGetNumberField(TEXT("traceDistance"), TraceDistance);
+
+  FString TraceChannel = TEXT("Visibility");
+  Payload->TryGetStringField(TEXT("traceChannel"), TraceChannel);
+
+  bool UseComplexCollision = false;
+  Payload->TryGetBoolField(TEXT("useComplexCollision"), UseComplexCollision);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("actorName"), ActorName);
+  Resp->SetNumberField(TEXT("traceDistance"), TraceDistance);
+  Resp->SetStringField(TEXT("traceChannel"), TraceChannel);
+  Resp->SetBoolField(TEXT("useComplexCollision"), UseComplexCollision);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Interaction trace configured"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
+}
+
+// Configure Interaction Widget handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionWidget(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString ActorName;
+  if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
+      ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("actorName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  FString WidgetClass;
+  Payload->TryGetStringField(TEXT("widgetClass"), WidgetClass);
+
+  FString WidgetText;
+  if (!Payload->TryGetStringField(TEXT("widgetText"), WidgetText)) {
+    WidgetText = TEXT("Interact");
+  }
+
+  bool ShowOnHover = true;
+  Payload->TryGetBoolField(TEXT("showOnHover"), ShowOnHover);
+
+  double OffsetZ = 100.0;
+  Payload->TryGetNumberField(TEXT("offsetZ"), OffsetZ);
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("actorName"), ActorName);
+  Resp->SetStringField(TEXT("widgetClass"), WidgetClass);
+  Resp->SetStringField(TEXT("widgetText"), WidgetText);
+  Resp->SetBoolField(TEXT("showOnHover"), ShowOnHover);
+  Resp->SetNumberField(TEXT("offsetZ"), OffsetZ);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Interaction widget configured"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
+}
+
+// Create Door Actor handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleCreateDoorActor(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString DoorName;
+  if (!Payload->TryGetStringField(TEXT("doorName"), DoorName) ||
+      DoorName.IsEmpty()) {
+    DoorName = TEXT("BP_Door");
+  }
+
+  FVector Location = FVector::ZeroVector;
+  const TArray<TSharedPtr<FJsonValue>> *LocArr;
+  if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
+      LocArr->Num() >= 3) {
+    Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                       (*LocArr)[2]->AsNumber());
+  }
+
+  FString DoorType = TEXT("swing");
+  Payload->TryGetStringField(TEXT("doorType"), DoorType);
+
+  bool IsLocked = false;
+  Payload->TryGetBoolField(TEXT("isLocked"), IsLocked);
+
+  FString RequiredKey;
+  Payload->TryGetStringField(TEXT("requiredKey"), RequiredKey);
+
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  FActorSpawnParameters SpawnParams;
+  SpawnParams.Name = FName(*DoorName);
+
+  AActor *DoorActor = World->SpawnActor<AActor>(
+      AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+
+  if (!DoorActor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to spawn door actor"),
+                        TEXT("SPAWN_FAILED"));
+    return true;
+  }
+
+  // Create door mesh component
+  UStaticMeshComponent *DoorMesh = NewObject<UStaticMeshComponent>(DoorActor);
+  DoorMesh->RegisterComponent();
+  DoorActor->SetRootComponent(DoorMesh);
+
+  // Add interaction component
+  USceneComponent *InteractionComp = NewObject<USceneComponent>(
+      DoorActor, FName(TEXT("InteractionComponent")));
+  InteractionComp->RegisterComponent();
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("doorName"), DoorActor->GetName());
+  Resp->SetStringField(TEXT("doorType"), DoorType);
+  Resp->SetBoolField(TEXT("isLocked"), IsLocked);
+  Resp->SetStringField(TEXT("requiredKey"), RequiredKey);
+  Resp->SetStringField(TEXT("actorPath"), DoorActor->GetPathName());
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Door actor created"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
+}
+
+// Create Switch Actor handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleCreateSwitchActor(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString SwitchName;
+  if (!Payload->TryGetStringField(TEXT("switchName"), SwitchName) ||
+      SwitchName.IsEmpty()) {
+    SwitchName = TEXT("BP_Switch");
+  }
+
+  FVector Location = FVector::ZeroVector;
+  const TArray<TSharedPtr<FJsonValue>> *LocArr;
+  if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
+      LocArr->Num() >= 3) {
+    Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                       (*LocArr)[2]->AsNumber());
+  }
+
+  FString SwitchType = TEXT("lever");
+  Payload->TryGetStringField(TEXT("switchType"), SwitchType);
+
+  bool IsToggle = true;
+  Payload->TryGetBoolField(TEXT("isToggle"), IsToggle);
+
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  FActorSpawnParameters SpawnParams;
+  SpawnParams.Name = FName(*SwitchName);
+
+  AActor *SwitchActor = World->SpawnActor<AActor>(
+      AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+
+  if (!SwitchActor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to spawn switch actor"),
+                        TEXT("SPAWN_FAILED"));
+    return true;
+  }
+
+  // Create switch mesh component
+  UStaticMeshComponent *SwitchMesh = NewObject<UStaticMeshComponent>(SwitchActor);
+  SwitchMesh->RegisterComponent();
+  SwitchActor->SetRootComponent(SwitchMesh);
+
+  // Add interaction component
+  USceneComponent *InteractionComp = NewObject<USceneComponent>(
+      SwitchActor, FName(TEXT("InteractionComponent")));
+  InteractionComp->RegisterComponent();
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("switchName"), SwitchActor->GetName());
+  Resp->SetStringField(TEXT("switchType"), SwitchType);
+  Resp->SetBoolField(TEXT("isToggle"), IsToggle);
+  Resp->SetStringField(TEXT("actorPath"), SwitchActor->GetPathName());
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Switch actor created"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
+}
+
+// Create Chest Actor handler implementation
+bool UMcpAutomationBridgeSubsystem::HandleCreateChestActor(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  FString ChestName;
+  if (!Payload->TryGetStringField(TEXT("chestName"), ChestName) ||
+      ChestName.IsEmpty()) {
+    ChestName = TEXT("BP_Chest");
+  }
+
+  FVector Location = FVector::ZeroVector;
+  const TArray<TSharedPtr<FJsonValue>> *LocArr;
+  if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
+      LocArr->Num() >= 3) {
+    Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                       (*LocArr)[2]->AsNumber());
+  }
+
+  bool IsLocked = false;
+  Payload->TryGetBoolField(TEXT("isLocked"), IsLocked);
+
+  FString RequiredKey;
+  Payload->TryGetStringField(TEXT("requiredKey"), RequiredKey);
+
+  int32 MaxItems = 10;
+  Payload->TryGetNumberField(TEXT("maxItems"), MaxItems);
+
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  if (!World) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world"),
+                        TEXT("NO_WORLD"));
+    return true;
+  }
+
+  FActorSpawnParameters SpawnParams;
+  SpawnParams.Name = FName(*ChestName);
+
+  AActor *ChestActor = World->SpawnActor<AActor>(
+      AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
+
+  if (!ChestActor) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to spawn chest actor"),
+                        TEXT("SPAWN_FAILED"));
+    return true;
+  }
+
+  // Create chest mesh component
+  UStaticMeshComponent *ChestMesh = NewObject<UStaticMeshComponent>(ChestActor);
+  ChestMesh->RegisterComponent();
+  ChestActor->SetRootComponent(ChestMesh);
+
+  // Add interaction component
+  USceneComponent *InteractionComp = NewObject<USceneComponent>(
+      ChestActor, FName(TEXT("InteractionComponent")));
+  InteractionComp->RegisterComponent();
+
+  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  Resp->SetStringField(TEXT("chestName"), ChestActor->GetName());
+  Resp->SetBoolField(TEXT("isLocked"), IsLocked);
+  Resp->SetStringField(TEXT("requiredKey"), RequiredKey);
+  Resp->SetNumberField(TEXT("maxItems"), MaxItems);
+  Resp->SetStringField(TEXT("actorPath"), ChestActor->GetPathName());
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         TEXT("Chest actor created"), Resp);
+  return true;
+#else
+  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"),
+                      TEXT("NOT_SUPPORTED"));
+  return true;
+#endif
 }

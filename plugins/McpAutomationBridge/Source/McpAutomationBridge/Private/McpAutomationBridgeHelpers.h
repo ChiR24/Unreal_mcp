@@ -224,7 +224,26 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     return FString();
 
   FString CleanPath = InPath;
+  
+  // Reject Windows absolute paths early (contain drive letter colon)
+  if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectRelativePath: Rejected Windows absolute path: %s"),
+        *InPath);
+    return FString();
+  }
+  
   FPaths::NormalizeFilename(CleanPath);
+
+  // CRITICAL: FPaths::NormalizeFilename converts / to \ on Windows
+  // We need to convert back to forward slashes for UE asset paths
+  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+  // Normalize double slashes (prevents engine crash from paths like /Game//Test)
+  while (CleanPath.Contains(TEXT("//"))) {
+    CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
+  }
 
   // Reject paths containing traversal
   if (CleanPath.Contains(TEXT(".."))) {
@@ -240,27 +259,29 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     CleanPath = TEXT("/") + CleanPath;
   }
 
-  // Whitelist valid roots
+  // Whitelist valid roots - MUST start with one of these
   const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game")) ||
                           CleanPath.StartsWith(TEXT("/Engine")) ||
                           CleanPath.StartsWith(TEXT("/Script"));
 
-  // Allow plugin content paths too (e.g. /MyPlugin/) - heuristic: starts with /
-  // and has second /
-  bool bLooksLikePlugin = false;
-  if (!bValidRoot && CleanPath.Len() > 1) {
-    int32 SecondSlash = -1;
-    if (CleanPath.FindChar(TEXT('/'), SecondSlash)) {
-      // Check if we have a second slash, e.g. /PluginName/Folder
-      // FindChar finds the *first* char. We want the second one.
-      if (CleanPath.FindLastChar(TEXT('/'), SecondSlash) && SecondSlash > 0) {
-        bLooksLikePlugin = true;
-      }
+  // Reject paths that start with / but don't have a valid root
+  // This catches paths like /etc/passwd or /invalid/path
+  if (!bValidRoot) {
+    // Check if it looks like a plugin path (e.g., /MyPlugin/Content/Asset)
+    // Plugin paths must have at least 3 segments: /PluginName/Content/...
+    TArray<FString> Segments;
+    CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
+    const bool bLooksLikePluginPath = Segments.Num() >= 3 &&
+        Segments.Num() >= 2 && Segments[1].Equals(TEXT("Content"), ESearchCase::IgnoreCase);
+    
+    if (!bLooksLikePluginPath) {
+      UE_LOG(
+          LogMcpAutomationBridgeSubsystem, Warning,
+          TEXT("SanitizeProjectRelativePath: Rejected path without valid root (not /Game, /Engine, /Script, or valid plugin path): %s"),
+          *InPath);
+      return FString();
     }
   }
-
-  // For strict safety, we might enforce /Game or /Engine, but plugins are
-  // common. The critical part is no ".." and it looks like an asset path.
 
   return CleanPath;
 }
@@ -268,13 +289,131 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
 /**
  * Validate a basic asset path format.
  *
- * @returns `true` if Path is non-empty, begins with a leading '/', and does not
- * contain the parent-traversal segment ("..") or consecutive slashes ("//");
- * `false` otherwise.
+ * @returns `true` if Path is non-empty, begins with a leading '/', does not
+ * contain the parent-traversal segment (".."), consecutive slashes ("//"),
+ * or Windows drive letters (":"); `false` otherwise.
  */
 static inline bool IsValidAssetPath(const FString &Path) {
-  return !Path.IsEmpty() && Path.StartsWith(TEXT("/")) &&
-         !Path.Contains(TEXT("..")) && !Path.Contains(TEXT("//"));
+  return !Path.IsEmpty() && 
+         Path.StartsWith(TEXT("/")) &&
+         !Path.Contains(TEXT("..")) && 
+         !Path.Contains(TEXT("//")) &&
+         !Path.Contains(TEXT(":"));  // Reject Windows absolute paths
+}
+
+/**
+ * Validate and sanitize an asset name.
+ * Removes/replaces characters that are invalid for Unreal asset names,
+ * including SQL injection patterns.
+ *
+ * @param InName Input asset name to sanitize
+ * @returns Sanitized name safe for use in asset creation
+ */
+static inline FString SanitizeAssetName(const FString &InName) {
+  if (InName.IsEmpty())
+    return TEXT("Asset");
+
+  FString Sanitized = InName.TrimStartAndEnd();
+  
+  // Replace SQL injection pattern characters with underscore
+  // Block: semicolons, quotes, double-dashes, and SQL keywords
+  Sanitized = Sanitized.Replace(TEXT(";"), TEXT("_"));
+  Sanitized = Sanitized.Replace(TEXT("'"), TEXT("_"));
+  Sanitized = Sanitized.Replace(TEXT("\""), TEXT("_"));
+  Sanitized = Sanitized.Replace(TEXT("--"), TEXT("_"));
+  Sanitized = Sanitized.Replace(TEXT("`"), TEXT("_"));
+  
+  // Replace other invalid characters for Unreal asset names
+  // Invalid: @ # % $ & * ( ) + = [ ] { } < > ? | \ : ~ ! and whitespace
+  const TArray<TCHAR> InvalidChars = {
+    TEXT('@'), TEXT('#'), TEXT('%'), TEXT('$'), TEXT('&'), TEXT('*'),
+    TEXT('('), TEXT(')'), TEXT('+'), TEXT('='), TEXT('['), TEXT(']'),
+    TEXT('{'), TEXT('}'), TEXT('<'), TEXT('>'), TEXT('?'), TEXT('|'),
+    TEXT('\\'), TEXT(':'), TEXT('~'), TEXT('!'), TEXT(' ')
+  };
+  
+  for (TCHAR C : InvalidChars) {
+    TCHAR CharStr[2] = { C, TEXT('\0') };
+    Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
+  }
+  
+  // Remove consecutive underscores
+  while (Sanitized.Contains(TEXT("__"))) {
+    Sanitized = Sanitized.Replace(TEXT("__"), TEXT("_"));
+  }
+  
+  // Remove leading/trailing underscores
+  while (Sanitized.StartsWith(TEXT("_"))) {
+    Sanitized.RemoveAt(0);
+  }
+  while (Sanitized.EndsWith(TEXT("_"))) {
+    Sanitized.RemoveAt(Sanitized.Len() - 1);
+  }
+  
+  // If empty after sanitization, use default
+  if (Sanitized.IsEmpty())
+    return TEXT("Asset");
+    
+  // Ensure name starts with a letter or underscore
+  if (!FChar::IsAlpha(Sanitized[0]) && Sanitized[0] != TEXT('_')) {
+    Sanitized = TEXT("Asset_") + Sanitized;
+  }
+  
+  // Truncate to reasonable length (64 chars is UE max for asset names)
+  if (Sanitized.Len() > 64) {
+    Sanitized = Sanitized.Left(64);
+  }
+  
+  return Sanitized;
+}
+
+/**
+ * Validate and normalize a full asset path for creation.
+ * Combines path and name validation, returns validated path or empty on failure.
+ *
+ * @param FolderPath Parent folder path (e.g., /Game/MyFolder)
+ * @param AssetName Name for the asset
+ * @param OutFullPath Receives the full validated path
+ * @param OutError Receives error message on failure
+ * @returns true if path is valid and safe for asset creation
+ */
+static inline bool ValidateAssetCreationPath(
+    const FString &FolderPath, 
+    const FString &AssetName,
+    FString &OutFullPath,
+    FString &OutError)
+{
+  // Sanitize and validate folder path
+  FString SanitizedFolder = SanitizeProjectRelativePath(FolderPath);
+  if (SanitizedFolder.IsEmpty()) {
+    OutError = TEXT("Invalid folder path: contains traversal or invalid characters");
+    return false;
+  }
+  
+  // Ensure folder starts with valid root
+  if (!SanitizedFolder.StartsWith(TEXT("/Game")) && 
+      !SanitizedFolder.StartsWith(TEXT("/Engine")) &&
+      !SanitizedFolder.StartsWith(TEXT("/Script"))) {
+    SanitizedFolder = TEXT("/Game") + SanitizedFolder;
+  }
+  
+  // Sanitize asset name
+  FString SanitizedName = SanitizeAssetName(AssetName);
+  if (SanitizedName.IsEmpty()) {
+    OutError = TEXT("Invalid asset name after sanitization");
+    return false;
+  }
+  
+  // Build full path
+  OutFullPath = SanitizedFolder / SanitizedName;
+  
+  // Final validation
+  if (!IsValidAssetPath(OutFullPath)) {
+    OutError = FString::Printf(TEXT("Invalid asset path after normalization: %s"), *OutFullPath);
+    return false;
+  }
+  
+  return true;
 }
 
 // Normalize an asset path to ensure it's in valid long package name format.

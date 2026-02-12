@@ -125,7 +125,12 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         {
             MID->SetTextureParameterValue(FName(*ParamName), RT);
             Volume->Settings.AddBlendable(MID, 1.0f);
-            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Render target attached to volume via material."));
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("renderTarget"), TargetPath);
+            Result->SetStringField(TEXT("materialPath"), MaterialPath);
+            Result->SetStringField(TEXT("parameterName"), ParamName);
+            Result->SetBoolField(TEXT("attached"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Render target attached to volume via material."), Result);
         }
         else
         {
@@ -164,8 +169,12 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         }
 
         StaticMesh->Build(true);
-        
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nanite enabled and mesh rebuilt."));
+
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("assetPath"), AssetPath);
+        Result->SetBoolField(TEXT("naniteEnabled"), true);
+        Result->SetBoolField(TEXT("rebuilt"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nanite enabled and mesh rebuilt."), Result);
         return true;
     }
     else if (SubAction == TEXT("lumen_update_scene"))
@@ -178,7 +187,11 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
             if (World)
             {
                 GEngine->Exec(World, TEXT("r.Lumen.Scene.Recapture"));
-                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen scene recapture triggered."));
+                TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                Result->SetStringField(TEXT("action"), TEXT("lumen_update_scene"));
+                Result->SetStringField(TEXT("command"), TEXT("r.Lumen.Scene.Recapture"));
+                Result->SetBoolField(TEXT("executed"), true);
+                SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen scene recapture triggered."), Result);
                 return true;
             }
         }

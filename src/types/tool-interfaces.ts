@@ -121,7 +121,7 @@ export interface IBlueprintTools {
     createBlueprint(params: { name: string; blueprintType?: string; savePath?: string; parentClass?: string; properties?: Record<string, unknown>; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     modifyConstructionScript(params: { blueprintPath: string; operations: Array<Record<string, unknown>>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
     addComponent(params: { blueprintName: string; componentType: string; componentName: string; attachTo?: string; transform?: Record<string, unknown>; properties?: Record<string, unknown>; compile?: boolean; save?: boolean; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse>;
-    waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<StandardActionResponse>;
+    waitForBlueprint(blueprintRef: string | string[], options?: { timeoutMs?: number; shouldExist?: boolean }): Promise<StandardActionResponse>;
     getBlueprint(params: { blueprintName: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     getBlueprintInfo(params: { blueprintPath: string; timeoutMs?: number }): Promise<StandardActionResponse>;
     probeSubobjectDataHandle(opts?: { componentClass?: string }): Promise<StandardActionResponse>;

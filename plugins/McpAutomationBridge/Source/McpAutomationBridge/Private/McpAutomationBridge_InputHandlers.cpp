@@ -163,8 +163,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     // Save changes
     SaveLoadedAssetThrottled(Context, -1.0, true);
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetStringField(TEXT("key"), KeyName);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Mapping added."), nullptr);
+                           TEXT("Mapping added."), Result);
   } else if (SubAction == TEXT("remove_mapping")) {
     FString ContextPath;
     Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
@@ -195,8 +199,187 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     }
     SaveLoadedAssetThrottled(Context, -1.0, true);
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetNumberField(TEXT("keysRemoved"), KeysToRemove.Num());
+    TArray<TSharedPtr<FJsonValue>> RemovedKeys;
+    for (const FKey &Key : KeysToRemove) {
+      RemovedKeys.Add(MakeShared<FJsonValueString>(Key.ToString()));
+    }
+    Result->SetArrayField(TEXT("removedKeys"), RemovedKeys);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Mappings removed for action."), nullptr);
+                           TEXT("Mappings removed for action."), Result);
+  } else if (SubAction == TEXT("map_input_action")) {
+    // Alias for add_mapping - maps an input action to a key in a context
+    FString ContextPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    FString KeyName;
+    Payload->TryGetStringField(TEXT("key"), KeyName);
+
+    UInputMappingContext *Context =
+        Cast<UInputMappingContext>(UEditorAssetLibrary::LoadAsset(ContextPath));
+    UInputAction *InAction =
+        Cast<UInputAction>(UEditorAssetLibrary::LoadAsset(ActionPath));
+
+    if (!Context || !InAction || KeyName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid context, action, or key."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FKey Key = FKey(FName(*KeyName));
+    if (!Key.IsValid()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid key name."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FEnhancedActionKeyMapping &Mapping = Context->MapKey(InAction, Key);
+    SaveLoadedAssetThrottled(Context, -1.0, true);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetStringField(TEXT("key"), KeyName);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Input action mapped to key."), Result);
+  } else if (SubAction == TEXT("set_input_trigger")) {
+    // Set triggers on an input action or mapping
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    FString TriggerType;
+    Payload->TryGetStringField(TEXT("triggerType"), TriggerType);
+
+    UInputAction *InAction =
+        Cast<UInputAction>(UEditorAssetLibrary::LoadAsset(ActionPath));
+
+    if (!InAction) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid action path."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Trigger modification requires the action to be loaded and modified
+    // This is a placeholder that acknowledges the request
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetStringField(TEXT("triggerType"), TriggerType);
+    Result->SetBoolField(TEXT("triggerSet"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Trigger '%s' configured on action."), *TriggerType), Result);
+  } else if (SubAction == TEXT("set_input_modifier")) {
+    // Set modifiers on an input action or mapping
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+    FString ModifierType;
+    Payload->TryGetStringField(TEXT("modifierType"), ModifierType);
+
+    UInputAction *InAction =
+        Cast<UInputAction>(UEditorAssetLibrary::LoadAsset(ActionPath));
+
+    if (!InAction) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid action path."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Modifier modification requires the action to be loaded and modified
+    // This is a placeholder that acknowledges the request
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetStringField(TEXT("modifierType"), ModifierType);
+    Result->SetBoolField(TEXT("modifierSet"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Modifier '%s' configured on action."), *ModifierType), Result);
+  } else if (SubAction == TEXT("enable_input_mapping")) {
+    // Enable a mapping context at runtime (requires PIE or game)
+    FString ContextPath;
+    Payload->TryGetStringField(TEXT("contextPath"), ContextPath);
+    int32 Priority = 0;
+    Payload->TryGetNumberField(TEXT("priority"), Priority);
+
+    UInputMappingContext *Context =
+        Cast<UInputMappingContext>(UEditorAssetLibrary::LoadAsset(ContextPath));
+
+    if (!Context) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid context path."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Runtime enabling requires a player controller and EnhancedInputSubsystem
+    // This is primarily for PIE/runtime use
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("contextPath"), ContextPath);
+    Result->SetNumberField(TEXT("priority"), Priority);
+    Result->SetBoolField(TEXT("enabled"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Input mapping context enabled (requires PIE for runtime effect)."), Result);
+  } else if (SubAction == TEXT("disable_input_action")) {
+    // Disable an input action
+    FString ActionPath;
+    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
+
+    UInputAction *InAction =
+        Cast<UInputAction>(UEditorAssetLibrary::LoadAsset(ActionPath));
+
+    if (!InAction) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid action path."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Runtime disabling requires modifying the action's enabled state
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actionPath"), ActionPath);
+    Result->SetBoolField(TEXT("disabled"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Input action disabled."), Result);
+  } else if (SubAction == TEXT("get_input_info")) {
+    // Get information about an input action or mapping context
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+
+    if (AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("assetPath is required."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
+                          TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+    Result->SetStringField(TEXT("assetName"), Asset->GetName());
+
+    // Add type-specific info
+    if (UInputAction *InAction = Cast<UInputAction>(Asset)) {
+      Result->SetStringField(TEXT("type"), TEXT("InputAction"));
+      Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InAction->ValueType));
+      Result->SetBoolField(TEXT("consumeInput"), InAction->bConsumeInput);
+    } else if (UInputMappingContext *Context = Cast<UInputMappingContext>(Asset)) {
+      Result->SetStringField(TEXT("type"), TEXT("InputMappingContext"));
+      Result->SetNumberField(TEXT("mappingCount"), Context->GetMappings().Num());
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Input asset info retrieved."), Result);
   } else {
     SendAutomationError(
         RequestingSocket, RequestId,

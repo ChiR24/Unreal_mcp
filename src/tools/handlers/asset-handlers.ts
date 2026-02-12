@@ -129,6 +129,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Asset imported successfully');
       }
+      case 'duplicate_asset':
       case 'duplicate': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },
@@ -162,6 +163,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Asset duplicated successfully');
       }
+      case 'rename_asset':
       case 'rename': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },
@@ -200,6 +202,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         }
         return cleanObject(res);
       }
+      case 'move_asset':
       case 'move': {
         const params = normalizeArgs(args, [
           { key: 'sourcePath', aliases: ['assetPath'], required: true },
@@ -224,10 +227,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'delete': {
         let paths: string[] = [];
         const argsTyped = args as AssetArgs;
-        if (Array.isArray(argsTyped.assetPaths)) {
-          paths = argsTyped.assetPaths as string[];
+        if (Array.isArray(argsTyped.assetPaths) || Array.isArray(argsTyped.asset_paths)) {
+          paths = (argsTyped.assetPaths || argsTyped.asset_paths) as string[];
         } else {
-          const single = argsTyped.assetPath || argsTyped.path;
+          // Support both camelCase and snake_case parameter names
+          const single = argsTyped.assetPath || argsTyped.asset_path || argsTyped.path;
           if (typeof single === 'string' && single.trim()) {
             paths = [single.trim()];
           }
@@ -640,11 +644,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const message = typeof result.message === 'string' ? result.message : '';
         const argsTyped = args as AssetArgs;
 
-        if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
+        // Check for unknown/invalid action errors from C++ (UNKNOWN_ACTION or INVALID_SUBACTION)
+        if (errorCode === 'UNKNOWN_ACTION' || errorCode === 'INVALID_SUBACTION' ||
+            message.toLowerCase().includes('unknown action') || message.toLowerCase().includes('unknown subaction')) {
           return cleanObject({
             success: false,
-            error: 'INVALID_SUBACTION',
-            message: 'Asset action not recognized by the automation plugin.',
+            error: 'UNKNOWN_ACTION',
+            message: `Unknown asset action: ${action}`,
             action: action || 'manage_asset',
             assetPath: argsTyped.assetPath ?? argsTyped.path
           });

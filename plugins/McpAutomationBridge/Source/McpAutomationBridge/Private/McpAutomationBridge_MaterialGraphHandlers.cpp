@@ -208,6 +208,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     UMaterialExpression *TargetExpr = FindExpressionByIdOrName(NodeId);
 
     if (TargetExpr) {
+      FString RemovedNodeId = TargetExpr->MaterialExpressionGuid.ToString();
 #if WITH_EDITORONLY_DATA
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       if (Material->GetEditorOnlyData()) {
@@ -220,7 +221,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 #endif
       Material->PostEditChange();
       Material->MarkPackageDirty();
-      SendAutomationResponse(Socket, RequestId, true, TEXT("Node removed."));
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("nodeId"), RemovedNodeId);
+      Result->SetBoolField(TEXT("removed"), true);
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Node removed."), Result);
     } else {
       SendAutomationError(Socket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));

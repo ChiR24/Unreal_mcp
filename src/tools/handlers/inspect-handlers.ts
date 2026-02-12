@@ -16,6 +16,34 @@ interface InspectResponse {
   [key: string]: unknown;
 }
 
+/**
+ * Action aliases for test compatibility
+ * Maps test action names to handler action names
+ */
+const INSPECT_ACTION_ALIASES: Record<string, string> = {
+  'get_actor_details': 'inspect_object',
+  'get_component_details': 'get_component_property',
+  'get_material_details': 'inspect_object',
+  'get_texture_details': 'inspect_object',
+  'get_mesh_details': 'inspect_object',
+  'get_blueprint_details': 'inspect_object',
+  'get_level_details': 'inspect_object',
+  'get_project_settings': 'get_project_settings',
+  'get_editor_settings': 'get_editor_settings',
+  'get_performance_stats': 'get_performance_stats',
+  'get_memory_stats': 'get_memory_stats',
+  'get_scene_stats': 'get_scene_stats',
+  'get_viewport_info': 'get_viewport_info',
+  'get_selected_actors': 'get_selected_actors',
+};
+
+/**
+ * Normalize inspect action names for test compatibility
+ */
+function normalizeInspectAction(action: string): string {
+  return INSPECT_ACTION_ALIASES[action] ?? action;
+}
+
 async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: ITools): Promise<string> {
   const argsTyped = args as InspectArgs;
   const componentName = typeof argsTyped.componentName === 'string' ? argsTyped.componentName.trim() : '';
@@ -94,9 +122,22 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
   
-  switch (action) {
+  // Normalize action name for test compatibility
+  const normalizedAction = normalizeInspectAction(action);
+  
+  // Also normalize parameter names for test compatibility
+  const normalizedArgs = {
+    ...args,
+    // Map snake_case to camelCase
+    actorName: args.actor_name ?? args.actorName ?? args.name,
+    objectPath: args.object_path ?? args.objectPath ?? args.path,
+    componentName: args.component_name ?? args.componentName,
+    propertyName: args.property_name ?? args.propertyName,
+  };
+  
+  switch (normalizedAction) {
     case 'inspect_object': {
-      const objectPath = await resolveObjectPath(args, tools);
+      const objectPath = await resolveObjectPath(normalizedArgs, tools);
       if (!objectPath) {
         throw new Error('Invalid objectPath: must be a non-empty string');
       }
@@ -479,6 +520,56 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         });
       }
       return cleanObject(res);
+    }
+    // Global actions that don't require objectPath
+    case 'get_project_settings': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_project_settings',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_editor_settings': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_editor_settings',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_performance_stats': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_performance_stats',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_memory_stats': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_memory_stats',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_scene_stats': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_scene_stats',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_viewport_info': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_viewport_info',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'get_selected_actors': {
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        action: 'get_selected_actors',
+        ...normalizedArgs
+      });
+      return cleanObject(res) as Record<string, unknown>;
     }
     default:
       // Fallback to generic automation request if action not explicitly handled

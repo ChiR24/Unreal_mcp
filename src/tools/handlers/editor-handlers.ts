@@ -3,8 +3,41 @@ import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
+/**
+ * Action aliases for test compatibility
+ * Maps test action names to handler action names
+ */
+const EDITOR_ACTION_ALIASES: Record<string, string> = {
+  'focus_actor': 'focus',
+  'set_camera_position': 'set_camera',
+  'set_viewport_camera': 'set_camera',
+  'take_screenshot': 'screenshot',
+  'close_asset': 'close_asset',
+  'save_all': 'save_all',
+  'undo': 'undo',
+  'redo': 'redo',
+  'set_editor_mode': 'set_editor_mode',
+  'show_stats': 'show_stats',
+  'hide_stats': 'hide_stats',
+  'set_game_view': 'set_game_view',
+  'set_immersive_mode': 'set_immersive_mode',
+  'single_frame_step': 'step_frame',
+  'set_fixed_delta_time': 'set_fixed_delta_time',
+  'open_level': 'open_level',
+};
+
+/**
+ * Normalize editor action names for test compatibility
+ */
+function normalizeEditorAction(action: string): string {
+  return EDITOR_ACTION_ALIASES[action] ?? action;
+}
+
 export async function handleEditorTools(action: string, args: EditorArgs, tools: ITools) {
-  switch (action) {
+  // Normalize action name for test compatibility
+  const normalizedAction = normalizeEditorAction(action);
+  
+  switch (normalizedAction) {
     case 'play': {
       const res = await tools.editorTools.playInEditor(args.timeoutMs);
       return cleanObject(res);
@@ -154,6 +187,64 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       // Use console command since interface doesn't have setViewportRealtime
       await tools.editorTools.executeConsoleCommand(`r.ViewportRealtime ${enabled ? 1 : 0}`);
       return { success: true, message: `Set viewport realtime to ${enabled}`, action: 'set_viewport_realtime' };
+    }
+    // Additional handlers for test compatibility
+    case 'close_asset': {
+      const assetPath = requireNonEmptyString(args.assetPath || args.path, 'assetPath');
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'close_asset', assetPath });
+      return cleanObject(res);
+    }
+    case 'save_all': {
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'save_all' });
+      return cleanObject(res);
+    }
+    case 'undo': {
+      await tools.editorTools.executeConsoleCommand('Undo');
+      return { success: true, message: 'Undo executed', action: 'undo' };
+    }
+    case 'redo': {
+      await tools.editorTools.executeConsoleCommand('Redo');
+      return { success: true, message: 'Redo executed', action: 'redo' };
+    }
+    case 'set_editor_mode': {
+      const mode = requireNonEmptyString(args.mode, 'mode');
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'set_editor_mode', mode });
+      return cleanObject(res);
+    }
+    case 'show_stats': {
+      await tools.editorTools.executeConsoleCommand('Stat FPS');
+      await tools.editorTools.executeConsoleCommand('Stat Unit');
+      return { success: true, message: 'Stats displayed', action: 'show_stats' };
+    }
+    case 'hide_stats': {
+      await tools.editorTools.executeConsoleCommand('Stat None');
+      return { success: true, message: 'Stats hidden', action: 'hide_stats' };
+    }
+    case 'set_game_view': {
+      const enabled = args.enabled !== false;
+      await tools.editorTools.executeConsoleCommand(`ToggleGameView ${enabled ? 1 : 0}`);
+      return { success: true, message: `Game view ${enabled ? 'enabled' : 'disabled'}`, action: 'set_game_view' };
+    }
+    case 'set_immersive_mode': {
+      const enabled = args.enabled !== false;
+      await tools.editorTools.executeConsoleCommand(`ToggleImmersion ${enabled ? 1 : 0}`);
+      return { success: true, message: `Immersive mode ${enabled ? 'enabled' : 'disabled'}`, action: 'set_immersive_mode' };
+    }
+    case 'set_fixed_delta_time': {
+      const deltaTime = typeof args.deltaTime === 'number' ? args.deltaTime : 0.01667;
+      await tools.editorTools.executeConsoleCommand(`r.FixedDeltaTime ${deltaTime}`);
+      return { success: true, message: `Fixed delta time set to ${deltaTime}`, action: 'set_fixed_delta_time' };
+    }
+    case 'open_level': {
+      const levelPath = requireNonEmptyString(args.levelPath || args.path, 'levelPath');
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_level', levelPath });
+      return cleanObject(res);
+    }
+    case 'focus':
+    case 'focus_actor': {
+      const actorName = requireNonEmptyString(args.actorName || args.name, 'actorName');
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'focus_actor', actorName });
+      return cleanObject(res);
     }
     default:
       return await executeAutomationRequest(tools, 'control_editor', args);

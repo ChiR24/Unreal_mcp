@@ -11,13 +11,16 @@ export interface ToolDefinition {
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',
-    description: 'Filter visible tools by category. Actions: list_categories (show available), set_categories (enable specific), get_status (current state). Categories: core, world, authoring, gameplay, utility, all.',
+    description: 'Build automation and pipeline control. Actions: run_ubt (compile targets), list_categories (show tool categories), get_status (bridge status). Routes to system_control internally.',
     category: 'core',
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['set_categories', 'list_categories', 'get_status'], description: 'list_categories: show available. set_categories: enable categories. get_status: current state.' },
-        categories: { type: 'array', items: commonSchemas.stringProp, description: 'Categories: core, world, authoring, gameplay, utility, all' }
+        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: show available tool categories. get_status: get bridge status.' },
+        target: { type: 'string', description: 'Build target name (e.g., MyProjectEditor)' },
+        platform: { type: 'string', description: 'Target platform (Win64, Linux, Mac)' },
+        configuration: { type: 'string', description: 'Build configuration (Development, Shipping, Debug)' },
+        arguments: { type: 'string', description: 'Additional UBT arguments' }
       },
       required: ['action']
     },
@@ -25,7 +28,36 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        categories: { type: 'array', items: commonSchemas.stringProp }
+        output: { type: 'string', description: 'Build output' },
+        command: { type: 'string', description: 'Executed command' }
+      }
+    }
+  },
+  {
+    name: 'manage_tools',
+    description: 'Dynamic MCP tool management. Enable/disable tools and categories at runtime. Actions: list_tools, list_categories, enable_tools, disable_tools, enable_category, disable_category, get_status, reset.',
+    category: 'core',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { 
+          type: 'string', 
+          enum: ['list_tools', 'list_categories', 'enable_tools', 'disable_tools', 'enable_category', 'disable_category', 'get_status', 'reset'],
+          description: 'list_tools: show all tools with status. list_categories: show categories. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
+        },
+        tools: { type: 'array', items: commonSchemas.stringProp, description: 'Tool names to enable/disable' },
+        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility)' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        tools: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, enabled: { type: 'boolean' }, category: { type: 'string' } } } },
+        categories: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, enabled: { type: 'boolean' }, toolCount: { type: 'number' } } } },
+        enabledCount: { type: 'number' },
+        disabledCount: { type: 'number' }
       }
     }
   },
@@ -39,7 +71,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'list', 'import', 'duplicate', 'rename', 'move', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
+            'list', 'import', 'duplicate', 'duplicate_asset', 'rename', 'rename_asset', 'move', 'move_asset', 'delete', 'delete_asset', 'delete_assets', 'create_folder', 'search_assets',
             'get_dependencies', 'get_source_control_state', 'analyze_graph', 'get_asset_graph', 'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'validate', 'fixup_redirectors', 'find_by_tag', 'generate_report',
             'create_material', 'create_material_instance', 'create_render_target', 'generate_lods', 'add_material_parameter', 'list_instances', 'reset_instance_parameters', 'exists', 'get_material_stats',
             'nanite_rebuild_mesh', 'bulk_rename', 'bulk_delete', 'source_control_checkout', 'source_control_submit',
@@ -237,7 +269,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         blueprintPath: commonSchemas.blueprintPath,
-        blueprint: commonSchemas.objectProp
+        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' }
       }
     }
   },
@@ -251,11 +283,25 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'spawn', 'spawn_blueprint', 'delete', 'delete_by_tag', 'duplicate',
-            'apply_force', 'set_transform', 'get_transform', 'set_visibility',
-            'add_component', 'set_component_properties', 'get_components',
-            'add_tag', 'remove_tag', 'find_by_tag', 'find_by_name', 'list', 'set_blueprint_variables',
-            'create_snapshot', 'attach', 'detach'
+            'spawn', 'spawn_actor', 'spawn_blueprint',
+            'delete', 'destroy_actor', 'delete_by_tag', 'duplicate',
+            'apply_force',
+            'set_transform', 'teleport_actor', 'set_actor_location', 'set_actor_rotation', 'set_actor_scale', 'set_actor_transform',
+            'get_transform', 'get_actor_transform',
+            'set_visibility', 'set_actor_visible',
+            'add_component', 'remove_component',
+            'set_component_properties', 'set_component_property', 'get_component_property',
+            'get_components', 'get_actor_components',
+            'get_actor_bounds',
+            'add_tag', 'remove_tag',
+            'find_by_tag', 'find_actors_by_tag',
+            'find_by_name', 'find_actors_by_name',
+            'find_by_class', 'find_actors_by_class',
+            'list', 'set_blueprint_variables',
+            'create_snapshot',
+            'attach', 'attach_actor',
+            'detach', 'detach_actor',
+            'set_actor_collision', 'call_actor_function'
           ],
           description: 'Action'
         },
@@ -311,11 +357,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'play', 'stop', 'stop_pie', 'pause', 'resume', 'set_game_speed', 'eject', 'possess',
-            'set_camera', 'set_camera_position', 'set_camera_fov', 'set_view_mode',
-            'set_viewport_resolution', 'console_command', 'execute_command', 'screenshot', 'step_frame',
-            'start_recording', 'stop_recording', 'create_bookmark', 'jump_to_bookmark',
-            'set_preferences', 'set_viewport_realtime', 'open_asset', 'simulate_input'
+            'play', 'stop', 'stop_pie', 'pause', 'resume', 'eject', 'possess',
+            'set_game_speed', 'set_fixed_delta_time',
+            'set_camera', 'set_camera_position', 'set_viewport_camera', 'set_camera_fov',
+            'set_view_mode', 'set_viewport_resolution',
+            'console_command', 'execute_command',
+            'screenshot', 'take_screenshot', 'step_frame', 'single_frame_step',
+            'start_recording', 'stop_recording',
+            'create_bookmark', 'jump_to_bookmark',
+            'set_preferences', 'set_viewport_realtime',
+            'open_asset', 'close_asset', 'simulate_input',
+            'open_level', 'focus_actor',
+            'show_stats', 'hide_stats',
+            'set_editor_mode', 'set_immersive_mode', 'set_game_view',
+            'undo', 'redo', 'save_all'
           ],
           description: 'Editor action'
         },
@@ -882,7 +937,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_input_action',
             'create_input_mapping_context',
             'add_mapping',
-            'remove_mapping'
+            'remove_mapping',
+            'map_input_action',
+            'set_input_trigger',
+            'set_input_modifier',
+            'enable_input_mapping',
+            'disable_input_action',
+            'get_input_info'
           ],
           description: 'Action to perform'
         },
@@ -890,7 +951,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         path: commonSchemas.directoryPath,
         contextPath: commonSchemas.assetPath,
         actionPath: commonSchemas.assetPath,
-        key: commonSchemas.stringProp
+        key: commonSchemas.stringProp,
+        triggerType: commonSchemas.stringProp,
+        modifierType: commonSchemas.stringProp,
+        assetPath: commonSchemas.assetPath,
+        priority: { type: 'number', description: 'Priority for input mapping context (default: 0).' }
       },
       required: ['action']
     },
@@ -912,9 +977,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'inspect_object', 'set_property', 'get_property', 'get_components', 'inspect_class', 'list_objects',
-            'get_component_property', 'set_component_property', 'get_metadata', 'add_tag', 'find_by_tag',
-            'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box'
+            'inspect_object', 'get_actor_details', 'get_blueprint_details', 'get_mesh_details',
+            'get_texture_details', 'get_material_details', 'get_level_details', 'get_component_details',
+            'set_property', 'get_property',
+            'get_components', 'get_component_property', 'set_component_property',
+            'inspect_class', 'list_objects',
+            'get_metadata', 'add_tag', 'find_by_tag',
+            'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
+            'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
+            'get_scene_stats', 'get_performance_stats', 'get_memory_stats', 'get_editor_settings'
           ],
           description: 'Action'
         },
@@ -1932,7 +2003,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'setup_footstep_system',
             'map_surface_to_sound',
             'configure_footstep_fx',
-            'get_character_info'
+            'get_character_info',
+            'setup_movement', 'set_walk_speed', 'set_jump_height', 'set_gravity_scale',
+            'set_ground_friction', 'set_braking_deceleration', 'configure_crouch', 'configure_sprint'
           ],
           description: 'Character action to perform.'
         },
@@ -2086,7 +2159,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'setup_reload_system', 'setup_ammo_system', 'setup_attachment_system', 'setup_weapon_switching',
             'configure_muzzle_flash', 'configure_tracer', 'configure_impact_effects', 'configure_shell_ejection',
             'create_melee_trace', 'configure_combo_system', 'create_hit_pause', 'configure_hit_reaction', 'setup_parry_block_system', 'configure_weapon_trails',
-            'get_combat_info'
+            'get_combat_info',
+            'setup_damage_type', 'configure_hit_detection', 'get_combat_stats',
+            'create_damage_effect', 'apply_damage', 'heal', 'create_shield', 'modify_armor'
           ],
           description: 'Combat action to perform'
         },
@@ -2264,7 +2339,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_state_tree', 'add_state_tree_state', 'add_state_tree_transition', 'configure_state_tree_task',
             'create_smart_object_definition', 'add_smart_object_slot', 'configure_slot_behavior', 'add_smart_object_component',
             'create_mass_entity_config', 'configure_mass_entity', 'add_mass_spawner',
-            'get_ai_info'
+            'get_ai_info',
+            'create_blackboard', 'setup_perception',
+            'create_nav_link_proxy', 'set_focus', 'clear_focus',
+            'set_blackboard_value', 'get_blackboard_value',
+            'run_behavior_tree', 'stop_behavior_tree'
           ],
           description: 'AI action to perform'
         },
@@ -4008,12 +4087,26 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'create_trigger_volume', 'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
-            'create_blocking_volume', 'create_kill_z_volume', 'create_pain_causing_volume', 'create_physics_volume',
+            // Trigger Volumes
+            'create_trigger_volume', 'add_trigger_volume',
+            'create_trigger_box', 'create_trigger_sphere', 'create_trigger_capsule',
+            // Gameplay Volumes
+            'create_blocking_volume', 'add_blocking_volume',
+            'create_kill_z_volume', 'add_kill_z_volume',
+            'create_pain_causing_volume', 'create_physics_volume', 'add_physics_volume',
             'create_audio_volume', 'create_reverb_volume',
-            'create_cull_distance_volume', 'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
+            // Rendering Volumes
+            'create_cull_distance_volume', 'add_cull_distance_volume',
+            'create_precomputed_visibility_volume', 'create_lightmass_importance_volume',
+            // Navigation Volumes
             'create_nav_mesh_bounds_volume', 'create_nav_modifier_volume', 'create_camera_blocking_volume',
-            'set_volume_extent', 'set_volume_properties',
+            // Post Process Volume (UE 5.1-5.6 only)
+            'create_post_process_volume', 'add_post_process_volume',
+            // Volume Configuration
+            'set_volume_extent', 'set_volume_bounds', 'set_volume_properties',
+            // Volume Removal
+            'remove_volume',
+            // Utility
             'get_volumes_info'
           ],
           description: 'Volume action to perform'

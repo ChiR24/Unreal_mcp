@@ -68,3 +68,11 @@ Desktop.ini
 plugins/McpAutomationBridge/.clangd
 plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
 .sisyphus
+.claude/
+.opencode/
+.clangd
+compile_commands_50.json
+compile_commands_55.json
+compile_commands_56.json
+compile_commands_57.json
+compile_commands.json

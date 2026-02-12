@@ -200,41 +200,92 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
-  async waitForBlueprint(blueprintRef: string | string[], timeoutMs?: number): Promise<StandardActionResponse> {
+  async waitForBlueprint(blueprintRef: string | string[], options?: { timeoutMs?: number; shouldExist?: boolean }): Promise<StandardActionResponse> {
     const candidates = Array.isArray(blueprintRef) ? blueprintRef : this.buildCandidates(blueprintRef as string | undefined);
     if (!candidates || candidates.length === 0) return { success: false, error: 'Invalid blueprint reference', checked: [] };
+
+    const shouldExist = options?.shouldExist !== false;
     if (this.pluginBlueprintActionsAvailable === false) {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' };
     }
 
-    const start = Date.now();
     const envDefault = Number(process.env.MCP_AUTOMATION_SCS_TIMEOUT_MS ?? process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '15000');
-    // Default to 15s (15000ms) instead of 120s to avoid long hangs on non-existent assets
     const defaultTimeout = Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 15000;
-    const tot = typeof timeoutMs === 'number' && timeoutMs > 0 ? timeoutMs : defaultTimeout;
-    const perCheck = Math.min(5000, Math.max(1000, Math.floor(tot / 6)));
-    while (Date.now() - start < tot) {
+    const totalTimeout = typeof options?.timeoutMs === 'number' && options.timeoutMs > 0 ? options.timeoutMs : defaultTimeout;
+    const perCheck = Math.min(5000, Math.max(shouldExist ? 1000 : 250, Math.floor(totalTimeout / Math.max(shouldExist ? 6 : 1, 1))));
+
+    const unknownResponse = () => {
+      this.pluginBlueprintActionsAvailable = false;
+      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' } as const;
+    };
+
+    const successResponse = (candidate: string, resolvedPath?: string): StandardActionResponse => {
+      this.pluginBlueprintActionsAvailable = true;
+      return { success: true, found: resolvedPath ?? candidate };
+    };
+
+    const notFoundResponse = (): StandardActionResponse => ({
+      success: false,
+      error: 'BLUEPRINT_NOT_FOUND',
+      message: 'Blueprint not found',
+      checked: candidates
+    });
+
+    type BlueprintExistsResult = { exists?: boolean; blueprintPath?: string };
+
+    const checkCandidates = async (): Promise<StandardActionResponse | null> => {
       for (const candidate of candidates) {
         try {
-          const r = await this.sendAction('blueprint_exists', { blueprintCandidates: [candidate], requestedPath: candidate }, { timeoutMs: Math.min(perCheck, tot) });
-          if (r && r.success && r.result && (r.result.exists === true || r.result.found)) {
-            this.pluginBlueprintActionsAvailable = true;
-            return { success: true, found: r.result.found ?? candidate };
+          const resp = await this.sendAction('blueprint_exists', { blueprintCandidates: [candidate], requestedPath: candidate }, { timeoutMs: Math.min(perCheck, totalTimeout) });
+          if (!resp) continue;
+
+          const resultObj = resp.result && typeof resp.result === 'object' ? resp.result as BlueprintExistsResult : null;
+          const resolvedPath = resultObj?.blueprintPath;
+          const exists = resultObj?.exists === true;
+
+          if (exists) {
+            return successResponse(candidate, resolvedPath);
           }
-          if (r && r.success === false && this.isUnknownActionResponse(r)) {
-            this.pluginBlueprintActionsAvailable = false;
-            return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_exists' };
+
+          if (!shouldExist && resultObj && resultObj.exists === false) {
+            return notFoundResponse();
           }
-        } catch (_e) {
-          // ignore and try next candidate
+
+          if (resp.success === false) {
+            if (this.isUnknownActionResponse(resp)) {
+              return unknownResponse();
+            }
+            return {
+              success: false,
+              error: resp.error ?? 'BLUEPRINT_CHECK_FAILED',
+              message: resp.message ?? 'Failed to verify blueprint existence'
+            };
+          }
+        } catch (_err) {
+          continue;
         }
       }
-      await new Promise((r) => setTimeout(r, 1000));
+      return null;
+    };
+
+    if (!shouldExist) {
+      const immediate = await checkCandidates();
+      if (immediate) return immediate;
+      return notFoundResponse();
     }
+
+    const start = Date.now();
+    while (Date.now() - start < totalTimeout) {
+      const result = await checkCandidates();
+      if (result) return result;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
     if (this.pluginBlueprintActionsAvailable === null) {
-      return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin availability unknown; blueprint_exists not implemented by plugin' };
+      return unknownResponse();
     }
-    return { success: false, error: `Timeout waiting for blueprint after ${tot}ms`, checked: candidates };
+
+    return { success: false, error: `Timeout waiting for blueprint after ${totalTimeout}ms`, checked: candidates };
   }
 
   async getBlueprint(params: { blueprintName: string; timeoutMs?: number; }): Promise<StandardActionResponse> {

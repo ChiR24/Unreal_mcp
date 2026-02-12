@@ -56,6 +56,16 @@ export const bridgeGoodbyeSchema = z.object({
     timestamp: z.string().optional()
 }).passthrough();
 
+// Progress update message - sent by UE during long operations to keep request alive
+export const progressUpdateSchema = z.object({
+    type: z.literal('progress_update'),
+    requestId: z.string().min(1),
+    percent: z.number().min(0).max(100).optional(),
+    message: z.string().optional(),
+    timestamp: z.string().optional(),
+    stillWorking: z.boolean().optional()  // True if operation is still in progress
+}).passthrough();
+
 export const automationMessageSchema = z.discriminatedUnion('type', [
     automationResponseSchema,
     automationEventSchema,
@@ -63,7 +73,8 @@ export const automationMessageSchema = z.discriminatedUnion('type', [
     bridgeErrorSchema,
     bridgePingSchema,
     bridgePongSchema,
-    bridgeGoodbyeSchema
+    bridgeGoodbyeSchema,
+    progressUpdateSchema
 ]);
 
 export type AutomationMessageSchema = z.infer<typeof automationMessageSchema>;

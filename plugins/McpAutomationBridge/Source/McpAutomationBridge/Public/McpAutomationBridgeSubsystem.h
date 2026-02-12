@@ -111,6 +111,18 @@ public:
                            const FString &RequestId, const FString &Message,
                            const FString &ErrorCode);
 
+  /**
+   * Send a progress update message during long-running operations.
+   * This keeps the request alive by extending its timeout on the server side.
+   * 
+   * @param RequestId The request ID being tracked
+   * @param Percent Optional progress percent (0-100), negative to omit
+   * @param Message Optional status message
+   * @param bStillWorking True if operation is still in progress (prevents stale detection)
+   */
+  void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f, 
+                          const FString &Message = TEXT(""), bool bStillWorking = true);
+
   bool ExecuteEditorCommands(const TArray<FString> &Commands,
                              FString &OutErrorMessage);
 #if MCP_HAS_CONTROLRIG_FACTORY
@@ -300,6 +312,51 @@ private:
   bool HandleAudioAction(const FString &RequestId, const FString &Action,
                          const TSharedPtr<FJsonObject> &Payload,
                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleCreateDialogueVoice(const FString &RequestId,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleCreateDialogueWave(const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleSetDialogueContext(const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleCreateReverbEffect(const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateSourceEffectChain(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleAddSourceEffect(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleCreateSubmixEffect(const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Interaction related automation actions
+  bool HandleCreateInteractionComponent(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureInteractionTrace(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleConfigureInteractionWidget(
+      const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateDoorActor(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateSwitchActor(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateChestActor(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Lighting related automation actions
   bool HandleLightingAction(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,
@@ -350,6 +407,37 @@ private:
   HandleGenerateThumbnail(const FString &RequestId, const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleNaniteRebuildMesh(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleFindByTag(const FString &RequestId, const FString &Action,
+                  const TSharedPtr<FJsonObject> &Payload,
+                  TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleAddMaterialNode(const FString &RequestId, const FString &Action,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleConnectMaterialPins(const FString &RequestId, const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleRemoveMaterialNode(const FString &RequestId, const FString &Action,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleBreakMaterialConnections(const FString &RequestId,
+                                 const FString &Action,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket>
+                                     RequestingSocket);
+  bool
+  HandleGetMaterialNodeDetails(const FString &RequestId, const FString &Action,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket>
+                                   RequestingSocket);
   // Landscape, foliage, and Niagara handlers
   bool HandleCreateLandscape(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
@@ -439,6 +527,9 @@ private:
   bool HandleSetupRagdoll(const FString &RequestId, const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleActivateRagdoll(const FString &RequestId, const FString &Action,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Material graph handlers
   bool HandleAddMaterialTextureSample(
       const FString &RequestId, const FString &Action,
@@ -584,8 +675,38 @@ private:
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleAssignClothAssetToMesh(const FString &RequestId,
-                                    const TSharedPtr<FJsonObject> &Payload,
-                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetPhysicsAsset(const FString &RequestId,
+                             const TSharedPtr<FJsonObject> &Payload,
+                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleRemovePhysicsBody(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleSetMorphTargetValue(const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListMorphTargets(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDeleteMorphTarget(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDeleteSocket(const FString &RequestId,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetBoneTransform(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleListVirtualBones(const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleDeleteVirtualBone(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGetPhysicsAssetInfo(const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 8: Material Authoring handlers
   bool HandleManageMaterialAuthoringAction(
       const FString &RequestId, const FString &Action,
@@ -680,6 +801,11 @@ private:
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Phase 26: Spline System handlers
   bool HandleManageSplinesAction(
+      const FString &RequestId, const FString &Action,
+      const TSharedPtr<FJsonObject> &Payload,
+      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  // Phase 27: Misc handlers (camera, viewport, bookmarks, etc.)
+  bool HandleMiscAction(
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
@@ -890,6 +1016,22 @@ private:
   bool HandleControlActorGetMetadata(const FString &RequestId,
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  // Additional actor handlers for test compatibility
+  bool HandleControlActorFindByClass(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorRemoveComponent(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorGetComponentProperty(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorSetCollision(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlActorCallFunction(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control Editor Subhandlers
   bool HandleControlEditorPlay(const FString &RequestId,
@@ -914,6 +1056,76 @@ private:
                                       const TSharedPtr<FJsonObject> &Payload,
                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorOpenAsset(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorScreenshot(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorPause(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorResume(const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorConsoleCommand(const FString &RequestId,
+                                          const TSharedPtr<FJsonObject> &Payload,
+                                          TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStepFrame(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStartRecording(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorStopRecording(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorCreateBookmark(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorJumpToBookmark(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetPreferences(const FString &RequestId,
+                                         const TSharedPtr<FJsonObject> &Payload,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetViewportRealtime(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSimulateInput(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  // Additional editor handlers for test compatibility
+  bool HandleControlEditorCloseAsset(const FString &RequestId,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSaveAll(const FString &RequestId,
+                                  const TSharedPtr<FJsonObject> &Payload,
+                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorUndo(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorRedo(const FString &RequestId,
+                               const TSharedPtr<FJsonObject> &Payload,
+                               TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetEditorMode(const FString &RequestId,
+                                        const TSharedPtr<FJsonObject> &Payload,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorShowStats(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorHideStats(const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetGameView(const FString &RequestId,
+                                      const TSharedPtr<FJsonObject> &Payload,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetImmersiveMode(const FString &RequestId,
+                                           const TSharedPtr<FJsonObject> &Payload,
+                                           TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorSetFixedDeltaTime(const FString &RequestId,
+                                            const TSharedPtr<FJsonObject> &Payload,
+                                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleControlEditorOpenLevel(const FString &RequestId,
                                     const TSharedPtr<FJsonObject> &Payload,
                                     TSharedPtr<FMcpBridgeWebSocket> Socket);
 

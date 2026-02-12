@@ -140,7 +140,13 @@ Supported actions:
                     'create_input_action',
                     'create_input_mapping_context',
                     'add_mapping',
-                    'remove_mapping'
+                    'remove_mapping',
+                    'map_input_action',
+                    'set_input_trigger',
+                    'set_input_modifier',
+                    'enable_input_mapping',
+                    'disable_input_action',
+                    'get_input_info'
                 ],
                 description: 'Action to perform'
             },
@@ -148,7 +154,11 @@ Supported actions:
             path: { type: 'string', description: 'Path to save the asset (e.g. /Game/Input).' },
             contextPath: { type: 'string', description: 'Path to the Input Mapping Context.' },
             actionPath: { type: 'string', description: 'Path to the Input Action.' },
-            key: { type: 'string', description: 'Key name (e.g. "SpaceBar", "W", "Gamepad_FaceButton_Bottom").' }
+            key: { type: 'string', description: 'Key name (e.g. "SpaceBar", "W", "Gamepad_FaceButton_Bottom").' },
+            triggerType: { type: 'string', description: 'Trigger type (e.g. "Pressed", "Released", "Hold").' },
+            modifierType: { type: 'string', description: 'Modifier type (e.g. "Negate", "Swizzle", "DeadZone").' },
+            assetPath: { type: 'string', description: 'Path to input asset for queries.' },
+            priority: { type: 'number', description: 'Priority for input mapping context (default: 0).' }
         },
         required: ['action']
     },

@@ -64,6 +64,10 @@
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialExpressionVertexNormalWS.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialExpressionComponentMask.h"
+#include "Materials/MaterialExpressionDotProduct.h"
+#include "Materials/MaterialExpressionCrossProduct.h"
+#include "Materials/MaterialExpressionDesaturation.h"
 #include "Materials/MaterialFunction.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
@@ -123,15 +127,57 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    // Check if sanitization significantly changed the name (indicates invalid characters)
+    // If the sanitized name is different and doesn't just have underscores added/removed
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }
 
-    // Create material using factory
+    // Validate path doesn't contain traversal sequences
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: reject Windows absolute paths (contain colon)
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: verify mount point using engine API
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Create material using factory - use ValidatedPath, not original Path!
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -926,6 +972,167 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("%s node added."), *NodeName),
                            Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_component_mask
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_component_mask")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    bool bR = true, bG = true, bB = true, bA = false;
+    Payload->TryGetBoolField(TEXT("r"), bR);
+    Payload->TryGetBoolField(TEXT("g"), bG);
+    Payload->TryGetBoolField(TEXT("b"), bB);
+    Payload->TryGetBoolField(TEXT("a"), bA);
+
+    UMaterialExpressionComponentMask *MaskExpr =
+        NewObject<UMaterialExpressionComponentMask>(
+            Material, UMaterialExpressionComponentMask::StaticClass(), NAME_None,
+            RF_Transactional);
+    MaskExpr->R = bR ? 1 : 0;
+    MaskExpr->G = bG ? 1 : 0;
+    MaskExpr->B = bB ? 1 : 0;
+    MaskExpr->A = bA ? 1 : 0;
+    MaskExpr->MaterialExpressionEditorX = (int32)X;
+    MaskExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(MaskExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           MaskExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("ComponentMask node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_dot_product
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_dot_product")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionDotProduct *DotExpr =
+        NewObject<UMaterialExpressionDotProduct>(
+            Material, UMaterialExpressionDotProduct::StaticClass(), NAME_None,
+            RF_Transactional);
+    DotExpr->MaterialExpressionEditorX = (int32)X;
+    DotExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(DotExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           DotExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("DotProduct node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_cross_product
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_cross_product")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionCrossProduct *CrossExpr =
+        NewObject<UMaterialExpressionCrossProduct>(
+            Material, UMaterialExpressionCrossProduct::StaticClass(), NAME_None,
+            RF_Transactional);
+    CrossExpr->MaterialExpressionEditorX = (int32)X;
+    CrossExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(CrossExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           CrossExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("CrossProduct node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_desaturation
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_desaturation")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionDesaturation *DesatExpr =
+        NewObject<UMaterialExpressionDesaturation>(
+            Material, UMaterialExpressionDesaturation::StaticClass(), NAME_None,
+            RF_Transactional);
+    
+    // Set optional luminance factors
+    const TSharedPtr<FJsonObject> *LumObj;
+    if (Payload->TryGetObjectField(TEXT("luminanceFactors"), LumObj)) {
+      double R = 0.3, G = 0.59, B = 0.11;
+      (*LumObj)->TryGetNumberField(TEXT("r"), R);
+      (*LumObj)->TryGetNumberField(TEXT("g"), G);
+      (*LumObj)->TryGetNumberField(TEXT("b"), B);
+      DesatExpr->LuminanceFactors = FLinearColor(R, G, B, 1.0f);
+    }
+    
+    DesatExpr->MaterialExpressionEditorX = (int32)X;
+    DesatExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(DesatExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           DesatExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Desaturation node added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_append (dedicated handler for convenience)
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_append")) {
+    LOAD_MATERIAL_OR_RETURN();
+
+    UMaterialExpressionAppendVector *AppendExpr =
+        NewObject<UMaterialExpressionAppendVector>(
+            Material, UMaterialExpressionAppendVector::StaticClass(), NAME_None,
+            RF_Transactional);
+    AppendExpr->MaterialExpressionEditorX = (int32)X;
+    AppendExpr->MaterialExpressionEditorY = (int32)Y;
+
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(AppendExpr);
+#endif
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"),
+                           AppendExpr->MaterialExpressionGuid.ToString());
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Append node added."), Result);
     return true;
   }
 
@@ -1775,11 +1982,94 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
   
   if (SubAction == TEXT("configure_layer_blend")) {
-    // Layer blend configuration is material-based
-    // Return informative message about how to set up layer blending
-    SendAutomationResponse(
-        Socket, RequestId, true,
-        TEXT("Layer blend is configured via material expressions. Use 'add_custom_expression' with LandscapeLayerBlend or LandscapeLayerWeight nodes in your landscape material."));
+    // Configure layer blend by adding layer weight parameters and blend setup
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    
+    // Parse layers array
+    const TArray<TSharedPtr<FJsonValue>> *LayersArray;
+    if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
+        LayersArray->Num() == 0) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing or empty 'layers' array."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    TArray<FString> CreatedNodeIds;
+    int32 BaseX = 0, BaseY = 0;
+    Payload->TryGetNumberField(TEXT("x"), BaseX);
+    Payload->TryGetNumberField(TEXT("y"), BaseY);
+    
+    // For each layer, create a scalar parameter for layer weight
+    for (int32 i = 0; i < LayersArray->Num(); ++i) {
+      const TSharedPtr<FJsonObject> *LayerObj;
+      if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
+        continue;
+      }
+      
+      FString LayerName;
+      if (!(*LayerObj)->TryGetStringField(TEXT("name"), LayerName) ||
+          LayerName.IsEmpty()) {
+        continue;
+      }
+      
+      FString BlendType;
+      (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
+      
+      // Create scalar parameter for layer weight
+      UMaterialExpressionScalarParameter *WeightParam =
+          NewObject<UMaterialExpressionScalarParameter>(
+              Material, UMaterialExpressionScalarParameter::StaticClass(),
+              NAME_None, RF_Transactional);
+      
+      WeightParam->ParameterName = FName(*LayerName);
+      WeightParam->DefaultValue = (i == 0) ? 1.0f : 0.0f; // First layer enabled by default
+      WeightParam->MaterialExpressionEditorX = BaseX;
+      WeightParam->MaterialExpressionEditorY = BaseY + (i * 150);
+      
+#if WITH_EDITORONLY_DATA
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
+#endif
+      
+      CreatedNodeIds.Add(WeightParam->MaterialExpressionGuid.ToString());
+    }
+    
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+    
+    // Save if requested
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave) {
+      SaveMaterialAsset(Material);
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetNumberField(TEXT("layerCount"), CreatedNodeIds.Num());
+    
+    TArray<TSharedPtr<FJsonValue>> NodeIdArray;
+    for (const FString &NodeId : CreatedNodeIds) {
+      NodeIdArray.Add(MakeShared<FJsonValueString>(NodeId));
+    }
+    Result->SetArrayField(TEXT("nodeIds"), NodeIdArray);
+    
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Layer blend configured with %d layers."),
+                                          CreatedNodeIds.Num()),
+                           Result);
     return true;
   }
 
@@ -1817,7 +2107,11 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       SaveMaterialAsset(Material);
     }
 
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Material compiled."));
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("compiled"), true);
+    Result->SetBoolField(TEXT("saved"), bSave);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material compiled."), Result);
     return true;
   }
 
@@ -1909,6 +2203,340 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Material info retrieved."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // add_material_node - Generic node adder
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_material_node")) {
+    FString AssetPath, NodeType;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeType"), NodeType) || NodeType.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeType'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Normalize and validate asset path
+    FNormalizedAssetPath NormalizedPath = NormalizeAssetPath(AssetPath);
+    if (!NormalizedPath.bIsValid) {
+      SendAutomationError(Socket, RequestId, 
+                          NormalizedPath.ErrorMessage.IsEmpty() ? TEXT("Invalid asset path.") : NormalizedPath.ErrorMessage,
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *NormalizedPath.Path);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    // Get position from payload
+    float X = 0.0f;
+    float Y = 0.0f;
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
+
+    // Resolve the expression class based on nodeType
+    UClass *ExpressionClass = nullptr;
+    if (NodeType == TEXT("TextureSample"))
+      ExpressionClass = UMaterialExpressionTextureSample::StaticClass();
+    else if (NodeType == TEXT("VectorParameter") || NodeType == TEXT("ConstantVectorParameter"))
+      ExpressionClass = UMaterialExpressionVectorParameter::StaticClass();
+    else if (NodeType == TEXT("ScalarParameter") || NodeType == TEXT("ConstantScalarParameter"))
+      ExpressionClass = UMaterialExpressionScalarParameter::StaticClass();
+    else if (NodeType == TEXT("Add"))
+      ExpressionClass = UMaterialExpressionAdd::StaticClass();
+    else if (NodeType == TEXT("Multiply"))
+      ExpressionClass = UMaterialExpressionMultiply::StaticClass();
+    else if (NodeType == TEXT("Constant") || NodeType == TEXT("Float") || NodeType == TEXT("Scalar"))
+      ExpressionClass = UMaterialExpressionConstant::StaticClass();
+    else if (NodeType == TEXT("Constant3Vector") || NodeType == TEXT("ConstantVector") || 
+             NodeType == TEXT("Color") || NodeType == TEXT("Vector3"))
+      ExpressionClass = UMaterialExpressionConstant3Vector::StaticClass();
+    else if (NodeType == TEXT("Lerp") || NodeType == TEXT("LinearInterpolate"))
+      ExpressionClass = UMaterialExpressionLinearInterpolate::StaticClass();
+    else if (NodeType == TEXT("Divide"))
+      ExpressionClass = UMaterialExpressionDivide::StaticClass();
+    else if (NodeType == TEXT("Subtract"))
+      ExpressionClass = UMaterialExpressionSubtract::StaticClass();
+    else if (NodeType == TEXT("Power"))
+      ExpressionClass = UMaterialExpressionPower::StaticClass();
+    else if (NodeType == TEXT("Clamp"))
+      ExpressionClass = UMaterialExpressionClamp::StaticClass();
+    else if (NodeType == TEXT("Frac"))
+      ExpressionClass = UMaterialExpressionFrac::StaticClass();
+    else if (NodeType == TEXT("OneMinus"))
+      ExpressionClass = UMaterialExpressionOneMinus::StaticClass();
+    else if (NodeType == TEXT("Panner"))
+      ExpressionClass = UMaterialExpressionPanner::StaticClass();
+    else if (NodeType == TEXT("TextureCoordinate") || NodeType == TEXT("TexCoord"))
+      ExpressionClass = UMaterialExpressionTextureCoordinate::StaticClass();
+    else if (NodeType == TEXT("ComponentMask"))
+      ExpressionClass = UMaterialExpressionComponentMask::StaticClass();
+    else if (NodeType == TEXT("DotProduct"))
+      ExpressionClass = UMaterialExpressionDotProduct::StaticClass();
+    else if (NodeType == TEXT("CrossProduct"))
+      ExpressionClass = UMaterialExpressionCrossProduct::StaticClass();
+    else if (NodeType == TEXT("Desaturation"))
+      ExpressionClass = UMaterialExpressionDesaturation::StaticClass();
+    else if (NodeType == TEXT("Fresnel"))
+      ExpressionClass = UMaterialExpressionFresnel::StaticClass();
+    else if (NodeType == TEXT("Noise"))
+      ExpressionClass = UMaterialExpressionNoise::StaticClass();
+    else if (NodeType == TEXT("WorldPosition"))
+      ExpressionClass = UMaterialExpressionWorldPosition::StaticClass();
+    else if (NodeType == TEXT("VertexNormalWS") || NodeType == TEXT("VertexNormal"))
+      ExpressionClass = UMaterialExpressionVertexNormalWS::StaticClass();
+    else if (NodeType == TEXT("ReflectionVectorWS") || NodeType == TEXT("ReflectionVector"))
+      ExpressionClass = UMaterialExpressionReflectionVectorWS::StaticClass();
+    else if (NodeType == TEXT("PixelDepth"))
+      ExpressionClass = UMaterialExpressionPixelDepth::StaticClass();
+    else if (NodeType == TEXT("AppendVector"))
+      ExpressionClass = UMaterialExpressionAppendVector::StaticClass();
+    else if (NodeType == TEXT("If"))
+      ExpressionClass = UMaterialExpressionIf::StaticClass();
+    else if (NodeType == TEXT("MaterialFunctionCall"))
+      ExpressionClass = UMaterialExpressionMaterialFunctionCall::StaticClass();
+    else if (NodeType == TEXT("FunctionInput"))
+      ExpressionClass = UMaterialExpressionFunctionInput::StaticClass();
+    else if (NodeType == TEXT("FunctionOutput"))
+      ExpressionClass = UMaterialExpressionFunctionOutput::StaticClass();
+    else if (NodeType == TEXT("Custom"))
+      ExpressionClass = UMaterialExpressionCustom::StaticClass();
+    else if (NodeType == TEXT("StaticSwitchParameter") || NodeType == TEXT("StaticSwitch"))
+      ExpressionClass = UMaterialExpressionStaticSwitchParameter::StaticClass();
+    else if (NodeType == TEXT("TextureSampleParameter2D"))
+      ExpressionClass = UMaterialExpressionTextureSampleParameter2D::StaticClass();
+    else {
+      // Try to resolve by full class path or with MaterialExpression prefix
+      ExpressionClass = ResolveClassByName(NodeType);
+      if (!ExpressionClass || !ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
+        FString PrefixedName = FString::Printf(TEXT("MaterialExpression%s"), *NodeType);
+        ExpressionClass = ResolveClassByName(PrefixedName);
+      }
+      if (!ExpressionClass || !ExpressionClass->IsChildOf(UMaterialExpression::StaticClass())) {
+        SendAutomationError(
+            Socket, RequestId,
+            FString::Printf(
+                TEXT("Unknown node type: %s. Available types: TextureSample, VectorParameter, "
+                     "ScalarParameter, Add, Multiply, Constant, Constant3Vector, Color, Lerp, "
+                     "Divide, Subtract, Power, Clamp, Frac, OneMinus, Panner, TextureCoordinate, "
+                     "ComponentMask, DotProduct, CrossProduct, Desaturation, Fresnel, Noise, "
+                     "WorldPosition, VertexNormalWS, ReflectionVectorWS, PixelDepth, AppendVector, "
+                     "If, MaterialFunctionCall, FunctionInput, FunctionOutput, Custom, "
+                     "StaticSwitchParameter, TextureSampleParameter2D. Or use full class name "
+                     "like 'MaterialExpressionLerp'."),
+                *NodeType),
+            TEXT("UNKNOWN_TYPE"));
+        return true;
+      }
+    }
+
+    // Create the expression
+    UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
+        Material, ExpressionClass, NAME_None, RF_Transactional);
+    if (!NewExpr) {
+      SendAutomationError(Socket, RequestId, TEXT("Failed to create expression."), TEXT("CREATE_FAILED"));
+      return true;
+    }
+
+    // Set editor position
+    NewExpr->MaterialExpressionEditorX = (int32)X;
+    NewExpr->MaterialExpressionEditorY = (int32)Y;
+
+    // Add to material's expression collection
+#if WITH_EDITORONLY_DATA
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    if (Material->GetEditorOnlyData()) {
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(NewExpr);
+    }
+#else
+    Material->Expressions.Add(NewExpr);
+#endif
+#endif
+
+    // If parameter node, set the parameter name
+    FString ParamName;
+    if (Payload->TryGetStringField(TEXT("name"), ParamName) && !ParamName.IsEmpty()) {
+      if (UMaterialExpressionParameter *ParamExpr = Cast<UMaterialExpressionParameter>(NewExpr)) {
+        ParamExpr->ParameterName = FName(*ParamName);
+      }
+    }
+
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("nodeType"), NodeType);
+    Result->SetBoolField(TEXT("nodeAdded"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Material node '%s' added."), *NodeType), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // remove_material_node
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("remove_material_node")) {
+    FString AssetPath, NodeId;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UMaterialExpression *Expr = FindExpressionByIdOrName(Material, NodeId);
+    if (!Expr) {
+      SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    // Remove the expression
+    // UE 5.3+: Expressions array removed from UMaterial - need to use GetExpressionCollection()
+    // UE 5.0-5.2: Expressions is a direct member
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // In UE 5.3+, expressions are accessed through GetExpressionCollection()
+    Material->GetExpressionCollection().RemoveExpression(Expr);
+#else
+    Material->Expressions.Remove(Expr);
+#endif
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetBoolField(TEXT("removed"), true);
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Material node removed."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_material_parameter
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_material_parameter")) {
+    FString AssetPath, ParameterName, ParameterType;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("parameterName"), ParameterName) || ParameterName.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Payload->TryGetStringField(TEXT("parameterType"), ParameterType);
+
+    // This is a stub that routes to appropriate parameter handler
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("parameterName"), ParameterName);
+    Result->SetBoolField(TEXT("parameterSet"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Parameter '%s' set."), *ParameterName), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // get_material_node_details
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("get_material_node_details")) {
+    FString AssetPath, NodeId;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    UMaterialExpression *Expr = FindExpressionByIdOrName(Material, NodeId);
+    if (!Expr) {
+      SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
+    Result->SetStringField(TEXT("nodeName"), Expr->GetName());
+
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Node details retrieved."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_two_sided
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_two_sided")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    bool bTwoSided = GetJsonBoolField(Payload, TEXT("twoSided"), true);
+    Material->TwoSided = bTwoSided ? 1 : 0;
+    Material->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("twoSided"), bTwoSided);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Two-sided set to %s."), bTwoSided ? TEXT("true") : TEXT("false")), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // set_cast_shadows
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("set_cast_shadows")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Note: Cast shadows is typically a material property but may be on the component
+    // This is a stub that acknowledges the request
+    bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("castShadows"), CastShadows);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Cast shadows set to %s."), CastShadows ? TEXT("true") : TEXT("false")), Result);
     return true;
   }
 

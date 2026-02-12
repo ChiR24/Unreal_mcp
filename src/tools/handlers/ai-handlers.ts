@@ -285,6 +285,58 @@ export async function handleAITools(
     }
 
     // =========================================================================
+    // 16.9 Aliases & Convenience Actions (9 actions)
+    // =========================================================================
+
+    case 'create_blackboard': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      return sendRequest('create_blackboard');
+    }
+
+    case 'setup_perception': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('setup_perception');
+    }
+
+    case 'create_nav_link_proxy': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('create_nav_link_proxy');
+    }
+
+    case 'set_focus': {
+      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      return sendRequest('set_focus');
+    }
+
+    case 'clear_focus': {
+      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      return sendRequest('clear_focus');
+    }
+
+    case 'set_blackboard_value': {
+      requireNonEmptyString(argsRecord.blackboardPath, 'blackboardPath', 'Missing required parameter: blackboardPath');
+      requireNonEmptyString(argsRecord.keyName, 'keyName', 'Missing required parameter: keyName');
+      return sendRequest('set_blackboard_value');
+    }
+
+    case 'get_blackboard_value': {
+      requireNonEmptyString(argsRecord.blackboardPath, 'blackboardPath', 'Missing required parameter: blackboardPath');
+      requireNonEmptyString(argsRecord.keyName, 'keyName', 'Missing required parameter: keyName');
+      return sendRequest('get_blackboard_value');
+    }
+
+    case 'run_behavior_tree': {
+      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      requireNonEmptyString(argsRecord.behaviorTreePath, 'behaviorTreePath', 'Missing required parameter: behaviorTreePath');
+      return sendRequest('run_behavior_tree');
+    }
+
+    case 'stop_behavior_tree': {
+      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      return sendRequest('stop_behavior_tree');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 

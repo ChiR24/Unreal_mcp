@@ -17,6 +17,8 @@ const SKELETON_ACTIONS = [
   'set_bone_transform', 'set_bone_parent',
   'create_virtual_bone',
   'create_socket', 'configure_socket',
+  // Socket action aliases (for test compatibility)
+  'add_socket', 'remove_socket', 'modify_socket',
   // 7.2 Skin Weights
   'auto_skin_weights', 'set_vertex_weights',
   'normalize_weights', 'prune_weights',
@@ -25,6 +27,8 @@ const SKELETON_ACTIONS = [
   'create_physics_asset',
   'add_physics_body', 'configure_physics_body',
   'add_physics_constraint', 'configure_constraint_limits',
+  // Physics action aliases
+  'modify_physics_body', 'set_physics_constraint', 'preview_physics',
   // 7.4 Cloth Setup (Basic)
   'bind_cloth_to_skeletal_mesh', 'assign_cloth_asset_to_mesh',
   // 7.5 Morph Targets
@@ -39,7 +43,15 @@ type SkeletonAction = (typeof SKELETON_ACTIONS)[number];
  * Normalize skeleton arguments before sending to C++
  */
 function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string, unknown> {
-  const normalized: Record<string, unknown> = { ...args, subAction: action };
+  // Map action aliases to canonical C++ action names
+  const actionAliases: Record<string, string> = {
+    'add_socket': 'create_socket',
+    'modify_socket': 'configure_socket',
+    'modify_physics_body': 'configure_physics_body',
+  };
+  
+  const canonicalAction = actionAliases[action] ?? action;
+  const normalized: Record<string, unknown> = { ...args, subAction: canonicalAction };
 
   // Normalize location/position parameters
   if (args.location) {

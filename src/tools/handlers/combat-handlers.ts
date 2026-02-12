@@ -236,6 +236,54 @@ export async function handleCombatTools(
     }
 
     // =========================================================================
+    // Aliases
+    // =========================================================================
+
+    case 'setup_damage_type': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      return sendRequest('setup_damage_type');
+    }
+
+    case 'configure_hit_detection': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('configure_hit_detection');
+    }
+
+    case 'get_combat_stats': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('get_combat_stats');
+    }
+
+    // =========================================================================
+    // New Sub-Actions
+    // =========================================================================
+
+    case 'create_damage_effect': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      return sendRequest('create_damage_effect');
+    }
+
+    case 'apply_damage': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('apply_damage');
+    }
+
+    case 'heal': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('heal');
+    }
+
+    case 'create_shield': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('create_shield');
+    }
+
+    case 'modify_armor': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('modify_armor');
+    }
+
+    // =========================================================================
     // Default / Unknown Action
     // =========================================================================
 
