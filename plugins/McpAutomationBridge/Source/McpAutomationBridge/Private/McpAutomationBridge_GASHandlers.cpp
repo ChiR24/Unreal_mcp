@@ -596,9 +596,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         McpSafeAssetSave(Blueprint);
 
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+        FString ActualPath = Path / ActualName;
+        
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayAbility"));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability created"), Result);
         return true;
@@ -2582,9 +2586,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FKismetEditorUtilities::CompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+        FString ActualPath = Path / ActualName;
+
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffectExecutionCalculation"));
         
         TArray<TSharedPtr<FJsonValue>> VariablesArray;

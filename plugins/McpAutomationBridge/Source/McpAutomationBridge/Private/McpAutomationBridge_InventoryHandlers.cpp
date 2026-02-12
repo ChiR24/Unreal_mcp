@@ -385,10 +385,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
         if (GetPayloadBool(Payload, TEXT("save"), true)) {
-          FString AssetPathForSave = Blueprint->GetPathName();
-          int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-          if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-          Blueprint->MarkPackageDirty();
+          McpSafeAssetSave(Blueprint);
         }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -813,10 +810,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(NewBlueprint);
 
       if (GetPayloadBool(Payload, TEXT("save"), true)) {
-        FString AssetPathForSave = NewBlueprint->GetPathName();
-        int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-        if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-        NewBlueprint->MarkPackageDirty();
+        McpSafeAssetSave(NewBlueprint);
       }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1685,10 +1679,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(LootTableAsset);
 
       if (GetPayloadBool(Payload, TEXT("save"), true)) {
-        FString AssetPathForSave = LootTableAsset->GetPathName();
-        int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-        if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-        LootTableAsset->MarkPackageDirty();
+        McpSafeAssetSave(LootTableAsset);
       }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1742,12 +1733,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
     if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(EntriesProp)) {
       // For custom loot table classes with proper array properties
       FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(LootTable));
-      EntryIndex = ArrayHelper.Num();
-      bEntryAdded = true;
+      // Actually add a new element to the array
+      int32 NewIdx = ArrayHelper.AddValue();
+      if (NewIdx != INDEX_NONE) {
+        EntryIndex = NewIdx;
+        bEntryAdded = true;
+        // Note: The new element's inner fields (item path, weight, quantities) 
+        // would need to be populated via reflection based on the struct definition
+      } else {
+        bEntryAdded = false;
+      }
     } else {
-      // For generic data assets, store in the generic data map
-      // The loot entry data will be stored as metadata
-      bEntryAdded = true;
+      // For generic data assets without proper array properties
+      bEntryAdded = false;
     }
 
     LootTable->MarkPackageDirty();
@@ -2030,10 +2028,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(RecipeAsset);
 
       if (GetPayloadBool(Payload, TEXT("save"), true)) {
-        FString AssetPathForSave = RecipeAsset->GetPathName();
-        int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-        if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-        RecipeAsset->MarkPackageDirty();
+        McpSafeAssetSave(RecipeAsset);
       }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -2123,10 +2118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       FAssetRegistryModule::AssetCreated(StationBlueprint);
 
         if (GetPayloadBool(Payload, TEXT("save"), true)) {
-          FString AssetPathForSave = StationBlueprint->GetPathName();
-          int32 DotIdx = AssetPathForSave.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-          if (DotIdx != INDEX_NONE) { AssetPathForSave.LeftInline(DotIdx); }
-          StationBlueprint->MarkPackageDirty();
+          McpSafeAssetSave(StationBlueprint);
         }
 
       TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());

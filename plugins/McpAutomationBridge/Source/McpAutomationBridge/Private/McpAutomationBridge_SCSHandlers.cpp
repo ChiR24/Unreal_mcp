@@ -87,6 +87,17 @@ static TSharedPtr<FJsonObject> PIEActiveError() {
 }
 #endif
 
+#if !WITH_EDITOR
+// Forward declaration for non-editor builds - must be before first call site
+static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
+  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  Result->SetBoolField(TEXT("success"), false);
+  Result->SetStringField(TEXT("error"),
+                         TEXT("SCS operations require editor build"));
+  return Result;
+}
+#endif
+
 // Get Blueprint SCS structure
 TSharedPtr<FJsonObject>
 FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
@@ -909,13 +920,3 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
 
   return Result;
 }
-
-#if !WITH_EDITOR
-static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), false);
-  Result->SetStringField(TEXT("error"),
-                         TEXT("SCS operations require editor build"));
-  return Result;
-}
-#endif

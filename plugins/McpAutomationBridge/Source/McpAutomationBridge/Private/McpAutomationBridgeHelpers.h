@@ -271,7 +271,8 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     // Plugin paths must have at least 3 segments: /PluginName/Content/...
     TArray<FString> Segments;
     CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-    bool bLooksLikePluginPath = Segments.Num() >= 2;
+    const bool bLooksLikePluginPath = Segments.Num() >= 3 &&
+        Segments.Num() >= 2 && Segments[1].Equals(TEXT("Content"), ESearchCase::IgnoreCase);
     
     if (!bLooksLikePluginPath) {
       UE_LOG(

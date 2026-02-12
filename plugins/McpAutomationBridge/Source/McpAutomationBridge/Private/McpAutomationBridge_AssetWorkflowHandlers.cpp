@@ -850,7 +850,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       TArray<FColor> ColorData;
       ColorData.Reserve(Width * Height);
 
-      for (int32 i = 0; i < ImageData.Num(); i += 4) {
+      // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
+      for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
         FColor Color;
         Color.B = ImageData[i + 0];
         Color.G = ImageData[i + 1];

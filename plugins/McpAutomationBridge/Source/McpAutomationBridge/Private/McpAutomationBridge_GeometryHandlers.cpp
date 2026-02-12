@@ -1158,6 +1158,15 @@ static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const
         AssetPath = FString::Printf(TEXT("/Game/GeneratedMeshes/%s"), *ActorName);
     }
 
+    // Sanitize the asset path to prevent path traversal and ensure valid path format
+    FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (SanitizedAssetPath.IsEmpty() && !AssetPath.IsEmpty())
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("Invalid assetPath - rejected due to security validation"), TEXT("INVALID_ASSET_PATH"));
+        return true;
+    }
+    AssetPath = SanitizedAssetPath;
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 

@@ -188,7 +188,18 @@ static FString NormalizeAudioPath(const FString& Path)
     }
     
     FString Normalized = Sanitized;
-    Normalized.ReplaceInline(TEXT("/Content"), TEXT("/Game"));
+    
+    // Only replace /Content at the start to avoid corrupting plugin paths
+    // Plugin paths like /MyPlugin/Content/Audio should NOT become /MyPlugin/Game/Audio
+    if (Normalized.StartsWith(TEXT("/Content/")))
+    {
+        Normalized = TEXT("/Game/") + Normalized.Mid(9);  // Skip "/Content/"
+    }
+    else if (Normalized == TEXT("/Content"))
+    {
+        Normalized = TEXT("/Game");
+    }
+    
     Normalized.ReplaceInline(TEXT("\\"), TEXT("/"));
     
     // Remove trailing slashes

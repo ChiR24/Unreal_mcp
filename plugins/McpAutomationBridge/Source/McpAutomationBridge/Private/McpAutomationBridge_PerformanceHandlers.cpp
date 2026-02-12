@@ -132,6 +132,24 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
           return true;
       }
 
+      // Sanitize category to prevent console command injection
+      // Only allow alphanumeric characters and underscores
+      bool bIsValidCategory = true;
+      for (int32 i = 0; i < Category.Len(); ++i) {
+        TCHAR C = Category[i];
+        if (!FChar::IsAlnum(C) && C != TEXT('_')) {
+          bIsValidCategory = false;
+          break;
+        }
+      }
+
+      if (!bIsValidCategory) {
+        SendAutomationError(RequestingSocket, RequestId, 
+                            TEXT("Invalid stat category name. Only alphanumeric characters and underscores allowed."),
+                            TEXT("INVALID_CATEGORY"));
+        return true;
+      }
+
       GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                     *FString::Printf(TEXT("stat %s"), *Category));
       SendAutomationResponse(

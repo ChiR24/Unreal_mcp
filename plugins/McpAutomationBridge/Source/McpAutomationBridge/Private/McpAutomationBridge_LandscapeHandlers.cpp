@@ -604,7 +604,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
       Landscape = Cast<ALandscape>(
           StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
     }
-    if (!Landscape && !LandscapeName.IsEmpty()) {
+    if (!Landscape && !LandscapeName.IsEmpty() && GEditor) {
       if (UEditorActorSubsystem *ActorSS =
               GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
         TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();

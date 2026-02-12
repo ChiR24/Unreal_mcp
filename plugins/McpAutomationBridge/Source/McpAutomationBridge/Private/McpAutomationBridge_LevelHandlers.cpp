@@ -75,6 +75,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("levelPath required"),
                             TEXT("INVALID_ARGUMENT"));
+        return true;
       }
 
       // Auto-resolve short names
@@ -186,7 +187,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("list_levels");
     } else if (LowerSub == TEXT("export_level")) {
       EffectiveAction = TEXT("export_level");
-    } else if (LowerSub == TEXT("import_level")) {
     } else if (LowerSub == TEXT("import_level")) {
       EffectiveAction = TEXT("import_level");
     } else if (LowerSub == TEXT("add_sublevel")) {

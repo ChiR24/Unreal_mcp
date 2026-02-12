@@ -294,14 +294,22 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         if (UserStore.FindParameterVariable(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName))))
         {
             UserStore.SetParameterValue(Val, FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName)));
-            // ...
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("parameterName"), ParamName);
+            Result->SetNumberField(TEXT("value"), Val);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Float parameter set."), Result);
+            return true;
         }
         
         // Try bool
         if (UserStore.FindParameterVariable(FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName))))
         {
             UserStore.SetParameterValue(bVal, FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName)));
-            // ...
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("parameterName"), ParamName);
+            Result->SetBoolField(TEXT("value"), bVal);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bool parameter set."), Result);
+            return true;
         }
 
         SendAutomationError(RequestingSocket, RequestId, TEXT("Parameter not found or type not supported (Float/Bool only)."), TEXT("PARAM_FAILED"));
