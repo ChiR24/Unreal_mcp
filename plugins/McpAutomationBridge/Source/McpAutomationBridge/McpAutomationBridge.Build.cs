@@ -65,12 +65,11 @@ public class McpAutomationBridge : ModuleRules
         // Disable PCH to prevent virtual memory exhaustion
         PCHUsage = PCHUsageMode.NoPCHs;
         
-        // DISABLE UNITY BUILDS - This is critical for large modules
-        // Unity builds combine many files into one huge compilation unit
-        // which causes "compiler out of heap space" even with plenty of RAM
-        // because the compiler heap lives in page file space, not RAM
-        bUseUnity = false;
-        Console.WriteLine("McpAutomationBridge: Unity builds DISABLED (prevents heap exhaustion for large modules)");
+        // Unity builds enabled - combine files for faster compilation
+        // Note: If you get "compiler out of heap space" errors, install BuildConfiguration.xml
+        // from plugins/McpAutomationBridge/Config/BuildConfiguration.xml to %AppData%\Unreal Engine\UnrealBuildTool\
+        bUseUnity = true;
+        Console.WriteLine("McpAutomationBridge: Unity builds enabled");
         
         // UE 5.0 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion == 0)
