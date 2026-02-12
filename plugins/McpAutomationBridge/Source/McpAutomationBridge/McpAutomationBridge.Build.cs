@@ -2,9 +2,31 @@ using UnrealBuildTool;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 public class McpAutomationBridge : ModuleRules
 {
+    // ============================================================================
+    // NATIVE WINDOWS API FOR ACTUAL MEMORY DETECTION
+    // ============================================================================
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MEMORYSTATUSEX
+    {
+        internal uint dwLength;
+        internal uint dwMemoryLoad;
+        internal ulong ullTotalPhys;
+        internal ulong ullAvailPhys;
+        internal ulong ullTotalPageFile;
+        internal ulong ullAvailPageFile;
+        internal ulong ullTotalVirtual;
+        internal ulong ullAvailVirtual;
+        internal ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
     /// <summary>
     /// Configures build rules, dependencies, and compile-time feature definitions for the McpAutomationBridge module based on the provided build target.
     /// </summary>
@@ -24,56 +46,32 @@ public class McpAutomationBridge : ModuleRules
         // ============================================================================
         // DYNAMIC MEMORY-BASED BUILD CONFIGURATION
         // ============================================================================
-        // Automatically adjust build parallelism based on available system memory
+        // Automatically adjust build parallelism based on ACTUAL available system memory
         // to prevent "compiler is out of heap space" errors (C1060)
         
-        long AvailableMemoryMB = GetAvailableMemoryMB();
-        bool bIsLowMemorySystem = AvailableMemoryMB < 8192; // Less than 8GB
-        bool bIsVeryLowMemorySystem = AvailableMemoryMB < 4096; // Less than 4GB
+        long AvailableMemoryMB = GetActualAvailableMemoryMB();
+        long TotalMemoryMB = GetTotalPhysicalMemoryMB();
         
-        Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory", AvailableMemoryMB));
+        // UBT already handles parallelism based on 1.5GB/action globally
+        // Our job is to prevent HUGE compilation units that exceed heap space
         
-        // Disable PCH to prevent virtual memory exhaustion on systems with limited RAM
-        // This is the most reliable workaround for C3859/C1076 errors
+        // IMPORTANT: Unity builds combine many .cpp files into one compilation unit
+        // This causes each compiler process to need 3-6GB+ heap space instead of 1.5GB
+        // For a module with 50+ handler files, unity builds cause heap exhaustion
+        // even with plenty of RAM, because Windows page file space is limited
+        
+        Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
+        
+        // Disable PCH to prevent virtual memory exhaustion
         PCHUsage = PCHUsageMode.NoPCHs;
         
-        // Enable Unity builds for faster compilation on systems with sufficient memory
-        // Unity builds combine multiple source files which speeds up compilation significantly
-        // Only disable for very low memory systems (< 8GB) to prevent C1060 heap errors
-        bUseUnity = !bIsLowMemorySystem;
-        Console.WriteLine(string.Format("McpAutomationBridge: Unity builds {0}", bUseUnity ? "enabled" : "disabled (low memory system)"));
-         
-        // Disable Adaptive Unity to prevent files from being excluded from unity builds
-        // bUseAdaptiveUnityBuild was removed in UE 5.7, use reflection to set it safely
-        try
-        {
-            var prop = GetType().GetProperty("bUseAdaptiveUnityBuild");
-            if (prop != null && !bIsVeryLowMemorySystem) { prop.SetValue(this, false); }
-        }
-        catch { /* Property doesn't exist in this UE version */ }
-         
-        // bMergeUnityFiles was also removed in UE 5.7
-        try
-        {
-            var prop = GetType().GetProperty("bMergeUnityFiles");
-            if (prop != null && !bIsLowMemorySystem) { prop.SetValue(this, true); }
-        }
-        catch { /* Property doesn't exist in this UE version */ }
+        // DISABLE UNITY BUILDS - This is critical for large modules
+        // Unity builds combine many files into one huge compilation unit
+        // which causes "compiler out of heap space" even with plenty of RAM
+        // because the compiler heap lives in page file space, not RAM
+        bUseUnity = false;
+        Console.WriteLine("McpAutomationBridge: Unity builds DISABLED (prevents heap exhaustion for large modules)");
         
-        // Set max parallel actions based on available memory
-        // Each compiler instance needs ~1-2GB of RAM
-        try
-        {
-            var prop = GetType().GetProperty("MaxParallelActions");
-            if (prop != null)
-            {
-                int MaxActions = bIsVeryLowMemorySystem ? 1 : (bIsLowMemorySystem ? 2 : 4);
-                prop.SetValue(this, MaxActions);
-                Console.WriteLine(string.Format("McpAutomationBridge: Max parallel actions set to {0}", MaxActions));
-            }
-        }
-        catch { /* Property doesn't exist in this UE version */ }
-
         // UE 5.0 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion == 0)
         {
@@ -334,53 +332,69 @@ PublicDependencyModuleNames.AddRange(new string[]
     }
 
     /// <summary>
-    /// Gets the approximate available physical memory in MB.
-    /// Uses a simple heuristic based on environment and process info.
+    /// Gets the ACTUAL available physical memory in MB using Windows API.
+    /// Falls back to conservative estimate if detection fails.
     /// </summary>
     /// <returns>Available memory in MB.</returns>
-    private long GetAvailableMemoryMB()
+    private long GetActualAvailableMemoryMB()
     {
         try
         {
-            // Check for UE_BUILD_CONFIGURATION environment variable
-            // This can be set to hint at memory constraints
-            string MemoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
-            if (!string.IsNullOrEmpty(MemoryHint))
+            // Try Windows API first (most accurate)
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                long HintValue;
-                if (long.TryParse(MemoryHint, out HintValue) && HintValue > 0)
+                var memStatus = new MEMORYSTATUSEX();
+                memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+                
+                if (GlobalMemoryStatusEx(ref memStatus))
                 {
-                    return HintValue;
+                    // Return available physical memory in MB
+                    return (long)(memStatus.ullAvailPhys / (1024 * 1024));
                 }
             }
-            
-            // Check for MSBuild's max CPU count - if low, system might be constrained
-            string ProcessorCount = Environment.GetEnvironmentVariable("NUMBER_OF_PROCESSORS");
-            if (!string.IsNullOrEmpty(ProcessorCount))
-            {
-                int CpuCount;
-                if (int.TryParse(ProcessorCount, out CpuCount))
-                {
-                    // Rough heuristic: assume 2GB per core minimum, 4GB per core recommended
-                    // For systems with many cores, assume more RAM
-                    long EstimatedMemory = CpuCount * 2048; // 2GB per core minimum
-                    
-                    // Cap the estimate to reasonable bounds
-                    if (EstimatedMemory > 65536) return 65536; // Max 64GB
-                    if (EstimatedMemory < 4096) return 4096;   // Min 4GB
-                    
-                    return EstimatedMemory;
-                }
-            }
-            
-            // Conservative default
-            return 8192; // Assume 8GB if we can't determine
         }
         catch
         {
-            // Default to conservative estimate
-            return 8192; // Assume 8GB
+            // Fall through to heuristics
         }
+        
+        // Fallback: Check for environment variable hint
+        string MemoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
+        if (!string.IsNullOrEmpty(MemoryHint))
+        {
+            long HintValue;
+            if (long.TryParse(MemoryHint, out HintValue) && HintValue > 0)
+            {
+                return HintValue;
+            }
+        }
+        
+        // Conservative fallback - assume 4GB available
+        return 4096;
+    }
+
+    /// <summary>
+    /// Gets the total physical memory in MB using Windows API.
+    /// </summary>
+    /// <returns>Total memory in MB.</returns>
+    private long GetTotalPhysicalMemoryMB()
+    {
+        try
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                var memStatus = new MEMORYSTATUSEX();
+                memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+                
+                if (GlobalMemoryStatusEx(ref memStatus))
+                {
+                    return (long)(memStatus.ullTotalPhys / (1024 * 1024));
+                }
+            }
+        }
+        catch { }
+        
+        return 8192; // Conservative fallback
     }
 
     /// <summary>

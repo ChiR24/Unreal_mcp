@@ -111,6 +111,18 @@ public:
                            const FString &RequestId, const FString &Message,
                            const FString &ErrorCode);
 
+  /**
+   * Send a progress update message during long-running operations.
+   * This keeps the request alive by extending its timeout on the server side.
+   * 
+   * @param RequestId The request ID being tracked
+   * @param Percent Optional progress percent (0-100), negative to omit
+   * @param Message Optional status message
+   * @param bStillWorking True if operation is still in progress (prevents stale detection)
+   */
+  void SendProgressUpdate(const FString &RequestId, float Percent = -1.0f, 
+                          const FString &Message = TEXT(""), bool bStillWorking = true);
+
   bool ExecuteEditorCommands(const TArray<FString> &Commands,
                              FString &OutErrorMessage);
 #if MCP_HAS_CONTROLRIG_FACTORY

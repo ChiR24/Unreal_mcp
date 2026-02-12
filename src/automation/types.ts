@@ -37,6 +37,19 @@ export interface AutomationBridgeResponseMessage extends AutomationBridgeMessage
     result?: unknown;
 }
 
+/**
+ * Progress update message sent by UE during long operations.
+ * Used to extend request timeout and provide status feedback.
+ */
+export interface ProgressUpdateMessage extends AutomationBridgeMessage {
+    type: 'progress_update';
+    requestId: string;
+    percent?: number;       // 0-100 progress indicator
+    message?: string;       // Human-readable status
+    timestamp?: string;     // ISO timestamp
+    stillWorking?: boolean; // True if operation is still in progress
+}
+
 export interface AutomationBridgeStatus {
     enabled: boolean;
     host: string;
@@ -92,6 +105,12 @@ export interface PendingRequest {
     eventTimeout?: NodeJS.Timeout | undefined;
     eventTimeoutMs?: number | undefined;
     initialResponse?: AutomationBridgeResponseMessage | undefined;
+    // Progress tracking for timeout extension
+    extensionCount?: number;
+    lastProgressPercent?: number;
+    staleCount?: number;
+    absoluteTimeout?: NodeJS.Timeout;
+    totalExtensionMs?: number;
 }
 
 /**

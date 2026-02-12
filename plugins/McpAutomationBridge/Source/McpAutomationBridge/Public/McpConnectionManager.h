@@ -33,9 +33,20 @@ public:
 	bool IsBridgeActive() const { return bBridgeAvailable; }
 	bool IsReconnectPending() const { return TimeUntilReconnect > 0.0f; }
 
-	bool SendRawMessage(const FString& Message);
-	void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);
-	void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
+    bool SendRawMessage(const FString& Message);
+    void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);
+    void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
+
+    /**
+     * Send a progress update message to extend request timeout during long operations.
+     * Used for heartbeat/keepalive to prevent timeouts while UE is actively working.
+     * 
+     * @param RequestId The request ID being tracked
+     * @param Percent Optional progress percent (0-100)
+     * @param Message Optional status message
+     * @param bStillWorking True if operation is still in progress (prevents stale detection)
+     */
+    void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""), bool bStillWorking = true);
 
 	void SetOnMessageReceived(FMcpMessageReceivedCallback InCallback);
 

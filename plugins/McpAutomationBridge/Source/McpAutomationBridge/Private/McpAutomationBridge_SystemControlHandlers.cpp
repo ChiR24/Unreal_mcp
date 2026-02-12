@@ -16,9 +16,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
+  // The sub-action is in the payload's "action" field
+  FString SubAction;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+  }
+  
+  const FString Lower = SubAction.ToLower();
+  
+  // Check if this handler should process this sub-action
   if (!Lower.StartsWith(TEXT("run_ubt")) &&
-      !Lower.StartsWith(TEXT("run_tests"))) {
+      !Lower.StartsWith(TEXT("run_tests")) &&
+      !Lower.StartsWith(TEXT("test_progress")) &&
+      !Lower.StartsWith(TEXT("test_stale"))) {
     return false; // Not handled by this function
   }
 
@@ -229,6 +239,78 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("Editor world not available for running tests"),
                           TEXT("EDITOR_NOT_AVAILABLE"));
     }
+    return true;
+  } else   if (Lower == TEXT("test_progress_protocol")) {
+    // Test action for heartbeat/progress protocol
+    // Simulates a long-running operation with progress updates
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("test_progress_protocol: Handler called successfully"));
+    int32 Steps = 5;
+    Payload->TryGetNumberField(TEXT("steps"), Steps);
+    Steps = FMath::Clamp(Steps, 1, 20);
+    
+    float StepDurationMs = 500.0f;
+    Payload->TryGetNumberField(TEXT("stepDurationMs"), StepDurationMs);
+    StepDurationMs = FMath::Clamp(StepDurationMs, 100.0f, 5000.0f);
+    
+    bool bSendProgress = true;
+    if (Payload->HasField(TEXT("sendProgress"))) {
+      bSendProgress = Payload->GetBoolField(TEXT("sendProgress"));
+    }
+    
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("test_progress_protocol: Starting %d steps, %.0fms each, progress=%s"),
+           Steps, StepDurationMs, bSendProgress ? TEXT("true") : TEXT("false"));
+    
+    for (int32 i = 1; i <= Steps; i++) {
+      // Send progress update before each step
+      if (bSendProgress) {
+        float Percent = (static_cast<float>(i) / static_cast<float>(Steps)) * 100.0f;
+        FString StatusMsg = FString::Printf(TEXT("Step %d/%d"), i, Steps);
+        SendProgressUpdate(RequestId, Percent, StatusMsg, true);
+      }
+      
+      // Simulate work by sleeping
+      FPlatformProcess::Sleep(StepDurationMs / 1000.0f);
+    }
+    
+    // Send final progress indicating completion
+    if (bSendProgress) {
+      SendProgressUpdate(RequestId, 100.0f, TEXT("Complete"), false);
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetNumberField(TEXT("steps"), Steps);
+    Result->SetNumberField(TEXT("stepDurationMs"), StepDurationMs);
+    Result->SetBoolField(TEXT("progressSent"), bSendProgress);
+    Result->SetStringField(TEXT("message"), TEXT("Progress protocol test completed"));
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Progress protocol test completed successfully"), Result);
+    return true;
+  } else if (Lower == TEXT("test_stale_progress")) {
+    // Test action for stale progress detection
+    // Sends the same progress percent multiple times to trigger stale detection
+    int32 StaleCount = 5;
+    Payload->TryGetNumberField(TEXT("staleCount"), StaleCount);
+    StaleCount = FMath::Clamp(StaleCount, 1, 10);
+    
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("test_stale_progress: Sending %d stale updates"), StaleCount);
+    
+    // Send same progress repeatedly to trigger stale detection
+    for (int32 i = 0; i < StaleCount; i++) {
+      FString StatusMsg = FString::Printf(TEXT("Stale update %d/%d"), i + 1, StaleCount);
+      SendProgressUpdate(RequestId, 50.0f, StatusMsg, true);  // Always 50%
+      FPlatformProcess::Sleep(0.1f);  // 100ms between updates
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetNumberField(TEXT("staleUpdatesSent"), StaleCount);
+    Result->SetBoolField(TEXT("staleDetectionExpected"), true);
+    
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Stale progress test completed"), Result);
     return true;
   }
 

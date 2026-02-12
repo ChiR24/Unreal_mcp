@@ -1471,6 +1471,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     return true;
   }
 
+  // Security: Validate tag format - reject path traversal attempts
+  if (TagValue.Contains(TEXT("..")) || TagValue.Contains(TEXT("\\")) || TagValue.Contains(TEXT("/"))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Invalid tag: '%s'. Path separators and traversal characters are not allowed."), *TagValue),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   FString MatchType;
   Payload->TryGetStringField(TEXT("matchType"), MatchType);
   MatchType = MatchType.ToLower();
@@ -1569,6 +1577,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   Payload->TryGetStringField(TEXT("name"), Query);
   if (Query.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("name required"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Security: Validate query format - reject path traversal attempts
+  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\")) || Query.Contains(TEXT("/"))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -2010,13 +2026,45 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   if (ClassName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("class"), ClassName);
   }
-  
+
+  if (ClassName.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("className or class is required"), nullptr,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Security: Validate class name format - reject path traversal attempts
+  // Valid formats: "/Script/Module.ClassName", "/Game/Path/ClassName.ClassName", "ClassName"
+  // Invalid: Contains "..", "\" (Windows paths), or other traversal patterns
+  if (ClassName.Contains(TEXT("..")) || ClassName.Contains(TEXT("\\"))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Invalid class name format: '%s'. Path traversal characters are not allowed."), *ClassName),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Additional security: Reject absolute filesystem paths
+  if (ClassName.StartsWith(TEXT("/")) && !ClassName.StartsWith(TEXT("/Script/")) && 
+      !ClassName.StartsWith(TEXT("/Game/")) && !ClassName.StartsWith(TEXT("/Engine/"))) {
+    // Could be a path traversal attempt disguised as a valid path
+    if (ClassName.Contains(TEXT("/etc/")) || ClassName.Contains(TEXT("/usr/")) || 
+        ClassName.Contains(TEXT("/var/")) || ClassName.Contains(TEXT("/home/")) ||
+        ClassName.Contains(TEXT("/root/")) || ClassName.Contains(TEXT("/tmp/")) ||
+        ClassName.Contains(TEXT("C:\\")) || ClassName.Contains(TEXT("D:\\"))) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Invalid class name format: '%s'. Filesystem paths are not allowed."), *ClassName),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
+
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
-  
+
   if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
     UClass* ClassToFind = nullptr;
-    
+
     // Try to find the class
     if (ClassName.StartsWith(TEXT("/"))) {
       ClassToFind = LoadObject<UClass>(nullptr, *ClassName);
@@ -2024,7 +2072,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
       // Use nullptr instead of ANY_PACKAGE for UE 5.7+ compatibility
       ClassToFind = FindObject<UClass>(nullptr, *ClassName);
     }
-    
+
     if (ClassToFind) {
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
         if (AActor* Actor = *It) {
@@ -2035,12 +2083,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
         }
       }
     } else {
-      // Class not found - return empty result
+      // Class not found - return empty result (this is valid for searches)
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleControlActorFindByClass: Class '%s' not found"), *ClassName);
     }
   }
-  
+
   Data->SetArrayField(TEXT("actors"), ActorsArray);
   Data->SetNumberField(TEXT("count"), ActorsArray.Num());
   SendStandardSuccessResponse(this, Socket, RequestId,
@@ -2452,18 +2500,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
 #if WITH_EDITOR
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("alreadyStopped"), true);
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Play session not active"), Resp, FString());
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("notInPIE"), true);
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Cannot eject: Play session not active"), Resp, TEXT("NO_ACTIVE_SESSION"));
     return true;
   }
 
-  GEditor->RequestEndPlayMap();
+  // Use Eject console command instead of RequestEndPlayMap
+  // This ejects the player from the possessed pawn without stopping PIE
+  GEditor->Exec(GEditor->PlayWorld, TEXT("Eject"));
+  
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("ejected"), true);
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Play in Editor ejected"), Resp, FString());
+                         TEXT("Ejected from possessed actor"), Resp, FString());
   return true;
 #else
   return false;
@@ -3528,8 +3580,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("savedCount"), SavedCount);
   Resp->SetNumberField(TEXT("totalDirty"), DirtyPackages.Num());
-  SendAutomationResponse(Socket, RequestId, true, 
-                         FString::Printf(TEXT("Saved %d assets"), SavedCount), Resp, FString());
+  
+  // Only report outer success if the operation actually succeeded
+  if (bSuccess || DirtyPackages.Num() == 0) {
+    SendAutomationResponse(Socket, RequestId, true, 
+                           FString::Printf(TEXT("Saved %d of %d dirty assets"), SavedCount, DirtyPackages.Num()), 
+                           Resp, FString());
+  } else {
+    SendAutomationResponse(Socket, RequestId, false, 
+                           FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
+                                           SavedCount, DirtyPackages.Num()), 
+                           Resp, TEXT("SAVE_FAILED"));
+  }
   return true;
 #else
   return false;
@@ -3793,6 +3855,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
 
   // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
+  
+  // Check if the map file exists before attempting to load
+  FString FullMapPath = FPaths::ProjectContentDir() + MapPath.RightChop(6); // Remove "/Game/" prefix
+  FullMapPath = FPaths::ConvertRelativePathToFull(FullMapPath);
+  
+  if (!FPaths::FileExists(FullMapPath)) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("levelPath"), LevelPath);
+    Resp->SetStringField(TEXT("error"), TEXT("Level file not found"));
+    SendAutomationResponse(Socket, RequestId, false, 
+                           FString::Printf(TEXT("Level file not found: %s"), *FullMapPath), 
+                           Resp, TEXT("FILE_NOT_FOUND"));
+    return true;
+  }
+  
   bool bOpened = FEditorFileUtils::LoadMap(*MapPath);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

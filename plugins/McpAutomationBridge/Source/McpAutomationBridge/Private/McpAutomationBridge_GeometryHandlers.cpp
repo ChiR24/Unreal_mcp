@@ -50,9 +50,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/MeshSubdivideFunctions.h"
 #include "GeometryScript/MeshUVFunctions.h"
 
-// UE 5.5+: MeshTransformFunctions was added for TranslateMesh, ScaleMesh, etc.
-// In earlier versions these were in MeshDeformFunctions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+// UE 5.3+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
+// UE 5.0-5.2: These functions are in MeshDeformFunctions
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "GeometryScript/MeshTransformFunctions.h"
 #endif
 
@@ -5861,8 +5861,9 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     FGeometryScriptPrimitiveOptions PrimOptions;
 
     // Clear existing mesh and sweep the profile along the path
-    // UE 5.7: AppendSweepPolygon signature changed - now takes TArray<FTransform> for SweepPath
-    // and has additional MiterLimit parameter
+    // UE 5.4+: AppendSweepPolygon has MiterLimit parameter
+    // UE 5.3 and earlier: No MiterLimit parameter
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
         Mesh,
         PrimOptions,
@@ -5877,6 +5878,21 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
         1.0f,  // MiterLimit
         nullptr
     );
+#else
+    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+        Mesh,
+        PrimOptions,
+        FTransform::Identity,
+        PolygonVertices,
+        PathFrames,
+        true,  // bLoop
+        bCap,  // bCapped
+        1.0f,  // StartScale
+        1.0f,  // EndScale
+        0.0f,  // RotationAngleDeg
+        nullptr
+    );
+#endif
 
     DMC->NotifyMeshUpdated();
 

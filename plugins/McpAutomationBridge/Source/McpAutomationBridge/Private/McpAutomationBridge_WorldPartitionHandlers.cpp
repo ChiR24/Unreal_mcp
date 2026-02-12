@@ -241,10 +241,10 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
     }
     else if (SubAction == TEXT("set_datalayer"))
     {
-#if MCP_HAS_DATALAYER_EDITOR
         FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"));
         FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"));
 
+#if MCP_HAS_DATALAYER_EDITOR
         AActor* Actor = FindObject<AActor>(nullptr, *ActorPath);
         if (!Actor)
         {
@@ -313,7 +313,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         // Fallback or simulation
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("DataLayerEditorSubsystem not available. set_datalayer skipped."));
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-        Result->SetStringField(TEXT("actorName"), ActorName);
+        Result->SetStringField(TEXT("actorName"), ActorPath);
         Result->SetStringField(TEXT("dataLayerName"), DataLayerName);
         Result->SetBoolField(TEXT("added"), false);
         Result->SetStringField(TEXT("note"), TEXT("Simulated - Subsystem missing"));

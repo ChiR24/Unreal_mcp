@@ -222,6 +222,7 @@ export interface BlueprintArgs extends HandlerArgs {
     timeoutMs?: number;
     waitForCompletion?: boolean;
     waitForCompletionTimeoutMs?: number;
+    shouldExist?: boolean;
     // Parent class for blueprint creation
     parentClass?: string;
     // SCS operations array

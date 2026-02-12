@@ -289,6 +289,25 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
 }
 
 /**
+ * @brief Send a progress update during long-running operations.
+ *
+ * Sends a progress_update message to the MCP server to extend the request
+ * timeout and provide status feedback. This prevents timeout errors when
+ * UE is actively working on a task.
+ *
+ * @param RequestId The request ID being tracked
+ * @param Percent Optional progress percent (0-100), use negative to omit
+ * @param Message Optional status message describing current operation
+ * @param bStillWorking True if operation is still in progress
+ */
+void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
+    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking) {
+  if (ConnectionManager.IsValid()) {
+    ConnectionManager->SendProgressUpdate(RequestId, Percent, Message, bStillWorking);
+  }
+}
+
+/**
  * @brief Records telemetry for an automation request with outcome details.
  *
  * Forwards the request identifier, success flag, human-readable message, and

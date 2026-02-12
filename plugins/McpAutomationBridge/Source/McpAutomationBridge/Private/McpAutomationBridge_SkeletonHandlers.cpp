@@ -3026,6 +3026,33 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
             return true;
         }
         
+        // SECURITY: Validate path to prevent path traversal attacks
+        // Ensure path starts with /Game/ and contains no traversal sequences
+        if (!SkeletonPath.StartsWith(TEXT("/Game/")) && !SkeletonPath.StartsWith(TEXT("/Engine/")) && !SkeletonPath.StartsWith(TEXT("/Temp/")))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid path. Path must start with /Game/, /Engine/, or /Temp/"), TEXT("INVALID_PATH"));
+            return true;
+        }
+        
+        // Check for path traversal attempts
+        if (SkeletonPath.Contains(TEXT("..")) || SkeletonPath.Contains(TEXT("//")) || SkeletonPath.Contains(TEXT("\\")))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid path. Path contains illegal characters or traversal sequences"), TEXT("INVALID_PATH"));
+            return true;
+        }
+        
+        // Validate using Unreal's package name validation (UE 5.7 uses EErrorCode)
+        FPackageName::EErrorCode ErrorCode;
+        if (!FPackageName::IsValidLongPackageName(SkeletonPath, false, &ErrorCode))
+        {
+            FString ErrorMsg = FPackageName::FormatErrorAsString(SkeletonPath, ErrorCode);
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Invalid package path: %s"), *ErrorMsg), TEXT("INVALID_PATH"));
+            return true;
+        }
+        
         // Normalize path
         FString PackagePath = FPaths::GetPath(SkeletonPath);
         FString SkeletonName = FPaths::GetBaseFilename(SkeletonPath);

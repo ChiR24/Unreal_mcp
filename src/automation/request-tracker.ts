@@ -1,5 +1,11 @@
 import { PendingRequest, AutomationBridgeResponseMessage } from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
+import {
+    PROGRESS_EXTENSION_MS,
+    MAX_PROGRESS_EXTENSIONS,
+    PROGRESS_STALE_THRESHOLD,
+    ABSOLUTE_MAX_TIMEOUT_MS
+} from '../constants.js';
 
 // Note: The two-phase event pattern was disabled because C++ handlers send a single response,
 // not request+event. All actions now use simple request-response. The PendingRequest interface
@@ -66,6 +72,15 @@ export class RequestTracker {
                 }
             }, timeoutMs);
 
+            // Set up absolute timeout cap to prevent indefinite extension
+            const absoluteTimeout = setTimeout(() => {
+                if (this.pendingRequests.has(requestId)) {
+                    this.pendingRequests.delete(requestId);
+                    const totalMs = ABSOLUTE_MAX_TIMEOUT_MS;
+                    reject(new Error(`Request ${requestId} exceeded absolute max timeout (${totalMs}ms)`));
+                }
+            }, ABSOLUTE_MAX_TIMEOUT_MS);
+
             this.pendingRequests.set(requestId, {
                 resolve,
                 reject,
@@ -76,11 +91,90 @@ export class RequestTracker {
                 // Note: waitForEvent and eventTimeoutMs are preserved for potential future use
                 // but currently all actions use simple request-response pattern
                 waitForEvent: false,
-                eventTimeoutMs: timeoutMs
+                eventTimeoutMs: timeoutMs,
+                // Progress tracking initialization
+                extensionCount: 0,
+                lastProgressPercent: undefined,
+                staleCount: 0,
+                absoluteTimeout,
+                totalExtensionMs: 0
             });
         });
 
         return { requestId, promise };
+    }
+
+    /**
+     * Extend the timeout for a pending request based on progress update.
+     * Implements safeguards against deadlock from false "alive" signals:
+     * 1. Max extensions limit (MAX_PROGRESS_EXTENSIONS)
+     * 2. Stale detection (percent unchanged for PROGRESS_STALE_THRESHOLD updates)
+     * 3. Absolute max timeout cap (ABSOLUTE_MAX_TIMEOUT_MS)
+     * 
+     * @param requestId - The request ID to extend
+     * @param percent - Current progress percent (0-100)
+     * @param message - Optional progress message
+     * @returns True if timeout was extended, false if rejected (deadlock prevention)
+     */
+    public extendTimeout(requestId: string, percent?: number, _message?: string): boolean {
+        const pending = this.pendingRequests.get(requestId);
+        if (!pending) {
+            return false;
+        }
+
+        // Check 1: Max extensions limit
+        if (pending.extensionCount !== undefined && pending.extensionCount >= MAX_PROGRESS_EXTENSIONS) {
+            pending.reject(new Error(
+                `Request ${requestId} exceeded max progress extensions (${MAX_PROGRESS_EXTENSIONS}) - possible deadlock detected`
+            ));
+            this.cleanupRequest(requestId);
+            return false;
+        }
+
+        // Check 2: Stale detection - same percent for too many updates
+        if (percent !== undefined && pending.lastProgressPercent === percent) {
+            pending.staleCount = (pending.staleCount || 0) + 1;
+            if (pending.staleCount >= PROGRESS_STALE_THRESHOLD) {
+                pending.reject(new Error(
+                    `Request ${requestId} stalled - progress unchanged at ${percent}% for ${PROGRESS_STALE_THRESHOLD} updates`
+                ));
+                this.cleanupRequest(requestId);
+                return false;
+            }
+        } else {
+            // Reset stale count on progress change
+            pending.staleCount = 0;
+        }
+
+        // Clear existing timeout and set new one
+        clearTimeout(pending.timeout);
+        
+        const newTimeout = setTimeout(() => {
+            if (this.pendingRequests.has(requestId)) {
+                this.pendingRequests.delete(requestId);
+                pending.reject(new Error(`Request ${requestId} timed out after extension`));
+            }
+        }, PROGRESS_EXTENSION_MS);
+
+        pending.timeout = newTimeout;
+        pending.extensionCount = (pending.extensionCount || 0) + 1;
+        pending.lastProgressPercent = percent;
+        pending.totalExtensionMs = (pending.totalExtensionMs || 0) + PROGRESS_EXTENSION_MS;
+
+        return true;
+    }
+
+    /**
+     * Clean up request timers and remove from map.
+     */
+    private cleanupRequest(requestId: string): void {
+        const pending = this.pendingRequests.get(requestId);
+        if (pending) {
+            clearTimeout(pending.timeout);
+            if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
+            this.pendingRequests.delete(requestId);
+        }
     }
 
     public getPendingRequest(requestId: string): PendingRequest | undefined {
@@ -92,6 +186,7 @@ export class RequestTracker {
         if (pending) {
             clearTimeout(pending.timeout);
             if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
             this.pendingRequests.delete(requestId);
             pending.resolve(response);
         }
@@ -102,6 +197,7 @@ export class RequestTracker {
         if (pending) {
             clearTimeout(pending.timeout);
             if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
             this.pendingRequests.delete(requestId);
             pending.reject(error);
         }
@@ -111,6 +207,7 @@ export class RequestTracker {
         for (const [, pending] of this.pendingRequests) {
             clearTimeout(pending.timeout);
             if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
+            if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
             pending.reject(error);
         }
         this.pendingRequests.clear();

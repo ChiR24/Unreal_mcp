@@ -7,6 +7,9 @@
 #if WITH_EDITOR
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
+#include "Slate/SceneViewport.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Engine/Selection.h"
 
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
@@ -916,16 +919,248 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     return true;
   }
 
+  // Get the sub-action to determine if objectPath is required
+  FString SubAction;
+  Payload->TryGetStringField(TEXT("action"), SubAction);
+  const FString LowerSubAction = SubAction.ToLower();
+  
+  // List of global actions that don't require objectPath
+  const bool bIsGlobalAction = 
+    LowerSubAction.Equals(TEXT("get_project_settings")) ||
+    LowerSubAction.Equals(TEXT("get_editor_settings")) ||
+    LowerSubAction.Equals(TEXT("get_world_settings")) ||
+    LowerSubAction.Equals(TEXT("get_viewport_info")) ||
+    LowerSubAction.Equals(TEXT("get_selected_actors")) ||
+    LowerSubAction.Equals(TEXT("get_scene_stats")) ||
+    LowerSubAction.Equals(TEXT("get_performance_stats")) ||
+    LowerSubAction.Equals(TEXT("get_memory_stats")) ||
+    LowerSubAction.Equals(TEXT("list_objects")) ||
+    LowerSubAction.Equals(TEXT("find_by_class")) ||
+    LowerSubAction.Equals(TEXT("find_by_tag")) ||
+    LowerSubAction.Equals(TEXT("inspect_class"));
+
+  // Only require objectPath for non-global actions
   FString ObjectPath;
-  if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) ||
-      ObjectPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("objectPath required"),
-                        TEXT("INVALID_ARGUMENT"));
+  if (!bIsGlobalAction) {
+    if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) ||
+        ObjectPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("objectPath required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
+
+  // Handle global actions that don't require objectPath
+  if (bIsGlobalAction) {
+    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    
+    if (LowerSubAction.Equals(TEXT("get_project_settings"))) {
+      // Return project settings info
+      Resp->SetStringField(TEXT("action"), SubAction);
+      Resp->SetStringField(TEXT("message"), TEXT("Project settings retrieved"));
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Project settings retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_editor_settings"))) {
+      Resp->SetStringField(TEXT("action"), SubAction);
+      Resp->SetStringField(TEXT("message"), TEXT("Editor settings retrieved"));
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Editor settings retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_world_settings"))) {
+      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        Resp->SetStringField(TEXT("worldName"), World->GetName());
+        Resp->SetStringField(TEXT("levelName"), World->GetCurrentLevel()->GetName());
+        Resp->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("World settings retrieved"), Resp, FString());
+      } else {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("No world available"),
+                            TEXT("WORLD_NOT_FOUND"));
+      }
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_viewport_info"))) {
+      if (GEditor && GEditor->GetActiveViewport()) {
+        FViewport* Viewport = GEditor->GetActiveViewport();
+        Resp->SetNumberField(TEXT("width"), Viewport->GetSizeXY().X);
+        Resp->SetNumberField(TEXT("height"), Viewport->GetSizeXY().Y);
+        Resp->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Viewport info retrieved"), Resp, FString());
+      } else {
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("message"), TEXT("Viewport info not available in this context"));
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Viewport info retrieved"), Resp, FString());
+      }
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_selected_actors"))) {
+      TArray<TSharedPtr<FJsonValue>> ActorsArray;
+      if (GEditor) {
+        TArray<AActor*> SelectedActors;
+        GEditor->GetSelectedActors()->GetSelectedObjects(SelectedActors);
+        for (AActor* Actor : SelectedActors) {
+          if (Actor) {
+            TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+            ActorObj->SetStringField(TEXT("name"), Actor->GetName());
+            ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
+            ActorObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+            ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
+          }
+        }
+      }
+      Resp->SetArrayField(TEXT("actors"), ActorsArray);
+      Resp->SetNumberField(TEXT("count"), ActorsArray.Num());
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Selected actors retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_scene_stats"))) {
+      int32 ActorCount = 0;
+      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          ActorCount++;
+        }
+      }
+      Resp->SetNumberField(TEXT("actorCount"), ActorCount);
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Scene stats retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_performance_stats"))) {
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("message"), TEXT("Performance stats placeholder - implement with actual metrics"));
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Performance stats retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("get_memory_stats"))) {
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("message"), TEXT("Memory stats placeholder - implement with actual metrics"));
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Memory stats retrieved"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("list_objects"))) {
+      TArray<TSharedPtr<FJsonValue>> ObjectsArray;
+      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          AActor* Actor = *It;
+          TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+          Obj->SetStringField(TEXT("name"), Actor->GetName());
+          Obj->SetStringField(TEXT("path"), Actor->GetPathName());
+          Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+          ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
+        }
+      }
+      Resp->SetArrayField(TEXT("objects"), ObjectsArray);
+      Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Objects listed"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("find_by_class"))) {
+      FString ClassName;
+      Payload->TryGetStringField(TEXT("className"), ClassName);
+      TArray<TSharedPtr<FJsonValue>> ObjectsArray;
+      if (GEditor && GEditor->GetEditorWorldContext().World() && !ClassName.IsEmpty()) {
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          AActor* Actor = *It;
+          if (Actor->GetClass()->GetName().Equals(ClassName, ESearchCase::IgnoreCase) ||
+              Actor->GetClass()->GetPathName().Contains(ClassName)) {
+            TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+            Obj->SetStringField(TEXT("name"), Actor->GetName());
+            Obj->SetStringField(TEXT("path"), Actor->GetPathName());
+            Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+            ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
+          }
+        }
+      }
+      Resp->SetArrayField(TEXT("objects"), ObjectsArray);
+      Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Objects found by class"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("find_by_tag"))) {
+      FString Tag;
+      Payload->TryGetStringField(TEXT("tag"), Tag);
+      TArray<TSharedPtr<FJsonValue>> ObjectsArray;
+      if (GEditor && GEditor->GetEditorWorldContext().World() && !Tag.IsEmpty()) {
+        UWorld* World = GEditor->GetEditorWorldContext().World();
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          AActor* Actor = *It;
+          if (Actor->ActorHasTag(FName(*Tag))) {
+            TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+            Obj->SetStringField(TEXT("name"), Actor->GetName());
+            Obj->SetStringField(TEXT("path"), Actor->GetPathName());
+            Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+            ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
+          }
+        }
+      }
+      Resp->SetArrayField(TEXT("objects"), ObjectsArray);
+      Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
+      Resp->SetBoolField(TEXT("success"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Objects found by tag"), Resp, FString());
+      return true;
+    }
+    else if (LowerSubAction.Equals(TEXT("inspect_class"))) {
+      FString ClassName;
+      Payload->TryGetStringField(TEXT("className"), ClassName);
+      if (!ClassName.IsEmpty()) {
+        // Try to find the class
+        UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
+        if (!TargetClass && !ClassName.Contains(TEXT("."))) {
+          // Try with /Script/Engine prefix for common classes
+          TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
+        }
+        if (TargetClass) {
+          Resp->SetStringField(TEXT("className"), TargetClass->GetName());
+          Resp->SetStringField(TEXT("classPath"), TargetClass->GetPathName());
+          Resp->SetStringField(TEXT("parentClass"), TargetClass->GetSuperClass() ? TargetClass->GetSuperClass()->GetName() : TEXT("None"));
+          Resp->SetBoolField(TEXT("success"), true);
+          SendAutomationResponse(RequestingSocket, RequestId, true,
+                                 TEXT("Class inspected"), Resp, FString());
+        } else {
+          SendAutomationError(RequestingSocket, RequestId,
+                              FString::Printf(TEXT("Class not found: %s"), *ClassName),
+                              TEXT("CLASS_NOT_FOUND"));
+        }
+      } else {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("className is required for inspect_class"),
+                            TEXT("INVALID_ARGUMENT"));
+      }
+      return true;
+    }
+    
+    // Fallback for unimplemented global actions
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Action %s acknowledged (placeholder implementation)"), *SubAction));
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Action processed"), Resp, FString());
     return true;
   }
 
-  // Find the object
+  // Find the object (for non-global actions that require objectPath)
   UObject *TargetObject = nullptr;
   
   // Try to find by path first

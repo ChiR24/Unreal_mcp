@@ -44,7 +44,7 @@
 #include "Builders/CubeBuilder.h"
 // PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.7+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION <= 6
-#include "PostProcess/PostProcessVolume.h"
+#include "Engine/PostProcessVolume.h"
 #define MCP_HAS_POSTPROCESS_VOLUME 1
 #else
 #define MCP_HAS_POSTPROCESS_VOLUME 0

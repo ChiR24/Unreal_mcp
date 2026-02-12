@@ -43,7 +43,8 @@ const ACTOR_ACTION_ALIASES: Record<string, string> = {
     'get_actor_components': 'get_components',
     'add_component': 'add_component',
     'remove_component': 'remove_component',
-    'set_component_property': 'set_component_properties',
+    'set_component_properties': 'set_component_property',
+    'set_component_property': 'set_component_property',
     'get_component_property': 'get_component_property',
     'call_actor_function': 'call_function',
     'find_actors_by_class': 'find_by_class',
@@ -62,7 +63,7 @@ function normalizeActorAction(action: string): string {
 const handlers: Record<string, ActorActionHandler> = {
     spawn: async (args, tools) => {
         const params = normalizeArgs(args, [
-            { key: 'classPath', aliases: ['class', 'type', 'actorClass', 'actor_class'], required: true, map: ACTOR_CLASS_ALIASES },
+            { key: 'classPath', aliases: ['class', 'type', 'actorClass', 'actor_class', 'className', 'class_name'], required: true, map: ACTOR_CLASS_ALIASES },
             { key: 'actorName', aliases: ['name', 'actor_name'] },
             { key: 'timeoutMs', default: undefined }
         ]);
@@ -308,6 +309,33 @@ const handlers: Record<string, ActorActionHandler> = {
         return tools.actorTools.findByName(name);
     },
     // Additional handlers for test compatibility
+    set_component_property: async (args, tools) => {
+        const params = normalizeArgs(args, [
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'componentName', aliases: ['component_name'], required: true }
+        ]);
+        const actorName = extractString(params, 'actorName');
+        const componentName = extractString(params, 'componentName');
+
+        // Support both singular (propertyName/value) and plural (properties) formats
+        let properties: Record<string, unknown>;
+        if (args.properties && typeof args.properties === 'object') {
+            // Plural format: properties object provided directly
+            properties = args.properties as Record<string, unknown>;
+        } else if (args.propertyName && args.value !== undefined) {
+            // Singular format: convert propertyName/value to properties object
+            properties = { [String(args.propertyName)]: args.value };
+        } else {
+            return ResponseFactory.error(new Error('Either "properties" object or "propertyName" and "value" must be provided'));
+        }
+
+        return executeAutomationRequest(tools, 'control_actor', {
+            action: 'set_component_properties',
+            actorName,
+            componentName,
+            properties
+        }) as Promise<Record<string, unknown>>;
+    },
     remove_component: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'actorName', aliases: ['name', 'actor_name'], required: true },

@@ -26,6 +26,11 @@ function normalizeBlueprintPath(path: string | undefined): string | undefined {
   return normalized;
 }
 
+function hasBlueprintPathTraversal(path: string | undefined): boolean {
+  if (!path) return false;
+  return path.split('/').some((segment) => segment === '..');
+}
+
 export async function handleBlueprintTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
@@ -36,6 +41,15 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
   }
   if (argsRecord.path) {
     argsRecord.path = normalizeBlueprintPath(argsRecord.path as string);
+  }
+
+  const isUnsafePath = (value: unknown): boolean => typeof value === 'string' && hasBlueprintPathTraversal(value);
+  if (isUnsafePath(argsTyped.blueprintPath) || isUnsafePath(argsRecord.path)) {
+    return cleanObject({
+      success: false,
+      error: 'INVALID_BLUEPRINT_PATH',
+      message: 'Blueprint path blocked for security: traversal segments detected'
+    }) as Record<string, unknown>;
   }
   
   switch (action) {
@@ -79,7 +93,11 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'ensure_exists': {
-      const res = await tools.blueprintTools.waitForBlueprint(argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '', argsRecord.timeoutMs as number | undefined);
+      const target = argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '';
+      const res = await tools.blueprintTools.waitForBlueprint(target, {
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        shouldExist: argsTyped.shouldExist !== false
+      });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_variable': {
@@ -286,6 +304,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       };
 
       const resolvedNodeType = (argsTyped.nodeType && nodeAliases[argsTyped.nodeType]) || argsTyped.nodeType || 'K2Node_CallFunction';
+      const resolvedMemberClass = (argsRecord.memberClass as string | undefined) || (argsRecord.nodeClass as string | undefined);
 
       // Validation for Event nodes
       if ((resolvedNodeType === 'K2Node_Event' || resolvedNodeType === 'K2Node_CustomEvent') && !(argsRecord.eventName as string | undefined) && !(argsRecord.customEventName as string | undefined) && !argsTyped.name) {
@@ -305,7 +324,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         variableName: argsTyped.variableName,
         nodeName: argsRecord.nodeName as string | undefined,
         eventName: (argsRecord.eventName as string | undefined) || (argsRecord.customEventName as string | undefined),
-        memberClass: argsRecord.memberClass as string | undefined,
+        memberClass: resolvedMemberClass,
         posX: argsRecord.posX as number | undefined,
         posY: argsRecord.posY as number | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined

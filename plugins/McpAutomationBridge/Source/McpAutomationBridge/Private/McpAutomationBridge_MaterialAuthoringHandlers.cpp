@@ -1982,11 +1982,94 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
   
   if (SubAction == TEXT("configure_layer_blend")) {
-    // Layer blend configuration is material-based
-    // Return informative message about how to set up layer blending
-    SendAutomationResponse(
-        Socket, RequestId, true,
-        TEXT("Layer blend is configured via material expressions. Use 'add_custom_expression' with LandscapeLayerBlend or LandscapeLayerWeight nodes in your landscape material."));
+    // Configure layer blend by adding layer weight parameters and blend setup
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (!Material) {
+      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    
+    // Parse layers array
+    const TArray<TSharedPtr<FJsonValue>> *LayersArray;
+    if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
+        LayersArray->Num() == 0) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing or empty 'layers' array."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    TArray<FString> CreatedNodeIds;
+    int32 BaseX = 0, BaseY = 0;
+    Payload->TryGetNumberField(TEXT("x"), BaseX);
+    Payload->TryGetNumberField(TEXT("y"), BaseY);
+    
+    // For each layer, create a scalar parameter for layer weight
+    for (int32 i = 0; i < LayersArray->Num(); ++i) {
+      const TSharedPtr<FJsonObject> *LayerObj;
+      if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
+        continue;
+      }
+      
+      FString LayerName;
+      if (!(*LayerObj)->TryGetStringField(TEXT("name"), LayerName) ||
+          LayerName.IsEmpty()) {
+        continue;
+      }
+      
+      FString BlendType;
+      (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
+      
+      // Create scalar parameter for layer weight
+      UMaterialExpressionScalarParameter *WeightParam =
+          NewObject<UMaterialExpressionScalarParameter>(
+              Material, UMaterialExpressionScalarParameter::StaticClass(),
+              NAME_None, RF_Transactional);
+      
+      WeightParam->ParameterName = FName(*LayerName);
+      WeightParam->DefaultValue = (i == 0) ? 1.0f : 0.0f; // First layer enabled by default
+      WeightParam->MaterialExpressionEditorX = BaseX;
+      WeightParam->MaterialExpressionEditorY = BaseY + (i * 150);
+      
+#if WITH_EDITORONLY_DATA
+      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
+#endif
+      
+      CreatedNodeIds.Add(WeightParam->MaterialExpressionGuid.ToString());
+    }
+    
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+    
+    // Save if requested
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    if (bSave) {
+      SaveMaterialAsset(Material);
+    }
+    
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetNumberField(TEXT("layerCount"), CreatedNodeIds.Num());
+    
+    TArray<TSharedPtr<FJsonValue>> NodeIdArray;
+    for (const FString &NodeId : CreatedNodeIds) {
+      NodeIdArray.Add(MakeShared<FJsonValueString>(NodeId));
+    }
+    Result->SetArrayField(TEXT("nodeIds"), NodeIdArray);
+    
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Layer blend configured with %d layers."),
+                                          CreatedNodeIds.Num()),
+                           Result);
     return true;
   }
 
@@ -2326,7 +2409,14 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     // Remove the expression
+    // UE 5.3+: Expressions array removed from UMaterial - need to use GetExpressionCollection()
+    // UE 5.0-5.2: Expressions is a direct member
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // In UE 5.3+, expressions are accessed through GetExpressionCollection()
     Material->GetExpressionCollection().RemoveExpression(Expr);
+#else
+    Material->Expressions.Remove(Expr);
+#endif
     Material->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();

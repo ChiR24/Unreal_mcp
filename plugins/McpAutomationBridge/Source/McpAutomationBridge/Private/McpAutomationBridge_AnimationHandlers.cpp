@@ -2627,14 +2627,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         } else {
           BlendSpace->Modify();
 
+          // UE 5.1+: AddSample has overload that takes animation + FVector
+          // UE 5.0: AddSample only takes FVector
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-          FBlendSample NewSample;
-          NewSample.Animation = AnimSeq;
-          NewSample.SampleValue = FVector(SampleX, SampleY, 0.0f);
-
-          PRAGMA_DISABLE_DEPRECATION_WARNINGS
-          BlendSpace->AddSample(NewSample);
-          PRAGMA_ENABLE_DEPRECATION_WARNINGS
+          BlendSpace->AddSample(AnimSeq, FVector(SampleX, SampleY, 0.0f));
 #else
           // UE 5.0: AddSample takes FVector - we can't set animation separately
           BlendSpace->AddSample(FVector(SampleX, SampleY, 0.0f));
@@ -2884,13 +2880,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           AimOffset->Modify();
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-          FBlendSample NewSample;
-          NewSample.Animation = AnimSeq;
-          NewSample.SampleValue = FVector(Yaw, Pitch, 0.0f);
-
-          PRAGMA_DISABLE_DEPRECATION_WARNINGS
-          AimOffset->AddSample(NewSample);
-          PRAGMA_ENABLE_DEPRECATION_WARNINGS
+          // UE 5.1+: AddSample has overload that takes animation + FVector
+          AimOffset->AddSample(AnimSeq, FVector(Yaw, Pitch, 0.0f));
 #else
           // UE 5.0: AddSample takes FVector - we can't set animation separately
           AimOffset->AddSample(FVector(Yaw, Pitch, 0.0f));

@@ -644,11 +644,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const message = typeof result.message === 'string' ? result.message : '';
         const argsTyped = args as AssetArgs;
 
-        if (errorCode === 'INVALID_SUBACTION' || message.toLowerCase().includes('unknown subaction')) {
+        // Check for unknown/invalid action errors from C++ (UNKNOWN_ACTION or INVALID_SUBACTION)
+        if (errorCode === 'UNKNOWN_ACTION' || errorCode === 'INVALID_SUBACTION' ||
+            message.toLowerCase().includes('unknown action') || message.toLowerCase().includes('unknown subaction')) {
           return cleanObject({
             success: false,
-            error: 'INVALID_SUBACTION',
-            message: 'Asset action not recognized by the automation plugin.',
+            error: 'UNKNOWN_ACTION',
+            message: `Unknown asset action: ${action}`,
             action: action || 'manage_asset',
             assetPath: argsTyped.assetPath ?? argsTyped.path
           });

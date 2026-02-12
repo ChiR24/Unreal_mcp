@@ -1,5 +1,5 @@
 import { Logger } from '../utils/logger.js';
-import { AutomationBridgeMessage, AutomationBridgeResponseMessage } from './types.js';
+import { AutomationBridgeMessage, AutomationBridgeResponseMessage, ProgressUpdateMessage } from './types.js';
 import { RequestTracker } from './request-tracker.js';
 
 function FStringSafe(val: unknown): string {
@@ -59,6 +59,9 @@ export class MessageHandler {
                 break;
             case 'automation_event':
                 this.handleAutomationEvent(message);
+                break;
+            case 'progress_update':
+                this.handleProgressUpdate(message as ProgressUpdateMessage);
                 break;
             default:
                 this.log.debug('Received automation bridge message with no handler', message);
@@ -146,6 +149,41 @@ export class MessageHandler {
         }
 
         this.log.debug('Received automation_event (no pending request):', message);
+    }
+
+    /**
+     * Handle progress update messages from UE during long-running operations.
+     * Extends the request timeout to keep the connection alive.
+     */
+    private handleProgressUpdate(message: ProgressUpdateMessage): void {
+        const { requestId, percent, message: statusMsg, stillWorking } = message;
+        
+        if (!requestId) {
+            this.log.debug('Received progress_update without requestId');
+            return;
+        }
+
+        const pending = this.requestTracker.getPendingRequest(requestId);
+        if (!pending) {
+            this.log.debug(`No pending request for progress_update requestId=${requestId}`);
+            return;
+        }
+
+        // Log the progress update
+        const progressStr = percent !== undefined ? ` (${percent.toFixed(1)}%)` : '';
+        const msgStr = statusMsg ? `: ${statusMsg}` : '';
+        this.log.debug(`Progress update for ${pending.action}${progressStr}${msgStr}`);
+
+        // If stillWorking is explicitly false, operation may be completing soon
+        if (stillWorking === false) {
+            this.log.debug(`Progress update indicates operation completing for ${pending.action}`);
+        }
+
+        // Extend the timeout - this also handles deadlock detection
+        const extended = this.requestTracker.extendTimeout(requestId, percent, statusMsg);
+        if (!extended) {
+            this.log.warn(`Timeout extension rejected for ${pending.action} - possible deadlock detected`);
+        }
     }
 
     private enforceActionMatch(response: AutomationBridgeResponseMessage, expectedAction: string): AutomationBridgeResponseMessage {
