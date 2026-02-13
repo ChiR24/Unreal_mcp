@@ -1937,6 +1937,665 @@ static bool HandleRemoveVolume(
     return true;
 }
 
+// ============================================================================
+// Add Volume To Actor Handlers (6 actions)
+// These create volumes positioned at an existing actor's location
+// ============================================================================
+
+// Helper to find actor by path or name
+static AActor* FindActorByPathOrName(UWorld* World, const FString& ActorPath)
+{
+    if (!World || ActorPath.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    // Try to interpret as actor name first
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        if (Actor)
+        {
+            // Check actor label
+            if (Actor->GetActorLabel().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+            // Check actor name
+            if (Actor->GetName().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+            // Check path-like format (e.g., /Game/MCPTest/TestActor)
+            FString ActorPathName = Actor->GetPathName();
+            if (ActorPathName.Equals(ActorPath, ESearchCase::IgnoreCase) ||
+                ActorPathName.EndsWith(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+static bool HandleAddTriggerVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    // Validate actorPath for security (no path traversal)
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    // Find the target actor
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Create trigger volume at actor's location
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_TriggerVolume");
+    ATriggerVolume* Volume = SpawnVolumeActor<ATriggerVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn TriggerVolume"), nullptr);
+        return true;
+    }
+
+    // Attach to the target actor
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+
+static bool HandleAddBlockingVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(200.0f, 200.0f, 200.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_BlockingVolume");
+    ABlockingVolume* Volume = SpawnVolumeActor<ABlockingVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn BlockingVolume"), nullptr);
+        return true;
+    }
+
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+
+static bool HandleAddKillZVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 100.0f));
+    float KillZHeight = GetJsonNumberField(Payload, TEXT("killZHeight"), 0.0f);
+    
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    // Use KillZHeight for Z position if specified
+    if (KillZHeight != 0.0f)
+    {
+        Location.Z = KillZHeight;
+    }
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_KillZVolume");
+    AKillZVolume* Volume = SpawnVolumeActor<AKillZVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn KillZVolume"), nullptr);
+        return true;
+    }
+
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetNumberField(TEXT("killZHeight"), Location.Z);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+
+static bool HandleAddPhysicsVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(300.0f, 300.0f, 300.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Optional physics properties
+    bool bWaterVolume = GetJsonBoolField(Payload, TEXT("bWaterVolume"), false);
+    float FluidFriction = GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3f);
+    float TerminalVelocity = GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0f);
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PhysicsVolume");
+    APhysicsVolume* Volume = SpawnVolumeActor<APhysicsVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn PhysicsVolume"), nullptr);
+        return true;
+    }
+
+    // Configure physics properties
+    Volume->bWaterVolume = bWaterVolume;
+    Volume->FluidFriction = FluidFriction;
+    Volume->TerminalVelocity = TerminalVelocity;
+
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+
+static bool HandleAddCullDistanceVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_CullDistanceVolume");
+    ACullDistanceVolume* Volume = SpawnVolumeActor<ACullDistanceVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn CullDistanceVolume"), nullptr);
+        return true;
+    }
+
+    // Parse cull distances if provided
+    if (Payload->HasTypedField<EJson::Array>(TEXT("cullDistances")))
+    {
+        TArray<TSharedPtr<FJsonValue>> CullDistancesJson = Payload->GetArrayField(TEXT("cullDistances"));
+        TArray<FCullDistanceSizePair> CullDistances;
+        
+        for (const TSharedPtr<FJsonValue>& Entry : CullDistancesJson)
+        {
+            if (Entry->Type == EJson::Object)
+            {
+                TSharedPtr<FJsonObject> EntryObj = Entry->AsObject();
+                FCullDistanceSizePair Pair;
+                Pair.Size = GetJsonNumberField(EntryObj, TEXT("size"), 100.0f);
+                Pair.CullDistance = GetJsonNumberField(EntryObj, TEXT("cullDistance"), 5000.0f);
+                CullDistances.Add(Pair);
+            }
+        }
+        
+        if (CullDistances.Num() > 0)
+        {
+            Volume->CullDistances = CullDistances;
+        }
+    }
+
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+
+#if MCP_HAS_POSTPROCESS_VOLUME
+static bool HandleAddPostProcessVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    float Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
+    float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
+    float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
+    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PostProcessVolume");
+    APostProcessVolume* Volume = SpawnVolumeActor<APostProcessVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn PostProcessVolume"), nullptr);
+        return true;
+    }
+
+    // Configure post process settings
+    Volume->Priority = Priority;
+    Volume->BlendRadius = BlendRadius;
+    Volume->BlendWeight = BlendWeight;
+    Volume->bEnabled = bEnabled;
+    Volume->bUnbound = bUnbound;
+
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetNumberField(TEXT("priority"), Priority);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    return true;
+}
+#endif
+
+// ============================================================================
+// Volume Bounds Handler (1 action)
+// Set volume bounds using min/max corners instead of extent
+// ============================================================================
+
+static bool HandleSetVolumeBounds(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    // Parse bounds array [minX, minY, minZ, maxX, maxY, maxZ]
+    TArray<float> BoundsValues;
+    if (Payload->HasTypedField<EJson::Array>(TEXT("bounds")))
+    {
+        TArray<TSharedPtr<FJsonValue>> BoundsArray = Payload->GetArrayField(TEXT("bounds"));
+        for (const TSharedPtr<FJsonValue>& Value : BoundsArray)
+        {
+            BoundsValues.Add(static_cast<float>(Value->AsNumber()));
+        }
+    }
+
+    if (BoundsValues.Num() != 6)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("bounds must be an array of 6 values [minX, minY, minZ, maxX, maxY, maxZ]"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Validate bounds values
+    for (float Val : BoundsValues)
+    {
+        if (!FMath::IsFinite(Val))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("bounds contains NaN or Infinity values"), nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+
+    FVector MinBound(BoundsValues[0], BoundsValues[1], BoundsValues[2]);
+    FVector MaxBound(BoundsValues[3], BoundsValues[4], BoundsValues[5]);
+
+    // Calculate center and extent from bounds
+    FVector Center = (MinBound + MaxBound) * 0.5f;
+    FVector Extent = (MaxBound - MinBound) * 0.5f;
+
+    if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("bounds must define a valid volume (max > min for all axes)"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* VolumeActor = FindVolumeByName(World, VolumeName);
+    if (!VolumeActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Set the volume location to center
+    VolumeActor->SetActorLocation(Center);
+
+    // Update the brush geometry for brush-based volumes
+    ABrush* BrushVolume = Cast<ABrush>(VolumeActor);
+    if (BrushVolume)
+    {
+        CreateBoxBrushForVolume(BrushVolume, Extent);
+    }
+    else
+    {
+        // For non-brush volumes, use scale
+        VolumeActor->SetActorScale3D(FVector(Extent.X / 100.0f, Extent.Y / 100.0f, Extent.Z / 100.0f));
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+
+    TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject());
+    TArray<TSharedPtr<FJsonValue>> MinArray, MaxArray;
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.X)));
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Y)));
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Z)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.X)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Y)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Z)));
+    BoundsJson->SetArrayField(TEXT("min"), MinArray);
+    BoundsJson->SetArrayField(TEXT("max"), MaxArray);
+    ResponseJson->SetObjectField(TEXT("bounds"), BoundsJson);
+
+    TSharedPtr<FJsonObject> CenterJson = MakeShareable(new FJsonObject());
+    CenterJson->SetNumberField(TEXT("x"), Center.X);
+    CenterJson->SetNumberField(TEXT("y"), Center.Y);
+    CenterJson->SetNumberField(TEXT("z"), Center.Z);
+    ResponseJson->SetObjectField(TEXT("center"), CenterJson);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Set bounds for volume: %s"), *VolumeName), ResponseJson);
+    return true;
+}
+
 #endif // WITH_EDITOR
 
 // ============================================================================
@@ -2051,6 +2710,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     {
         return HandleSetVolumeProperties(this, RequestId, Payload, Socket);
     }
+    if (SubAction == TEXT("set_volume_bounds"))
+    {
+        return HandleSetVolumeBounds(this, RequestId, Payload, Socket);
+    }
 
     // Volume Removal
     if (SubAction == TEXT("remove_volume"))
@@ -2063,6 +2726,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     {
         return HandleGetVolumesInfo(this, RequestId, Payload, Socket);
     }
+
+    // Add Volume To Actor handlers
+    if (SubAction == TEXT("add_trigger_volume"))
+    {
+        return HandleAddTriggerVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_blocking_volume"))
+    {
+        return HandleAddBlockingVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_kill_z_volume"))
+    {
+        return HandleAddKillZVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_physics_volume"))
+    {
+        return HandleAddPhysicsVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_cull_distance_volume"))
+    {
+        return HandleAddCullDistanceVolume(this, RequestId, Payload, Socket);
+    }
+#if MCP_HAS_POSTPROCESS_VOLUME
+    if (SubAction == TEXT("add_post_process_volume"))
+    {
+        return HandleAddPostProcessVolume(this, RequestId, Payload, Socket);
+    }
+#else
+    if (SubAction == TEXT("add_post_process_volume"))
+    {
+        SendAutomationResponse(Socket, RequestId, false,
+            TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+#endif
 
     // Unknown action
     SendAutomationResponse(Socket, RequestId, false,

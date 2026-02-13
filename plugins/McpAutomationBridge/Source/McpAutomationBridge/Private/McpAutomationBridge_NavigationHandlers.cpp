@@ -102,6 +102,27 @@ static FRotator GetJsonRotatorFieldNav(const TSharedPtr<FJsonObject>& Payload, c
     return Default;
 }
 
+// Helper to validate actor name (reject path traversal and path separators)
+static bool IsValidActorName(const FString& Name)
+{
+    if (Name.IsEmpty()) return false;
+    // Reject path traversal
+    if (Name.Contains(TEXT(".."))) return false;
+    // Reject path separators (actor names should not contain slashes)
+    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\"))) return false;
+    // Reject Windows drive letters
+    if (Name.Contains(TEXT(":"))) return false;
+    return true;
+}
+
+// Helper to validate asset/class path (reject path traversal and ensure valid format)
+static bool IsValidNavigationPath(const FString& Path)
+{
+    if (Path.IsEmpty()) return false;
+    // Use the existing validation helper
+    return IsValidAssetPath(Path);
+}
+
 // ============================================================================
 // NavMesh Configuration Handlers
 // ============================================================================
@@ -364,6 +385,22 @@ static bool HandleCreateNavModifierComponent(
         return true;
     }
 
+    // Validate blueprint path - reject path traversal and invalid format
+    if (!IsValidNavigationPath(BlueprintPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate area class path if provided
+    if (!AreaClassPath.IsEmpty() && !IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     // Load the Blueprint
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -453,6 +490,22 @@ static bool HandleSetNavAreaClass(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName and areaClass are required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate area class path - reject path traversal and invalid format
+    if (!IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -559,6 +612,15 @@ static bool HandleConfigureNavAreaCost(
         return true;
     }
 
+    // Validate area class path - reject path traversal and invalid format
+    // Note: NavArea class paths use /Script/NavigationSystem.NavArea_Xxx format
+    if (!IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     // Load area class
     UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
     if (!AreaClass)
@@ -613,6 +675,14 @@ static bool HandleCreateNavLinkProxy(
     FRotator Rotation = GetJsonRotatorFieldNav(Payload, TEXT("rotation"));
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -686,6 +756,14 @@ static bool HandleConfigureNavLink(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -791,6 +869,14 @@ static bool HandleSetNavLinkType(
         return true;
     }
 
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -854,6 +940,14 @@ static bool HandleCreateSmartLink(
     FRotator Rotation = GetJsonRotatorFieldNav(Payload, TEXT("rotation"));
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -925,6 +1019,14 @@ static bool HandleConfigureSmartLinkBehavior(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 

@@ -3,11 +3,11 @@ import { ITools } from '../../types/tool-interfaces.js';
 import type { LightingArgs } from '../../types/handler-types.js';
 import { normalizeLocation } from './common-handlers.js';
 
-// Valid light types supported by UE
-const VALID_LIGHT_TYPES = ['point', 'directional', 'spot', 'rect', 'sky'];
-
-// Valid GI methods
-const VALID_GI_METHODS = ['lumen', 'screenspace', 'none', 'raytraced', 'ssgi'];
+// Valid light types supported by UE - accepts multiple formats
+const VALID_LIGHT_TYPES = [
+  'point', 'directional', 'spot', 'rect', 'sky',           // lowercase short names
+  'pointlight', 'directionallight', 'spotlight', 'rectlight', 'skylight'  // lowercase class names
+];
 
 // Helper to coerce unknown to number | undefined
 const toNumber = (val: unknown): number | undefined => {
@@ -42,14 +42,19 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
     case 'spawn_light':
     case 'create_light': {
       // Map generic create_light to specific types if provided
-      const lightType = args.lightType ? String(args.lightType).toLowerCase() : 'point';
+      let lightType = args.lightType ? String(args.lightType).toLowerCase() : 'point';
+      
+      // Normalize class names to short names (pointlight -> point, directionallight -> directional, etc.)
+      if (lightType.endsWith('light') && lightType !== 'light') {
+        lightType = lightType.replace(/light$/, '');
+      }
       
       // Validate light type
-      if (!VALID_LIGHT_TYPES.includes(lightType)) {
+      if (!VALID_LIGHT_TYPES.includes(lightType) && !VALID_LIGHT_TYPES.includes(lightType + 'light')) {
         return {
           success: false,
           error: 'INVALID_LIGHT_TYPE',
-          message: `Invalid lightType: '${args.lightType}'. Must be one of: ${VALID_LIGHT_TYPES.join(', ')}`,
+          message: `Invalid lightType: '${args.lightType}'. Must be one of: point, directional, spot, rect, sky (or class names: PointLight, DirectionalLight, etc.)`,
           action: action
         };
       }
@@ -137,21 +142,32 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       }));
     }
     case 'setup_global_illumination': {
-      // Validate GI method if provided
-      let methodLower: string | undefined;
+      // Normalize and validate GI method
+      let normalizedMethod: string | undefined;
       if (args.method) {
-        methodLower = String(args.method).toLowerCase();
-        if (!VALID_GI_METHODS.includes(methodLower)) {
+        const methodLower = String(args.method).toLowerCase();
+        // Map to C++ expected values
+        if (methodLower === 'lumen' || methodLower === 'lumengi') {
+          normalizedMethod = 'LumenGI';
+        } else if (methodLower === 'screenspace' || methodLower === 'ssgi') {
+          normalizedMethod = 'ScreenSpace';
+        } else if (methodLower === 'none') {
+          normalizedMethod = 'None';
+        } else if (methodLower === 'raytraced') {
+          normalizedMethod = 'RayTraced';
+        } else if (methodLower === 'lightmass') {
+          normalizedMethod = 'Lightmass';
+        } else {
           return {
             success: false,
             error: 'INVALID_GI_METHOD',
-            message: `Invalid GI method: '${args.method}'. Must be one of: ${VALID_GI_METHODS.join(', ')}`,
+            message: `Invalid GI method: '${args.method}'. Must be one of: LumenGI, ScreenSpace, None, RayTraced, Lightmass`,
             action: 'setup_global_illumination'
           };
         }
       }
       return cleanObject(await tools.lightingTools.setupGlobalIllumination({
-        method: methodLower || toString(args.method),
+        method: normalizedMethod || toString(args.method),
         quality: toString(args.quality),
         indirectLightingIntensity: toNumber(args.indirectLightingIntensity),
         bounces: toNumber(args.bounces)

@@ -199,8 +199,11 @@ static bool HandleCreateSplineActor(
     }
 
     // Spawn a new actor with a spline component
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'SplineActor'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
@@ -754,7 +757,31 @@ static bool HandleCreateSplineMeshComponent(
         return true;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    // SECURITY: Validate blueprintPath to prevent directory traversal and arbitrary file access
+    FString SafeBlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+    if (SafeBlueprintPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe blueprintPath: %s. Path must be relative to project (e.g., /Game/...)"), *BlueprintPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // SECURITY: Validate meshPath if provided
+    FString SafeMeshPath;
+    if (!MeshPath.IsEmpty())
+    {
+        SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
+
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *SafeBlueprintPath);
     if (!Blueprint)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -794,10 +821,10 @@ static bool HandleCreateSplineMeshComponent(
     USplineMeshComponent* MeshComp = Cast<USplineMeshComponent>(NewNode->ComponentTemplate);
     if (MeshComp)
     {
-        // Set mesh if provided
-        if (!MeshPath.IsEmpty())
+        // Set mesh if provided (use sanitized path)
+        if (!SafeMeshPath.IsEmpty())
         {
-            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
             if (Mesh)
             {
                 MeshComp->SetStaticMesh(Mesh);
@@ -847,6 +874,16 @@ static bool HandleSetSplineMeshAsset(
         return true;
     }
 
+    // SECURITY: Validate meshPath to prevent directory traversal and arbitrary file access
+    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    if (SafeMeshPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -891,11 +928,11 @@ static bool HandleSetSplineMeshAsset(
         return true;
     }
 
-    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
@@ -904,7 +941,7 @@ static bool HandleSetSplineMeshAsset(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("meshPath"), MeshPath);
+    Result->SetStringField(TEXT("meshPath"), SafeMeshPath);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh asset set"), Result);
@@ -1004,6 +1041,16 @@ static bool HandleSetSplineMeshMaterial(
         return true;
     }
 
+    // SECURITY: Validate materialPath to prevent directory traversal and arbitrary file access
+    FString SafeMaterialPath = SanitizeProjectRelativePath(MaterialPath);
+    if (SafeMaterialPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe materialPath: %s. Path must be relative to project (e.g., /Game/...)"), *MaterialPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -1047,11 +1094,11 @@ static bool HandleSetSplineMeshMaterial(
         return true;
     }
 
-    UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+    UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
     if (!Material)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Material not found: %s"), *MaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
+            FString::Printf(TEXT("Material not found: %s"), *SafeMaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
         return true;
     }
 
@@ -1059,7 +1106,7 @@ static bool HandleSetSplineMeshMaterial(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("materialPath"), MaterialPath);
+    Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
@@ -1089,6 +1136,16 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
+    // SECURITY: Validate meshPath to prevent directory traversal and arbitrary file access
+    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    if (SafeMeshPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -1113,11 +1170,11 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
-    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
@@ -1226,8 +1283,11 @@ static bool HandleCreateTemplateSpline(
     }
 
     // Spawn actor with spline
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'SplineActor'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);

@@ -95,6 +95,29 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     return true;
   }
 
+  // Security: Validate path format
+  FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
+  if (SafePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+  FoliageTypePath = SafePath;
+
+  // Auto-resolve simple name
+  if (!FoliageTypePath.IsEmpty() &&
+      FPaths::GetPath(FoliageTypePath).IsEmpty()) {
+    FoliageTypePath =
+        FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+  }
+  if (FoliageTypePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("foliageTypePath (or foliageType) required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   // Auto-resolve simple name
   if (!FoliageTypePath.IsEmpty() &&
       FPaths::GetPath(FoliageTypePath).IsEmpty()) {

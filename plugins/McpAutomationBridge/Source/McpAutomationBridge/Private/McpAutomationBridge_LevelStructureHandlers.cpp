@@ -161,6 +161,24 @@ static bool HandleCreateLevel(
 
     // CRITICAL: Check if level already exists to prevent WorldSettings collision crash
     // This prevents Fatal Error: "Cannot generate unique name for 'WorldSettings'"
+    
+    // Check 1: Check if package exists IN MEMORY (from previous operations in same session)
+    // This catches cases where a level was created but the asset registry hasn't synced yet
+    UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *FullPath);
+    if (ExistingPackage)
+    {
+        // Check if there's already a world in this package
+        UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *LevelName);
+        if (ExistingWorld)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Level already exists in memory: %s. Use load_level or provide a different name."), *FullPath),
+                nullptr, TEXT("LEVEL_ALREADY_EXISTS"));
+            return true;
+        }
+    }
+    
+    // Check 2: Check if package exists ON DISK (covers previously saved levels)
     if (FPackageName::DoesPackageExist(FullPath))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
