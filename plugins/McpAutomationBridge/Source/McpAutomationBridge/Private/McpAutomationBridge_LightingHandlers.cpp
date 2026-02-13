@@ -38,10 +38,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
   const FString Lower = Action.ToLower();
   if (!Lower.StartsWith(TEXT("spawn_light")) &&
       !Lower.StartsWith(TEXT("spawn_sky_light")) &&
+      !Lower.StartsWith(TEXT("create_sky_light")) &&       // Added: was missing
+      !Lower.StartsWith(TEXT("create_light")) &&          // Added: alias for spawn_light
       !Lower.StartsWith(TEXT("build_lighting")) &&
+      !Lower.StartsWith(TEXT("bake_lightmap")) &&         // Added: was missing
       !Lower.StartsWith(TEXT("ensure_single_sky_light")) &&
       !Lower.StartsWith(TEXT("create_lighting_enabled_level")) &&
       !Lower.StartsWith(TEXT("create_lightmass_volume")) &&
+      !Lower.StartsWith(TEXT("create_dynamic_light")) &&  // Added: was missing
       !Lower.StartsWith(TEXT("setup_volumetric_fog")) &&
       !Lower.StartsWith(TEXT("setup_global_illumination")) &&
       !Lower.StartsWith(TEXT("configure_shadows")) &&
@@ -100,12 +104,38 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     return true;
   }
 
-  if (Lower == TEXT("spawn_light")) {
+  if (Lower == TEXT("spawn_light") || Lower == TEXT("create_light") || Lower == TEXT("create_dynamic_light")) {
     FString LightClassStr;
-    if (!Payload->TryGetStringField(TEXT("lightClass"), LightClassStr) ||
-        LightClassStr.IsEmpty()) {
+    
+    // Support both lightClass (Unreal class name) and lightType (short name)
+    if (!Payload->TryGetStringField(TEXT("lightClass"), LightClassStr) || LightClassStr.IsEmpty()) {
+      // Try lightType parameter - map short names to Unreal class names
+      FString LightType;
+      if (Payload->TryGetStringField(TEXT("lightType"), LightType) && !LightType.IsEmpty()) {
+        const FString LowerType = LightType.ToLower();
+        if (LowerType == TEXT("point") || LowerType == TEXT("pointlight")) {
+          LightClassStr = TEXT("PointLight");
+        } else if (LowerType == TEXT("directional") || LowerType == TEXT("directionallight")) {
+          LightClassStr = TEXT("DirectionalLight");
+        } else if (LowerType == TEXT("spot") || LowerType == TEXT("spotlight")) {
+          LightClassStr = TEXT("SpotLight");
+        } else if (LowerType == TEXT("rect") || LowerType == TEXT("rectlight")) {
+          LightClassStr = TEXT("RectLight");
+        } else if (LowerType == TEXT("sky") || LowerType == TEXT("skylight")) {
+          LightClassStr = TEXT("SkyLight");
+        } else {
+          // Unknown light type
+          SendAutomationError(RequestingSocket, RequestId,
+                              FString::Printf(TEXT("Invalid lightType: %s. Must be one of: point, directional, spot, rect, sky"), *LightType),
+                              TEXT("INVALID_LIGHT_TYPE"));
+          return true;
+        }
+      }
+    }
+    
+    if (LightClassStr.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("lightClass required"),
+                          TEXT("lightClass or lightType required"),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -176,7 +206,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       BaseLightComp->SetMobility(EComponentMobility::Movable);
     }
 
-    // Apply properties
+    // Apply properties with validation
     const TSharedPtr<FJsonObject> *Props;
     if (Payload->TryGetObjectField(TEXT("properties"), Props)) {
       ULightComponent *LightComp =
@@ -184,6 +214,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       if (LightComp) {
         double Intensity;
         if ((*Props)->TryGetNumberField(TEXT("intensity"), Intensity)) {
+          // Validate intensity: must be finite and non-negative
+          if (!FMath::IsFinite(Intensity)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                   TEXT("spawn_light: Invalid intensity (not finite), using 0"));
+            Intensity = 0.0;
+          } else if (Intensity < 0.0) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                   TEXT("spawn_light: Negative intensity %.2f clamped to 0"), Intensity);
+            Intensity = 0.0;
+          }
           LightComp->SetIntensity((float)Intensity);
         }
 
@@ -196,7 +236,18 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           Color.A = (*ColorObj)->HasField(TEXT("a"))
                         ? GetJsonNumberField((*ColorObj), TEXT("a"))
                         : 1.0f;
-          LightComp->SetLightColor(Color);
+          // Validate color components: must be finite
+          bool bColorValid = true;
+          if (!FMath::IsFinite(Color.R) || !FMath::IsFinite(Color.G) || 
+              !FMath::IsFinite(Color.B) || !FMath::IsFinite(Color.A)) {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                   TEXT("spawn_light: Invalid color components, using white"));
+            Color = FLinearColor::White;
+            bColorValid = false;
+          }
+          if (bColorValid) {
+            LightComp->SetLightColor(Color);
+          }
         }
 
         bool bCastShadows;
@@ -221,6 +272,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                 Cast<UPointLightComponent>(LightComp)) {
           double Radius;
           if ((*Props)->TryGetNumberField(TEXT("attenuationRadius"), Radius)) {
+            // Validate radius: must be positive and finite
+            if (!FMath::IsFinite(Radius) || Radius <= 0.0) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_light: Invalid attenuationRadius %.2f, using 1000"), Radius);
+              Radius = 1000.0;
+            }
             PointComp->SetAttenuationRadius((float)Radius);
           }
         }
@@ -229,10 +286,22 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                 Cast<USpotLightComponent>(LightComp)) {
           double InnerCone;
           if ((*Props)->TryGetNumberField(TEXT("innerConeAngle"), InnerCone)) {
+            // Validate cone angle: 0-180 degrees
+            if (!FMath::IsFinite(InnerCone) || InnerCone < 0.0 || InnerCone > 180.0) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_light: Invalid innerConeAngle %.2f, clamping to 0-180"), InnerCone);
+              InnerCone = FMath::Clamp(InnerCone, 0.0, 180.0);
+            }
             SpotComp->SetInnerConeAngle((float)InnerCone);
           }
           double OuterCone;
           if ((*Props)->TryGetNumberField(TEXT("outerConeAngle"), OuterCone)) {
+            // Validate cone angle: 0-180 degrees
+            if (!FMath::IsFinite(OuterCone) || OuterCone < 0.0 || OuterCone > 180.0) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_light: Invalid outerConeAngle %.2f, clamping to 0-180"), OuterCone);
+              OuterCone = FMath::Clamp(OuterCone, 0.0, 180.0);
+            }
             SpotComp->SetOuterConeAngle((float)OuterCone);
           }
         }
@@ -241,10 +310,22 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                 Cast<URectLightComponent>(LightComp)) {
           double Width;
           if ((*Props)->TryGetNumberField(TEXT("sourceWidth"), Width)) {
+            // Validate width: must be positive
+            if (!FMath::IsFinite(Width) || Width <= 0.0) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_light: Invalid sourceWidth %.2f, using 100"), Width);
+              Width = 100.0;
+            }
             RectComp->SetSourceWidth((float)Width);
           }
           double Height;
           if ((*Props)->TryGetNumberField(TEXT("sourceHeight"), Height)) {
+            // Validate height: must be positive
+            if (!FMath::IsFinite(Height) || Height <= 0.0) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_light: Invalid sourceHeight %.2f, using 100"), Height);
+              Height = 100.0;
+            }
             RectComp->SetSourceHeight((float)Height);
           }
         }
@@ -257,7 +338,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Light spawned"), Resp);
     return true;
-  } else if (Lower == TEXT("spawn_sky_light")) {
+  } else if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light")) {
     AActor *SkyLight = SpawnActorInActiveWorld<AActor>(
         ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
     if (!SkyLight) {
@@ -311,14 +392,50 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SkyLight spawned"), Resp);
     return true;
-  } else if (Lower == TEXT("build_lighting")) {
+  } else if (Lower == TEXT("build_lighting") || Lower == TEXT("bake_lightmap")) {
     if (GEditor && GEditor->GetEditorWorldContext().World()) {
-      if (GEditor && GEditor->GetEditorWorldContext().World())
-        GEditor->Exec(GEditor->GetEditorWorldContext().World(),
-                      TEXT("BuildLighting Production"));
+      // Read quality parameter
+      FString Quality;
+      Payload->TryGetStringField(TEXT("quality"), Quality);
+      
+      // Map quality string to console command
+      FString QualityCmd = TEXT("Production"); // Default
+      if (!Quality.IsEmpty()) {
+        const FString LowerQuality = Quality.ToLower();
+        if (LowerQuality == TEXT("preview") || LowerQuality == TEXT("0")) {
+          QualityCmd = TEXT("Preview");
+        } else if (LowerQuality == TEXT("medium") || LowerQuality == TEXT("1")) {
+          QualityCmd = TEXT("Medium");
+        } else if (LowerQuality == TEXT("high") || LowerQuality == TEXT("2")) {
+          QualityCmd = TEXT("High");
+        } else if (LowerQuality == TEXT("production") || LowerQuality == TEXT("3")) {
+          QualityCmd = TEXT("Production");
+        } else {
+          // Unknown quality - return error
+          TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+          Err->SetStringField(TEXT("error"), TEXT("unknown_quality"));
+          Err->SetStringField(TEXT("quality"), Quality);
+          Err->SetStringField(TEXT("validValues"), TEXT("preview/0, medium/1, high/2, production/3"));
+          SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 TEXT("Unknown lighting quality"), Err,
+                                 TEXT("UNKNOWN_QUALITY"));
+          return true;
+        }
+      }
+      
+      FString Command = FString::Printf(TEXT("BuildLighting %s"), *QualityCmd);
+      GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+      
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetStringField(TEXT("quality"), QualityCmd);
+      Resp->SetBoolField(TEXT("started"), true);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Lighting build started with quality: %s"), *QualityCmd), Resp);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor world not available"),
+                          TEXT("EDITOR_WORLD_NOT_AVAILABLE"));
     }
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Lighting build started"), nullptr);
     return true;
   } else if (Lower == TEXT("ensure_single_sky_light")) {
     TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();

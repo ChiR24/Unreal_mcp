@@ -777,6 +777,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         brushSize: commonSchemas.numberProp,
         layerName: commonSchemas.stringProp,
         eraseMode: commonSchemas.booleanProp,
+        actorName: commonSchemas.actorName,
         foliageType: commonSchemas.stringProp,
         foliageTypePath: commonSchemas.assetPath,
         meshPath: commonSchemas.meshPath,

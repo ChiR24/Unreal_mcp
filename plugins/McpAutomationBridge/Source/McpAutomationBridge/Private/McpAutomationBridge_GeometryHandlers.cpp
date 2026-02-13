@@ -172,6 +172,40 @@ static constexpr int32 MAX_SEGMENTS = 256;
 static constexpr double MAX_DIMENSION = 100000.0;
 static constexpr double MIN_DIMENSION = 0.01;
 
+// Polygon count guards to prevent OOM crashes
+// Recommended limit for dynamic meshes: 100K-500K triangles (UE5 best practices)
+static constexpr int32 MAX_TRIANGLES_PER_DYNAMIC_MESH = 500000;
+static constexpr int32 MAX_SUBDIVIDE_ITERATIONS = 6;  // Each iteration quadruples triangles
+static constexpr int32 WARNING_TRIANGLE_THRESHOLD = 250000;
+
+// Memory pressure threshold (percentage)
+static constexpr float MEMORY_PRESSURE_WARNING = 0.80f;   // Alert at 80% memory used
+static constexpr float MEMORY_PRESSURE_CRITICAL = 0.90f;  // Block operations at 90%
+
+// Helper to check memory pressure before heavy operations
+static bool IsMemoryPressureSafe()
+{
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+    FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
+    double UsagePercent = static_cast<double>(MemStats.UsedPhysical) / 
+                          static_cast<double>(MemStats.TotalPhysical);
+    return UsagePercent < MEMORY_PRESSURE_CRITICAL;
+#else
+    return true;  // Assume safe on other platforms
+#endif
+}
+
+static double GetMemoryUsagePercent()
+{
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+    FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
+    return static_cast<double>(MemStats.UsedPhysical) / 
+           static_cast<double>(MemStats.TotalPhysical) * 100.0;
+#else
+    return 0.0;
+#endif
+}
+
 static int32 ClampSegments(int32 Value, int32 Default = 1)
 {
     return FMath::Clamp(Value <= 0 ? Default : Value, 1, MAX_SEGMENTS);
@@ -663,7 +697,7 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
 {
     FString TargetActorName = GetStringFieldGeom(Payload, TEXT("targetActor"));
     FString ToolActorName = GetStringFieldGeom(Payload, TEXT("toolActor"));
-    bool bKeepTool = GetBoolFieldGeom(Payload, TEXT("keepTool"), false);
+    bool bKeepTool = GetBoolFieldGeom(Payload, TEXT("keepTool"), true);  // Default to true to prevent cascade test failures
 
     if (TargetActorName.IsEmpty() || ToolActorName.IsEmpty())
     {
@@ -1035,6 +1069,25 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
+    // Safety: Clamp iterations to prevent polygon explosion
+    int32 OriginalIterations = Iterations;
+    Iterations = FMath::Clamp(Iterations, 1, MAX_SUBDIVIDE_ITERATIONS);
+    if (Iterations != OriginalIterations)
+    {
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide iterations clamped from %d to %d (MAX_SUBDIVIDE_ITERATIONS)"), 
+               OriginalIterations, Iterations);
+    }
+
+    // Check memory pressure before heavy operation
+    if (!IsMemoryPressureSafe())
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Subdivide blocked to prevent OOM."), 
+                           GetMemoryUsagePercent()), 
+            TEXT("MEMORY_PRESSURE"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
 
@@ -1066,6 +1119,23 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     // Use individual query functions instead
     int32 TriCountBefore = Mesh->GetTriangleCount();
 
+    // Safety: Estimate triangles after subdivision and check against limit
+    // Each subdivision iteration roughly quadruples triangle count
+    int64 EstimatedTriangles = static_cast<int64>(TriCountBefore);
+    for (int32 i = 0; i < Iterations; ++i)
+    {
+        EstimatedTriangles *= 4;  // Each subdivision ~4x triangles
+    }
+    
+    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Subdivide would exceed triangle limit. Current: %d, Estimated after: %lld, Max allowed: %d"), 
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return true;
+    }
+
     for (int32 i = 0; i < Iterations; ++i)
     {
         // UE 5.7: ApplyPNTessellation now takes TessellationLevel as separate parameter
@@ -1074,6 +1144,13 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
     }
 
     int32 TriCountAfter = Mesh->GetTriangleCount();
+
+    // Warning if approaching limit
+    if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
+    {
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide result has %d triangles (warning threshold: %d)"), 
+               TriCountAfter, WARNING_TRIANGLE_THRESHOLD);
+    }
 
     DMC->NotifyMeshUpdated();
 

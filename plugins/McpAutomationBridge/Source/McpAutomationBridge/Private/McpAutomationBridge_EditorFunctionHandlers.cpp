@@ -519,11 +519,14 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
           QualityEnum = ELightingBuildQuality::Quality_Medium;
         } else if (LowerQuality == TEXT("high")) {
           QualityEnum = ELightingBuildQuality::Quality_High;
+        } else if (LowerQuality == TEXT("production")) {
+          QualityEnum = ELightingBuildQuality::Quality_Production;
         } else {
           TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
           Err->SetBoolField(TEXT("success"), false);
           Err->SetStringField(TEXT("error"), TEXT("unknown_quality"));
           Err->SetStringField(TEXT("quality"), Quality);
+          Err->SetStringField(TEXT("validValues"), TEXT("preview, medium, high, production"));
           SendAutomationResponse(RequestingSocket, RequestId, false,
                                  TEXT("Unknown lighting quality"), Err,
                                  TEXT("UNKNOWN_QUALITY"));

@@ -199,7 +199,14 @@ export const commonSchemas = {
     success: { type: 'boolean' },
     message: { type: 'string' },
     error: { type: 'string' },
-    actor: { type: 'string' },
+    actor: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        path: { type: 'string' }
+      }
+    },
     actorPath: { type: 'string' }
   },
   outputWithNodeId: {

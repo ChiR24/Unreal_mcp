@@ -56,6 +56,7 @@
 #endif
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
 #include "Engine/LevelStreamingVolume.h"
+#include "EditorAssetLibrary.h"
 #endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpLevelStructureHandlers, Log, All);
@@ -133,7 +134,20 @@ static bool HandleCreateLevel(
 {
     using namespace LevelStructureHelpers;
 
-    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT("NewLevel"));
+    // CRITICAL: levelName is required - no default fallback to prevent hidden errors
+    FString LevelName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    }
+    
+    if (LevelName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("levelName is required for create_level"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"), TEXT("/Game/Maps"));
     bool bCreateWorldPartition = GetJsonBoolField(Payload, TEXT("bCreateWorldPartition"), false);
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -143,6 +157,16 @@ static bool HandleCreateLevel(
     if (!FullPath.StartsWith(TEXT("/Game/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
+    }
+
+    // CRITICAL: Check if level already exists to prevent WorldSettings collision crash
+    // This prevents Fatal Error: "Cannot generate unique name for 'WorldSettings'"
+    if (FPackageName::DoesPackageExist(FullPath))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Level already exists: %s. Use load_level or provide a different name."), *FullPath),
+            nullptr, TEXT("LEVEL_ALREADY_EXISTS"));
+        return true;
     }
 
     // Create the level package

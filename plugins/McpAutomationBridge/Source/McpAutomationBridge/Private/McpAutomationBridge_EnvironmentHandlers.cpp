@@ -143,13 +143,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     return HandleCreateProceduralTerrain(RequestId,
                                          TEXT("create_procedural_terrain"),
                                          Payload, RequestingSocket);
+  } else if (LowerSub == TEXT("add_foliage_type") || LowerSub == TEXT("add_foliage")) {
+    // Dispatch to foliage type handler
+    return HandleAddFoliageType(RequestId, TEXT("add_foliage_type"),
+                                Payload, RequestingSocket);
+  } else if (LowerSub == TEXT("create_landscape")) {
+    // Dispatch to landscape creation handler
+    return HandleCreateLandscape(RequestId, TEXT("create_landscape"),
+                                 Payload, RequestingSocket);
   }
   // Dispatch landscape operations
   else if (LowerSub == TEXT("paint_landscape") ||
            LowerSub == TEXT("paint_landscape_layer")) {
     return HandlePaintLandscapeLayer(RequestId, TEXT("paint_landscape_layer"),
                                      Payload, RequestingSocket);
-  } else if (LowerSub == TEXT("sculpt_landscape")) {
+  } else if (LowerSub == TEXT("sculpt_landscape") || LowerSub == TEXT("sculpt")) {
     return HandleSculptLandscape(RequestId, TEXT("sculpt_landscape"), Payload,
                                  RequestingSocket);
   } else if (LowerSub == TEXT("modify_heightmap")) {
@@ -187,29 +195,42 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      TSharedPtr<FJsonObject> Snapshot = MakeShared<FJsonObject>();
-      Snapshot->SetStringField(TEXT("timestamp"),
-                               FDateTime::UtcNow().ToString());
-      Snapshot->SetStringField(TEXT("type"), TEXT("environment_snapshot"));
+      // SECURITY: Validate path to prevent directory traversal and arbitrary file access
+      FString SafePath = SanitizeProjectRelativePath(Path);
+      if (SafePath.IsEmpty()) {
+        bSuccess = false;
+        Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path must be relative to project (e.g., /Temp/snapshot.json)"), *Path);
+        ErrorCode = TEXT("SECURITY_VIOLATION");
+        Resp->SetStringField(TEXT("error"), Message);
+      } else {
+        // Convert project-relative path to absolute file path
+        FString AbsolutePath = FPaths::ProjectDir() / SafePath;
+        FPaths::MakeStandardFilename(AbsolutePath);
+        
+        TSharedPtr<FJsonObject> Snapshot = MakeShared<FJsonObject>();
+        Snapshot->SetStringField(TEXT("timestamp"),
+                                 FDateTime::UtcNow().ToString());
+        Snapshot->SetStringField(TEXT("type"), TEXT("environment_snapshot"));
 
-      FString JsonString;
-      TSharedRef<TJsonWriter<>> Writer =
-          TJsonWriterFactory<>::Create(&JsonString);
-      if (FJsonSerializer::Serialize(Snapshot.ToSharedRef(), Writer)) {
-        if (FFileHelper::SaveStringToFile(JsonString, *Path)) {
-          Resp->SetStringField(TEXT("exportPath"), Path);
-          Resp->SetStringField(TEXT("message"), TEXT("Snapshot exported"));
+        FString JsonString;
+        TSharedRef<TJsonWriter<>> Writer =
+            TJsonWriterFactory<>::Create(&JsonString);
+        if (FJsonSerializer::Serialize(Snapshot.ToSharedRef(), Writer)) {
+          if (FFileHelper::SaveStringToFile(JsonString, *AbsolutePath)) {
+            Resp->SetStringField(TEXT("exportPath"), SafePath);
+            Resp->SetStringField(TEXT("message"), TEXT("Snapshot exported"));
+          } else {
+            bSuccess = false;
+            Message = TEXT("Failed to write snapshot file");
+            ErrorCode = TEXT("WRITE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
         } else {
           bSuccess = false;
-          Message = TEXT("Failed to write snapshot file");
-          ErrorCode = TEXT("WRITE_FAILED");
+          Message = TEXT("Failed to serialize snapshot");
+          ErrorCode = TEXT("SERIALIZE_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
         }
-      } else {
-        bSuccess = false;
-        Message = TEXT("Failed to serialize snapshot");
-        ErrorCode = TEXT("SERIALIZE_FAILED");
-        Resp->SetStringField(TEXT("error"), Message);
       }
     }
   } else if (LowerSub == TEXT("import_snapshot")) {
@@ -221,25 +242,38 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      FString JsonString;
-      if (!FFileHelper::LoadFileToString(JsonString, *Path)) {
+      // SECURITY: Validate path to prevent directory traversal and arbitrary file access
+      FString SafePath = SanitizeProjectRelativePath(Path);
+      if (SafePath.IsEmpty()) {
         bSuccess = false;
-        Message = TEXT("Failed to read snapshot file");
-        ErrorCode = TEXT("LOAD_FAILED");
+        Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path must be relative to project (e.g., /Temp/snapshot.json)"), *Path);
+        ErrorCode = TEXT("SECURITY_VIOLATION");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
-        TSharedPtr<FJsonObject> SnapshotObj;
-        TSharedRef<TJsonReader<>> Reader =
-            TJsonReaderFactory<>::Create(JsonString);
-        if (!FJsonSerializer::Deserialize(Reader, SnapshotObj) ||
-            !SnapshotObj.IsValid()) {
+        // Convert project-relative path to absolute file path
+        FString AbsolutePath = FPaths::ProjectDir() / SafePath;
+        FPaths::MakeStandardFilename(AbsolutePath);
+        
+        FString JsonString;
+        if (!FFileHelper::LoadFileToString(JsonString, *AbsolutePath)) {
           bSuccess = false;
-          Message = TEXT("Failed to parse snapshot");
-          ErrorCode = TEXT("PARSE_FAILED");
+          Message = TEXT("Failed to read snapshot file");
+          ErrorCode = TEXT("LOAD_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
         } else {
-          Resp->SetObjectField(TEXT("snapshot"), SnapshotObj.ToSharedRef());
-          Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
+          TSharedPtr<FJsonObject> SnapshotObj;
+          TSharedRef<TJsonReader<>> Reader =
+              TJsonReaderFactory<>::Create(JsonString);
+          if (!FJsonSerializer::Deserialize(Reader, SnapshotObj) ||
+              !SnapshotObj.IsValid()) {
+            bSuccess = false;
+            Message = TEXT("Failed to parse snapshot");
+            ErrorCode = TEXT("PARSE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          } else {
+            Resp->SetObjectField(TEXT("snapshot"), SnapshotObj.ToSharedRef());
+            Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
+          }
         }
       }
     }
@@ -754,6 +788,34 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
   Payload->TryGetNumberField(TEXT("heightScale"), HeightScale);
   Payload->TryGetNumberField(TEXT("subdivisions"), Subdivisions);
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
+  
+  // Strict validation: reject empty actorName
+  if (ActorName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName parameter is required for create_procedural_terrain"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Validate actorName format (reject invalid characters)
+  if (ActorName.Contains(TEXT("/")) || ActorName.Contains(TEXT("\\")) ||
+      ActorName.Contains(TEXT(":")) || ActorName.Contains(TEXT("*")) ||
+      ActorName.Contains(TEXT("?")) || ActorName.Contains(TEXT("\"")) ||
+      ActorName.Contains(TEXT("<")) || ActorName.Contains(TEXT(">")) ||
+      ActorName.Contains(TEXT("|"))) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName contains invalid characters (/, \\, :, *, ?, \", <, >, |)"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Validate actorName length
+  if (ActorName.Len() > 128) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("actorName exceeds maximum length of 128 characters"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   
   // Clamp values to reasonable limits
   SizeX = FMath::Clamp(SizeX, 2, 1000);

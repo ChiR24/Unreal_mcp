@@ -325,14 +325,20 @@ static bool HandleRebuildNavigation(
         return true;
     }
 
+    // Check for RecastNavMesh - warn if missing but still allow rebuild attempt
+    // (rebuild may succeed if NavMeshBoundsVolume exists but NavMesh hasn't been built yet)
+    ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
+    bool bHasNavMesh = (NavMesh != nullptr);
+
     // Trigger full navigation rebuild
     NavSys->Build();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("rebuilding"), NavSys->IsNavigationBuildInProgress());
+    Result->SetBoolField(TEXT("hasNavMesh"), bHasNavMesh);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Navigation rebuild initiated"), Result);
+        bHasNavMesh ? TEXT("Navigation rebuild initiated") : TEXT("Navigation rebuild initiated (no existing NavMesh - ensure NavMeshBoundsVolume is present)"), Result);
     return true;
 }
 
@@ -617,8 +623,11 @@ static bool HandleCreateNavLinkProxy(
     }
 
     // Spawn the NavLinkProxy actor
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'NavLinkProxy'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(Location, Rotation, SpawnParams);
@@ -855,8 +864,10 @@ static bool HandleCreateSmartLink(
     }
 
     // Spawn NavLinkProxy with smart link enabled
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(Location, Rotation, SpawnParams);

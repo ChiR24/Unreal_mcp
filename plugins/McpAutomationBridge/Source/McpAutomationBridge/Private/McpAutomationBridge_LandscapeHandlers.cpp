@@ -146,6 +146,34 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Payload->TryGetStringField(TEXT("landscapeName"), NameOverride);
   }
 
+  // Strict validation: reject empty/missing name for landscape creation
+  if (NameOverride.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("name or landscapeName parameter is required for create_landscape"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Validate name format (reject invalid characters)
+  if (NameOverride.Contains(TEXT("/")) || NameOverride.Contains(TEXT("\\")) ||
+      NameOverride.Contains(TEXT(":")) || NameOverride.Contains(TEXT("*")) ||
+      NameOverride.Contains(TEXT("?")) || NameOverride.Contains(TEXT("\"")) ||
+      NameOverride.Contains(TEXT("<")) || NameOverride.Contains(TEXT(">")) ||
+      NameOverride.Contains(TEXT("|"))) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("name contains invalid characters (/, \\, :, *, ?, \", <, >, |)"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Validate name length
+  if (NameOverride.Len() > 128) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("name exceeds maximum length of 128 characters"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   // Capture parameters by value for the async task
   const int32 CaptComponentsX = ComponentsX;
   const int32 CaptComponentsY = ComponentsY;
@@ -615,6 +643,30 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
             Landscape = Cast<ALandscape>(A);
             break;
           }
+        }
+      }
+    }
+    // Fallback to single landscape if no path/name provided or name not found
+    if (!Landscape && GEditor) {
+      if (UEditorActorSubsystem *ActorSS =
+              GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+        TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+        ALandscape *Fallback = nullptr;
+        int32 LandscapeCount = 0;
+
+        for (AActor *A : AllActors) {
+          if (ALandscape *L = Cast<ALandscape>(A)) {
+            LandscapeCount++;
+            Fallback = L;
+          }
+        }
+
+        if (!Landscape && LandscapeCount == 1) {
+          Landscape = Fallback;
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                 TEXT("HandlePaintLandscapeLayer: No specific landscape provided, "
+                      "using single available Landscape: '%s'"),
+                 *Landscape->GetActorLabel());
         }
       }
     }

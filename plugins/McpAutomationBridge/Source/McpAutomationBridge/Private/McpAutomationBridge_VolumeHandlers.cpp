@@ -42,8 +42,8 @@
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
-// PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.7+)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION <= 6
+// PostProcessVolume exists in UE 5.1+ (verified in 5.3, 5.6, 5.7)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "Engine/PostProcessVolume.h"
 #define MCP_HAS_POSTPROCESS_VOLUME 1
 #else
@@ -150,6 +150,113 @@ namespace VolumeHelpers
         CubeBuilder->Z = HalfHeight * 2.0f;
 
         CubeBuilder->Build(Volume->GetWorld(), Volume);
+
+        return true;
+    }
+
+    // ============================================================================
+    // Validation Helpers
+    // ============================================================================
+
+    // Validate volume name - reject empty, path traversal, and invalid characters
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateVolumeName(const FString& VolumeName, FString& OutError)
+    {
+        if (VolumeName.IsEmpty())
+        {
+            OutError = TEXT("volumeName is required");
+            return false;
+        }
+
+        // Reject path traversal
+        if (VolumeName.Contains(TEXT("..")) || VolumeName.Contains(TEXT("/")) || VolumeName.Contains(TEXT("\\")))
+        {
+            OutError = TEXT("volumeName must not contain path separators or traversal sequences");
+            return false;
+        }
+
+        // Reject Windows drive letters
+        if (VolumeName.Contains(TEXT(":")))
+        {
+            OutError = TEXT("volumeName must not contain drive letters");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate extent vector - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateExtent(const FVector& Extent, FString& OutError)
+    {
+        if (!FMath::IsFinite(Extent.X) || !FMath::IsFinite(Extent.Y) || !FMath::IsFinite(Extent.Z))
+        {
+            OutError = TEXT("extent contains NaN or Infinity values");
+            return false;
+        }
+
+        if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
+        {
+            OutError = TEXT("extent values must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate radius - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateRadius(float Radius, FString& OutError)
+    {
+        if (!FMath::IsFinite(Radius))
+        {
+            OutError = TEXT("radius contains NaN or Infinity value");
+            return false;
+        }
+
+        if (Radius <= 0.0f)
+        {
+            OutError = TEXT("radius must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate capsule dimensions - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateCapsuleDimensions(float Radius, float HalfHeight, FString& OutError)
+    {
+        if (!FMath::IsFinite(Radius) || !FMath::IsFinite(HalfHeight))
+        {
+            OutError = TEXT("capsule dimensions contain NaN or Infinity values");
+            return false;
+        }
+
+        if (Radius <= 0.0f)
+        {
+            OutError = TEXT("capsule radius must be positive");
+            return false;
+        }
+
+        if (HalfHeight <= 0.0f)
+        {
+            OutError = TEXT("capsule half height must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate location vector - reject NaN or Infinity values (zero is valid)
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateLocation(const FVector& Location, FString& OutError)
+    {
+        if (!FMath::IsFinite(Location.X) || !FMath::IsFinite(Location.Y) || !FMath::IsFinite(Location.Z))
+        {
+            OutError = TEXT("location contains NaN or Infinity values");
+            return false;
+        }
 
         return true;
     }
@@ -268,10 +375,32 @@ static bool HandleCreateTriggerVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -306,13 +435,35 @@ static bool HandleCreateTriggerBox(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerBox"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("boxExtent"), FVector(100.0f, 100.0f, 100.0f));
     if (Extent == FVector::ZeroVector)
     {
         Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    }
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     UWorld* World = GetEditorWorld();
@@ -348,10 +499,32 @@ static bool HandleCreateTriggerSphere(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerSphere"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     float Radius = GetJsonNumberField(Payload, TEXT("sphereRadius"), 100.0f);
+    if (!ValidateRadius(Radius, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -395,11 +568,33 @@ static bool HandleCreateTriggerCapsule(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerCapsule"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     float Radius = GetJsonNumberField(Payload, TEXT("capsuleRadius"), 50.0f);
     float HalfHeight = GetJsonNumberField(Payload, TEXT("capsuleHalfHeight"), 100.0f);
+    if (!ValidateCapsuleDimensions(Radius, HalfHeight, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -448,7 +643,15 @@ static bool HandleCreateBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("BlockingVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
@@ -486,10 +689,32 @@ static bool HandleCreateKillZVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("KillZVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(10000.0f, 10000.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -524,10 +749,33 @@ static bool HandleCreatePainCausingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PainCausingVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bPainCausing = GetJsonBoolField(Payload, TEXT("bPainCausing"), true);
     float DamagePerSec = GetJsonNumberField(Payload, TEXT("damagePerSec"), 10.0f);
 
@@ -570,10 +818,33 @@ static bool HandleCreatePhysicsVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PhysicsVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bWaterVolume = GetJsonBoolField(Payload, TEXT("bWaterVolume"), false);
     float FluidFriction = GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3f);
     float TerminalVelocity = GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0f);
@@ -622,10 +893,33 @@ static bool HandleCreateAudioVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("AudioVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true);
 
     UWorld* World = GetEditorWorld();
@@ -665,10 +959,33 @@ static bool HandleCreateReverbVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("ReverbVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true);
     float ReverbVolumeLevel = GetJsonNumberField(Payload, TEXT("reverbVolume"), 0.5f);
     float FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.5f);
@@ -721,10 +1038,33 @@ static bool HandleCreatePostProcessVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PostProcessVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     float Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
     float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
     float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
@@ -837,10 +1177,32 @@ static bool HandleCreateCullDistanceVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CullDistanceVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -899,10 +1261,32 @@ static bool HandleCreatePrecomputedVisibilityVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PrecomputedVisibilityVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -937,10 +1321,32 @@ static bool HandleCreateLightmassImportanceVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("LightmassImportanceVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(5000.0f, 5000.0f, 2000.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -975,10 +1381,32 @@ static bool HandleCreateNavMeshBoundsVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavMeshBoundsVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(2000.0f, 2000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1013,10 +1441,32 @@ static bool HandleCreateNavModifierVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavModifierVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1051,10 +1501,32 @@ static bool HandleCreateCameraBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CameraBlockingVolume"));
+    // Validate required volumeName parameter
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(200.0f, 200.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1094,12 +1566,19 @@ static bool HandleSetVolumeExtent(
     using namespace VolumeHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-    FVector NewExtent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required"), nullptr);
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    FVector NewExtent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(NewExtent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -1115,7 +1594,7 @@ static bool HandleSetVolumeExtent(
     if (!VolumeActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr);
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -1153,11 +1632,11 @@ static bool HandleSetVolumeProperties(
     using namespace VolumeHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required"), nullptr);
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -1173,7 +1652,7 @@ static bool HandleSetVolumeProperties(
     if (!VolumeActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr);
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -1417,11 +1896,11 @@ static bool HandleRemoveVolume(
     using namespace VolumeHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required for remove_volume"), nullptr, TEXT("MISSING_PARAMETER"));
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -1528,11 +2007,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
         return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
     }
 #else
-    // PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.0 and 5.7+)
+    // PostProcessVolume requires UE 5.1+
     if (SubAction == TEXT("create_post_process_volume"))
     {
         SendAutomationResponse(Socket, RequestId, false,
-            TEXT("PostProcessVolume is only available in UE 5.1-5.6"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+            TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
         return true;
     }
 #endif

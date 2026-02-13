@@ -352,10 +352,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Spawned->SetActorLabel(BaseName);
   }
 
+  // Build response matching the outputWithActor schema:
+  // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-  Data->SetStringField(TEXT("id"), Spawned->GetActorLabel());
-  Data->SetStringField(TEXT("name"), Spawned->GetActorLabel());
-  Data->SetStringField(TEXT("objectPath"), Spawned->GetPathName());
+  
+  // Actor object with id, name and path
+  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
+  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
+  Data->SetObjectField(TEXT("actor"), ActorObj);
+  
+  // actorPath for convenience
+  Data->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
+  
   // Provide the resolved class path useful for referencing
   if (ResolvedClass)
     Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
@@ -476,9 +486,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
 
+  // Build response matching the outputWithActor schema:
+  // { actor: { id, name, path }, actorPath, classPath }
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+  
+  // Actor object with id, name and path
+  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
+  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
+  Resp->SetObjectField(TEXT("actor"), ActorObj);
+  
+  // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
