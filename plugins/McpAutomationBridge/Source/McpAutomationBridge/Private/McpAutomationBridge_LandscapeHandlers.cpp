@@ -440,6 +440,18 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
   FString LandscapeName;
   Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
 
+  // Security: Validate landscape path if provided (not strictly required since we can find by name)
+  if (!LandscapePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    LandscapePath = SafePath;
+  }
+
   // Operation: raise, lower, flatten, set (default: set)
   FString Operation = TEXT("set");
   Payload->TryGetStringField(TEXT("operation"), Operation);
@@ -682,6 +694,18 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
   FString LandscapeName;
   Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
 
+  // Security: Validate landscape path if provided
+  if (!LandscapePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    LandscapePath = SafePath;
+  }
+
   FString LayerName;
   if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) ||
       LayerName.IsEmpty()) {
@@ -860,6 +884,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
   Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
   FString LandscapeName;
   Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  // Security: Validate landscape path if provided
+  if (!LandscapePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    LandscapePath = SafePath;
+  }
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
          TEXT("HandleSculptLandscape: RequestId=%s Path='%s' Name='%s'"),

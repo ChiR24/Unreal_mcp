@@ -133,6 +133,28 @@ static bool HandleConfigureNavMeshSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -250,6 +272,28 @@ static bool HandleSetNavAgentProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -330,6 +374,28 @@ static bool HandleRebuildNavigation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -1146,6 +1212,28 @@ static bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {

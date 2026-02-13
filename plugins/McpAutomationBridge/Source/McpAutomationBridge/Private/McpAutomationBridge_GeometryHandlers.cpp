@@ -2380,9 +2380,9 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-// Note: Geometry Script collision API changed in UE 5.5
-// Disabling for UE 5.5+ until updated for new API
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+// Geometry Script collision API is stable in UE 5.4, 5.5, 5.6, 5.7
+// Verified: CollisionFunctions.h headers are identical across versions
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
     
