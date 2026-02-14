@@ -105,7 +105,7 @@ export async function handleVolumeTools(
     // Trigger Volumes (4 actions)
     // ========================================================================
     case 'create_trigger_volume':
-    case 'add_trigger_volume': // Alias for compatibility
+    case 'add_trigger_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_trigger_volume');
 
     case 'create_trigger_box':
@@ -121,18 +121,18 @@ export async function handleVolumeTools(
     // Gameplay Volumes (11 actions)
     // ========================================================================
     case 'create_blocking_volume':
-    case 'add_blocking_volume': // Alias for compatibility
+    case 'add_blocking_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_blocking_volume');
 
     case 'create_kill_z_volume':
-    case 'add_kill_z_volume': // Alias for compatibility
+    case 'add_kill_z_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_kill_z_volume');
 
     case 'create_pain_causing_volume':
       return sendRequest('create_pain_causing_volume');
 
     case 'create_physics_volume':
-    case 'add_physics_volume': // Alias for compatibility
+    case 'add_physics_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_physics_volume');
 
     case 'create_audio_volume':
@@ -142,7 +142,7 @@ export async function handleVolumeTools(
       return sendRequest('create_reverb_volume');
 
     case 'create_cull_distance_volume':
-    case 'add_cull_distance_volume': // Alias for compatibility
+    case 'add_cull_distance_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_cull_distance_volume');
 
     case 'create_precomputed_visibility_volume':
@@ -164,7 +164,7 @@ export async function handleVolumeTools(
     // Post Process Volume (UE 5.1-5.6 only, removed in 5.7+)
     // ========================================================================
     case 'create_post_process_volume':
-    case 'add_post_process_volume': // Alias for compatibility
+    case 'add_post_process_volume': // Alias for compatibility - creates standalone volume
       return sendRequest('create_post_process_volume');
 
     // ========================================================================

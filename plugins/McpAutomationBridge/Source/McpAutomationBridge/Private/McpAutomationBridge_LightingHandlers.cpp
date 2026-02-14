@@ -363,10 +363,18 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           FString CubemapPath;
           if (Payload->TryGetStringField(TEXT("cubemapPath"), CubemapPath) &&
               !CubemapPath.IsEmpty()) {
-            UTextureCube *Cubemap = Cast<UTextureCube>(StaticLoadObject(
-                UTextureCube::StaticClass(), nullptr, *CubemapPath));
-            if (Cubemap) {
-              SkyComp->Cubemap = Cubemap;
+            // Security: Validate cubemap path to prevent traversal attacks
+            FString SanitizedCubemapPath = SanitizeProjectRelativePath(CubemapPath);
+            if (SanitizedCubemapPath.IsEmpty()) {
+              UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                     TEXT("spawn_sky_light: Invalid cubemapPath rejected: %s"), *CubemapPath);
+              // Don't fail the spawn, just skip the cubemap
+            } else {
+              UTextureCube *Cubemap = Cast<UTextureCube>(StaticLoadObject(
+                  UTextureCube::StaticClass(), nullptr, *SanitizedCubemapPath));
+              if (Cubemap) {
+                SkyComp->Cubemap = Cubemap;
+              }
             }
           }
         } else {
@@ -729,6 +737,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Security: Validate path to prevent traversal attacks
+    FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    if (SanitizedPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid path: contains traversal or invalid characters"),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    Path = SanitizedPath;
 
     if (GEditor) {
       // Create a new blank map

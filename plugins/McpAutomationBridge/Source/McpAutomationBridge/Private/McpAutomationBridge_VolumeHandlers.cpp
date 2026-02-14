@@ -375,8 +375,8 @@ static bool HandleCreateTriggerVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -435,8 +435,8 @@ static bool HandleCreateTriggerBox(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -499,8 +499,8 @@ static bool HandleCreateTriggerSphere(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -568,8 +568,8 @@ static bool HandleCreateTriggerCapsule(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -643,8 +643,8 @@ static bool HandleCreateBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -689,8 +689,8 @@ static bool HandleCreateKillZVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -749,8 +749,8 @@ static bool HandleCreatePainCausingVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -818,8 +818,8 @@ static bool HandleCreatePhysicsVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -893,8 +893,8 @@ static bool HandleCreateAudioVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -959,8 +959,8 @@ static bool HandleCreateReverbVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1038,8 +1038,8 @@ static bool HandleCreatePostProcessVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1177,8 +1177,8 @@ static bool HandleCreateCullDistanceVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1261,8 +1261,8 @@ static bool HandleCreatePrecomputedVisibilityVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1321,8 +1321,8 @@ static bool HandleCreateLightmassImportanceVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1381,8 +1381,8 @@ static bool HandleCreateNavMeshBoundsVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1441,8 +1441,8 @@ static bool HandleCreateNavModifierVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1501,8 +1501,8 @@ static bool HandleCreateCameraBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    // Validate required volumeName parameter
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
@@ -1565,6 +1565,7 @@ static bool HandleSetVolumeExtent(
 {
     using namespace VolumeHelpers;
 
+    // MODIFY operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
@@ -1631,6 +1632,7 @@ static bool HandleSetVolumeProperties(
 {
     using namespace VolumeHelpers;
 
+    // MODIFY operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
@@ -1895,6 +1897,7 @@ static bool HandleRemoveVolume(
 {
     using namespace VolumeHelpers;
 
+    // DELETE operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
@@ -2487,6 +2490,7 @@ static bool HandleSetVolumeBounds(
 {
     using namespace VolumeHelpers;
 
+    // MODIFY operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))

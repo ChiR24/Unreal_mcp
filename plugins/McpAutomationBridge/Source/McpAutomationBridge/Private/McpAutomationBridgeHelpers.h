@@ -287,6 +287,73 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
 }
 
 /**
+ * Sanitize a file path for use with file operations (export/import snapshot, etc.).
+ * Unlike SanitizeProjectRelativePath which requires asset roots (/Game, /Engine, /Script),
+ * this function accepts any project-relative file path while still enforcing security.
+ *
+ * Security checks:
+ * - Rejects Windows absolute paths (drive letters)
+ * - Rejects path traversal (..)
+ * - Ensures path is relative (starts with /)
+ * - Normalizes path separators
+ *
+ * @param InPath Input file path to sanitize
+ * @returns Sanitized path if valid, empty string if rejected
+ */
+static inline FString SanitizeProjectFilePath(const FString &InPath) {
+  if (InPath.IsEmpty())
+    return FString();
+
+  FString CleanPath = InPath;
+
+  // Reject Windows absolute paths early (contain drive letter colon)
+  if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected Windows absolute path: %s"),
+        *InPath);
+    return FString();
+  }
+
+  FPaths::NormalizeFilename(CleanPath);
+
+  // Convert backslashes to forward slashes
+  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+  // Normalize double slashes
+  while (CleanPath.Contains(TEXT("//"))) {
+    CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
+  }
+
+  // Reject paths containing traversal (CRITICAL for security)
+  if (CleanPath.Contains(TEXT(".."))) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected path containing '..': %s"),
+        *InPath);
+    return FString();
+  }
+
+  // Ensure path starts with a slash (project-relative)
+  if (!CleanPath.StartsWith(TEXT("/"))) {
+    CleanPath = TEXT("/") + CleanPath;
+  }
+
+  // Reject empty filename
+  if (CleanPath.Len() <= 1) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected empty path"));
+    return FString();
+  }
+
+  // All validation passed - the path is safe for file operations.
+  // Unlike asset paths, file paths are permissive and allow any project-relative
+  // location (/Temp, /Saved, /Config, etc.) as long as they don't escape the project.
+  return CleanPath;
+}
+
+/**
  * Validate a basic asset path format.
  *
  * @returns `true` if Path is non-empty, begins with a leading '/', does not

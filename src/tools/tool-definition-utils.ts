@@ -186,19 +186,19 @@ export const commonSchemas = {
   outputBase: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string' }
+    error: { type: 'string', nullable: true }
   },
   outputWithPath: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string' },
+    error: { type: 'string', nullable: true },
     path: { type: 'string' },
     assetPath: { type: 'string' }
   },
   outputWithActor: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string' },
+    error: { type: 'string', nullable: true },
     actor: {
       type: 'object',
       properties: {
@@ -212,7 +212,7 @@ export const commonSchemas = {
   outputWithNodeId: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string' },
+    error: { type: 'string', nullable: true },
     nodeId: { type: 'string' }
   },
 

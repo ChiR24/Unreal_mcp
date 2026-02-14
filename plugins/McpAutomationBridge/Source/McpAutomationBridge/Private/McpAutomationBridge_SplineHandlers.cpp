@@ -1114,6 +1114,103 @@ static bool HandleSetSplineMeshMaterial(
     return true;
 }
 
+static bool HandleCreateSplineMeshActor(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TEXT("SplineMeshActor"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"), TEXT("SplineMesh"));
+    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
+    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("rotation"));
+
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return true;
+    }
+
+    // SECURITY: Validate meshPath if provided
+    FString SafeMeshPath;
+    if (!MeshPath.IsEmpty())
+    {
+        SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
+
+    // Spawn actor with unique name handling
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
+    if (!NewActor)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn spline mesh actor"), nullptr, TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    NewActor->SetActorLabel(*ActorName);
+
+    // Create SplineMeshComponent and attach to actor
+    USplineMeshComponent* SplineMeshComp = NewObject<USplineMeshComponent>(NewActor, *ComponentName);
+    if (!SplineMeshComp)
+    {
+        NewActor->Destroy();
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to create SplineMeshComponent"), nullptr, TEXT("COMPONENT_FAILED"));
+        return true;
+    }
+
+    SplineMeshComp->RegisterComponent();
+    NewActor->AddInstanceComponent(SplineMeshComp);
+    NewActor->SetRootComponent(SplineMeshComp);
+
+    // Set mesh if provided
+    if (!SafeMeshPath.IsEmpty())
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
+        if (Mesh)
+        {
+            SplineMeshComp->SetStaticMesh(Mesh);
+        }
+    }
+
+    // Set forward axis
+    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
+    if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
+    else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+    SplineMeshComp->SetForwardAxis(Axis);
+
+    // Set default start/end positions for a simple spline mesh
+    SplineMeshComp->SetStartAndEnd(FVector::ZeroVector, FVector(100, 0, 0),
+                                    FVector(500, 0, 0), FVector(-100, 0, 0));
+
+    World->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
+    Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
+    Result->SetStringField(TEXT("componentName"), ComponentName);
+
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("SplineMeshActor '%s' created with component '%s'"), *ActorName, *ComponentName), Result);
+    return true;
+}
+
 // ============================================================================
 // Mesh Scattering Handlers
 // ============================================================================
@@ -1528,6 +1625,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     // Spline Mesh
     if (SubAction == TEXT("create_spline_mesh_component"))
         return HandleCreateSplineMeshComponent(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("create_spline_mesh_actor"))
+        return HandleCreateSplineMeshActor(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("set_spline_mesh_asset"))
         return HandleSetSplineMeshAsset(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("configure_spline_mesh_axis"))

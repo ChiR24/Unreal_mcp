@@ -3904,6 +3904,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         },
         volumeName: commonSchemas.volumeName,
         volumePath: commonSchemas.volumePath,
+        actorPath: commonSchemas.actorPath, // For add_*_volume actions that attach to existing actors
         location: {
           type: 'object',
           properties: {

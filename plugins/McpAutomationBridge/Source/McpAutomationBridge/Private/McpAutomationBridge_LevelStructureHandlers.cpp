@@ -134,13 +134,9 @@ static bool HandleCreateLevel(
 {
     using namespace LevelStructureHelpers;
 
-    // CRITICAL: levelName is required - no default fallback to prevent hidden errors
-    FString LevelName;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("levelName"), LevelName);
-    }
-    
+    // Backward compatibility: default levelName if not provided
+    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT("NewLevel"));
+
     if (LevelName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -286,6 +282,7 @@ static bool HandleCreateSublevel(
     }
 
     FString SublevelPath = GetJsonStringField(Payload, TEXT("sublevelPath"), TEXT(""));
+    FString ParentLevel = GetJsonStringField(Payload, TEXT("parentLevel"), TEXT(""));
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
     UWorld* World = GetEditorWorld();
@@ -294,6 +291,27 @@ static bool HandleCreateSublevel(
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
         return true;
+    }
+
+    // Validate parentLevel if specified
+    if (!ParentLevel.IsEmpty())
+    {
+        // Normalize the parent level path
+        FString NormalizedParentPath = ParentLevel;
+        if (!NormalizedParentPath.StartsWith(TEXT("/Game/")))
+        {
+            NormalizedParentPath = TEXT("/Game/") + NormalizedParentPath;
+        }
+        // Remove .umap extension if present
+        NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
+
+        // Check if the parent level exists
+        if (!FPackageName::DoesPackageExist(NormalizedParentPath))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Parent level not found: %s"), *ParentLevel), nullptr, TEXT("LEVEL_NOT_FOUND"));
+            return true;
+        }
     }
 
     // Create sublevel path if not provided
@@ -1724,6 +1742,22 @@ static bool HandleCreateLevelInstance(
         return true;
     }
 
+    // Validate that the level asset exists
+    FString NormalizedLevelPath = LevelAssetPath;
+    if (!NormalizedLevelPath.StartsWith(TEXT("/Game/")))
+    {
+        NormalizedLevelPath = TEXT("/Game/") + NormalizedLevelPath;
+    }
+    // Remove .umap extension if present
+    NormalizedLevelPath.RemoveFromEnd(TEXT(".umap"));
+
+    if (!FPackageName::DoesPackageExist(NormalizedLevelPath))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Level asset not found: %s"), *LevelAssetPath), nullptr, TEXT("LEVEL_NOT_FOUND"));
+        return true;
+    }
+
     UWorld* World = GetEditorWorld();
     if (!World)
     {
@@ -1743,7 +1777,9 @@ static bool HandleCreateLevelInstance(
 
     // Spawn Level Instance Actor
     FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = FName(*LevelInstanceName);
+    // CRITICAL FIX: Use MakeUniqueObjectName to prevent "Cannot generate unique name" crash
+    SpawnParams.Name = MakeUniqueObjectName(World, ALevelInstance::StaticClass(), FName(*LevelInstanceName));
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     ALevelInstance* LevelInstanceActor = World->SpawnActor<ALevelInstance>(
@@ -1761,10 +1797,12 @@ static bool HandleCreateLevelInstance(
     }
 
     LevelInstanceActor->SetActorScale3D(InstanceScale);
+    // Set actor label to the requested name (may differ from internal name if collision occurred)
     LevelInstanceActor->SetActorLabel(*LevelInstanceName);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("levelInstanceName"), LevelInstanceName);
+    ResponseJson->SetStringField(TEXT("actorName"), LevelInstanceActor->GetName());
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     
     TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
@@ -1793,6 +1831,24 @@ static bool HandleCreatePackedLevelActor(
     bool bPackBlueprints = GetJsonBoolField(Payload, TEXT("bPackBlueprints"), true);
     bool bPackStaticMeshes = GetJsonBoolField(Payload, TEXT("bPackStaticMeshes"), true);
 
+    // Validate levelAssetPath if provided
+    if (!LevelAssetPath.IsEmpty())
+    {
+        FString NormalizedLevelPath = LevelAssetPath;
+        if (!NormalizedLevelPath.StartsWith(TEXT("/Game/")))
+        {
+            NormalizedLevelPath = TEXT("/Game/") + NormalizedLevelPath;
+        }
+        NormalizedLevelPath.RemoveFromEnd(TEXT(".umap"));
+
+        if (!FPackageName::DoesPackageExist(NormalizedLevelPath))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Level asset not found: %s"), *LevelAssetPath), nullptr, TEXT("LEVEL_NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GetEditorWorld();
     if (!World)
     {
@@ -1803,7 +1859,10 @@ static bool HandleCreatePackedLevelActor(
 
     // Spawn Packed Level Actor
     FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = FName(*PackedLevelName);
+    // CRITICAL FIX: Use MakeUniqueObjectName to prevent "Cannot generate unique name" crash
+    // This prevents fatal error when multiple actors with same name are created
+    SpawnParams.Name = MakeUniqueObjectName(World, APackedLevelActor::StaticClass(), FName(*PackedLevelName));
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;  // Auto-generate unique name if still taken
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     APackedLevelActor* PackedActor = World->SpawnActor<APackedLevelActor>(
@@ -1820,10 +1879,12 @@ static bool HandleCreatePackedLevelActor(
         return true;
     }
 
+    // Set actor label to the requested name (may differ from internal name if collision occurred)
     PackedActor->SetActorLabel(*PackedLevelName);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("packedLevelName"), PackedLevelName);
+    ResponseJson->SetStringField(TEXT("actorName"), PackedActor->GetName());
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     ResponseJson->SetBoolField(TEXT("packBlueprints"), bPackBlueprints);
     ResponseJson->SetBoolField(TEXT("packStaticMeshes"), bPackStaticMeshes);

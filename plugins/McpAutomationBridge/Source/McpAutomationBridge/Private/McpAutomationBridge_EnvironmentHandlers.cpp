@@ -195,8 +195,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // SECURITY: Validate path to prevent directory traversal and arbitrary file access
-      FString SafePath = SanitizeProjectRelativePath(Path);
+      // SECURITY: Validate file path to prevent directory traversal and arbitrary file access
+      // Use SanitizeProjectFilePath for file operations (accepts /Temp, /Saved, etc.)
+      FString SafePath = SanitizeProjectFilePath(Path);
       if (SafePath.IsEmpty()) {
         bSuccess = false;
         Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path must be relative to project (e.g., /Temp/snapshot.json)"), *Path);
@@ -242,8 +243,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
     } else {
-      // SECURITY: Validate path to prevent directory traversal and arbitrary file access
-      FString SafePath = SanitizeProjectRelativePath(Path);
+      // SECURITY: Validate file path to prevent directory traversal and arbitrary file access
+      // Use SanitizeProjectFilePath for file operations (accepts /Temp, /Saved, etc.)
+      FString SafePath = SanitizeProjectFilePath(Path);
       if (SafePath.IsEmpty()) {
         bSuccess = false;
         Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path must be relative to project (e.g., /Temp/snapshot.json)"), *Path);

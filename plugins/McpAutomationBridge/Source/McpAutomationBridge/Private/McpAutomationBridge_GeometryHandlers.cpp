@@ -2670,6 +2670,29 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
+    // Safety: Check memory pressure before array operation
+    if (!IsMemoryPressureSafe())
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."), 
+                           GetMemoryUsagePercent()), 
+            TEXT("MEMORY_PRESSURE"));
+        return true;
+    }
+
+    // Safety: Estimate triangles after array and check against limit
+    int32 TriCountBefore = Mesh->GetTriangleCount();
+    int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
+    
+    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return true;
+    }
+
     // Create a copy for arraying
     UDynamicMesh* SourceMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     SourceMesh->SetMesh(Mesh->GetMeshRef());
@@ -2929,9 +2952,30 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
+    // Safety: Check memory pressure before triangulation
+    if (!IsMemoryPressureSafe())
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Triangulation blocked to prevent OOM."), 
+                           GetMemoryUsagePercent()), 
+            TEXT("MEMORY_PRESSURE"));
+        return true;
+    }
+
+    // Safety: Check triangle count before operation
+    int32 TriCountBefore = Mesh->GetTriangleCount();
+    if (TriCountBefore > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Mesh has too many triangles (%d). Max allowed: %d"), 
+                           TriCountBefore, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return true;
+    }
+
     // Triangulate the mesh (convert quads/n-gons to triangles)
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
-        Mesh, Mesh->GetTriangleCount(), FGeometryScriptSimplifyMeshOptions(), nullptr);
+        Mesh, TriCountBefore, FGeometryScriptSimplifyMeshOptions(), nullptr);
 
     DMC->NotifyMeshUpdated();
 
