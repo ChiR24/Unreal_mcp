@@ -152,6 +152,17 @@ static bool HandleCreateLevel(
     bool bCreateWorldPartition = GetJsonBoolField(Payload, TEXT("bCreateWorldPartition"), false);
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
+    // Security: Validate level path format to prevent traversal attacks
+    FString SafeLevelPath = SanitizeProjectRelativePath(LevelPath);
+    if (SafeLevelPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe level path: %s"), *LevelPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+    LevelPath = SafeLevelPath;
+
     // Build full path
     FString FullPath = LevelPath / LevelName;
     if (!FullPath.StartsWith(TEXT("/Game/")))
@@ -260,7 +271,20 @@ static bool HandleCreateSublevel(
 {
     using namespace LevelStructureHelpers;
 
-    FString SublevelName = GetJsonStringField(Payload, TEXT("sublevelName"), TEXT("Sublevel"));
+    // CRITICAL: sublevelName is required - no default fallback to prevent hidden errors
+    FString SublevelName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("sublevelName"), SublevelName);
+    }
+    
+    if (SublevelName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("sublevelName is required for create_sublevel"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FString SublevelPath = GetJsonStringField(Payload, TEXT("sublevelPath"), TEXT(""));
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
@@ -268,7 +292,7 @@ static bool HandleCreateSublevel(
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -277,6 +301,19 @@ static bool HandleCreateSublevel(
     {
         FString WorldPath = World->GetOutermost()->GetName();
         SublevelPath = FPaths::GetPath(WorldPath) / SublevelName;
+    }
+    else
+    {
+        // Security: Validate sublevel path format to prevent traversal attacks
+        FString SafePath = SanitizeProjectRelativePath(SublevelPath);
+        if (SafePath.IsEmpty())
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Invalid or unsafe sublevel path: %s"), *SublevelPath),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        SublevelPath = SafePath;
     }
 
     // Add streaming level
@@ -325,7 +362,20 @@ static bool HandleConfigureLevelStreaming(
 {
     using namespace LevelStructureHelpers;
 
-    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
+    // CRITICAL: levelName is required - no default fallback
+    FString LevelName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    }
+    
+    if (LevelName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("levelName is required for configure_level_streaming"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FString StreamingMethod = GetJsonStringField(Payload, TEXT("streamingMethod"), TEXT("Blueprint"));
     bool bShouldBeVisible = GetJsonBoolField(Payload, TEXT("bShouldBeVisible"), true);
     bool bShouldBlockOnLoad = GetJsonBoolField(Payload, TEXT("bShouldBlockOnLoad"), false);
@@ -335,7 +385,7 @@ static bool HandleConfigureLevelStreaming(
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -353,7 +403,7 @@ static bool HandleConfigureLevelStreaming(
     if (!FoundLevel)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr);
+            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr, TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 
@@ -380,7 +430,20 @@ static bool HandleSetStreamingDistance(
 {
     using namespace LevelStructureHelpers;
 
-    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT(""));
+    // CRITICAL: levelName is required - no default fallback
+    FString LevelName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    }
+    
+    if (LevelName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("levelName is required for set_streaming_distance"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     double StreamingDistance = GetJsonNumberField(Payload, TEXT("streamingDistance"), 10000.0);
     FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("LoadingAndVisibility"));
     TSharedPtr<FJsonObject> VolumeLocationJson = GetObjectField(Payload, TEXT("volumeLocation"));
@@ -391,7 +454,7 @@ static bool HandleSetStreamingDistance(
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -409,7 +472,7 @@ static bool HandleSetStreamingDistance(
     if (!FoundLevel)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr);
+            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr, TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 
@@ -859,7 +922,20 @@ static bool HandleCreateDataLayer(
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
-    FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"), TEXT("NewDataLayer"));
+    // CRITICAL: dataLayerName is required - no default fallback
+    FString DataLayerName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("dataLayerName"), DataLayerName);
+    }
+    
+    if (DataLayerName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("dataLayerName is required for create_data_layer"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FString DataLayerAssetPath = GetJsonStringField(Payload, TEXT("dataLayerAssetPath"), TEXT("/Game/DataLayers"));
     bool bIsInitiallyVisible = GetJsonBoolField(Payload, TEXT("bIsInitiallyVisible"), true);
     bool bIsInitiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsInitiallyLoaded"), true);
@@ -870,7 +946,7 @@ static bool HandleCreateDataLayer(
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -879,7 +955,7 @@ static bool HandleCreateDataLayer(
     if (!WorldPartition)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr);
+            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
 
@@ -888,9 +964,20 @@ static bool HandleCreateDataLayer(
     if (!DataLayerEditorSubsystem)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data Layer Editor Subsystem not available"), nullptr);
+            TEXT("Data Layer Editor Subsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_AVAILABLE"));
         return true;
     }
+
+    // Security: Validate data layer asset path format to prevent traversal attacks
+    FString SafeAssetPath = SanitizeProjectRelativePath(DataLayerAssetPath);
+    if (SafeAssetPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe data layer asset path: %s"), *DataLayerAssetPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+    DataLayerAssetPath = SafeAssetPath;
 
     // Step 1: Create a UDataLayerAsset (the asset that backs the data layer instance)
     FString FullAssetPath = DataLayerAssetPath / DataLayerName;
@@ -904,7 +991,7 @@ static bool HandleCreateDataLayer(
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for DataLayerAsset at: %s"), *FullAssetPath), nullptr);
+            FString::Printf(TEXT("Failed to create package for DataLayerAsset at: %s"), *FullAssetPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
         return true;
     }
 
@@ -913,7 +1000,7 @@ static bool HandleCreateDataLayer(
     if (!NewDataLayerAsset)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create UDataLayerAsset object"), nullptr);
+            TEXT("Failed to create UDataLayerAsset object"), nullptr, TEXT("ASSET_CREATION_FAILED"));
         return true;
     }
 
@@ -1111,12 +1198,36 @@ static bool HandleConfigureHlodLayer(
 {
     using namespace LevelStructureHelpers;
 
-    FString HlodLayerName = GetJsonStringField(Payload, TEXT("hlodLayerName"), TEXT("DefaultHLOD"));
+    // CRITICAL: hlodLayerName is required - no default fallback
+    FString HlodLayerName;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("hlodLayerName"), HlodLayerName);
+    }
+    
+    if (HlodLayerName.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("hlodLayerName is required for configure_hlod_layer"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FString HlodLayerPath = GetJsonStringField(Payload, TEXT("hlodLayerPath"), TEXT("/Game/HLOD"));
     bool bIsSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsSpatiallyLoaded"), true);
     int32 CellSize = GetJsonIntField(Payload, TEXT("cellSize"), 25600);
     double LoadingDistance = GetJsonNumberField(Payload, TEXT("loadingDistance"), 51200.0);
     FString LayerType = GetJsonStringField(Payload, TEXT("layerType"), TEXT("MeshMerge"));
+
+    // Security: Validate HLOD layer path format to prevent traversal attacks
+    FString SafePath = SanitizeProjectRelativePath(HlodLayerPath);
+    if (SafePath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe HLOD layer path: %s"), *HlodLayerPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+    HlodLayerPath = SafePath;
 
     // Build full path
     FString FullPath = HlodLayerPath / HlodLayerName;
@@ -1130,7 +1241,7 @@ static bool HandleConfigureHlodLayer(
     if (!AssetPackage)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for HLOD layer at: %s"), *FullPath), nullptr);
+            FString::Printf(TEXT("Failed to create package for HLOD layer at: %s"), *FullPath), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
         return true;
     }
 
@@ -1139,7 +1250,7 @@ static bool HandleConfigureHlodLayer(
     if (!NewHLODLayer)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create UHLODLayer object"), nullptr);
+            TEXT("Failed to create UHLODLayer object"), nullptr, TEXT("ASSET_CREATION_FAILED"));
         return true;
     }
 
@@ -1215,13 +1326,16 @@ static bool HandleCreateMinimapVolume(
     if (!WorldPartition)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled. AWorldPartitionMiniMapVolume requires World Partition."), nullptr);
+            TEXT("World Partition is not enabled. AWorldPartitionMiniMapVolume requires World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
 
     // Spawn the AWorldPartitionMiniMapVolume
     FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = FName(*VolumeName);
+    // CRITICAL FIX: Use MakeUniqueObjectName to prevent "Cannot generate unique name" crash
+    // This prevents fatal error when multiple volumes with same name are created
+    SpawnParams.Name = MakeUniqueObjectName(World, AWorldPartitionMiniMapVolume::StaticClass(), FName(*VolumeName));
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;  // Auto-generate unique name if still taken
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     AWorldPartitionMiniMapVolume* MiniMapVolume = World->SpawnActor<AWorldPartitionMiniMapVolume>(
@@ -1234,11 +1348,11 @@ static bool HandleCreateMinimapVolume(
     if (!MiniMapVolume)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), nullptr);
+            TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), nullptr, TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
 
-    // Set actor label
+    // Set actor label to the requested name (may differ from internal name if collision occurred)
     MiniMapVolume->SetActorLabel(*VolumeName);
 
     // Scale the volume to match the extent (AVolume uses a brush, scale affects it)

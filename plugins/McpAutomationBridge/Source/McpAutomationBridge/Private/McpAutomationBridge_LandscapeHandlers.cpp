@@ -807,14 +807,47 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
       }
     }
 
+    // Auto-create layer if it doesn't exist (matches UE Landscape Editor behavior)
     if (!LayerInfo) {
-      Subsystem->SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Layer '%s' not found. Create layer first using "
-                               "landscape editor."),
-                          *LayerName),
-          TEXT("LAYER_NOT_FOUND"));
-      return;
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+             TEXT("HandlePaintLandscapeLayer: Layer '%s' not found, auto-creating..."),
+             *LayerName);
+
+      // Create a new layer info object
+      ULandscapeLayerInfoObject* NewLayerInfo = NewObject<ULandscapeLayerInfoObject>(
+          Landscape, FName(*FString::Printf(TEXT("LayerInfo_%s"), *LayerName)),
+          RF_Public | RF_Transactional);
+
+      if (NewLayerInfo) {
+        // Set the layer name using the public API (handles deprecation in 5.7+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        NewLayerInfo->SetLayerName(FName(*LayerName), true);
+#else
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        NewLayerInfo->LayerName = FName(*LayerName);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+
+        // Add to landscape info layers
+        FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
+        LandscapeInfo->Layers.Add(NewLayerSettings);
+
+        // Create target layer settings for the new layer
+        LandscapeInfo->CreateTargetLayerSettingsFor(NewLayerInfo);
+
+        LayerInfo = NewLayerInfo;
+
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+               TEXT("HandlePaintLandscapeLayer: Auto-created layer '%s'"),
+               *LayerName);
+      } else {
+        Subsystem->SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Failed to create layer '%s'"),
+                            *LayerName),
+            TEXT("LAYER_CREATION_FAILED"));
+        return;
+      }
     }
 
     // Note: Do NOT call MakeDialog() - it blocks indefinitely in headless environments

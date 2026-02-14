@@ -783,8 +783,8 @@ void FMcpConnectionManager::SendAutomationResponse(
   Response->SetBoolField(TEXT("success"), bSuccess);
   if (!Message.IsEmpty())
     Response->SetStringField(TEXT("message"), Message);
-  if (!ErrorCode.IsEmpty())
-    Response->SetStringField(TEXT("error"), ErrorCode);
+  // Always include error field as empty string when no error (required by JSON schema: error: { type: 'string' })
+  Response->SetStringField(TEXT("error"), ErrorCode.IsEmpty() ? TEXT("") : ErrorCode);
   if (Result.IsValid())
     Response->SetObjectField(TEXT("result"), Result.ToSharedRef());
 

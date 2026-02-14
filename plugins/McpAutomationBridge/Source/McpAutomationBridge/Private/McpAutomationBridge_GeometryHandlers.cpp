@@ -50,6 +50,11 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/MeshSubdivideFunctions.h"
 #include "GeometryScript/MeshUVFunctions.h"
 
+// Collision functions for generate_collision (UE 5.4+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#include "GeometryScript/CollisionFunctions.h"
+#endif
+
 // UE 5.3+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
 // UE 5.0-5.2: These functions are in MeshDeformFunctions
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -2428,7 +2433,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
 #else
-    Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4 (API changed in 5.5)"), TEXT("VERSION_NOT_SUPPORTED"));
+    Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
 #endif
     return true;
 }
@@ -2572,6 +2577,29 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+
+    // Safety: Check memory pressure before array operation
+    if (!IsMemoryPressureSafe())
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Array operation blocked to prevent OOM."), 
+                           GetMemoryUsagePercent()), 
+            TEXT("MEMORY_PRESSURE"));
+        return true;
+    }
+
+    // Safety: Estimate triangles after array and check against limit
+    int32 TriCountBefore = Mesh->GetTriangleCount();
+    int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * Count;
+    
+    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Array would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return true;
+    }
 
     // Create a copy for arraying
     UDynamicMesh* SourceMesh = NewObject<UDynamicMesh>(GetTransientPackage());
