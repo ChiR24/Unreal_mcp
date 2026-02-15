@@ -622,6 +622,47 @@ export async function runToolTests(toolName, testCases) {
       }
     };
 
+    // === CLEANUP: Delete existing test assets from previous runs ===
+    console.log('🧹 Cleaning up existing test assets...');
+    try {
+      // Delete test levels
+      await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'MainLevel' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'TestLevel' } }, 10000).catch(() => {});
+      
+      // Delete geometry actors
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestBox' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSphere' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestCylinder' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestActor' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavTestActor' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSpline' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestRoad' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SplineControlPoints' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavLinkProxy_Test' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SmartNavLink_Test' } }, 5000).catch(() => {});
+      
+      // Delete test assets (blueprints, materials)
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/BP_Test' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/SplineBP' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestMaterial' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/Parent' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/M_Test' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/ConvertedMesh' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestLandscape' } }, 10000).catch(() => {});
+      
+      // Delete foliage types
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Foliage/Grass' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Foliage/Tree' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Foliage/Bush' } }, 10000).catch(() => {});
+      
+      // Delete NavMeshBoundsVolume
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavMeshBoundsVolume' } }, 5000).catch(() => {});
+      
+      console.log('✅ Cleanup complete\n');
+    } catch (cleanupErr) {
+      console.warn('⚠️  Cleanup had issues:', cleanupErr?.message || cleanupErr);
+    }
+
     // Setup test assets before running tests
     console.log('🔧 Setting up test assets...');
     try {

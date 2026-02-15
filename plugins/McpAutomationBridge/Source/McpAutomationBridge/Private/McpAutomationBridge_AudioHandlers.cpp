@@ -357,6 +357,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SoundCue->GetPathName());
+    AddAssetVerification(Resp, SoundCue);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SoundCue created"), Resp);
     return true;
@@ -482,6 +483,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     Resp->SetNumberField(TEXT("volume"), Volume);
     Resp->SetNumberField(TEXT("pitch"), Pitch);
 
+    // Sound played - add sound asset verification
+    AddAssetVerification(Resp, Sound);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played 2D"), Resp);
     return true;
@@ -531,6 +534,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
       Resp->SetStringField(TEXT("name"), SoundClass->GetName());
 
+      AddAssetVerification(Resp, SoundClass);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("SoundClass created"), Resp);
     } else {
@@ -590,6 +594,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       Resp->SetStringField(TEXT("path"), SoundMix->GetPathName());
       Resp->SetStringField(TEXT("name"), SoundMix->GetName());
 
+      AddAssetVerification(Resp, SoundMix);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("SoundMix created"), Resp);
     } else {
@@ -616,6 +621,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("mixName"), MixName);
+        AddAssetVerification(Resp, Mix);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("SoundMix pushed"), Resp);
       } else {
@@ -645,6 +651,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("mixName"), MixName);
+        AddAssetVerification(Resp, Mix);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("SoundMix popped"), Resp);
       } else {
@@ -750,6 +757,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (AudioComp) {
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+      AddAssetVerification(Resp, Sound);
+      AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound attached"), Resp);
     } else {
@@ -797,6 +806,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actorName"), ActorName);
         Resp->SetStringField(TEXT("action"), Lower);
+        AddActorVerification(Resp, TargetActor);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Sound fading"), Resp);
         return true;
@@ -871,6 +881,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+      AddAssetVerification(Resp, Sound);
+      AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Ambient sound created"), Resp);
     } else {
@@ -938,6 +950,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
+      AddAssetVerification(Resp, Sound);
+      AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound spawned"), Resp);
     } else {

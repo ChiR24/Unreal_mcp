@@ -281,9 +281,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(NewTexture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Noise texture '%s' created"), *Name));
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        AddAssetVerification(Response, NewTexture);
         return Response;
     }
     
@@ -434,9 +434,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(NewTexture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Gradient texture '%s' created"), *Name));
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        AddAssetVerification(Response, NewTexture);
         return Response;
     }
     
@@ -603,9 +603,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(NewTexture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Pattern texture '%s' created"), *Name));
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        AddAssetVerification(Response, NewTexture);
         return Response;
     }
     
@@ -811,9 +811,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(NormalMap);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Normal map created from height map"));
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        AddAssetVerification(Response, NormalMap);
         return Response;
     }
     
@@ -941,10 +941,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(AOTexture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("AO texture '%s' created (procedural approximation)"), *Name));
         Response->SetStringField(TEXT("note"), TEXT("For mesh-accurate AO, use external baking tools like Substance Painter or xNormal"));
-        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        AddAssetVerification(Response, AOTexture);
         return Response;
     }
     
@@ -1011,8 +1011,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(Texture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Compression set to %s"), *CompressionSettingsStr));
+        AddAssetVerification(Response, Texture);
         return Response;
     }
     
@@ -1077,8 +1078,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(Texture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture group set to %s"), *TextureGroup));
+        AddAssetVerification(Response, Texture);
         return Response;
     }
     
@@ -1129,8 +1131,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
             McpSafeAssetSave(Texture);
         }
         
-        Response->SetBoolField(TEXT("success"), true);
+Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("LOD bias set to %d"), LODBias));
+        AddAssetVerification(Response, Texture);
         return Response;
     }
     

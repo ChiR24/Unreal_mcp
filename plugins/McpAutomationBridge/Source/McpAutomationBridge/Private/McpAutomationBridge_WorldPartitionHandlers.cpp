@@ -293,11 +293,11 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
                 TArray<UDataLayerInstance*> Layers;
                 Layers.Add(TargetLayer);
 
-                DataLayerSubsystem->AddActorsToDataLayers(Actors, Layers);
+DataLayerSubsystem->AddActorsToDataLayers(Actors, Layers);
                 TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-                Result->SetStringField(TEXT("actorName"), Actor->GetName());
                 Result->SetStringField(TEXT("dataLayerName"), DataLayerName);
                 Result->SetBoolField(TEXT("added"), true);
+                AddActorVerification(Result, Actor);
                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor added to DataLayer."), Result);
             }
             else

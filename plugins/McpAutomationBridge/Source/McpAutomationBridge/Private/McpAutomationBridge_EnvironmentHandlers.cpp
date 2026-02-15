@@ -545,6 +545,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEnvironmentAction(
     Result->SetNumberField(TEXT("hour"), ClampedHour);
     Result->SetNumberField(TEXT("pitch"), SolarPitch);
     Result->SetStringField(TEXT("actor"), SunLight->GetPathName());
+    
+    // Add verification data
+    AddActorVerification(Result, SunLight);
+    
     SendResult(true, TEXT("Time of day updated"), FString(), Result);
     return true;
   }
@@ -710,6 +714,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetStringField(TEXT("command"), Command);
   Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("executed"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Console command executed"), Resp, FString());
@@ -954,6 +959,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
   Resp->SetNumberField(TEXT("sizeX"), SizeX);
   Resp->SetNumberField(TEXT("sizeY"), SizeY);
   Resp->SetNumberField(TEXT("subdivisions"), Subdivisions);
+  
+  // Add verification data
+  AddActorVerification(Resp, TerrainActor);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Procedural terrain created successfully"), Resp, FString());

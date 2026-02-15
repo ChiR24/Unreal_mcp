@@ -154,8 +154,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           }
         }
         
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetStringField(TEXT("levelPath"), LevelPath);
+TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        VerifyAssetExists(Resp, LevelPath);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level loaded"), Resp, FString());
         return true;
@@ -272,10 +272,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    bool bSaved = FEditorFileUtils::SaveCurrentLevel();
+bool bSaved = FEditorFileUtils::SaveCurrentLevel();
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetStringField(TEXT("levelPath"), World->GetOutermost()->GetName());
+      FString LevelPath = World->GetOutermost()->GetName();
+      VerifyAssetExists(Resp, LevelPath);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {

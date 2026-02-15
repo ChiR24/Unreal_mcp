@@ -76,9 +76,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
       McpSafeAssetSave(Blueprint);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetBoolField(TEXT("componentAdded"), true);
       Result->SetStringField(TEXT("componentName"), ComponentName);
+      AddAssetVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction component added"), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create interaction component"), TEXT("COMPONENT_CREATE_FAILED"));
@@ -166,15 +167,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("TraceType"), NameType);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetStringField(TEXT("traceType"), TraceType);
     Result->SetNumberField(TEXT("traceDistance"), TraceDistance);
     Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
     Result->SetBoolField(TEXT("configured"), bConfigured);
-    Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeAssetSave(Blueprint);
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction trace configured"), Result);
 #else
     SendAutomationError(RequestingSocket, RequestId, TEXT("configure_interaction_trace is editor-only"), TEXT("EDITOR_ONLY"));
@@ -470,14 +471,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       FBlueprintEditorUtils::MarkBlueprintAsModified(DoorBP);
       McpSafeAssetSave(DoorBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-      Result->SetStringField(TEXT("doorPath"), DoorBP->GetPathName());
-      Result->SetStringField(TEXT("blueprintPath"), DoorBP->GetPathName());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetNumberField(TEXT("openAngle"), OpenAngle);
       Result->SetNumberField(TEXT("openTime"), OpenTime);
       Result->SetBoolField(TEXT("autoClose"), AutoClose);
       Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
       Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
+      AddAssetVerification(Result, DoorBP);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door actor created"), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create door blueprint"), TEXT("BLUEPRINT_CREATE_FAILED"));

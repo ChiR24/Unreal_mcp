@@ -153,6 +153,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         TargetGraph->AddNode(FuncNode, true, false);
 
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("modulePath"), ModulePath);
         Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Module node added."), Result);
@@ -221,6 +222,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         if (bConnected)
         {
              TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+             AddAssetVerification(Result, System);
              Result->SetStringField(TEXT("fromNode"), FromNodeId);
              Result->SetStringField(TEXT("fromPin"), FromPinName);
              Result->SetStringField(TEXT("toNode"), ToNodeId);
@@ -253,6 +255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         {
             TargetGraph->RemoveNode(TargetNode);
             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            AddAssetVerification(Result, System);
             Result->SetStringField(TEXT("nodeId"), NodeId);
             Result->SetBoolField(TEXT("removed"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node removed."), Result);
@@ -295,6 +298,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         {
             UserStore.SetParameterValue(Val, FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName)));
             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            AddAssetVerification(Result, System);
             Result->SetStringField(TEXT("parameterName"), ParamName);
             Result->SetNumberField(TEXT("value"), Val);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Float parameter set."), Result);
@@ -306,6 +310,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(const FString& Requ
         {
             UserStore.SetParameterValue(bVal, FNiagaraVariable(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName)));
             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            AddAssetVerification(Result, System);
             Result->SetStringField(TEXT("parameterName"), ParamName);
             Result->SetBoolField(TEXT("value"), bVal);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bool parameter set."), Result);

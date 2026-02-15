@@ -480,6 +480,13 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     return true;
   }
 
+  // Optional: Skip the expensive Flush() operation for performance
+  // When true, height changes are queued but not immediately flushed to GPU
+  // This can significantly improve performance for batch operations
+  // The caller should call flush separately or the changes will be flushed on next edit
+  bool bSkipFlush = false;
+  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
+
   // Copy height data for async task
   TArray<uint16> HeightValues;
   if (bHasHeightData) {
@@ -499,7 +506,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
                                         LandscapeName, Operation,
                                         RegionMinX, RegionMinY, RegionMaxX, RegionMaxY,
                                         HeightValues =
-                                            MoveTemp(HeightValues)]() {
+                                            MoveTemp(HeightValues), bSkipFlush]() {
     UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
     if (!Subsystem)
       return;
@@ -653,9 +660,15 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     LandscapeEditWrite.SetHeightData(MinX, MinY, MaxX, MaxY, OutputHeights.GetData(),
                                      SizeX, false);
 
-    SlowTask.EnterProgressFrame(
-        1.0f, FText::FromString(TEXT("Rebuilding collision")));
-    LandscapeEditWrite.Flush();
+    // Flush is expensive - it forces render thread synchronization
+    // Skip if requested for batch operations, but note that changes
+    // won't be visible until the next flush or edit operation
+    if (!bSkipFlush) {
+      SlowTask.EnterProgressFrame(
+          1.0f, FText::FromString(TEXT("Flushing changes to GPU")));
+      LandscapeEditWrite.Flush();
+    }
+    
     // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
     // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
     // which can take 60+ seconds for large landscapes
@@ -669,6 +682,10 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedCount);
     Resp->SetNumberField(TEXT("regionSizeX"), SizeX);
     Resp->SetNumberField(TEXT("regionSizeY"), SizeY);
+    Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);
+    
+    // Add verification data
+    AddActorVerification(Resp, Landscape);
 
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                       TEXT("Heightmap modified successfully"),

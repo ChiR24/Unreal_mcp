@@ -376,6 +376,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
+  
+  // Add verification data
+  AddActorVerification(Data, Spawned);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned actor '%s'"), *Spawned->GetActorLabel());
@@ -500,6 +503,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+  
+  // Add verification data
+  AddActorVerification(Resp, Spawned);
+  
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned blueprint '%s'"),
          *Spawned->GetActorLabel());
@@ -587,6 +594,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
                           : TEXT("Some actors could not be deleted");
     ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
   }
+
+  // Add verification data for delete operations
+  Resp->SetBoolField(TEXT("existsAfter"), false);
+  Resp->SetStringField(TEXT("action"), TEXT("deleted"));
 
   if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted) {
     SendStandardErrorResponse(this, Socket, RequestId, ErrorCode, Message);
@@ -691,10 +702,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Applied force to '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Force applied"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Force applied"), Data);
   return true;
 #else
   return false;
@@ -766,10 +779,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set transform for '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Actor transform updated"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
   return true;
 #else
   return false;
@@ -880,11 +895,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set visibility to %s for '%s'"),
          bVisible ? TEXT("True") : TEXT("False"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Actor visibility updated"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);
   return true;
 #else
   return false;
@@ -1185,13 +1202,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Updated properties for component '%s' on '%s'"),
          *TargetComponent->GetName(), *Found->GetActorLabel());
 
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Component properties updated"), Data,
-                              PropertyWarnings);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
   return true;
 #else
   return false;
@@ -1275,6 +1293,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
+  
+  // Add verification data
+  if (Found) {
+    AddActorVerification(Data, Found);
+  }
+  
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);
   return true;
@@ -1324,6 +1348,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   Data->SetStringField(TEXT("source"), Found->GetActorLabel());
   Data->SetStringField(TEXT("actorName"), Duplicated->GetActorLabel());
   Data->SetStringField(TEXT("actorPath"), Duplicated->GetPathName());
+
+  // Add verification data
+  AddActorVerification(Data, Duplicated);
 
   TArray<TSharedPtr<FJsonValue>> OffsetArray;
   OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.X));
@@ -1408,11 +1435,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     return true;
   }
 
+  // Add verification data for the child actor
+  AddActorVerification(Data, Child);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Attached '%s' to '%s'"), *Child->GetActorLabel(),
          *Parent->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor attached"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor attached"), Data);
   return true;
 #else
   return false;
@@ -1468,10 +1497,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Detached '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor detached"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor detached"), Data);
   return true;
 #else
   return false;
@@ -1577,11 +1608,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Data->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagName.ToString());
+
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Added tag '%s' to '%s'"), *TagName.ToString(),
          *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Tag applied to actor"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Tag applied to actor"), Data);
   return true;
 #else
   return false;
@@ -1680,6 +1714,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   for (const FString &Name : Deleted)
     DeletedArray.Add(MakeShared<FJsonValueString>(Name));
   Data->SetArrayField(TEXT("deleted"), DeletedArray);
+
+  // Add verification data for delete operations
+  Data->SetBoolField(TEXT("existsAfter"), false);
+  Data->SetStringField(TEXT("action"), TEXT("deleted"));
+
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actors deleted by tag"), Data);
   return true;
@@ -2023,11 +2062,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   Data->SetBoolField(TEXT("wasPresent"), true);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagValue);
+
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Removed tag '%s' from '%s'"), *TagValue,
          *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Tag removed from actor"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Tag removed from actor"), Data);
   return true;
 #else
   return false;
@@ -2162,6 +2204,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
       TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
       Data->SetStringField(TEXT("actorName"), ActorName);
       Data->SetStringField(TEXT("componentName"), ComponentName);
+
+      // Add verification data for delete operations
+      Data->SetBoolField(TEXT("existsAfter"), false);
+      Data->SetStringField(TEXT("action"), TEXT("deleted"));
+
       SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
       return true;
     }

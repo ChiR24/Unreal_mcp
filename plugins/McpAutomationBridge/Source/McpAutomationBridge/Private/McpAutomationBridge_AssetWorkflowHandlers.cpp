@@ -1038,6 +1038,11 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             if (!bRenameSucceeded) {
               Resp->SetBoolField(TEXT("renameWarning"), true);
             }
+            // Add verification data
+            UObject *ImportedAsset = UEditorAssetLibrary::LoadAsset(FinalAssetPath);
+            if (ImportedAsset) {
+              AddAssetVerification(Resp, ImportedAsset);
+            }
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
                 bRenameSucceeded ? TEXT("Asset imported")
@@ -1187,6 +1192,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
+  
+  // Add verification data
+  AddAssetVerification(Resp, Asset);
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset metadata updated"), Resp, FString());
@@ -1321,6 +1329,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+    // Add verification data
+    UObject *NewAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
+    if (NewAsset) {
+      AddAssetVerification(Resp, NewAsset);
+    }
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
                            Resp, FString());
   } else {
@@ -1393,6 +1406,13 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+    
+    // Add verification data
+    UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
+    if (RenamedAsset) {
+      AddAssetVerification(Resp, RenamedAsset);
+    }
+    
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
                            FString());
   } else {
@@ -1466,6 +1486,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), DeletedCount > 0);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
+  // Add verification data - assets no longer exist after deletion
+  Resp->SetBoolField(TEXT("existsAfter"), false);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp,
                          FString());
   return true;
@@ -1513,6 +1535,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
+    // Add verification data
+    VerifyAssetExists(Resp, SafePath);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"),
                            Resp, FString());
   } else {

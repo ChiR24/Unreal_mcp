@@ -285,6 +285,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     Out->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Out->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     Out->SetBoolField(TEXT("success"), true);
+    AddActorVerification(Out, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actor spawned"), Out, FString());
     return true;
@@ -408,6 +409,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     Out->SetBoolField(TEXT("success"), true);
     Out->SetStringField(TEXT("possessed"), FoundPawn->GetActorLabel());
+    AddActorVerification(Out, FoundPawn);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Possessed pawn"), Out, FString());
     return true;

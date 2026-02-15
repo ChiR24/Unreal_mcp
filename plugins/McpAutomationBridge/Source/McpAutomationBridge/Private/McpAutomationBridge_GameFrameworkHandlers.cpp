@@ -512,6 +512,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameMode blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -549,6 +550,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameState blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -586,6 +588,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created PlayerController blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -623,6 +626,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created PlayerState blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -660,6 +664,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameInstance blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -697,6 +702,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created HUD blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
+        AddAssetVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }

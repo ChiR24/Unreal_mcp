@@ -421,6 +421,16 @@ static bool HandleCreateTriggerVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+    
+    // Add location for verification
+    TSharedPtr<FJsonObject> LocationObj = MakeShared<FJsonObject>();
+    LocationObj->SetNumberField(TEXT("x"), Volume->GetActorLocation().X);
+    LocationObj->SetNumberField(TEXT("y"), Volume->GetActorLocation().Y);
+    LocationObj->SetNumberField(TEXT("z"), Volume->GetActorLocation().Z);
+    ResponseJson->SetObjectField(TEXT("location"), LocationObj);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerVolume: %s"), *VolumeName), ResponseJson);
@@ -485,6 +495,16 @@ static bool HandleCreateTriggerBox(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerBox"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+    
+    // Add box extent for verification
+    TSharedPtr<FJsonObject> ExtentObj = MakeShared<FJsonObject>();
+    ExtentObj->SetNumberField(TEXT("x"), Extent.X);
+    ExtentObj->SetNumberField(TEXT("y"), Extent.Y);
+    ExtentObj->SetNumberField(TEXT("z"), Extent.Z);
+    ResponseJson->SetObjectField(TEXT("boxExtent"), ExtentObj);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerBox: %s"), *VolumeName), ResponseJson);
@@ -554,6 +574,9 @@ static bool HandleCreateTriggerSphere(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerSphere: %s"), *VolumeName), ResponseJson);
@@ -625,6 +648,9 @@ static bool HandleCreateTriggerCapsule(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerCapsule"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerCapsule: %s"), *VolumeName), ResponseJson);
@@ -689,6 +715,9 @@ static bool HandleCreateBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created BlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -749,6 +778,9 @@ static bool HandleCreateKillZVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created KillZVolume: %s"), *VolumeName), ResponseJson);
@@ -818,6 +850,9 @@ static bool HandleCreatePainCausingVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APainCausingVolume"));
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PainCausingVolume: %s"), *VolumeName), ResponseJson);
@@ -893,6 +928,9 @@ static bool HandleCreatePhysicsVolume(
     ResponseJson->SetNumberField(TEXT("fluidFriction"), FluidFriction);
     ResponseJson->SetNumberField(TEXT("terminalVelocity"), TerminalVelocity);
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PhysicsVolume: %s"), *VolumeName), ResponseJson);
@@ -959,6 +997,9 @@ static bool HandleCreateAudioVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created AudioVolume: %s"), *VolumeName), ResponseJson);
@@ -1037,6 +1078,9 @@ static bool HandleCreateReverbVolume(
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     ResponseJson->SetNumberField(TEXT("reverbVolume"), ReverbVolumeLevel);
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created ReverbVolume: %s"), *VolumeName), ResponseJson);
@@ -1176,6 +1220,9 @@ static bool HandleCreatePostProcessVolume(
     ResponseJson->SetNumberField(TEXT("blendWeight"), BlendWeight);
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
@@ -1261,6 +1308,9 @@ static bool HandleCreateCullDistanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CullDistanceVolume: %s"), *VolumeName), ResponseJson);
@@ -1321,6 +1371,9 @@ static bool HandleCreatePrecomputedVisibilityVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APrecomputedVisibilityVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PrecomputedVisibilityVolume: %s"), *VolumeName), ResponseJson);
@@ -1381,6 +1434,9 @@ static bool HandleCreateLightmassImportanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ALightmassImportanceVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created LightmassImportanceVolume: %s"), *VolumeName), ResponseJson);
@@ -1441,6 +1497,9 @@ static bool HandleCreateNavMeshBoundsVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavMeshBoundsVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavMeshBoundsVolume: %s"), *VolumeName), ResponseJson);
@@ -1501,6 +1560,9 @@ static bool HandleCreateNavModifierVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavModifierVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavModifierVolume: %s"), *VolumeName), ResponseJson);
@@ -1561,6 +1623,9 @@ static bool HandleCreateCameraBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACameraBlockingVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CameraBlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -1626,6 +1691,9 @@ static bool HandleSetVolumeExtent(
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
 
     TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
     ExtentJson->SetNumberField(TEXT("x"), NewExtent.X);
@@ -1748,6 +1816,9 @@ static bool HandleSetVolumeProperties(
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
 
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString& Prop : PropertiesSet)
@@ -1948,6 +2019,8 @@ static bool HandleRemoveVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
+    ResponseJson->SetBoolField(TEXT("existsAfter"), false);
+    ResponseJson->SetStringField(TEXT("action"), TEXT("deleted"));
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
@@ -2066,6 +2139,9 @@ static bool HandleAddTriggerVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2138,6 +2214,9 @@ static bool HandleAddBlockingVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2218,6 +2297,9 @@ static bool HandleAddKillZVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("killZHeight"), Location.Z);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2301,6 +2383,9 @@ static bool HandleAddPhysicsVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2397,6 +2482,9 @@ static bool HandleAddCullDistanceVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2484,6 +2572,9 @@ static bool HandleAddPostProcessVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
@@ -2590,6 +2681,9 @@ static bool HandleSetVolumeBounds(
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
 
     TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject());
     TArray<TSharedPtr<FJsonValue>> MinArray, MaxArray;

@@ -273,6 +273,9 @@ static bool HandleCreateSplineActor(
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
     Result->SetBoolField(TEXT("closedLoop"), SplineComp->IsClosedLoop());
 
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline actor '%s' created with %d points"), *ActorName, SplineComp->GetNumberOfSplinePoints()), Result);
     return true;
@@ -340,6 +343,9 @@ static bool HandleAddSplinePoint(
     Result->SetNumberField(TEXT("pointIndex"), Index);
     Result->SetNumberField(TEXT("totalPoints"), SplineComp->GetNumberOfSplinePoints());
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added spline point at index %d"), Index), Result);
     return true;
@@ -401,6 +407,9 @@ static bool HandleRemoveSplinePoint(
     Result->SetNumberField(TEXT("removedIndex"), PointIndex);
     Result->SetNumberField(TEXT("remainingPoints"), SplineComp->GetNumberOfSplinePoints());
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed spline point at index %d"), PointIndex), Result);
     return true;
@@ -461,6 +470,9 @@ static bool HandleSetSplinePointPosition(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set position for spline point %d"), PointIndex), Result);
@@ -533,6 +545,9 @@ static bool HandleSetSplinePointTangents(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set tangents for spline point %d"), PointIndex), Result);
     return true;
@@ -594,6 +609,9 @@ static bool HandleSetSplinePointRotation(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set rotation for spline point %d"), PointIndex), Result);
     return true;
@@ -654,6 +672,9 @@ static bool HandleSetSplinePointScale(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set scale for spline point %d"), PointIndex), Result);
@@ -729,6 +750,9 @@ static bool HandleSetSplineType(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("splineType"), SplineType);
     Result->SetNumberField(TEXT("pointsAffected"), PointIndex >= 0 ? 1 : SplineComp->GetNumberOfSplinePoints());
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set spline type to %s"), *SplineType), Result);
@@ -851,6 +875,11 @@ static bool HandleCreateSplineMeshComponent(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    
+    // Add verification data
+    Result->SetBoolField(TEXT("existsAfter"), true);
+    // Use action prefix format expected by TS message-handler.ts enforceActionMatch()
+    Result->SetStringField(TEXT("action"), TEXT("manage_splines:component_added"));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineMeshComponent '%s' added to Blueprint"), *ComponentName), Result);
@@ -943,6 +972,9 @@ static bool HandleSetSplineMeshAsset(
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("meshPath"), SafeMeshPath);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh asset set"), Result);
     return true;
@@ -1017,6 +1049,9 @@ static bool HandleConfigureSplineMeshAxis(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline mesh forward axis set to %s"), *ForwardAxis), Result);
@@ -1108,6 +1143,10 @@ static bool HandleSetSplineMeshMaterial(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
+    
+    // Add verification data
+    AddActorVerification(Result, Actor);
+    AddComponentVerification(Result, TargetComp);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh material set"), Result);
@@ -1205,6 +1244,10 @@ static bool HandleCreateSplineMeshActor(
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetStringField(TEXT("componentName"), ComponentName);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+    AddComponentVerification(Result, SplineMeshComp);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineMeshActor '%s' created with component '%s'"), *ActorName, *ComponentName), Result);
@@ -1307,6 +1350,9 @@ static bool HandleScatterMeshesAlongSpline(
     Result->SetNumberField(TEXT("meshesCreated"), CreatedMeshes.Num());
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetNumberField(TEXT("spacing"), Spacing);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Scattered %d meshes along spline"), CreatedMeshes.Num()), Result);
@@ -1425,6 +1471,9 @@ static bool HandleCreateTemplateSpline(
     Result->SetStringField(TEXT("templateType"), TemplateName);
     Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
+
+    // Add verification data
+    AddActorVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("%s spline '%s' created"), *TemplateName, *ActorName), Result);

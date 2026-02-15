@@ -245,9 +245,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetStringField(TEXT("componentClass"), TEXT("AbilitySystemComponent"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ASC added"), Result);
         return true;
     }
@@ -311,9 +311,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetStringField(TEXT("replicationMode"), ReplicationMode);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ASC configured"), Result);
         return true;
     }
@@ -338,9 +338,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attribute set created"), Result);
         return true;
     }

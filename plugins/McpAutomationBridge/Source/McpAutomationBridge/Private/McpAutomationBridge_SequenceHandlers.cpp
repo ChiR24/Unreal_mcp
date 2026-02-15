@@ -165,10 +165,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
          TEXT("HandleSequenceCreate: Handing RequestID=%s Path=%s"),
          *RequestIdArg, *FullPath);
 
-  // Check existence first to avoid error log spam
+// Check existence first to avoid error log spam
   if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("sequencePath"), FullPath);
+    VerifyAssetExists(Resp, FullPath);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("HandleSequenceCreate: Sequence exists, sending response for "
                 "RequestID=%s"),
@@ -194,11 +194,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
             TEXT("AssetTools"));
     UObject *NewObj = AssetToolsModule.Get().CreateAsset(
         Name, DestFolder, ULevelSequence::StaticClass(), Factory);
-    if (NewObj) {
+if (NewObj) {
       McpSafeAssetSave(NewObj);
       GCurrentSequencePath = FullPath;
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetStringField(TEXT("sequencePath"), FullPath);
+      AddAssetVerification(Resp, NewObj);
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleSequenceCreate: Created sequence, sending response "
                   "for RequestID=%s"),
@@ -292,14 +292,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
         bRateFound = true;
       }
 
-      if (bRateFound) {
+if (bRateFound) {
         MovieScene->SetDisplayRate(NewRate);
         MovieScene->Modify();
 
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("displayRate"),
                              NewRate.ToPrettyText().ToString());
+        AddAssetVerification(Resp, LevelSeq);
         SendAutomationResponse(Socket, RequestId, true,
                                TEXT("Display rate set"), Resp, FString());
         return true;

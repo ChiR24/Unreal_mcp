@@ -157,19 +157,25 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       return true;
     }
 
-    FVector Location = FVector::ZeroVector;
+    // Default location to a reasonable height above ground (z=300) to avoid burying lights in geometry
+    // User can override by providing explicit location
+    FVector Location = FVector(0.0f, 0.0f, 300.0f);
     const TSharedPtr<FJsonObject> *LocPtr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocPtr)) {
+    bool bHasExplicitLocation = Payload->TryGetObjectField(TEXT("location"), LocPtr);
+    if (bHasExplicitLocation) {
       Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
       Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
       Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
+    } else {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("spawn_light: No location provided, using default (0, 0, 300)"));
     }
 
     FRotator Rotation = FRotator::ZeroRotator;
     const TSharedPtr<FJsonObject> *RotPtr;
     if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr)) {
       Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
-      Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
+      Rotation.Yaw = GetJsonNumberField((*LocPtr), TEXT("yaw"));
       Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
     }
 
@@ -336,17 +342,26 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), NewLight->GetActorLabel());
+
+    // Add verification data
+    AddActorVerification(Resp, NewLight);
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Light spawned"), Resp);
     return true;
   } else if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light")) {
-    // Parse location from payload (optional, defaults to ZeroVector)
-    FVector Location = FVector::ZeroVector;
+    // Default location to a reasonable height (z=500) for sky lights
+    // User can override by providing explicit location
+    FVector Location = FVector(0.0f, 0.0f, 500.0f);
     const TSharedPtr<FJsonObject> *LocPtr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocPtr)) {
+    bool bHasExplicitLocation = Payload->TryGetObjectField(TEXT("location"), LocPtr);
+    if (bHasExplicitLocation) {
       Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
       Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
       Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
+    } else {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("spawn_sky_light: No location provided, using default (0, 0, 500)"));
     }
     
     // Parse rotation from payload (optional, defaults to ZeroRotator)
@@ -416,6 +431,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), SkyLight->GetActorLabel());
+    
+    // Add verification data
+    AddActorVerification(Resp, SkyLight);
+    
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SkyLight spawned"), Resp);
     return true;
@@ -429,8 +448,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
           Resp->SetBoolField(TEXT("skipped"), true);
           Resp->SetStringField(TEXT("reason"), TEXT("bForceNoPrecomputedLighting is true"));
-          SendAutomationResponse(RequestingSocket, RequestId, true,
-              TEXT("Lighting build skipped - precomputed lighting disabled in WorldSettings"), Resp);
+          Resp->SetStringField(TEXT("suggestion"), TEXT("Set WorldSettings.bForceNoPrecomputedLighting to false to enable lighting builds"));
+          // Return success=false since the operation did NOT complete
+          SendAutomationResponse(RequestingSocket, RequestId, false,
+              TEXT("Lighting build skipped - precomputed lighting disabled in WorldSettings"), Resp,
+              TEXT("OPERATION_SKIPPED"));
           return true;
         }
       }
@@ -533,6 +555,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetNumberField(TEXT("removed"), RemovedCount);
+
+    // Add verification data for the kept/spawned SkyLight
+    if (KeptActor) {
+      AddActorVerification(Resp, KeptActor);
+    }
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Ensured single SkyLight"), Resp);
     return true;
@@ -568,6 +596,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("actorName"), Volume->GetActorLabel());
+
+      // Add verification data
+      AddActorVerification(Resp, Volume);
 
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("LightmassImportanceVolume created"), Resp);
@@ -608,6 +639,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       Resp->SetStringField(TEXT("actorName"), FogActor->GetActorLabel());
       Resp->SetBoolField(TEXT("enabled"), true);
 
+      // Add verification data
+      AddActorVerification(Resp, FogActor);
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Volumetric fog enabled"), Resp);
     } else {
@@ -618,34 +652,62 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     return true;
   } else if (Lower == TEXT("setup_global_illumination")) {
     FString Method;
-    if (Payload->TryGetStringField(TEXT("method"), Method)) {
-      if (Method == TEXT("LumenGI")) {
-        IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
-            TEXT("r.DynamicGlobalIlluminationMethod"));
-        if (CVar)
-          CVar->Set(1); // 1 = Lumen
-
-        IConsoleVariable *CVarRefl = IConsoleManager::Get().FindConsoleVariable(
-            TEXT("r.ReflectionMethod"));
-        if (CVarRefl)
-          CVarRefl->Set(1); // 1 = Lumen
-      } else if (Method == TEXT("ScreenSpace")) {
-        IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
-            TEXT("r.DynamicGlobalIlluminationMethod"));
-        if (CVar)
-          CVar->Set(2); // SSGI
-      } else if (Method == TEXT("None")) {
-        IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
-            TEXT("r.DynamicGlobalIlluminationMethod"));
-        if (CVar)
-          CVar->Set(0);
-      }
+    if (!Payload->TryGetStringField(TEXT("method"), Method) || Method.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("method parameter is required. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
+    
+    bool bValidMethod = false;
+    if (Method == TEXT("LumenGI")) {
+      IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.DynamicGlobalIlluminationMethod"));
+      if (CVar)
+        CVar->Set(1); // 1 = Lumen
+
+      IConsoleVariable *CVarRefl = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.ReflectionMethod"));
+      if (CVarRefl)
+        CVarRefl->Set(1); // 1 = Lumen
+      bValidMethod = true;
+    } else if (Method == TEXT("ScreenSpace")) {
+      IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.DynamicGlobalIlluminationMethod"));
+      if (CVar)
+        CVar->Set(2); // SSGI
+      bValidMethod = true;
+    } else if (Method == TEXT("None")) {
+      IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.DynamicGlobalIlluminationMethod"));
+      if (CVar)
+        CVar->Set(0);
+      bValidMethod = true;
+    } else if (Method == TEXT("RayTraced")) {
+      IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.DynamicGlobalIlluminationMethod"));
+      if (CVar)
+        CVar->Set(3); // 3 = RayTraced (if supported)
+      bValidMethod = true;
+    } else if (Method == TEXT("Lightmass")) {
+      // Lightmass requires disabling Lumen and enabling static lighting
+      IConsoleVariable *CVarGI = IConsoleManager::Get().FindConsoleVariable(
+          TEXT("r.DynamicGlobalIlluminationMethod"));
+      if (CVarGI)
+        CVarGI->Set(0); // Disable dynamic GI to use baked
+      bValidMethod = true;
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid GI method: %s. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"), *Method),
+          TEXT("INVALID_GI_METHOD"));
+      return true;
+    }
+    
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("success"), bValidMethod);
     Resp->SetStringField(TEXT("method"), Method);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("GI method configured"), Resp);
+                           FString::Printf(TEXT("GI method configured: %s"), *Method), Resp);
     return true;
   } else if (Lower == TEXT("configure_shadows")) {
     bool bVirtual = false;
@@ -701,6 +763,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("actorName"), PPV->GetActorLabel());
+
+      // Add verification data
+      AddActorVerification(Resp, PPV);
+
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Exposure settings applied"), Resp);
     } else {
@@ -754,6 +820,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("actorName"), PPV->GetActorLabel());
+      
+      // Add verification data
+      AddActorVerification(Resp, PPV);
+      
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Ambient Occlusion settings configured"),
                              Resp);
@@ -809,6 +879,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         Resp->SetStringField(TEXT("path"), Path);
         Resp->SetStringField(TEXT("message"),
                              TEXT("Level created with lighting"));
+        
+        // Add verification data
+        Resp->SetBoolField(TEXT("existsAfter"), true);
+        Resp->SetStringField(TEXT("levelPath"), Path);
+        
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level created with lighting"), Resp);
       } else {

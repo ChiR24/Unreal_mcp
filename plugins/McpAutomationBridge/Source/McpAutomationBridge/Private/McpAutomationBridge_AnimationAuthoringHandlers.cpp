@@ -456,13 +456,14 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #endif
         
         SaveAnimAsset(NewSequence, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' created"), *Name));
+        AddAssetVerification(Response, NewSequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_sequence_length"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -494,11 +495,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #endif
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Sequence length updated"));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_bone_track"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -556,11 +558,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #endif
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_bone_key"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -628,11 +631,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #endif
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone key set at frame %d"), Frame));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_curve_key"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -688,11 +692,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #endif
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Curve key set at frame %d"), Frame));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_notify"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -754,11 +759,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(AnimAsset, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Notify added"));
+        AddAssetVerification(Response, AnimAsset);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_notify_state"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -824,11 +830,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(AnimAsset, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Notify state added"));
+        AddAssetVerification(Response, AnimAsset);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_sync_marker"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -863,11 +870,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Sequence->RefreshSyncMarkerDataFromAuthored();
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Sync marker '%s' added"), *MarkerName));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_root_motion_settings"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -900,11 +908,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Root motion settings updated"));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_additive_settings"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -960,11 +969,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Sequence, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Additive settings updated"));
+        AddAssetVerification(Response, Sequence);
         return Response;
     }
-    
+
     // ===== 10.2 Animation Montages =====
     
     if (SubAction == TEXT("create_montage"))
@@ -1013,13 +1023,14 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(NewMontage, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Montage '%s' created"), *Name));
+        AddAssetVerification(Response, NewMontage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_montage_section"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1042,11 +1053,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), StartTime);
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Section '%s' added at index %d"), *SectionName, SectionIndex));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_montage_slot"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1099,11 +1111,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         Segment.LoopingCount = 1;
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Animation added to montage slot"));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_section_timing"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1136,11 +1149,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Section timing updated"));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("add_montage_notify"))
     {
         // Similar to add_notify but for montages
@@ -1193,11 +1207,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_blend_in"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1228,11 +1243,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Blend in settings updated"));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("set_blend_out"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1263,11 +1279,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(TEXT("Blend out settings updated"));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     if (SubAction == TEXT("link_sections"))
     {
         FString AssetPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("assetPath"), TEXT("")));
@@ -1295,11 +1312,12 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         SaveAnimAsset(Montage, bSave);
-        
+
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Linked '%s' to '%s'"), *FromSection, *ToSection));
+        AddAssetVerification(Response, Montage);
         return Response;
     }
-    
+
     // ===== 10.3 Blend Spaces =====
     
     if (SubAction == TEXT("create_blend_space_1d"))
@@ -1366,16 +1384,17 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         NewBlendSpace->PostEditChange();
         
         SaveAnimAsset(NewBlendSpace, bSave);
-        
+
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' created"), *Name));
+        AddAssetVerification(Response, NewBlendSpace);
 #else
         ANIM_ERROR_RESPONSE(TEXT("Blend space factory not available"), TEXT("NOT_SUPPORTED"));
 #endif
         return Response;
     }
-    
+
     if (SubAction == TEXT("create_blend_space_2d"))
     {
 #if MCP_HAS_BLENDSPACE_FACTORY

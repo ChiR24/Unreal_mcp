@@ -112,9 +112,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
         McpSafeAssetSave(ItemAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-      Result->SetStringField(TEXT("itemPath"), Package->GetName());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetStringField(TEXT("assetName"), SanitizedName);
+      AddAssetVerification(Result, ItemAsset);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item data asset created"), Result);
     } else {
@@ -179,10 +179,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       McpSafeAssetSave(ItemAsset);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    Result->SetStringField(TEXT("itemPath"), ItemPath);
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetBoolField(TEXT("modified"), ModifiedProperties.Num() > 0);
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
+    AddAssetVerification(Result, ItemAsset);
 
     TArray<TSharedPtr<FJsonValue>> ModifiedArr;
     for (const FString& Name : ModifiedProperties) {

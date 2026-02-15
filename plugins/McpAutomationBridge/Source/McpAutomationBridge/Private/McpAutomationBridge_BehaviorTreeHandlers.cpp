@@ -164,6 +164,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());
     Result->SetStringField(TEXT("name"), Name);
     Result->SetBoolField(TEXT("saved"), bSaved);
+    AddAssetVerification(Result, NewBT);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Behavior Tree created."), Result);
@@ -363,6 +364,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+        AddAssetVerification(Result, BT);
+
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node added."), Result);
       } else {
@@ -421,8 +424,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       if (BTGraph->GetSchema()->TryCreateConnection(OutputPin, InputPin)) {
         BTGraph->NotifyGraphChanged();
         BT->MarkPackageDirty();
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        AddAssetVerification(Resp, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Nodes connected."));
+                               TEXT("Nodes connected."), Resp);
       } else {
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Failed to connect nodes."),
@@ -448,8 +453,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     if (TargetNode) {
       BTGraph->RemoveNode(TargetNode);
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      AddAssetVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Node removed."));
+                             TEXT("Node removed."), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));
@@ -469,8 +476,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     if (TargetNode) {
       TargetNode->BreakAllNodeLinks();
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      AddAssetVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Connections broken."));
+                             TEXT("Connections broken."), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));
@@ -560,8 +569,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
         BT->MarkPackageDirty();
       }
 
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      AddAssetVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Node properties updated."));
+                             TEXT("Node properties updated."), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));

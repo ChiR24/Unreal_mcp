@@ -296,6 +296,9 @@ static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("width"), Width);
     Result->SetNumberField(TEXT("height"), Height);
     Result->SetNumberField(TEXT("depth"), Depth);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Box mesh created"), Result);
     return true;
@@ -354,6 +357,9 @@ static bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FStrin
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("radius"), Radius);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Sphere mesh created"), Result);
     return true;
@@ -412,6 +418,9 @@ static bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FStr
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cylinder mesh created"), Result);
     return true;
@@ -466,6 +475,10 @@ double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), Name);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cone mesh created"), Result);
     return true;
 }
@@ -521,6 +534,10 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), Name);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Capsule mesh created"), Result);
     return true;
 }
@@ -631,6 +648,10 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Plane mesh created"), Result);
     return true;
 }
@@ -688,6 +709,10 @@ static bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString&
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Disc mesh created"), Result);
     return true;
 }
@@ -1423,6 +1448,10 @@ float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
+
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Linear stairs created"), Result);
     return true;
 }
@@ -3025,6 +3054,30 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
+    // Safety: Check memory pressure before poke operation
+    if (!IsMemoryPressureSafe())
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Poke operation blocked to prevent OOM."), 
+                           GetMemoryUsagePercent()), 
+            TEXT("MEMORY_PRESSURE"));
+        return true;
+    }
+
+    // Safety: Check triangle count before operation
+    // Poke with PNTessellation roughly triples triangle count (each face gets subdivided)
+    int32 TriCountBefore = Mesh->GetTriangleCount();
+    int64 EstimatedTriangles = static_cast<int64>(TriCountBefore) * 4;  // 4x safety margin for subdivision
+    
+    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId, 
+            FString::Printf(TEXT("Poke would exceed triangle limit. Current: %d, Estimated: %lld, Max: %d"), 
+                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH), 
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return true;
+    }
+
     // Poke faces - offset vertices inward/outward along face normals
     // UE 5.7: FGeometryScriptMeshOffsetFacesOptions uses Distance not OffsetDistance
     FGeometryScriptMeshOffsetFacesOptions PokeOptions;
@@ -3037,12 +3090,22 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     FGeometryScriptPNTessellateOptions TessOptions;
     UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, 1, nullptr);
 
+    int32 TriCountAfter = Mesh->GetTriangleCount();
+
+    // Warning if approaching limit
+    if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
+    {
+        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Poke result has %d triangles (warning threshold: %d)"), 
+               TriCountAfter, WARNING_TRIANGLE_THRESHOLD);
+    }
+
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("offset"), PokeOffset);
-    Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
+    Result->SetNumberField(TEXT("triangleCount"), TriCountAfter);
+    Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Poke applied"), Result);
     return true;
 }
@@ -6132,6 +6195,12 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     Result->SetNumberField(TEXT("segments"), Segments);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
+    
+    // Add verification data for the target actor
+    if (TargetActor)
+    {
+        AddActorVerification(Result, TargetActor);
+    }
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Extruded profile along spline"), Result);
     return true;
@@ -6281,6 +6350,10 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("edgesSplit"), EdgesSplit);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
+    
+    // Add verification data
+    AddActorVerification(Result, TargetActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Edge split applied"), Result);
     return true;
 }
@@ -6361,6 +6434,10 @@ static bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FStri
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Result->SetStringField(TEXT("note"), TEXT("Partial quadrangulation applied - full quad remesh requires external library"));
+    
+    // Add verification data
+    AddActorVerification(Result, TargetActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Quadrangulation applied"), Result);
     return true;
 }
@@ -6444,6 +6521,10 @@ static bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString
     Result->SetNumberField(TEXT("voxelSize"), VoxelSize);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
+    
+    // Add verification data
+    AddActorVerification(Result, TargetActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Voxel remesh applied"), Result);
     return true;
 }
@@ -6516,6 +6597,10 @@ static bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, 
     Result->SetNumberField(TEXT("hullCount"), MaxHullCount);
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     Result->SetStringField(TEXT("collisionType"), TEXT("convex_decomposition"));
+    
+    // Add verification data
+    AddActorVerification(Result, TargetActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Complex collision generated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Complex collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -6601,6 +6686,10 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetNumberField(TEXT("trianglesBefore"), CurrentTris);
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
+    
+    // Add verification data
+    AddActorVerification(Result, TargetActor);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision simplified"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Collision simplification requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -6729,6 +6818,10 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
     Result->SetStringField(TEXT("assetPath"), TargetPath);
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
+    
+    // Add verification data
+    AddAssetVerification(Result, StaticMesh);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LODs generated for geometry"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));
@@ -6797,6 +6890,10 @@ static bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FStr
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
+    
+    // Add verification data
+    AddAssetVerification(Result, StaticMesh);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD settings updated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));
@@ -6883,6 +6980,10 @@ static bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
+    
+    // Add verification data
+    AddAssetVerification(Result, StaticMesh);
+    
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD screen sizes updated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Requires editor build"), TEXT("NOT_SUPPORTED"));

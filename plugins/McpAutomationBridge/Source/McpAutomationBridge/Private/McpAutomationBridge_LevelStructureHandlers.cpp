@@ -15,6 +15,7 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "HAL/FileManager.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Engine/Engine.h"
@@ -134,10 +135,16 @@ static bool HandleCreateLevel(
 {
     using namespace LevelStructureHelpers;
 
-    // Backward compatibility: default levelName if not provided
-    FString LevelName = GetJsonStringField(Payload, TEXT("levelName"), TEXT("NewLevel"));
+    // CRITICAL: levelName is required - check if explicitly provided, not just if empty
+    FString LevelName;
+    bool bHasLevelName = false;
+    if (Payload.IsValid())
+    {
+        bHasLevelName = Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    }
 
-    if (LevelName.IsEmpty())
+    // Fail if levelName was not provided OR if it's empty
+    if (!bHasLevelName || LevelName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("levelName is required for create_level"), nullptr, TEXT("INVALID_ARGUMENT"));
@@ -239,19 +246,60 @@ static bool HandleCreateLevel(
     Package->MarkPackageDirty();
 
     // Save if requested
+    bool bSaveSucceeded = true;
     if (bSave)
     {
-        McpSafeAssetSave(NewWorld);
+        bSaveSucceeded = McpSafeAssetSave(NewWorld);
+        
+        // CRITICAL: Flush asset registry and verify file exists to prevent 
+        // FILE_NOT_FOUND cascade when immediately loading after creation
+        if (bSaveSucceeded)
+        {
+            // Flush asset registry so the new level is immediately discoverable
+            IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+            
+            // Convert package path to filename for scanning
+            FString LevelFilename;
+            if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, LevelFilename, FPackageName::GetMapPackageExtension()))
+            {
+                TArray<FString> FilesToScan;
+                FilesToScan.Add(LevelFilename);
+                AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+            }
+            
+            // Verify the file actually exists on disk before reporting success
+            // This prevents false positives where save appeared to succeed but file wasn't written
+            FString VerifyFilename;
+            if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, VerifyFilename, FPackageName::GetMapPackageExtension()))
+            {
+                if (!IFileManager::Get().FileExists(*VerifyFilename))
+                {
+                    bSaveSucceeded = false;
+                    UE_LOG(LogMcpLevelStructureHandlers, Error, TEXT("Level save verification failed: file not found at %s"), *VerifyFilename);
+                }
+            }
+        }
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    ResponseJson->SetStringField(TEXT("levelPath"), FullPath);
+    AddAssetVerification(ResponseJson, NewWorld);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
+    ResponseJson->SetStringField(TEXT("levelPath"), FullPath);
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
     ResponseJson->SetBoolField(TEXT("worldPartitionRequested"), bCreateWorldPartition);
+    ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
     if (bCreateWorldPartition && !bWorldPartitionActuallyEnabled)
     {
         ResponseJson->SetStringField(TEXT("worldPartitionNote"), TEXT("World Partition must be enabled via editor UI or project settings for new levels"));
+    }
+
+    // If save was requested but failed, report error
+    if (bSave && !bSaveSucceeded)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Level created but save verification failed: %s"), *FullPath),
+            ResponseJson, TEXT("SAVE_VERIFICATION_FAILED"));
+        return true;
     }
 
     FString Message = FString::Printf(TEXT("Created level: %s"), *FullPath);
@@ -362,7 +410,7 @@ static bool HandleCreateSublevel(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    ResponseJson->SetStringField(TEXT("sublevelPath"), SublevelPath);
+    AddAssetVerification(ResponseJson, World);
     ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
     ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
     ResponseJson->SetBoolField(TEXT("saved"), bSave);
@@ -431,6 +479,7 @@ static bool HandleConfigureLevelStreaming(
     FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming;
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, World);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("streamingMethod"), StreamingMethod);
     ResponseJson->SetBoolField(TEXT("shouldBeVisible"), bShouldBeVisible);
@@ -513,6 +562,7 @@ static bool HandleSetStreamingDistance(
         }
         
         TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        AddAssetVerification(ResponseJson, World);
         ResponseJson->SetStringField(TEXT("levelName"), LevelName);
         ResponseJson->SetArrayField(TEXT("streamingVolumes"), VolumesArray);
         ResponseJson->SetNumberField(TEXT("volumeCount"), VolumesArray.Num());
@@ -585,6 +635,7 @@ static bool HandleSetStreamingDistance(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddActorVerification(ResponseJson, NewVolume);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("volumeName"), NewVolume->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
@@ -612,9 +663,26 @@ static bool HandleConfigureLevelBounds(
 {
     using namespace LevelStructureHelpers;
 
-    FVector BoundsOrigin = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("boundsOrigin")));
-    FVector BoundsExtent = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("boundsExtent")), FVector(10000.0));
     bool bAutoCalculateBounds = GetJsonBoolField(Payload, TEXT("bAutoCalculateBounds"), false);
+    
+    // Check if bounds parameters are provided
+    TSharedPtr<FJsonObject> BoundsOriginJson = GetObjectField(Payload, TEXT("boundsOrigin"));
+    TSharedPtr<FJsonObject> BoundsExtentJson = GetObjectField(Payload, TEXT("boundsExtent"));
+    
+    // If not auto-calculating, boundsOrigin and boundsExtent must be provided
+    if (!bAutoCalculateBounds)
+    {
+        if (!BoundsOriginJson.IsValid() || !BoundsExtentJson.IsValid())
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("boundsOrigin and boundsExtent are required when bAutoCalculateBounds is false"),
+                nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+
+    FVector BoundsOrigin = LevelStructureHelpers::GetVectorFromJson(BoundsOriginJson);
+    FVector BoundsExtent = LevelStructureHelpers::GetVectorFromJson(BoundsExtentJson, FVector(10000.0));
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -649,6 +717,7 @@ static bool HandleConfigureLevelBounds(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, World);
     
     TSharedPtr<FJsonObject> OriginJson = MakeShareable(new FJsonObject());
     OriginJson->SetNumberField(TEXT("x"), WorldBounds.GetCenter().X);
@@ -762,8 +831,17 @@ static bool HandleConfigureGridSize(
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
     if (!SpatialHash)
     {
+        // Provide detailed error with actionable guidance
+        TSharedPtr<FJsonObject> ErrorJson = MakeShareable(new FJsonObject());
+        ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
+        ErrorJson->SetStringField(TEXT("requiredHashType"), TEXT("WorldPartitionRuntimeSpatialHash"));
+        ErrorJson->SetStringField(TEXT("hint"), TEXT("World Partition must use RuntimeSpatialHash for grid configuration. This is the default for new WP-enabled levels."));
+        ErrorJson->SetStringField(TEXT("solution"), TEXT("Create a new level with World Partition enabled, or check World Partition settings in the editor."));
+        
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not using RuntimeSpatialHash. Grid configuration not applicable."), nullptr);
+            FString::Printf(TEXT("World Partition is not using RuntimeSpatialHash (using %s instead). Grid configuration not applicable."),
+                *RuntimeHash->GetClass()->GetName()),
+            ErrorJson, TEXT("INVALID_PARTITION_TYPE"));
         return true;
     }
 
@@ -887,6 +965,7 @@ static bool HandleConfigureGridSize(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, World);
     ResponseJson->SetStringField(TEXT("gridName"), GridName.IsEmpty() ? TEXT("(default)") : GridName);
     ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
     ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
@@ -1065,6 +1144,7 @@ static bool HandleCreateDataLayer(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, NewDataLayerAsset);
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetStringField(TEXT("dataLayerAssetPath"), FullAssetPath);
     ResponseJson->SetStringField(TEXT("dataLayerType"), DataLayerType);
@@ -1154,7 +1234,38 @@ static bool HandleAssignActorToDataLayer(
     }
 
     // Find the data layer instance by name
-    UDataLayerInstance* DataLayerInstance = DataLayerEditorSubsystem->GetDataLayerInstance(FName(*DataLayerName));
+    // Try multiple lookup methods to handle both short name and full name matching
+    UDataLayerInstance* DataLayerInstance = nullptr;
+    
+    // Method 1: Direct FName lookup (for full names)
+    DataLayerInstance = DataLayerEditorSubsystem->GetDataLayerInstance(FName(*DataLayerName));
+    
+    // Method 2: If not found, search by short name (case-insensitive)
+    if (!DataLayerInstance)
+    {
+        TArray<UDataLayerInstance*> AllDataLayers = DataLayerEditorSubsystem->GetAllDataLayers();
+        for (UDataLayerInstance* DL : AllDataLayers)
+        {
+            if (DL)
+            {
+                // Compare by short name (case-insensitive for robustness)
+                FString ShortName = DL->GetDataLayerShortName();
+                if (ShortName.Equals(DataLayerName, ESearchCase::IgnoreCase))
+                {
+                    DataLayerInstance = DL;
+                    break;
+                }
+                // Also try full name
+                FString FullName = DL->GetDataLayerFullName();
+                if (FullName.Equals(DataLayerName, ESearchCase::IgnoreCase))
+                {
+                    DataLayerInstance = DL;
+                    break;
+                }
+            }
+        }
+    }
+    
     if (!DataLayerInstance)
     {
         // Build a list of available data layers for the error message
@@ -1181,8 +1292,8 @@ static bool HandleAssignActorToDataLayer(
     bool bSuccess = DataLayerEditorSubsystem->AddActorToDataLayer(FoundActor, DataLayerInstance);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddActorVerification(ResponseJson, FoundActor);
     ResponseJson->SetStringField(TEXT("actorName"), ActorName);
-    ResponseJson->SetStringField(TEXT("actorPath"), FoundActor->GetPathName());
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetBoolField(TEXT("assigned"), bSuccess);
 
@@ -1380,6 +1491,7 @@ static bool HandleCreateMinimapVolume(
     MiniMapVolume->SetActorScale3D(DesiredScale);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddActorVerification(ResponseJson, MiniMapVolume);
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AWorldPartitionMiniMapVolume"));
     
@@ -1459,8 +1571,8 @@ static bool HandleOpenLevelBlueprint(
     GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(LevelBP);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("levelName"), World->GetMapName());
-    ResponseJson->SetStringField(TEXT("blueprintPath"), LevelBP->GetPathName());
 
     FString Message = FString::Printf(TEXT("Opened Level Blueprint for: %s"), *World->GetMapName());
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
@@ -1591,6 +1703,7 @@ static bool HandleAddLevelBlueprintNode(
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("nodeClass"), NodeClass);
     ResponseJson->SetStringField(TEXT("nodeName"), CreatedNodeName);
     ResponseJson->SetNumberField(TEXT("posX"), PosX);
@@ -1704,6 +1817,7 @@ static bool HandleConnectLevelBlueprintNodes(
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddAssetVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("sourceNode"), SourceNodeName);
     ResponseJson->SetStringField(TEXT("sourcePin"), SourcePinName);
     ResponseJson->SetStringField(TEXT("targetNode"), TargetNodeName);
@@ -1801,8 +1915,8 @@ static bool HandleCreateLevelInstance(
     LevelInstanceActor->SetActorLabel(*LevelInstanceName);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddActorVerification(ResponseJson, LevelInstanceActor);
     ResponseJson->SetStringField(TEXT("levelInstanceName"), LevelInstanceName);
-    ResponseJson->SetStringField(TEXT("actorName"), LevelInstanceActor->GetName());
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     
     TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
@@ -1883,8 +1997,8 @@ static bool HandleCreatePackedLevelActor(
     PackedActor->SetActorLabel(*PackedLevelName);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    AddActorVerification(ResponseJson, PackedActor);
     ResponseJson->SetStringField(TEXT("packedLevelName"), PackedLevelName);
-    ResponseJson->SetStringField(TEXT("actorName"), PackedActor->GetName());
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     ResponseJson->SetBoolField(TEXT("packBlueprints"), bPackBlueprints);
     ResponseJson->SetBoolField(TEXT("packStaticMeshes"), bPackStaticMeshes);

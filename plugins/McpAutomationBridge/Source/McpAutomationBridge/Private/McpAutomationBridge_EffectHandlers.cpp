@@ -781,9 +781,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       if (bFound) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetBoolField(TEXT("active"), true);
+        for (AActor *FoundActor : AllActors) {
+          if (FoundActor && FoundActor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) {
+            AddActorVerification(Resp, FoundActor);
+            break;
+          }
+        }
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara system activated."), Resp);
       } else
@@ -1033,8 +1037,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
       }
 
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+      AddActorVerification(Resp, Spawned);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Dynamic light created"), Resp, FString());
       return true;
@@ -1274,8 +1277,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
            *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+    AddActorVerification(Resp, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Niagara spawned"), Resp, FString());
     return true;

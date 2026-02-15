@@ -406,6 +406,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     ResultPayload->SetStringField(TEXT("assetPath"),
                                   PreExistingBP->GetPathName());
     ResultPayload->SetBoolField(TEXT("saved"), true);
+    AddAssetVerification(ResultPayload, PreExistingBP);
 
     FScopeLock Lock(&GBlueprintCreateMutex);
     if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
@@ -540,6 +541,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
       ResultPayload->SetStringField(TEXT("assetPath"),
                                     ExistingBP->GetPathName());
       ResultPayload->SetBoolField(TEXT("saved"), true);
+      AddAssetVerification(ResultPayload, ExistingBP);
 
       FScopeLock Lock(&GBlueprintCreateMutex);
       if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
@@ -604,6 +606,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   ResultPayload->SetStringField(TEXT("assetPath"),
                                 CreatedBlueprint->GetPathName());
   ResultPayload->SetBoolField(TEXT("saved"), true);
+  AddAssetVerification(ResultPayload, CreatedBlueprint);
   FScopeLock Lock(&GBlueprintCreateMutex);
   if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
           GBlueprintCreateInflight.Find(CreateKey)) {

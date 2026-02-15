@@ -291,7 +291,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")));
-        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property replication configured"), ResultJson);
         return true;
     }
@@ -343,7 +343,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
-        ResultJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication condition configured"), ResultJson);
         return true;
     }
@@ -393,6 +393,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net update frequency configured"), ResultJson);
         return true;
     }
@@ -426,6 +427,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net priority set to %.2f"), NetPriority));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net priority configured"), ResultJson);
         return true;
     }
@@ -460,6 +462,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net dormancy configured"), ResultJson);
         return true;
     }
@@ -509,6 +512,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"), 
             bNetLoadOnClient ? TEXT("true") : TEXT("false"),
             bSpatiallyLoaded ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph configured"), ResultJson);
         return true;
     }
@@ -591,6 +595,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             ResultJson->SetStringField(TEXT("rpcType"), RpcType);
             ResultJson->SetBoolField(TEXT("reliable"), bReliable);
             ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created %s RPC function: %s"), *RpcType, *FunctionName));
+            AddAssetVerification(ResultJson, Blueprint);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC function created"), ResultJson);
         }
         else
@@ -668,6 +673,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC validation %s for function %s"), bWithValidation ? TEXT("enabled") : TEXT("disabled"), *FunctionName));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC validation configured"), ResultJson);
         return true;
     }
@@ -740,6 +746,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("reliable"), bReliable);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s reliability set to %s"), *FunctionName, bReliable ? TEXT("reliable") : TEXT("unreliable")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC reliability configured"), ResultJson);
         return true;
     }
@@ -783,6 +790,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), Owner ? FString::Printf(TEXT("Set owner of %s to %s"), *ActorName, *OwnerActorName) : FString::Printf(TEXT("Cleared owner of %s"), *ActorName));
+        AddActorVerification(ResultJson, Actor);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Owner set"), ResultJson);
         return true;
     }
@@ -835,6 +843,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Autonomous proxy configuration %s for replicated properties"), bIsAutonomousProxy ? TEXT("enabled") : TEXT("disabled")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);
         return true;
     }
@@ -962,6 +971,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net cull distance squared set to %.0f"), NetCullDistanceSquared));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net cull distance configured"), ResultJson);
         return true;
     }
@@ -995,6 +1005,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Always relevant set to %s"), bAlwaysRelevant ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Always relevant configured"), ResultJson);
         return true;
     }
@@ -1028,6 +1039,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Only relevant to owner set to %s"), bOnlyRelevantToOwner ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Only relevant to owner configured"), ResultJson);
         return true;
     }
@@ -1074,6 +1086,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             ResultJson->SetStringField(TEXT("structName"), StructName);
         }
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net serialization configured (customSerialization=%s)"), bCustomSerialization ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net serialization configured"), ResultJson);
         return true;
     }
@@ -1123,6 +1136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ReplicatedUsing configured"), ResultJson);
         return true;
     }
@@ -1176,6 +1190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("usePushModel"), bUsePushModel);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for all replicated properties"), bUsePushModel ? TEXT("enabled") : TEXT("disabled")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Push model configured"), ResultJson);
         return true;
     }
@@ -1228,6 +1243,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
         ResultJson->SetNumberField(TEXT("predictionThreshold"), PredictionThreshold);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Client prediction %s"), bEnablePrediction ? TEXT("enabled") : TEXT("disabled")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Client prediction configured"), ResultJson);
         return true;
     }
@@ -1271,6 +1287,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetNumberField(TEXT("correctionThreshold"), CorrectionThreshold);
         ResultJson->SetNumberField(TEXT("smoothingRate"), SmoothingRate);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Server correction configured (threshold=%.2f, smoothing=%.2f)"), CorrectionThreshold, SmoothingRate));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server correction configured"), ResultJson);
         return true;
     }
@@ -1346,6 +1363,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("variableName"), VarName);
         ResultJson->SetStringField(TEXT("dataType"), DataType);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' added"), *VarName, *DataType));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network prediction data added"), ResultJson);
         return true;
     }
@@ -1384,6 +1402,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Movement prediction configured"));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement prediction configured"), ResultJson);
         return true;
     }
@@ -1477,6 +1496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("role"), Role);
         ResultJson->SetBoolField(TEXT("replicates"), CDO ? CDO->GetIsReplicated() : false);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net role configured to %s (replicates=%s)"), *Role, CDO && CDO->GetIsReplicated() ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role configured"), ResultJson);
         return true;
     }
@@ -1510,6 +1530,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replicate movement set to %s"), bReplicateMovement ? TEXT("true") : TEXT("false")));
+        AddAssetVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replicated movement configured"), ResultJson);
         return true;
     }

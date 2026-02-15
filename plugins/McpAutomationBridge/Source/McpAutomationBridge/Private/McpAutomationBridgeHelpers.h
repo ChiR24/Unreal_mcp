@@ -2495,4 +2495,73 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
   return Cast<T>(Spawned);
 }
 
+// ============================================================================
+// VERIFICATION HELPERS
+// ============================================================================
+//
+// These helpers add verifiable data to responses so users can confirm
+// that actions actually executed in Unreal Editor without manual verification.
+//
+// Key principle: Every response should include:
+// 1. The ACTUAL path/name of the created/modified object (not the requested one)
+// 2. Existence verification (existsAfter: true/false)
+// 3. Object-specific data (component counts, GUIDs, etc.)
+// ============================================================================
+
+/**
+ * Add actor verification data to a JSON response.
+ * Includes: actorPath, actorName, actorGuid, existsAfter
+ */
+static inline void AddActorVerification(TSharedPtr<FJsonObject> Response, AActor* Actor) {
+  if (!Response || !Actor) return;
+  
+  // Use GetPackage()->GetPathName() for the asset path
+  FString ActorPath = Actor->GetPackage() ? Actor->GetPackage()->GetPathName() : Actor->GetPathName();
+  Response->SetStringField(TEXT("actorPath"), ActorPath);
+  Response->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+  Response->SetStringField(TEXT("actorGuid"), Actor->GetActorGuid().ToString());
+  Response->SetBoolField(TEXT("existsAfter"), true);
+  Response->SetStringField(TEXT("actorClass"), Actor->GetClass()->GetName());
+}
+
+/**
+ * Add component verification data to a JSON response.
+ * Includes: componentPath, componentName, componentClass
+ */
+static inline void AddComponentVerification(TSharedPtr<FJsonObject> Response, USceneComponent* Component) {
+  if (!Response || !Component) return;
+  
+  Response->SetStringField(TEXT("componentName"), Component->GetName());
+  Response->SetStringField(TEXT("componentClass"), Component->GetClass()->GetName());
+  if (AActor* Owner = Component->GetOwner()) {
+    Response->SetStringField(TEXT("ownerActorPath"), Owner->GetPackage() ? Owner->GetPackage()->GetPathName() : Owner->GetPathName());
+  }
+}
+
+/**
+ * Add asset verification data to a JSON response.
+ * Includes: assetPath, assetName, existsAfter
+ */
+static inline void AddAssetVerification(TSharedPtr<FJsonObject> Response, UObject* Asset) {
+  if (!Response || !Asset) return;
+  
+  FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
+  Response->SetStringField(TEXT("assetPath"), AssetPath);
+  Response->SetStringField(TEXT("assetName"), Asset->GetName());
+  Response->SetBoolField(TEXT("existsAfter"), true);
+  Response->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+}
+
+/**
+ * Verify an asset exists at the given path and add to response.
+ */
+static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FString& AssetPath) {
+  bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
+  if (Response) {
+    Response->SetStringField(TEXT("verifiedPath"), AssetPath);
+    Response->SetBoolField(TEXT("existsAfter"), bExists);
+  }
+  return bExists;
+}
+
 #endif

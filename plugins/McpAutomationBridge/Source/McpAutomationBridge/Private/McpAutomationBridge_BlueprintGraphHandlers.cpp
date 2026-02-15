@@ -216,6 +216,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node created."), Result);
       } else {
@@ -704,8 +705,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Pins connected."));
+                             TEXT("Pins connected."), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to connect pins (schema rejection)."),
@@ -777,6 +780,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetArrayField(TEXT("nodes"), NodesArray);
     Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
+    AddAssetVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Nodes retrieved."), Result);
@@ -809,8 +813,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     TargetNode->Modify();
     TargetGraph->GetSchema()->BreakPinLinks(*Pin, true);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Pin links broken."));
+                           TEXT("Pin links broken."), Result);
     return true;
   }
 
@@ -827,8 +833,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetNode) {
       FBlueprintEditorUtils::RemoveNode(Blueprint, TargetNode, true);
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Node deleted."));
+                             TEXT("Node deleted."), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Node not found."),
                           TEXT("NODE_NOT_FOUND"));
@@ -857,6 +865,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("nodeId"), RerouteNode->NodeGuid.ToString());
+    Result->SetStringField(TEXT("nodeName"), RerouteNode->GetName());
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Reroute node created."), Result);
     return true;
@@ -915,8 +925,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (bHandled) {
         TargetGraph->NotifyGraphChanged();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
+        Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Node property updated."));
+                               TEXT("Node property updated."), Result);
       } else {
         SendAutomationError(
             RequestingSocket, RequestId,
@@ -957,6 +971,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         Pins.Add(MakeShared<FJsonValueObject>(PinObj));
       }
       Result->SetArrayField(TEXT("pins"), Pins);
+      AddAssetVerification(Result, Blueprint);
 
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node details retrieved."), Result);
@@ -981,6 +996,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       Nodes.Add(MakeShared<FJsonValueObject>(NodeObj));
     }
     Result->SetArrayField(TEXT("nodes"), Nodes);
+    AddAssetVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Graph details retrieved."), Result);
@@ -1063,6 +1079,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     }
 
     Result->SetArrayField(TEXT("pins"), PinsJson);
+    AddAssetVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin details retrieved."), Result);
@@ -1086,6 +1103,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
     Result->SetNumberField(TEXT("count"), NodeTypes.Num());
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Node types listed."), Result);
     return true;
@@ -1131,8 +1149,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
     Result->SetStringField(TEXT("pinName"), PinName);
     Result->SetStringField(TEXT("value"), Value);
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin default value set."), Result);
     return true;

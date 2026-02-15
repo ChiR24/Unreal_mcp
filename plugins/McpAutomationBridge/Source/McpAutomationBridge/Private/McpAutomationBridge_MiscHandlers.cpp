@@ -206,6 +206,7 @@ static bool HandleCreatePostProcessVolume(
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
     ResponseJson->SetNumberField(TEXT("blendRadius"), BlendRadius);
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
@@ -261,6 +262,7 @@ static bool HandleCreateCamera(
     ResponseJson->SetStringField(TEXT("cameraName"), Camera->GetActorLabel());
     ResponseJson->SetStringField(TEXT("cameraPath"), Camera->GetPathName());
     ResponseJson->SetNumberField(TEXT("fov"), FOV);
+    AddActorVerification(ResponseJson, Camera);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created camera: %s"), *CameraName), ResponseJson);
@@ -574,6 +576,7 @@ static bool HandleCreateSplineComponent(
     ResponseJson->SetStringField(TEXT("componentName"), ComponentName);
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetBoolField(TEXT("closedLoop"), bClosedLoop);
+    AddAssetVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineComponent '%s' added to Blueprint"), *ComponentName), ResponseJson);
@@ -632,6 +635,7 @@ static bool HandleSetReplication(
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetBoolField(TEXT("replicates"), bReplicates);
     ResponseJson->SetBoolField(TEXT("replicateMovement"), bReplicateMovement);
+    AddAssetVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Replication settings configured for %s"), *BlueprintPath), ResponseJson);
@@ -711,6 +715,10 @@ static bool HandleCreateReplicatedVariable(
     ResponseJson->SetStringField(TEXT("variableName"), VariableName);
     ResponseJson->SetStringField(TEXT("variableType"), VariableType);
     ResponseJson->SetBoolField(TEXT("replicated"), true);
+    if (bCreated)
+    {
+        AddAssetVerification(ResponseJson, Blueprint);
+    }
 
     Subsystem->SendAutomationResponse(Socket, RequestId, bCreated,
         bCreated ? FString::Printf(TEXT("Created replicated variable: %s"), *VariableName) : TEXT("Failed to create variable"),
@@ -771,6 +779,7 @@ static bool HandleSetNetUpdateFrequency(
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetNumberField(TEXT("frequency"), Frequency);
     ResponseJson->SetNumberField(TEXT("minFrequency"), MinFrequency);
+    AddAssetVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), Frequency, MinFrequency), ResponseJson);
@@ -858,6 +867,10 @@ static bool HandleCreateRPC(
     ResponseJson->SetStringField(TEXT("functionName"), FunctionName);
     ResponseJson->SetStringField(TEXT("rpcType"), RPCType);
     ResponseJson->SetBoolField(TEXT("reliable"), bReliable);
+    if (NewGraph)
+    {
+        AddAssetVerification(ResponseJson, Blueprint);
+    }
 
     Subsystem->SendAutomationResponse(Socket, RequestId, NewGraph != nullptr,
         NewGraph ? FString::Printf(TEXT("Created %s RPC: %s"), *RPCType, *FunctionName) : TEXT("Failed to create RPC"),
@@ -916,6 +929,7 @@ static bool HandleConfigureNetCullDistance(
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetNumberField(TEXT("cullDistance"), CullDistance);
     ResponseJson->SetNumberField(TEXT("cullDistanceSquared"), CullDistance * CullDistance);
+    AddAssetVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Net cull distance set to %.0f"), CullDistance), ResponseJson);

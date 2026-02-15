@@ -188,6 +188,7 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
   Result->SetArrayField(TEXT("components"), Components);
   Result->SetNumberField(TEXT("count"), Components.Num());
   Result->SetStringField(TEXT("blueprint_path"), BlueprintPath);
+  AddAssetVerification(Result, Blueprint);
 #else
   Result->SetBoolField(TEXT("success"), false);
   Result->SetStringField(TEXT("error"),
@@ -385,6 +386,12 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   // Feature #1, #2: Report mesh/material assignment status
   Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
   Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
+  AddAssetVerification(Result, Blueprint);
+  if (NewNode && NewNode->ComponentTemplate) {
+    if (USceneComponent* SceneComp = Cast<USceneComponent>(NewNode->ComponentTemplate)) {
+      AddComponentVerification(Result, SceneComp);
+    }
+  }
 #else
   return UnsupportedSCSAction();
 #endif
@@ -459,6 +466,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
       FString::Printf(TEXT("Component '%s' removed from SCS"), *ComponentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddAssetVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif
@@ -561,7 +569,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       }
     }
 
-    if (!NewParentNode) {
+  if (!NewParentNode) {
       // If caller asked for RootComponent and we can't resolve it, treat as a
       // benign no-op
       if (bRootSynonym) {
@@ -570,6 +578,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
             TEXT("message"),
             TEXT("Requested RootComponent not found; component remains at "
                  "current hierarchy (treated as success)."));
+        AddAssetVerification(Result, Blueprint);
         return Result;
       }
       Result->SetBoolField(TEXT("success"), false);
@@ -625,6 +634,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     Result->SetStringField(
         TEXT("message"),
         TEXT("Component already under requested parent; no changes made"));
+    AddAssetVerification(Result, Blueprint);
     return Result;
   }
 
@@ -670,6 +680,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                               : *NewParentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddAssetVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif
@@ -784,6 +795,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
                         *ComponentName));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
+    AddAssetVerification(Result, Blueprint);
   } else {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
@@ -914,6 +926,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
                       *PropertyName, *ComponentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
+  AddAssetVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif

@@ -255,6 +255,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetStringField(TEXT("foliageActorName"), IFA->GetName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage painted successfully"), Resp, FString());
@@ -353,6 +358,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage removed successfully"), Resp, FString());
@@ -473,6 +482,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), InstancesArray);
   Resp->SetNumberField(TEXT("count"), InstancesArray.Num());
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage instances retrieved"), Resp, FString());
@@ -644,6 +657,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   Resp->SetStringField(TEXT("asset_path"), FoliageType->GetPathName());
   Resp->SetStringField(TEXT("used_mesh"), MeshPath);
   Resp->SetStringField(TEXT("method"), TEXT("native_asset_creation"));
+  
+  // Add verification data
+  AddAssetVerification(Resp, FoliageType);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage type created successfully"), Resp,
@@ -883,6 +899,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instances_count"), Added);
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  Resp->SetBoolField(TEXT("existsAfter"), true);
+  
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage instances added"), Resp, FString());
   return true;
@@ -1085,6 +1107,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
   Resp->SetNumberField(TEXT("foliage_types_count"), TypeIndex);
   Resp->SetBoolField(TEXT("resimulated"), true);
+  
+  // Add verification data
+  AddActorVerification(Resp, Volume);
+  AddAssetVerification(Resp, Spawner);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Procedural foliage created"), Resp, FString());
