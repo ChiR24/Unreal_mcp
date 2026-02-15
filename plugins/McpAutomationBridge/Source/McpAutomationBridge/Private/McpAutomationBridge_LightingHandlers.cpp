@@ -20,6 +20,7 @@
 #include "Engine/RectLight.h"
 #include "Engine/SkyLight.h"
 #include "Engine/SpotLight.h"
+#include "GameFramework/WorldSettings.h"
 #include "Lightmass/LightmassImportanceVolume.h"
 
 /* UE5.6: LightingBuildOptions.h removed; use console exec */
@@ -339,8 +340,26 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                            TEXT("Light spawned"), Resp);
     return true;
   } else if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light")) {
+    // Parse location from payload (optional, defaults to ZeroVector)
+    FVector Location = FVector::ZeroVector;
+    const TSharedPtr<FJsonObject> *LocPtr;
+    if (Payload->TryGetObjectField(TEXT("location"), LocPtr)) {
+      Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
+      Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
+      Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
+    }
+    
+    // Parse rotation from payload (optional, defaults to ZeroRotator)
+    FRotator Rotation = FRotator::ZeroRotator;
+    const TSharedPtr<FJsonObject> *RotPtr;
+    if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr)) {
+      Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
+      Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
+      Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
+    }
+    
     AActor *SkyLight = SpawnActorInActiveWorld<AActor>(
-        ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator);
+        ASkyLight::StaticClass(), Location, Rotation);
     if (!SkyLight) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Failed to spawn SkyLight"),
@@ -402,6 +421,20 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     return true;
   } else if (Lower == TEXT("build_lighting") || Lower == TEXT("bake_lightmap")) {
     if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      UWorld* World = GEditor->GetEditorWorldContext().World();
+      
+      // Check if precomputed lighting is disabled in WorldSettings
+      if (AWorldSettings* WS = World->GetWorldSettings()) {
+        if (WS->bForceNoPrecomputedLighting) {
+          TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+          Resp->SetBoolField(TEXT("skipped"), true);
+          Resp->SetStringField(TEXT("reason"), TEXT("bForceNoPrecomputedLighting is true"));
+          SendAutomationResponse(RequestingSocket, RequestId, true,
+              TEXT("Lighting build skipped - precomputed lighting disabled in WorldSettings"), Resp);
+          return true;
+        }
+      }
+      
       // Read quality parameter
       FString Quality;
       Payload->TryGetStringField(TEXT("quality"), Quality);

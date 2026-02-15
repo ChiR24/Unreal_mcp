@@ -597,7 +597,7 @@ export class LightingTools {
     cubemapPath?: string;
     intensity?: number;
     recapture?: boolean;
-    location?: [number, number, number];
+    location?: [number, number, number] | { x: number; y: number; z: number };
     rotation?: [number, number, number] | { pitch: number, yaw: number, roll: number };
     realTimeCapture?: boolean;
     castShadows?: boolean;
@@ -859,21 +859,32 @@ export class LightingTools {
   // Create a new level with proper lighting settings
   async createLightingEnabledLevel(params?: {
     levelName?: string;
+    path?: string;  // Direct path parameter - takes precedence over levelName
     copyActors?: boolean;
     useTemplate?: boolean;
   } | undefined) {
+    // Determine the path: use explicit path parameter, or derive from levelName
+    let path: string | undefined = params?.path;
+    if (!path && params?.levelName) {
+      path = `/Game/Maps/${params.levelName}`;
+    }
     const levelName = params?.levelName || 'LightingEnabledLevel';
 
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Level creation requires plugin support.');
     }
 
+    // If no path provided, generate one from levelName
+    if (!path) {
+      path = `/Game/Maps/${levelName}`;
+    }
+
     try {
       const response = await this.automationBridge.sendAutomationRequest('create_lighting_enabled_level', {
+        path,  // Always send path to C++ handler
         levelName,
         copyActors: params?.copyActors === true,
         useTemplate: params?.useTemplate === true,
-        path: params?.levelName ? `/Game/Maps/${params.levelName}` : undefined // Ensure path is sent
       }, {
         timeoutMs: 120000 // 2 minutes for level creation
       });

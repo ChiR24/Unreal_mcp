@@ -210,7 +210,7 @@ export interface ILandscapeTools {
     createProceduralTerrain(params: { name: string; location?: [number, number, number]; subdivisions?: number; heightFunction?: string; material?: string; settings?: Record<string, unknown> }): Promise<StandardActionResponse>;
     createLandscapeGrassType(params: { name: string; meshPath: string; density?: number; minScale?: number; maxScale?: number; path?: string; staticMesh?: string }): Promise<StandardActionResponse>;
     setLandscapeMaterial(params: { landscapeName: string; materialPath: string }): Promise<StandardActionResponse>;
-    modifyHeightmap(params: { landscapeName: string; heightData: number[]; minX: number; minY: number; maxX: number; maxY: number; updateNormals?: boolean }): Promise<StandardActionResponse>;
+    modifyHeightmap(params: { landscapeName: string; heightData: number[]; minX: number; minY: number; maxX: number; maxY: number; updateNormals?: boolean; timeoutMs?: number }): Promise<StandardActionResponse>;
 }
 
 export interface IFoliageTools {

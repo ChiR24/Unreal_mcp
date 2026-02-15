@@ -306,11 +306,12 @@ static inline FString SanitizeProjectFilePath(const FString &InPath) {
 
   FString CleanPath = InPath;
 
-  // Reject Windows absolute paths early (contain drive letter colon)
-  if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
+  // SECURITY: Reject Windows absolute paths (contain drive letter colon anywhere)
+  // Use Contains() for robust detection - handles X:\, X:/, /X:\, and edge cases
+  if (CleanPath.Contains(TEXT(":"))) {
     UE_LOG(
         LogMcpAutomationBridgeSubsystem, Warning,
-        TEXT("SanitizeProjectFilePath: Rejected Windows absolute path: %s"),
+        TEXT("SanitizeProjectFilePath: Rejected Windows absolute path (contains ':'): %s"),
         *InPath);
     return FString();
   }

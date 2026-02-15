@@ -597,6 +597,7 @@ export class LandscapeTools implements ILandscapeTools {
     maxX: number;
     maxY: number;
     updateNormals?: boolean;
+    timeoutMs?: number;
   }): Promise<StandardActionResponse> {
     if (!this.automationBridge) {
       throw new Error('Automation Bridge not available. Landscape operations require plugin support.');
@@ -620,6 +621,10 @@ export class LandscapeTools implements ILandscapeTools {
       };
     }
 
+    // Use provided timeout or default to 90s for heightmap operations
+    // Heightmap modification can be slow due to GPU sync and collision rebuild
+    const timeoutMs = params.timeoutMs ?? 90000;
+
     try {
       const response = await this.automationBridge.sendAutomationRequest('modify_heightmap', {
         landscapeName,
@@ -630,7 +635,7 @@ export class LandscapeTools implements ILandscapeTools {
         maxY,
         updateNormals: params.updateNormals ?? true
       }, {
-        timeoutMs: 60000
+        timeoutMs
       });
 
       if (response.success === false) {

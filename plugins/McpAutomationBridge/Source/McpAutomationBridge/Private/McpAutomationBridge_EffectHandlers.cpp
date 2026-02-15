@@ -73,11 +73,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   const bool bIsCreateEffect = Lower.Equals(TEXT("create_effect")) ||
                                Lower.StartsWith(TEXT("create_effect"));
   const bool bIsNiagaraModule = Lower.StartsWith(TEXT("add_")) ||
-                                Lower.StartsWith(TEXT("set_parameter")) ||
-                                Lower.StartsWith(TEXT("bind_parameter")) ||
-                                Lower.StartsWith(TEXT("enable_gpu")) ||
-                                Lower.StartsWith(TEXT("configure_event"));
-  if (!bIsCreateEffect && !bIsNiagaraModule && !Lower.StartsWith(TEXT("spawn_")) &&
+                                 Lower.StartsWith(TEXT("set_parameter")) ||
+                                 Lower.StartsWith(TEXT("bind_parameter")) ||
+                                 Lower.StartsWith(TEXT("enable_gpu")) ||
+                                 Lower.StartsWith(TEXT("configure_event"));
+  // Note: Only accept spawn_niagara explicitly, NOT spawn_sky_light (which goes to HandleLightingAction)
+  const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
+  if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
       !Lower.Equals(TEXT("set_niagara_parameter")) &&
       !Lower.Equals(TEXT("list_debug_shapes")) &&
       !Lower.Equals(TEXT("clear_debug_shapes")))

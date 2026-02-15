@@ -114,6 +114,8 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
     case 'create_sky_light': {
       return cleanObject(await tools.lightingTools.createSkyLight({
         name: toString(args.name),
+        location: args.location,
+        rotation: args.rotation,
         sourceType: toString(args.sourceType),
         cubemapPath: args.cubemapPath,
         intensity: toNumber(args.intensity),
@@ -208,6 +210,7 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
     case 'create_lighting_enabled_level': {
       return cleanObject(await tools.lightingTools.createLightingEnabledLevel({
         levelName: toString(args.levelName),
+        path: toString(args.path),  // Pass through path parameter
         copyActors: toBoolean(args.copyActors),
         useTemplate: toBoolean(args.useTemplate)
       }));

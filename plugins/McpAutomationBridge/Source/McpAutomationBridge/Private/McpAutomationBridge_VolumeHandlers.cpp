@@ -652,9 +652,23 @@ static bool HandleCreateBlockingVolume(
             *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return true;
     }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)

@@ -1098,14 +1098,14 @@ static bool HandleAssignActorToDataLayer(
     if (ActorName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr);
+            TEXT("actorName is required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     if (DataLayerName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("dataLayerName is required"), nullptr);
+            TEXT("dataLayerName is required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -1122,7 +1122,7 @@ static bool HandleAssignActorToDataLayer(
     if (!WorldPartition)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr);
+            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
 
@@ -1131,7 +1131,7 @@ static bool HandleAssignActorToDataLayer(
     if (!DataLayerEditorSubsystem)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data Layer Editor Subsystem not available"), nullptr);
+            TEXT("Data Layer Editor Subsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_AVAILABLE"));
         return true;
     }
 
@@ -1149,7 +1149,7 @@ static bool HandleAssignActorToDataLayer(
     if (!FoundActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr);
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -1173,7 +1173,7 @@ static bool HandleAssignActorToDataLayer(
             : TEXT("(none)");
 
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Data layer not found: '%s'. Available data layers: %s"), *DataLayerName, *AvailableStr), nullptr);
+            FString::Printf(TEXT("Data layer not found: '%s'. Available data layers: %s"), *DataLayerName, *AvailableStr), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 

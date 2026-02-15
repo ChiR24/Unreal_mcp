@@ -11,8 +11,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
 // Common failure keywords to check against
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden'];
-const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok'];
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation'];
+const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled'];
 
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
@@ -144,13 +144,13 @@ function evaluateExpectation(testCase, response) {
   const structuredSuccess = typeof response.structuredContent?.success === 'boolean'
     ? response.structuredContent.success
     : undefined;
-  const actualSuccess = structuredSuccess ?? !response.isError;
+  const actualSuccess = structuredSuccess ?? !(response.isError || response.structuredContent?.isError);
 
-  // CRITICAL: If response explicitly indicates an error (isError: true or structuredContent.success: false)
-  // and the PRIMARY expectation is success (not just a fallback alternative), FAIL immediately.
-  // This prevents false positives where tests like "success|handled|error" pass even when
+  // CRITICAL: If response explicitly indicates an error (isError: true or structuredContent.success: false
+  // or structuredContent.isError: true) and the PRIMARY expectation is success (not just a fallback alternative),
+  // FAIL immediately. This prevents false positives where tests like "success|handled|error" pass even when
   // the engine returns success: false.
-  if ((response.isError === true || structuredSuccess === false) && !primaryExpectsFailure) {
+  if ((response.isError === true || response.structuredContent?.isError === true || structuredSuccess === false) && !primaryExpectsFailure) {
     const errorReason = response.structuredContent?.error || response.structuredContent?.message || 'Unknown error';
     return {
       passed: false,
@@ -182,6 +182,59 @@ function evaluateExpectation(testCase, response) {
   const errorStr = (actualError || '').toString().toLowerCase();
   const contentStr = contentText.toString().toLowerCase();
   const combined = `${messageStr} ${errorStr} ${contentStr}`;
+
+  // CRITICAL FIX: Detect infrastructure errors that should FAIL tests even if
+  // structuredContent.success is true or the expectation allows success as fallback.
+  // This prevents false positives where tests like "error|success|handled" pass
+  // even when the engine returns NO_NAVMESH, NOT_FOUND, NO_COMPONENT, etc.
+  const infrastructureErrorCodes = [
+    'no_navmesh', 'no_nav_sys', 'no_world', 'no_component', 'no_smart_link',
+    'not_found', 'invalid_class', 'create_failed', 'spawn_failed', 'already_exists',
+    'invalid_bp', 'cdo_failed', 'level_already_exists', 'asset_not_found'
+  ];
+  const hasInfrastructureError = infrastructureErrorCodes.some(code => 
+    errorStr === code || errorStr.includes(code) || messageStr.includes(code)
+  );
+  
+  if (hasInfrastructureError && !primaryExpectsFailure) {
+    return {
+      passed: false,
+      reason: `Infrastructure error detected but test expected success (primary intent: ${primaryCondition}): ${actualError || actualMessage}`
+    };
+  }
+
+  // CRITICAL FIX: Detect crash/connection loss in error responses that should FAIL tests
+  // unless explicitly expected. This prevents false positives where tests like "error|notfound"
+  // pass on crash because "error" matches any error message.
+  const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected'];
+  const hasCrashIndicator = crashIndicators.some(ind => 
+    errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
+  );
+  const explicitlyExpectsCrash = lowerExpected.includes('disconnect') || 
+    lowerExpected.includes('crash') || 
+    lowerExpected.includes('connection lost') ||
+    lowerExpected.includes('ue_not_connected');
+  
+  if (hasCrashIndicator && !explicitlyExpectsCrash) {
+    return {
+      passed: false,
+      reason: `Crash/connection loss detected but test did not expect it: ${actualError || actualMessage}`
+    };
+  }
+
+  // CRITICAL FIX: Detect timeout in structured responses that should FAIL tests
+  // unless "timeout" is the PRIMARY expectation. This prevents false positives where
+  // tests like "error" or "error|timeout" pass on timeout when the timeout is an
+  // infrastructure failure, not a validation error.
+  const hasTimeout = combined.includes('timeout') || combined.includes('timed out');
+  const explicitlyExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
+  
+  if (hasTimeout && !explicitlyExpectsTimeout) {
+    return {
+      passed: false,
+      reason: `Timeout detected (infrastructure failure) but test did not expect timeout as primary condition (expected: ${primaryCondition}): ${actualError || actualMessage}`
+    };
+  }
 
   // If expectation is an object with specific pattern constraints, apply them
   if (typeof expectation === 'object' && expectation !== null) {
@@ -215,8 +268,11 @@ function evaluateExpectation(testCase, response) {
       }
 
       // Special-case timeout expectations so that MCP transport timeouts
-      // (e.g. "Request timed out") satisfy conditions containing "timeout".
-      if (condition === 'timeout' || condition.includes('timeout')) {
+      // (e.g. "Request timed out") satisfy conditions where "timeout" is
+      // the PRIMARY expected outcome (not just an alternative).
+      // This prevents false positives where "error|timeout" passes on timeout
+      // when the primary expectation is actually "error" (validation failure).
+      if ((condition === 'timeout' || condition.includes('timeout')) && primaryCondition === condition) {
         if (combined.includes('timeout') || combined.includes('timed out')) {
           return { passed: true, reason: `Expected timeout condition met: ${condition}` };
         }
@@ -629,9 +685,226 @@ export async function runToolTests(toolName, testCases) {
         }
       }, 15000).catch(err => console.warn('⚠️  M_Test material may already exist:', err?.message || err));
 
+      // === Foliage Setup for build_environment tests ===
+      // Create Foliage folder
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: { action: 'create_folder', path: '/Game/Foliage' }
+      }, 10000).catch(() => { /* Folder may already exist */ });
+
+      // Create Grass foliage type using add_foliage_type action
+      await callToolOnce({
+        name: 'build_environment',
+        arguments: {
+          action: 'add_foliage_type',
+          name: 'Grass',
+          meshPath: '/Engine/BasicShapes/Sphere',
+          density: 100
+        }
+      }, 15000).catch(err => console.warn('⚠️  Grass foliage type may already exist:', err?.message || err));
+
+      // Create Tree foliage type
+      await callToolOnce({
+        name: 'build_environment',
+        arguments: {
+          action: 'add_foliage_type',
+          name: 'Tree',
+          meshPath: '/Engine/BasicShapes/Sphere',
+          density: 50
+        }
+      }, 15000).catch(err => console.warn('⚠️  Tree foliage type may already exist:', err?.message || err));
+
+      // Create Bush foliage type for procedural foliage tests
+      await callToolOnce({
+        name: 'build_environment',
+        arguments: {
+          action: 'add_foliage_type',
+          name: 'Bush',
+          meshPath: '/Engine/BasicShapes/Sphere',
+          density: 75
+        }
+      }, 15000).catch(err => console.warn('⚠️  Bush foliage type may already exist:', err?.message || err));
+      // === End Foliage Setup ===
+
+      // === Geometry Setup for manage_geometry tests ===
+      // Create TestBox for geometry manipulation tests
+      await callToolOnce({
+        name: 'manage_geometry',
+        arguments: { action: 'create_box', name: 'TestBox', width: 100, height: 100, depth: 100 }
+      }, 15000).catch(err => console.warn('⚠️  TestBox may already exist:', err?.message || err));
+
+      // Create TestSphere for boolean operation tests
+      await callToolOnce({
+        name: 'manage_geometry',
+        arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
+      }, 15000).catch(err => console.warn('⚠️  TestSphere may already exist:', err?.message || err));
+
+      // Create TestCylinder for additional geometry tests
+      await callToolOnce({
+        name: 'manage_geometry',
+        arguments: { action: 'create_cylinder', name: 'TestCylinder', radius: 50, height: 100, segments: 16 }
+      }, 15000).catch(err => console.warn('⚠️  TestCylinder may already exist:', err?.message || err));
+      // === End Geometry Setup ===
+
+      // === Navigation Setup for manage_navigation tests ===
+      // Create NavMeshBoundsVolume so RecastNavMesh can be generated
+      await callToolOnce({
+        name: 'manage_volumes',
+        arguments: {
+          action: 'create_nav_mesh_bounds_volume',
+          volumeName: 'TestNavMeshBounds',
+          location: { x: 0, y: 0, z: 0 },
+          extent: { x: 2000, y: 2000, z: 500 }
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestNavMeshBounds may already exist:', err?.message || err));
+
+      // Trigger navigation rebuild to generate RecastNavMesh
+      await callToolOnce({
+        name: 'manage_navigation',
+        arguments: { action: 'rebuild_navigation' }
+      }, 30000).catch(err => console.warn('⚠️  Navigation rebuild may have failed:', err?.message || err));
+
+      // Create BP_Test blueprint for create_nav_modifier_component tests
+      await callToolOnce({
+        name: 'manage_blueprint',
+        arguments: { action: 'create_blueprint', name: 'BP_Test', path: '/Game/MCPTest' }
+      }, 15000).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
+
+      // Add NavModifier component to BP_Test blueprint
+      await callToolOnce({
+        name: 'manage_navigation',
+        arguments: {
+          action: 'create_nav_modifier_component',
+          blueprintPath: '/Game/MCPTest/BP_Test',
+          componentName: 'NavModifier',
+          areaClass: '/Script/NavigationSystem.NavArea_Obstacle'
+        }
+      }, 15000).catch(err => console.warn('⚠️  NavModifier component may already exist:', err?.message || err));
+
+      // Spawn actor from BP_Test for set_nav_area_class tests
+      // Use control_actor spawn_blueprint to spawn actor from blueprint
+      await callToolOnce({
+        name: 'control_actor',
+        arguments: { action: 'spawn_blueprint', blueprintPath: '/Game/MCPTest/BP_Test', actorName: 'NavTestActor', location: [0, 0, 100] }
+      }, 15000).catch(err => console.warn('⚠️  NavTestActor may already exist:', err?.message || err));
+      // === End Navigation Setup ===
+
+      // === Spline Setup for manage_splines tests ===
+      // Create TestSpline for spline manipulation tests
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_spline_actor', actorName: 'TestSpline', location: {x:0,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestSpline may already exist:', err?.message || err));
+
+      // Create template spline actors for specialized spline tests
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_road_spline', actorName: 'TestRoad', location: {x:500,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestRoad may already exist:', err?.message || err));
+
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_river_spline', actorName: 'TestRiver', location: {x:1000,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestRiver may already exist:', err?.message || err));
+
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_fence_spline', actorName: 'TestFence', location: {x:1500,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestFence may already exist:', err?.message || err));
+
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_wall_spline', actorName: 'TestWall', location: {x:2000,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestWall may already exist:', err?.message || err));
+
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_cable_spline', actorName: 'TestCable', location: {x:2500,y:0,z:100} }
+      }, 15000).catch(err => console.warn('⚠️  TestCable may already exist:', err?.message || err));
+
+      await callToolOnce({
+        name: 'manage_splines',
+        arguments: { action: 'create_pipe_spline', actorName: 'TestPipe', location: {x:3000,y:0,z:0} }
+      }, 15000).catch(err => console.warn('⚠️  TestPipe may already exist:', err?.message || err));
+
+      // Create SplineBP blueprint for create_spline_mesh_component tests
+      // Note: create_blueprint creates directly under path, so /Game/ creates /Game/SplineBP
+      await callToolOnce({
+        name: 'manage_blueprint',
+        arguments: { action: 'create_blueprint', name: 'SplineBP', path: '/Game' }
+      }, 15000).catch(err => console.warn('⚠️  SplineBP may already exist:', err?.message || err));
+      // === End Spline Setup ===
+
+      // === Level Structure Setup for manage_level_structure tests ===
+      // Create TestLevel for level blueprint and level instance tests
+      await callToolOnce({
+        name: 'manage_level_structure',
+        arguments: { 
+          action: 'create_level', 
+          levelName: 'TestLevel', 
+          levelPath: '/Game/MCPTest',
+          bCreateWorldPartition: false,
+          save: true
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestLevel may already exist:', err?.message || err));
+
+      // Create MainLevel for streaming/sublevel tests
+      await callToolOnce({
+        name: 'manage_level_structure',
+        arguments: { 
+          action: 'create_level', 
+          levelName: 'MainLevel', 
+          levelPath: '/Game/MCPTest',
+          bCreateWorldPartition: false,
+          save: true
+        }
+      }, 15000).catch(err => console.warn('⚠️  MainLevel may already exist:', err?.message || err));
+
+      // Create DataLayers folder for data layer tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: { action: 'create_folder', path: '/Game/MCPTest/DataLayers' }
+      }, 10000).catch(() => { /* Folder may already exist */ });
+
+      // Note: TestLayer creation requires World Partition enabled on the level
+      // and the DataLayerEditorSubsystem to be available. We create it per-test
+      // with unique names in the test file itself.
+      // === End Level Structure Setup ===
+
       console.log('✅ Test assets setup complete\n');
     } catch (setupErr) {
       console.warn('⚠️  Test asset setup had issues (tests may fail if assets missing):', setupErr?.message || setupErr);
+    }
+
+    // Helper function to reset geometry for manage_geometry tests
+    // This prevents polygon explosion from accumulating across tests
+    let geometryResetCounter = 0;
+    async function resetGeometryActors() {
+      try {
+        // Delete existing geometry actors
+        await callToolOnce({
+          name: 'control_actor',
+          arguments: { action: 'delete', actorName: 'TestBox' }
+        }, 5000).catch(() => { /* ignore if doesn't exist */ });
+        
+        await callToolOnce({
+          name: 'control_actor',
+          arguments: { action: 'delete', actorName: 'TestSphere' }
+        }, 5000).catch(() => { /* ignore if doesn't exist */ });
+        
+        // Recreate fresh geometry
+        await callToolOnce({
+          name: 'manage_geometry',
+          arguments: { action: 'create_box', name: 'TestBox', width: 100, height: 100, depth: 100 }
+        }, 10000);
+        
+        await callToolOnce({
+          name: 'manage_geometry',
+          arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
+        }, 10000);
+      } catch (err) {
+        console.warn('⚠️  Geometry reset failed:', err?.message || err);
+      }
     }
 
     // Run each test case
@@ -718,11 +991,44 @@ export async function runToolTests(toolName, testCases) {
         const lowerExpected = (testCase.expected || '').toString().toLowerCase();
         const lowerError = errorMessage.toLowerCase();
 
-        // If the test explicitly expects a timeout (e.g. "timeout|error"), then
-        // an MCP/client timeout should be treated as the expected outcome rather
-        // than as a hard harness failure. Accept both "timeout" and "timed out"
+        // CRITICAL: Detect crash/connection loss indicators that should ALWAYS fail tests
+        // unless the test explicitly expects disconnection. This prevents false positives
+        // where tests like "error|not found" pass on crash/connection loss because
+        // "error" matches any error message.
+        const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected'];
+        const isCrashError = crashIndicators.some(ind => lowerError.includes(ind));
+        const explicitlyExpectsCrash = lowerExpected.includes('disconnect') || 
+          lowerExpected.includes('crash') || 
+          lowerExpected.includes('connection lost') ||
+          lowerExpected.includes('ue_not_connected');
+        
+        if (isCrashError && !explicitlyExpectsCrash) {
+          console.log(`[FAILED] ${testCase.scenario} (${durationMs.toFixed(1)} ms) => CRASH/CONNECTION LOSS: ${errorMessage}`);
+          results.push({
+            scenario: testCase.scenario,
+            toolName: testCase.toolName,
+            arguments: testCase.arguments,
+            status: 'failed',
+            durationMs,
+            detail: `Infrastructure failure (crash/disconnection): ${errorMessage}`
+          });
+          continue;
+        }
+
+        // Determine PRIMARY intent from expected string
+        // Only pass timeout tests when "timeout" is the PRIMARY expectation,
+        // not just an alternative in the expected string.
+        const primaryCondition = lowerExpected.split('|')[0].split(' or ')[0].trim();
+        const primaryExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
+
+        // If the test's PRIMARY expectation is a timeout, then an MCP/client timeout
+        // should be treated as the expected outcome. Accept both "timeout" and "timed out"
         // phrasing from different MCP client implementations.
-        if (lowerExpected.includes('timeout') && (lowerError.includes('timeout') || lowerError.includes('timed out'))) {
+        // 
+        // CRITICAL: This fixes the bug where tests like "error|timeout|success" would pass
+        // on timeout even though the PRIMARY expectation is "error" (validation failure).
+        // A timeout in such cases is an infrastructure failure, not a validation success.
+        if (primaryExpectsTimeout && (lowerError.includes('timeout') || lowerError.includes('timed out'))) {
           console.log(`[PASSED] ${testCase.scenario} (${durationMs.toFixed(1)} ms)`);
           results.push({
             scenario: testCase.scenario,
@@ -749,6 +1055,27 @@ export async function runToolTests(toolName, testCases) {
       // Throttle to avoid rate limiting (600 req/min = 10 req/sec)
       if (TEST_THROTTLE_MS > 0 && i < testCases.length - 1) {
         await new Promise(resolve => setTimeout(resolve, TEST_THROTTLE_MS));
+      }
+      
+      // GEOMETRY RESET: Reset geometry actors between manage_geometry tests to prevent
+      // polygon explosion from accumulating. Destructive operations (subdivide, bevel, shell,
+      // etc.) can create millions of triangles, eventually causing OOM crashes.
+      // We reset every N destructive geometry tests to balance performance vs memory safety.
+      const GEOMETRY_RESET_INTERVAL = 10; // Reset every 10 destructive geometry tests
+      const isGeometryTest = testCase.toolName === 'manage_geometry';
+      const isDestructiveGeometryOp = isGeometryTest && [
+        'subdivide', 'extrude', 'inset', 'outset', 'bevel', 'offset_faces', 'shell', 'chamfer',
+        'boolean_union', 'boolean_subtract', 'boolean_intersection', 'remesh_uniform', 'poke',
+        'array_linear', 'array_radial', 'cylindrify', 'spherify', 'bend', 'twist', 'taper',
+        'noise_deform', 'smooth', 'relax', 'stretch', 'triangulate'
+      ].some(op => testCase.arguments?.action?.includes(op));
+      
+      if (isDestructiveGeometryOp) {
+        geometryResetCounter++;
+        if (geometryResetCounter % GEOMETRY_RESET_INTERVAL === 0) {
+          console.log('  🔄 Resetting geometry actors to prevent polygon accumulation...');
+          await resetGeometryActors();
+        }
       }
     }
 

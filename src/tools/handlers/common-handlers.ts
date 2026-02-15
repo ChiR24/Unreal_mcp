@@ -52,7 +52,16 @@ export async function executeAutomationRequest(
     throw new Error(`Automation bridge is not connected to Unreal Engine. Please check if the editor is running and the plugin is enabled. Action: ${toolName}`);
   }
 
-  return await automationBridge.sendAutomationRequest(toolName, args, options);
+  // Extract timeoutMs from args if present (for tools that need custom timeouts)
+  // This allows tests and handlers to specify longer timeouts for heavy operations
+  const argsRecord = args as Record<string, unknown>;
+  const timeoutMs = options.timeoutMs ?? (typeof argsRecord.timeoutMs === 'number' ? argsRecord.timeoutMs : undefined);
+  
+  // Remove timeoutMs from payload to avoid sending it to UE (it's client-side only)
+  const cleanedArgs = { ...argsRecord };
+  delete cleanedArgs.timeoutMs;
+
+  return await automationBridge.sendAutomationRequest(toolName, cleanedArgs, timeoutMs ? { timeoutMs } : {});
 }
 
 /**
