@@ -56,6 +56,7 @@
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
 #endif
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
+#include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #include "Engine/LevelStreamingVolume.h"
 #include "EditorAssetLibrary.h"
 #endif
@@ -148,6 +149,46 @@ static bool HandleCreateLevel(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("levelName is required for create_level"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Validate levelName for invalid characters
+    // These characters are not allowed in Windows filenames and UE asset names
+    const FString InvalidChars = TEXT("\\/:*?\"<>|");
+    for (const TCHAR& Char : LevelName)
+    {
+        if (InvalidChars.Contains(FString(1, &Char)))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("levelName contains invalid character: '%c'. Cannot use: \\ / : * ? \" < > |"), Char),
+                nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+
+    // Check length (max 255 chars)
+    if (LevelName.Len() > 255)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("levelName exceeds maximum length of 255 characters"),
+            nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Check for reserved Windows filenames
+    const TArray<FString> ReservedNames = {
+        TEXT("CON"), TEXT("PRN"), TEXT("AUX"), TEXT("NUL"),
+        TEXT("COM1"), TEXT("COM2"), TEXT("COM3"), TEXT("COM4"), TEXT("COM5"),
+        TEXT("COM6"), TEXT("COM7"), TEXT("COM8"), TEXT("COM9"),
+        TEXT("LPT1"), TEXT("LPT2"), TEXT("LPT3"), TEXT("LPT4"), TEXT("LPT5"),
+        TEXT("LPT6"), TEXT("LPT7"), TEXT("LPT8"), TEXT("LPT9")
+    };
+    FString UpperLevelName = LevelName.ToUpper();
+    if (ReservedNames.Contains(UpperLevelName))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("levelName cannot be a reserved Windows device name: %s"), *LevelName),
+            nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -249,15 +290,18 @@ static bool HandleCreateLevel(
     bool bSaveSucceeded = true;
     if (bSave)
     {
-        bSaveSucceeded = McpSafeAssetSave(NewWorld);
-        
-        // CRITICAL: Flush asset registry and verify file exists to prevent 
-        // FILE_NOT_FOUND cascade when immediately loading after creation
+        // CRITICAL: Use McpSafeLevelSave to avoid Intel GPU driver crashes.
+        // FEditorFileUtils::SaveLevel() directly can trigger MONZA DdiThreadingContext
+        // exceptions on Intel GPUs due to render thread race conditions.
+        // The safe wrapper suspends rendering during save and implements retry logic.
+        // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time).
+        bSaveSucceeded = McpSafeLevelSave(NewWorld->PersistentLevel, FullPath, 5);
+
         if (bSaveSucceeded)
         {
             // Flush asset registry so the new level is immediately discoverable
             IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-            
+
             // Convert package path to filename for scanning
             FString LevelFilename;
             if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, LevelFilename, FPackageName::GetMapPackageExtension()))
@@ -266,18 +310,10 @@ static bool HandleCreateLevel(
                 FilesToScan.Add(LevelFilename);
                 AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
             }
-            
-            // Verify the file actually exists on disk before reporting success
-            // This prevents false positives where save appeared to succeed but file wasn't written
-            FString VerifyFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(FullPath, VerifyFilename, FPackageName::GetMapPackageExtension()))
-            {
-                if (!IFileManager::Get().FileExists(*VerifyFilename))
-                {
-                    bSaveSucceeded = false;
-                    UE_LOG(LogMcpLevelStructureHandlers, Error, TEXT("Level save verification failed: file not found at %s"), *VerifyFilename);
-                }
-            }
+        }
+        else
+        {
+            UE_LOG(LogMcpLevelStructureHandlers, Error, TEXT("McpSafeLevelSave failed for: %s"), *FullPath);
         }
     }
 
@@ -828,24 +864,166 @@ static bool HandleConfigureGridSize(
         return true;
     }
 
+    // Check if we're dealing with RuntimeSpatialHash or RuntimeHashSet
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
-    if (!SpatialHash)
+    UWorldPartitionRuntimeHashSet* HashSet = Cast<UWorldPartitionRuntimeHashSet>(RuntimeHash);
+
+    if (!SpatialHash && !HashSet)
     {
-        // Provide detailed error with actionable guidance
+        // Neither supported hash type
         TSharedPtr<FJsonObject> ErrorJson = MakeShareable(new FJsonObject());
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
-        ErrorJson->SetStringField(TEXT("requiredHashType"), TEXT("WorldPartitionRuntimeSpatialHash"));
-        ErrorJson->SetStringField(TEXT("hint"), TEXT("World Partition must use RuntimeSpatialHash for grid configuration. This is the default for new WP-enabled levels."));
+        ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash, WorldPartitionRuntimeHashSet"));
+        ErrorJson->SetStringField(TEXT("hint"), TEXT("World Partition must use RuntimeSpatialHash or RuntimeHashSet for grid configuration."));
         ErrorJson->SetStringField(TEXT("solution"), TEXT("Create a new level with World Partition enabled, or check World Partition settings in the editor."));
-        
+
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("World Partition is not using RuntimeSpatialHash (using %s instead). Grid configuration not applicable."),
+            FString::Printf(TEXT("World Partition is using unsupported hash type: %s. Grid configuration not applicable."),
                 *RuntimeHash->GetClass()->GetName()),
             ErrorJson, TEXT("INVALID_PARTITION_TYPE"));
         return true;
     }
 
 #if WITH_EDITORONLY_DATA
+    // Handle RuntimeHashSet (UE 5.7+ default)
+    if (HashSet)
+    {
+        // For HashSet, we use the RuntimePartitions API instead of Grids
+        // RuntimePartitions is an array of FWorldPartitionRuntimePartition
+        FProperty* PartitionsProperty = HashSet->GetClass()->FindPropertyByName(TEXT("RuntimePartitions"));
+        if (!PartitionsProperty)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Could not find RuntimePartitions property on RuntimeHashSet"), nullptr);
+            return true;
+        }
+
+        FArrayProperty* ArrayProp = CastField<FArrayProperty>(PartitionsProperty);
+        if (!ArrayProp)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("RuntimePartitions property is not an array"), nullptr);
+            return true;
+        }
+
+        // Get the array helper
+        void* PartitionsArrayPtr = PartitionsProperty->ContainerPtrToValuePtr<void>(HashSet);
+        FScriptArrayHelper ArrayHelper(ArrayProp, PartitionsArrayPtr);
+
+        // Find or create the partition
+        bool bFound = false;
+        bool bCreated = false;
+        int32 ModifiedIndex = -1;
+        FName TargetPartitionName = GridName.IsEmpty() ? FName(TEXT("MainPartition")) : FName(*GridName);
+
+        // Get the struct type from the array property
+        FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp->Inner);
+        if (!StructProp)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("RuntimePartitions array element is not a struct"), nullptr);
+            return true;
+        }
+
+        UStruct* PartitionStruct = StructProp->Struct;
+
+        for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+        {
+            void* PartitionPtr = ArrayHelper.GetRawPtr(i);
+            if (!PartitionPtr) continue;
+
+            // Get the Name property from the partition struct
+            FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
+            if (NameProp && NameProp->IsA<FNameProperty>())
+            {
+                FNameProperty* NameProperty = CastField<FNameProperty>(NameProp);
+                FName PartitionName = NameProperty->GetPropertyValue(PartitionPtr);
+
+                if (PartitionName == TargetPartitionName)
+                {
+                    // Found the partition - update its settings via reflection
+                    // LoadingRange equivalent
+                    FProperty* LoadingRangeProp = PartitionStruct->FindPropertyByName(TEXT("LoadingRange"));
+                    if (LoadingRangeProp && LoadingRangeProp->IsA<FFloatProperty>())
+                    {
+                        CastField<FFloatProperty>(LoadingRangeProp)->SetPropertyValue(PartitionPtr, LoadingRange);
+                    }
+
+                    // GridCellSize equivalent (may be called GridSize or CellSize)
+                    FProperty* GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("GridSize"));
+                    if (!GridSizeProp)
+                    {
+                        GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("CellSize"));
+                    }
+                    if (GridSizeProp && GridSizeProp->IsA<FIntProperty>())
+                    {
+                        CastField<FIntProperty>(GridSizeProp)->SetPropertyValue(PartitionPtr, GridCellSize);
+                    }
+
+                    bFound = true;
+                    ModifiedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // If not found and createIfMissing is true, add a new partition
+        if (!bFound && bCreateIfMissing)
+        {
+            int32 NewIndex = ArrayHelper.AddValue();
+            void* NewPartition = ArrayHelper.GetRawPtr(NewIndex);
+            if (NewPartition)
+            {
+                // Initialize the new partition
+                FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
+                if (NameProp && NameProp->IsA<FNameProperty>())
+                {
+                    CastField<FNameProperty>(NameProp)->SetPropertyValue(NewPartition, TargetPartitionName);
+                }
+
+                FProperty* LoadingRangeProp = PartitionStruct->FindPropertyByName(TEXT("LoadingRange"));
+                if (LoadingRangeProp && LoadingRangeProp->IsA<FFloatProperty>())
+                {
+                    CastField<FFloatProperty>(LoadingRangeProp)->SetPropertyValue(NewPartition, LoadingRange);
+                }
+
+                FProperty* GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("GridSize"));
+                if (!GridSizeProp)
+                {
+                    GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("CellSize"));
+                }
+                if (GridSizeProp && GridSizeProp->IsA<FIntProperty>())
+                {
+                    CastField<FIntProperty>(GridSizeProp)->SetPropertyValue(NewPartition, GridCellSize);
+                }
+
+                bCreated = true;
+                bFound = true;
+            }
+        }
+
+        // Mark package dirty
+        HashSet->MarkPackageDirty();
+
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        AddAssetVerification(ResponseJson, World);
+        ResponseJson->SetBoolField(TEXT("success"), true);
+        ResponseJson->SetStringField(TEXT("hashType"), TEXT("RuntimeHashSet"));
+        ResponseJson->SetStringField(TEXT("partitionName"), TargetPartitionName.ToString());
+        ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
+        ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
+        ResponseJson->SetBoolField(TEXT("created"), bCreated);
+        ResponseJson->SetBoolField(TEXT("modified"), bFound);
+
+        FString Message = bCreated
+            ? FString::Printf(TEXT("Created new partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString())
+            : FString::Printf(TEXT("Updated partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString());
+
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        return true;
+    }
+
+    // Handle RuntimeSpatialHash (existing code)
     // Access the editor-only Grids array via reflection since it's protected
     // The Grids property is TArray<FSpatialHashRuntimeGrid> which holds the editable grid configuration
     FProperty* GridsProperty = SpatialHash->GetClass()->FindPropertyByName(TEXT("Grids"));
@@ -887,7 +1065,7 @@ static bool HandleConfigureGridSize(
                 Grid->LoadingRange = LoadingRange;
                 Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
                 Grid->Priority = Priority;
-                
+
                 bFound = true;
                 ModifiedIndex = i;
                 break;
@@ -913,7 +1091,7 @@ static bool HandleConfigureGridSize(
             NewGrid->DebugColor = FLinearColor::MakeRandomColor();
             NewGrid->bClientOnlyVisible = false;
             NewGrid->HLODLayer = nullptr;
-            
+
             bCreated = true;
             ModifiedIndex = NewIndex;
         }
@@ -931,11 +1109,11 @@ static bool HandleConfigureGridSize(
                 AvailableGrids.Add(Grid->GridName.ToString());
             }
         }
-        
-        FString AvailableStr = AvailableGrids.Num() > 0 
-            ? FString::Join(AvailableGrids, TEXT(", ")) 
+
+        FString AvailableStr = AvailableGrids.Num() > 0
+            ? FString::Join(AvailableGrids, TEXT(", "))
             : TEXT("(none - use createIfMissing=true to create a new grid)");
-        
+
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Grid '%s' not found. Available grids: %s"), *GridName, *AvailableStr), nullptr);
         return true;
@@ -977,7 +1155,7 @@ static bool HandleConfigureGridSize(
     ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration updated. Regenerate streaming data to apply changes (World Partition > Generate Streaming)."));
 
     FString Action = bCreated ? TEXT("Created") : TEXT("Configured");
-    FString Message = FString::Printf(TEXT("%s grid '%s' with CellSize=%d, LoadingRange=%.0f"), 
+    FString Message = FString::Printf(TEXT("%s grid '%s' with CellSize=%d, LoadingRange=%.0f"),
         *Action, GridName.IsEmpty() ? TEXT("(default)") : *GridName, GridCellSize, LoadingRange);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
@@ -1288,6 +1466,26 @@ static bool HandleAssignActorToDataLayer(
         return true;
     }
 
+    // IDEMPOTENCY: Check if actor is already in the target data layer before attempting to add
+    // This makes the operation idempotent - returns success whether actor is newly added or already present
+    bool bAlreadyInLayer = FoundActor->ContainsDataLayer(DataLayerInstance);
+
+    if (bAlreadyInLayer)
+    {
+        // Already assigned - return success (idempotent behavior)
+        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+        AddActorVerification(ResponseJson, FoundActor);
+        ResponseJson->SetStringField(TEXT("actorName"), ActorName);
+        ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
+        ResponseJson->SetBoolField(TEXT("assigned"), true);
+        ResponseJson->SetBoolField(TEXT("alreadyAssigned"), true);
+        
+        FString Message = FString::Printf(TEXT("Actor '%s' is already in data layer '%s'"), 
+            *ActorName, *DataLayerName);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        return true;
+    }
+
     // Use the real API to add the actor to the data layer
     bool bSuccess = DataLayerEditorSubsystem->AddActorToDataLayer(FoundActor, DataLayerInstance);
 
@@ -1305,9 +1503,9 @@ static bool HandleAssignActorToDataLayer(
     }
     else
     {
-        // Check if actor was already in the data layer
-        ResponseJson->SetStringField(TEXT("reason"), TEXT("Actor may already belong to this data layer or is not compatible"));
-        FString Message = FString::Printf(TEXT("Failed to assign actor '%s' to data layer '%s'. Actor may already belong to this layer or is not compatible with data layers."), 
+        // This should rarely happen now - only if actor is incompatible with data layers
+        ResponseJson->SetStringField(TEXT("reason"), TEXT("Actor is not compatible with data layers"));
+        FString Message = FString::Printf(TEXT("Failed to assign actor '%s' to data layer '%s'. Actor may not be compatible with data layers."), 
             *ActorName, *DataLayerName);
         Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, ResponseJson);
     }

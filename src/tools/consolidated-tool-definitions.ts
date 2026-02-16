@@ -343,7 +343,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             }
           }
         },
-        data: commonSchemas.objectProp
+        data: commonSchemas.nullableObjectProp
       }
     }
   },
@@ -409,10 +409,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         action: {
           type: 'string',
           enum: [
-            'load', 'save', 'save_as', 'save_level_as', 'stream', 'create_level', 'create_light', 'build_lighting',
+            'load', 'save', 'save_as', 'save_level_as', 'stream', 'unload', 'create_level', 'create_light', 'build_lighting',
             'set_metadata', 'load_cells', 'set_datalayer',
-            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'validate_level',
-            'cleanup_invalid_datalayers', 'add_sublevel'
+            'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'delete_level', 'validate_level',
+            'cleanup_invalid_datalayers', 'add_sublevel', 'rename_level', 'duplicate_level', 'get_current_level'
           ],
           description: 'Action'
         },

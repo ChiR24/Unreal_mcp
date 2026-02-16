@@ -21,6 +21,41 @@ function getTimeoutMs(): number {
 }
 
 /**
+ * Validates level name for invalid characters and length.
+ * Returns null if valid, error message if invalid.
+ */
+function validateLevelName(levelName: string): string | null {
+  if (!levelName || levelName.trim() === '') {
+    return 'levelName cannot be empty';
+  }
+
+  // Check length (max 255 chars for filesystem compatibility)
+  if (levelName.length > 255) {
+    return 'levelName exceeds maximum length of 255 characters';
+  }
+
+  // Check for invalid characters that would cause issues
+  // These characters are not allowed in Windows filenames and UE asset names
+  const invalidChars = /[\\/:*?"<>|]/;
+  if (invalidChars.test(levelName)) {
+    return `levelName contains invalid characters. Cannot use: \\ / : * ? " < > |`;
+  }
+
+  // Check for leading/trailing spaces
+  if (levelName !== levelName.trim()) {
+    return 'levelName cannot have leading or trailing spaces';
+  }
+
+  // Check for reserved Windows filenames
+  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+  if (reservedNames.test(levelName)) {
+    return `levelName cannot be a reserved Windows device name: ${levelName}`;
+  }
+
+  return null;
+}
+
+/**
  * Normalize path fields to ensure they start with /Game/ and use forward slashes.
  * Returns a copy of the args with normalized paths.
  */
@@ -79,8 +114,20 @@ export async function handleLevelStructureTools(
     // ========================================================================
     // Levels (5 actions)
     // ========================================================================
-    case 'create_level':
+    case 'create_level': {
+      // Validate levelName before sending to C++ handler
+      const levelName = String(argsRecord.levelName || '');
+      const validationError = validateLevelName(levelName);
+      if (validationError) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: validationError,
+          action
+        };
+      }
       return sendRequest('create_level');
+    }
 
     case 'create_sublevel':
       return sendRequest('create_sublevel');

@@ -154,6 +154,9 @@ export const commonSchemas = {
   // Note: 'integer' is a valid JSON Schema type for whole numbers (counts, indices)
   integerProp: { type: 'integer' },
   objectProp: { type: 'object' },
+  // Nullable object property for optional data fields in error responses
+  // Uses JSON Schema type array to allow both object and null (nullable: true is OpenAPI, not JSON Schema)
+  nullableObjectProp: { type: ['object', 'null'], description: 'Optional data object (null for error responses).' },
   arrayOfStrings: { type: 'array', items: { type: 'string' } },
   // Note: arrayOfNumbers is used for SCS transforms [x,y,z] format in Blueprint Manager.
   // Use location/rotation/scale objects for Actor Control {x,y,z} format.
@@ -186,19 +189,19 @@ export const commonSchemas = {
   outputBase: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string', nullable: true }
+    error: { type: ['string', 'null'] }
   },
   outputWithPath: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string', nullable: true },
+    error: { type: ['string', 'null'] },
     path: { type: 'string' },
     assetPath: { type: 'string' }
   },
   outputWithActor: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string', nullable: true },
+    error: { type: ['string', 'null'] },
     actor: {
       type: 'object',
       properties: {
@@ -212,7 +215,7 @@ export const commonSchemas = {
   outputWithNodeId: {
     success: { type: 'boolean' },
     message: { type: 'string' },
-    error: { type: 'string', nullable: true },
+    error: { type: ['string', 'null'] },
     nodeId: { type: 'string' }
   },
 

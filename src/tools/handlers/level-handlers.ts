@@ -120,6 +120,26 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       });
       return cleanObject(res) as Record<string, unknown>;
     }
+    case 'unload': {
+      // unload is a convenience alias for stream with shouldBeLoaded=false
+      const levelPath = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : undefined;
+      const levelName = typeof argsTyped.levelName === 'string' ? argsTyped.levelName : undefined;
+      if (!levelPath && !levelName) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (or levelName)',
+          action
+        });
+      }
+      const res = await tools.levelTools.streamLevel({
+        levelPath,
+        levelName,
+        shouldBeLoaded: false,
+        shouldBeVisible: false
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
     case 'create_light': {
       // Delegate directly to the plugin's manage_level.create_light handler.
       const res = await executeAutomationRequest(tools, 'manage_level', args);

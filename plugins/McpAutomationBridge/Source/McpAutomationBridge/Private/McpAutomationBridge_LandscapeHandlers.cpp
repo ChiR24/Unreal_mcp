@@ -607,9 +607,10 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
         1.0f, FText::FromString(TEXT("Reading current heightmap data")));
 
     // Read current height data for the region
+    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
     TArray<uint16> CurrentHeights;
     CurrentHeights.SetNumZeroed(RegionSize);
-    FLandscapeEditDataInterface LandscapeEditRead(LandscapeInfo);
+    FLandscapeEditDataInterface LandscapeEditRead(LandscapeInfo, false);
     LandscapeEditRead.GetHeightData(MinX, MinY, MaxX, MaxY, CurrentHeights.GetData(), 0);
 
     // Prepare output height data
@@ -654,9 +655,10 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
         1.0f, FText::FromString(TEXT("Writing heightmap data")));
 
     // Write the modified height data
-    // Use bForce=false to avoid blocking GPU synchronization
+    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
+    // Use bForce=false in SetHeightData to avoid blocking GPU synchronization
     // This prevents 60+ second hangs on large landscapes
-    FLandscapeEditDataInterface LandscapeEditWrite(LandscapeInfo);
+    FLandscapeEditDataInterface LandscapeEditWrite(LandscapeInfo, false);
     LandscapeEditWrite.SetHeightData(MinX, MinY, MaxX, MaxY, OutputHeights.GetData(),
                                      SizeX, false);
 
@@ -757,12 +759,16 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
   Payload->TryGetNumberField(TEXT("strength"), Strength);
   Strength = FMath::Clamp(Strength, 0.0, 1.0);
 
+  // Optional: Skip the expensive Flush() operation for performance
+  bool bSkipFlush = false;
+  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
+
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
 
   AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
                                         RequestingSocket, LandscapePath,
                                         LandscapeName, LayerName, MinX, MinY,
-                                        MaxX, MaxY, Strength]() {
+                                        MaxX, MaxY, Strength, bSkipFlush]() {
     UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
     if (!Subsystem)
       return;
@@ -896,7 +902,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
                                         PaintMaxY);
     }
 
-    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
+    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
     const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
     const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
     const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
@@ -906,8 +913,16 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
 
     LandscapeEdit.SetAlphaData(LayerInfo, PaintMinX, PaintMinY, PaintMaxX,
                                PaintMaxY, AlphaData.GetData(), RegionSizeX);
-    LandscapeEdit.Flush();
-    Landscape->PostEditChange();
+
+    // Flush is expensive - it forces render thread synchronization
+    // Skip if requested for batch operations
+    if (!bSkipFlush) {
+      LandscapeEdit.Flush();
+    }
+
+    // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
+    // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
+    Landscape->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
@@ -1001,12 +1016,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
   double Strength = 0.1;
   Payload->TryGetNumberField(TEXT("strength"), Strength);
 
+  // Optional: Skip the expensive Flush() operation for performance
+  bool bSkipFlush = false;
+  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
+
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
 
   AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
                                         RequestingSocket, LandscapePath,
                                         LandscapeName, TargetLocation, ToolMode,
-                                        BrushRadius, BrushFalloff, Strength]() {
+                                        BrushRadius, BrushFalloff, Strength, bSkipFlush]() {
     UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
     if (!Subsystem)
       return;
@@ -1112,7 +1131,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     TArray<uint16> HeightData;
     HeightData.SetNumZeroed(SizeX * SizeY);
 
-    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo);
+    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
+    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
     LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY, HeightData.GetData(),
                                 0);
 
@@ -1167,8 +1187,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     if (bModified) {
       LandscapeEdit.SetHeightData(MinX, MinY, MaxX, MaxY, HeightData.GetData(),
                                   0, true);
-      LandscapeEdit.Flush();
-      Landscape->PostEditChange();
+
+      // Flush is expensive - it forces render thread synchronization
+      // Skip if requested for batch operations
+      if (!bSkipFlush) {
+        LandscapeEdit.Flush();
+      }
+
+      // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
+      // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
+      Landscape->MarkPackageDirty();
     }
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();

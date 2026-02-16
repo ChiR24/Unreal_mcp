@@ -141,12 +141,30 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
       return true;
     }
 
-    // Dynamic resolution with heuristics
-    UClass *LightClass = ResolveUClass(LightClassStr);
-
-    // Try finding with 'A' prefix (standard Actor prefix)
-    if (!LightClass) {
-      LightClass = ResolveUClass(TEXT("A") + LightClassStr);
+    // CRITICAL: Use explicit StaticClass() for native light types to avoid
+    // ResolveUClass resolution issues where TObjectIterator may return wrong class.
+    // This ensures SpotLight, DirectionalLight, etc. spawn correctly.
+    UClass *LightClass = nullptr;
+    const FString LowerClassStr = LightClassStr.ToLower();
+    
+    if (LowerClassStr == TEXT("pointlight") || LowerClassStr == TEXT("point")) {
+      LightClass = APointLight::StaticClass();
+    } else if (LowerClassStr == TEXT("directionallight") || LowerClassStr == TEXT("directional")) {
+      LightClass = ADirectionalLight::StaticClass();
+    } else if (LowerClassStr == TEXT("spotlight") || LowerClassStr == TEXT("spot")) {
+      LightClass = ASpotLight::StaticClass();
+    } else if (LowerClassStr == TEXT("rectlight") || LowerClassStr == TEXT("rect")) {
+      LightClass = ARectLight::StaticClass();
+    } else if (LowerClassStr == TEXT("skylight") || LowerClassStr == TEXT("sky")) {
+      LightClass = ASkyLight::StaticClass();
+    } else {
+      // Fallback: Dynamic resolution with heuristics for custom light types
+      LightClass = ResolveUClass(LightClassStr);
+      
+      // Try finding with 'A' prefix (standard Actor prefix)
+      if (!LightClass) {
+        LightClass = ResolveUClass(TEXT("A") + LightClassStr);
+      }
     }
 
     if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass())) {
@@ -156,6 +174,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+    
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("spawn_light: Resolved lightClass '%s' to %s (path: %s)"),
+           *LightClassStr, *LightClass->GetName(), *LightClass->GetPathName());
 
     // Default location to a reasonable height above ground (z=300) to avoid burying lights in geometry
     // User can override by providing explicit location
@@ -870,9 +892,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                                       FVector::ZeroVector,
                                       FRotator::ZeroRotator, TEXT("SkyLight"));
 
-      // Save the level
-      bool bSaved = FEditorFileUtils::SaveLevel(
-          GEditor->GetEditorWorldContext().World()->PersistentLevel, *Path);
+      // Save the level using McpSafeLevelSave to prevent Intel GPU driver crashes
+      // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
+      bool bSaved = McpSafeLevelSave(
+          GEditor->GetEditorWorldContext().World()->PersistentLevel, *Path, 5);
       if (bSaved) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetBoolField(TEXT("success"), true);

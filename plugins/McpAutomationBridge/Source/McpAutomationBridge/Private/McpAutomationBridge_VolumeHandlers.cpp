@@ -1844,6 +1844,19 @@ static bool HandleGetVolumesInfo(
 {
     using namespace VolumeHelpers;
 
+    // Security check: reject path parameter if present (this tool doesn't use paths)
+    FString PathParam = GetJsonStringField(Payload, TEXT("path"), TEXT(""));
+    if (!PathParam.IsEmpty())
+    {
+        if (PathParam.Contains(TEXT("..")) || PathParam.Contains(TEXT("\\")))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("get_volumes_info does not accept path parameter with traversal characters"),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
+
     FString Filter = GetJsonStringField(Payload, TEXT("filter"), TEXT(""));
     FString VolumeType = GetJsonStringField(Payload, TEXT("volumeType"), TEXT(""));
 
@@ -2020,7 +2033,7 @@ static bool HandleRemoveVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
     ResponseJson->SetBoolField(TEXT("existsAfter"), false);
-    ResponseJson->SetStringField(TEXT("action"), TEXT("deleted"));
+    ResponseJson->SetStringField(TEXT("action"), TEXT("manage_volumes:deleted"));
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
@@ -2132,19 +2145,26 @@ static bool HandleAddTriggerVolume(
         return true;
     }
 
-    // Attach to the target actor
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("TriggerVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 
@@ -2208,18 +2228,26 @@ static bool HandleAddBlockingVolume(
         return true;
     }
 
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("BlockingVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 
@@ -2290,19 +2318,27 @@ static bool HandleAddKillZVolume(
         return true;
     }
 
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("killZHeight"), Location.Z);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("KillZVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 
@@ -2376,19 +2412,27 @@ static bool HandleAddPhysicsVolume(
     Volume->FluidFriction = FluidFriction;
     Volume->TerminalVelocity = TerminalVelocity;
 
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("PhysicsVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 
@@ -2476,18 +2520,26 @@ static bool HandleAddCullDistanceVolume(
         }
     }
 
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("CullDistanceVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 
@@ -2565,19 +2617,27 @@ static bool HandleAddPostProcessVolume(
     Volume->bEnabled = bEnabled;
     Volume->bUnbound = bUnbound;
 
-    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    // Attach to the target actor - check return value
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
     AddActorVerification(ResponseJson, Volume);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel()), ResponseJson);
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("PostProcessVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
     return true;
 }
 #endif

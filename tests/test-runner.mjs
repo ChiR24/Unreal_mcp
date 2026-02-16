@@ -236,6 +236,18 @@ function evaluateExpectation(testCase, response) {
     };
   }
 
+  // CRITICAL FIX: Detect attachment failure for add_*_volume actions.
+  // When a volume is created but attachment fails (e.g., static volume to movable actor),
+  // the test should FAIL because the requested attachment did not succeed.
+  const attachmentSucceeded = response.structuredContent?.attachmentSucceeded;
+  const isAddVolumeAction = messageStr.includes('add_') && messageStr.includes('volume');
+  if (attachmentSucceeded === false && primaryExpectsSuccess && !lowerExpected.includes('attachment failed')) {
+    return {
+      passed: false,
+      reason: `Attachment failed for volume operation: ${actualMessage}. Volume was created but could not be attached to target actor.`
+    };
+  }
+
   // If expectation is an object with specific pattern constraints, apply them
   if (typeof expectation === 'object' && expectation !== null) {
     // If actual outcome was success, check successPattern
@@ -1102,16 +1114,26 @@ export async function runToolTests(toolName, testCases) {
       // polygon explosion from accumulating. Destructive operations (subdivide, bevel, shell,
       // etc.) can create millions of triangles, eventually causing OOM crashes.
       // We reset every N destructive geometry tests to balance performance vs memory safety.
-      const GEOMETRY_RESET_INTERVAL = 10; // Reset every 10 destructive geometry tests
+      const GEOMETRY_RESET_INTERVAL = 5; // Reset every 5 destructive geometry tests (reduced from 10)
+      
+      // High-impact operations that cause exponential triangle growth - ALWAYS reset before these
+      const HIGH_IMPACT_OPS = ['poke', 'subdivide', 'triangulate', 'array_radial', 'array_linear'];
+      
       const isGeometryTest = testCase.toolName === 'manage_geometry';
+      const testAction = testCase.arguments?.action || '';
       const isDestructiveGeometryOp = isGeometryTest && [
         'subdivide', 'extrude', 'inset', 'outset', 'bevel', 'offset_faces', 'shell', 'chamfer',
         'boolean_union', 'boolean_subtract', 'boolean_intersection', 'remesh_uniform', 'poke',
         'array_linear', 'array_radial', 'cylindrify', 'spherify', 'bend', 'twist', 'taper',
         'noise_deform', 'smooth', 'relax', 'stretch', 'triangulate'
-      ].some(op => testCase.arguments?.action?.includes(op));
+      ].some(op => testAction.includes(op));
       
-      if (isDestructiveGeometryOp) {
+      // Always reset BEFORE high-impact operations to prevent POLYGON_LIMIT_EXCEEDED
+      const isHighImpactOp = isGeometryTest && HIGH_IMPACT_OPS.some(op => testAction.includes(op));
+      if (isHighImpactOp) {
+        console.log('  🔄 Resetting geometry before high-impact operation: ' + testAction);
+        await resetGeometryActors();
+      } else if (isDestructiveGeometryOp) {
         geometryResetCounter++;
         if (geometryResetCounter % GEOMETRY_RESET_INTERVAL === 0) {
           console.log('  🔄 Resetting geometry actors to prevent polygon accumulation...');

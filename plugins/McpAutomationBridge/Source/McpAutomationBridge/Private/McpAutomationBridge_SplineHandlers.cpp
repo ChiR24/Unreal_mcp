@@ -849,10 +849,13 @@ static bool HandleCreateSplineMeshComponent(
         if (!SafeMeshPath.IsEmpty())
         {
             UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
-            if (Mesh)
+            if (!Mesh)
             {
-                MeshComp->SetStaticMesh(Mesh);
+                Self->SendAutomationResponse(Socket, RequestId, false,
+                    FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+                return true;
             }
+            MeshComp->SetStaticMesh(Mesh);
         }
 
         // Set forward axis
@@ -860,6 +863,17 @@ static bool HandleCreateSplineMeshComponent(
         if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
         else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
         MeshComp->SetForwardAxis(Axis);
+
+        // Ensure material is valid - use fallback if engine default is missing
+        // This prevents "DefaultMaterial not available" warnings on custom engine builds
+        if (MeshComp->GetMaterial(0) == nullptr)
+        {
+            UMaterialInterface* FallbackMaterial = McpLoadMaterialWithFallback(TEXT(""), true);
+            if (FallbackMaterial)
+            {
+                MeshComp->SetMaterial(0, FallbackMaterial);
+            }
+        }
     }
 
     // Add node to SCS
@@ -1222,9 +1236,25 @@ static bool HandleCreateSplineMeshActor(
     if (!SafeMeshPath.IsEmpty())
     {
         UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
-        if (Mesh)
+        if (!Mesh)
         {
-            SplineMeshComp->SetStaticMesh(Mesh);
+            // Clean up the partially created actor
+            NewActor->Destroy();
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            return true;
+        }
+        SplineMeshComp->SetStaticMesh(Mesh);
+    }
+
+    // Ensure material is valid - use fallback if engine default is missing
+    // This prevents "DefaultMaterial not available" warnings on custom engine builds
+    if (SplineMeshComp->GetMaterial(0) == nullptr)
+    {
+        UMaterialInterface* FallbackMaterial = McpLoadMaterialWithFallback(TEXT(""), true);
+        if (FallbackMaterial)
+        {
+            SplineMeshComp->SetMaterial(0, FallbackMaterial);
         }
     }
 

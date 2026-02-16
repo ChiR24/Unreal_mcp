@@ -488,7 +488,7 @@ export async function handleConsolidatedToolCall(
     }
 
     // Fallback or Unknown
-    return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}` });
+    return cleanObject({ success: false, error: 'UNKNOWN_TOOL', message: `Unknown consolidated tool: ${name}`, data: null });
 
   } catch (err: unknown) {
     const duration = Date.now() - startTime;

@@ -272,7 +272,10 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
-bool bSaved = FEditorFileUtils::SaveCurrentLevel();
+    // Use McpSafeLevelSave to prevent Intel GPU driver crashes during save
+    // FlushRenderingCommands prevents MONZA DdiThreadingContext exceptions
+    // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
+    bool bSaved = McpSafeLevelSave(World->PersistentLevel, World->GetOutermost()->GetName(), 5);
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       FString LevelPath = World->GetOutermost()->GetName();
@@ -347,7 +350,9 @@ bool bSaved = FEditorFileUtils::SaveCurrentLevel();
       bool bSaved = false;
 #if __has_include("FileHelpers.h")
       if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
-        bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+        // Use McpSafeLevelSave to prevent Intel GPU driver crashes
+        // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
+        bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath, 5);
       }
 #endif
       if (bSaved) {

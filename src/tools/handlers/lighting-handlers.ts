@@ -144,32 +144,39 @@ export async function handleLightingTools(action: string, args: LightingArgs, to
       }));
     }
     case 'setup_global_illumination': {
+      // REQUIRE 'method' parameter - it's mandatory for this action
+      if (!args.method) {
+        return {
+          success: false,
+          error: 'MISSING_REQUIRED_PARAM',
+          message: "'method' parameter is required for setup_global_illumination. Must be one of: LumenGI, ScreenSpace, None, RayTraced, Lightmass",
+          action: 'setup_global_illumination'
+        };
+      }
       // Normalize and validate GI method
       let normalizedMethod: string | undefined;
-      if (args.method) {
-        const methodLower = String(args.method).toLowerCase();
-        // Map to C++ expected values
-        if (methodLower === 'lumen' || methodLower === 'lumengi') {
-          normalizedMethod = 'LumenGI';
-        } else if (methodLower === 'screenspace' || methodLower === 'ssgi') {
-          normalizedMethod = 'ScreenSpace';
-        } else if (methodLower === 'none') {
-          normalizedMethod = 'None';
-        } else if (methodLower === 'raytraced') {
-          normalizedMethod = 'RayTraced';
-        } else if (methodLower === 'lightmass') {
-          normalizedMethod = 'Lightmass';
-        } else {
-          return {
-            success: false,
-            error: 'INVALID_GI_METHOD',
-            message: `Invalid GI method: '${args.method}'. Must be one of: LumenGI, ScreenSpace, None, RayTraced, Lightmass`,
-            action: 'setup_global_illumination'
-          };
-        }
+      const methodLower = String(args.method).toLowerCase();
+      // Map to C++ expected values
+      if (methodLower === 'lumen' || methodLower === 'lumengi') {
+        normalizedMethod = 'LumenGI';
+      } else if (methodLower === 'screenspace' || methodLower === 'ssgi') {
+        normalizedMethod = 'ScreenSpace';
+      } else if (methodLower === 'none') {
+        normalizedMethod = 'None';
+      } else if (methodLower === 'raytraced') {
+        normalizedMethod = 'RayTraced';
+      } else if (methodLower === 'lightmass') {
+        normalizedMethod = 'Lightmass';
+      } else {
+        return {
+          success: false,
+          error: 'INVALID_GI_METHOD',
+          message: `Invalid GI method: '${args.method}'. Must be one of: LumenGI, ScreenSpace, None, RayTraced, Lightmass`,
+          action: 'setup_global_illumination'
+        };
       }
       return cleanObject(await tools.lightingTools.setupGlobalIllumination({
-        method: normalizedMethod || toString(args.method),
+        method: normalizedMethod,
         quality: toString(args.quality),
         indirectLightingIntensity: toNumber(args.indirectLightingIntensity),
         bounces: toNumber(args.bounces)

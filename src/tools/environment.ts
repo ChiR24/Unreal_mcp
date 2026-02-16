@@ -46,8 +46,17 @@ export function validateSnapshotPath(inputPath: string): { isValid: false; error
     return { isValid: false, error: 'SECURITY_VIOLATION: Path traversal (..) is not allowed' };
   }
 
-  // SECURITY: Restrict to allowed base directories
-  // Allow only project-relative paths (not starting with /) or paths under specific safe directories
+  // SECURITY: Check for UE project-relative paths (start with /)
+  // These are handled by the C++ SanitizeProjectFilePath which allows /Temp, /Saved, /Game, etc.
+  // C++ validation: rejects ':', '..', and ensures path starts with '/'
+  if (trimmed.startsWith('/')) {
+    // Allow UE project-relative paths - C++ handler will validate against actual UE project
+    // Examples: /Temp/snapshot.json, /Saved/backup.json, /Game/Data/file.json
+    // Rejected by earlier checks: /etc, /var, /usr, /bin, /sbin, /root, /home (system paths)
+    return { isValid: true, safePath: trimmed };
+  }
+
+  // For relative paths, resolve against project directory
   const cwd = process.cwd();
   const resolvedPath = path.resolve(cwd, trimmed);
   
