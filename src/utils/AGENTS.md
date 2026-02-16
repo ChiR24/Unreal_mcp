@@ -1,9 +1,9 @@
 # src/utils
 
-Shared utilities for normalization, security, and logging.
+Shared utilities for normalization, security, and logging (8 files).
 
 ## OVERVIEW
-Foundational utilities ensuring path safety, command validation, and consistent logging.
+Foundational utilities ensuring path safety, command validation, and consistent logging. Strict zero-any policy enforced.
 
 ## WHERE TO LOOK
 | Utility | File | Purpose |
@@ -12,6 +12,9 @@ Foundational utilities ensuring path safety, command validation, and consistent 
 | Normalization | `normalize.ts` | Force `/Game/` and forward slashes |
 | Validation | `validation.ts` | Zod schemas and runtime checks |
 | Command Queue | `unreal-command-queue.ts` | Throttled execution for UE console |
+| Response Validator | `response-validator.ts` | AJV schema validation |
+| Logger | `logger.ts` | Structured logging (stderr only) |
+| Constants | `constants.ts` | Shared string constants |
 
 ## CONVENTIONS
 - **Path First**: Always call `sanitizePath()` before using any user-provided path.

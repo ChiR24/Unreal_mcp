@@ -1,9 +1,22 @@
 # src/automation
 
-WebSocket bridge client and protocol handling.
+WebSocket bridge client and protocol handling (9 files).
 
 ## OVERVIEW
-Manages connection to Unreal Engine and provides a promise-based API for requests.
+Manages connection to Unreal Engine and provides a promise-based API for automation requests.
+
+## STRUCTURE
+```
+automation/
+├── bridge.ts              # Main AutomationBridge class (36KB)
+├── connection-manager.ts  # Reconnect logic, heartbeat
+├── handshake.ts           # Protocol version negotiation
+├── message-handler.ts     # JSON-RPC frame processing
+├── message-schema.ts      # Message type definitions
+├── request-tracker.ts     # Pending request tracking
+├── types.ts               # TypeScript interfaces
+└── index.ts               # Module exports
+```
 
 ## WHERE TO LOOK
 | Task | File | Notes |
