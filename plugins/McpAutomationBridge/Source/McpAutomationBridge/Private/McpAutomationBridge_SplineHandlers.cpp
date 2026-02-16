@@ -1297,22 +1297,23 @@ static bool HandleScatterMeshesAlongSpline(
     FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
     FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
     double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
-    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("bAlignToSpline"), true);
+    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("alignToSpline"), true);
 
-    if (ActorName.IsEmpty() || MeshPath.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName and meshPath are required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    // SECURITY: Validate meshPath to prevent directory traversal and arbitrary file access
+    // Sanitize mesh path
     FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
     if (SafeMeshPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
             nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate spacing to prevent division by zero
+    if (Spacing <= 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("spacing must be greater than 0"), nullptr, TEXT("INVALID_PARAM"));
         return true;
     }
 
@@ -1405,7 +1406,7 @@ static bool HandleConfigureMeshSpacing(
     Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh spacing configuration stored"), Result);
+        TEXT("Mesh spacing parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
     return true;
 }
 
@@ -1426,7 +1427,7 @@ static bool HandleConfigureMeshRandomization(
     Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh randomization configuration stored"), Result);
+        TEXT("Mesh randomization parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
     return true;
 }
 

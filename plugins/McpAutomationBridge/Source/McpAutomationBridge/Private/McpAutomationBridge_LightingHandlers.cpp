@@ -266,17 +266,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
                         ? GetJsonNumberField((*ColorObj), TEXT("a"))
                         : 1.0f;
           // Validate color components: must be finite
-          bool bColorValid = true;
           if (!FMath::IsFinite(Color.R) || !FMath::IsFinite(Color.G) || 
               !FMath::IsFinite(Color.B) || !FMath::IsFinite(Color.A)) {
             UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                    TEXT("spawn_light: Invalid color components, using white"));
             Color = FLinearColor::White;
-            bColorValid = false;
           }
-          if (bColorValid) {
-            LightComp->SetLightColor(Color);
-          }
+          LightComp->SetLightColor(Color);
         }
 
         bool bCastShadows;
@@ -876,13 +872,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     if (GEditor) {
       // Create a new blank map
       GEditor->NewMap();
-      bool bNewMap = true; // Assume success
-      if (!bNewMap) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Failed to create new map"),
-                            TEXT("CREATION_FAILED"));
-        return true;
-      }
 
       // Add basic lighting
       SpawnActorInActiveWorld<AActor>(ADirectionalLight::StaticClass(),

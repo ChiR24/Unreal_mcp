@@ -2713,7 +2713,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     }
 
     FString StationType = GetPayloadString(Payload, TEXT("stationType"), TEXT("Basic"));
-    int32 CraftingSpeed = static_cast<int32>(GetPayloadNumber(Payload, TEXT("craftingSpeedMultiplier"), 1.0));
+    double CraftingSpeed = GetPayloadNumber(Payload, TEXT("craftingSpeedMultiplier"), 1.0);
 
     // Add station recipe configuration variables
     FEdGraphPinType SoftObjectArrayType;

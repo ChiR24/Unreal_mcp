@@ -2129,6 +2129,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         
         // Add key to curve
         Controller.SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
+        // Success - set the response
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("curveName"), CurveName);
+        Resp->SetNumberField(TEXT("time"), Time);
+        Resp->SetNumberField(TEXT("value"), Value);
 #else
         // UE 5.0: Curve editing API not available in the same form
         Message = TEXT("set_curve_key requires UE 5.1+");
@@ -2136,14 +2143,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
 #endif
 
-        if (bSuccess) {
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
-          Resp->SetStringField(TEXT("assetPath"), AssetPath);
-          Resp->SetStringField(TEXT("curveName"), CurveName);
-          Resp->SetNumberField(TEXT("time"), Time);
-          Resp->SetNumberField(TEXT("value"), Value);
-        }
 #else
         Message = TEXT("set_curve_key requires editor build");
         ErrorCode = TEXT("NOT_IMPLEMENTED");

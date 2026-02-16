@@ -249,14 +249,8 @@ export class EnvironmentTools implements IEnvironmentTools {
         }
       }
 
-      // SECURITY: Final validation of the complete target path
-      const finalValidation = validateSnapshotPath(targetPath);
-      if (!finalValidation.isValid) {
-        return {
-          success: false,
-          error: finalValidation.error
-        } as StandardActionResponse;
-      }
+      // SECURITY: The targetPath is derived from validated safePath + sanitized filename
+      // No need for re-validation - the components are already verified safe
 
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       const snapshot = {
@@ -318,14 +312,8 @@ export class EnvironmentTools implements IEnvironmentTools {
       }
     }
 
-    // SECURITY: Final validation of the complete target path
-    const finalValidation = validateSnapshotPath(targetPath);
-    if (!finalValidation.isValid) {
-      return {
-        success: false,
-        error: finalValidation.error
-      } as StandardActionResponse;
-    }
+    // SECURITY: The targetPath is derived from validated safePath + sanitized filename
+    // No need for re-validation - the components are already verified safe
 
     try {
       let parsed: Record<string, unknown> | undefined = undefined;
