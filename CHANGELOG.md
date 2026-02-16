@@ -7,6 +7,345 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.16] - 2026-02-16
+
+> [!IMPORTANT]
+> ### 🔧 World Tools Category Fixes & Security Hardening
+> This release includes critical bug fixes, security hardening, and UE 5.7 compatibility improvements across all world-building tools (landscape, foliage, geometry, volumes, navigation).
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Path Validation & Input Sanitization</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/207">#207</a>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| **SanitizeProjectRelativePath** | Rejects Windows absolute paths, normalizes slashes, collapses `//`, requires valid UE roots (`/Game`, `/Engine`, `/Script`) |
+| **SanitizeProjectFilePath** | File operations with path traversal protection |
+| **ValidateAssetCreationPath** | Combines folder + name validation for asset creation |
+| **Actor/Volume Name Validation** | Blocks invalid characters, enforces length checks |
+| **Snapshot Path Validation** | Prevents directory traversal attacks via snapshot paths |
+
+**Files Modified:**
+- `McpAutomationBridgeHelpers.h` (+326 lines of security helpers)
+- `src/tools/environment.ts` (snapshot path security)
+- `src/utils/path-security.ts` (path normalization)
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🐛 Landscape Handler Silent Fallback Bug</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+
+| Bug | Root Cause | Fix |
+|-----|------------|-----|
+| False positives on non-existent landscapes | Path matching compared `GetPathName()` (internal path) with asset path | Normalized both paths with `.uasset` stripping |
+| Silent fallback to single landscape | `if (!Landscape && LandscapeCount == 1)` used any available landscape | Removed fallback, now returns `LANDSCAPE_NOT_FOUND` error |
+| Wrong response path | Returned requested path instead of actual path | Now returns `Landscape->GetPackage()->GetPathName()` |
+
+**Affected Handlers:** `HandleModifyHeightmap`, `HandlePaintLandscapeLayer`, `HandleSculptLandscape`, `HandleSetLandscapeMaterial`
+
+</details>
+
+<details>
+<summary><b>🐛 Rotation Yaw Bug</b> (McpAutomationBridge_LightingHandlers.cpp:200)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `Rotation.Yaw` read from `LocPtr` instead of `RotPtr` | Changed to `GetJsonNumberField((*RotPtr), TEXT("yaw"))` |
+
+**Impact:** Incorrect rotation when spawning lights with rotation parameters.
+
+</details>
+
+<details>
+<summary><b>🐛 Integer Overflow in Heightmap Operations</b> (McpAutomationBridge_LandscapeHandlers.cpp:631-635)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `static_cast<int16>(CurrentHeights[i])` overflows for values > 32767 | Changed to `static_cast<int32>` |
+
+**Impact:** Heightmap raise/lower operations now produce correct results for heights above midpoint.
+
+</details>
+
+<details>
+<summary><b>🐛 set_curve_key Success Reporting</b> (McpAutomationBridge_AnimationHandlers.cpp:2139)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `bSuccess` initialized `false`, only set `true` inside `if (bSuccess)` block (unreachable) | Moved success logic before the condition check |
+
+**Impact:** `set_curve_key` now correctly reports success.
+
+</details>
+
+<details>
+<summary><b>🐛 CraftingSpeed Truncation</b> (McpAutomationBridge_InventoryHandlers.cpp:2716)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `int32 CraftingSpeed` truncated fractional multipliers (1.5 → 1) | Changed to `double` |
+
+</details>
+
+<details>
+<summary><b>🐛 Invalid Color Fallback Not Applied</b> (McpAutomationBridge_LightingHandlers.cpp:277)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `SetLightColor()` only called when `bColorValid == true`, but `bColorValid = false` for invalid colors | Removed guard, always call `SetLightColor()` after correcting invalid colors to white |
+
+</details>
+
+<details>
+<summary><b>🐛 Double-Validation in Snapshot Path</b> (src/tools/environment.ts:253, 322)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| Redundant second `validateSnapshotPath()` call on already-resolved absolute paths | Removed redundant call |
+
+</details>
+
+<details>
+<summary><b>🐛 Intel GPU Driver Crash Prevention</b> (McpAutomationBridgeHelpers.h)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `MONZA DdiThreadingContext` exceptions on Intel GPUs during level save | Added `McpSafeLevelSave` helper with `FlushRenderingCommands` and retry logic |
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🛤️ LOD Generation Enhancements</b> (McpAutomationBridge_GeometryHandlers.cpp)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **landscapePath support** | LOD generation now accepts single `landscapePath` or array `assetPaths` |
+| **lodCount parameter** | Alternative to `numLODs` for specifying LOD count |
+| **Path sanitization** | All LOD operations use `SanitizeProjectRelativePath` |
+
+</details>
+
+<details>
+<summary><b>🌿 FoliageType Auto-Creation</b> (McpAutomationBridge_FoliageHandlers.cpp)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-create FoliageType** | When painting/adding foliage, FoliageType is automatically created from StaticMesh if missing |
+| **Path validation** | All foliage operations use path sanitization |
+
+</details>
+
+<details>
+<summary><b>🏔️ Landscape Layer Auto-Creation</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-create layers** | When painting, landscape layers are auto-created if they don't exist (matches UE editor behavior) |
+
+</details>
+
+<details>
+<summary><b>📊 Handler Verification</b> (Multiple Handler Files)</summary>
+
+| Pattern | Description |
+|---------|-------------|
+| **AddActorVerification** | Returns `actorPath`, `actorName`, `actorGuid`, `existsAfter`, `actorClass` |
+| **AddComponentVerification** | Returns `componentName`, `componentClass`, `ownerActorPath` |
+| **AddAssetVerification** | Returns `assetPath`, `assetName`, `existsAfter`, `assetClass` |
+| **VerifyAssetExists** | Verifies asset exists at path |
+
+**Files Updated:** PropertyHandlers, LevelHandlers, EffectHandlers, GASHandlers, SequenceHandlers, SkeletonHandlers, and 30+ additional handler files
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>🎮 UE 5.7 Compatibility</b></summary>
+
+| Component | Change |
+|-----------|--------|
+| **WebSocket Protocol** | `GetProtocolType()` (FName) replaces deprecated `GetProtocolFamily()` (enum) |
+| **SCS Save** | `McpSafeAssetSave` replaces `SaveLoadedAssetThrottled` to prevent recursive `FlushRenderingCommands` crashes |
+| **PostProcessVolume** | Conditionally compiled (removed in UE 5.7) |
+| **Niagara Graph** | Initialize `GraphSource`/`NiagaraGraph` to prevent null graph crashes |
+| **Landscape Edit** | `FLandscapeEditDataInterface` for UE 5.5+, deprecation suppression for 5.0-5.4 |
+| **WorldPartition** | Support `RuntimeHashSet` in addition to `RuntimeSpatialHash` for UE 5.7+ |
+
+</details>
+
+<details>
+<summary><b>📈 Performance Improvements</b></summary>
+
+| Component | Change |
+|-----------|--------|
+| **Heightmap Modification** | Pass `false` to `FLandscapeEditDataInterface` to prevent 60+ second GPU sync delays |
+| **Landscape Updates** | Use `MarkPackageDirty` instead of `PostEditChange` to avoid unnecessary rebuilds |
+| **Geometry Operations** | Memory pressure checks and triangle limits to prevent OOM crashes |
+
+</details>
+
+### 📊 Statistics
+
+- **Files Changed:** 70 files
+- **Lines Added:** ~7,200
+- **Lines Removed:** ~1,400
+- **Bug Fixes:** 8 critical bugs
+- **New Verification Helpers:** 4
+
+---
+
+## 🏷️ [0.5.15] - 2026-02-12
+
+> [!IMPORTANT]
+> ### 🚀 Major Feature Release: 200+ Action Handlers
+> This release adds ~200 new C++ automation sub-actions across all domains, introduces progress heartbeat protocol for long-running operations, dynamic tool management, IPv6 support, and comprehensive security hardening.
+
+### ✨ Added
+
+<details>
+<summary><b>🎮 200+ MCP Action Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/200">#200</a>)</summary>
+
+| Domain | New Actions |
+|--------|-------------|
+| **AI** | 50+ actions for EQS, Perception, State Trees, Smart Objects |
+| **Combat** | Weapons, projectiles, damage, melee combat |
+| **Character** | Character creation, movement, advanced locomotion |
+| **Inventory** | Items, equipment, loot tables, crafting |
+| **GAS** | Gameplay Ability System: abilities, effects, attributes |
+| **Audio** | MetaSounds, sound classes, dialogue |
+| **Materials** | Material expressions, landscape layers |
+| **Textures** | Texture creation, compression, virtual texturing |
+| **Levels** | 15+ new sub-actions for level management |
+| **Volumes** | 18 volume types |
+| **Performance** | Profiling, optimization, scalability |
+| **Input** | Enhanced Input Actions & Contexts |
+| **Interaction** | Interactables, destructibles, triggers |
+| **Misc** | System control, tests, logs |
+
+**New Handler Files:**
+- `McpAutomationBridge_CharacterHandlers.cpp` (337 lines)
+- `McpAutomationBridge_CombatHandlers.cpp` (398 lines)
+- `McpAutomationBridge_SystemControlHandlers.cpp` (324 lines)
+- `McpAutomationBridge_MiscHandlers.cpp` (1010 lines)
+- `McpAutomationBridge_WidgetAuthoringHandlers.cpp` (2404 lines)
+
+</details>
+
+<details>
+<summary><b>💓 Progress Heartbeat Protocol</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/201">#201</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Progress Updates** | C++ sends `progress_update` WebSocket messages during long-running operations |
+| **Deadline Extensions** | TS extends request deadlines on each update with deadlock safeguards |
+| **Stale Detection** | Detects same percentage for 3 consecutive updates |
+| **Absolute Cap** | 5-minute maximum extension limit |
+| **Max Extensions** | 10 extensions per request |
+
+**Timeout Changes:**
+- Default request timeout: 60s → 30s (extensions handle slow ops)
+
+</details>
+
+<details>
+<summary><b>🔧 Dynamic Tool Management</b></summary>
+
+| Feature | Description |
+|---------|-------------|
+| **manage_tools MCP Tool** | Enables AI to enable/disable tools at runtime |
+| **Protected Tools** | `manage_tools`, `inspect`, and core category cannot be disabled |
+| **list_changed Notifications** | Tool registry sends MCP notifications when tools change |
+| **Category Filtering** | Filter tools by category (core, world, authoring, gameplay, utility) |
+
+</details>
+
+<details>
+<summary><b>🌐 IPv6 Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/194">#194</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **IPv6 Addresses** | Full support for IPv6 addresses in automation bridge |
+| **Hostname Resolution** | DNS resolution via `GetAddressInfo` instead of fallback to 127.0.0.1 |
+| **Address Family Detection** | Auto-detect IPv6 by checking for colons in address |
+| **Zone ID Handling** | Strip zone IDs from IPv6 addresses for Node.js compatibility |
+| **Fallback Support** | Re-create socket as IPv4 when IPv6 not available |
+
+</details>
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Security Hardening</b></summary>
+
+| Function | Description |
+|----------|-------------|
+| **SanitizeProjectRelativePath** | Rejects Windows absolute paths, normalizes slashes, collapses `//`, requires valid UE roots |
+| **SanitizeAssetName** | Strips SQL injection patterns, invalid characters, enforces 64-char limit |
+| **ValidateAssetCreationPath** | Combines folder + name validation |
+| **IsValidAssetPath** | Rejects `:` (Windows drive letters) and consecutive slashes |
+
+**TypeScript Security:**
+- `src/utils/path-security.ts`: Collapse `//` normalization
+- `src/utils/validation.ts`: SQL injection detection
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>🎮 UE 5.7 Compatibility Fixes</b></summary>
+
+| Component | Change |
+|-----------|--------|
+| **WebSocket** | `GetProtocolType()` (FName) replaces `GetProtocolFamily()` (enum) |
+| **SCS Save** | `McpSafeAssetSave` prevents recursive `FlushRenderingCommands` crashes |
+| **PostProcessVolume** | Conditionally compiled (removed in 5.7) |
+| **Niagara** | Initialize `GraphSource`/`NiagaraGraph` to prevent null graph crashes |
+
+</details>
+
+<details>
+<summary><b>⚡ Performance & Infrastructure</b></summary>
+
+| Change | Description |
+|--------|-------------|
+| **Memory Detection** | Windows `GlobalMemoryStatusEx` replaces heuristic detection |
+| **Rate Limit** | `MaxAutomationRequestsPerMinute` raised 120 → 600 |
+| **Logging** | Improved request/response logging with action name and filtered payload preview |
+| **Blueprint Handler** | Variable name collision generates unique suffix, type validation before loading |
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🐛 Various Fixes</b></summary>
+
+| Fix | Description |
+|-----|-------------|
+| **~30 handlers** | Handlers that returned `nullptr` now return structured JSON |
+| **Blueprint** | Unknown actions return explicit error instead of silent failure |
+| **Level tools** | File existence checked before load, post-load path validation |
+| **Eject handler** | Changed from stopping PIE to ejecting from possessed pawn |
+
+</details>
+
+### 📊 Statistics
+
+- **Files Changed:** 83 files
+- **Lines Added:** ~23,000
+- **Lines Removed:** ~2,700
+- **New Action Handlers:** ~200
+- **New Handler Files:** 5
+
+---
+
 ## 🏷️ [0.5.14] - 2026-02-05
 
 > [!IMPORTANT]
