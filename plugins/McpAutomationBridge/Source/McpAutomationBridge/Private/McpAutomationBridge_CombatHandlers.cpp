@@ -345,6 +345,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("range"), Range);
         Result->SetNumberField(TEXT("spread"), Spread);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
         return true;
     }
@@ -386,6 +387,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("meshPath"), MeshPath);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon mesh configured."), Result);
         return true;
     }
@@ -439,6 +441,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetStringField(TEXT("muzzleSocket"), MuzzleSocket);
         Result->SetStringField(TEXT("ejectionSocket"), EjectionSocket);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon sockets configured."), Result);
         return true;
     }
@@ -506,6 +509,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("range"), Range);
         Result->SetNumberField(TEXT("spread"), Spread);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon stats configured."), Result);
         return true;
     }
@@ -570,6 +574,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetStringField(TEXT("traceChannel"), TraceChannel);
         Result->SetNumberField(TEXT("range"), Range);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hitscan configured."), Result);
         return true;
     }
@@ -623,6 +628,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetStringField(TEXT("projectileClass"), ProjectileClass);
         Result->SetNumberField(TEXT("projectileSpeed"), ProjectileSpeed);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile firing configured."), Result);
         return true;
     }
@@ -688,6 +694,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("spreadIncrease"), SpreadIncrease);
         Result->SetNumberField(TEXT("spreadRecovery"), SpreadRecovery);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spread pattern configured."), Result);
         return true;
     }
@@ -748,6 +755,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("recoilYaw"), RecoilYaw);
         Result->SetNumberField(TEXT("recoilRecovery"), RecoilRecovery);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Recoil pattern configured."), Result);
         return true;
     }
@@ -820,6 +828,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("adsSpeed"), AdsSpeed);
         Result->SetNumberField(TEXT("adsSpreadMultiplier"), AdsSpreadMultiplier);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Aim down sights configured."), Result);
         return true;
     }
@@ -887,6 +896,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile blueprint created successfully."), Result);
         return true;
     }
@@ -925,6 +935,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile movement configured."), Result);
         return true;
     }
@@ -1079,6 +1090,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
         return true;
     }
@@ -1139,6 +1151,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetNumberField(TEXT("criticalMultiplier"), CriticalMultiplier);
         Result->SetNumberField(TEXT("headshotMultiplier"), HeadshotMultiplier);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage execution configured."), Result);
         return true;
     }
@@ -1242,6 +1255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetBoolField(TEXT("isDamageZoneHead"), IsDamageZoneHead);
         Result->SetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hitbox component configured."), Result);
         return true;
     }
@@ -1336,6 +1350,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         if (bReloadAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ReloadAnimation"))));
         Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reload system configured with Blueprint variables."), Result);
         return true;
     }

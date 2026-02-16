@@ -5,6 +5,109 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { DEFAULT_SKYLIGHT_INTENSITY, DEFAULT_SUN_INTENSITY, DEFAULT_TIME_OF_DAY } from '../constants.js';
 import { IEnvironmentTools, StandardActionResponse } from '../types/tool-interfaces.js';
 
+/**
+ * Validates a file path to prevent path traversal and arbitrary file access.
+ * Security checks:
+ * - Rejects Windows absolute paths (drive letters)
+ * - Rejects Unix absolute paths (starting with /) except UE-style project-relative paths
+ * - Rejects path traversal attempts (..)
+ * - Maps UE-style paths (/Temp, /Saved, /Game) to safe project directories
+ * - Ensures final path is contained within project directory
+ * 
+ * @param inputPath - The path to validate
+ * @returns Object with isValid flag and optional sanitized path or error
+ */
+export function validateSnapshotPath(inputPath: string): { isValid: false; error: string } | { isValid: true; safePath: string } {
+  if (!inputPath || typeof inputPath !== 'string') {
+    return { isValid: false, error: 'Path is required' };
+  }
+
+  const trimmed = inputPath.trim();
+  if (trimmed.length === 0) {
+    return { isValid: false, error: 'Path cannot be empty' };
+  }
+
+  // SECURITY: Reject Windows absolute paths (contain drive letter with colon)
+  // Matches patterns like C:\, D:/, X:\etc\passwd, etc.
+  if (/^[a-zA-Z]:[/\\]/.test(trimmed) || trimmed.includes(':')) {
+    return { isValid: false, error: 'SECURITY_VIOLATION: Absolute paths with drive letters are not allowed' };
+  }
+
+  // SECURITY: Reject path traversal attempts
+  // Normalize the path to resolve any ./ or ../ before checking
+  const normalized = path.normalize(trimmed);
+  if (normalized.includes('..') || trimmed.includes('..')) {
+    return { isValid: false, error: 'SECURITY_VIOLATION: Path traversal (..) is not allowed' };
+  }
+
+  const cwd = process.cwd();
+
+  // SECURITY: Handle UE-style project-relative paths (start with /)
+  // Only allow specific UE directories that are safe
+  if (trimmed.startsWith('/')) {
+    // Reject system paths explicitly
+    // Note: We check for specific system paths but allow UE's /Temp, /Saved, /Game
+    // /tmp/ (lowercase) is a Unix system directory, but /Temp/ (capital T) is UE
+    const systemPathPrefixes = ['/etc/', '/var/', '/usr/', '/bin/', '/sbin/', '/root/', '/home/', '/opt/', '/proc/', '/sys/', '/dev/', '/tmp/'];
+    for (const prefix of systemPathPrefixes) {
+      if (trimmed.toLowerCase().startsWith(prefix.toLowerCase())) {
+        return { isValid: false, error: `SECURITY_VIOLATION: System directory paths (${prefix}) are not allowed` };
+      }
+    }
+    
+    // Reject exact system path matches (no trailing slash)
+    const exactSystemPaths = ['/etc', '/var', '/usr', '/bin', '/sbin', '/root', '/home', '/opt', '/proc', '/sys', '/dev', '/tmp'];
+    if (exactSystemPaths.some(sp => trimmed.toLowerCase() === sp.toLowerCase())) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: System directory paths are not allowed' };
+    }
+
+    // Only allow UE project-relative paths: /Temp/, /Saved/, /Game/
+    // These will be mapped to safe directories within the project
+    const allowedUePaths = ['/Temp/', '/Saved/', '/Game/'];
+    const isAllowedUePath = allowedUePaths.some(uePath => 
+      trimmed.toLowerCase().startsWith(uePath.toLowerCase()) || 
+      trimmed.toLowerCase() === uePath.slice(0, -1).toLowerCase()
+    );
+
+    if (!isAllowedUePath) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: Only UE project-relative paths (/Temp, /Saved, /Game) are allowed' };
+    }
+
+    // Map UE-style paths to safe project directories
+    // /Temp -> project/temp, /Saved -> project/Saved, /Game -> project/Content
+    let mappedPath: string;
+    if (trimmed.toLowerCase().startsWith('/temp')) {
+      // Map /Temp to a temp directory within the project
+      mappedPath = path.join(cwd, 'temp', trimmed.slice(6)); // Remove '/Temp/'
+    } else if (trimmed.toLowerCase().startsWith('/saved')) {
+      mappedPath = path.join(cwd, 'Saved', trimmed.slice(7)); // Remove '/Saved/'
+    } else if (trimmed.toLowerCase().startsWith('/game')) {
+      mappedPath = path.join(cwd, 'Content', trimmed.slice(6)); // Remove '/Game/'
+    } else {
+      // This shouldn't happen due to the isAllowedUePath check, but be safe
+      return { isValid: false, error: 'SECURITY_VIOLATION: Unrecognized UE path' };
+    }
+
+    // Normalize and verify the final path is within the project
+    const finalPath = path.normalize(mappedPath);
+    if (!finalPath.startsWith(cwd)) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: Path must be within the project directory' };
+    }
+
+    return { isValid: true, safePath: finalPath };
+  }
+
+  // For relative paths, resolve against project directory
+  const resolvedPath = path.resolve(cwd, trimmed);
+  
+  // Ensure the resolved path is within the project directory
+  if (!resolvedPath.startsWith(cwd)) {
+    return { isValid: false, error: 'SECURITY_VIOLATION: Path must be within the project directory' };
+  }
+
+  return { isValid: true, safePath: resolvedPath };
+}
+
 export class EnvironmentTools implements IEnvironmentTools {
   constructor(_bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
 
@@ -117,26 +220,37 @@ export class EnvironmentTools implements IEnvironmentTools {
         ? params.filename.trim()
         : undefined;
 
+      // SECURITY: Validate the path to prevent path traversal attacks
+      const basePathValidation = validateSnapshotPath(rawPath);
+      if (!basePathValidation.isValid) {
+        return {
+          success: false,
+          error: basePathValidation.error
+        } as StandardActionResponse;
+      }
+
       let targetPath: string;
       if (rawFilename) {
-        const dir = rawPath;
-        targetPath = path.isAbsolute(dir)
-          ? path.join(dir, rawFilename)
-          : path.join(process.cwd(), dir, rawFilename);
+        // Validate filename doesn't contain path traversal
+        if (rawFilename.includes('..') || rawFilename.includes('/') || rawFilename.includes('\\')) {
+          return {
+            success: false,
+            error: 'SECURITY_VIOLATION: Filename cannot contain path separators or traversal'
+          } as StandardActionResponse;
+        }
+        targetPath = path.join(basePathValidation.safePath, rawFilename);
       } else {
         const hasExt = /\.[a-z0-9]+$/i.test(rawPath);
         if (hasExt) {
-          targetPath = path.isAbsolute(rawPath)
-            ? rawPath
-            : path.join(process.cwd(), rawPath);
+          targetPath = basePathValidation.safePath;
         } else {
-          const dir = rawPath;
           const filename = 'env_snapshot.json';
-          targetPath = path.isAbsolute(dir)
-            ? path.join(dir, filename)
-            : path.join(process.cwd(), dir, filename);
+          targetPath = path.join(basePathValidation.safePath, filename);
         }
       }
+
+      // SECURITY: The targetPath is derived from validated safePath + sanitized filename
+      // No need for re-validation - the components are already verified safe
 
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       const snapshot = {
@@ -169,26 +283,37 @@ export class EnvironmentTools implements IEnvironmentTools {
       ? params.filename.trim()
       : undefined;
 
+    // SECURITY: Validate the path to prevent path traversal attacks
+    const basePathValidation = validateSnapshotPath(rawPath);
+    if (!basePathValidation.isValid) {
+      return {
+        success: false,
+        error: basePathValidation.error
+      } as StandardActionResponse;
+    }
+
     let targetPath: string;
     if (rawFilename) {
-      const dir = rawPath;
-      targetPath = path.isAbsolute(dir)
-        ? path.join(dir, rawFilename)
-        : path.join(process.cwd(), dir, rawFilename);
+      // Validate filename doesn't contain path traversal
+      if (rawFilename.includes('..') || rawFilename.includes('/') || rawFilename.includes('\\')) {
+        return {
+          success: false,
+          error: 'SECURITY_VIOLATION: Filename cannot contain path separators or traversal'
+        } as StandardActionResponse;
+      }
+      targetPath = path.join(basePathValidation.safePath, rawFilename);
     } else {
       const hasExt = /\.[a-z0-9]+$/i.test(rawPath);
       if (hasExt) {
-        targetPath = path.isAbsolute(rawPath)
-          ? rawPath
-          : path.join(process.cwd(), rawPath);
+        targetPath = basePathValidation.safePath;
       } else {
-        const dir = rawPath;
         const filename = 'env_snapshot.json';
-        targetPath = path.isAbsolute(dir)
-          ? path.join(dir, filename)
-          : path.join(process.cwd(), dir, filename);
+        targetPath = path.join(basePathValidation.safePath, filename);
       }
     }
+
+    // SECURITY: The targetPath is derived from validated safePath + sanitized filename
+    // No need for re-validation - the components are already verified safe
 
     try {
       let parsed: Record<string, unknown> | undefined = undefined;

@@ -238,7 +238,9 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         }
 
         if (paths.length === 0) {
-          throw new Error('No paths provided for delete action');
+          // Return graceful error response instead of throwing
+          // This handles cleanup scenarios where paths may be empty
+          return ResponseFactory.error('INVALID_ARGUMENT', 'No paths provided for delete action. Provide assetPath (string) or assetPaths (array).');
         }
 
         // Normalize paths: strip object sub-path suffix (e.g., /Game/Folder/Asset.Asset -> /Game/Folder/Asset)

@@ -178,6 +178,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
   Resp->SetStringField(TEXT("systemName"), SystemName);
+  AddAssetVerification(Resp, NiagaraSystem);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara system created successfully"), Resp,
@@ -308,6 +309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("emitterPath"), NiagaraEmitter->GetPathName());
   Resp->SetStringField(TEXT("emitterName"), EmitterName);
+  AddAssetVerification(Resp, NiagaraEmitter);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara emitter created successfully"), Resp,
@@ -413,6 +415,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
   Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
   Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
   Resp->SetStringField(TEXT("systemPath"), SystemPath);
+  AddActorVerification(Resp, NiagaraActor);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara actor spawned successfully"), Resp,
@@ -570,6 +573,9 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("parameterName"), ParameterName);
   Resp->SetStringField(TEXT("parameterType"), ParameterType);
+  if (bSuccess && NiagaraActor) {
+    AddActorVerification(Resp, NiagaraActor);
+  }
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
@@ -715,6 +721,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraRibbon(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
   Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+  AddActorVerification(Resp, NiagaraActor);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara ribbon created successfully"), Resp,

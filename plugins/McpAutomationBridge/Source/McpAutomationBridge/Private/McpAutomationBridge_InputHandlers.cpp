@@ -82,6 +82,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       SaveLoadedAssetThrottled(NewAsset, -1.0, true);
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+      AddAssetVerification(Result, NewAsset);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Input Action created."), Result);
     } else {
@@ -124,6 +125,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       SaveLoadedAssetThrottled(NewAsset, -1.0, true);
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+      AddAssetVerification(Result, NewAsset);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Input Mapping Context created."), Result);
     } else {
@@ -167,6 +169,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("contextPath"), ContextPath);
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("key"), KeyName);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Mapping added."), Result);
   } else if (SubAction == TEXT("remove_mapping")) {
@@ -208,6 +212,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       RemovedKeys.Add(MakeShared<FJsonValueString>(Key.ToString()));
     }
     Result->SetArrayField(TEXT("removedKeys"), RemovedKeys);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Mappings removed for action."), Result);
   } else if (SubAction == TEXT("map_input_action")) {
@@ -245,6 +251,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("contextPath"), ContextPath);
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("key"), KeyName);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Input action mapped to key."), Result);
   } else if (SubAction == TEXT("set_input_trigger")) {
@@ -270,6 +278,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("triggerType"), TriggerType);
     Result->SetBoolField(TEXT("triggerSet"), true);
+    AddAssetVerification(Result, InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Trigger '%s' configured on action."), *TriggerType), Result);
   } else if (SubAction == TEXT("set_input_modifier")) {
@@ -295,6 +304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("modifierType"), ModifierType);
     Result->SetBoolField(TEXT("modifierSet"), true);
+    AddAssetVerification(Result, InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            FString::Printf(TEXT("Modifier '%s' configured on action."), *ModifierType), Result);
   } else if (SubAction == TEXT("enable_input_mapping")) {
@@ -320,6 +330,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("contextPath"), ContextPath);
     Result->SetNumberField(TEXT("priority"), Priority);
     Result->SetBoolField(TEXT("enabled"), true);
+    AddAssetVerification(Result, Context);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Input mapping context enabled (requires PIE for runtime effect)."), Result);
   } else if (SubAction == TEXT("disable_input_action")) {
@@ -341,6 +352,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetBoolField(TEXT("disabled"), true);
+    AddAssetVerification(Result, InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Input action disabled."), Result);
   } else if (SubAction == TEXT("get_input_info")) {
@@ -369,15 +381,16 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("assetName"), Asset->GetName());
 
     // Add type-specific info
-    if (UInputAction *InAction = Cast<UInputAction>(Asset)) {
+    if (UInputAction *InputAction = Cast<UInputAction>(Asset)) {
       Result->SetStringField(TEXT("type"), TEXT("InputAction"));
-      Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InAction->ValueType));
-      Result->SetBoolField(TEXT("consumeInput"), InAction->bConsumeInput);
+      Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InputAction->ValueType));
+      Result->SetBoolField(TEXT("consumeInput"), InputAction->bConsumeInput);
     } else if (UInputMappingContext *Context = Cast<UInputMappingContext>(Asset)) {
       Result->SetStringField(TEXT("type"), TEXT("InputMappingContext"));
       Result->SetNumberField(TEXT("mappingCount"), Context->GetMappings().Num());
     }
 
+    AddAssetVerification(Result, Asset);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Input asset info retrieved."), Result);
   } else {

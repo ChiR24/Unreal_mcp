@@ -130,6 +130,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
             Result->SetStringField(TEXT("materialPath"), MaterialPath);
             Result->SetStringField(TEXT("parameterName"), ParamName);
             Result->SetBoolField(TEXT("attached"), true);
+            AddActorVerification(Result, Volume);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Render target attached to volume via material."), Result);
         }
         else

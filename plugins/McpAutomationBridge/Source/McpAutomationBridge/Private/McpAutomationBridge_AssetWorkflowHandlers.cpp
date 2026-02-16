@@ -1038,6 +1038,11 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             if (!bRenameSucceeded) {
               Resp->SetBoolField(TEXT("renameWarning"), true);
             }
+            // Add verification data
+            UObject *ImportedAsset = UEditorAssetLibrary::LoadAsset(FinalAssetPath);
+            if (ImportedAsset) {
+              AddAssetVerification(Resp, ImportedAsset);
+            }
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
                 bRenameSucceeded ? TEXT("Asset imported")
@@ -1187,6 +1192,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
+  
+  // Add verification data
+  AddAssetVerification(Resp, Asset);
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset metadata updated"), Resp, FString());
@@ -1321,6 +1329,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+    // Add verification data
+    UObject *NewAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
+    if (NewAsset) {
+      AddAssetVerification(Resp, NewAsset);
+    }
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
                            Resp, FString());
   } else {
@@ -1393,6 +1406,13 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
+    
+    // Add verification data
+    UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
+    if (RenamedAsset) {
+      AddAssetVerification(Resp, RenamedAsset);
+    }
+    
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
                            FString());
   } else {
@@ -1466,6 +1486,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), DeletedCount > 0);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
+  // Add verification data - assets no longer exist after deletion
+  Resp->SetBoolField(TEXT("existsAfter"), false);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp,
                          FString());
   return true;
@@ -1513,6 +1535,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
+    // Add verification data
+    VerifyAssetExists(Resp, SafePath);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"),
                            Resp, FString());
   } else {
@@ -2819,40 +2843,69 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return true;
   }
 
+  // Support both landscapePath (single) and assetPaths (array)
+  FString LandscapePath;
+  Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
+  
   const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) ||
-      !AssetPathsArray) {
+  Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray);
+
+  // Support both lodCount and numLODs
+  int32 NumLODs = 4;
+  Payload->TryGetNumberField(TEXT("lodCount"), NumLODs);
+  Payload->TryGetNumberField(TEXT("numLODs"), NumLODs);
+  NumLODs = FMath::Clamp(NumLODs, 1, 50);
+
+  // Build list of paths to process
+  TArray<FString> Paths;
+  
+  // Add landscape path if provided
+  if (!LandscapePath.IsEmpty()) {
+    // Validate landscape path
+    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    Paths.Add(SafePath);
+  }
+  
+  // Add asset paths if provided
+  if (AssetPathsArray) {
+    for (const auto &Val : *AssetPathsArray) {
+      if (Val.IsValid() && Val->Type == EJson::String)
+        Paths.Add(Val->AsString());
+    }
+  }
+
+  if (Paths.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("assetPaths array required"),
+                        TEXT("landscapePath or assetPaths required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
-  int32 NumLODs = 4;
-  Payload->TryGetNumberField(TEXT("numLODs"), NumLODs);
-
   // Dispatch to Game Thread
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
-  // Copy paths
-  TArray<FString> Paths;
-  for (const auto &Val : *AssetPathsArray) {
-    if (Val.IsValid() && Val->Type == EJson::String)
-      Paths.Add(Val->AsString());
-  }
+  TArray<FString> PathsCopy = Paths;
 
   AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
-                                        RequestingSocket, Paths, NumLODs]() {
+                                        RequestingSocket, PathsCopy, NumLODs]() {
     UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
     if (!Subsystem)
       return;
 
     int32 SuccessCount = 0;
 
-    for (const FString &Path : Paths) {
+    for (const FString &Path : PathsCopy) {
       UObject *Obj = LoadObject<UObject>(nullptr, *Path);
+      
+      // Try Static Mesh
       if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Generating %d LODs for %s"), NumLODs, *Path);
+               TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
 
         Mesh->Modify();
         Mesh->SetNumSourceModels(NumLODs);
@@ -2887,6 +2940,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
+    Resp->SetNumberField(TEXT("lodCount"), NumLODs);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                       TEXT("LOD generation completed"),
                                       Resp, FString());

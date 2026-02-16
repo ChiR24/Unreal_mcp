@@ -258,8 +258,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    AddAssetVerification(Result, Skeleton);
 
     // Bone count
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -335,9 +335,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
         BoneArray.Add(MakeShareable(new FJsonValueObject(BoneObj)));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetArrayField(TEXT("bones"), BoneArray);
     Result->SetNumberField(TEXT("count"), BoneArray.Num());
+    AddAssetVerification(Result, Skeleton);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bones listed"), Result);
     return true;

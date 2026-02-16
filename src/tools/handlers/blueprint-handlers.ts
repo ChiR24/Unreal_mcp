@@ -60,16 +60,15 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const pathArg = (argsRecord.path as string | undefined) || argsTyped.blueprintPath;
 
       if (pathArg) {
-        const parts = pathArg.split('/');
-        const extractName = parts.pop(); // The last part is the name
-
-        // If name wasn't provided, use the extracted name
-        if (!name) {
-          name = extractName;
-        }
-
-        // If savePath wasn't provided, use the extracted path
-        if (!savePath) {
+        // If name is provided, treat path as the savePath directly
+        // If name is NOT provided, parse path to extract name and savePath
+        if (name) {
+          // Name provided: use path as savePath
+          savePath = pathArg;
+        } else {
+          // Name not provided: extract name from path
+          const parts = pathArg.split('/');
+          name = parts.pop(); // The last part is the name
           savePath = parts.join('/');
         }
       }

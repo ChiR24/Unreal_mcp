@@ -90,9 +90,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Actor->SetActorLocation(NewLoc);
 
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetBoolField(TEXT("saved"), true);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("x"), NewLoc.X);
@@ -126,9 +126,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Actor->SetActorRotation(NewRot);
 
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetBoolField(TEXT("saved"), true);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("pitch"), NewRot.Pitch);
@@ -164,9 +164,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Actor->SetActorScale3D(NewScale);
 
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetBoolField(TEXT("saved"), true);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("x"), NewScale.X);
@@ -189,10 +189,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Actor->SetActorHiddenInGame(bHidden);
 
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetBoolField(TEXT("saved"), true);
       ResultPayload->SetBoolField(TEXT("value"), bHidden);
+      AddActorVerification(ResultPayload, Actor);
 
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Actor visibility updated."), ResultPayload,
@@ -258,9 +258,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 #endif
 
   TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-  ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetBoolField(TEXT("saved"), true);
+  
+  // Add verification based on object type
+  if (AActor* AsActor = Cast<AActor>(RootObject)) {
+    AddActorVerification(ResultPayload, AsActor);
+  } else {
+    AddAssetVerification(ResultPayload, RootObject);
+  }
 
   if (TSharedPtr<FJsonValue> CurrentValue =
           ExportPropertyToJsonValue(TargetContainer, Property)) {
@@ -330,11 +336,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   // Special handling for common AActor properties that are actually functions
   // or require setters
   if (AActor *Actor = Cast<AActor>(RootObject)) {
-    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("x"), Loc.X);
@@ -351,8 +357,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
                                    ESearchCase::IgnoreCase)) {
       FRotator Rot = Actor->GetActorRotation();
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
@@ -371,8 +377,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
                                    ESearchCase::IgnoreCase)) {
       FVector Scale = Actor->GetActorScale3D();
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+      AddActorVerification(ResultPayload, Actor);
 
       TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
       ValObj->SetNumberField(TEXT("x"), Scale.X);
@@ -429,10 +435,16 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-  ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetField(TEXT("value"), CurrentValue);
+  
+  // Add verification based on object type
+  if (AActor* AsActor = Cast<AActor>(RootObject)) {
+    AddActorVerification(ResultPayload, AsActor);
+  } else {
+    AddAssetVerification(ResultPayload, RootObject);
+  }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Property value retrieved."), ResultPayload,
@@ -580,11 +592,17 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayAppend(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-  ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("newIndex"), NewIndex);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
+  
+  // Add verification based on object type
+  if (AActor* AsActor = Cast<AActor>(RootObject)) {
+    AddActorVerification(ResultPayload, AsActor);
+  } else {
+    AddAssetVerification(ResultPayload, RootObject);
+  }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Array element appended."), ResultPayload,
@@ -689,11 +707,17 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayRemove(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-  ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("removedIndex"), Index);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
+  
+  // Add verification based on object type
+  if (AActor* AsActor = Cast<AActor>(RootObject)) {
+    AddActorVerification(ResultPayload, AsActor);
+  } else {
+    AddAssetVerification(ResultPayload, RootObject);
+  }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Array element removed."), ResultPayload,
@@ -782,11 +806,17 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayClear(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-  ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
+TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("previousSize"), PrevSize);
   ResultPayload->SetNumberField(TEXT("newSize"), 0);
+  
+  // Add verification based on object type
+  if (AActor* AsActor = Cast<AActor>(RootObject)) {
+    AddActorVerification(ResultPayload, AsActor);
+  } else {
+    AddAssetVerification(ResultPayload, RootObject);
+  }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Array cleared."), ResultPayload, FString());

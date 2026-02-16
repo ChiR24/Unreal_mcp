@@ -352,10 +352,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Spawned->SetActorLabel(BaseName);
   }
 
+  // Build response matching the outputWithActor schema:
+  // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-  Data->SetStringField(TEXT("id"), Spawned->GetActorLabel());
-  Data->SetStringField(TEXT("name"), Spawned->GetActorLabel());
-  Data->SetStringField(TEXT("objectPath"), Spawned->GetPathName());
+  
+  // Actor object with id, name and path
+  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
+  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
+  Data->SetObjectField(TEXT("actor"), ActorObj);
+  
+  // actorPath for convenience
+  Data->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
+  
   // Provide the resolved class path useful for referencing
   if (ResolvedClass)
     Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
@@ -366,6 +376,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
+  
+  // Add verification data
+  AddActorVerification(Data, Spawned);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned actor '%s'"), *Spawned->GetActorLabel());
@@ -385,9 +398,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
   if (BlueprintPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Blueprint path required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("Blueprint path required"), nullptr);
     return true;
   }
 
@@ -425,11 +437,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     ResolvedClass = ResolveClassByName(BlueprintPath);
 
   if (!ResolvedClass) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("error"), TEXT("Blueprint class not found"));
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Blueprint class not found"), Resp,
-                           TEXT("CLASS_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
+                              TEXT("Blueprint class not found"), nullptr);
     return true;
   }
 
@@ -465,22 +474,32 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   }
 
   if (!Spawned) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetStringField(TEXT("error"), TEXT("Failed to spawn blueprint"));
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to spawn blueprint"), Resp,
-                           TEXT("SPAWN_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
+                              TEXT("Failed to spawn blueprint"), nullptr);
     return true;
   }
 
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
 
+  // Build response matching the outputWithActor schema:
+  // { actor: { id, name, path }, actorPath, classPath }
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+  
+  // Actor object with id, name and path
+  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
+  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
+  Resp->SetObjectField(TEXT("actor"), ActorObj);
+  
+  // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
+  
+  // Add verification data
+  AddActorVerification(Resp, Spawned);
+  
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned blueprint '%s'"),
          *Spawned->GetActorLabel());
@@ -569,6 +588,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
   }
 
+  // Add verification data for delete operations
+  Resp->SetBoolField(TEXT("existsAfter"), false);
+  Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+
   if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted) {
     SendStandardErrorResponse(this, Socket, RequestId, ErrorCode, Message);
   } else {
@@ -591,8 +614,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -605,9 +628,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   }
 
   if (!Prim) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("No component to apply force"), nullptr,
-                           TEXT("NO_COMPONENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_COMPONENT"),
+                              TEXT("No component to apply force"), nullptr);
     return true;
   }
 
@@ -672,10 +694,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Applied force to '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Force applied"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Force applied"), Data);
   return true;
 #else
   return false;
@@ -689,15 +713,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -747,10 +771,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set transform for '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Actor transform updated"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
   return true;
 #else
   return false;
@@ -814,8 +840,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
@@ -825,8 +851,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -861,11 +887,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set visibility to %s for '%s'"),
          bVisible ? TEXT("True") : TEXT("False"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Actor visibility updated"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);
   return true;
 #else
   return false;
@@ -879,17 +907,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   FString ComponentType;
   Payload->TryGetStringField(TEXT("componentType"), ComponentType);
   if (ComponentType.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("componentType required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("componentType required"), nullptr);
     return true;
   }
 
@@ -898,17 +925,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
   UClass *ComponentClass = ResolveClassByName(ComponentType);
   if (!ComponentClass ||
       !ComponentClass->IsChildOf(UActorComponent::StaticClass())) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Component class not found"), nullptr,
-                           TEXT("CLASS_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
+                              TEXT("Component class not found"), nullptr);
     return true;
   }
 
@@ -920,9 +946,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   UActorComponent *NewComponent = NewObject<UActorComponent>(
       Found, ComponentClass, DesiredName, RF_Transactional);
   if (!NewComponent) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to create component"), nullptr,
-                           TEXT("CREATE_COMPONENT_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CREATE_COMPONENT_FAILED"),
+                              TEXT("Failed to create component"), nullptr);
     return true;
   }
 
@@ -1022,33 +1047,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
   if (ComponentName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("componentName required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("componentName required"), nullptr);
     return true;
   }
 
   const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;
   if (!(Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) &&
         PropertiesPtr && PropertiesPtr->IsValid())) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("properties object required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("properties object required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1063,9 +1086,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   }
 
   if (!TargetComponent) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Component not found"), nullptr,
-                           TEXT("COMPONENT_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("COMPONENT_NOT_FOUND"),
+                              TEXT("Component not found"), nullptr);
     return true;
   }
 
@@ -1166,13 +1188,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     Data->SetArrayField(TEXT("applied"), PropsArray);
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Updated properties for component '%s' on '%s'"),
          *TargetComponent->GetName(), *Found->GetActorLabel());
 
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Component properties updated"), Data,
-                              PropertyWarnings);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
   return true;
 #else
   return false;
@@ -1192,9 +1215,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   }
 
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("actorName or objectPath required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName or objectPath required"), nullptr);
     return true;
   }
 
@@ -1211,9 +1233,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   }
 
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Actor or Blueprint not found"), nullptr,
-                           TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor or Blueprint not found"), nullptr);
     return true;
   }
 
@@ -1256,6 +1277,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
+  
+  // Add verification data
+  if (Found) {
+    AddActorVerification(Data, Found);
+  }
+  
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);
   return true;
@@ -1271,15 +1298,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1290,9 +1317,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   AActor *Duplicated =
       ActorSS->DuplicateActor(Found, Found->GetWorld(), Offset);
   if (!Duplicated) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to duplicate actor"), nullptr,
-                           TEXT("DUPLICATE_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("DUPLICATE_FAILED"),
+                              TEXT("Failed to duplicate actor"), nullptr);
     return true;
   }
 
@@ -1305,6 +1331,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   Data->SetStringField(TEXT("source"), Found->GetActorLabel());
   Data->SetStringField(TEXT("actorName"), Duplicated->GetActorLabel());
   Data->SetStringField(TEXT("actorPath"), Duplicated->GetPathName());
+
+  // Add verification data
+  AddActorVerification(Data, Duplicated);
 
   TArray<TSharedPtr<FJsonValue>> OffsetArray;
   OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.X));
@@ -1332,34 +1361,30 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   FString ParentName;
   Payload->TryGetStringField(TEXT("parentActor"), ParentName);
   if (ChildName.IsEmpty() || ParentName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("childActor and parentActor required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("childActor and parentActor required"), nullptr);
     return true;
   }
 
   AActor *Child = FindActorByName(ChildName);
   AActor *Parent = FindActorByName(ParentName);
   if (!Child || !Parent) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Child or parent actor not found"), nullptr,
-                           TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Child or parent actor not found"), nullptr);
     return true;
   }
 
   if (Child == Parent) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Cannot attach actor to itself"), nullptr,
-                           TEXT("CYCLE_DETECTED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CYCLE_DETECTED"),
+                              TEXT("Cannot attach actor to itself"), nullptr);
     return true;
   }
 
   USceneComponent *ChildRoot = Child->GetRootComponent();
   USceneComponent *ParentRoot = Parent->GetRootComponent();
   if (!ChildRoot || !ParentRoot) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Actor missing root component"), nullptr,
-                           TEXT("ROOT_MISSING"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ROOT_MISSING"),
+                              TEXT("Actor missing root component"), nullptr);
     return true;
   }
 
@@ -1389,11 +1414,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     return true;
   }
 
+  // Add verification data for the child actor
+  AddActorVerification(Data, Child);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Attached '%s' to '%s'"), *Child->GetActorLabel(),
          *Parent->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor attached"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor attached"), Data);
   return true;
 #else
   return false;
@@ -1407,15 +1434,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1449,10 +1476,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     return true;
   }
 
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Detached '%s'"), *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor detached"),
-                              Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Actor detached"), Data);
   return true;
 #else
   return false;
@@ -1466,16 +1495,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
   if (TagValue.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("tag required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("tag required"), nullptr);
     return true;
   }
 
   // Security: Validate tag format - reject path traversal attempts
   if (TagValue.Contains(TEXT("..")) || TagValue.Contains(TEXT("\\")) || TagValue.Contains(TEXT("/"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("Invalid tag: '%s'. Path separators and traversal characters are not allowed."), *TagValue),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              FString::Printf(TEXT("Invalid tag: '%s'. Path separators and traversal characters are not allowed."), *TagValue), nullptr);
     return true;
   }
 
@@ -1534,16 +1562,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
   if (TargetName.IsEmpty() || TagValue.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("actorName and tag required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName and tag required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1558,11 +1585,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Data->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagName.ToString());
+
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Added tag '%s' to '%s'"), *TagName.ToString(),
          *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Tag applied to actor"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Tag applied to actor"), Data);
   return true;
 #else
   return false;
@@ -1576,16 +1606,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   FString Query;
   Payload->TryGetStringField(TEXT("name"), Query);
   if (Query.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("name required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("name required"), nullptr);
     return true;
   }
 
   // Security: Validate query format - reject path traversal attempts
   if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\")) || Query.Contains(TEXT("/"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query), nullptr);
     return true;
   }
 
@@ -1633,8 +1662,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
   if (TagValue.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("tag required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("tag required"), nullptr);
     return true;
   }
 
@@ -1661,6 +1690,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   for (const FString &Name : Deleted)
     DeletedArray.Add(MakeShared<FJsonValueString>(Name));
   Data->SetArrayField(TEXT("deleted"), DeletedArray);
+
+  // Add verification data for delete operations
+  Data->SetBoolField(TEXT("existsAfter"), false);
+  Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actors deleted by tag"), Data);
   return true;
@@ -1676,24 +1710,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   const TSharedPtr<FJsonObject> *VariablesPtr = nullptr;
   if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) &&
         VariablesPtr && VariablesPtr->IsValid())) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("variables object required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("variables object required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1743,24 +1776,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   FString SnapshotName;
   Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
   if (SnapshotName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("snapshotName required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("snapshotName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1786,32 +1818,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   FString SnapshotName;
   Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
   if (SnapshotName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("snapshotName required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("snapshotName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
   const FString SnapshotKey =
       FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);
   if (!CachedActorSnapshots.Contains(SnapshotKey)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Snapshot not found"),
-                           nullptr, TEXT("SNAPSHOT_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SNAPSHOT_NOT_FOUND"),
+                              TEXT("Snapshot not found"), nullptr);
     return true;
   }
 
@@ -1839,15 +1870,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1874,15 +1905,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1916,15 +1947,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -1969,16 +2000,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
   if (TargetName.IsEmpty() || TagValue.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("actorName and tag required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName and tag required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 
@@ -2004,11 +2034,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   Data->SetBoolField(TEXT("wasPresent"), true);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagValue);
+
+  // Add verification data
+  AddActorVerification(Data, Found);
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Removed tag '%s' from '%s'"), *TagValue,
          *Found->GetActorLabel());
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Tag removed from actor"), Data);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Tag removed from actor"), Data);
   return true;
 #else
   return false;
@@ -2028,9 +2061,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   }
 
   if (ClassName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("className or class is required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("className or class is required"), nullptr);
     return true;
   }
 
@@ -2038,9 +2070,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   // Valid formats: "/Script/Module.ClassName", "/Game/Path/ClassName.ClassName", "ClassName"
   // Invalid: Contains "..", "\" (Windows paths), or other traversal patterns
   if (ClassName.Contains(TEXT("..")) || ClassName.Contains(TEXT("\\"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("Invalid class name format: '%s'. Path traversal characters are not allowed."), *ClassName),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              FString::Printf(TEXT("Invalid class name format: '%s'. Path traversal characters are not allowed."), *ClassName), nullptr);
     return true;
   }
 
@@ -2052,9 +2083,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
         ClassName.Contains(TEXT("/var/")) || ClassName.Contains(TEXT("/home/")) ||
         ClassName.Contains(TEXT("/root/")) || ClassName.Contains(TEXT("/tmp/")) ||
         ClassName.Contains(TEXT("C:\\")) || ClassName.Contains(TEXT("D:\\"))) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             FString::Printf(TEXT("Invalid class name format: '%s'. Filesystem paths are not allowed."), *ClassName),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              FString::Printf(TEXT("Invalid class name format: '%s'. Filesystem paths are not allowed."), *ClassName), nullptr);
       return true;
     }
   }
@@ -2143,6 +2173,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
       TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
       Data->SetStringField(TEXT("actorName"), ActorName);
       Data->SetStringField(TEXT("componentName"), ComponentName);
+
+      // Add verification data for delete operations
+      Data->SetBoolField(TEXT("existsAfter"), false);
+      Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+
       SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
       return true;
     }
@@ -2335,15 +2370,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
 
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
   if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("EditorActorSubsystem not available"), nullptr,
-                           TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"),
+                              TEXT("EditorActorSubsystem not available"), nullptr);
     return true;
   }
 
@@ -2431,15 +2464,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("call_function") || LowerSub == TEXT("call_actor_function"))
     return HandleControlActorCallFunction(RequestId, Payload, RequestingSocket);
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      FString::Printf(TEXT("Unknown actor control action: %s"), *LowerSub),
-      nullptr, TEXT("UNKNOWN_ACTION"));
+  SendStandardErrorResponse(
+      this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
+      FString::Printf(TEXT("Unknown actor control action: %s"), *LowerSub), nullptr);
   return true;
 #else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("Actor control requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                            TEXT("Actor control requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -2514,11 +2545,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor->PlayWorld) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), false);
-    Resp->SetBoolField(TEXT("notInPIE"), true);
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Cannot eject: Play session not active"), Resp, TEXT("NO_ACTIVE_SESSION"));
+    TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+    ErrorDetails->SetBoolField(TEXT("notInPIE"), true);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("Cannot eject: Play session not active"), ErrorDetails);
     return true;
   }
 
@@ -2549,17 +2579,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     Payload->TryGetStringField(TEXT("objectPath"), ActorName);
 
   if (ActorName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(ActorName);
   if (!Found) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr,
-        TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr);
     return true;
   }
 
@@ -2573,15 +2601,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
                              nullptr);
     } else {
       // If not in PIE, we can't possess
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Cannot possess actor while not in PIE"),
-                             nullptr, TEXT("NOT_IN_PIE"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
+                              TEXT("Cannot possess actor while not in PIE"), nullptr);
     }
     return true;
   }
 
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor not available"),
-                         nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
   return true;
 #else
   return false;
@@ -2595,8 +2622,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
@@ -2617,8 +2644,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
         return true;
       }
     }
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
   return false;
@@ -2717,9 +2744,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
                            FString());
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("View mode command failed"), nullptr,
-                         TEXT("EXEC_FAILED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("EXEC_FAILED"),
+                              TEXT("View mode command failed"), nullptr);
   return true;
 #else
   return false;
@@ -2747,9 +2773,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -2821,15 +2846,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   if (LowerSub == TEXT("open_level"))
     return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      FString::Printf(TEXT("Unknown editor control action: %s"), *LowerSub),
-      nullptr, TEXT("UNKNOWN_ACTION"));
+  SendStandardErrorResponse(
+      this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
+      FString::Printf(TEXT("Unknown editor control action: %s"), *LowerSub), nullptr);
   return true;
 #else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("Editor control requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                            TEXT("Editor control requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -2841,38 +2864,35 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("assetPath required"), nullptr);
     return true;
   }
 
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
   UAssetEditorSubsystem *AssetEditorSS =
       GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
   if (!AssetEditorSS) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("AssetEditorSubsystem not available"), nullptr,
-                           TEXT("SUBSYSTEM_MISSING"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
+                              TEXT("AssetEditorSubsystem not available"), nullptr);
     return true;
   }
 
   if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
+                              TEXT("Asset not found"), nullptr);
     return true;
   }
 
   UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
+                              TEXT("Failed to load asset"), nullptr);
     return true;
   }
 
@@ -2886,9 +2906,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
                            FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to open asset editor"), Resp,
-                           TEXT("OPEN_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"),
+                              TEXT("Failed to open asset editor"), Resp);
   }
   return true;
 #else
@@ -2901,9 +2920,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -2940,9 +2958,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   // Get the active viewport
   FViewport* Viewport = GEditor->GetActiveViewport();
   if (!Viewport) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("No active viewport available"), nullptr,
-                           TEXT("VIEWPORT_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
+                              TEXT("No active viewport available"), nullptr);
     return true;
   }
 
@@ -2961,9 +2978,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
                          TEXT("Screenshot requested"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Screenshot requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Screenshot requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -2973,17 +2989,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
   if (!GEditor->PlayWorld) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("No active PIE session to pause"), nullptr,
-                           TEXT("NO_ACTIVE_SESSION"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("No active PIE session to pause"), nullptr);
     return true;
   }
 
@@ -2999,9 +3013,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
                          TEXT("PIE session paused"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Pause requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Pause requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3011,17 +3024,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
   if (!GEditor->PlayWorld) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("No active PIE session to resume"), nullptr,
-                           TEXT("NO_ACTIVE_SESSION"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("No active PIE session to resume"), nullptr);
     return true;
   }
 
@@ -3037,9 +3048,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
                          TEXT("PIE session resumed"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Resume requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Resume requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3049,26 +3059,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
   FString Command;
   Payload->TryGetStringField(TEXT("command"), Command);
   if (Command.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("command parameter is required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("command parameter is required"), nullptr);
     return true;
   }
 
   // Execute the console command in editor context
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
   UWorld* World = GEditor->GetEditorWorldContext().World();
@@ -3083,9 +3090,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
                          TEXT("Console command executed"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Console command requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Console command requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3095,17 +3101,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
   if (!GEditor->PlayWorld) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("No active PIE session to step"), nullptr,
-                           TEXT("NO_ACTIVE_SESSION"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("No active PIE session to step"), nullptr);
     return true;
   }
 
@@ -3121,9 +3125,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
                          TEXT("Frame stepped"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Step frame requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Step frame requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3133,9 +3136,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3163,9 +3165,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
                          TEXT("Recording started"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Recording requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Recording requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3175,9 +3176,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3196,9 +3196,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
                          TEXT("Recording stopped"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Recording requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Recording requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3208,9 +3207,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3234,9 +3232,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
                          TEXT("Bookmark created"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Bookmarks require editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Bookmarks require editor build."), nullptr);
   return true;
 #endif
 }
@@ -3246,9 +3243,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3272,9 +3268,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
                          TEXT("Jumped to bookmark"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Bookmarks require editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Bookmarks require editor build."), nullptr);
   return true;
 #endif
 }
@@ -3284,9 +3279,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3347,9 +3341,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
                          TEXT("Preferences updated"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Preferences require editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Preferences require editor build."), nullptr);
   return true;
 #endif
 }
@@ -3359,9 +3352,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3402,9 +3394,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
                          TEXT("Viewport realtime updated"), Resp, FString());
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Viewport realtime requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Viewport realtime requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3414,9 +3405,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3528,13 +3518,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   if (bSuccess) {
     SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false, Message, Resp, TEXT("INPUT_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INPUT_FAILED"), Message, Resp);
   }
   return true;
 #else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Simulate input requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                              TEXT("Simulate input requires editor build."), nullptr);
   return true;
 #endif
 }
@@ -3546,24 +3535,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("assetPath required"), nullptr);
     return true;
   }
 
   UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
   if (!AssetEditorSS) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("AssetEditorSubsystem unavailable"), nullptr,
-                           TEXT("SUBSYSTEM_MISSING"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
+                              TEXT("AssetEditorSubsystem unavailable"), nullptr);
     return true;
   }
 
   UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
+                              TEXT("Failed to load asset"), nullptr);
     return true;
   }
 
@@ -3613,10 +3600,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
                            FString::Printf(TEXT("Saved %d of %d dirty assets"), SavedCount, DirtyPackages.Num()), 
                            Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false, 
-                           FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
-                                           SavedCount, DirtyPackages.Num()), 
-                           Resp, TEXT("SAVE_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),
+                              FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
+                                              SavedCount, DirtyPackages.Num()), 
+                              Resp);
   }
   return true;
 #else
@@ -3629,9 +3616,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3653,9 +3639,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3679,8 +3664,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   if (Mode.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("mode required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("mode required"), nullptr);
     return true;
   }
 
@@ -3704,9 +3689,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3738,9 +3722,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3766,9 +3749,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3826,9 +3808,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
   }
 
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3857,8 +3838,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     Payload->TryGetStringField(TEXT("path"), LevelPath);
   }
   if (LevelPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("levelPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("levelPath required"), nullptr);
     return true;
   }
 
@@ -3873,9 +3854,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   }
 
   if (!GEditor) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available"), nullptr,
-                           TEXT("EDITOR_NOT_AVAILABLE"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
+                              TEXT("Editor not available"), nullptr);
     return true;
   }
 
@@ -3887,13 +3867,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   FullMapPath = FPaths::ConvertRelativePathToFull(FullMapPath);
   
   if (!FPaths::FileExists(FullMapPath)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), false);
-    Resp->SetStringField(TEXT("levelPath"), LevelPath);
-    Resp->SetStringField(TEXT("error"), TEXT("Level file not found"));
-    SendAutomationResponse(Socket, RequestId, false, 
-                           FString::Printf(TEXT("Level file not found: %s"), *FullMapPath), 
-                           Resp, TEXT("FILE_NOT_FOUND"));
+    TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+    ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
+                              FString::Printf(TEXT("Level file not found: %s"), *FullMapPath), 
+                              ErrorDetails);
     return true;
   }
   
@@ -3906,7 +3884,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   if (bOpened) {
     SendAutomationResponse(Socket, RequestId, true, TEXT("Level opened"), Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to open level"), Resp, TEXT("OPEN_FAILED"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"), TEXT("Failed to open level"), Resp);
   }
   return true;
 #else
@@ -3924,9 +3902,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   if (!ActorSS) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("EditorActorSubsystem unavailable"), nullptr,
-                           TEXT("SUBSYSTEM_MISSING"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
+                              TEXT("EditorActorSubsystem unavailable"), nullptr);
     return true;
   }
 
@@ -3971,15 +3948,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Actor not found"),
-                           nullptr, TEXT("ACTOR_NOT_FOUND"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                              TEXT("Actor not found"), nullptr);
     return true;
   }
 

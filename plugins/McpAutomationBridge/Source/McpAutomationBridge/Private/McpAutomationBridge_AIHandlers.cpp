@@ -460,6 +460,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("controllerPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created AI Controller: %s"), *Name));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI Controller created"), Result);
         return true;
     }
@@ -543,6 +544,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         McpSafeAssetSave(Controller);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
+        AddAssetVerification(Result, Controller);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree reference set"), Result);
         return true;
     }
@@ -627,6 +629,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetBoolField(TEXT("saved"), bSaved);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("blackboardPath"), BlackboardPath);
+        AddAssetVerification(Result, Controller);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard reference set"), Result);
         return true;
     }
@@ -658,6 +661,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Blackboard: %s"), *Name));
+        AddAssetVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), Result);
         return true;
     }
@@ -739,6 +743,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("keyIndex"), Blackboard->Keys.Num() - 1);
         Result->SetStringField(TEXT("keyName"), KeyName);
         Result->SetStringField(TEXT("keyType"), KeyType);
+        AddAssetVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard key added"), Result);
         return true;
     }
@@ -782,6 +787,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("keyName"), KeyName);
         Result->SetBoolField(TEXT("isInstanceSynced"), bInstanceSynced);
+        AddAssetVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Key instance sync updated"), Result);
         return true;
     }
@@ -813,6 +819,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("behaviorTreePath"), BT->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Behavior Tree: %s"), *Name));
+        AddAssetVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree created"), Result);
         return true;
     }
@@ -855,6 +862,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
             Result->SetStringField(TEXT("compositeType"), CompositeType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s node"), *CompositeType));
+            AddAssetVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Composite node added"), Result);
         }
         else
@@ -897,6 +905,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             BT->MarkPackageDirty();
             Result->SetStringField(TEXT("taskType"), TaskType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s task"), *TaskType));
+            AddAssetVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task node added"), Result);
         }
         else
@@ -943,6 +952,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             BT->MarkPackageDirty();
             Result->SetStringField(TEXT("decoratorType"), DecoratorType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s decorator"), *DecoratorType));
+            AddAssetVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Decorator added"), Result);
         }
         else
@@ -975,6 +985,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("serviceType"), ServiceType);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s reference created"), *ServiceType));
 
+        AddAssetVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
         return true;
     }
@@ -998,6 +1009,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("nodeId"), NodeId);
         Result->SetStringField(TEXT("message"), TEXT("Node configuration updated"));
 
+        AddAssetVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node configured"), Result);
         return true;
     }
@@ -1029,6 +1041,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("queryPath"), Query->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created EQS Query: %s"), *Name));
+        AddAssetVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("EQS Query created"), Result);
         return true;
     }
@@ -1067,6 +1080,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             Query->MarkPackageDirty();
             Result->SetStringField(TEXT("generatorType"), GeneratorType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s generator"), *GeneratorType));
+            AddAssetVerification(Result, Query);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Generator added"), Result);
         }
         else
@@ -1097,6 +1111,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("contextType"), ContextType);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Context %s configured"), *ContextType));
 
+        AddAssetVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Context added"), Result);
         return true;
     }
@@ -1151,6 +1166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             Query->MarkPackageDirty();
             Result->SetStringField(TEXT("testType"), TestType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s test"), *TestType));
+            AddAssetVerification(Result, Query);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Test added"), Result);
         }
         else
@@ -1182,6 +1198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("testIndex"), TestIndex);
         Result->SetStringField(TEXT("message"), TEXT("Test scoring configured"));
 
+        AddAssetVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Scoring configured"), Result);
         return true;
     }
@@ -1221,6 +1238,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
             Result->SetStringField(TEXT("componentName"), TEXT("AIPerception"));
             Result->SetStringField(TEXT("message"), TEXT("AI Perception component added"));
+            AddAssetVerification(Result, Blueprint);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Perception component added"), Result);
         }
         else
@@ -1261,6 +1279,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Sight sense configured"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sight config set"), Result);
         return true;
     }
@@ -1287,6 +1306,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Hearing sense configured"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hearing config set"), Result);
         return true;
     }
@@ -1306,6 +1326,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Damage sense configured"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage config set"), Result);
         return true;
     }
@@ -1327,6 +1348,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Blueprint->MarkPackageDirty();
         Result->SetNumberField(TEXT("teamId"), TeamId);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Team ID set to %d"), TeamId));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
         return true;
     }
@@ -1395,6 +1417,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("stateTreePath"), FullPath);
         Result->SetStringField(TEXT("rootStateName"), TEXT("Root"));
         Result->SetStringField(TEXT("message"), TEXT("State Tree created with root state"));
+        AddAssetVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #elif MCP_HAS_STATE_TREE
         // Headers not available but version supports it
@@ -1403,6 +1426,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("stateTreePath"), Path / Name);
         Result->SetStringField(TEXT("message"), TEXT("State Tree creation registered (headers unavailable - enable StateTree plugin)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
+        // Note: No verification since StateTree was not actually created
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree registered"), Result);
 #else
         SendAutomationError(RequestingSocket, RequestId,
@@ -1502,6 +1526,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("parentState"), ParentStateName);
         Result->SetStringField(TEXT("stateType"), StateType);
         Result->SetStringField(TEXT("message"), TEXT("State added to StateTree"));
+        AddAssetVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
 #elif MCP_HAS_STATE_TREE
         FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
@@ -1509,6 +1534,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("stateName"), StateName);
         Result->SetStringField(TEXT("message"), TEXT("State addition registered (headers unavailable)"));
         Result->SetBoolField(TEXT("headersUnavailable"), true);
+        // Note: No verification since StateTree headers unavailable
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State registered"), Result);
 #else
         SendAutomationError(RequestingSocket, RequestId,

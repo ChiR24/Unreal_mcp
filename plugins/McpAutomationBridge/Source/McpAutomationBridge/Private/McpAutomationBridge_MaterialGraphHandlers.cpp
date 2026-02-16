@@ -185,8 +185,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       Material->MarkPackageDirty();
 
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Material);
       Result->SetStringField(TEXT("nodeId"),
                              NewExpr->MaterialExpressionGuid.ToString());
+      Result->SetStringField(TEXT("nodeType"), ExpressionClass->GetName());
       SendAutomationResponse(Socket, RequestId, true, TEXT("Node added."),
                              Result);
     } else {
@@ -222,6 +224,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       Material->PostEditChange();
       Material->MarkPackageDirty();
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Material);
       Result->SetStringField(TEXT("nodeId"), RemovedNodeId);
       Result->SetBoolField(TEXT("removed"), true);
       SendAutomationResponse(Socket, RequestId, true, TEXT("Node removed."), Result);
@@ -289,8 +292,11 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       if (bFound) {
         Material->PostEditChange();
         Material->MarkPackageDirty();
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        AddAssetVerification(Result, Material);
+        Result->SetStringField(TEXT("inputName"), InputName);
         SendAutomationResponse(Socket, RequestId, true,
-                               TEXT("Connected to main material node."));
+                               TEXT("Connected to main material node."), Result);
       } else {
         SendAutomationError(
             Socket, RequestId,
@@ -318,8 +324,11 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
                 InputPtr->Expression = SourceExpr;
                 Material->PostEditChange();
                 Material->MarkPackageDirty();
+                TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                AddAssetVerification(Result, Material);
+                Result->SetStringField(TEXT("inputName"), InputName);
                 SendAutomationResponse(Socket, RequestId, true,
-                                       TEXT("Nodes connected."));
+                                       TEXT("Nodes connected."), Result);
                 return true;
               }
             }
@@ -394,14 +403,11 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
         if (bFound) {
           Material->PostEditChange();
           Material->MarkPackageDirty();
+          TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+          AddAssetVerification(Result, Material);
+          Result->SetStringField(TEXT("pinName"), PinName);
           SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Disconnected from main material pin."));
-          return true;
-        } else {
-          SendAutomationError(
-              Socket, RequestId,
-              FString::Printf(TEXT("Unknown or unsupported pin: %s"), *PinName),
-              TEXT("INVALID_PIN"));
+                                 TEXT("Disconnected from main material pin."), Result);
           return true;
         }
       }
@@ -418,9 +424,11 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       // For now, just acknowledge but warn.
       Material->PostEditChange();
       Material->MarkPackageDirty();
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Material);
       SendAutomationResponse(
           Socket, RequestId, true,
-          TEXT("Node disconnection partial (generic inputs not cleared)."));
+          TEXT("Node disconnection partial (generic inputs not cleared)."), Result);
       return true;
     }
 
@@ -446,6 +454,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
     if (TargetExpr) {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Material);
       Result->SetStringField(TEXT("nodeType"),
                              TargetExpr->GetClass()->GetName());
       Result->SetStringField(TEXT("desc"), TargetExpr->Desc);
@@ -590,9 +599,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialTextureSample(
   McpSafeAssetSave(Material);
 
   TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  AddAssetVerification(Result, Material);
   Result->SetStringField(TEXT("nodeId"),
                          TexSample->MaterialExpressionGuid.ToString());
-  Result->SetStringField(TEXT("materialPath"), Material->GetPathName());
   Result->SetStringField(TEXT("texturePath"), Texture->GetPathName());
 
   SendAutomationResponse(Socket, RequestId, true,
@@ -724,11 +733,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialExpression(
   McpSafeAssetSave(Material);
 
   TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  AddAssetVerification(Result, Material);
   Result->SetStringField(TEXT("nodeId"),
                          NewExpr->MaterialExpressionGuid.ToString());
   Result->SetStringField(TEXT("expressionClass"),
                          ExpressionClass->GetName());
-  Result->SetStringField(TEXT("materialPath"), Material->GetPathName());
 
   SendAutomationResponse(
       Socket, RequestId, true,
@@ -914,10 +923,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialNodes(
   McpSafeAssetSave(Material);
 
   TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  AddAssetVerification(Result, Material);
   Result->SetArrayField(TEXT("createdNodes"), CreatedNodes);
   Result->SetNumberField(TEXT("successCount"), SuccessCount);
   Result->SetNumberField(TEXT("failCount"), FailCount);
-  Result->SetStringField(TEXT("materialPath"), Material->GetPathName());
 
   SendAutomationResponse(
       Socket, RequestId, true,

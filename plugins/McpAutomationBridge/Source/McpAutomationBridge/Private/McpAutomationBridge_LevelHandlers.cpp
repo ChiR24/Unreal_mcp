@@ -154,8 +154,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           }
         }
         
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetStringField(TEXT("levelPath"), LevelPath);
+TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        VerifyAssetExists(Resp, LevelPath);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level loaded"), Resp, FString());
         return true;
@@ -272,10 +272,14 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       return true;
     }
 
-    bool bSaved = FEditorFileUtils::SaveCurrentLevel();
+    // Use McpSafeLevelSave to prevent Intel GPU driver crashes during save
+    // FlushRenderingCommands prevents MONZA DdiThreadingContext exceptions
+    // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
+    bool bSaved = McpSafeLevelSave(World->PersistentLevel, World->GetOutermost()->GetName(), 5);
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetStringField(TEXT("levelPath"), World->GetOutermost()->GetName());
+      FString LevelPath = World->GetOutermost()->GetName();
+      VerifyAssetExists(Resp, LevelPath);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {
@@ -346,7 +350,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       bool bSaved = false;
 #if __has_include("FileHelpers.h")
       if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
-        bSaved = FEditorFileUtils::SaveMap(World, SavePath);
+        // Use McpSafeLevelSave to prevent Intel GPU driver crashes
+        // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
+        bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath, 5);
       }
 #endif
       if (bSaved) {

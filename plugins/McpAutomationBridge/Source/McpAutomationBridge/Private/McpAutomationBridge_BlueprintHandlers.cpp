@@ -2940,6 +2940,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         }
       }
     }
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Response, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable added"), Response, FString());
     return true;
@@ -3071,6 +3073,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       Result->SetField(TEXT("value"), CurrentValue);
     }
 
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Default value set successfully"), Result);
     return true;
@@ -3155,6 +3159,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("variableName"), VarName);
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable removed successfully"), Result);
     return true;
@@ -3245,6 +3251,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     Result->SetStringField(TEXT("oldName"), OldName);
     Result->SetStringField(TEXT("newName"), NewName);
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable renamed successfully"), Result);
     return true;
@@ -3542,7 +3550,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     if (Params.Num() > 0) {
       Resp->SetArrayField(TEXT("parameters"), Params);
     }
-
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Resp, BP);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Event added"), Resp, FString());
 
@@ -3964,7 +3973,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     if (Outputs.Num() > 0) {
       Resp->SetArrayField(TEXT("outputs"), Outputs);
     }
-
+    // Add verification data for the blueprint asset
+    AddAssetVerification(Resp, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Function added"), Resp, FString());
 
@@ -4145,6 +4155,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           Result->SetStringField(TEXT("propertyName"), PropertyName);
           Result->SetStringField(TEXT("blueprintPath"), Path);
           Result->SetBoolField(TEXT("saved"), bSaved);
+          // Add verification data for the blueprint asset
+          AddAssetVerification(Result, BP);
           SendAutomationResponse(RequestingSocket, RequestId, true,
                                  TEXT("Blueprint default class property set"),
                                  Result, FString());

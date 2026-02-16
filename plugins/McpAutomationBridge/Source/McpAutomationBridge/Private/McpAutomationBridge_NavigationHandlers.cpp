@@ -102,6 +102,27 @@ static FRotator GetJsonRotatorFieldNav(const TSharedPtr<FJsonObject>& Payload, c
     return Default;
 }
 
+// Helper to validate actor name (reject path traversal and path separators)
+static bool IsValidActorName(const FString& Name)
+{
+    if (Name.IsEmpty()) return false;
+    // Reject path traversal
+    if (Name.Contains(TEXT(".."))) return false;
+    // Reject path separators (actor names should not contain slashes)
+    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\"))) return false;
+    // Reject Windows drive letters
+    if (Name.Contains(TEXT(":"))) return false;
+    return true;
+}
+
+// Helper to validate asset/class path (reject path traversal and ensure valid format)
+static bool IsValidNavigationPath(const FString& Path)
+{
+    if (Path.IsEmpty()) return false;
+    // Use the existing validation helper
+    return IsValidAssetPath(Path);
+}
+
 // ============================================================================
 // NavMesh Configuration Handlers
 // ============================================================================
@@ -112,6 +133,28 @@ static bool HandleConfigureNavMeshSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -217,6 +260,12 @@ static bool HandleConfigureNavMeshSettings(
     Result->SetStringField(TEXT("navMeshName"), NavMesh->GetName());
     Result->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
     Result->SetBoolField(TEXT("modified"), bModified);
+    Result->SetBoolField(TEXT("navMeshPresent"), true);
+    
+    // Add verification data
+    Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
+    Result->SetStringField(TEXT("navMeshClass"), NavMesh->GetClass()->GetName());
+    Result->SetBoolField(TEXT("existsAfter"), true);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         bModified ? TEXT("NavMesh settings configured") : TEXT("No settings modified"), Result);
@@ -229,6 +278,28 @@ static bool HandleSetNavAgentProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -297,6 +368,11 @@ static bool HandleSetNavAgentProperties(
     Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
     Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
     Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
+    Result->SetBoolField(TEXT("navMeshPresent"), true);
+    
+    // Add verification data
+    Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
+    Result->SetBoolField(TEXT("existsAfter"), true);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Nav agent properties set"), Result);
@@ -309,6 +385,28 @@ static bool HandleRebuildNavigation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -325,14 +423,26 @@ static bool HandleRebuildNavigation(
         return true;
     }
 
+    // Check for RecastNavMesh - warn if missing but still allow rebuild attempt
+    // (rebuild may succeed if NavMeshBoundsVolume exists but NavMesh hasn't been built yet)
+    ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
+    bool bHasNavMesh = (NavMesh != nullptr);
+
     // Trigger full navigation rebuild
     NavSys->Build();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetBoolField(TEXT("rebuilding"), NavSys->IsNavigationBuildInProgress());
+    Result->SetBoolField(TEXT("hasNavMesh"), bHasNavMesh);
+    Result->SetBoolField(TEXT("navMeshPresent"), bHasNavMesh);
+    Result->SetBoolField(TEXT("bHasNavMesh"), bHasNavMesh);
+    
+    // Add verification data
+    Result->SetStringField(TEXT("navigationSystemPath"), NavSys->GetPathName());
+    Result->SetBoolField(TEXT("existsAfter"), true);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Navigation rebuild initiated"), Result);
+        bHasNavMesh ? TEXT("Navigation rebuild initiated") : TEXT("Navigation rebuild initiated (no existing NavMesh - ensure NavMeshBoundsVolume is present)"), Result);
     return true;
 }
 
@@ -355,6 +465,22 @@ static bool HandleCreateNavModifierComponent(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("blueprintPath is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate blueprint path - reject path traversal and invalid format
+    if (!IsValidNavigationPath(BlueprintPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate area class path if provided
+    if (!AreaClassPath.IsEmpty() && !IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -427,6 +553,10 @@ static bool HandleCreateNavModifierComponent(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    Result->SetBoolField(TEXT("existsAfter"), true);
+    
+    // Add verification data for blueprint
+    AddAssetVerification(Result, Blueprint);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavModifierComponent '%s' added to Blueprint"), *ComponentName), Result);
@@ -447,6 +577,22 @@ static bool HandleSetNavAreaClass(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName and areaClass are required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate area class path - reject path traversal and invalid format
+    if (!IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -530,6 +676,7 @@ static bool HandleSetNavAreaClass(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
+    AddActorVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Nav area class set"), Result);
@@ -550,6 +697,15 @@ static bool HandleConfigureNavAreaCost(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("areaClass is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate area class path - reject path traversal and invalid format
+    // Note: NavArea class paths use /Script/NavigationSystem.NavArea_Xxx format
+    if (!IsValidNavigationPath(AreaClassPath))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid areaClass: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -579,6 +735,7 @@ static bool HandleConfigureNavAreaCost(
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
     Result->SetNumberField(TEXT("areaCost"), AreaCost);
     Result->SetNumberField(TEXT("fixedAreaEnteringCost"), AreaCDO->GetFixedAreaEnteringCost());
+    Result->SetBoolField(TEXT("existsAfter"), true);
     
     // Warn if user tried to set fixedAreaEnteringCost (it's read-only via automation)
     FString Message = TEXT("Nav area cost configured");
@@ -608,6 +765,30 @@ static bool HandleCreateNavLinkProxy(
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
+    // Validate required parameters - NavLinkProxy needs location and link geometry
+    if (!Payload->HasField(TEXT("location")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("location is required for create_nav_link_proxy"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+    
+    // Validate that at least startPoint and endPoint are provided (link geometry is essential)
+    if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("startPoint and endPoint are required for create_nav_link_proxy to define the navigation link"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -617,8 +798,11 @@ static bool HandleCreateNavLinkProxy(
     }
 
     // Spawn the NavLinkProxy actor
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'NavLinkProxy'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(Location, Rotation, SpawnParams);
@@ -659,6 +843,7 @@ static bool HandleCreateNavLinkProxy(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), NavLink->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
+    AddActorVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavLinkProxy '%s' created"), *ActorName), Result);
@@ -677,6 +862,14 @@ static bool HandleConfigureNavLink(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -760,6 +953,7 @@ static bool HandleConfigureNavLink(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("modified"), bModified);
+    AddActorVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("NavLink configured"), Result);
@@ -779,6 +973,14 @@ static bool HandleSetNavLinkType(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -828,6 +1030,7 @@ static bool HandleSetNavLinkType(
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("linkType"), LinkType);
     Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), NavLink->bSmartLinkIsRelevant);
+    AddActorVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavLink type set to %s"), *LinkType), Result);
@@ -846,6 +1049,30 @@ static bool HandleCreateSmartLink(
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
+    // Validate required parameters - SmartLink needs location and link geometry
+    if (!Payload->HasField(TEXT("location")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("location is required for create_smart_link"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+    
+    // Validate that at least startPoint and endPoint are provided (link geometry is essential)
+    if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("startPoint and endPoint are required for create_smart_link to define the navigation link"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -855,8 +1082,10 @@ static bool HandleCreateSmartLink(
     }
 
     // Spawn NavLinkProxy with smart link enabled
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     ANavLinkProxy* NavLink = World->SpawnActor<ANavLinkProxy>(Location, Rotation, SpawnParams);
@@ -896,6 +1125,7 @@ static bool HandleCreateSmartLink(
     Result->SetStringField(TEXT("actorName"), NavLink->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
     Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), true);
+    AddActorVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Smart NavLink '%s' created"), *ActorName), Result);
@@ -914,6 +1144,14 @@ static bool HandleConfigureSmartLinkBehavior(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // Validate actor name - reject path traversal and invalid characters
+    if (!IsValidActorName(ActorName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -1017,6 +1255,9 @@ static bool HandleConfigureSmartLinkBehavior(
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("linkEnabled"), SmartComp->IsEnabled());
     Result->SetBoolField(TEXT("modified"), bModified);
+    
+    // Add verification data
+    AddActorVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Smart link behavior configured"), Result);
@@ -1033,6 +1274,28 @@ static bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
+    // Validate optional blueprintPath parameter if provided
+    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    if (!BlueprintPath.IsEmpty())
+    {
+        // Validate path format - reject path traversal and invalid characters
+        if (!IsValidNavigationPath(BlueprintPath))
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        
+        // Check if blueprint exists
+        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        if (!Blueprint)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+            return true;
+        }
+    }
+
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {

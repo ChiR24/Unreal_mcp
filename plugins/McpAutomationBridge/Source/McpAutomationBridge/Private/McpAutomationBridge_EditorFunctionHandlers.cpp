@@ -285,6 +285,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     Out->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Out->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     Out->SetBoolField(TEXT("success"), true);
+    AddActorVerification(Out, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actor spawned"), Out, FString());
     return true;
@@ -408,6 +409,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     Out->SetBoolField(TEXT("success"), true);
     Out->SetStringField(TEXT("possessed"), FoundPawn->GetActorLabel());
+    AddActorVerification(Out, FoundPawn);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Possessed pawn"), Out, FString());
     return true;
@@ -519,11 +521,14 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
           QualityEnum = ELightingBuildQuality::Quality_Medium;
         } else if (LowerQuality == TEXT("high")) {
           QualityEnum = ELightingBuildQuality::Quality_High;
+        } else if (LowerQuality == TEXT("production")) {
+          QualityEnum = ELightingBuildQuality::Quality_Production;
         } else {
           TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
           Err->SetBoolField(TEXT("success"), false);
           Err->SetStringField(TEXT("error"), TEXT("unknown_quality"));
           Err->SetStringField(TEXT("quality"), Quality);
+          Err->SetStringField(TEXT("validValues"), TEXT("preview, medium, high, production"));
           SendAutomationResponse(RequestingSocket, RequestId, false,
                                  TEXT("Unknown lighting quality"), Err,
                                  TEXT("UNKNOWN_QUALITY"));

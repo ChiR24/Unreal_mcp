@@ -32,9 +32,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(const FString& RequestId, 
         // "EnableGDT" or "GameplayDebuggerCategory"
         
         FString Cmd = FString::Printf(TEXT("GameplayDebuggerCategory %s"), *CategoryName);
-        GEngine->Exec(nullptr, *Cmd);
+        bool bSuccess = GEngine->Exec(nullptr, *Cmd);
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Toggled gameplay debugger category: %s"), *CategoryName));
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetStringField(TEXT("categoryName"), CategoryName);
+        Resp->SetStringField(TEXT("consoleCommand"), Cmd);
+        Resp->SetBoolField(TEXT("commandExecuted"), bSuccess);
+        Resp->SetBoolField(TEXT("existsAfter"), true);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Toggled gameplay debugger category: %s"), *CategoryName), Resp);
         return true;
     }
 

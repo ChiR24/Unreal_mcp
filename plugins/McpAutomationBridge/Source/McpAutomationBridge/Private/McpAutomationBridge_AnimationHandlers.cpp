@@ -495,6 +495,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Resp->SetStringField(TEXT("blueprintPath"), NewAsset->GetPathName());
           Resp->SetStringField(TEXT("skeletonPath"),
                                TargetSkeleton->GetPathName());
+          AddAssetVerification(Resp, NewAsset);
         } else {
           Message = TEXT("Failed to create Animation Blueprint asset");
           ErrorCode = TEXT("ASSET_CREATION_FAILED");
@@ -596,6 +597,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                                      BlendSpace->GetPathName());
                 Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
                 Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
+                AddAssetVerification(Resp, BlendSpace);
               } else {
                 Message =
                     TEXT("Created asset is not a BlendSpaceBase instance");
@@ -614,6 +616,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               Resp->SetStringField(TEXT("warning"),
                                    TEXT("BlendSpaceBase headers unavailable; "
                                         "axis configuration skipped."));
+              AddAssetVerification(Resp, CreatedBlendAsset);
 #endif // MCP_HAS_BLENDSPACE_BASE
             } else {
               Message = FactoryError.IsEmpty()
@@ -790,6 +793,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Resp->SetStringField(TEXT("ikPath"), ControlRigPath);
             Resp->SetStringField(TEXT("controlRigPath"), ControlRigPath);
             Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+            AddAssetVerification(Resp, ControlRigBlueprint);
           }
         }
       }
@@ -1180,6 +1184,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Resp->SetStringField(TEXT("skeletonPath"),
                                  TargetSkeleton->GetPathName());
           }
+          UPhysicsAsset* ExistingPhysicsAsset = LoadObject<UPhysicsAsset>(nullptr, *PhysicsAssetObjectPath);
+          if (ExistingPhysicsAsset) {
+            AddAssetVerification(Resp, ExistingPhysicsAsset);
+          }
         } else {
           UPhysicsAssetFactory *PhysicsFactory =
               NewObject<UPhysicsAssetFactory>();
@@ -1223,6 +1231,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                 Resp->SetStringField(TEXT("skeletonPath"),
                                      TargetSkeleton->GetPathName());
               }
+              AddAssetVerification(Resp, PhysicsAsset);
 
               bSuccess = true;
               Message = TEXT("Physics simulation setup completed");
@@ -1330,6 +1339,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Resp->SetStringField(TEXT("assetPath"), ObjectPath);
             Resp->SetStringField(TEXT("assetType"), AssetTypeString);
             Resp->SetBoolField(TEXT("existingAsset"), true);
+            UObject* ExistingAsset = LoadObject<UObject>(nullptr, *ObjectPath);
+            if (ExistingAsset) {
+              AddAssetVerification(Resp, ExistingAsset);
+            }
           } else {
             FAssetToolsModule &AssetToolsModule =
                 FModuleManager::LoadModuleChecked<FAssetToolsModule>(
@@ -1345,6 +1358,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetType"), AssetTypeString);
               Resp->SetBoolField(TEXT("existingAsset"), false);
+              AddAssetVerification(Resp, NewAsset);
               bSuccess = true;
               Message = FString::Printf(TEXT("Animation %s created"),
                                         *AssetTypeString);
@@ -1504,6 +1518,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       }
       if (RetargetedArray.Num() > 0) {
         Resp->SetArrayField(TEXT("retargetedAssets"), RetargetedArray);
+        // Add verification for the first retargeted asset
+        if (RetargetedAssets.Num() > 0) {
+          UAnimSequence* FirstRetargeted = LoadObject<UAnimSequence>(nullptr, *RetargetedAssets[0]);
+          if (FirstRetargeted) {
+            AddAssetVerification(Resp, FirstRetargeted);
+          }
+        }
       }
 
       if (SkippedAssets.Num() > 0) {
@@ -2108,6 +2129,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         
         // Add key to curve
         Controller.SetCurveKey(CurveId, FRichCurveKey(static_cast<float>(Time), static_cast<float>(Value)));
+        // Success - set the response
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        Resp->SetStringField(TEXT("curveName"), CurveName);
+        Resp->SetNumberField(TEXT("time"), Time);
+        Resp->SetNumberField(TEXT("value"), Value);
 #else
         // UE 5.0: Curve editing API not available in the same form
         Message = TEXT("set_curve_key requires UE 5.1+");
@@ -2115,14 +2143,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("error"), Message);
 #endif
 
-        if (bSuccess) {
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Curve key set for '%s' at %.2fs = %.2f"), *CurveName, Time, Value);
-          Resp->SetStringField(TEXT("assetPath"), AssetPath);
-          Resp->SetStringField(TEXT("curveName"), CurveName);
-          Resp->SetNumberField(TEXT("time"), Time);
-          Resp->SetNumberField(TEXT("value"), Value);
-        }
 #else
         Message = TEXT("set_curve_key requires editor build");
         ErrorCode = TEXT("NOT_IMPLEMENTED");

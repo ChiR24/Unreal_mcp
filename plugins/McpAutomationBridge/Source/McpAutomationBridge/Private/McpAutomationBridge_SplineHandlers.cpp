@@ -199,8 +199,11 @@ static bool HandleCreateSplineActor(
     }
 
     // Spawn a new actor with a spline component
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'SplineActor'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
@@ -270,6 +273,9 @@ static bool HandleCreateSplineActor(
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
     Result->SetBoolField(TEXT("closedLoop"), SplineComp->IsClosedLoop());
 
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline actor '%s' created with %d points"), *ActorName, SplineComp->GetNumberOfSplinePoints()), Result);
     return true;
@@ -337,6 +343,9 @@ static bool HandleAddSplinePoint(
     Result->SetNumberField(TEXT("pointIndex"), Index);
     Result->SetNumberField(TEXT("totalPoints"), SplineComp->GetNumberOfSplinePoints());
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added spline point at index %d"), Index), Result);
     return true;
@@ -398,6 +407,9 @@ static bool HandleRemoveSplinePoint(
     Result->SetNumberField(TEXT("removedIndex"), PointIndex);
     Result->SetNumberField(TEXT("remainingPoints"), SplineComp->GetNumberOfSplinePoints());
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed spline point at index %d"), PointIndex), Result);
     return true;
@@ -458,6 +470,9 @@ static bool HandleSetSplinePointPosition(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set position for spline point %d"), PointIndex), Result);
@@ -530,6 +545,9 @@ static bool HandleSetSplinePointTangents(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set tangents for spline point %d"), PointIndex), Result);
     return true;
@@ -591,6 +609,9 @@ static bool HandleSetSplinePointRotation(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set rotation for spline point %d"), PointIndex), Result);
     return true;
@@ -651,6 +672,9 @@ static bool HandleSetSplinePointScale(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set scale for spline point %d"), PointIndex), Result);
@@ -727,6 +751,9 @@ static bool HandleSetSplineType(
     Result->SetStringField(TEXT("splineType"), SplineType);
     Result->SetNumberField(TEXT("pointsAffected"), PointIndex >= 0 ? 1 : SplineComp->GetNumberOfSplinePoints());
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set spline type to %s"), *SplineType), Result);
     return true;
@@ -754,7 +781,31 @@ static bool HandleCreateSplineMeshComponent(
         return true;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    // SECURITY: Validate blueprintPath to prevent directory traversal and arbitrary file access
+    FString SafeBlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+    if (SafeBlueprintPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe blueprintPath: %s. Path must be relative to project (e.g., /Game/...)"), *BlueprintPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // SECURITY: Validate meshPath if provided
+    FString SafeMeshPath;
+    if (!MeshPath.IsEmpty())
+    {
+        SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
+
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *SafeBlueprintPath);
     if (!Blueprint)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -794,14 +845,17 @@ static bool HandleCreateSplineMeshComponent(
     USplineMeshComponent* MeshComp = Cast<USplineMeshComponent>(NewNode->ComponentTemplate);
     if (MeshComp)
     {
-        // Set mesh if provided
-        if (!MeshPath.IsEmpty())
+        // Set mesh if provided (use sanitized path)
+        if (!SafeMeshPath.IsEmpty())
         {
-            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-            if (Mesh)
+            UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
+            if (!Mesh)
             {
-                MeshComp->SetStaticMesh(Mesh);
+                Self->SendAutomationResponse(Socket, RequestId, false,
+                    FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+                return true;
             }
+            MeshComp->SetStaticMesh(Mesh);
         }
 
         // Set forward axis
@@ -809,6 +863,17 @@ static bool HandleCreateSplineMeshComponent(
         if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
         else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
         MeshComp->SetForwardAxis(Axis);
+
+        // Ensure material is valid - use fallback if engine default is missing
+        // This prevents "DefaultMaterial not available" warnings on custom engine builds
+        if (MeshComp->GetMaterial(0) == nullptr)
+        {
+            UMaterialInterface* FallbackMaterial = McpLoadMaterialWithFallback(TEXT(""), true);
+            if (FallbackMaterial)
+            {
+                MeshComp->SetMaterial(0, FallbackMaterial);
+            }
+        }
     }
 
     // Add node to SCS
@@ -824,6 +889,11 @@ static bool HandleCreateSplineMeshComponent(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    
+    // Add verification data
+    Result->SetBoolField(TEXT("existsAfter"), true);
+    // Use action prefix format expected by TS message-handler.ts enforceActionMatch()
+    Result->SetStringField(TEXT("action"), TEXT("manage_splines:component_added"));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineMeshComponent '%s' added to Blueprint"), *ComponentName), Result);
@@ -844,6 +914,16 @@ static bool HandleSetSplineMeshAsset(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName and meshPath are required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // SECURITY: Validate meshPath to prevent directory traversal and arbitrary file access
+    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    if (SafeMeshPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -891,11 +971,11 @@ static bool HandleSetSplineMeshAsset(
         return true;
     }
 
-    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
@@ -904,7 +984,10 @@ static bool HandleSetSplineMeshAsset(
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("meshPath"), MeshPath);
+    Result->SetStringField(TEXT("meshPath"), SafeMeshPath);
+
+    // Add verification data
+    AddActorVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh asset set"), Result);
@@ -981,6 +1064,9 @@ static bool HandleConfigureSplineMeshAxis(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline mesh forward axis set to %s"), *ForwardAxis), Result);
     return true;
@@ -1001,6 +1087,16 @@ static bool HandleSetSplineMeshMaterial(
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("actorName and materialPath are required"), nullptr, TEXT("MISSING_PARAM"));
+        return true;
+    }
+
+    // SECURITY: Validate materialPath to prevent directory traversal and arbitrary file access
+    FString SafeMaterialPath = SanitizeProjectRelativePath(MaterialPath);
+    if (SafeMaterialPath.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe materialPath: %s. Path must be relative to project (e.g., /Game/...)"), *MaterialPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -1047,11 +1143,11 @@ static bool HandleSetSplineMeshMaterial(
         return true;
     }
 
-    UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+    UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
     if (!Material)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Material not found: %s"), *MaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
+            FString::Printf(TEXT("Material not found: %s"), *SafeMaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
         return true;
     }
 
@@ -1059,11 +1155,132 @@ static bool HandleSetSplineMeshMaterial(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("materialPath"), MaterialPath);
+    Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
+    
+    // Add verification data
+    AddActorVerification(Result, Actor);
+    AddComponentVerification(Result, TargetComp);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh material set"), Result);
+    return true;
+}
+
+static bool HandleCreateSplineMeshActor(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TEXT("SplineMeshActor"));
+    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"), TEXT("SplineMesh"));
+    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
+    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("rotation"));
+
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return true;
+    }
+
+    // SECURITY: Validate meshPath if provided
+    FString SafeMeshPath;
+    if (!MeshPath.IsEmpty())
+    {
+        SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
+
+    // Spawn actor with unique name handling
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
+    if (!NewActor)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn spline mesh actor"), nullptr, TEXT("SPAWN_FAILED"));
+        return true;
+    }
+
+    NewActor->SetActorLabel(*ActorName);
+
+    // Create SplineMeshComponent and attach to actor
+    USplineMeshComponent* SplineMeshComp = NewObject<USplineMeshComponent>(NewActor, *ComponentName);
+    if (!SplineMeshComp)
+    {
+        NewActor->Destroy();
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to create SplineMeshComponent"), nullptr, TEXT("COMPONENT_FAILED"));
+        return true;
+    }
+
+    SplineMeshComp->RegisterComponent();
+    NewActor->AddInstanceComponent(SplineMeshComp);
+    NewActor->SetRootComponent(SplineMeshComp);
+
+    // Set mesh if provided
+    if (!SafeMeshPath.IsEmpty())
+    {
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
+        if (!Mesh)
+        {
+            // Clean up the partially created actor
+            NewActor->Destroy();
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            return true;
+        }
+        SplineMeshComp->SetStaticMesh(Mesh);
+    }
+
+    // Ensure material is valid - use fallback if engine default is missing
+    // This prevents "DefaultMaterial not available" warnings on custom engine builds
+    if (SplineMeshComp->GetMaterial(0) == nullptr)
+    {
+        UMaterialInterface* FallbackMaterial = McpLoadMaterialWithFallback(TEXT(""), true);
+        if (FallbackMaterial)
+        {
+            SplineMeshComp->SetMaterial(0, FallbackMaterial);
+        }
+    }
+
+    // Set forward axis
+    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
+    if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
+    else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+    SplineMeshComp->SetForwardAxis(Axis);
+
+    // Set default start/end positions for a simple spline mesh
+    SplineMeshComp->SetStartAndEnd(FVector::ZeroVector, FVector(100, 0, 0),
+                                    FVector(500, 0, 0), FVector(-100, 0, 0));
+
+    World->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
+    Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
+    Result->SetStringField(TEXT("componentName"), ComponentName);
+    
+    // Add verification data
+    AddActorVerification(Result, NewActor);
+    AddComponentVerification(Result, SplineMeshComp);
+
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("SplineMeshActor '%s' created with component '%s'"), *ActorName, *ComponentName), Result);
     return true;
 }
 
@@ -1080,12 +1297,23 @@ static bool HandleScatterMeshesAlongSpline(
     FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
     FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
     double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
-    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("bAlignToSpline"), true);
+    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("alignToSpline"), true);
 
-    if (ActorName.IsEmpty() || MeshPath.IsEmpty())
+    // Sanitize mesh path
+    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    if (SafeMeshPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName and meshPath are required"), nullptr, TEXT("MISSING_PARAM"));
+            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    // Validate spacing to prevent division by zero
+    if (Spacing <= 0.0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("spacing must be greater than 0"), nullptr, TEXT("INVALID_PARAM"));
         return true;
     }
 
@@ -1113,11 +1341,11 @@ static bool HandleScatterMeshesAlongSpline(
         return true;
     }
 
-    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+    UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
@@ -1154,6 +1382,9 @@ static bool HandleScatterMeshesAlongSpline(
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetNumberField(TEXT("spacing"), Spacing);
 
+    // Add verification data
+    AddActorVerification(Result, Actor);
+
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Scattered %d meshes along spline"), CreatedMeshes.Num()), Result);
     return true;
@@ -1175,7 +1406,7 @@ static bool HandleConfigureMeshSpacing(
     Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh spacing configuration stored"), Result);
+        TEXT("Mesh spacing parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
     return true;
 }
 
@@ -1196,7 +1427,7 @@ static bool HandleConfigureMeshRandomization(
     Result->SetNumberField(TEXT("rotationRange"), GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Mesh randomization configuration stored"), Result);
+        TEXT("Mesh randomization parameters validated (storage not implemented - pass to scatter_meshes_along_spline)"), Result);
     return true;
 }
 
@@ -1226,8 +1457,11 @@ static bool HandleCreateTemplateSpline(
     }
 
     // Spawn actor with spline
+    // Use NameMode::Requested to auto-generate unique name if collision occurs
+    // This prevents the Fatal Error: "Cannot generate unique name for 'SplineActor'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
     AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
@@ -1268,6 +1502,9 @@ static bool HandleCreateTemplateSpline(
     Result->SetStringField(TEXT("templateType"), TemplateName);
     Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
+
+    // Add verification data
+    AddActorVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("%s spline '%s' created"), *TemplateName, *ActorName), Result);
@@ -1468,6 +1705,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     // Spline Mesh
     if (SubAction == TEXT("create_spline_mesh_component"))
         return HandleCreateSplineMeshComponent(this, RequestId, Payload, Socket);
+    if (SubAction == TEXT("create_spline_mesh_actor"))
+        return HandleCreateSplineMeshActor(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("set_spline_mesh_asset"))
         return HandleSetSplineMeshAsset(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("configure_spline_mesh_axis"))

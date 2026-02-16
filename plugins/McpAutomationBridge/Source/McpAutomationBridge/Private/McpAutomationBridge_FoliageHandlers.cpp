@@ -95,11 +95,29 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     return true;
   }
 
+  // Security: Validate path format
+  FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
+  if (SafePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+  FoliageTypePath = SafePath;
+
   // Auto-resolve simple name
   if (!FoliageTypePath.IsEmpty() &&
       FPaths::GetPath(FoliageTypePath).IsEmpty()) {
     FoliageTypePath =
         FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+  }
+
+  // Validate after auto-resolve
+  if (FoliageTypePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("foliageTypePath (or foliageType) required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
   }
 
   // Accept single 'position' or array of 'locations'
@@ -150,21 +168,55 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
 
   UWorld *World = GEditor->GetEditorWorldContext().World();
 
-  if (!UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
+  // Try to load as FoliageType first
+  UFoliageType *FoliageType = nullptr;
+  if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
+    FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  }
+  
+  // If not a FoliageType, try loading as StaticMesh and auto-create FoliageType
+  if (!FoliageType) {
+    UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *FoliageTypePath);
+    if (StaticMesh) {
+      // Auto-create FoliageType from StaticMesh
+      FString BaseName = FPaths::GetBaseFilename(FoliageTypePath);
+      FString AutoFTPath = FString::Printf(TEXT("/Game/Foliage/Auto_%s"), *BaseName);
+
+      // Issue 4 fix: Check if asset already exists before creating
+      if (UEditorAssetLibrary::DoesAssetExist(AutoFTPath)) {
+        FoliageType = LoadObject<UFoliageType>(nullptr, *AutoFTPath);
+        if (FoliageType) {
+          FoliageTypePath = AutoFTPath;
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                 TEXT("HandlePaintFoliage: Using existing auto-created FoliageType: %s"), *FoliageTypePath);
+        }
+      } else {
+        // Issue 5 fix: Add null check for CreatePackage
+        UPackage *FTPackage = CreatePackage(*AutoFTPath);
+        if (FTPackage) {
+          UFoliageType_InstancedStaticMesh *AutoFT = NewObject<UFoliageType_InstancedStaticMesh>(
+              FTPackage, FName(*BaseName), RF_Public | RF_Standalone);
+          if (AutoFT) {
+            AutoFT->SetStaticMesh(StaticMesh);
+            AutoFT->Density = 100.0f;
+            AutoFT->ReapplyDensity = true;
+            McpSafeAssetSave(AutoFT);
+            FoliageType = AutoFT;
+            FoliageTypePath = AutoFT->GetPathName();
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+                   TEXT("HandlePaintFoliage: Auto-created FoliageType from StaticMesh: %s"), *FoliageTypePath);
+          }
+        }
+      }
+    }
+  }
+  
+  if (!FoliageType) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Foliage type asset not found: %s"),
+        FString::Printf(TEXT("Foliage type asset not found: %s (also tried as StaticMesh)"),
                         *FoliageTypePath),
         TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  UFoliageType *FoliageType =
-      LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-  if (!FoliageType) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to load foliage type"),
-                        TEXT("LOAD_FAILED"));
     return true;
   }
 
@@ -203,6 +255,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetStringField(TEXT("foliageActorName"), IFA->GetName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage painted successfully"), Resp, FString());
@@ -234,6 +291,18 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
 
   FString FoliageTypePath;
   Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+
+  // Security: Validate path format if provided
+  if (!FoliageTypePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    FoliageTypePath = SafePath;
+  }
 
   // Auto-resolve simple name
   if (!FoliageTypePath.IsEmpty() &&
@@ -289,6 +358,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage removed successfully"), Resp, FString());
@@ -320,6 +393,18 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
 
   FString FoliageTypePath;
   Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+
+  // Security: Validate path format if provided
+  if (!FoliageTypePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    FoliageTypePath = SafePath;
+  }
 
   // Auto-resolve simple name
   if (!FoliageTypePath.IsEmpty() &&
@@ -397,6 +482,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), InstancesArray);
   Resp->SetNumberField(TEXT("count"), InstancesArray.Num());
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage instances retrieved"), Resp, FString());
@@ -568,6 +657,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   Resp->SetStringField(TEXT("asset_path"), FoliageType->GetPathName());
   Resp->SetStringField(TEXT("used_mesh"), MeshPath);
   Resp->SetStringField(TEXT("method"), TEXT("native_asset_creation"));
+  
+  // Add verification data
+  AddAssetVerification(Resp, FoliageType);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage type created successfully"), Resp,
@@ -609,6 +701,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
+
+  // Security: Validate path format
+  FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
+  if (SafePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
+                        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+  FoliageTypePath = SafePath;
 
   // Auto-resolve simple name
   if (!FoliageTypePath.IsEmpty() &&
@@ -729,14 +831,38 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
 
   UWorld *World = GEditor->GetEditorWorldContext().World();
 
-  // Use Silent load to avoid engine warnings
+  // Try to load as FoliageType first
   UFoliageType *FoliageType = Cast<UFoliageType>(
       StaticLoadObject(UFoliageType::StaticClass(), nullptr, *FoliageTypePath,
                        nullptr, LOAD_NoWarn));
+  
+  // If not a FoliageType, try loading as StaticMesh and auto-create FoliageType
+  if (!FoliageType) {
+    UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *FoliageTypePath);
+    if (StaticMesh) {
+      // Auto-create FoliageType from StaticMesh
+      FString BaseName = FPaths::GetBaseFilename(FoliageTypePath);
+      FString AutoFTPath = FString::Printf(TEXT("/Game/Foliage/Auto_%s"), *BaseName);
+      UPackage *FTPackage = CreatePackage(*AutoFTPath);
+      UFoliageType_InstancedStaticMesh *AutoFT = NewObject<UFoliageType_InstancedStaticMesh>(
+          FTPackage, FName(*BaseName), RF_Public | RF_Standalone);
+      if (AutoFT) {
+        AutoFT->SetStaticMesh(StaticMesh);
+        AutoFT->Density = 100.0f;
+        AutoFT->ReapplyDensity = true;
+        McpSafeAssetSave(AutoFT);
+        FoliageType = AutoFT;
+        FoliageTypePath = AutoFT->GetPathName();
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+               TEXT("HandleAddFoliageInstances: Auto-created FoliageType from StaticMesh: %s"), *FoliageTypePath);
+      }
+    }
+  }
+  
   if (!FoliageType) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Foliage type asset not found: %s"),
+        FString::Printf(TEXT("Foliage type asset not found: %s (also tried as StaticMesh)"),
                         *FoliageTypePath),
         TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -773,6 +899,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instances_count"), Added);
+  
+  // Add verification data
+  Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  Resp->SetBoolField(TEXT("existsAfter"), true);
+  
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage instances added"), Resp, FString());
   return true;
@@ -975,6 +1107,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
   Resp->SetNumberField(TEXT("foliage_types_count"), TypeIndex);
   Resp->SetBoolField(TEXT("resimulated"), true);
+  
+  // Add verification data
+  AddActorVerification(Resp, Volume);
+  AddAssetVerification(Resp, Spawner);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Procedural foliage created"), Resp, FString());

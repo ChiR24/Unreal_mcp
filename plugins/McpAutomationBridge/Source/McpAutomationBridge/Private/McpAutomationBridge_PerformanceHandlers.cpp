@@ -447,6 +447,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       Resp->SetStringField(TEXT("defaultPackageName"), DefaultPackageName);
     }
 
+    // Add verification for the first source actor (merge tool operates on selection)
+    if (ActorsToMerge.Num() > 0 && ActorsToMerge[0]) {
+      AddActorVerification(Resp, ActorsToMerge[0]);
+    }
+
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actors merged using Merge Actors tool"), Resp,
                            FString());

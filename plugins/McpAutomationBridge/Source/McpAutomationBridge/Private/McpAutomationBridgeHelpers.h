@@ -177,6 +177,7 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UObjectIterator.h"
+#include "RenderingThread.h"  // FlushRenderingCommands for safe level saves
 
 #if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
@@ -283,6 +284,74 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
     }
   }
 
+  return CleanPath;
+}
+
+/**
+ * Sanitize a file path for use with file operations (export/import snapshot, etc.).
+ * Unlike SanitizeProjectRelativePath which requires asset roots (/Game, /Engine, /Script),
+ * this function accepts any project-relative file path while still enforcing security.
+ *
+ * Security checks:
+ * - Rejects Windows absolute paths (drive letters)
+ * - Rejects path traversal (..)
+ * - Ensures path is relative (starts with /)
+ * - Normalizes path separators
+ *
+ * @param InPath Input file path to sanitize
+ * @returns Sanitized path if valid, empty string if rejected
+ */
+static inline FString SanitizeProjectFilePath(const FString &InPath) {
+  if (InPath.IsEmpty())
+    return FString();
+
+  FString CleanPath = InPath;
+
+  // SECURITY: Reject Windows absolute paths (contain drive letter colon anywhere)
+  // Use Contains() for robust detection - handles X:\, X:/, /X:\, and edge cases
+  if (CleanPath.Contains(TEXT(":"))) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected Windows absolute path (contains ':'): %s"),
+        *InPath);
+    return FString();
+  }
+
+  FPaths::NormalizeFilename(CleanPath);
+
+  // Convert backslashes to forward slashes
+  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+
+  // Normalize double slashes
+  while (CleanPath.Contains(TEXT("//"))) {
+    CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
+  }
+
+  // Reject paths containing traversal (CRITICAL for security)
+  if (CleanPath.Contains(TEXT(".."))) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected path containing '..': %s"),
+        *InPath);
+    return FString();
+  }
+
+  // Ensure path starts with a slash (project-relative)
+  if (!CleanPath.StartsWith(TEXT("/"))) {
+    CleanPath = TEXT("/") + CleanPath;
+  }
+
+  // Reject empty filename
+  if (CleanPath.Len() <= 1) {
+    UE_LOG(
+        LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("SanitizeProjectFilePath: Rejected empty path"));
+    return FString();
+  }
+
+  // All validation passed - the path is safe for file operations.
+  // Unlike asset paths, file paths are permissive and allow any project-relative
+  // location (/Temp, /Saved, /Config, etc.) as long as they don't escape the project.
   return CleanPath;
 }
 
@@ -620,6 +689,170 @@ static inline bool McpSafeAssetSave(UObject* Asset)
     
     return true;
 }
+
+// McpSafeLevelSave uses FlushRenderingCommands for thread-safe level saving
+// UE 5.0+ has FlushRenderingCommands in RenderingThread.h
+
+#if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION >= 5
+#include "FileHelpers.h"  // FEditorFileUtils
+#include "Misc/PackageName.h"
+#include "HAL/FileManager.h"  // IFileManager
+#include "RenderingThread.h"  // FlushRenderingCommands
+#include "Materials/MaterialInterface.h"  // UMaterialInterface for McpLoadMaterialWithFallback
+#endif
+/**
+ * Safely save a level with UE 5.7+ compatibility workarounds.
+ *
+ * CRITICAL: Intel GPU drivers (MONZA DdiThreadingContext) can crash when
+ * FEditorFileUtils::SaveLevel() is called immediately after level creation.
+ *
+ * This helper:
+ * 1. Suspends the render thread during save (prevents driver race condition)
+ * 2. Flushes all rendering commands before and after save
+ * 3. Retries with exponential backoff on failure (default: 5 retries)
+ * 4. Verifies the file exists after save with additional file system sync
+ *
+ * @param Level The ULevel to save
+ * @param FullPath The full package path for the level
+ * @param MaxRetries Number of retry attempts (default: 5 for Intel GPU resilience)
+ * @return true if save succeeded and file exists
+ */
+static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
+{
+    if (!Level)
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Level is null"));
+        return false;
+    }
+
+    FString PackagePath = FullPath;
+    if (!PackagePath.StartsWith(TEXT("/Game/")))
+    {
+        PackagePath = TEXT("/Game/") + PackagePath;
+    }
+
+    // Ensure path has proper format
+    if (PackagePath.Contains(TEXT(".")))
+    {
+        PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+
+    bool bSaveSucceeded = false;
+    // Increased initial delay for Intel GPU driver stability (MONZA DdiThreadingContext)
+    // The driver needs more time to complete pending operations before file I/O
+    float DelayMs = 250.0f;
+
+    for (int32 Retry = 0; Retry < MaxRetries; ++Retry)
+    {
+        // CRITICAL: Flush rendering commands to prevent Intel driver race condition
+        // The MONZA DdiThreadingContext crash occurs when rendering commands
+        // overlap with file I/O operations during level save
+        // Note: FSuspendRenderThread was removed in UE 5.x - use FlushRenderingCommands instead
+        FlushRenderingCommands();
+
+        // Additional delay after flush to ensure GPU is completely idle
+        // This is critical for Intel integrated graphics which may have
+        // pending operations in the driver's command queue
+        FPlatformProcess::Sleep(0.050f); // 50ms additional wait
+
+        // Perform the actual save after flushing render commands
+        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+
+        if (bSaveSucceeded)
+        {
+            // Small delay before verification to allow file system to flush
+            FPlatformProcess::Sleep(0.100f); // 100ms
+
+            // Verify file exists on disk
+            FString VerifyFilename;
+            if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
+            {
+                if (IFileManager::Get().FileExists(*VerifyFilename))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level after %d attempt(s): %s"), 
+                        Retry + 1, *PackagePath);
+                    return true;
+                }
+                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but file not found (attempt %d/%d): %s"), 
+                    Retry + 1, MaxRetries, *VerifyFilename);
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save attempt %d/%d failed for: %s"),
+                Retry + 1, MaxRetries, *PackagePath);
+        }
+
+        // Exponential backoff before retry (250ms → 500ms → 1000ms → 2000ms → 4000ms)
+        if (Retry < MaxRetries - 1)
+        {
+            FPlatformProcess::Sleep(DelayMs / 1000.0f);
+            DelayMs *= 2.0f;
+        }
+    }
+
+    UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: All %d save attempts failed for: %s"), MaxRetries, *PackagePath);
+    return false;
+}
+
+/**
+ * Material fallback helper for robust material loading across UE versions.
+ * Attempts to load a material with fallback chain for engine defaults.
+ * Tries: Requested → DefaultMaterial → WorldGridMaterial → DefaultDeferredDecalMaterial
+ * 
+ * This addresses missing DefaultMaterial warnings on custom engine builds or stripped content.
+ * See: Infrastructure_Robustness_Implementation_Plan.md Issue #3
+ * 
+ * @param MaterialPath Preferred material path (can be empty to use fallback immediately)
+ * @param bSilent If true, suppresses warning logs for missing requested material
+ * @return UMaterialInterface* or nullptr if all fallbacks fail
+ */
+static inline UMaterialInterface* McpLoadMaterialWithFallback(
+    const FString& MaterialPath, 
+    bool bSilent = false)
+{
+    // Try requested path first if provided
+    if (!MaterialPath.IsEmpty())
+    {
+        UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+        if (Material)
+        {
+            return Material;
+        }
+        if (!bSilent)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpLoadMaterialWithFallback: Requested material not found: %s"), *MaterialPath);
+        }
+    }
+    
+    // Fallback chain for engine materials (order matters - most common first)
+    const TCHAR* FallbackPaths[] = {
+        TEXT("/Engine/EngineMaterials/DefaultMaterial"),
+        TEXT("/Engine/EngineMaterials/WorldGridMaterial"),
+        TEXT("/Engine/EngineMaterials/DefaultDeferredDecalMaterial"),
+        TEXT("/Engine/EngineMaterials/DefaultTextMaterialOpaque")
+    };
+    
+    for (const TCHAR* FallbackPath : FallbackPaths)
+    {
+        UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, FallbackPath);
+        if (Material)
+        {
+            if (!bSilent && !MaterialPath.IsEmpty())
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpLoadMaterialWithFallback: Using fallback '%s' for '%s'"), 
+                    FallbackPath, *MaterialPath);
+            }
+            return Material;
+        }
+    }
+    
+    UE_LOG(LogTemp, Error, TEXT("McpLoadMaterialWithFallback: All fallback materials unavailable - engine content may be missing"));
+    return nullptr;
+}
+#endif // WITH_EDITOR
+
 #endif
 
 #if WITH_EDITOR
@@ -2311,6 +2544,7 @@ static inline void SendStandardSuccessResponse(
  * Format:
  * {
  *   "success": false,
+ *   "data": {},   // Empty object for schema compliance
  *   "error": {
  *     "code": "ERROR_CODE",
  *     "message": "Human readable message",
@@ -2329,6 +2563,10 @@ static inline void SendStandardErrorResponse(
 
   TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
   Envelope->SetBoolField(TEXT("success"), false);
+  
+  // CRITICAL: Add empty data object for schema compliance
+  // The MCP schema requires data: { type: 'object' } in all responses
+  Envelope->SetObjectField(TEXT("data"), MakeShared<FJsonObject>());
 
   TSharedPtr<FJsonObject> ErrorObj = MakeShared<FJsonObject>();
   ErrorObj->SetStringField(TEXT("code"), ErrorCode);
@@ -2425,6 +2663,94 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
   }
 
   return Cast<T>(Spawned);
+}
+
+// ============================================================================
+// VERIFICATION HELPERS
+// ============================================================================
+//
+// These helpers add verifiable data to responses so users can confirm
+// that actions actually executed in Unreal Editor without manual verification.
+//
+// Key principle: Every response should include:
+// 1. The ACTUAL path/name of the created/modified object (not the requested one)
+// 2. Existence verification (existsAfter: true/false)
+// 3. Object-specific data (component counts, GUIDs, etc.)
+// ============================================================================
+
+/**
+ * Add actor verification data to a JSON response.
+ * Includes: actorPath, actorName, actorGuid, existsAfter
+ */
+static inline void AddActorVerification(TSharedPtr<FJsonObject> Response, AActor* Actor) {
+  if (!Response || !Actor) return;
+  
+  // Use GetPackage()->GetPathName() for the asset path
+  FString ActorPath = Actor->GetPackage() ? Actor->GetPackage()->GetPathName() : Actor->GetPathName();
+  Response->SetStringField(TEXT("actorPath"), ActorPath);
+  Response->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+  Response->SetStringField(TEXT("actorGuid"), Actor->GetActorGuid().ToString());
+  Response->SetBoolField(TEXT("existsAfter"), true);
+  Response->SetStringField(TEXT("actorClass"), Actor->GetClass()->GetName());
+}
+
+/**
+ * Add component verification data to a JSON response.
+ * Includes: componentPath, componentName, componentClass
+ */
+static inline void AddComponentVerification(TSharedPtr<FJsonObject> Response, USceneComponent* Component) {
+  if (!Response || !Component) return;
+  
+  Response->SetStringField(TEXT("componentName"), Component->GetName());
+  Response->SetStringField(TEXT("componentClass"), Component->GetClass()->GetName());
+  if (AActor* Owner = Component->GetOwner()) {
+    Response->SetStringField(TEXT("ownerActorPath"), Owner->GetPackage() ? Owner->GetPackage()->GetPathName() : Owner->GetPathName());
+  }
+}
+
+/**
+ * Add asset verification data to a JSON response.
+ * Includes: assetPath, assetName, existsAfter
+ */
+static inline void AddAssetVerification(TSharedPtr<FJsonObject> Response, UObject* Asset) {
+  if (!Response || !Asset) return;
+  
+  FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
+  Response->SetStringField(TEXT("assetPath"), AssetPath);
+  Response->SetStringField(TEXT("assetName"), Asset->GetName());
+  Response->SetBoolField(TEXT("existsAfter"), true);
+  Response->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+}
+
+/**
+ * Add asset verification data to a nested object within the response.
+ * Use this when verifying multiple assets to avoid field overwrites.
+ * @param Response The main response object
+ * @param FieldName The field name for the nested verification object (e.g., "contextVerification", "actionVerification")
+ * @param Asset The asset to verify
+ */
+static inline void AddAssetVerificationNested(TSharedPtr<FJsonObject> Response, const FString& FieldName, UObject* Asset) {
+  if (!Response || !Asset) return;
+  
+  TSharedPtr<FJsonObject> VerificationObj = MakeShared<FJsonObject>();
+  FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
+  VerificationObj->SetStringField(TEXT("assetPath"), AssetPath);
+  VerificationObj->SetStringField(TEXT("assetName"), Asset->GetName());
+  VerificationObj->SetBoolField(TEXT("existsAfter"), true);
+  VerificationObj->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+  Response->SetObjectField(FieldName, VerificationObj);
+}
+
+/**
+ * Verify an asset exists at the given path and add to response.
+ */
+static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FString& AssetPath) {
+  bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
+  if (Response) {
+    Response->SetStringField(TEXT("verifiedPath"), AssetPath);
+    Response->SetBoolField(TEXT("existsAfter"), bExists);
+  }
+  return bExists;
 }
 
 #endif

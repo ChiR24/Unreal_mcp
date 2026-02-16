@@ -136,6 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
                                  Data.AssetClass.ToString());
 #endif
         AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
+        AddAssetVerification(AssetObj, Asset);
         AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
       }
     }

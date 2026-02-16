@@ -73,11 +73,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   const bool bIsCreateEffect = Lower.Equals(TEXT("create_effect")) ||
                                Lower.StartsWith(TEXT("create_effect"));
   const bool bIsNiagaraModule = Lower.StartsWith(TEXT("add_")) ||
-                                Lower.StartsWith(TEXT("set_parameter")) ||
-                                Lower.StartsWith(TEXT("bind_parameter")) ||
-                                Lower.StartsWith(TEXT("enable_gpu")) ||
-                                Lower.StartsWith(TEXT("configure_event"));
-  if (!bIsCreateEffect && !bIsNiagaraModule && !Lower.StartsWith(TEXT("spawn_")) &&
+                                 Lower.StartsWith(TEXT("set_parameter")) ||
+                                 Lower.StartsWith(TEXT("bind_parameter")) ||
+                                 Lower.StartsWith(TEXT("enable_gpu")) ||
+                                 Lower.StartsWith(TEXT("configure_event"));
+  // Note: Only accept spawn_niagara explicitly, NOT spawn_sky_light (which goes to HandleLightingAction)
+  const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
+  if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
       !Lower.Equals(TEXT("set_niagara_parameter")) &&
       !Lower.Equals(TEXT("list_debug_shapes")) &&
       !Lower.Equals(TEXT("clear_debug_shapes")))
@@ -779,9 +781,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       if (bFound) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetBoolField(TEXT("active"), true);
+        for (AActor *FoundActor : AllActors) {
+          if (FoundActor && FoundActor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) {
+            AddActorVerification(Resp, FoundActor);
+            break;
+          }
+        }
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara system activated."), Resp);
       } else
@@ -1031,8 +1037,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
       }
 
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+      AddActorVerification(Resp, Spawned);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Dynamic light created"), Resp, FString());
       return true;
@@ -1272,8 +1277,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
            *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actor"), Spawned->GetActorLabel());
+    AddActorVerification(Resp, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Niagara spawned"), Resp, FString());
     return true;

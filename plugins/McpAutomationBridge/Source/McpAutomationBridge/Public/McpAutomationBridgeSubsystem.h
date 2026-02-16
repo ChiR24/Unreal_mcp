@@ -385,6 +385,21 @@ private:
   bool HandleRemoveFoliage(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleGenerateLODs(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleBakeLightmap(const FString &RequestId, const FString &Action,
+                          const TSharedPtr<FJsonObject> &Payload,
+                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateProceduralTerrain(const FString &RequestId, const FString &Action,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleCreateProceduralFoliage(const FString &RequestId, const FString &Action,
+                                     const TSharedPtr<FJsonObject> &Payload,
+                                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool HandleAddFoliageType(const FString &RequestId, const FString &Action,
+                            const TSharedPtr<FJsonObject> &Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Asset workflow handlers
   bool
   HandleSourceControlCheckout(const FString &RequestId, const FString &Action,
@@ -442,24 +457,10 @@ private:
   bool HandleCreateLandscape(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  bool HandleCreateProceduralTerrain(
-      const FString &RequestId, const FString &Action,
-      const TSharedPtr<FJsonObject> &Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  bool HandleCreateProceduralFoliage(
-      const FString &RequestId, const FString &Action,
-      const TSharedPtr<FJsonObject> &Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleCreateLandscapeGrassType(
       const FString &RequestId, const FString &Action,
       const TSharedPtr<FJsonObject> &Payload,
       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  bool HandleGenerateLODs(const FString &RequestId, const FString &Action,
-                          const TSharedPtr<FJsonObject> &Payload,
-                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-  bool HandleBakeLightmap(const FString &RequestId, const FString &Action,
-                          const TSharedPtr<FJsonObject> &Payload,
-                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Aggregate landscape editor that dispatches to specific edit ops
   bool HandleEditLandscape(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
@@ -552,9 +553,6 @@ private:
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Foliage handlers
-  bool HandleAddFoliageType(const FString &RequestId, const FString &Action,
-                            const TSharedPtr<FJsonObject> &Payload,
-                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool
   HandleAddFoliageInstances(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,

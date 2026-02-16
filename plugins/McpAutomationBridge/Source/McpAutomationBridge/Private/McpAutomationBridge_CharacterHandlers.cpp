@@ -227,6 +227,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), Path / Name);
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("parentClass"), TEXT("Character"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Character blueprint created"), Result);
         return true;
     }
@@ -268,6 +269,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("capsuleRadius"), CapsuleRadius);
         Result->SetNumberField(TEXT("capsuleHalfHeight"), CapsuleHalfHeight);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Capsule configured"), Result);
         return true;
     }
@@ -339,6 +341,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         if (!SkeletalMeshPath.IsEmpty()) Result->SetStringField(TEXT("skeletalMesh"), SkeletalMeshPath);
         if (!AnimBPPath.IsEmpty()) Result->SetStringField(TEXT("animBlueprint"), AnimBPPath);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mesh configured"), Result);
         return true;
     }
@@ -424,6 +427,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("springArmLength"), SpringArmLength);
         Result->SetBoolField(TEXT("usePawnControlRotation"), UsePawnControlRotation);
         Result->SetBoolField(TEXT("lagEnabled"), LagEnabled);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Camera configured"), Result);
         return true;
     }
@@ -479,6 +483,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement speeds configured"), Result);
         return true;
     }
@@ -526,6 +531,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Jump configured"), Result);
         return true;
     }
@@ -571,6 +577,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Rotation configured"), Result);
         return true;
     }
@@ -639,6 +646,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("stateVariable"), StateVarName);
         Result->SetStringField(TEXT("speedVariable"), SpeedVarName);
         Result->SetNumberField(TEXT("customSpeed"), CustomSpeed);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Custom movement mode added with state tracking variables"), Result);
         return true;
     }
@@ -680,6 +688,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav movement configured"), Result);
         return true;
     }
@@ -741,6 +750,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         if (!MantleAnim.IsEmpty()) Result->SetStringField(TEXT("mantleAnimation"), MantleAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsMantling"));
         Result->SetStringField(TEXT("targetVariable"), TEXT("MantleTargetLocation"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mantling system configured with state variables"), Result);
         return true;
     }
@@ -798,6 +808,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("vaultDepth"), VaultDepth);
         if (!VaultAnim.IsEmpty()) Result->SetStringField(TEXT("vaultAnimation"), VaultAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsVaulting"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Vaulting system configured with state variables"), Result);
         return true;
     }
@@ -868,6 +879,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("climbableTag"), ClimbableTag);
         if (!ClimbAnim.IsEmpty()) Result->SetStringField(TEXT("climbAnimation"), ClimbAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsClimbing"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Climbing system configured with state variables"), Result);
         return true;
     }
@@ -924,6 +936,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("slideCooldown"), SlideCooldown);
         if (!SlideAnim.IsEmpty()) Result->SetStringField(TEXT("slideAnimation"), SlideAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsSliding"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sliding system configured with state and timing variables"), Result);
         return true;
     }
@@ -991,6 +1004,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetNumberField(TEXT("wallRunGravityScale"), WallRunGravity);
         if (!WallRunAnim.IsEmpty()) Result->SetStringField(TEXT("wallRunAnimation"), WallRunAnim);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsWallRunning"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Wall running system configured with state variables"), Result);
         return true;
     }
@@ -1048,6 +1062,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         Result->SetStringField(TEXT("grappleTargetTag"), GrappleTarget);
         if (!GrappleCable.IsEmpty()) Result->SetStringField(TEXT("grappleCable"), GrappleCable);
         Result->SetStringField(TEXT("stateVariable"), TEXT("bIsGrappling"));
+        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Grappling system configured with state variables"), Result);
         return true;
     }

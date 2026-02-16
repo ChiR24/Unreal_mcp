@@ -112,9 +112,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
         McpSafeAssetSave(ItemAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-      Result->SetStringField(TEXT("itemPath"), Package->GetName());
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       Result->SetStringField(TEXT("assetName"), SanitizedName);
+      AddAssetVerification(Result, ItemAsset);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item data asset created"), Result);
     } else {
@@ -179,10 +179,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
       McpSafeAssetSave(ItemAsset);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    Result->SetStringField(TEXT("itemPath"), ItemPath);
+TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetBoolField(TEXT("modified"), ModifiedProperties.Num() > 0);
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
+    AddAssetVerification(Result, ItemAsset);
 
     TArray<TSharedPtr<FJsonValue>> ModifiedArr;
     for (const FString& Name : ModifiedProperties) {
@@ -2713,7 +2713,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
     }
 
     FString StationType = GetPayloadString(Payload, TEXT("stationType"), TEXT("Basic"));
-    int32 CraftingSpeed = static_cast<int32>(GetPayloadNumber(Payload, TEXT("craftingSpeedMultiplier"), 1.0));
+    double CraftingSpeed = GetPayloadNumber(Payload, TEXT("craftingSpeedMultiplier"), 1.0);
 
     // Add station recipe configuration variables
     FEdGraphPinType SoftObjectArrayType;

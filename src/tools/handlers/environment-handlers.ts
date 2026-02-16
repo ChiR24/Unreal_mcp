@@ -45,7 +45,8 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         minY: (argsRecord.minY as number) ?? 0,
         maxX: (argsRecord.maxX as number) ?? 0,
         maxY: (argsRecord.maxY as number) ?? 0,
-        updateNormals: argsRecord.updateNormals as boolean | undefined
+        updateNormals: argsRecord.updateNormals as boolean | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined
       })) as Record<string, unknown>;
     case 'sculpt':
     case 'sculpt_landscape': {

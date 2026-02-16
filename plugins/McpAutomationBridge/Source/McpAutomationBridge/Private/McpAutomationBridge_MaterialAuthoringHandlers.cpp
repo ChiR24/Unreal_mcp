@@ -263,7 +263,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     NewMaterial->PostEditChange();
     NewMaterial->MarkPackageDirty();
 
-    // Notify asset registry FIRST (required for UE 5.7+ before saving)
+// Notify asset registry FIRST (required for UE 5.7+ before saving)
     FAssetRegistryModule::AssetCreated(NewMaterial);
 
     bool bSave = true;
@@ -273,7 +273,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     }
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("assetPath"), NewMaterial->GetPathName());
+    AddAssetVerification(Result, NewMaterial);
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Material '%s' created."), *Name),
                            Result);
@@ -328,9 +328,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SaveMaterialAsset(Material);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Material);
     SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Blend mode set to %s."), *BlendMode));
+        FString::Printf(TEXT("Blend mode set to %s."), *BlendMode), Result);
     return true;
   }
 
@@ -390,9 +392,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SaveMaterialAsset(Material);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Material);
     SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Shading model set to %s."), *ShadingModel));
+        FString::Printf(TEXT("Shading model set to %s."), *ShadingModel), Result);
     return true;
   }
 
@@ -442,9 +446,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SaveMaterialAsset(Material);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Material);
     SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Material domain set to %s."), *Domain));
+        FString::Printf(TEXT("Material domain set to %s."), *Domain), Result);
     return true;
   }
 
@@ -1431,7 +1437,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     FAssetRegistryModule::AssetCreated(NewFunc);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("assetPath"), NewFunc->GetPathName());
+    AddAssetVerification(Result, NewFunc);
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Material function '%s' created."), *Name), Result);
@@ -1648,7 +1654,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     FAssetRegistryModule::AssetCreated(NewInstance);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("assetPath"), NewInstance->GetPathName());
+    AddAssetVerification(Result, NewInstance);
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Material instance '%s' created."), *Name), Result);
@@ -1694,10 +1700,14 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       SaveMaterialInstanceAsset(Instance);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Instance);
+    Result->SetStringField(TEXT("parameterName"), ParamName);
+    Result->SetNumberField(TEXT("value"), Value);
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Scalar parameter '%s' set to %f."), *ParamName,
-                        Value));
+                        Value), Result);
     return true;
   }
 
@@ -1749,9 +1759,12 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       SaveMaterialInstanceAsset(Instance);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Instance);
+    Result->SetStringField(TEXT("parameterName"), ParamName);
     SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Vector parameter '%s' set."), *ParamName));
+        FString::Printf(TEXT("Vector parameter '%s' set."), *ParamName), Result);
     return true;
   }
 
@@ -1805,9 +1818,12 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       SaveMaterialInstanceAsset(Instance);
     }
 
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Instance);
+    Result->SetStringField(TEXT("parameterName"), ParamName);
     SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Texture parameter '%s' set."), *ParamName));
+        FString::Printf(TEXT("Texture parameter '%s' set."), *ParamName), Result);
     return true;
   }
 
@@ -1877,7 +1893,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     FAssetRegistryModule::AssetCreated(NewMaterial);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("assetPath"), NewMaterial->GetPathName());
+    AddAssetVerification(Result, NewMaterial);
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Material '%s' created."), *Name),
                            Result);
@@ -1968,7 +1984,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     FAssetRegistryModule::AssetCreated(LayerInfo);
     
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    Result->SetStringField(TEXT("assetPath"), LayerInfo->GetPathName());
+    AddAssetVerification(Result, LayerInfo);
     Result->SetStringField(TEXT("layerName"), LayerName);
     
     SendAutomationResponse(Socket, RequestId, true,

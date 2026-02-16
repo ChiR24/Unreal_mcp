@@ -4,7 +4,7 @@
  * Complete spline-based content creation system including:
  * - Spline Creation: create_spline_actor, add_spline_point, remove_spline_point, set_spline_point_position
  * - Spline Configuration: set_spline_point_tangents, set_spline_point_rotation, set_spline_point_scale, set_spline_type
- * - Spline Mesh: create_spline_mesh_component, set_spline_mesh_asset, configure_spline_mesh_axis, set_spline_mesh_material
+ * - Spline Mesh: create_spline_mesh_component, create_spline_mesh_actor, set_spline_mesh_asset, configure_spline_mesh_axis, set_spline_mesh_material
  * - Spline Mesh Array: scatter_meshes_along_spline, configure_mesh_spacing, configure_mesh_randomization
  * - Quick Templates: create_road_spline, create_river_spline, create_fence_spline, create_wall_spline, create_cable_spline, create_pipe_spline
  * - Utility: get_splines_info
@@ -106,10 +106,13 @@ export async function handleSplineTools(
       return sendRequest('set_spline_type');
 
     // ========================================================================
-    // Spline Mesh (4 actions)
+    // Spline Mesh (5 actions)
     // ========================================================================
     case 'create_spline_mesh_component':
       return sendRequest('create_spline_mesh_component');
+
+    case 'create_spline_mesh_actor':
+      return sendRequest('create_spline_mesh_actor');
 
     case 'set_spline_mesh_asset':
       return sendRequest('set_spline_mesh_asset');

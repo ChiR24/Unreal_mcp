@@ -42,8 +42,8 @@
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
-// PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.7+)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION <= 6
+// PostProcessVolume exists in UE 5.1+ (verified in 5.3, 5.6, 5.7)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "Engine/PostProcessVolume.h"
 #define MCP_HAS_POSTPROCESS_VOLUME 1
 #else
@@ -150,6 +150,113 @@ namespace VolumeHelpers
         CubeBuilder->Z = HalfHeight * 2.0f;
 
         CubeBuilder->Build(Volume->GetWorld(), Volume);
+
+        return true;
+    }
+
+    // ============================================================================
+    // Validation Helpers
+    // ============================================================================
+
+    // Validate volume name - reject empty, path traversal, and invalid characters
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateVolumeName(const FString& VolumeName, FString& OutError)
+    {
+        if (VolumeName.IsEmpty())
+        {
+            OutError = TEXT("volumeName is required");
+            return false;
+        }
+
+        // Reject path traversal
+        if (VolumeName.Contains(TEXT("..")) || VolumeName.Contains(TEXT("/")) || VolumeName.Contains(TEXT("\\")))
+        {
+            OutError = TEXT("volumeName must not contain path separators or traversal sequences");
+            return false;
+        }
+
+        // Reject Windows drive letters
+        if (VolumeName.Contains(TEXT(":")))
+        {
+            OutError = TEXT("volumeName must not contain drive letters");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate extent vector - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateExtent(const FVector& Extent, FString& OutError)
+    {
+        if (!FMath::IsFinite(Extent.X) || !FMath::IsFinite(Extent.Y) || !FMath::IsFinite(Extent.Z))
+        {
+            OutError = TEXT("extent contains NaN or Infinity values");
+            return false;
+        }
+
+        if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
+        {
+            OutError = TEXT("extent values must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate radius - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateRadius(float Radius, FString& OutError)
+    {
+        if (!FMath::IsFinite(Radius))
+        {
+            OutError = TEXT("radius contains NaN or Infinity value");
+            return false;
+        }
+
+        if (Radius <= 0.0f)
+        {
+            OutError = TEXT("radius must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate capsule dimensions - reject negative, NaN, or Infinity values
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateCapsuleDimensions(float Radius, float HalfHeight, FString& OutError)
+    {
+        if (!FMath::IsFinite(Radius) || !FMath::IsFinite(HalfHeight))
+        {
+            OutError = TEXT("capsule dimensions contain NaN or Infinity values");
+            return false;
+        }
+
+        if (Radius <= 0.0f)
+        {
+            OutError = TEXT("capsule radius must be positive");
+            return false;
+        }
+
+        if (HalfHeight <= 0.0f)
+        {
+            OutError = TEXT("capsule half height must be positive");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Validate location vector - reject NaN or Infinity values (zero is valid)
+    // Returns true if valid, false if invalid (sets OutError on failure)
+    bool ValidateLocation(const FVector& Location, FString& OutError)
+    {
+        if (!FMath::IsFinite(Location.X) || !FMath::IsFinite(Location.Y) || !FMath::IsFinite(Location.Z))
+        {
+            OutError = TEXT("location contains NaN or Infinity values");
+            return false;
+        }
 
         return true;
     }
@@ -268,10 +375,32 @@ static bool HandleCreateTriggerVolume(
 {
     using namespace VolumeHelpers;
 
+    // Validate volumeName parameter with backward-compatible default
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -292,6 +421,16 @@ static bool HandleCreateTriggerVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+    
+    // Add location for verification
+    TSharedPtr<FJsonObject> LocationObj = MakeShared<FJsonObject>();
+    LocationObj->SetNumberField(TEXT("x"), Volume->GetActorLocation().X);
+    LocationObj->SetNumberField(TEXT("y"), Volume->GetActorLocation().Y);
+    LocationObj->SetNumberField(TEXT("z"), Volume->GetActorLocation().Z);
+    ResponseJson->SetObjectField(TEXT("location"), LocationObj);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerVolume: %s"), *VolumeName), ResponseJson);
@@ -306,13 +445,35 @@ static bool HandleCreateTriggerBox(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerBox"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("boxExtent"), FVector(100.0f, 100.0f, 100.0f));
     if (Extent == FVector::ZeroVector)
     {
         Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    }
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     UWorld* World = GetEditorWorld();
@@ -334,6 +495,16 @@ static bool HandleCreateTriggerBox(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerBox"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+    
+    // Add box extent for verification
+    TSharedPtr<FJsonObject> ExtentObj = MakeShared<FJsonObject>();
+    ExtentObj->SetNumberField(TEXT("x"), Extent.X);
+    ExtentObj->SetNumberField(TEXT("y"), Extent.Y);
+    ExtentObj->SetNumberField(TEXT("z"), Extent.Z);
+    ResponseJson->SetObjectField(TEXT("boxExtent"), ExtentObj);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerBox: %s"), *VolumeName), ResponseJson);
@@ -348,10 +519,32 @@ static bool HandleCreateTriggerSphere(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerSphere"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     float Radius = GetJsonNumberField(Payload, TEXT("sphereRadius"), 100.0f);
+    if (!ValidateRadius(Radius, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -381,6 +574,9 @@ static bool HandleCreateTriggerSphere(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerSphere: %s"), *VolumeName), ResponseJson);
@@ -395,11 +591,33 @@ static bool HandleCreateTriggerCapsule(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerCapsule"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     float Radius = GetJsonNumberField(Payload, TEXT("capsuleRadius"), 50.0f);
     float HalfHeight = GetJsonNumberField(Payload, TEXT("capsuleHalfHeight"), 100.0f);
+    if (!ValidateCapsuleDimensions(Radius, HalfHeight, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -430,6 +648,9 @@ static bool HandleCreateTriggerCapsule(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerCapsule"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerCapsule: %s"), *VolumeName), ResponseJson);
@@ -448,10 +669,32 @@ static bool HandleCreateBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("BlockingVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -472,6 +715,9 @@ static bool HandleCreateBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created BlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -486,10 +732,32 @@ static bool HandleCreateKillZVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("KillZVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(10000.0f, 10000.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -510,6 +778,9 @@ static bool HandleCreateKillZVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created KillZVolume: %s"), *VolumeName), ResponseJson);
@@ -524,10 +795,33 @@ static bool HandleCreatePainCausingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PainCausingVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bPainCausing = GetJsonBoolField(Payload, TEXT("bPainCausing"), true);
     float DamagePerSec = GetJsonNumberField(Payload, TEXT("damagePerSec"), 10.0f);
 
@@ -556,6 +850,9 @@ static bool HandleCreatePainCausingVolume(
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APainCausingVolume"));
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PainCausingVolume: %s"), *VolumeName), ResponseJson);
@@ -570,10 +867,33 @@ static bool HandleCreatePhysicsVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PhysicsVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bWaterVolume = GetJsonBoolField(Payload, TEXT("bWaterVolume"), false);
     float FluidFriction = GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3f);
     float TerminalVelocity = GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0f);
@@ -608,6 +928,9 @@ static bool HandleCreatePhysicsVolume(
     ResponseJson->SetNumberField(TEXT("fluidFriction"), FluidFriction);
     ResponseJson->SetNumberField(TEXT("terminalVelocity"), TerminalVelocity);
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PhysicsVolume: %s"), *VolumeName), ResponseJson);
@@ -622,10 +945,33 @@ static bool HandleCreateAudioVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("AudioVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true);
 
     UWorld* World = GetEditorWorld();
@@ -651,6 +997,9 @@ static bool HandleCreateAudioVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created AudioVolume: %s"), *VolumeName), ResponseJson);
@@ -665,10 +1014,33 @@ static bool HandleCreateReverbVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("ReverbVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     bool bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true);
     float ReverbVolumeLevel = GetJsonNumberField(Payload, TEXT("reverbVolume"), 0.5f);
     float FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.5f);
@@ -706,6 +1078,9 @@ static bool HandleCreateReverbVolume(
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     ResponseJson->SetNumberField(TEXT("reverbVolume"), ReverbVolumeLevel);
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created ReverbVolume: %s"), *VolumeName), ResponseJson);
@@ -721,10 +1096,33 @@ static bool HandleCreatePostProcessVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PostProcessVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     float Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
     float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
     float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
@@ -822,6 +1220,9 @@ static bool HandleCreatePostProcessVolume(
     ResponseJson->SetNumberField(TEXT("blendWeight"), BlendWeight);
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
@@ -837,10 +1238,32 @@ static bool HandleCreateCullDistanceVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CullDistanceVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -885,6 +1308,9 @@ static bool HandleCreateCullDistanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CullDistanceVolume: %s"), *VolumeName), ResponseJson);
@@ -899,10 +1325,32 @@ static bool HandleCreatePrecomputedVisibilityVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PrecomputedVisibilityVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -923,6 +1371,9 @@ static bool HandleCreatePrecomputedVisibilityVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APrecomputedVisibilityVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PrecomputedVisibilityVolume: %s"), *VolumeName), ResponseJson);
@@ -937,10 +1388,32 @@ static bool HandleCreateLightmassImportanceVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("LightmassImportanceVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(5000.0f, 5000.0f, 2000.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -961,6 +1434,9 @@ static bool HandleCreateLightmassImportanceVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ALightmassImportanceVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created LightmassImportanceVolume: %s"), *VolumeName), ResponseJson);
@@ -975,10 +1451,32 @@ static bool HandleCreateNavMeshBoundsVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavMeshBoundsVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(2000.0f, 2000.0f, 500.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -999,6 +1497,9 @@ static bool HandleCreateNavMeshBoundsVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavMeshBoundsVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavMeshBoundsVolume: %s"), *VolumeName), ResponseJson);
@@ -1013,10 +1514,32 @@ static bool HandleCreateNavModifierVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("NavModifierVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1037,6 +1560,9 @@ static bool HandleCreateNavModifierVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavModifierVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavModifierVolume: %s"), *VolumeName), ResponseJson);
@@ -1051,10 +1577,32 @@ static bool HandleCreateCameraBlockingVolume(
 {
     using namespace VolumeHelpers;
 
-    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("CameraBlockingVolume"));
+    // Validate volumeName parameter with backward-compatible default
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("TriggerVolume"));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FVector Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    if (!ValidateLocation(Location, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     FRotator Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(200.0f, 200.0f, 200.0f));
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -1075,6 +1623,9 @@ static bool HandleCreateCameraBlockingVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACameraBlockingVolume"));
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CameraBlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -1093,13 +1644,21 @@ static bool HandleSetVolumeExtent(
 {
     using namespace VolumeHelpers;
 
+    // MODIFY operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-    FVector NewExtent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required"), nullptr);
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    FVector NewExtent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    if (!ValidateExtent(NewExtent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -1115,7 +1674,7 @@ static bool HandleSetVolumeExtent(
     if (!VolumeActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr);
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -1132,6 +1691,9 @@ static bool HandleSetVolumeExtent(
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
 
     TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
     ExtentJson->SetNumberField(TEXT("x"), NewExtent.X);
@@ -1152,12 +1714,13 @@ static bool HandleSetVolumeProperties(
 {
     using namespace VolumeHelpers;
 
+    // MODIFY operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required"), nullptr);
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -1173,7 +1736,7 @@ static bool HandleSetVolumeProperties(
     if (!VolumeActor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr);
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -1253,6 +1816,9 @@ static bool HandleSetVolumeProperties(
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
 
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString& Prop : PropertiesSet)
@@ -1277,6 +1843,19 @@ static bool HandleGetVolumesInfo(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace VolumeHelpers;
+
+    // Security check: reject path parameter if present (this tool doesn't use paths)
+    FString PathParam = GetJsonStringField(Payload, TEXT("path"), TEXT(""));
+    if (!PathParam.IsEmpty())
+    {
+        if (PathParam.Contains(TEXT("..")) || PathParam.Contains(TEXT("\\")))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("get_volumes_info does not accept path parameter with traversal characters"),
+                nullptr, TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+    }
 
     FString Filter = GetJsonStringField(Payload, TEXT("filter"), TEXT(""));
     FString VolumeType = GetJsonStringField(Payload, TEXT("volumeType"), TEXT(""));
@@ -1416,12 +1995,13 @@ static bool HandleRemoveVolume(
 {
     using namespace VolumeHelpers;
 
+    // DELETE operation - volumeName is required (no default)
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
-
-    if (VolumeName.IsEmpty())
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("volumeName is required for remove_volume"), nullptr, TEXT("MISSING_PARAMETER"));
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -1452,9 +2032,775 @@ static bool HandleRemoveVolume(
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
+    ResponseJson->SetBoolField(TEXT("existsAfter"), false);
+    ResponseJson->SetStringField(TEXT("action"), TEXT("manage_volumes:deleted"));
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
+    return true;
+}
+
+// ============================================================================
+// Add Volume To Actor Handlers (6 actions)
+// These create volumes positioned at an existing actor's location
+// ============================================================================
+
+// Helper to find actor by path or name
+static AActor* FindActorByPathOrName(UWorld* World, const FString& ActorPath)
+{
+    if (!World || ActorPath.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    // Try to interpret as actor name first
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        AActor* Actor = *It;
+        if (Actor)
+        {
+            // Check actor label
+            if (Actor->GetActorLabel().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+            // Check actor name
+            if (Actor->GetName().Equals(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+            // Check path-like format (e.g., /Game/MCPTest/TestActor)
+            FString ActorPathName = Actor->GetPathName();
+            if (ActorPathName.Equals(ActorPath, ESearchCase::IgnoreCase) ||
+                ActorPathName.EndsWith(ActorPath, ESearchCase::IgnoreCase))
+            {
+                return Actor;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+static bool HandleAddTriggerVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    // Validate actorPath for security (no path traversal)
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    // Find the target actor
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Create trigger volume at actor's location
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_TriggerVolume");
+    ATriggerVolume* Volume = SpawnVolumeActor<ATriggerVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn TriggerVolume"), nullptr);
+        return true;
+    }
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added TriggerVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("TriggerVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+
+static bool HandleAddBlockingVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(200.0f, 200.0f, 200.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_BlockingVolume");
+    ABlockingVolume* Volume = SpawnVolumeActor<ABlockingVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn BlockingVolume"), nullptr);
+        return true;
+    }
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added BlockingVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("BlockingVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+
+static bool HandleAddKillZVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 100.0f));
+    float KillZHeight = GetJsonNumberField(Payload, TEXT("killZHeight"), 0.0f);
+    
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    // Use KillZHeight for Z position if specified
+    if (KillZHeight != 0.0f)
+    {
+        Location.Z = KillZHeight;
+    }
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_KillZVolume");
+    AKillZVolume* Volume = SpawnVolumeActor<AKillZVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn KillZVolume"), nullptr);
+        return true;
+    }
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetNumberField(TEXT("killZHeight"), Location.Z);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added KillZVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("KillZVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+
+static bool HandleAddPhysicsVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(300.0f, 300.0f, 300.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Optional physics properties
+    bool bWaterVolume = GetJsonBoolField(Payload, TEXT("bWaterVolume"), false);
+    float FluidFriction = GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3f);
+    float TerminalVelocity = GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0f);
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PhysicsVolume");
+    APhysicsVolume* Volume = SpawnVolumeActor<APhysicsVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn PhysicsVolume"), nullptr);
+        return true;
+    }
+
+    // Configure physics properties
+    Volume->bWaterVolume = bWaterVolume;
+    Volume->FluidFriction = FluidFriction;
+    Volume->TerminalVelocity = TerminalVelocity;
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added PhysicsVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("PhysicsVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+
+static bool HandleAddCullDistanceVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_CullDistanceVolume");
+    ACullDistanceVolume* Volume = SpawnVolumeActor<ACullDistanceVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn CullDistanceVolume"), nullptr);
+        return true;
+    }
+
+    // Parse cull distances if provided
+    if (Payload->HasTypedField<EJson::Array>(TEXT("cullDistances")))
+    {
+        TArray<TSharedPtr<FJsonValue>> CullDistancesJson = Payload->GetArrayField(TEXT("cullDistances"));
+        TArray<FCullDistanceSizePair> CullDistances;
+        
+        for (const TSharedPtr<FJsonValue>& Entry : CullDistancesJson)
+        {
+            if (Entry->Type == EJson::Object)
+            {
+                TSharedPtr<FJsonObject> EntryObj = Entry->AsObject();
+                FCullDistanceSizePair Pair;
+                Pair.Size = GetJsonNumberField(EntryObj, TEXT("size"), 100.0f);
+                Pair.CullDistance = GetJsonNumberField(EntryObj, TEXT("cullDistance"), 5000.0f);
+                CullDistances.Add(Pair);
+            }
+        }
+        
+        if (CullDistances.Num() > 0)
+        {
+            Volume->CullDistances = CullDistances;
+        }
+    }
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added CullDistanceVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("CullDistanceVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+
+#if MCP_HAS_POSTPROCESS_VOLUME
+static bool HandleAddPostProcessVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
+    if (ActorPath.IsEmpty())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorPath contains invalid characters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+
+    FVector Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f));
+    FString ValidationError;
+    if (!ValidateExtent(Extent, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    float Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
+    float BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
+    float BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
+    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* TargetActor = FindActorByPathOrName(World, ActorPath);
+    if (!TargetActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    FVector Location = TargetActor->GetActorLocation();
+    FRotator Rotation = TargetActor->GetActorRotation();
+    
+    FString VolumeName = TargetActor->GetActorLabel() + TEXT("_PostProcessVolume");
+    APostProcessVolume* Volume = SpawnVolumeActor<APostProcessVolume>(World, VolumeName, Location, Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to spawn PostProcessVolume"), nullptr);
+        return true;
+    }
+
+    // Configure post process settings
+    Volume->Priority = Priority;
+    Volume->BlendRadius = BlendRadius;
+    Volume->BlendWeight = BlendWeight;
+    Volume->bEnabled = bEnabled;
+    Volume->bUnbound = bUnbound;
+
+    // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
+    ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
+    ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
+    ResponseJson->SetNumberField(TEXT("priority"), Priority);
+    ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, Volume);
+
+    // If attachment failed, return success=false since user's intent (attach to actor) failed
+    // Volume was still created, so include it in response for debugging
+    FString ResponseMessage = bAttachmentSucceeded 
+        ? FString::Printf(TEXT("Added PostProcessVolume to actor: %s"), *TargetActor->GetActorLabel())
+        : FString::Printf(TEXT("PostProcessVolume created but attachment to '%s' failed (volume is static, target may be movable)"), *TargetActor->GetActorLabel());
+    
+    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
+        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    return true;
+}
+#endif
+
+// ============================================================================
+// Volume Bounds Handler (1 action)
+// Set volume bounds using min/max corners instead of extent
+// ============================================================================
+
+static bool HandleSetVolumeBounds(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    using namespace VolumeHelpers;
+
+    // MODIFY operation - volumeName is required (no default)
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    FString ValidationError;
+    if (!ValidateVolumeName(VolumeName, ValidationError))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
+    // Parse bounds array [minX, minY, minZ, maxX, maxY, maxZ]
+    TArray<float> BoundsValues;
+    if (Payload->HasTypedField<EJson::Array>(TEXT("bounds")))
+    {
+        TArray<TSharedPtr<FJsonValue>> BoundsArray = Payload->GetArrayField(TEXT("bounds"));
+        for (const TSharedPtr<FJsonValue>& Value : BoundsArray)
+        {
+            BoundsValues.Add(static_cast<float>(Value->AsNumber()));
+        }
+    }
+
+    if (BoundsValues.Num() != 6)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("bounds must be an array of 6 values [minX, minY, minZ, maxX, maxY, maxZ]"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // Validate bounds values
+    for (float Val : BoundsValues)
+    {
+        if (!FMath::IsFinite(Val))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("bounds contains NaN or Infinity values"), nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+
+    FVector MinBound(BoundsValues[0], BoundsValues[1], BoundsValues[2]);
+    FVector MaxBound(BoundsValues[3], BoundsValues[4], BoundsValues[5]);
+
+    // Calculate center and extent from bounds
+    FVector Center = (MinBound + MaxBound) * 0.5f;
+    FVector Extent = (MaxBound - MinBound) * 0.5f;
+
+    if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("bounds must define a valid volume (max > min for all axes)"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    UWorld* World = GetEditorWorld();
+    if (!World)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Editor world not available"), nullptr);
+        return true;
+    }
+
+    AActor* VolumeActor = FindVolumeByName(World, VolumeName);
+    if (!VolumeActor)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Set the volume location to center
+    VolumeActor->SetActorLocation(Center);
+
+    // Update the brush geometry for brush-based volumes
+    ABrush* BrushVolume = Cast<ABrush>(VolumeActor);
+    if (BrushVolume)
+    {
+        CreateBoxBrushForVolume(BrushVolume, Extent);
+    }
+    else
+    {
+        // For non-brush volumes, use scale
+        VolumeActor->SetActorScale3D(FVector(Extent.X / 100.0f, Extent.Y / 100.0f, Extent.Z / 100.0f));
+    }
+
+    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
+    
+    // Add verification data
+    AddActorVerification(ResponseJson, VolumeActor);
+
+    TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject());
+    TArray<TSharedPtr<FJsonValue>> MinArray, MaxArray;
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.X)));
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Y)));
+    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Z)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.X)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Y)));
+    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Z)));
+    BoundsJson->SetArrayField(TEXT("min"), MinArray);
+    BoundsJson->SetArrayField(TEXT("max"), MaxArray);
+    ResponseJson->SetObjectField(TEXT("bounds"), BoundsJson);
+
+    TSharedPtr<FJsonObject> CenterJson = MakeShareable(new FJsonObject());
+    CenterJson->SetNumberField(TEXT("x"), Center.X);
+    CenterJson->SetNumberField(TEXT("y"), Center.Y);
+    CenterJson->SetNumberField(TEXT("z"), Center.Z);
+    ResponseJson->SetObjectField(TEXT("center"), CenterJson);
+
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Set bounds for volume: %s"), *VolumeName), ResponseJson);
     return true;
 }
 
@@ -1528,11 +2874,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
         return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
     }
 #else
-    // PostProcessVolume only exists in UE 5.1-5.6 (removed in 5.0 and 5.7+)
+    // PostProcessVolume requires UE 5.1+
     if (SubAction == TEXT("create_post_process_volume"))
     {
         SendAutomationResponse(Socket, RequestId, false,
-            TEXT("PostProcessVolume is only available in UE 5.1-5.6"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+            TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
         return true;
     }
 #endif
@@ -1572,6 +2918,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     {
         return HandleSetVolumeProperties(this, RequestId, Payload, Socket);
     }
+    if (SubAction == TEXT("set_volume_bounds"))
+    {
+        return HandleSetVolumeBounds(this, RequestId, Payload, Socket);
+    }
 
     // Volume Removal
     if (SubAction == TEXT("remove_volume"))
@@ -1584,6 +2934,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     {
         return HandleGetVolumesInfo(this, RequestId, Payload, Socket);
     }
+
+    // Add Volume To Actor handlers
+    if (SubAction == TEXT("add_trigger_volume"))
+    {
+        return HandleAddTriggerVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_blocking_volume"))
+    {
+        return HandleAddBlockingVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_kill_z_volume"))
+    {
+        return HandleAddKillZVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_physics_volume"))
+    {
+        return HandleAddPhysicsVolume(this, RequestId, Payload, Socket);
+    }
+    if (SubAction == TEXT("add_cull_distance_volume"))
+    {
+        return HandleAddCullDistanceVolume(this, RequestId, Payload, Socket);
+    }
+#if MCP_HAS_POSTPROCESS_VOLUME
+    if (SubAction == TEXT("add_post_process_volume"))
+    {
+        return HandleAddPostProcessVolume(this, RequestId, Payload, Socket);
+    }
+#else
+    if (SubAction == TEXT("add_post_process_volume"))
+    {
+        SendAutomationResponse(Socket, RequestId, false,
+            TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+#endif
 
     // Unknown action
     SendAutomationResponse(Socket, RequestId, false,

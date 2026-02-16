@@ -365,6 +365,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created widget blueprint: %s"), *Name));
         ResultJson->SetStringField(TEXT("widgetPath"), ObjectPath);
 
+        AddAssetVerification(ResultJson, WidgetBlueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
         return true;
@@ -487,6 +488,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added canvas panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added canvas panel"), ResultJson);
         return true;
     }
@@ -544,6 +546,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added horizontal box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added horizontal box"), ResultJson);
         return true;
     }
@@ -600,6 +603,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added vertical box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added vertical box"), ResultJson);
         return true;
     }
@@ -656,6 +660,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added overlay"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added overlay"), ResultJson);
         return true;
     }
@@ -739,6 +744,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text block"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added text block"), ResultJson);
         return true;
     }
@@ -808,6 +814,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added image"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added image"), ResultJson);
         return true;
     }
@@ -872,6 +879,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added button"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added button"), ResultJson);
         return true;
     }
@@ -942,6 +950,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added progress bar"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added progress bar"), ResultJson);
         return true;
     }
@@ -1014,6 +1023,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added slider"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added slider"), ResultJson);
         return true;
     }
@@ -1073,6 +1083,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetObjectField(TEXT("widgetInfo"), WidgetInfo);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Retrieved widget info"), ResultJson);
         return true;
     }
@@ -1136,6 +1147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added grid panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
+        AddAssetVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added grid panel"), ResultJson);
         return true;
     }

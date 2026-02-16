@@ -224,7 +224,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             McpSafeAssetSave(NewSystem);
         }
 
-        Result->SetStringField(TEXT("assetPath"), NewSystem->GetPathName());
+        AddAssetVerification(Result, NewSystem);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Niagara System: %s"), *Name));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("System created."), Result);
         return true;
@@ -265,7 +265,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             McpSafeAssetSave(NewEmitter);
         }
 
-        Result->SetStringField(TEXT("assetPath"), NewEmitter->GetPathName());
+        AddAssetVerification(Result, NewEmitter);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Niagara Emitter: %s"), *Name));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Emitter created."), Result);
         return true;
@@ -307,6 +307,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("emitterName"), NewHandle.GetName().ToString());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added emitter '%s' to system."), *Emitter->GetName()));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Emitter added to system."), Result);
@@ -359,6 +360,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Updated properties for emitter '%s'."), *EmitterName));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Emitter properties updated."), Result);
         return true;
@@ -505,6 +507,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnRate"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("spawnRate"), SpawnRate);
@@ -554,6 +557,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnBurst"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("burstCount"), BurstCount);
@@ -602,6 +606,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("SpawnPerUnit"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("spawnPerUnit"), SpawnPerUnit);
@@ -650,6 +655,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("InitializeParticle"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetNumberField(TEXT("lifetime"), Lifetime);
@@ -697,6 +703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("ParticleState"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetStringField(TEXT("message"), TEXT("Added particle state module."));
@@ -785,6 +792,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), FString::Printf(TEXT("Force_%s"), *ForceType));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetStringField(TEXT("forceType"), ForceType);
@@ -857,6 +865,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("Velocity"));
         Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
         Result->SetStringField(TEXT("velocityMode"), VelocityMode);
@@ -892,6 +901,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("Acceleration"));
         Result->SetStringField(TEXT("message"), TEXT("Configured acceleration module."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Acceleration module configured."), Result);
@@ -921,6 +931,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("Size"));
         Result->SetStringField(TEXT("sizeMode"), SizeMode);
         Result->SetNumberField(TEXT("uniformSize"), UniformSize);
@@ -958,6 +969,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("Color"));
         Result->SetStringField(TEXT("colorMode"), ColorMode);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured color module: mode=%s"), *ColorMode));
@@ -1045,6 +1057,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("SpriteRenderer"));
         Result->SetStringField(TEXT("message"), TEXT("Configured sprite renderer module."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sprite renderer configured."), Result);
@@ -1131,6 +1144,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("MeshRenderer"));
         Result->SetStringField(TEXT("message"), TEXT("Configured mesh renderer module."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mesh renderer configured."), Result);
@@ -1213,6 +1227,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("RibbonRenderer"));
         Result->SetStringField(TEXT("message"), TEXT("Configured ribbon renderer module."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ribbon renderer configured."), Result);
@@ -1288,6 +1303,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("LightRenderer"));
         Result->SetStringField(TEXT("message"), TEXT("Configured light renderer module."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Light renderer configured."), Result);
@@ -1319,6 +1335,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("Collision"));
         Result->SetStringField(TEXT("collisionMode"), CollisionMode);
         Result->SetNumberField(TEXT("restitution"), Restitution);
@@ -1351,6 +1368,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("KillParticles"));
         Result->SetStringField(TEXT("killCondition"), KillCondition);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured kill particles module: condition=%s"), *KillCondition));
@@ -1380,6 +1398,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("moduleName"), TEXT("CameraOffset"));
         Result->SetNumberField(TEXT("cameraOffset"), CameraOffset);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured camera offset module: offset=%.1f"), CameraOffset));
@@ -1451,6 +1470,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("parameterName"), ParamName);
         Result->SetStringField(TEXT("parameterType"), ParamType);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added user parameter '%s' of type %s."), *ParamName, *ParamType));
@@ -1525,6 +1545,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("parameterName"), ParamName);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parameter '%s' value."), *ParamName));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Parameter value set."), Result);
@@ -1562,6 +1583,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("parameterName"), ParamName);
         Result->SetStringField(TEXT("sourceBinding"), SourceBinding);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Bound parameter '%s' to source '%s'."), *ParamName, *SourceBinding));
@@ -1591,6 +1613,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("dataInterface"), TEXT("SkeletalMesh"));
         Result->SetStringField(TEXT("message"), TEXT("Added Skeletal Mesh data interface."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Skeletal Mesh DI added."), Result);
@@ -1619,6 +1642,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("dataInterface"), TEXT("StaticMesh"));
         Result->SetStringField(TEXT("message"), TEXT("Added Static Mesh data interface."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Static Mesh DI added."), Result);
@@ -1645,6 +1669,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("dataInterface"), TEXT("Spline"));
         Result->SetStringField(TEXT("message"), TEXT("Added Spline data interface."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spline DI added."), Result);
@@ -1671,6 +1696,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("dataInterface"), TEXT("AudioSpectrum"));
         Result->SetStringField(TEXT("message"), TEXT("Added Audio Spectrum data interface."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Audio Spectrum DI added."), Result);
@@ -1697,6 +1723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("dataInterface"), TEXT("CollisionQuery"));
         Result->SetStringField(TEXT("message"), TEXT("Added Collision Query data interface."));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Collision Query DI added."), Result);
@@ -1734,6 +1761,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("eventName"), EventName);
         Result->SetStringField(TEXT("eventType"), TEXT("Generator"));
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added event generator '%s'."), *EventName));
@@ -1771,6 +1799,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("eventName"), EventName);
         Result->SetStringField(TEXT("eventType"), TEXT("Receiver"));
         Result->SetBoolField(TEXT("spawnOnEvent"), bSpawnOnEvent);
@@ -1823,6 +1852,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("eventName"), EventName);
         Result->SetNumberField(TEXT("payloadAttributeCount"), PayloadAttributes.Num());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured event payload for '%s' with %d attributes."), *EventName, PayloadAttributes.Num()));
@@ -1881,6 +1911,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetBoolField(TEXT("gpuEnabled"), true);
         Result->SetBoolField(TEXT("fixedBoundsEnabled"), bFixedBounds);
         Result->SetBoolField(TEXT("deterministicEnabled"), bDeterministic);
@@ -1918,6 +1949,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             System->MarkPackageDirty();
         }
 
+        AddAssetVerification(Result, System);
         Result->SetStringField(TEXT("stageName"), StageName);
         Result->SetStringField(TEXT("iterationSource"), IterationSource);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added simulation stage '%s'."), *StageName));
