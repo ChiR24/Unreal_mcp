@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🏷️ [0.5.16] - 2026-02-16
+## 🏷️ [0.5.17] - 2026-02-16
 
 > [!IMPORTANT]
 > ### 🔧 World Tools Category Fixes & Security Hardening
@@ -200,7 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🏷️ [0.5.15] - 2026-02-12
+## 🏷️ [0.5.16] - 2026-02-12
 
 > [!IMPORTANT]
 > ### 🚀 Major Feature Release: 200+ Action Handlers
@@ -296,6 +296,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>🔒 String Escaping Fix</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/202">#202</a>)</summary>
+
+| Issue | Fix |
+|-------|-----|
+| Incomplete string escaping in path handling | Added proper escaping for special characters |
+
+</details>
+
 ### 🔧 Changed
 
 <details>
@@ -343,6 +352,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lines Removed:** ~2,700
 - **New Action Handlers:** ~200
 - **New Handler Files:** 5
+
+---
+
+## 🏷️ [0.5.15] - 2026-02-06
+
+> [!NOTE]
+> ### 🌐 Network Configuration Release
+> This release adds support for non-loopback binding in automation bridge settings, enabling LAN access configuration.
+
+### ✨ Added
+
+<details>
+<summary><b>🌐 Non-Loopback Binding Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/193">#193</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **Non-Loopback Binding** | Automation bridge can now bind to non-loopback addresses (e.g., `0.0.0.0`) for LAN access |
+| **Allow Non-Loopback Setting** | New `bAllowNonLoopback` setting in plugin configuration |
+| **TypeScript Support** | Added `MCP_AUTOMATION_ALLOW_NON_LOOPBACK` environment variable |
+| **Host Validation Tests** | New test suite for bridge host validation |
+
+**Configuration:**
+```env
+# Enable LAN access
+MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true
+MCP_AUTOMATION_HOST=0.0.0.0
+```
+
+**Security Note:** Only enable on trusted networks with appropriate firewall rules.
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>Dependabot Updates</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `github/codeql-action` | 4.32.1 → 4.32.2 | [#189](https://github.com/ChiR24/Unreal_mcp/pull/189) |
+| Dependencies group | 2 updates | [#190](https://github.com/ChiR24/Unreal_mcp/pull/190) |
+
+</details>
+
+### 📊 Statistics
+
+- **Files Changed:** 8 files
+- **Lines Added:** ~270
+- **Lines Removed:** ~10
 
 ---
 
