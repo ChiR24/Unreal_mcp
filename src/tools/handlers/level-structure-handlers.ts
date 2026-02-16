@@ -38,7 +38,7 @@ function validateLevelName(levelName: string): string | null {
   // These characters are not allowed in Windows filenames and UE asset names
   const invalidChars = /[\\/:*?"<>|]/;
   if (invalidChars.test(levelName)) {
-    return `levelName contains invalid characters. Cannot use: \\ / : * ? " < > |`;
+    return 'levelName contains invalid characters. Cannot use: \\ / : * ? " < > |';
   }
 
   // Check for leading/trailing spaces
@@ -49,7 +49,7 @@ function validateLevelName(levelName: string): string | null {
   // Check for reserved Windows filenames
   const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
   if (reservedNames.test(levelName)) {
-    return `levelName cannot be a reserved Windows device name: ${levelName}`;
+    return 'levelName cannot be a reserved Windows device name: ' + levelName;
   }
 
   return null;

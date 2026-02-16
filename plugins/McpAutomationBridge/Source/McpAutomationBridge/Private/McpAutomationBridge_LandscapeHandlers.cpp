@@ -873,11 +873,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
         FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
         LandscapeInfo->Layers.Add(NewLayerSettings);
 
-        // Create target layer settings for the new layer (UE 5.1+ only)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        LandscapeInfo->CreateTargetLayerSettingsFor(NewLayerInfo);
-#endif
-
         LayerInfo = NewLayerInfo;
 
         UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
