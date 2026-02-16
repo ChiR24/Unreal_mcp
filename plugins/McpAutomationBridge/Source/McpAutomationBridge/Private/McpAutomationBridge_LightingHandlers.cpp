@@ -197,7 +197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const TSharedPtr<FJsonObject> *RotPtr;
     if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr)) {
       Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
-      Rotation.Yaw = GetJsonNumberField((*LocPtr), TEXT("yaw"));
+      Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
       Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
     }
 

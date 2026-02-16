@@ -54,9 +54,9 @@
 #include "AssetToolsModule.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
+#include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #endif
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
-#include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #include "Engine/LevelStreamingVolume.h"
 #include "EditorAssetLibrary.h"
 #endif
@@ -866,15 +866,23 @@ static bool HandleConfigureGridSize(
 
     // Check if we're dealing with RuntimeSpatialHash or RuntimeHashSet
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     UWorldPartitionRuntimeHashSet* HashSet = Cast<UWorldPartitionRuntimeHashSet>(RuntimeHash);
 
     if (!SpatialHash && !HashSet)
+#else
+    if (!SpatialHash)
+#endif
     {
         // Neither supported hash type
         TSharedPtr<FJsonObject> ErrorJson = MakeShareable(new FJsonObject());
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash, WorldPartitionRuntimeHashSet"));
-        ErrorJson->SetStringField(TEXT("hint"), TEXT("World Partition must use RuntimeSpatialHash or RuntimeHashSet for grid configuration."));
+#else
+        ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash"));
+#endif
+        ErrorJson->SetStringField(TEXT("hint"), TEXT("World Partition must use RuntimeSpatialHash for grid configuration."));
         ErrorJson->SetStringField(TEXT("solution"), TEXT("Create a new level with World Partition enabled, or check World Partition settings in the editor."));
 
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -885,7 +893,8 @@ static bool HandleConfigureGridSize(
     }
 
 #if WITH_EDITORONLY_DATA
-    // Handle RuntimeHashSet (UE 5.7+ default)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    // Handle RuntimeHashSet (UE 5.1+ only)
     if (HashSet)
     {
         // For HashSet, we use the RuntimePartitions API instead of Grids
@@ -1022,6 +1031,7 @@ static bool HandleConfigureGridSize(
         Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
         return true;
     }
+#endif // ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 
     // Handle RuntimeSpatialHash (existing code)
     // Access the editor-only Grids array via reflection since it's protected

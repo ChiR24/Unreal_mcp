@@ -169,8 +169,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("contextPath"), ContextPath);
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("key"), KeyName);
-    AddAssetVerification(Result, Context);
-    AddAssetVerification(Result, InAction);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Mapping added."), Result);
   } else if (SubAction == TEXT("remove_mapping")) {
@@ -212,8 +212,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       RemovedKeys.Add(MakeShared<FJsonValueString>(Key.ToString()));
     }
     Result->SetArrayField(TEXT("removedKeys"), RemovedKeys);
-    AddAssetVerification(Result, Context);
-    AddAssetVerification(Result, InAction);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Mappings removed for action."), Result);
   } else if (SubAction == TEXT("map_input_action")) {
@@ -251,8 +251,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     Result->SetStringField(TEXT("contextPath"), ContextPath);
     Result->SetStringField(TEXT("actionPath"), ActionPath);
     Result->SetStringField(TEXT("key"), KeyName);
-    AddAssetVerification(Result, Context);
-    AddAssetVerification(Result, InAction);
+    AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
+    AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Input action mapped to key."), Result);
   } else if (SubAction == TEXT("set_input_trigger")) {

@@ -628,11 +628,13 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
 
       if (Operation.Equals(TEXT("raise"), ESearchCase::IgnoreCase)) {
         // Raise by delta (positive values raise, negative lower)
-        NewHeight = FMath::Clamp(static_cast<int16>(CurrentHeights[i]) + FMath::Abs(Delta) / 10, 0, 65535);
+        // Use int32 to avoid overflow for heights > 32767
+        NewHeight = FMath::Clamp(static_cast<int32>(CurrentHeights[i]) + FMath::Abs(Delta) / 10, 0, 65535);
         ModifiedCount++;
       } else if (Operation.Equals(TEXT("lower"), ESearchCase::IgnoreCase)) {
         // Lower by delta
-        NewHeight = FMath::Clamp(static_cast<int16>(CurrentHeights[i]) - FMath::Abs(Delta) / 10, 0, 65535);
+        // Use int32 to avoid overflow for heights > 32767
+        NewHeight = FMath::Clamp(static_cast<int32>(CurrentHeights[i]) - FMath::Abs(Delta) / 10, 0, 65535);
         ModifiedCount++;
       } else if (Operation.Equals(TEXT("flatten"), ESearchCase::IgnoreCase)) {
         // Flatten to target height
@@ -871,8 +873,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
         FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
         LandscapeInfo->Layers.Add(NewLayerSettings);
 
-        // Create target layer settings for the new layer
+        // Create target layer settings for the new layer (UE 5.1+ only)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         LandscapeInfo->CreateTargetLayerSettingsFor(NewLayerInfo);
+#endif
 
         LayerInfo = NewLayerInfo;
 

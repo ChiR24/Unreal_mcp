@@ -9,9 +9,10 @@ import { IEnvironmentTools, StandardActionResponse } from '../types/tool-interfa
  * Validates a file path to prevent path traversal and arbitrary file access.
  * Security checks:
  * - Rejects Windows absolute paths (drive letters)
- * - Rejects Unix absolute paths (starting with /)
+ * - Rejects Unix absolute paths (starting with /) except UE-style project-relative paths
  * - Rejects path traversal attempts (..)
- * - Restricts to allowed directories (project-relative, tmp, temp)
+ * - Maps UE-style paths (/Temp, /Saved, /Game) to safe project directories
+ * - Ensures final path is contained within project directory
  * 
  * @param inputPath - The path to validate
  * @returns Object with isValid flag and optional sanitized path or error
@@ -32,13 +33,6 @@ export function validateSnapshotPath(inputPath: string): { isValid: false; error
     return { isValid: false, error: 'SECURITY_VIOLATION: Absolute paths with drive letters are not allowed' };
   }
 
-  // SECURITY: Reject Unix absolute paths
-  if (trimmed.startsWith('/etc') || trimmed.startsWith('/var') || trimmed.startsWith('/usr') || 
-      trimmed.startsWith('/bin') || trimmed.startsWith('/sbin') || trimmed.startsWith('/root') ||
-      trimmed.startsWith('/home')) {
-    return { isValid: false, error: 'SECURITY_VIOLATION: System directory paths are not allowed' };
-  }
-
   // SECURITY: Reject path traversal attempts
   // Normalize the path to resolve any ./ or ../ before checking
   const normalized = path.normalize(trimmed);
@@ -46,18 +40,64 @@ export function validateSnapshotPath(inputPath: string): { isValid: false; error
     return { isValid: false, error: 'SECURITY_VIOLATION: Path traversal (..) is not allowed' };
   }
 
-  // SECURITY: Check for UE project-relative paths (start with /)
-  // These are handled by the C++ SanitizeProjectFilePath which allows /Temp, /Saved, /Game, etc.
-  // C++ validation: rejects ':', '..', and ensures path starts with '/'
+  const cwd = process.cwd();
+
+  // SECURITY: Handle UE-style project-relative paths (start with /)
+  // Only allow specific UE directories that are safe
   if (trimmed.startsWith('/')) {
-    // Allow UE project-relative paths - C++ handler will validate against actual UE project
-    // Examples: /Temp/snapshot.json, /Saved/backup.json, /Game/Data/file.json
-    // Rejected by earlier checks: /etc, /var, /usr, /bin, /sbin, /root, /home (system paths)
-    return { isValid: true, safePath: trimmed };
+    // Reject system paths explicitly
+    // Note: We check for specific system paths but allow UE's /Temp, /Saved, /Game
+    // /tmp/ (lowercase) is a Unix system directory, but /Temp/ (capital T) is UE
+    const systemPathPrefixes = ['/etc/', '/var/', '/usr/', '/bin/', '/sbin/', '/root/', '/home/', '/opt/', '/proc/', '/sys/', '/dev/', '/tmp/'];
+    for (const prefix of systemPathPrefixes) {
+      if (trimmed.toLowerCase().startsWith(prefix.toLowerCase())) {
+        return { isValid: false, error: `SECURITY_VIOLATION: System directory paths (${prefix}) are not allowed` };
+      }
+    }
+    
+    // Reject exact system path matches (no trailing slash)
+    const exactSystemPaths = ['/etc', '/var', '/usr', '/bin', '/sbin', '/root', '/home', '/opt', '/proc', '/sys', '/dev', '/tmp'];
+    if (exactSystemPaths.some(sp => trimmed.toLowerCase() === sp.toLowerCase())) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: System directory paths are not allowed' };
+    }
+
+    // Only allow UE project-relative paths: /Temp/, /Saved/, /Game/
+    // These will be mapped to safe directories within the project
+    const allowedUePaths = ['/Temp/', '/Saved/', '/Game/'];
+    const isAllowedUePath = allowedUePaths.some(uePath => 
+      trimmed.toLowerCase().startsWith(uePath.toLowerCase()) || 
+      trimmed.toLowerCase() === uePath.slice(0, -1).toLowerCase()
+    );
+
+    if (!isAllowedUePath) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: Only UE project-relative paths (/Temp, /Saved, /Game) are allowed' };
+    }
+
+    // Map UE-style paths to safe project directories
+    // /Temp -> project/temp, /Saved -> project/Saved, /Game -> project/Content
+    let mappedPath: string;
+    if (trimmed.toLowerCase().startsWith('/temp')) {
+      // Map /Temp to a temp directory within the project
+      mappedPath = path.join(cwd, 'temp', trimmed.slice(6)); // Remove '/Temp/'
+    } else if (trimmed.toLowerCase().startsWith('/saved')) {
+      mappedPath = path.join(cwd, 'Saved', trimmed.slice(7)); // Remove '/Saved/'
+    } else if (trimmed.toLowerCase().startsWith('/game')) {
+      mappedPath = path.join(cwd, 'Content', trimmed.slice(6)); // Remove '/Game/'
+    } else {
+      // This shouldn't happen due to the isAllowedUePath check, but be safe
+      return { isValid: false, error: 'SECURITY_VIOLATION: Unrecognized UE path' };
+    }
+
+    // Normalize and verify the final path is within the project
+    const finalPath = path.normalize(mappedPath);
+    if (!finalPath.startsWith(cwd)) {
+      return { isValid: false, error: 'SECURITY_VIOLATION: Path must be within the project directory' };
+    }
+
+    return { isValid: true, safePath: finalPath };
   }
 
   // For relative paths, resolve against project directory
-  const cwd = process.cwd();
   const resolvedPath = path.resolve(cwd, trimmed);
   
   // Ensure the resolved path is within the project directory

@@ -2146,7 +2146,13 @@ static bool HandleAddTriggerVolume(
     }
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
@@ -2229,7 +2235,13 @@ static bool HandleAddBlockingVolume(
     }
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
@@ -2319,7 +2331,13 @@ static bool HandleAddKillZVolume(
     }
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
@@ -2413,7 +2431,13 @@ static bool HandleAddPhysicsVolume(
     Volume->TerminalVelocity = TerminalVelocity;
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
@@ -2521,7 +2545,13 @@ static bool HandleAddCullDistanceVolume(
     }
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
@@ -2618,7 +2648,13 @@ static bool HandleAddPostProcessVolume(
     Volume->bUnbound = bUnbound;
 
     // Attach to the target actor - check return value
+    // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     bool bAttachmentSucceeded = Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+#else
+    Volume->AttachToActor(TargetActor, FAttachmentTransformRules::KeepWorldTransform);
+    bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
+#endif
 
     TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());

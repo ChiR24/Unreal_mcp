@@ -2723,6 +2723,25 @@ static inline void AddAssetVerification(TSharedPtr<FJsonObject> Response, UObjec
 }
 
 /**
+ * Add asset verification data to a nested object within the response.
+ * Use this when verifying multiple assets to avoid field overwrites.
+ * @param Response The main response object
+ * @param FieldName The field name for the nested verification object (e.g., "contextVerification", "actionVerification")
+ * @param Asset The asset to verify
+ */
+static inline void AddAssetVerificationNested(TSharedPtr<FJsonObject> Response, const FString& FieldName, UObject* Asset) {
+  if (!Response || !Asset) return;
+  
+  TSharedPtr<FJsonObject> VerificationObj = MakeShared<FJsonObject>();
+  FString AssetPath = Asset->GetPackage() ? Asset->GetPackage()->GetPathName() : Asset->GetPathName();
+  VerificationObj->SetStringField(TEXT("assetPath"), AssetPath);
+  VerificationObj->SetStringField(TEXT("assetName"), Asset->GetName());
+  VerificationObj->SetBoolField(TEXT("existsAfter"), true);
+  VerificationObj->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
+  Response->SetObjectField(FieldName, VerificationObj);
+}
+
+/**
  * Verify an asset exists at the given path and add to response.
  */
 static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FString& AssetPath) {

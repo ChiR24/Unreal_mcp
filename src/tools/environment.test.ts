@@ -54,6 +54,67 @@ describe('validateSnapshotPath Security', () => {
         expect(result.error).toContain('SECURITY_VIOLATION');
       }
     });
+
+    it('should reject /tmp paths (security risk)', () => {
+      const result = validateSnapshotPath('/tmp/snapshot.json');
+      expect(result.isValid).toBe(false);
+      if (!result.isValid) {
+        expect(result.error).toContain('SECURITY_VIOLATION');
+        expect(result.error).toContain('System directory');
+      }
+    });
+
+    it('should reject exact /tmp path', () => {
+      const result = validateSnapshotPath('/tmp');
+      expect(result.isValid).toBe(false);
+      if (!result.isValid) {
+        expect(result.error).toContain('SECURITY_VIOLATION');
+      }
+    });
+
+    it('should reject arbitrary absolute paths', () => {
+      const result = validateSnapshotPath('/arbitrary/path/file.json');
+      expect(result.isValid).toBe(false);
+      if (!result.isValid) {
+        expect(result.error).toContain('SECURITY_VIOLATION');
+        expect(result.error).toContain('UE project-relative paths');
+      }
+    });
+  });
+
+  describe('UE project-relative paths', () => {
+    it('should accept /Temp paths and map to project temp directory', () => {
+      const result = validateSnapshotPath('/Temp/snapshot.json');
+      expect(result.isValid).toBe(true);
+      if (result.isValid) {
+        expect(result.safePath).toContain('temp');
+        expect(result.safePath).not.toContain('/Temp');
+      }
+    });
+
+    it('should accept /Saved paths and map to project Saved directory', () => {
+      const result = validateSnapshotPath('/Saved/backup.json');
+      expect(result.isValid).toBe(true);
+      if (result.isValid) {
+        expect(result.safePath).toContain('Saved');
+      }
+    });
+
+    it('should accept /Game paths and map to project Content directory', () => {
+      const result = validateSnapshotPath('/Game/Data/config.json');
+      expect(result.isValid).toBe(true);
+      if (result.isValid) {
+        expect(result.safePath).toContain('Content');
+      }
+    });
+
+    it('should accept case-insensitive UE paths (/temp, /TEMP)', () => {
+      const result1 = validateSnapshotPath('/temp/test.json');
+      expect(result1.isValid).toBe(true);
+      
+      const result2 = validateSnapshotPath('/TEMP/test.json');
+      expect(result2.isValid).toBe(true);
+    });
   });
 
   describe('Path traversal', () => {

@@ -240,7 +240,6 @@ function evaluateExpectation(testCase, response) {
   // When a volume is created but attachment fails (e.g., static volume to movable actor),
   // the test should FAIL because the requested attachment did not succeed.
   const attachmentSucceeded = response.structuredContent?.attachmentSucceeded;
-  const isAddVolumeAction = messageStr.includes('add_') && messageStr.includes('volume');
   if (attachmentSucceeded === false && primaryExpectsSuccess && !lowerExpected.includes('attachment failed')) {
     return {
       passed: false,
