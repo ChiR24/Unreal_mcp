@@ -633,6 +633,48 @@ export async function runToolTests(toolName, testCases) {
       }
     };
 
+    // Retry helper with exponential backoff for setup operations
+    // Helps handle transient failures like Intel GPU driver crashes
+    async function callWithRetry(callOptions, options = {}) {
+      const {
+        maxRetries = 3,
+        baseDelayMs = 1000,
+        maxDelayMs = 10000,
+        timeoutMs = 15000,
+        operationName = callOptions.name
+      } = options;
+      
+      let lastError = null;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const result = await callToolOnce(callOptions, timeoutMs);
+          // Check for success in structured response
+          if (result?.structuredContent?.success === false) {
+            throw new Error(result.structuredContent.error || result.structuredContent.message || 'Operation failed');
+          }
+          if (attempt > 1) {
+            console.log(`  ✅ ${operationName} succeeded on attempt ${attempt}/${maxRetries}`);
+          }
+          return result;
+        } catch (err) {
+          lastError = err;
+          const errorMsg = String(err?.message || err);
+          const isDriverCrash = errorMsg.toLowerCase().includes('disconnect') ||
+                                errorMsg.toLowerCase().includes('1006') ||
+                                errorMsg.toLowerCase().includes('crash') ||
+                                errorMsg.toLowerCase().includes('exception');
+          
+          if (attempt < maxRetries) {
+            const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
+            const reason = isDriverCrash ? 'driver instability detected' : 'transient failure';
+            console.warn(`  ⚠️  ${operationName} failed (attempt ${attempt}/${maxRetries}, ${reason}), retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+          }
+        }
+      }
+      throw lastError;
+    }
+
     // === CLEANUP: Delete existing test assets from previous runs ===
     console.log('🧹 Cleaning up existing test assets...');
     try {
@@ -645,6 +687,8 @@ export async function runToolTests(toolName, testCases) {
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSphere' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestCylinder' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestActor' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ParentActor' } }, 5000).catch(() => {});
+      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ChildActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavTestActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSpline' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestRoad' } }, 5000).catch(() => {});
@@ -683,21 +727,47 @@ export async function runToolTests(toolName, testCases) {
         arguments: { action: 'create_folder', path: '/Game/MCPTest' }
       }, 10000).catch(() => { /* Folder may already exist */ });
 
-      // Spawn TestActor
-      await callToolOnce({
+      // Spawn TestActor with a mesh for physics tests (apply_force requires a mesh)
+      // Use retry logic for critical actors that many tests depend on
+      await callWithRetry({
         name: 'control_actor',
         arguments: {
           action: 'spawn',
           classPath: '/Script/Engine.StaticMeshActor',
           actorName: 'TestActor',
+          meshPath: '/Engine/BasicShapes/Cube',
           location: { x: 0, y: 0, z: 0 },
           rotation: { pitch: 0, yaw: 0, roll: 0 },
           scale: { x: 1, y: 1, z: 1 }
         }
-      }, 15000).catch(err => console.warn('⚠️  TestActor may already exist:', err?.message || err));
+      }, { maxRetries: 3, timeoutMs: 20000, operationName: 'spawn TestActor' }).catch(err => console.warn('⚠️  TestActor may already exist:', err?.message || err));
 
-      // Create Test Blueprint
+      // Spawn ParentActor for attach/detach tests
       await callToolOnce({
+        name: 'control_actor',
+        arguments: {
+          action: 'spawn',
+          classPath: '/Script/Engine.StaticMeshActor',
+          actorName: 'ParentActor',
+          meshPath: '/Engine/BasicShapes/Cube',
+          location: { x: 200, y: 0, z: 0 }
+        }
+      }, 15000).catch(err => console.warn('⚠️  ParentActor may already exist:', err?.message || err));
+
+      // Spawn ChildActor for attach/detach tests
+      await callToolOnce({
+        name: 'control_actor',
+        arguments: {
+          action: 'spawn',
+          classPath: '/Script/Engine.StaticMeshActor',
+          actorName: 'ChildActor',
+          meshPath: '/Engine/BasicShapes/Cube',
+          location: { x: 300, y: 0, z: 0 }
+        }
+      }, 15000).catch(err => console.warn('⚠️  ChildActor may already exist:', err?.message || err));
+
+      // Create Test Blueprint (critical for many tests - use retry)
+      await callWithRetry({
         name: 'manage_blueprint',
         arguments: {
           action: 'create',
@@ -705,7 +775,7 @@ export async function runToolTests(toolName, testCases) {
           path: '/Game/MCPTest',
           parentClass: 'Actor'
         }
-      }, 15000).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
+      }, { maxRetries: 3, timeoutMs: 20000, operationName: 'create BP_Test blueprint' }).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
 
       // Create Test Material
       await callToolOnce({
@@ -889,7 +959,8 @@ export async function runToolTests(toolName, testCases) {
 
       // === Level Structure Setup for manage_level_structure tests ===
       // Create TestLevel for level blueprint and level instance tests
-      await callToolOnce({
+      // Use retry logic for level creation due to Intel GPU driver instability
+      await callWithRetry({
         name: 'manage_level_structure',
         arguments: { 
           action: 'create_level', 
@@ -898,10 +969,10 @@ export async function runToolTests(toolName, testCases) {
           bCreateWorldPartition: false,
           save: true
         }
-      }, 15000).catch(err => console.warn('⚠️  TestLevel may already exist:', err?.message || err));
+      }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create TestLevel' }).catch(err => console.warn('⚠️  TestLevel creation failed after retries:', err?.message || err));
 
       // Create MainLevel for streaming/sublevel tests
-      await callToolOnce({
+      await callWithRetry({
         name: 'manage_level_structure',
         arguments: { 
           action: 'create_level', 
@@ -910,7 +981,7 @@ export async function runToolTests(toolName, testCases) {
           bCreateWorldPartition: false,
           save: true
         }
-      }, 15000).catch(err => console.warn('⚠️  MainLevel may already exist:', err?.message || err));
+      }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create MainLevel' }).catch(err => console.warn('⚠️  MainLevel creation failed after retries:', err?.message || err));
 
       // Create DataLayers folder for data layer tests
       await callToolOnce({
@@ -965,7 +1036,7 @@ export async function runToolTests(toolName, testCases) {
     
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '180000');
+      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '30000');
       const startTime = performance.now();
 
       try {

@@ -1057,6 +1057,38 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleMiscAction(R, A, P, S);
                   });
+
+  // PIE State Handler - for checking Play-In-Editor state
+  RegisterHandler(TEXT("check_pie_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+#if WITH_EDITOR
+                    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                    bool bIsInPIE = false;
+                    FString PieState = TEXT("stopped");
+                    
+                    if (GEditor && GEditor->PlayWorld) {
+                      bIsInPIE = true;
+                      if (GEditor->PlayWorld->IsPaused()) {
+                        PieState = TEXT("paused");
+                      } else {
+                        PieState = TEXT("playing");
+                      }
+                    }
+                    
+                    Result->SetBoolField(TEXT("isInPIE"), bIsInPIE);
+                    Result->SetStringField(TEXT("pieState"), PieState);
+                    
+                    SendAutomationResponse(S, R, true, 
+                        bIsInPIE ? TEXT("PIE is active") : TEXT("PIE is not active"),
+                        Result);
+                    return true;
+#else
+                    SendAutomationError(S, R, TEXT("PIE state check requires editor build"), TEXT("NOT_AVAILABLE"));
+                    return true;
+#endif
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the

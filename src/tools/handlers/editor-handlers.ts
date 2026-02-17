@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
 
 /**
  * Action aliases for test compatibility
@@ -27,15 +27,129 @@ const EDITOR_ACTION_ALIASES: Record<string, string> = {
 };
 
 /**
+ * Idempotent actions that accept success even with invalid/missing params.
+ * These are global commands that have sensible defaults or no-ops.
+ */
+const IDEMPOTENT_ACTIONS = new Set([
+  'stop', 'stop_pie', 'pause', 'resume', 
+  'set_game_speed', 'set_fixed_delta_time', 
+  'set_immersive_mode', 'set_game_view', 
+  'show_stats', 'hide_stats', 
+  'undo', 'redo', 
+  'step_frame', 'single_frame_step'
+]);
+
+/**
+ * Actions that require specific parameters.
+ * Maps action name to array of required parameter names.
+ */
+const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
+  'open_asset': ['assetPath'],
+  'close_asset': ['assetPath'],
+  'open_level': ['levelPath'],
+  'focus_actor': ['actorName'],
+  'possess': ['actorName'],
+  'set_camera': ['location', 'rotation'],
+  'set_viewport_resolution': ['width', 'height'],
+  'set_view_mode': ['viewMode'],
+  'set_editor_mode': ['mode'],
+  'set_camera_fov': ['fov'],
+  'set_game_speed': ['speed'],
+  'set_fixed_delta_time': ['deltaTime'],
+  'screenshot': ['filename'],
+  'set_preferences': ['category', 'preferences'],
+  'execute_command': ['command'],
+  'console_command': ['command'],
+};
+
+/**
+ * Actions that have specific allowed parameters.
+ * Maps action name to array of allowed parameter names (excluding action/subAction/timeoutMs).
+ */
+const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
+  'play': [],
+  'stop': [],
+  'stop_pie': [],
+  'pause': [],
+  'resume': [],
+  'eject': [],
+  'possess': ['actorName'],
+  'open_asset': ['assetPath', 'path'],
+  'close_asset': ['assetPath', 'path'],
+  'open_level': ['levelPath', 'path'],
+  'focus_actor': ['actorName', 'name'],
+  'set_camera': ['location', 'rotation', 'actorName'],
+  'set_viewport_resolution': ['width', 'height'],
+  'set_view_mode': ['viewMode'],
+  'set_editor_mode': ['mode'],
+  'set_camera_fov': ['fov'],
+  'set_game_speed': ['speed'],
+  'set_fixed_delta_time': ['deltaTime'],
+  'screenshot': ['filename', 'resolution'],
+  'set_preferences': ['category', 'preferences', 'section', 'key', 'value'],
+  'execute_command': ['command'],
+  'console_command': ['command'],
+  'undo': [],
+  'redo': [],
+  'save_all': [],
+  'show_stats': ['stat'],
+  'hide_stats': ['stat'],
+  'set_game_view': ['enabled'],
+  'set_immersive_mode': ['enabled'],
+  'step_frame': ['steps'],
+  'single_frame_step': ['steps'],
+  'create_bookmark': ['id', 'description', 'bookmarkName'],
+  'jump_to_bookmark': ['id', 'bookmarkName'],
+  'start_recording': ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],
+  'stop_recording': [],
+  'set_viewport_realtime': ['enabled', 'realtime'],
+  'simulate_input': ['key', 'action', 'axis', 'value'],
+};
+
+/**
  * Normalize editor action names for test compatibility
  */
 function normalizeEditorAction(action: string): string {
   return EDITOR_ACTION_ALIASES[action] ?? action;
 }
 
+/**
+ * Validates arguments for editor actions.
+ * For non-idempotent actions, validates that only expected parameters are present.
+ * Always validates security patterns (path traversal, etc).
+ */
+function validateEditorActionArgs(
+  action: string,
+  args: Record<string, unknown>
+): void {
+  // Always validate security patterns first
+  validateArgsSecurity({ action, ...args } as Record<string, unknown>);
+  
+  // Idempotent actions are allowed to accept any parameters (they ignore extras gracefully)
+  if (IDEMPOTENT_ACTIONS.has(action)) {
+    return;
+  }
+  
+  // Validate that only expected parameters are present for non-idempotent actions
+  const allowedParams = ACTION_ALLOWED_PARAMS[action];
+  if (allowedParams !== undefined) {
+    validateExpectedParams(args, allowedParams, `control_editor:${action}`);
+  }
+  
+  // Validate required parameters if defined for this action
+  const requiredParams = ACTION_REQUIRED_PARAMS[action];
+  if (requiredParams !== undefined) {
+    validateRequiredParams(args, requiredParams, `control_editor:${action}`);
+  }
+}
+
 export async function handleEditorTools(action: string, args: EditorArgs, tools: ITools) {
   // Normalize action name for test compatibility
   const normalizedAction = normalizeEditorAction(action);
+  
+  // Validate arguments for this action
+  const argsRecord = args as Record<string, unknown>;
+  validateEditorActionArgs(normalizedAction, argsRecord);
   
   switch (normalizedAction) {
     case 'play': {
