@@ -169,17 +169,17 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'eject': {
-      const inPie = await tools.editorTools.isInPIE();
-      if (!inPie) {
-        throw new Error('Cannot eject while not in PIE');
-      }
+      // CRITICAL FIX: Removed redundant isInPIE() check that caused race condition.
+      // PIE state is now validated atomically in the C++ handler (HandleControlEditorEject)
+      // which checks GEditor->PlayWorld directly before executing the eject command.
+      // This prevents the race where PIE stops between TS check and C++ execution.
       return await executeAutomationRequest(tools, 'control_editor', { action: 'eject' });
     }
     case 'possess': {
-      const inPie = await tools.editorTools.isInPIE();
-      if (!inPie) {
-        throw new Error('Cannot possess actor while not in PIE');
-      }
+      // CRITICAL FIX: Removed redundant isInPIE() check that caused race condition.
+      // PIE state is now validated atomically in the C++ handler (HandleControlEditorPossess)
+      // which checks GEditor->PlayWorld directly before executing the possess command.
+      // This prevents the race where PIE stops between TS check and C++ execution.
       return await executeAutomationRequest(tools, 'control_editor', args);
     }
     case 'pause': {
@@ -359,6 +359,13 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     case 'open_level': {
       const levelPath = requireNonEmptyString(args.levelPath || args.path, 'levelPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_level', levelPath });
+      return cleanObject(res);
+    }
+    case 'simulate_input': {
+      // CRITICAL: Validation runs in validateEditorActionArgs before reaching here.
+      // Allowed params are defined in ACTION_ALLOWED_PARAMS: ['key', 'action', 'axis', 'value']
+      // This ensures unknown params like 'invalidExtraParam' are rejected.
+      const res = await executeAutomationRequest(tools, 'control_editor', args);
       return cleanObject(res);
     }
     case 'focus':

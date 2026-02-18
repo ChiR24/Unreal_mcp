@@ -209,10 +209,9 @@ function registerDefaultHandlers() {
   // 4. EDITOR CONTROL
   toolRegistry.register('control_editor', async (args, tools) => {
     const action = getAction(args);
-    if (action === 'simulate_input') {
-      const payload = { ...args, subAction: action };
-      return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
-    }
+    // CRITICAL FIX: Removed simulate_input special case that bypassed validation.
+    // All actions now go through handleEditorTools which validates via validateEditorActionArgs.
+    // This ensures unknown parameters like 'invalidExtraParam' are properly rejected.
     return await handleEditorTools(action, args, tools);
   });
 

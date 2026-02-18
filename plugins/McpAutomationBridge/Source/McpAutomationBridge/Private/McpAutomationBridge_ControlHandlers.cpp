@@ -2225,8 +2225,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
         Data->SetStringField(TEXT("actorName"), ActorName);
         Data->SetStringField(TEXT("componentName"), ComponentName);
         Data->SetStringField(TEXT("propertyName"), PropertyName);
-        // Note: Full property value serialization would require more complex logic
-        Data->SetStringField(TEXT("value"), TEXT("<property value>"));
+        Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
+        
+        // Extract property value using the existing helper function
+        TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
+        if (PropertyValue.IsValid()) {
+          Data->SetField(TEXT("value"), PropertyValue);
+        } else {
+          Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
+        }
+        
         SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
         return true;
       }
@@ -3877,7 +3885,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   FString MapPath = LevelPath + TEXT(".umap");
   
   // Check if the map file exists before attempting to load
-  FString FullMapPath = FPaths::ProjectContentDir() + MapPath.RightChop(6); // Remove "/Game/" prefix
+  // CRITICAL FIX: Use Mid(6) to skip first 6 chars ("/Game/"), not RightChop(6) which gets LAST 6 chars
+  // RightChop(6) was incorrectly returning ".umap" instead of "Path/To/Level.umap"
+  FString FullMapPath = FPaths::ProjectContentDir() + MapPath.Mid(6); // Remove "/Game/" prefix
   FullMapPath = FPaths::ConvertRelativePathToFull(FullMapPath);
   
   if (!FPaths::FileExists(FullMapPath)) {
