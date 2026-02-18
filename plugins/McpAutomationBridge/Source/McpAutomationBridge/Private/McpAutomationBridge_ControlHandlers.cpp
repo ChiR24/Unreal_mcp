@@ -3577,10 +3577,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
 
   bool bSuccess = true;
   int32 SavedCount = 0;
+  int32 SkippedCount = 0;
   
   for (UPackage* Package : DirtyPackages) {
     if (Package) {
       FString PackagePath = Package->GetPathName();
+      
+      // Skip transient/temporary packages that cannot be saved
+      // These include /Temp/ paths and packages with RF_Transient flag
+      if (PackagePath.StartsWith(TEXT("/Temp/")) || 
+          PackagePath.StartsWith(TEXT("/Transient/")) ||
+          Package->HasAnyFlags(RF_Transient)) {
+        SkippedCount++;
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+               TEXT("HandleControlEditorSaveAll: Skipping transient package: %s"), *PackagePath);
+        continue;
+      }
+      
       if (UEditorAssetLibrary::SaveAsset(PackagePath, false)) {
         SavedCount++;
       } else {
@@ -3592,17 +3605,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("savedCount"), SavedCount);
+  Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
   Resp->SetNumberField(TEXT("totalDirty"), DirtyPackages.Num());
   
   // Only report outer success if the operation actually succeeded
   if (bSuccess || DirtyPackages.Num() == 0) {
     SendAutomationResponse(Socket, RequestId, true, 
-                           FString::Printf(TEXT("Saved %d of %d dirty assets"), SavedCount, DirtyPackages.Num()), 
+                           FString::Printf(TEXT("Saved %d of %d dirty assets (skipped %d transient)"), SavedCount, DirtyPackages.Num() - SkippedCount, SkippedCount), 
                            Resp, FString());
   } else {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),
                               FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
-                                              SavedCount, DirtyPackages.Num()), 
+                                              SavedCount, DirtyPackages.Num() - SkippedCount), 
                               Resp);
   }
   return true;

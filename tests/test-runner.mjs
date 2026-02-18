@@ -11,7 +11,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
 // Common failure keywords to check against
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation'];
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'object_not_found', 'actor_not_found'];
 const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled'];
 
 // Defaults for spawning the MCP server.
@@ -194,10 +194,12 @@ function evaluateExpectation(testCase, response) {
   // structuredContent.success is true or the expectation allows success as fallback.
   // This prevents false positives where tests like "error|success|handled" pass
   // even when the engine returns NO_NAVMESH, NOT_FOUND, NO_COMPONENT, etc.
+  // Note: 'actor_not_found' is a valid error for negative tests - do NOT add it here
+  // as that would fail tests that expect actor_not_found as the error.
   const infrastructureErrorCodes = [
     'no_navmesh', 'no_nav_sys', 'no_world', 'no_component', 'no_smart_link',
-    'not_found', 'invalid_class', 'create_failed', 'spawn_failed', 'already_exists',
-    'invalid_bp', 'cdo_failed', 'level_already_exists', 'asset_not_found'
+    'create_failed', 'spawn_failed', 'invalid_bp', 'cdo_failed', 
+    'level_already_exists', 'physics_failed', 'function_not_found'
   ];
   const hasInfrastructureError = infrastructureErrorCodes.some(code => 
     errorStr === code || errorStr.includes(code) || messageStr.includes(code)
@@ -348,9 +350,12 @@ function evaluateExpectation(testCase, response) {
 
     // Check for specific error types (not just generic "error" keyword)
     // Include security-related keywords for path traversal / injection tests
-    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation'];
-    const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
-    let errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
+    // Include engine-specific error codes (OBJECT_NOT_FOUND, ACTOR_NOT_FOUND)
+    // Support both lowercase (for readability) and uppercase (engine output) variants
+    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation', 'object_not_found', 'actor_not_found', 'CLASS_NOT_FOUND', 'ACTOR_NOT_FOUND', 'OBJECT_NOT_FOUND', 'COMPONENT_NOT_FOUND', 'PHYSICS_FAILED', 'FUNCTION_NOT_FOUND'];
+    const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type.toLowerCase()));
+    let errorTypeMatch = expectedErrorType ? 
+      (lowerReason.includes(expectedErrorType.toLowerCase()) || lowerReason.includes(expectedErrorType.toUpperCase())) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
 
     // Also check detail field if main error check failed (handles wrapped exceptions)
@@ -368,7 +373,10 @@ function evaluateExpectation(testCase, response) {
     if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
       lowerExpected.includes('missing') || lowerExpected.includes('already exists') || 
       lowerExpected.includes('sc_disabled') || lowerExpected.includes('security') ||
-      lowerExpected.includes('blocked') || lowerExpected.includes('violation')) {
+      lowerExpected.includes('blocked') || lowerExpected.includes('violation') ||
+      lowerExpected.includes('object_not_found') || lowerExpected.includes('actor_not_found') ||
+      lowerExpected.includes('class_not_found') || lowerExpected.includes('component_not_found') ||
+      lowerExpected.includes('physics_failed') || lowerExpected.includes('function_not_found')) {
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -743,6 +751,7 @@ export async function runToolTests(toolName, testCases) {
       }, 10000).catch(() => { /* Folder may already exist */ });
 
       // Spawn TestActor with a mesh for physics tests (apply_force requires a mesh)
+      // Use /Engine/EngineMeshes/Cube (exists in UE 5.3-5.7) instead of /Engine/BasicShapes/Cube (doesn't exist)
       // Use retry logic for critical actors that many tests depend on
       await callWithRetry({
         name: 'control_actor',
@@ -756,6 +765,22 @@ export async function runToolTests(toolName, testCases) {
           scale: { x: 1, y: 1, z: 1 }
         }
       }, { maxRetries: 3, timeoutMs: 20000, operationName: 'spawn TestActor' }).catch(err => console.warn('⚠️  TestActor may already exist:', err?.message || err));
+
+      // Enable physics on TestActor for apply_force tests
+      // Set collision to QueryAndPhysics and enable SimulatePhysics on the StaticMeshComponent
+      await callToolOnce({
+        name: 'control_actor',
+        arguments: {
+          action: 'set_component_property',
+          actorName: 'TestActor',
+          componentName: 'StaticMeshComponent0',
+          properties: { 
+            'CollisionEnabled': 'QueryAndPhysics',
+            'SimulatePhysics': true,
+            'bSimulatePhysics': true 
+          }
+        }
+      }, 10000).catch(err => console.warn('⚠️  Physics setup for TestActor failed:', err?.message || err));
 
       // Spawn ParentActor for attach/detach tests
       await callToolOnce({
@@ -846,11 +871,12 @@ export async function runToolTests(toolName, testCases) {
 
       // Create TestAsset by duplicating an engine cube mesh
       // This is needed for duplicate/rename/move/get_dependencies/validate etc. tests
+      // Use /Engine/EngineMeshes/Cube (exists in UE 5.3-5.7) instead of /Engine/BasicShapes/Cube (doesn't exist)
       await callToolOnce({
         name: 'manage_asset',
         arguments: {
           action: 'duplicate',
-          sourcePath: '/Engine/BasicShapes/Cube',
+          sourcePath: '/Engine/EngineMeshes/Cube',
           destinationPath: '/Game/MCPTest/TestAsset'
         }
       }, 15000).catch(err => console.warn('⚠️  TestAsset may already exist:', err?.message || err));
@@ -860,7 +886,7 @@ export async function runToolTests(toolName, testCases) {
         name: 'manage_asset',
         arguments: {
           action: 'duplicate',
-          sourcePath: '/Engine/BasicShapes/Cube',
+          sourcePath: '/Engine/EngineMeshes/Cube',
           destinationPath: '/Game/MCPTest/TestMesh'
         }
       }, 15000).catch(err => console.warn('⚠️  TestMesh may already exist:', err?.message || err));

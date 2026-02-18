@@ -59,12 +59,34 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
   );
   if (direct) return direct;
 
-  const actorName = await resolveObjectPath(args, tools, { pathKeys: [], actorKeys: ['actorName', 'name', 'objectPath'] });
+  // Check if objectPath itself is a component path (e.g., "ActorName.ComponentName")
+  const rawObjectPath = typeof argsTyped.objectPath === 'string' ? argsTyped.objectPath.trim() : '';
+  const objectPathLooksLikeComponent = rawObjectPath && 
+    !rawObjectPath.includes('/') && 
+    !rawObjectPath.includes('\\') &&
+    rawObjectPath.includes('.') &&
+    rawObjectPath.split('.').length === 2;
+
+  // Extract actor name from either explicit actorName or from objectPath if it looks like component path
+  let actorName: string | undefined;
+  let effectiveComponentName = componentName;
+
+  if (objectPathLooksLikeComponent && !componentName) {
+    // objectPath is "ActorName.ComponentName" format
+    const parts = rawObjectPath.split('.');
+    actorName = parts[0];
+    effectiveComponentName = parts[1];
+  } else {
+    actorName = await resolveObjectPath(args, tools, { pathKeys: [], actorKeys: ['actorName', 'name', 'objectPath'] });
+  }
+
   if (!actorName) {
     throw new Error('Invalid actorName: required to resolve componentName');
   }
-  if (!componentName) {
-    throw new Error('Invalid componentName: must be a non-empty string');
+
+  // If no component name was provided or extracted, just return the actor path
+  if (!effectiveComponentName) {
+    return actorName;
   }
 
   // Use inspect:get_components to find the exact component path
@@ -84,7 +106,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
     components = Array.isArray(compsRes?.components) ? compsRes.components : [];
   }
 
-  const needle = componentName.toLowerCase();
+  const needle = effectiveComponentName.toLowerCase();
 
   if (components.length > 0) {
     // 1. Exact Name/Path Match
@@ -114,7 +136,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 
   // Fallback: Construct path manually using original request
   // Use dot notation for subobjects
-  return `${actorName}.${componentName}`;
+  return `${actorName}.${effectiveComponentName}`;
 }
 
 
@@ -136,7 +158,35 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
   
   switch (normalizedAction) {
     case 'inspect_object': {
-      const objectPath = await resolveObjectPath(normalizedArgs, tools);
+      // Check if this is a component path (dot notation like "Actor.Component")
+      // Must NOT be a file path (contains slashes or backslashes)
+      // and componentName must be provided OR objectPath looks like "ActorName.ComponentName"
+      const rawObjectPath = normalizedArgs.objectPath as string | undefined;
+      const hasComponentName = typeof normalizedArgs.componentName === 'string' && 
+        normalizedArgs.componentName.trim().length > 0;
+      
+      // Only treat as component path if:
+      // 1. componentName is explicitly provided, OR
+      // 2. objectPath looks like "ActorName.ComponentName" (no slashes, has exactly one dot with content on both sides)
+      const looksLikeComponentPath = rawObjectPath && 
+        !rawObjectPath.includes('/') && 
+        !rawObjectPath.includes('\\') &&
+        rawObjectPath.includes('.') &&
+        rawObjectPath.split('.').length === 2 &&
+        rawObjectPath.split('.')[0].length > 0 &&
+        rawObjectPath.split('.')[1].length > 0;
+      
+      let objectPath: string;
+      
+      if (hasComponentName || looksLikeComponentPath) {
+        // Use component resolution for dot notation paths
+        // This handles "Actor.Component" syntax by finding the actual component path
+        objectPath = await resolveComponentObjectPathFromArgs(normalizedArgs, tools);
+      } else {
+        // Standard object path resolution for actors, assets, etc.
+        objectPath = await resolveObjectPath(normalizedArgs, tools) ?? '';
+      }
+      
       if (!objectPath) {
         throw new Error('Invalid objectPath: must be a non-empty string');
       }
@@ -437,7 +487,30 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         if (!actorName) throw new Error('actorName is required for delete_object');
         const res = await tools.actorTools.delete({
           actorName
-        });
+        }) as InspectResponse;
+        
+        // Handle response-based errors (C++ returns success:false without throwing)
+        if (res && res.success === false) {
+          const msg = String(res.message || res.error || '');
+          const lower = msg.toLowerCase();
+          // Check for both singular "actor not found" and plural "actors not found"
+          if (lower.includes('actor not found') || lower.includes('actors not found') || lower.includes('not found')) {
+            return cleanObject({
+              success: false,
+              error: res.error || 'NOT_FOUND',
+              handled: true,
+              message: msg,
+              deleted: actorName,
+              notFound: true
+            });
+          }
+          // Other errors - return with handled flag
+          return cleanObject({
+            ...res,
+            handled: true,
+            notFound: lower.includes('not found')
+          });
+        }
         return cleanObject(res);
       } catch (err: unknown) {
         const msg = String(err instanceof Error ? err.message : err);

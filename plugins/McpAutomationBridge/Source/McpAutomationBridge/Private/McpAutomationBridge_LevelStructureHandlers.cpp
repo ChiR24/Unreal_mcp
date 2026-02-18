@@ -214,8 +214,9 @@ static bool HandleCreateLevel(
         FullPath = TEXT("/Game/") + FullPath;
     }
 
-    // CRITICAL: Check if level already exists to prevent WorldSettings collision crash
-    // This prevents Fatal Error: "Cannot generate unique name for 'WorldSettings'"
+    // IDEMPOTENT: Check if level already exists and return success if so
+    // This makes create_level idempotent - calling it multiple times with the same path succeeds
+    // The level is not recreated if it already exists (prevents WorldSettings collision crash)
     
     // Check 1: Check if package exists IN MEMORY (from previous operations in same session)
     // This catches cases where a level was created but the asset registry hasn't synced yet
@@ -226,9 +227,14 @@ static bool HandleCreateLevel(
         UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *LevelName);
         if (ExistingWorld)
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Level already exists in memory: %s. Use load_level or provide a different name."), *FullPath),
-                nullptr, TEXT("LEVEL_ALREADY_EXISTS"));
+            // IDEMPOTENT: Level exists in memory - return success with exists flag
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("levelPath"), FullPath);
+            Result->SetBoolField(TEXT("exists"), true);
+            Result->SetBoolField(TEXT("alreadyExisted"), true);
+            Subsystem->SendAutomationResponse(Socket, RequestId, true,
+                FString::Printf(TEXT("Level already exists: %s"), *FullPath),
+                Result, FString());
             return true;
         }
     }
@@ -236,9 +242,14 @@ static bool HandleCreateLevel(
     // Check 2: Check if package exists ON DISK (covers previously saved levels)
     if (FPackageName::DoesPackageExist(FullPath))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Level already exists: %s. Use load_level or provide a different name."), *FullPath),
-            nullptr, TEXT("LEVEL_ALREADY_EXISTS"));
+        // IDEMPOTENT: Level exists on disk - return success with exists flag
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("levelPath"), FullPath);
+        Result->SetBoolField(TEXT("exists"), true);
+        Result->SetBoolField(TEXT("alreadyExisted"), true);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true,
+            FString::Printf(TEXT("Level already exists: %s"), *FullPath),
+            Result, FString());
         return true;
     }
 

@@ -68,10 +68,32 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     return true;
   }
 
-  auto FindExpressionByIdOrName =
-      [&](const FString &IdOrName) -> UMaterialExpression * {
+  // Helper function to find expression by ID, name, or index
+  // Supports: GUID string, node name, object path, parameter name, or numeric index
+  auto FindExpressionByIdOrNameOrIndex =
+      [&](const FString &IdOrName, int32 Index = -1) -> UMaterialExpression * {
+    // First, try index-based lookup if Index is valid
+    if (Index >= 0) {
+      const TArray<UMaterialExpression*> &Expressions = MCP_GET_MATERIAL_EXPRESSIONS(Material);
+      if (Index < Expressions.Num()) {
+        return Expressions[Index];
+      }
+      return nullptr; // Index out of bounds
+    }
+    
+    // If IdOrName is empty, return nullptr
     if (IdOrName.IsEmpty()) {
       return nullptr;
+    }
+
+    // Try to parse as numeric index first (e.g., "0", "1", "2")
+    int32 ParsedIndex = -1;
+    if (IdOrName.IsNumeric()) {
+      ParsedIndex = FCString::Atoi(*IdOrName);
+      const TArray<UMaterialExpression*> &Expressions = MCP_GET_MATERIAL_EXPRESSIONS(Material);
+      if (ParsedIndex >= 0 && ParsedIndex < Expressions.Num()) {
+        return Expressions[ParsedIndex];
+      }
     }
 
     const FString Needle = IdOrName.TrimStartAndEnd();
@@ -98,6 +120,28 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
         }
       }
     }
+    return nullptr;
+  };
+
+  // Wrapper that accepts both string ID and numeric index
+  auto FindExpressionByPayload = [&](const FString &IdField, const FString &IndexField) -> UMaterialExpression* {
+    // Check for numeric index first (e.g., fromExpression: 0)
+    int32 Index = -1;
+    if (Payload->TryGetNumberField(*IndexField, Index) && Index >= 0) {
+      return FindExpressionByIdOrNameOrIndex(FString(), Index);
+    }
+    
+    // Then check for string ID
+    FString IdOrName;
+    if (Payload->TryGetStringField(*IdField, IdOrName) && !IdOrName.IsEmpty()) {
+      return FindExpressionByIdOrNameOrIndex(IdOrName);
+    }
+    
+    // Also check if IdField contains a numeric string
+    if (Payload->TryGetStringField(*IdField, IdOrName) && IdOrName.IsNumeric()) {
+      return FindExpressionByIdOrNameOrIndex(IdOrName);
+    }
+    
     return nullptr;
   };
 
@@ -200,14 +244,18 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
   } else if (SubAction == TEXT("remove_node")) {
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    
+    // Also check for expressionIndex (numeric index)
+    int32 ExpressionIndex = -1;
+    Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex);
 
-    if (NodeId.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."),
+    if (NodeId.IsEmpty() && ExpressionIndex < 0) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' or 'expressionIndex'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
-    UMaterialExpression *TargetExpr = FindExpressionByIdOrName(NodeId);
+    UMaterialExpression *TargetExpr = FindExpressionByIdOrNameOrIndex(NodeId, ExpressionIndex);
 
     if (TargetExpr) {
       FString RemovedNodeId = TargetExpr->MaterialExpressionGuid.ToString();
@@ -238,12 +286,31 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     // Material graph connections are complex because inputs are structs on the
     // expression, not EdGraph pins We need to find the target expression and
     // set its input
+    
+    // Support both string IDs and numeric indices for source/target
+    // fromExpression/sourceNodeId: string ID or numeric index
+    // toExpression/targetNodeId: string ID or numeric index (or empty for main material)
     FString SourceNodeId, TargetNodeId, InputName;
     Payload->TryGetStringField(TEXT("sourceNodeId"), SourceNodeId);
     Payload->TryGetStringField(TEXT("targetNodeId"), TargetNodeId);
     Payload->TryGetStringField(TEXT("inputName"), InputName);
+    
+    // Also check for newer parameter names
+    if (SourceNodeId.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("fromExpression"), SourceNodeId);
+    }
+    if (TargetNodeId.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("toExpression"), TargetNodeId);
+    }
+    
+    // Try numeric indices first
+    int32 SourceIndex = -1, TargetIndex = -1;
+    Payload->TryGetNumberField(TEXT("fromExpression"), SourceIndex);
+    Payload->TryGetNumberField(TEXT("toExpression"), TargetIndex);
 
-    UMaterialExpression *SourceExpr = FindExpressionByIdOrName(SourceNodeId);
+    UMaterialExpression *SourceExpr = (SourceIndex >= 0) 
+        ? FindExpressionByIdOrNameOrIndex(FString(), SourceIndex)
+        : FindExpressionByIdOrNameOrIndex(SourceNodeId);
 
     if (!SourceExpr) {
       SendAutomationError(Socket, RequestId, TEXT("Source node not found."),
@@ -252,8 +319,8 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     }
 
     // Target could be another expression OR the main material node (if
-    // TargetNodeId is empty or "Main")
-    if (TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) {
+    // TargetNodeId is empty or "Main" or no target specified)
+    if ((TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) && TargetIndex < 0) {
       bool bFound = false;
 #if WITH_EDITORONLY_DATA
       if (InputName == TEXT("BaseColor")) {
@@ -305,7 +372,9 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       }
       return true;
     } else {
-      UMaterialExpression *TargetExpr = FindExpressionByIdOrName(TargetNodeId);
+      UMaterialExpression *TargetExpr = (TargetIndex >= 0)
+          ? FindExpressionByIdOrNameOrIndex(FString(), TargetIndex)
+          : FindExpressionByIdOrNameOrIndex(TargetNodeId);
 
       if (TargetExpr) {
         // We have to iterate properties to find the FExpressionInput
@@ -413,7 +482,13 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       }
     }
 
-    UMaterialExpression *TargetExpr = FindExpressionByIdOrName(NodeId);
+    // Also check for expressionIndex
+    int32 ExpressionIndex = -1;
+    Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex);
+    
+    UMaterialExpression *TargetExpr = (ExpressionIndex >= 0)
+        ? FindExpressionByIdOrNameOrIndex(FString(), ExpressionIndex)
+        : FindExpressionByIdOrNameOrIndex(NodeId);
 
     if (TargetExpr) {
       // Disconnect all inputs of this node if no specific pin name
@@ -438,6 +513,10 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
   } else if (SubAction == TEXT("get_node_details")) {
     FString NodeId;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    
+    // Also check for expressionIndex
+    int32 ExpressionIndex = -1;
+    Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex);
 
     UMaterialExpression *TargetExpr = nullptr;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -447,9 +526,11 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
     auto& AllExpressions = Material->Expressions;
 #endif
 
-    // If nodeId provided, try to find that specific node
-    if (!NodeId.IsEmpty()) {
-      TargetExpr = FindExpressionByIdOrName(NodeId);
+    // If nodeId or index provided, try to find that specific node
+    if (ExpressionIndex >= 0) {
+      TargetExpr = FindExpressionByIdOrNameOrIndex(FString(), ExpressionIndex);
+    } else if (!NodeId.IsEmpty()) {
+      TargetExpr = FindExpressionByIdOrNameOrIndex(NodeId);
     }
 
     if (TargetExpr) {

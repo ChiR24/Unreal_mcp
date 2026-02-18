@@ -29,6 +29,7 @@ const EDITOR_ACTION_ALIASES: Record<string, string> = {
 /**
  * Idempotent actions that accept success even with invalid/missing params.
  * These are global commands that have sensible defaults or no-ops.
+ * NOTE: Include both original and normalized action names for proper validation.
  */
 const IDEMPOTENT_ACTIONS = new Set([
   'stop', 'stop_pie', 'pause', 'resume', 
@@ -42,12 +43,14 @@ const IDEMPOTENT_ACTIONS = new Set([
 /**
  * Actions that require specific parameters.
  * Maps action name to array of required parameter names.
+ * NOTE: Includes both original and normalized action names for proper validation.
  */
 const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   'open_asset': ['assetPath'],
   'close_asset': ['assetPath'],
   'open_level': ['levelPath'],
   'focus_actor': ['actorName'],
+  'focus': ['actorName'],  // Normalized alias for focus_actor
   'possess': ['actorName'],
   'set_camera': ['location', 'rotation'],
   'set_viewport_resolution': ['width', 'height'],
@@ -65,6 +68,7 @@ const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
 /**
  * Actions that have specific allowed parameters.
  * Maps action name to array of allowed parameter names (excluding action/subAction/timeoutMs).
+ * NOTE: Includes both original and normalized action names for proper validation.
  */
 const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'play': [],
@@ -78,6 +82,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'close_asset': ['assetPath', 'path'],
   'open_level': ['levelPath', 'path'],
   'focus_actor': ['actorName', 'name'],
+  'focus': ['actorName', 'name'],  // Normalized alias for focus_actor
   'set_camera': ['location', 'rotation', 'actorName'],
   'set_viewport_resolution': ['width', 'height'],
   'set_view_mode': ['viewMode'],

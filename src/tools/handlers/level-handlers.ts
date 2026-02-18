@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, LevelArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString, validateSecurityPatterns } from './common-handlers.js';
 
 /** Response from automation request */
 interface AutomationResponse {
@@ -42,6 +42,17 @@ function normalizeLevelArgs(args: LevelArgs): LevelArgs {
 export async function handleLevelTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   // Normalize args to support both camelCase and snake_case
   const argsTyped = normalizeLevelArgs(args as LevelArgs);
+  
+  // Security validation: check for path traversal attempts
+  const securityError = validateSecurityPatterns(args as Record<string, unknown>);
+  if (securityError) {
+    return cleanObject({
+      success: false,
+      error: 'SECURITY_VIOLATION',
+      message: securityError,
+      action
+    });
+  }
   
   switch (action) {
     case 'load':
@@ -141,7 +152,26 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_light': {
-      // Delegate directly to the plugin's manage_level.create_light handler.
+      // Validate required parameters for create_light
+      const lightType = argsTyped.type || argsTyped.lightType;
+      if (!lightType || typeof lightType !== 'string' || lightType.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: type (or lightType). Valid types: Point, Directional, Spot, Sky, Rect',
+          action
+        });
+      }
+      // Validate light type is one of the supported types
+      const validTypes = ['Point', 'Directional', 'Spot', 'Sky', 'Rect', 'PointLight', 'DirectionalLight', 'SpotLight', 'SkyLight', 'RectLight'];
+      if (!validTypes.some(t => t.toLowerCase() === lightType.toLowerCase())) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: `Invalid light type: ${lightType}. Valid types: Point, Directional, Spot, Sky, Rect`,
+          action
+        });
+      }
       const res = await executeAutomationRequest(tools, 'manage_level', args);
       return cleanObject(res) as Record<string, unknown>;
     }
@@ -205,9 +235,18 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     }
     case 'delete':
     case 'delete_level': {
-      const levelPaths = Array.isArray(argsTyped.levelPaths) 
-        ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string') 
+      const levelPaths = Array.isArray(argsTyped.levelPaths)
+        ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string')
         : (argsTyped.levelPath ? [argsTyped.levelPath] : []);
+      // Validate at least one path is provided for delete
+      if (levelPaths.length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'levelPath or levelPaths is required for delete',
+          action
+        });
+      }
       const res = await tools.levelTools.deleteLevels({ levelPaths });
       return cleanObject(res) as Record<string, unknown>;
     }
@@ -282,6 +321,23 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'load_cells': {
+      // Validate required parameters for load_cells
+      const hasCells = Array.isArray(argsTyped.cells) && argsTyped.cells.length > 0;
+      const hasOrigin = Array.isArray(argsTyped.origin) && argsTyped.origin.length >= 2;
+      const hasExtent = Array.isArray(argsTyped.extent) && argsTyped.extent.length >= 2;
+      const hasMin = Array.isArray(argsTyped.min) && argsTyped.min.length >= 2;
+      const hasMax = Array.isArray(argsTyped.max) && argsTyped.max.length >= 2;
+      
+      // Must have either cells, or origin+extent, or min+max
+      if (!hasCells && !(hasOrigin && hasExtent) && !(hasMin && hasMax)) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameters: must provide either cells array, or origin+extent, or min+max',
+          action
+        });
+      }
+
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = argsTyped.origin;
       let extent = argsTyped.extent;

@@ -6,6 +6,39 @@ import { normalizeArgs, extractString, extractOptionalString, extractOptionalNum
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { sanitizePath } from '../../utils/validation.js';
 
+/**
+ * Valid actions for manage_asset tool.
+ * Actions not in this list will return UNKNOWN_ACTION error immediately.
+ */
+const VALID_ASSET_ACTIONS = new Set([
+  // Core asset operations
+  'list', 'import', 'duplicate', 'rename', 'move', 'delete',
+  'create_folder', 'search_assets', 'get_dependencies', 'validate',
+  'fixup_redirectors', 'find_by_tag', 'exists', 'bulk_rename', 'bulk_delete',
+  'duplicate_asset', 'rename_asset', 'move_asset', 'delete_asset', 'delete_assets',
+  // Asset metadata
+  'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'generate_report',
+  // Material operations
+  'create_material', 'create_material_instance', 'create_render_target',
+  'generate_lods', 'add_material_parameter', 'list_instances',
+  'reset_instance_parameters', 'get_material_stats', 'nanite_rebuild_mesh',
+  // Material graph operations
+  'add_material_node', 'remove_material_node', 'rebuild_material',
+  'connect_material_pins', 'break_material_connections', 'get_material_node_details',
+  // Source control
+  'source_control_checkout', 'source_control_submit', 'get_source_control_state',
+  // Graph analysis
+  'analyze_graph', 'get_asset_graph'
+]);
+
+/**
+ * Check if an action is valid for the manage_asset tool.
+ * Returns true if the action is recognized, false otherwise.
+ */
+function isValidAssetAction(action: string): boolean {
+  return VALID_ASSET_ACTIONS.has(action);
+}
+
 /** Asset info from list response */
 interface AssetListItem {
   path?: string;
@@ -737,7 +770,19 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         return ResponseFactory.success(res, 'Bulk delete completed');
       }
       default: {
-        // Pass all args through to C++ handler for unhandled actions
+        // Validate action first - return error immediately for unknown actions
+        // This prevents sending invalid requests to C++ and avoids timeout issues
+        if (!isValidAssetAction(action)) {
+          return cleanObject({
+            success: false,
+            error: 'UNKNOWN_ACTION',
+            message: `Unknown asset action: ${action}. Valid actions are: ${Array.from(VALID_ASSET_ACTIONS).join(', ')}`,
+            action: action || 'manage_asset',
+            assetPath: (args as AssetArgs).assetPath ?? (args as AssetArgs).path
+          });
+        }
+        
+        // Pass all args through to C++ handler for actions that are valid but not explicitly handled
         const res = await executeAutomationRequest(tools, action || 'manage_asset', { ...args, subAction: action }) as AssetOperationResponse;
         const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';

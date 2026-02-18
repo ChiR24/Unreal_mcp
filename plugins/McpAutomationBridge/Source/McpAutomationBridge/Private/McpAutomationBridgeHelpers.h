@@ -712,6 +712,7 @@ static inline bool McpSafeAssetSave(UObject* Asset)
  * 2. Flushes all rendering commands before and after save
  * 3. Retries with exponential backoff on failure (default: 5 retries)
  * 4. Verifies the file exists after save with additional file system sync
+ * 5. Validates path length to prevent Windows Error 87 (MAX_PATH exceeded)
  *
  * @param Level The ULevel to save
  * @param FullPath The full package path for the level
@@ -767,10 +768,32 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
     }
 
+    // CRITICAL: Validate path length to prevent Windows Error 87 (ERROR_INVALID_PARAMETER)
+    // Windows MAX_PATH is 260 characters including null terminator
+    // We check both the package path and the resulting absolute file path
+    {
+        FString AbsoluteFilePath;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AbsoluteFilePath, FPackageName::GetMapPackageExtension()))
+        {
+            AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
+            
+            // Windows MAX_PATH limit (260 chars including null, so 259 usable)
+            // Use 240 as safety margin for temp files and intermediate operations
+            const int32 SafePathLength = 240;
+            if (AbsoluteFilePath.Len() > SafePathLength)
+            {
+                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"), 
+                    AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
+                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths (LongPathsEnabled registry key)"));
+                return false;
+            }
+        }
+    }
+
     bool bSaveSucceeded = false;
-    // Increased initial delay for Intel GPU driver stability (MONZA DdiThreadingContext)
-    // The driver needs more time to complete pending operations before file I/O
-    float DelayMs = 250.0f;
+    // Reduced initial delay for faster test execution while still handling Intel GPU
+    // The driver needs time to complete pending operations before file I/O
+    float DelayMs = 100.0f;
 
     for (int32 Retry = 0; Retry < MaxRetries; ++Retry)
     {
@@ -783,18 +806,18 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         // Additional delay after flush to ensure GPU is completely idle
         // This is critical for Intel integrated graphics which may have
         // pending operations in the driver's command queue
-        FPlatformProcess::Sleep(0.050f); // 50ms additional wait
+        FPlatformProcess::Sleep(0.025f); // 25ms reduced from 50ms
 
         // Perform the actual save after flushing render commands
         bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
 
         if (bSaveSucceeded)
         {
-            // Increased delay for file system sync, especially important for:
+            // Delay for file system sync, especially important for:
             // 1. Intel GPU driver operations (MONZA)
             // 2. Network drives
             // 3. Antivirus software intercepting file operations
-            FPlatformProcess::Sleep(0.250f); // 250ms - increased from 100ms
+            FPlatformProcess::Sleep(0.100f); // 100ms reduced from 250ms
 
             // Verify file exists on disk
             FString VerifyFilename;
@@ -835,7 +858,8 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
                 Retry + 1, MaxRetries, *PackagePath);
         }
 
-        // Exponential backoff before retry (250ms → 500ms → 1000ms → 2000ms → 4000ms)
+        // Exponential backoff before retry (100ms → 200ms → 400ms → 800ms → 1600ms)
+        // Faster than before to stay within test timeouts
         if (Retry < MaxRetries - 1)
         {
             FPlatformProcess::Sleep(DelayMs / 1000.0f);

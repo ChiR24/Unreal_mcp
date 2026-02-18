@@ -57,6 +57,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       ObjectPath = FoundActor->GetPathName();
     }
   }
+  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
+    FString PackagePath = ObjectPath;
+    if (PackagePath.Contains(TEXT("."))) {
+      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
+    if (LoadedPackage) {
+      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
+      if (!RootObject) {
+        RootObject = LoadedPackage;
+      }
+    }
+  }
 #endif
   if (!RootObject) {
     SendAutomationError(
@@ -324,6 +337,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
       ObjectPath = FoundActor->GetPathName();
     }
   }
+  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
+    FString PackagePath = ObjectPath;
+    if (PackagePath.Contains(TEXT("."))) {
+      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
+    if (LoadedPackage) {
+      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
+      if (!RootObject) {
+        RootObject = LoadedPackage;
+      }
+    }
+  }
 #endif
   if (!RootObject) {
     SendAutomationError(
@@ -336,7 +362,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   // Special handling for common AActor properties that are actually functions
   // or require setters
   if (AActor *Actor = Cast<AActor>(RootObject)) {
-if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+ if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);

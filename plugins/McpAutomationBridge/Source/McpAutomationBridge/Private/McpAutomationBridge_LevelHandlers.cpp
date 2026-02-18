@@ -418,8 +418,20 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
 
+    // SECURITY: Sanitize LevelPath to prevent path traversal attacks
+    // Rejects paths containing "..", double slashes, or invalid characters
+    // that could cause engine crashes or security violations
+    FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
+    if (!LevelPath.IsEmpty() && SanitizedLevelPath.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Invalid levelPath: contains path traversal (..), double slashes, or invalid characters"),
+          nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
     // Construct valid package path
-    FString SavePath = LevelPath;
+    FString SavePath = SanitizedLevelPath;
     if (SavePath.IsEmpty() && !LevelName.IsEmpty()) {
       if (LevelName.StartsWith(TEXT("/")))
         SavePath = LevelName;
@@ -478,7 +490,11 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         IFileManager::Get().MakeDirectory(*FPaths::GetPath(Filename), true);
       }
 
-      if (FEditorFileUtils::SaveMap(NewWorld, SavePath)) {
+      // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
+      // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
+      // during level save operations
+      bool bSaved = McpSafeLevelSave(NewWorld->PersistentLevel, SavePath, 5);
+      if (bSaved) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         Resp->SetStringField(TEXT("packagePath"), SavePath);
@@ -491,7 +507,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             FString());
       } else {
         SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Failed to save new level"), nullptr,
+                               TEXT("Failed to save new level after 5 retries (check GPU driver stability)"), nullptr,
                                TEXT("SAVE_FAILED"));
       }
     } else {
@@ -714,12 +730,17 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Ensure directory
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(ExportPath), true);
 
-    // FEditorFileUtils::ExportMap(WorldToExport, ExportPath); // Legacy/Removed
-    // Use SaveMap for .umap or FEditorFileUtils::SaveLevel
-    FEditorFileUtils::SaveMap(WorldToExport, ExportPath);
-
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Level exported"), nullptr);
+    // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
+    // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
+    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, ExportPath, 5);
+    if (bExported) {
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Level exported"), nullptr);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to export level after 5 retries (check GPU driver stability)"), nullptr,
+                             TEXT("EXPORT_FAILED"));
+    }
     return true;
   }
   if (EffectiveAction == TEXT("import_level")) {

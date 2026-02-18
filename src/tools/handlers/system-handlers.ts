@@ -609,6 +609,72 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     }
     case 'read_log':
       return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
+    case 'export_asset': {
+      // Export asset to FBX/OBJ format
+      // This requires editor-only functionality and may not be available in all UE versions
+      const assetPath = typeof argsTyped.assetPath === 'string' ? argsTyped.assetPath : '';
+      const exportPath = typeof argsTyped.exportPath === 'string' ? argsTyped.exportPath : '';
+      
+      if (!assetPath) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'assetPath is required for export_asset',
+          action: 'export_asset'
+        };
+      }
+      
+      if (!exportPath) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'exportPath is required for export_asset',
+          action: 'export_asset'
+        };
+      }
+      
+      // Try to execute via C++ automation bridge
+      try {
+        const res = await executeAutomationRequest(
+          tools, 
+          'export_asset', 
+          { assetPath, exportPath },
+          'Export functionality not available'
+        ) as OperationResponse;
+        
+        if (res && res.success) {
+          return cleanObject({
+            success: true,
+            message: `Asset exported to ${exportPath}`,
+            action: 'export_asset',
+            assetPath,
+            exportPath,
+            ...res
+          });
+        }
+        
+        // C++ returned an error
+        return cleanObject({
+          success: false,
+          error: res?.error || 'EXPORT_FAILED',
+          message: res?.message || 'Export operation failed',
+          action: 'export_asset',
+          assetPath,
+          exportPath
+        });
+      } catch (error) {
+        // Export not implemented in C++ - return handled error
+        return {
+          success: false,
+          error: 'NOT_IMPLEMENTED',
+          message: 'export_asset is not yet implemented. Asset export requires engine-specific FBX/OBJ export APIs.',
+          action: 'export_asset',
+          assetPath,
+          exportPath,
+          handled: true
+        };
+      }
+    }
     default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
       return cleanObject(res) as Record<string, unknown>;

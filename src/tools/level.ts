@@ -608,9 +608,12 @@ export class LevelTools extends BaseTool implements ILevelTools {
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
   }): Promise<StandardActionResponse> {
-    const basePath = params.savePath || '/Game/Maps';
+    // SECURITY: Sanitize the base path and level name to prevent path traversal
+    const basePath = this.normalizeLevelPath(params.savePath || '/Game/Maps').path;
+    // Sanitize the level name to prevent injection attacks
+    const sanitizedName = sanitizeCommandArgument(params.levelName);
     const isPartitioned = true; // default to World Partition for UE5
-    const fullPath = `${basePath}/${params.levelName}`;
+    const fullPath = `${basePath}/${sanitizedName}`;
 
     try {
       const response = await this.sendAutomationRequest<LevelResponse>('create_new_level', {
@@ -770,33 +773,13 @@ export class LevelTools extends BaseTool implements ILevelTools {
       });
 
       if (response.success === false) {
-        const errorCode = typeof response.error === 'string' ? response.error : '';
-        const isExecFailed = errorCode.toLowerCase() === 'exec_failed';
-
-        if (isExecFailed) {
-          const handledResult: Record<string, unknown> = {
-            success: true,
-            handled: true,
-            message: response.message || 'Streaming level request handled (editor reported EXEC_FAILED)',
-            level: levelName || '',
-            levelPath,
-            loaded: params.shouldBeLoaded,
-            visible: shouldBeVisible
-          };
-
-          if (response.warnings) {
-            handledResult.warnings = response.warnings;
-          }
-          if (response.details) {
-            handledResult.details = response.details;
-          }
-
-          return handledResult as StandardActionResponse;
-        }
-
+        // IMPORTANT: Do NOT transform failures into successes.
+        // EXEC_FAILED means the console command did not execute successfully.
+        // For negative tests expecting security errors, returning success:true would be a false positive.
         return {
           success: false,
           error: response.error || response.message || 'Streaming level update failed',
+          message: response.message,
           level: levelName || '',
           levelPath: levelPath,
           loaded: params.shouldBeLoaded,
