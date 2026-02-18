@@ -165,6 +165,13 @@ function evaluateExpectation(testCase, response) {
     actualError = response.structuredContent.error;
     actualMessage = response.structuredContent.message;
   }
+  // Also check top-level message field (MCP errors may not have structuredContent)
+  if (!actualMessage && response.message) {
+    actualMessage = response.message;
+  }
+  if (!actualError && response.error) {
+    actualError = response.error;
+  }
 
   // Also extract flattened plain-text content for matching when structured
   // fields are missing or when MCP errors (e.g. timeouts) are only reported
@@ -340,7 +347,8 @@ function evaluateExpectation(testCase, response) {
     const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || contentStr || '';
 
     // Check for specific error types (not just generic "error" keyword)
-    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled'];
+    // Include security-related keywords for path traversal / injection tests
+    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
     let errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
@@ -358,7 +366,9 @@ function evaluateExpectation(testCase, response) {
 
     // If expected outcome specifies an error type, actual error should match it
     if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
-      lowerExpected.includes('missing') || lowerExpected.includes('already exists') || lowerExpected.includes('sc_disabled')) {
+      lowerExpected.includes('missing') || lowerExpected.includes('already exists') || 
+      lowerExpected.includes('sc_disabled') || lowerExpected.includes('security') ||
+      lowerExpected.includes('blocked') || lowerExpected.includes('violation')) {
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -704,6 +714,11 @@ export async function runToolTests(toolName, testCases) {
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/M_Test' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/ConvertedMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestLandscape' } }, 10000).catch(() => {});
+      // Delete asset test artifacts
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestAsset' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestMesh' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestMat' } }, 10000).catch(() => {});
+      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/MCPTest/TestInstance' } }, 10000).catch(() => {});
       
       // Delete foliage types
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', assetPath: '/Game/Foliage/Grass' } }, 10000).catch(() => {});
@@ -735,7 +750,7 @@ export async function runToolTests(toolName, testCases) {
           action: 'spawn',
           classPath: '/Script/Engine.StaticMeshActor',
           actorName: 'TestActor',
-          meshPath: '/Engine/BasicShapes/Cube',
+          meshPath: '/Engine/EngineMeshes/Cube',
           location: { x: 0, y: 0, z: 0 },
           rotation: { pitch: 0, yaw: 0, roll: 0 },
           scale: { x: 1, y: 1, z: 1 }
@@ -749,7 +764,7 @@ export async function runToolTests(toolName, testCases) {
           action: 'spawn',
           classPath: '/Script/Engine.StaticMeshActor',
           actorName: 'ParentActor',
-          meshPath: '/Engine/BasicShapes/Cube',
+          meshPath: '/Engine/EngineMeshes/Cube',
           location: { x: 200, y: 0, z: 0 }
         }
       }, 15000).catch(err => console.warn('⚠️  ParentActor may already exist:', err?.message || err));
@@ -761,7 +776,7 @@ export async function runToolTests(toolName, testCases) {
           action: 'spawn',
           classPath: '/Script/Engine.StaticMeshActor',
           actorName: 'ChildActor',
-          meshPath: '/Engine/BasicShapes/Cube',
+          meshPath: '/Engine/EngineMeshes/Cube',
           location: { x: 300, y: 0, z: 0 }
         }
       }, 15000).catch(err => console.warn('⚠️  ChildActor may already exist:', err?.message || err));
@@ -806,6 +821,50 @@ export async function runToolTests(toolName, testCases) {
           path: '/Game/MCPTest'
         }
       }, 15000).catch(err => console.warn('⚠️  M_Test material may already exist:', err?.message || err));
+
+      // === Asset Test Setup for manage_asset tests ===
+      // Create TestMat material for material graph/stats tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'create_material',
+          name: 'TestMat',
+          path: '/Game/MCPTest'
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestMat material may already exist:', err?.message || err));
+
+      // Create TestInstance material instance for reset_instance_parameters tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'create_material_instance',
+          name: 'TestInstance',
+          parentMaterial: '/Game/MCPTest/Parent',
+          path: '/Game/MCPTest'
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestInstance material instance may already exist:', err?.message || err));
+
+      // Create TestAsset by duplicating an engine cube mesh
+      // This is needed for duplicate/rename/move/get_dependencies/validate etc. tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'duplicate',
+          sourcePath: '/Engine/BasicShapes/Cube',
+          destinationPath: '/Game/MCPTest/TestAsset'
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestAsset may already exist:', err?.message || err));
+
+      // Create TestMesh for generate_lods and nanite_rebuild_mesh tests
+      await callToolOnce({
+        name: 'manage_asset',
+        arguments: {
+          action: 'duplicate',
+          sourcePath: '/Engine/BasicShapes/Cube',
+          destinationPath: '/Game/MCPTest/TestMesh'
+        }
+      }, 15000).catch(err => console.warn('⚠️  TestMesh may already exist:', err?.message || err));
+      // === End Asset Test Setup ===
 
       // === Foliage Setup for build_environment tests ===
       // Create Foliage folder
@@ -1036,7 +1095,7 @@ export async function runToolTests(toolName, testCases) {
     
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '30000');
+      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '5000');
       const startTime = performance.now();
 
       try {

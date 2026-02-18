@@ -536,9 +536,9 @@ export class IntrospectionTools {
       try {
         const response = await automationBridge.sendAutomationRequest('inspect', {
           action: 'inspect_class',
-          // C++ plugin expects `classPath` for inspect_class, but accepts both
-          // short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
-          classPath: className
+          // C++ plugin expects `className` for inspect_class
+          // Accepts both short names and full paths (e.g. "Actor" or "/Script/Engine.Actor").
+          className: className
         }, {
           timeoutMs: 60000
         }) as Record<string, unknown>;

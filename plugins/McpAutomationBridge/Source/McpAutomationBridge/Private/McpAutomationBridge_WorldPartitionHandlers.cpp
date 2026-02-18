@@ -130,7 +130,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         {
             WPEditorSubsystem->LoadRegion(Bounds);
             TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-            Result->SetStringField(TEXT("action"), TEXT("load_region"));
+            Result->SetStringField(TEXT("action"), TEXT("manage_world_partition"));
+            Result->SetStringField(TEXT("subAction"), TEXT("load_cells"));
             Result->SetStringField(TEXT("method"), TEXT("EditorSubsystem"));
             Result->SetBoolField(TEXT("requested"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested."), Result);
@@ -146,13 +147,14 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
              UWorldPartitionEditorLoaderAdapter* EditorLoaderAdapter = WorldPartition->CreateEditorLoaderAdapter<FLoaderAdapterShape>(World, Bounds, TEXT("MCP Loaded Region"));
              if (EditorLoaderAdapter && EditorLoaderAdapter->GetLoaderAdapter())
              {
-                 EditorLoaderAdapter->GetLoaderAdapter()->SetUserCreated(true);
-                 EditorLoaderAdapter->GetLoaderAdapter()->Load();
-                 TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-                 Result->SetStringField(TEXT("action"), TEXT("load_region"));
-                 Result->SetStringField(TEXT("method"), TEXT("LoaderAdapter"));
-                 Result->SetBoolField(TEXT("requested"), true);
-                 SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested via LoaderAdapter."), Result);
+                  EditorLoaderAdapter->GetLoaderAdapter()->SetUserCreated(true);
+                  EditorLoaderAdapter->GetLoaderAdapter()->Load();
+                  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+                  Result->SetStringField(TEXT("action"), TEXT("manage_world_partition"));
+                  Result->SetStringField(TEXT("subAction"), TEXT("load_cells"));
+                  Result->SetStringField(TEXT("method"), TEXT("LoaderAdapter"));
+                  Result->SetBoolField(TEXT("requested"), true);
+                  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Region load requested via LoaderAdapter."), Result);
                  return true;
              }
         }

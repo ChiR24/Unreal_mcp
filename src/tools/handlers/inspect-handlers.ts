@@ -22,7 +22,6 @@ interface InspectResponse {
  */
 const INSPECT_ACTION_ALIASES: Record<string, string> = {
   'get_actor_details': 'inspect_object',
-  'get_component_details': 'get_component_property',
   'get_material_details': 'inspect_object',
   'get_texture_details': 'inspect_object',
   'get_mesh_details': 'inspect_object',
@@ -360,6 +359,23 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       });
       return cleanObject(res);
     }
+    case 'get_component_details': {
+      // Get component details by inspecting the component object
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
+      
+      const res = await executeAutomationRequest(
+        tools,
+        'inspect',
+        {
+          action: 'inspect_object',
+          objectPath: componentObjectPath,
+          detailed: true
+        },
+        'Failed to get component details'
+      ) as InspectResponse;
+      
+      return cleanObject(res);
+    }
     case 'get_metadata': {
       const actorName = await resolveObjectPath(args, tools);
       if (!actorName) throw new Error('Invalid actorName');
@@ -426,7 +442,8 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       } catch (err: unknown) {
         const msg = String(err instanceof Error ? err.message : err);
         const lower = msg.toLowerCase();
-        if (lower.includes('actor not found')) {
+        // Check for both singular "actor not found" and plural "actors not found"
+        if (lower.includes('actor not found') || lower.includes('actors not found') || lower.includes('not found')) {
           return cleanObject({
             success: false,
             error: 'NOT_FOUND',

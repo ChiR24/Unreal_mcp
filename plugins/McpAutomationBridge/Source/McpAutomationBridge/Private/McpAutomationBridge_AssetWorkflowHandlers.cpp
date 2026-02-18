@@ -532,15 +532,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     return true;
   }
 
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) ||
-      !AssetPathsArray || AssetPathsArray->Num() == 0) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("assetPaths array required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
   // Get rename options
   FString Prefix, Suffix, SearchText, ReplaceText;
   Payload->TryGetStringField(TEXT("prefix"), Prefix);
@@ -552,9 +543,55 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   Payload->TryGetBoolField(TEXT("checkoutFiles"), bCheckoutFiles);
 
   TArray<FString> AssetPaths;
-  for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-    if (Val.IsValid() && Val->Type == EJson::String) {
-      AssetPaths.Add(Val->AsString());
+
+  // Check for assetPaths array first
+  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
+      AssetPathsArray && AssetPathsArray->Num() > 0) {
+    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
+      if (Val.IsValid() && Val->Type == EJson::String) {
+        AssetPaths.Add(Val->AsString());
+      }
+    }
+  } else {
+    // Check for folderPath - if provided, list all assets in that folder
+    FString FolderPath;
+    if (Payload->TryGetStringField(TEXT("folderPath"), FolderPath) && !FolderPath.IsEmpty()) {
+      // Normalize path
+      FString NormalizedPath = FolderPath;
+      if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
+        NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
+      }
+      
+      // Get all assets in the folder
+      FAssetRegistryModule &AssetRegistryModule =
+          FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+      IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+      
+      FARFilter Filter;
+      Filter.PackagePaths.Add(FName(*NormalizedPath));
+      Filter.bRecursivePaths = true;
+      
+      TArray<FAssetData> AssetDataList;
+      AssetRegistry.GetAssets(Filter, AssetDataList);
+      
+      for (const FAssetData &AssetData : AssetDataList) {
+        AssetPaths.Add(AssetData.ToSoftObjectPath().ToString());
+      }
+      
+      if (AssetPaths.Num() == 0) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetNumberField(TEXT("renamed"), 0);
+        Result->SetStringField(TEXT("message"), TEXT("No assets found in folder"));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
+        return true;
+      }
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Either assetPaths array or folderPath is required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
   }
 
@@ -672,15 +709,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     return true;
   }
 
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) ||
-      !AssetPathsArray || AssetPathsArray->Num() == 0) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("assetPaths array required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
   bool bShowConfirmation = false;
   Payload->TryGetBoolField(TEXT("showConfirmation"), bShowConfirmation);
 
@@ -688,9 +716,68 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   Payload->TryGetBoolField(TEXT("fixupRedirectors"), bFixupRedirectors);
 
   TArray<FString> AssetPaths;
-  for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-    if (Val.IsValid() && Val->Type == EJson::String) {
-      AssetPaths.Add(Val->AsString());
+
+  // Check for assetPaths array first
+  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
+      AssetPathsArray && AssetPathsArray->Num() > 0) {
+    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
+      if (Val.IsValid() && Val->Type == EJson::String) {
+        AssetPaths.Add(Val->AsString());
+      }
+    }
+  } else {
+    // Check for folderPath - if provided, list all assets in that folder
+    FString FolderPath;
+    FString Pattern;
+    Payload->TryGetStringField(TEXT("folderPath"), FolderPath);
+    Payload->TryGetStringField(TEXT("path"), FolderPath);  // alias
+    Payload->TryGetStringField(TEXT("pattern"), Pattern);
+    
+    if (!FolderPath.IsEmpty()) {
+      // Normalize path
+      FString NormalizedPath = FolderPath;
+      if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
+        NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
+      }
+      
+      // Get all assets in the folder
+      FAssetRegistryModule &AssetRegistryModule =
+          FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+      IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+      
+      FARFilter Filter;
+      Filter.PackagePaths.Add(FName(*NormalizedPath));
+      Filter.bRecursivePaths = true;
+      
+      TArray<FAssetData> AssetDataList;
+      AssetRegistry.GetAssets(Filter, AssetDataList);
+      
+      for (const FAssetData &AssetData : AssetDataList) {
+        FString AssetPath = AssetData.ToSoftObjectPath().ToString();
+        // If pattern is specified, filter by it
+        if (!Pattern.IsEmpty()) {
+          FString AssetName = AssetData.AssetName.ToString();
+          if (!AssetName.Contains(Pattern)) {
+            continue;
+          }
+        }
+        AssetPaths.Add(AssetPath);
+      }
+      
+      if (AssetPaths.Num() == 0) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetNumberField(TEXT("deleted"), 0);
+        Result->SetStringField(TEXT("message"), TEXT("No assets found matching criteria"));
+        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
+        return true;
+      }
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Either assetPaths array or folderPath is required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
   }
 

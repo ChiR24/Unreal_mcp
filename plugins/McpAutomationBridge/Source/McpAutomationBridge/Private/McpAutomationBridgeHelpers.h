@@ -726,10 +726,39 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         return false;
     }
 
+    // CRITICAL: Reject transient/unsaved level paths that would cause double-slash package names
+    // Saving transient levels causes fatal error: "Attempted to create a package with name 
+    // containing double slashes" when HLOD/Instancing generates paths like /Game//Temp/...
+    if (FullPath.StartsWith(TEXT("/Temp/")) ||
+        FullPath.StartsWith(TEXT("/Engine/Transient")) ||
+        FullPath.Contains(TEXT("Untitled")))
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Cannot save transient level: %s. Use save_as with a valid path."), *FullPath);
+        return false;
+    }
+
     FString PackagePath = FullPath;
     if (!PackagePath.StartsWith(TEXT("/Game/")))
     {
-        PackagePath = TEXT("/Game/") + PackagePath;
+        // Only prepend /Game/ if the path doesn't start with any slash
+        // (paths like /Temp/ or /Engine/ would create double slashes)
+        if (!PackagePath.StartsWith(TEXT("/")))
+        {
+            PackagePath = TEXT("/Game/") + PackagePath;
+        }
+        else
+        {
+            // Path starts with / but isn't /Game/ - this is likely an invalid path
+            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Invalid path (not under /Game/): %s"), *PackagePath);
+            return false;
+        }
+    }
+
+    // Validate no double slashes in the path (would cause fatal error in CreatePackage)
+    if (PackagePath.Contains(TEXT("//")))
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path contains double slashes (would cause fatal error): %s"), *PackagePath);
+        return false;
     }
 
     // Ensure path has proper format
@@ -761,21 +790,43 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
 
         if (bSaveSucceeded)
         {
-            // Small delay before verification to allow file system to flush
-            FPlatformProcess::Sleep(0.100f); // 100ms
+            // Increased delay for file system sync, especially important for:
+            // 1. Intel GPU driver operations (MONZA)
+            // 2. Network drives
+            // 3. Antivirus software intercepting file operations
+            FPlatformProcess::Sleep(0.250f); // 250ms - increased from 100ms
 
             // Verify file exists on disk
             FString VerifyFilename;
             if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
             {
-                if (IFileManager::Get().FileExists(*VerifyFilename))
+                // CRITICAL: Convert to absolute path for reliable file existence check
+                // TryConvertLongPackageNameToFilename may return relative paths in some configurations
+                FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
+                
+                // Try both the original and absolute path
+                bool bFileExists = IFileManager::Get().FileExists(*VerifyFilename);
+                if (!bFileExists && !AbsoluteVerifyFilename.Equals(VerifyFilename, ESearchCase::IgnoreCase))
+                {
+                    bFileExists = IFileManager::Get().FileExists(*AbsoluteVerifyFilename);
+                    if (bFileExists)
+                    {
+                        UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: File found at absolute path: %s"), *AbsoluteVerifyFilename);
+                    }
+                }
+                
+                if (bFileExists)
                 {
                     UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level after %d attempt(s): %s"), 
                         Retry + 1, *PackagePath);
                     return true;
                 }
-                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but file not found (attempt %d/%d): %s"), 
-                    Retry + 1, MaxRetries, *VerifyFilename);
+                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but file not found (attempt %d/%d): %s (absolute: %s)"), 
+                    Retry + 1, MaxRetries, *VerifyFilename, *AbsoluteVerifyFilename);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
             }
         }
         else

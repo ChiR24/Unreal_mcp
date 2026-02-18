@@ -67,7 +67,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     Result->SetArrayField(TEXT("dependencies"), DepArray);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Dependencies retrieved."), Result);
+                            TEXT("Dependencies retrieved."), Result);
     return true;
   } else if (SubAction == TEXT("find_by_tag")) {
     FString Tag;
@@ -88,20 +88,23 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       Path = TEXT("/Game"); // Default search path
     }
 
-    // Get all assets in the specified path
+    // Use AssetRegistry's cached data instead of loading assets
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+    
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*Path));
     Filter.bRecursivePaths = true;
 
     TArray<FAssetData> AssetDataList;
-    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+    AssetRegistry.GetAssets(Filter, AssetDataList);
 
-    // Filter assets by checking their package metadata
+    // Filter assets by checking their CACHED metadata tags (no asset loading!)
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
+    FName TagFName(*Tag);
 
     for (const FAssetData &Data : AssetDataList) {
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
@@ -109,17 +112,21 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 #else
       const FString AssetPath = Data.ToSoftObjectPath().ToString();
 #endif
-      UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-      if (!Asset)
-        continue;
 
-      // Check if the asset has the metadata tag
-      FString MetadataValue =
-          UEditorAssetLibrary::GetMetadataTag(Asset, FName(*Tag));
+      // Use cached tag value from FAssetData (no loading required!)
+      // This is O(1) lookup vs O(n) disk I/O for loading each asset
+      FString MetadataValue;
+      bool bHasTag = false;
+      
+      // Check if the tag exists in cached data first, then get its value
+      if (Data.TagsAndValues.Contains(TagFName))
+      {
+        MetadataValue = Data.TagsAndValues.FindTag(TagFName).GetValue();
+        bHasTag = true;
+      }
 
-      // If we found metadata, check if it matches expected value (or just
-      // existence)
-      bool bMatches = !MetadataValue.IsEmpty();
+      // If we found metadata, check if it matches expected value (or just existence)
+      bool bMatches = bHasTag;
       if (bMatches && !ExpectedValue.IsEmpty()) {
         bMatches = MetadataValue.Equals(ExpectedValue, ESearchCase::IgnoreCase);
       }
@@ -136,7 +143,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
                                  Data.AssetClass.ToString());
 #endif
         AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
-        AddAssetVerification(AssetObj, Asset);
         AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
       }
     }

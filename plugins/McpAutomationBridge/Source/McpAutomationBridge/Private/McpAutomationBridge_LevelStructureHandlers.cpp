@@ -329,9 +329,26 @@ static bool HandleCreateLevel(
         ResponseJson->SetStringField(TEXT("worldPartitionNote"), TEXT("World Partition must be enabled via editor UI or project settings for new levels"));
     }
 
-    // If save was requested but failed, report error
+    // If save was requested but failed, report error and clean up the failed level
     if (bSave && !bSaveSucceeded)
     {
+        // CRITICAL: Clean up the created level to prevent "Level already exists in memory" errors
+        // on retry attempts. The level was created in memory but save verification failed,
+        // so we need to remove it to allow retry with the same name.
+        if (NewWorld)
+        {
+            // Destroy the world - this removes it from memory
+            NewWorld->DestroyWorld(false);
+        }
+        if (Package)
+        {
+            // Remove package from root and mark for garbage collection
+            Package->RemoveFromRoot();
+            Package->MarkAsGarbage();
+        }
+        
+        UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Cleaned up failed level from memory: %s"), *FullPath);
+        
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Level created but save verification failed: %s"), *FullPath),
             ResponseJson, TEXT("SAVE_VERIFICATION_FAILED"));

@@ -272,10 +272,33 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
+    // CRITICAL: Check if the current level is transient (unsaved/Untitled)
+    // Saving a transient level causes fatal error: "Attempted to create a package 
+    // with name containing double slashes" when HLOD/Instancing generates paths
+    // like /Game//Temp/Untitled_1_HLOD0_Instancing
+    FString PackageName = World->GetOutermost()->GetName();
+    bool bIsTransient = PackageName.StartsWith(TEXT("/Temp/")) ||
+                        PackageName.StartsWith(TEXT("/Engine/Transient")) ||
+                        PackageName.Contains(TEXT("Untitled"));
+    
+    if (bIsTransient) {
+      TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+      ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
+      ErrorDetail->SetStringField(TEXT("reason"), 
+          TEXT("Level is unsaved/temporary. Use save_level_as with a valid path first."));
+      ErrorDetail->SetStringField(TEXT("hint"), 
+          TEXT("Use manage_level with action='save_as' and provide savePath parameter"));
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Cannot save transient level: Level must be saved with 'save_as' first"),
+          ErrorDetail, TEXT("TRANSIENT_LEVEL"));
+      return true;
+    }
+
     // Use McpSafeLevelSave to prevent Intel GPU driver crashes during save
     // FlushRenderingCommands prevents MONZA DdiThreadingContext exceptions
     // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
-    bool bSaved = McpSafeLevelSave(World->PersistentLevel, World->GetOutermost()->GetName(), 5);
+    bool bSaved = McpSafeLevelSave(World->PersistentLevel, PackageName, 5);
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       FString LevelPath = World->GetOutermost()->GetName();
@@ -285,21 +308,13 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     } else {
       // Provide detailed error information
       TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
-      FString PackageName = World->GetOutermost()->GetName();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
 
       FString Filename;
       FString ErrorReason = TEXT("Unknown save failure");
 
-      if (PackageName.Contains(TEXT("Untitled")) ||
-          PackageName.StartsWith(TEXT("/Temp/"))) {
-        ErrorReason = TEXT(
-            "Level is unsaved/temporary. Use save_level_as with a path first.");
-        ErrorDetail->SetStringField(
-            TEXT("hint"),
-            TEXT(
-                "Use manage_level with action='save_as' and provide savePath"));
-      } else if (FPackageName::TryConvertLongPackageNameToFilename(
+      // Transient level check already handled above, so this is for other save failures
+      if (FPackageName::TryConvertLongPackageNameToFilename(
                      PackageName, Filename,
                      FPackageName::GetMapPackageExtension())) {
         if (IFileManager::Get().IsReadOnly(*Filename)) {
@@ -315,6 +330,8 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
               TEXT("Save operation failed - check Output Log for details");
           ErrorDetail->SetStringField(TEXT("filename"), Filename);
         }
+      } else {
+        ErrorReason = TEXT("Invalid package path");
       }
 
       ErrorDetail->SetStringField(TEXT("reason"), ErrorReason);

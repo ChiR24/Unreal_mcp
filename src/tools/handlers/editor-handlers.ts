@@ -125,7 +125,15 @@ function validateEditorActionArgs(
   // Always validate security patterns first
   validateArgsSecurity({ action, ...args } as Record<string, unknown>);
   
-  // Idempotent actions are allowed to accept any parameters (they ignore extras gracefully)
+  // Validate required parameters FIRST (applies to ALL actions including idempotent)
+  // This ensures required param validation is not skipped for idempotent actions
+  const requiredParams = ACTION_REQUIRED_PARAMS[action];
+  if (requiredParams !== undefined) {
+    validateRequiredParams(args, requiredParams, `control_editor:${action}`);
+  }
+  
+  // Idempotent actions skip allowed params validation (they accept extras gracefully)
+  // But they still require their required params to be present (validated above)
   if (IDEMPOTENT_ACTIONS.has(action)) {
     return;
   }
@@ -134,12 +142,6 @@ function validateEditorActionArgs(
   const allowedParams = ACTION_ALLOWED_PARAMS[action];
   if (allowedParams !== undefined) {
     validateExpectedParams(args, allowedParams, `control_editor:${action}`);
-  }
-  
-  // Validate required parameters if defined for this action
-  const requiredParams = ACTION_REQUIRED_PARAMS[action];
-  if (requiredParams !== undefined) {
-    validateRequiredParams(args, requiredParams, `control_editor:${action}`);
   }
 }
 

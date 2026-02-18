@@ -578,16 +578,6 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Material stats retrieved');
       }
-      case 'rebuild_material': {
-        const params = normalizeArgs(args, [
-          { key: 'assetPath', required: true }
-        ]);
-        const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'rebuild_material', {
-          assetPath
-        });
-        return ResponseFactory.success(res, 'Material rebuilt successfully');
-      }
       case 'add_material_node': {
         const materialNodeAliases: Record<string, string> = {
           'Multiply': 'MaterialExpressionMultiply',
@@ -619,7 +609,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         };
 
         const params = normalizeArgs(args, [
-          { key: 'assetPath', required: true },
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
           { key: 'nodeType', aliases: ['type'], required: true, map: materialNodeAliases },
           { key: 'posX' },
           { key: 'posY' }
@@ -637,6 +627,114 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           posY
         });
         return ResponseFactory.success(res, 'Material node added successfully');
+      }
+      case 'connect_material_pins': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'sourceNodeId', aliases: ['sourceNode'], required: true },
+          { key: 'sourcePin', aliases: ['fromPin', 'outputPin'], required: true },
+          { key: 'targetNodeId', aliases: ['targetNode'], required: true },
+          { key: 'targetPin', aliases: ['toPin', 'inputPin'], required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const sourceNodeId = extractString(params, 'sourceNodeId');
+        const sourcePin = extractString(params, 'sourcePin');
+        const targetNodeId = extractString(params, 'targetNodeId');
+        const targetPin = extractString(params, 'targetPin');
+        const res = await executeAutomationRequest(tools, 'connect_material_pins', {
+          assetPath,
+          sourceNodeId,
+          sourcePin,
+          targetNodeId,
+          targetPin
+        });
+        return ResponseFactory.success(res, 'Material pins connected successfully');
+      }
+      case 'remove_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+        const res = await executeAutomationRequest(tools, 'remove_material_node', {
+          assetPath,
+          nodeId
+        });
+        return ResponseFactory.success(res, 'Material node removed successfully');
+      }
+      case 'break_material_connections': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId' },
+          { key: 'pinName' }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractOptionalString(params, 'nodeId');
+        const pinName = extractOptionalString(params, 'pinName');
+        const res = await executeAutomationRequest(tools, 'break_material_connections', {
+          assetPath,
+          nodeId,
+          pinName
+        });
+        return ResponseFactory.success(res, 'Material connections broken successfully');
+      }
+      case 'get_material_node_details': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+        const res = await executeAutomationRequest(tools, 'get_material_node_details', {
+          assetPath,
+          nodeId
+        });
+        return ResponseFactory.success(res, 'Material node details retrieved');
+      }
+      case 'rebuild_material': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const res = await executeAutomationRequest(tools, 'rebuild_material', {
+          assetPath
+        });
+        return ResponseFactory.success(res, 'Material rebuilt successfully');
+      }
+      case 'bulk_rename': {
+        // Accept either folderPath or assetPaths
+        const argsTyped = args as AssetArgs;
+        const folderPath = argsTyped.folderPath ?? argsTyped.path;
+        const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
+        
+        if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_rename');
+        }
+        
+        const res = await executeAutomationRequest(tools, 'bulk_rename', {
+          ...args,
+          folderPath,
+          assetPaths
+        });
+        return ResponseFactory.success(res, 'Bulk rename completed');
+      }
+      case 'bulk_delete': {
+        // Accept either folderPath or assetPaths
+        const argsTyped = args as AssetArgs;
+        const folderPath = argsTyped.folderPath ?? argsTyped.path;
+        const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
+        
+        if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_delete');
+        }
+        
+        const res = await executeAutomationRequest(tools, 'bulk_delete', {
+          ...args,
+          folderPath,
+          assetPaths
+        });
+        return ResponseFactory.success(res, 'Bulk delete completed');
       }
       default: {
         // Pass all args through to C++ handler for unhandled actions

@@ -1029,7 +1029,9 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     
     if (LowerSubAction.Equals(TEXT("get_project_settings"))) {
       // Return project settings info
-      Resp->SetStringField(TEXT("action"), SubAction);
+      // Set action to "inspect" (the tool name) for proper action matching in TS message-handler
+      Resp->SetStringField(TEXT("action"), TEXT("inspect"));
+      Resp->SetStringField(TEXT("subAction"), SubAction);
       Resp->SetStringField(TEXT("message"), TEXT("Project settings retrieved"));
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1037,7 +1039,9 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
       return true;
     }
     else if (LowerSubAction.Equals(TEXT("get_editor_settings"))) {
-      Resp->SetStringField(TEXT("action"), SubAction);
+      // Set action to "inspect" (the tool name) for proper action matching in TS message-handler
+      Resp->SetStringField(TEXT("action"), TEXT("inspect"));
+      Resp->SetStringField(TEXT("subAction"), SubAction);
       Resp->SetStringField(TEXT("message"), TEXT("Editor settings retrieved"));
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1335,10 +1339,17 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     Resp->SetBoolField(TEXT("isActor"), false);
   }
   
-  // Tags
+  // Tags - only for Actor-derived classes to avoid assertion failure
   TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : TargetObject->GetClass()->GetDefaultObject<AActor>()->Tags) {
-    TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+  UClass* ObjClass = TargetObject->GetClass();
+  // Check if the class is actually an Actor or Actor-derived class before calling GetDefaultObject<AActor>()
+  // Using IsChildOf instead of Cast to avoid assertion in UE 5.7
+  if (ObjClass && ObjClass->IsChildOf(AActor::StaticClass())) {
+    if (AActor* DefaultActor = ObjClass->GetDefaultObject<AActor>()) {
+      for (const FName &Tag : DefaultActor->Tags) {
+        TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+      }
+    }
   }
   Resp->SetArrayField(TEXT("tags"), TagsArray);
 
