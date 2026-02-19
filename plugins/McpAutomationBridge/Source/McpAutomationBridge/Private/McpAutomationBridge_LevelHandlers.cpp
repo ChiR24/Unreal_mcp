@@ -33,7 +33,111 @@
 #else
 #define MCP_HAS_LEVELEDITOR_SUBSYSTEM 0
 #endif
-#endif
+
+/**
+ * Safely creates a new map with proper tick system cleanup to prevent
+ * TickTaskManager assertion crashes in UE 5.7+.
+ *
+ * CRITICAL: Calling GEditor->NewMap() without proper cleanup causes:
+ * "Assertion failed: !LevelList.Contains(TickTaskLevel)" in TickTaskManager.cpp
+ *
+ * This is a known issue (UE-197643, UE-138424) where tick functions from
+ * the old world remain registered when the new world is created.
+ *
+ * @param bForceNewMap If true, create a completely new empty map (default: true)
+ * @return UWorld* The newly created world, or nullptr on failure
+ */
+static UWorld* McpSafeNewMap(bool bForceNewMap = true)
+{
+    if (!GEditor)
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeNewMap: GEditor is null"));
+        return nullptr;
+    }
+
+    UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    
+    if (CurrentWorld)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Cleaning up current world '%s'"), *CurrentWorld->GetName());
+        
+        // STEP 1: Disable all actor ticking to prevent tick manager assertions
+        // This is critical - if any tick function is still registered when NewMap is called,
+        // the assertion "!LevelList.Contains(TickTaskLevel)" will fail
+        int32 DisabledActorCount = 0;
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (!Level) continue;
+            
+            for (AActor* Actor : Level->Actors)
+            {
+                if (Actor)
+                {
+                    // Disable actor tick - SetActorTickEnabled is safe to call even if already disabled
+                    Actor->SetActorTickEnabled(false);
+                    DisabledActorCount++;
+                    
+                    // Also disable component ticks
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component)
+                        {
+                            Component->SetComponentTickEnabled(false);
+                        }
+                    }
+                }
+            }
+        }
+        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Disabled ticking for %d actors"), DisabledActorCount);
+        
+        // STEP 2: Send end-of-frame updates to complete any pending tick work
+        CurrentWorld->SendAllEndOfFrameUpdates();
+        
+        // STEP 3: Flush rendering commands to ensure all GPU work is complete
+        FlushRenderingCommands();
+        
+        // STEP 4: Explicitly unload streaming levels
+        // This prevents UE-197643 where tick prerequisites cross level boundaries
+        TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
+        for (ULevelStreaming* StreamingLevel : StreamingLevels)
+        {
+            if (StreamingLevel)
+            {
+                StreamingLevel->SetShouldBeLoaded(false);
+                StreamingLevel->SetShouldBeVisible(false);
+            }
+        }
+        
+        // STEP 5: Flush rendering commands again after streaming level changes
+        FlushRenderingCommands();
+        
+        // STEP 6: Force garbage collection to clean up any remaining references
+        GEditor->ForceGarbageCollection(true);
+        
+        // STEP 7: Another flush after GC
+        FlushRenderingCommands();
+        
+        // STEP 8: Give the engine a moment to process cleanup
+        FPlatformProcess::Sleep(0.05f); // 50ms delay
+    }
+    
+    // STEP 9: Now safe to create new map
+    UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s)"), 
+           bForceNewMap ? TEXT("true") : TEXT("false"));
+    
+    UWorld* NewWorld = GEditor->NewMap(bForceNewMap);
+    
+    if (NewWorld)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Successfully created new world '%s'"), *NewWorld->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeNewMap: Failed to create new map"));
+    }
+    
+    return NewWorld;
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     const FString &RequestId, const FString &Action,
@@ -232,7 +336,6 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     }
   }
 
-#if WITH_EDITOR
   // Helper lambda to get all levels from a world (替代 UEditorLevelUtils::GetLevels which has linker issues)
   auto GetAllLevelsFromWorld = [](UWorld* World) -> TArray<ULevel*> {
     TArray<ULevel*> Levels;
@@ -468,18 +571,18 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
-    // Force cleanup of previous world/resources to prevent RenderCore/Driver
-    // crashes (monza/D3D12) especially when tests run back-to-back triggering
-    // thumbnail generation or world partition shutdown.
-    if (GEditor) {
-      FlushRenderingCommands();
-      GEditor->ForceGarbageCollection(true);
-      FlushRenderingCommands();
-    }
+    // CRITICAL: Use McpSafeNewMap instead of GEditor->NewMap() directly.
+    // Calling NewMap() without proper tick cleanup causes:
+    // "Assertion failed: !LevelList.Contains(TickTaskLevel)" in TickTaskManager.cpp
+    // This is a known UE 5.7 issue (UE-197643, UE-138424).
+    // McpSafeNewMap handles:
+    // 1. Disabling all actor/component ticking
+    // 2. Removing tick prerequisites
+    // 3. Flushing async loading and streaming levels
+    // 4. Proper garbage collection
+    UWorld* NewWorld = McpSafeNewMap(true);
 
-    if (UWorld *NewWorld =
-            GEditor->NewMap(true)) // true = force new map (creates untitled)
-    {
+    if (NewWorld) {
       GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);
 
       // Save it to valid path

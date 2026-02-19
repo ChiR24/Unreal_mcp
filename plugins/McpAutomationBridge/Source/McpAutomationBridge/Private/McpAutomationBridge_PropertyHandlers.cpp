@@ -48,8 +48,31 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  UObject *RootObject = nullptr;
 #if WITH_EDITOR
+  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
+  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
+  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  {
+    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
+    
+    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
+    {
+      // Try to find the actor first
+      if (AActor *Actor = FindActorByName(ActorName))
+      {
+        // Find the component on the actor using fuzzy name matching
+        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
+        {
+          RootObject = Comp;
+          // Normalize the path for downstream error messages
+          ObjectPath = Comp->GetPathName();
+        }
+      }
+    }
+  }
+  
   if (!RootObject) {
     if (AActor *FoundActor = FindActorByName(ObjectPath)) {
       RootObject = FoundActor;
@@ -70,6 +93,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       }
     }
   }
+#else
+  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #endif
   if (!RootObject) {
     SendAutomationError(
@@ -328,8 +353,31 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  UObject *RootObject = nullptr;
 #if WITH_EDITOR
+  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
+  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
+  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  {
+    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
+    
+    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
+    {
+      // Try to find the actor first
+      if (AActor *Actor = FindActorByName(ActorName))
+      {
+        // Find the component on the actor using fuzzy name matching
+        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
+        {
+          RootObject = Comp;
+          // Normalize the path for downstream error messages
+          ObjectPath = Comp->GetPathName();
+        }
+      }
+    }
+  }
+  
   if (!RootObject) {
     if (AActor *FoundActor = FindActorByName(ObjectPath)) {
       RootObject = FoundActor;
@@ -350,6 +398,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
       }
     }
   }
+#else
+  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #endif
   if (!RootObject) {
     SendAutomationError(

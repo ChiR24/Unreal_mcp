@@ -715,13 +715,17 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'get_material_node_details': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
-          { key: 'nodeId', required: true }
+          { key: 'nodeId', required: false },  // Optional - if not provided, lists all nodes
+          { key: 'expressionIndex' }  // Alternative to nodeId - numeric index
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const nodeId = extractString(params, 'nodeId');
+        const nodeId = extractOptionalString(params, 'nodeId');
+        const expressionIndex = extractOptionalNumber(params, 'expressionIndex');
+        
         const res = await executeAutomationRequest(tools, 'get_material_node_details', {
           assetPath,
-          nodeId
+          nodeId,
+          expressionIndex
         });
         return ResponseFactory.success(res, 'Material node details retrieved');
       }

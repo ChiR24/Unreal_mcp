@@ -1075,15 +1075,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     return true;
   }
 
-  UActorComponent *TargetComponent = nullptr;
-  for (UActorComponent *Comp : Found->GetComponents()) {
-    if (!Comp)
-      continue;
-    if (Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      TargetComponent = Comp;
-      break;
-    }
-  }
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  UActorComponent *TargetComponent = FindComponentByName(Found, ComponentName);
 
   if (!TargetComponent) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("COMPONENT_NOT_FOUND"),
@@ -2163,24 +2156,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     return true;
   }
   
-  // Find and destroy component
-  TInlineComponentArray<UActorComponent*> Components;
-  Actor->GetComponents(Components);
-  
-  for (UActorComponent* Component : Components) {
-    if (Component && Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      Component->DestroyComponent();
-      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-      Data->SetStringField(TEXT("actorName"), ActorName);
-      Data->SetStringField(TEXT("componentName"), ComponentName);
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
+  if (Component) {
+    Component->DestroyComponent();
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("actorName"), ActorName);
+    Data->SetStringField(TEXT("componentName"), ComponentName);
 
-      // Add verification data for delete operations
-      Data->SetBoolField(TEXT("existsAfter"), false);
-      Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+    // Add verification data for delete operations
+    Data->SetBoolField(TEXT("existsAfter"), false);
+    Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 
-      SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
-      return true;
-    }
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
+    return true;
   }
   
   SendAutomationError(Socket, RequestId,
@@ -2212,37 +2201,40 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
   
-  // Find component
-  TInlineComponentArray<UActorComponent*> Components;
-  Actor->GetComponents(Components);
-  
-  for (UActorComponent* Component : Components) {
-    if (Component && Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      // Get property using reflection
-      FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
-      if (Property) {
-        TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-        Data->SetStringField(TEXT("actorName"), ActorName);
-        Data->SetStringField(TEXT("componentName"), ComponentName);
-        Data->SetStringField(TEXT("propertyName"), PropertyName);
-        Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
-        
-        // Extract property value using the existing helper function
-        TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
-        if (PropertyValue.IsValid()) {
-          Data->SetField(TEXT("value"), PropertyValue);
-        } else {
-          Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
-        }
-        
-        SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
-        return true;
-      }
-      break;
-    }
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  // This handles cases where component names have numeric suffixes (e.g., "StaticMeshComponent0")
+  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
+  if (!Component) {
+    SendAutomationError(Socket, RequestId, 
+        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName), 
+        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
   }
   
-  SendAutomationError(Socket, RequestId, TEXT("Component or property not found"), TEXT("NOT_FOUND"));
+  // Get property using reflection
+  FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
+  if (!Property) {
+    SendAutomationError(Socket, RequestId, 
+        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName), 
+        TEXT("PROPERTY_NOT_FOUND"));
+    return true;
+  }
+  
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("actorName"), ActorName);
+  Data->SetStringField(TEXT("componentName"), ComponentName);
+  Data->SetStringField(TEXT("propertyName"), PropertyName);
+  Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
+  
+  // Extract property value using the existing helper function
+  TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
+  if (PropertyValue.IsValid()) {
+    Data->SetField(TEXT("value"), PropertyValue);
+  } else {
+    Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
+  }
+  
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
   return true;
 #else
   return false;

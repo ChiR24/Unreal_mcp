@@ -565,17 +565,21 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
       Result->SetArrayField(TEXT("availableNodes"), NodeList);
       Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
 
-      FString Message =
-          NodeId.IsEmpty()
-              ? FString::Printf(
-                    TEXT("No nodeId provided. Material has %d nodes."),
-                    AllExpressions.Num())
-              : FString::Printf(
-                    TEXT("Node '%s' not found. Material has %d nodes."),
-                    *NodeId, AllExpressions.Num());
-
-      SendAutomationResponse(Socket, RequestId, false, Message, Result,
-                             TEXT("NODE_NOT_FOUND"));
+      // If no nodeId was provided, this is a successful "list all nodes" operation
+      // If nodeId was provided but not found, return error
+      if (NodeId.IsEmpty() && ExpressionIndex < 0) {
+        FString Message = FString::Printf(
+            TEXT("Material has %d nodes. Available nodes listed."),
+            AllExpressions.Num());
+        SendAutomationResponse(Socket, RequestId, true, Message, Result);
+      } else {
+        FString Message = FString::Printf(
+            TEXT("Node '%s' not found. Material has %d nodes."),
+            NodeId.IsEmpty() ? *FString::FromInt(ExpressionIndex) : *NodeId, 
+            AllExpressions.Num());
+        SendAutomationResponse(Socket, RequestId, false, Message, Result,
+                               TEXT("NODE_NOT_FOUND"));
+      }
     }
     return true;
   }

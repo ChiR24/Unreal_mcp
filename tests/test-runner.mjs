@@ -298,8 +298,29 @@ function evaluateExpectation(testCase, response) {
         }
       }
 
+      // CRITICAL FIX: Only match failure keywords in response if PRIMARY intent expects failure
+      // This prevents false positives where "success|handled|object_not_found" passes when
+      // response is success=false with "object_not_found" error - primary was "success"!
+      const conditionIsFailure = failureKeywords.some((kw) => condition.includes(kw));
+      const conditionIsSuccess = successKeywords.some((kw) => condition.includes(kw));
+      
+      // Only allow substring match if:
+      // 1. Condition is a success keyword AND actualSuccess is true, OR
+      // 2. Condition is a failure keyword AND primary expects failure, OR
+      // 3. Condition is neither success nor failure keyword (neutral like "handled")
       if (combined.includes(condition)) {
-        return { passed: true, reason: `Expected condition met: ${condition}` };
+        if (conditionIsSuccess && actualSuccess === true) {
+          return { passed: true, reason: `Expected condition met: ${condition}` };
+        }
+        if (conditionIsFailure && primaryExpectsFailure) {
+          return { passed: true, reason: `Expected condition met: ${condition}` };
+        }
+        if (!conditionIsSuccess && !conditionIsFailure) {
+          // Neutral keyword (like "handled") - but still require that actualSuccess matches primary intent
+          if ((primaryExpectsSuccess && actualSuccess === true) || (primaryExpectsFailure && actualSuccess === false)) {
+            return { passed: true, reason: `Expected condition met: ${condition}` };
+          }
+        }
       }
     }
     // If none of the OR/pipe conditions matched, it's a failure

@@ -700,7 +700,151 @@ static inline bool McpSafeAssetSave(UObject* Asset)
 #include "HAL/FileManager.h"  // IFileManager
 #include "RenderingThread.h"  // FlushRenderingCommands
 #include "Materials/MaterialInterface.h"  // UMaterialInterface for McpLoadMaterialWithFallback
+#include "Editor/EditorEngine.h"  // UEditorEngine (forward decl if needed)
+#include "Engine/World.h"  // UWorld
+#include "Engine/Level.h"  // ULevel
+#include "Engine/LevelStreaming.h"  // ULevelStreaming
+#include "GameFramework/Actor.h"  // AActor
+#include "Components/ActorComponent.h"  // UActorComponent
+
+/**
+ * Resolve a component from an actor by component name with fuzzy matching.
+ * Supports exact name match, partial name match (starts with), and common suffixes.
+ * 
+ * This helper resolves component paths in "ActorName.ComponentName" format where
+ * the component name may be a partial match (e.g., "StaticMeshComponent" matches "StaticMeshComponent0").
+ *
+ * @param Actor The actor to search for components
+ * @param ComponentName The component name to search for (exact or partial match)
+ * @return UActorComponent* or nullptr if not found
+ */
+static inline UActorComponent* FindComponentByName(AActor* Actor, const FString& ComponentName)
+{
+    if (!Actor || ComponentName.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    const FString Needle = ComponentName.ToLower();
+    UActorComponent* ExactMatch = nullptr;
+    UActorComponent* StartsWithMatch = nullptr;
+
+    // Iterate all components on the actor
+    TArray<UActorComponent*> Components;
+    Actor->GetComponents(Components);
+    
+    for (UActorComponent* Comp : Components)
+    {
+        if (!Comp)
+        {
+            continue;
+        }
+
+        const FString CompName = Comp->GetName().ToLower();
+        const FString CompPath = Comp->GetPathName().ToLower();
+
+        // 1. Exact name match (highest priority)
+        if (CompName.Equals(Needle))
+        {
+            return Comp; // Exact match, return immediately
+        }
+
+        // 2. Exact path match
+        if (CompPath.Equals(Needle))
+        {
+            return Comp;
+        }
+
+        // 3. Path ends with component name (e.g., "ActorName.StaticMeshComponent0")
+        if (CompPath.EndsWith(FString::Printf(TEXT(".%s"), *Needle)))
+        {
+            return Comp;
+        }
+
+        // 4. Path ends with ":ComponentName" (subobject format)
+        if (CompPath.EndsWith(FString::Printf(TEXT(":%s"), *Needle)))
+        {
+            return Comp;
+        }
+
+        // 5. Fuzzy match: ComponentName starts with the needle (e.g., "StaticMeshComponent" matches "StaticMeshComponent0")
+        if (CompName.StartsWith(Needle) && !StartsWithMatch)
+        {
+            StartsWithMatch = Comp;
+        }
+
+        // 6. Path contains the component name
+        if (!ExactMatch && CompPath.Contains(Needle))
+        {
+            ExactMatch = Comp;
+        }
+    }
+
+    // Return matches in priority order
+    if (ExactMatch)
+    {
+        return ExactMatch;
+    }
+    if (StartsWithMatch)
+    {
+        return StartsWithMatch;
+    }
+
+    return nullptr;
+}
+
+/**
+ * Resolve an object path that may be in "ActorName.ComponentName" format.
+ * Returns the component if the path is in component path format, or nullptr otherwise.
+ *
+ * @param ObjectPath The path to resolve (e.g., "TestActor.StaticMeshComponent0")
+ * @param OutActorName If not nullptr, receives the actor name portion of the path
+ * @param OutComponentName If not nullptr, receives the component name portion of the path
+ * @return UActorComponent* if the path is a valid component path, nullptr otherwise
+ */
+static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, FString* OutActorName = nullptr, FString* OutComponentName = nullptr)
+{
+    // Check if this looks like a component path: "ActorName.ComponentName"
+    // Must contain exactly one dot, no slashes, and both parts must be non-empty
+    if (ObjectPath.IsEmpty() || 
+        ObjectPath.Contains(TEXT("/")) || 
+        ObjectPath.Contains(TEXT("\\")) ||
+        !ObjectPath.Contains(TEXT(".")))
+    {
+        return nullptr;
+    }
+
+    // Split on the first dot
+    int32 DotIndex;
+    if (!ObjectPath.FindChar(TEXT('.'), DotIndex))
+    {
+        return nullptr;
+    }
+
+    FString ActorName = ObjectPath.Left(DotIndex);
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - DotIndex - 1);
+
+    // Both parts must be non-empty
+    if (ActorName.IsEmpty() || ComponentName.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    // Output the parsed names if requested
+    if (OutActorName)
+    {
+        *OutActorName = ActorName;
+    }
+    if (OutComponentName)
+    {
+        *OutComponentName = ComponentName;
+    }
+
+    return nullptr; // Caller must find actor and then find component
+}
+
 #endif
+
 /**
  * Safely save a level with UE 5.7+ compatibility workarounds.
  *

@@ -39,6 +39,16 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
     {
         FString Name;
         Payload->TryGetStringField(TEXT("name"), Name);
+        
+        // Validate required 'name' parameter - return error if missing or empty
+        if (Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("name parameter is required for create_render_target"), 
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
         int32 Width = 256;
         int32 Height = 256;
         Payload->TryGetNumberField(TEXT("width"), Width);
@@ -49,7 +59,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
         FString PackagePath = TEXT("/Game/RenderTargets");
         Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
 
-        FString AssetName = Name.IsEmpty() ? TEXT("NewRenderTarget") : Name;
+        FString AssetName = Name;
         FString FullPath = PackagePath / AssetName;
 
         UPackage* Package = CreatePackage(*FullPath);
