@@ -922,7 +922,7 @@ private:
                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control handlers
-  AActor *FindActorByName(const FString &Target);
+  AActor *FindActorByName(const FString &Target, bool bExactMatchOnly = false);
 
   // Control Actor Subhandlers
   bool HandleControlActorSpawn(const FString &RequestId,

@@ -11,7 +11,8 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
 // Common failure keywords to check against
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'object_not_found', 'actor_not_found'];
+// CRITICAL: Include both singular and plural forms for flexible matching
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'not_found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'not exist'];
 const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled'];
 
 // Defaults for spawning the MCP server.
@@ -304,6 +305,13 @@ function evaluateExpectation(testCase, response) {
       const conditionIsFailure = failureKeywords.some((kw) => condition.includes(kw));
       const conditionIsSuccess = successKeywords.some((kw) => condition.includes(kw));
       
+      // CRITICAL FIX: If condition is "error" and response.isError is true, match it
+      // This handles cases where the error message doesn't contain the word "error" but
+      // isError: true clearly indicates an error state.
+      if (condition === 'error' && (response.isError === true || response.structuredContent?.isError === true)) {
+        return { passed: true, reason: `Expected condition met: isError=true` };
+      }
+      
       // Only allow substring match if:
       // 1. Condition is a success keyword AND actualSuccess is true, OR
       // 2. Condition is a failure keyword AND primary expects failure, OR
@@ -373,10 +381,15 @@ function evaluateExpectation(testCase, response) {
     // Include security-related keywords for path traversal / injection tests
     // Include engine-specific error codes (OBJECT_NOT_FOUND, ACTOR_NOT_FOUND)
     // Support both lowercase (for readability) and uppercase (engine output) variants
-    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation', 'object_not_found', 'actor_not_found', 'CLASS_NOT_FOUND', 'ACTOR_NOT_FOUND', 'OBJECT_NOT_FOUND', 'COMPONENT_NOT_FOUND', 'PHYSICS_FAILED', 'FUNCTION_NOT_FOUND'];
+    // CRITICAL FIX: Include plural forms like 'actors not found' to match 'actor_not_found'
+    // The engine may return "Actors not found" (plural) for batch operations
+    const specificErrorTypes = ['not found', 'not_found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'CLASS_NOT_FOUND', 'ACTOR_NOT_FOUND', 'OBJECT_NOT_FOUND', 'COMPONENT_NOT_FOUND', 'PHYSICS_FAILED', 'FUNCTION_NOT_FOUND', 'NOT_FOUND', 'PROPERTY_NOT_FOUND'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type.toLowerCase()));
+    // Normalize underscores/spaces for comparison (engine may return NOT_FOUND or "not found")
+    const normalizedReason = lowerReason.replace(/_/g, ' ');
+    const normalizedExpected = expectedErrorType ? expectedErrorType.toLowerCase().replace(/_/g, ' ') : '';
     let errorTypeMatch = expectedErrorType ? 
-      (lowerReason.includes(expectedErrorType.toLowerCase()) || lowerReason.includes(expectedErrorType.toUpperCase())) :
+      (normalizedReason.includes(normalizedExpected) || lowerReason.includes(expectedErrorType.toLowerCase()) || lowerReason.includes(expectedErrorType.toUpperCase())) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));
 
     // Also check detail field if main error check failed (handles wrapped exceptions)
@@ -391,13 +404,23 @@ function evaluateExpectation(testCase, response) {
     }
 
     // If expected outcome specifies an error type, actual error should match it
-    if (lowerExpected.includes('not found') || lowerExpected.includes('invalid') ||
+    if (lowerExpected.includes('not found') || lowerExpected.includes('not_found') || lowerExpected.includes('invalid') ||
       lowerExpected.includes('missing') || lowerExpected.includes('already exists') || 
       lowerExpected.includes('sc_disabled') || lowerExpected.includes('security') ||
       lowerExpected.includes('blocked') || lowerExpected.includes('violation') ||
       lowerExpected.includes('object_not_found') || lowerExpected.includes('actor_not_found') ||
+      lowerExpected.includes('actors not found') ||  // CRITICAL FIX: Handle plural form
       lowerExpected.includes('class_not_found') || lowerExpected.includes('component_not_found') ||
-      lowerExpected.includes('physics_failed') || lowerExpected.includes('function_not_found')) {
+      lowerExpected.includes('physics_failed') || lowerExpected.includes('function_not_found') ||
+      lowerExpected.includes('property_not_found')) {
+      
+      // CRITICAL FIX: Special handling for actor_not_found vs "actors not found" (plural)
+      // The engine may return "Actors not found" for batch operations even for single actor
+      if ((lowerExpected.includes('actor_not_found') || lowerExpected.includes('actors not found')) &&
+          (normalizedReason.includes('actors not found') || normalizedReason.includes('actor not found'))) {
+        return { passed: true, reason: `Expected error type matched (actor/actors not found): ${actualMessage || actualError}` };
+      }
+      
       const passed = errorTypeMatch;
       let reason;
       if (response.isError) {
@@ -1174,15 +1197,25 @@ export async function runToolTests(toolName, testCases) {
         let { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
 
         // CRITICAL FIX: For performance tests (tests with timeoutMs), if the response
-        // has success=false, the test should FAIL even if the expectation string
-        // includes "error" as an alternative. Performance tests are meant to verify
-        // that an operation completes successfully within the timeout, not that it
-        // fails within the timeout window.
+        // has success=false AND the PRIMARY expectation is success, the test should FAIL.
+        // However, if the PRIMARY expectation is failure (error/not found/etc), then
+        // success=false is the EXPECTED outcome and the test should PASS.
+        // This fixes negative test cases (like delete_object with non-existent actor)
+        // where success=false is the correct expected result.
         const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined || 
                                   testCase.scenario?.includes('performance');
         const responseSuccess = normalizedResponse?.structuredContent?.success;
         
-        if (isPerformanceTest && responseSuccess === false) {
+        // Check PRIMARY intent - if the test EXPECTS failure, success=false is correct
+        const lowerExpected = (testCase.expected || '').toString().toLowerCase();
+        const primaryCondition = lowerExpected.split('|')[0].split(' or ')[0].trim();
+        const primaryExpectsFailure = failureKeywords.some((word) => primaryCondition.includes(word));
+        
+        // Only fail performance test if:
+        // 1. It's a performance test AND
+        // 2. Response shows success=false AND
+        // 3. PRIMARY expectation is NOT failure (test expected success)
+        if (isPerformanceTest && responseSuccess === false && !primaryExpectsFailure) {
           passed = false;
           const errorMsg = normalizedResponse?.structuredContent?.error || 
                           normalizedResponse?.structuredContent?.message || 

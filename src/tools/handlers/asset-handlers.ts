@@ -805,6 +805,19 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           });
         }
 
+        // CRITICAL FIX: Check if C++ returned success=false and pass it through
+        // This prevents false positives where TS wraps a failed C++ response as success
+        if (typeof result.success === 'boolean' && result.success === false) {
+          return cleanObject({
+            success: false,
+            error: errorCode || 'OPERATION_FAILED',
+            message: message || 'Asset operation failed',
+            action: action || 'manage_asset',
+            assetPath: argsTyped.assetPath ?? argsTyped.path,
+            data: result
+          });
+        }
+
         return ResponseFactory.success(res, 'Asset action executed successfully');
       }
     }

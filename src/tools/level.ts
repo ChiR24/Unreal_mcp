@@ -609,11 +609,32 @@ export class LevelTools extends BaseTool implements ILevelTools {
     savePath?: string;
   }): Promise<StandardActionResponse> {
     // SECURITY: Sanitize the base path and level name to prevent path traversal
-    const basePath = this.normalizeLevelPath(params.savePath || '/Game/Maps').path;
     // Sanitize the level name to prevent injection attacks
     const sanitizedName = sanitizeCommandArgument(params.levelName);
     const isPartitioned = true; // default to World Partition for UE5
-    const fullPath = `${basePath}/${sanitizedName}`;
+
+    // Determine the full path for the level
+    // If savePath is provided:
+    //   - If it ends with the level name, use it directly (avoid duplication)
+    //   - Otherwise, append the level name
+    // If no savePath, use default /Game/Maps/<levelName>
+    let fullPath: string;
+    if (params.savePath) {
+      const normalizedPath = this.normalizeLevelPath(params.savePath).path;
+      // Check if the path already ends with the level name (avoid /Game/Test/Level/Level duplication)
+      const pathSegments = normalizedPath.split('/').filter(s => s.length > 0);
+      const lastSegment = pathSegments[pathSegments.length - 1];
+
+      if (lastSegment && lastSegment.toLowerCase() === sanitizedName.toLowerCase()) {
+        // Path already includes level name - use as-is
+        fullPath = normalizedPath;
+      } else {
+        // Append level name to parent directory
+        fullPath = `${normalizedPath}/${sanitizedName}`;
+      }
+    } else {
+      fullPath = `/Game/Maps/${sanitizedName}`;
+    }
 
     try {
       const response = await this.sendAutomationRequest<LevelResponse>('create_new_level', {

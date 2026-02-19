@@ -198,19 +198,46 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     return true;
   }
 
-  // Get optional directory path (if empty, fix all redirectors)
+  // Get directory path - REQUIRED for proper error reporting
   FString DirectoryPath;
   Payload->TryGetStringField(TEXT("directoryPath"), DirectoryPath);
+  
+  // Also check for "path" as alias
+  if (DirectoryPath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("path"), DirectoryPath);
+  }
 
   bool bCheckoutFiles = false;
   Payload->TryGetBoolField(TEXT("checkoutFiles"), bCheckoutFiles);
 
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, DirectoryPath,
+  // Validate path is provided
+  if (DirectoryPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("directoryPath or path is required for fixup_redirectors"),
+                        TEXT("MISSING_ARGUMENT"));
+    return true;
+  }
+
+  // Normalize path
+  FString NormalizedPath = DirectoryPath;
+  if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
+    NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
+  }
+
+  AsyncTask(ENamedThreads::GameThread, [this, RequestId, NormalizedPath,
                                         bCheckoutFiles, RequestingSocket]() {
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             TEXT("AssetRegistry"));
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+
+    // Validate directory exists in asset registry
+    if (!AssetRegistry.PathExists(FName(*NormalizedPath))) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Directory not found: %s"), *NormalizedPath),
+                          TEXT("PATH_NOT_FOUND"));
+      return;
+    }
 
     // Find all redirectors
     FARFilter Filter;
@@ -221,16 +248,8 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
 #endif
 
-    if (!DirectoryPath.IsEmpty()) {
-      FString NormalizedPath = DirectoryPath;
-      if (NormalizedPath.StartsWith(TEXT("/Content"),
-                                    ESearchCase::IgnoreCase)) {
-        NormalizedPath =
-            FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
-      }
-      Filter.PackagePaths.Add(FName(*NormalizedPath));
-      Filter.bRecursivePaths = true;
-    }
+    Filter.PackagePaths.Add(FName(*NormalizedPath));
+    Filter.bRecursivePaths = true;
 
     TArray<FAssetData> RedirectorAssets;
     AssetRegistry.GetAssets(Filter, RedirectorAssets);
@@ -1588,23 +1607,49 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   }
 
   int32 DeletedCount = 0;
+  TArray<FString> NotFoundPaths;
+  
   for (const FString &Path : PathsToDelete) {
     if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
       if (UEditorAssetLibrary::DeleteDirectory(Path)) {
         DeletedCount++;
       }
-    } else if (UEditorAssetLibrary::DeleteAsset(Path)) {
-      DeletedCount++;
+    } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
+      // Asset exists - attempt to delete it
+      if (UEditorAssetLibrary::DeleteAsset(Path)) {
+        DeletedCount++;
+      }
+    } else {
+      // Asset/directory does not exist
+      NotFoundPaths.Add(Path);
     }
   }
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  Resp->SetBoolField(TEXT("success"), DeletedCount > 0);
+  
+  // Return success only if at least one asset was deleted
+  bool bSuccess = DeletedCount > 0;
+  Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
-  // Add verification data - assets no longer exist after deletion
   Resp->SetBoolField(TEXT("existsAfter"), false);
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp,
-                         FString());
+  
+  if (NotFoundPaths.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> NotFoundArray;
+    for (const FString& P : NotFoundPaths) {
+      NotFoundArray.Add(MakeShared<FJsonValueString>(P));
+    }
+    Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+    Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+  }
+  
+  if (bSuccess) {
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp, FString());
+  } else {
+    // Nothing was deleted - all paths were not found
+    SendAutomationResponse(Socket, RequestId, false, 
+                           FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num()),
+                           Resp, TEXT("ASSET_NOT_FOUND"));
+  }
   return true;
 #else
   SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));

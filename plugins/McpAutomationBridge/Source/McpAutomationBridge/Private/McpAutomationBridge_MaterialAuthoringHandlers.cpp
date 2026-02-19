@@ -175,6 +175,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    // Validate parent folder exists
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+    
+    if (!AssetRegistry.PathExists(FName(*ValidatedPath))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ValidatedPath),
+                          TEXT("PARENT_FOLDER_NOT_FOUND"));
+      return true;
+    }
+
     // Create material using factory - use ValidatedPath, not original Path!
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
     UPackage *Package = CreatePackage(*ValidatedPath);

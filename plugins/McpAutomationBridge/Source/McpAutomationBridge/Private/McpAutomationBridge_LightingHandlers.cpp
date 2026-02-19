@@ -29,6 +29,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "LevelEditor.h"
 #include "Subsystems/EditorActorSubsystem.h"
+#include "RenderingThread.h"  // FlushRenderingCommands for safe spawning
 
 #endif
 
@@ -205,9 +206,33 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SpawnParams.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    // Fix: Declare NewLight before use
-    AActor *NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location,
-                                                       &Rotation, SpawnParams);
+    // CRITICAL FIX: Validate world before spawning to prevent crashes
+    UWorld* World = ActorSS->GetWorld();
+    if (!World || !World->IsValidLowLevel()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("No valid world available for spawning light"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    // CRITICAL FIX: Flush rendering commands to prevent GPU driver crashes
+    // during spawn operations (especially Intel MONZA drivers)
+    FlushRenderingCommands();
+
+    // CRITICAL FIX: Use SpawnActorDeferred for safer initialization
+    FTransform SpawnTransform(Rotation, Location);
+    AActor *NewLight = World->SpawnActorDeferred<AActor>(
+        LightClass,
+        SpawnTransform,
+        nullptr,    // Owner
+        nullptr,    // Instigator
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+    );
+
+    // CRITICAL FIX: Finish spawning with proper transform
+    if (NewLight) {
+        UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
+    }
 
     // Explicitly set location/rotation
     if (NewLight) {

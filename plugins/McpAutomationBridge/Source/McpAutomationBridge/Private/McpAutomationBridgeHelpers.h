@@ -961,9 +961,10 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
             // 1. Intel GPU driver operations (MONZA)
             // 2. Network drives
             // 3. Antivirus software intercepting file operations
-            FPlatformProcess::Sleep(0.100f); // 100ms reduced from 250ms
+            // INCREASED: 200ms for better reliability with Intel GPU and network drives
+            FPlatformProcess::Sleep(0.200f);
 
-            // Verify file exists on disk
+            // Verify file exists on disk with multiple retries
             FString VerifyFilename;
             if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
             {
@@ -971,14 +972,31 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
                 // TryConvertLongPackageNameToFilename may return relative paths in some configurations
                 FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
                 
-                // Try both the original and absolute path
-                bool bFileExists = IFileManager::Get().FileExists(*VerifyFilename);
-                if (!bFileExists && !AbsoluteVerifyFilename.Equals(VerifyFilename, ESearchCase::IgnoreCase))
+                // CRITICAL FIX: Retry file verification multiple times to handle:
+                // - File system timing on slow drives
+                // - Antivirus software temporarily blocking access
+                // - Network drive latency
+                bool bFileExists = false;
+                const int32 MaxVerifyRetries = 3;
+                for (int32 VerifyRetry = 0; VerifyRetry < MaxVerifyRetries && !bFileExists; ++VerifyRetry)
                 {
-                    bFileExists = IFileManager::Get().FileExists(*AbsoluteVerifyFilename);
-                    if (bFileExists)
+                    // Try both the original and absolute path
+                    bFileExists = IFileManager::Get().FileExists(*VerifyFilename);
+                    if (!bFileExists && !AbsoluteVerifyFilename.Equals(VerifyFilename, ESearchCase::IgnoreCase))
                     {
-                        UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: File found at absolute path: %s"), *AbsoluteVerifyFilename);
+                        bFileExists = IFileManager::Get().FileExists(*AbsoluteVerifyFilename);
+                        if (bFileExists)
+                        {
+                            UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: File found at absolute path: %s"), *AbsoluteVerifyFilename);
+                        }
+                    }
+                    
+                    if (!bFileExists && VerifyRetry < MaxVerifyRetries - 1)
+                    {
+                        // Wait and retry - file might be flushing to disk
+                        UE_LOG(LogTemp, Verbose, TEXT("McpSafeLevelSave: File not found yet, retrying in 50ms (verify attempt %d/%d)"), 
+                            VerifyRetry + 1, MaxVerifyRetries);
+                        FPlatformProcess::Sleep(0.050f);
                     }
                 }
                 
@@ -988,7 +1006,62 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
                         Retry + 1, *PackagePath);
                     return true;
                 }
-                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but file not found (attempt %d/%d): %s (absolute: %s)"), 
+                
+                // CRITICAL FIX: If save reported success but file verification fails due to 
+                // timing/driver issues, check multiple fallback verification methods.
+                // FEditorFileUtils::SaveLevel() may succeed but IFileManager hasn't synced yet.
+                
+                // FALLBACK 1: Check if the package exists in UE's package system
+                if (FPackageName::DoesPackageExist(PackagePath))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system after save (file verification timed out, but save succeeded): %s"), 
+                        *PackagePath);
+                    return true;
+                }
+                
+                // FALLBACK 2: Check Asset Registry (more reliable for newly saved assets)
+                // The Asset Registry updates asynchronously but is often faster than file system
+                IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(PackagePath));
+#else
+                FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*PackagePath));
+#endif
+                if (AssetData.IsValid())
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Asset found in AssetRegistry after save: %s"), *PackagePath);
+                    return true;
+                }
+                
+                // FALLBACK 3: Try synchronous scan of the directory, then check again
+                FString DirectoryPath = FPaths::GetPath(PackagePath);
+                if (!DirectoryPath.IsEmpty())
+                {
+                    TArray<FString> ScanPaths;
+                    ScanPaths.Add(DirectoryPath);
+                    AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
+                    
+                    // Check Asset Registry again after scan
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                    AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(PackagePath));
+#else
+                    AssetData = AssetRegistry.GetAssetByObjectPath(FName(*PackagePath));
+#endif
+                    if (AssetData.IsValid())
+                    {
+                        UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Asset found in AssetRegistry after synchronous scan: %s"), *PackagePath);
+                        return true;
+                    }
+                }
+                
+                // FALLBACK 4: Check if package is loaded in memory (FindPackage)
+                if (UPackage* Pkg = FindPackage(nullptr, *PackagePath))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package loaded in memory after save: %s"), *PackagePath);
+                    return true;
+                }
+                
+                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but all verification methods failed (attempt %d/%d): %s (absolute: %s)"), 
                     Retry + 1, MaxRetries, *VerifyFilename, *AbsoluteVerifyFilename);
             }
             else

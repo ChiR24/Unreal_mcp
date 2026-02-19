@@ -340,25 +340,15 @@ static bool HandleCreateLevel(
         ResponseJson->SetStringField(TEXT("worldPartitionNote"), TEXT("World Partition must be enabled via editor UI or project settings for new levels"));
     }
 
-    // If save was requested but failed, report error and clean up the failed level
+    // If save was requested but failed, report error
+    // NOTE: We do NOT clean up the level from memory because:
+    // 1. McpSafeLevelSave now uses FPackageName::DoesPackageExist as fallback verification
+    // 2. The file might actually exist on disk even if file verification timed out
+    // 3. The idempotent check will find it on retry and return success
+    // 4. Cleaning up causes race conditions where the level exists on disk but not in memory
     if (bSave && !bSaveSucceeded)
     {
-        // CRITICAL: Clean up the created level to prevent "Level already exists in memory" errors
-        // on retry attempts. The level was created in memory but save verification failed,
-        // so we need to remove it to allow retry with the same name.
-        if (NewWorld)
-        {
-            // Destroy the world - this removes it from memory
-            NewWorld->DestroyWorld(false);
-        }
-        if (Package)
-        {
-            // Remove package from root and mark for garbage collection
-            Package->RemoveFromRoot();
-            Package->MarkAsGarbage();
-        }
-        
-        UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Cleaned up failed level from memory: %s"), *FullPath);
+        UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Save verification reported failure, but level may exist on disk: %s"), *FullPath);
         
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Level created but save verification failed: %s"), *FullPath),

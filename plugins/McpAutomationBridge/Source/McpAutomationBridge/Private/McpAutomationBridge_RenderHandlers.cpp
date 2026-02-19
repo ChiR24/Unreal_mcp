@@ -58,6 +58,28 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
 
         FString PackagePath = TEXT("/Game/RenderTargets");
         Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+        
+        // Also check for "path" as alias
+        if (PackagePath.IsEmpty() || PackagePath == TEXT("/Game/RenderTargets"))
+        {
+            FString PathAlias;
+            if (Payload->TryGetStringField(TEXT("path"), PathAlias) && !PathAlias.IsEmpty())
+            {
+                PackagePath = PathAlias;
+            }
+        }
+
+        // Validate parent folder exists
+        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+        IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+        
+        if (!AssetRegistry.PathExists(FName(*PackagePath)))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath), 
+                TEXT("PARENT_FOLDER_NOT_FOUND"));
+            return true;
+        }
 
         FString AssetName = Name;
         FString FullPath = PackagePath / AssetName;

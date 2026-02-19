@@ -81,7 +81,7 @@
 // (ExtractVectorField and ExtractRotatorField moved to
 // McpAutomationBridgeHelpers.h)
 
-AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
+AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
 #if WITH_EDITOR
   if (Target.IsEmpty() || !GEditor)
     return nullptr;
@@ -122,8 +122,10 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
       ExactMatch = A;
       break;
     }
-    // Collect fuzzy matches
-    if (A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+    // Collect fuzzy matches ONLY if exact matching is not required
+    // CRITICAL FIX: Fuzzy matching can cause delete operations to delete wrong actors
+    // (e.g., "TestActor_Copy" matches when searching for "TestActor")
+    if (!bExactMatchOnly && A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
       FuzzyMatches.Add(A);
     }
   }
@@ -132,13 +134,15 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
     return ExactMatch;
   }
 
-  // If no exact match, check fuzzy matches
-  if (FuzzyMatches.Num() == 1) {
-    return FuzzyMatches[0];
-  } else if (FuzzyMatches.Num() > 1) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
-           *Target, FuzzyMatches.Num());
+  // If no exact match, check fuzzy matches ONLY if exact matching is not required
+  if (!bExactMatchOnly) {
+    if (FuzzyMatches.Num() == 1) {
+      return FuzzyMatches[0];
+    } else if (FuzzyMatches.Num() > 1) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
+             *Target, FuzzyMatches.Num());
+    }
   }
 
   // Fallback: try to load as asset if it looks like a path
@@ -546,7 +550,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   TArray<FString> Missing;
 
   for (const FString &Name : Targets) {
-    AActor *Found = FindActorByName(Name);
+    // CRITICAL FIX: Use exact match only for delete operations to prevent
+    // fuzzy matching from deleting wrong actors (e.g., "TestActor_Copy" when
+    // searching for "TestActor")
+    AActor *Found = FindActorByName(Name, true);
     if (!Found) {
       Missing.Add(Name);
       continue;
@@ -1506,9 +1513,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
 
+  // DEBUG: Log tag search details
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("HandleControlActorFindByTag: Searching for tag '%s' (FName: %s)"),
+         *TagValue, *TagName.ToString());
+
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  
+  // DEBUG: Log total actors being searched
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
+         
   for (AActor *Actor : AllActors) {
     if (!Actor)
       continue;
@@ -1522,6 +1539,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
       }
     } else {
       bMatches = Actor->ActorHasTag(TagName);
+    }
+
+    // DEBUG: Log actor tags for troubleshooting
+    if (Actor->Tags.Num() > 0) {
+      FString TagList;
+      for (const FName& T : Actor->Tags) {
+        TagList += T.ToString() + TEXT(", ");
+      }
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("HandleControlActorFindByTag: Actor '%s' has tags: [%s] - match=%d"),
+             *Actor->GetActorLabel(), *TagList, bMatches);
     }
 
     if (bMatches) {
@@ -2088,13 +2116,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
     UClass* ClassToFind = nullptr;
 
-    // Try to find the class
-    if (ClassName.StartsWith(TEXT("/"))) {
-      ClassToFind = LoadObject<UClass>(nullptr, *ClassName);
-    } else {
-      // Use nullptr instead of ANY_PACKAGE for UE 5.7+ compatibility
-      ClassToFind = FindObject<UClass>(nullptr, *ClassName);
-    }
+    // CRITICAL FIX: Use ResolveClassByName for proper engine class resolution
+    // This handles: full paths, short names like "StaticMeshActor", and loads classes if needed
+    // Without this, FindObject only finds already-loaded classes, missing engine classes like
+    // AStaticMeshActor, APawn, etc. that haven't been accessed yet
+    ClassToFind = ResolveClassByName(ClassName);
 
     if (ClassToFind) {
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
@@ -3142,7 +3168,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   }
 
   FString RecordingName;
-  Payload->TryGetStringField(TEXT("name"), RecordingName);
+  // Accept both 'name' and 'filename' fields for flexibility
+  // TS handler sends 'filename', so we check that first
+  Payload->TryGetStringField(TEXT("filename"), RecordingName);
+  if (RecordingName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), RecordingName);
+  }
   if (RecordingName.IsEmpty()) {
     RecordingName = FString::Printf(TEXT("Recording_%s"),
         *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
@@ -3410,9 +3441,32 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     return true;
   }
 
+  // Accept multiple field names for flexibility
+  // - 'type': C++ native field (key_down, key_up, mouse_click, mouse_move)
+  // - 'inputType': Alternative name
+  // - 'inputAction': Action-based naming (pressed, released, click, move)
+  // CRITICAL: Do NOT read from 'action' field - that's the routing action (e.g., "simulate_input")
+  // and will always be present in the payload. Only use type/inputType/inputAction for input type.
   FString InputType;
   Payload->TryGetStringField(TEXT("type"), InputType);
+  if (InputType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("inputType"), InputType);
+  }
+  if (InputType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("inputAction"), InputType);
+  }
+  
+  // Map action values to C++ expected type values
   InputType = InputType.ToLower();
+  if (InputType == TEXT("pressed") || InputType == TEXT("down")) {
+    InputType = TEXT("key_down");
+  } else if (InputType == TEXT("released") || InputType == TEXT("up")) {
+    InputType = TEXT("key_up");
+  } else if (InputType == TEXT("click")) {
+    InputType = TEXT("mouse_click");
+  } else if (InputType == TEXT("move")) {
+    InputType = TEXT("mouse_move");
+  }
 
   FString Key;
   Payload->TryGetStringField(TEXT("key"), Key);

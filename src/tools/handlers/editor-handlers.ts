@@ -365,7 +365,32 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       // CRITICAL: Validation runs in validateEditorActionArgs before reaching here.
       // Allowed params are defined in ACTION_ALLOWED_PARAMS: ['key', 'action', 'axis', 'value']
       // This ensures unknown params like 'invalidExtraParam' are rejected.
-      const res = await executeAutomationRequest(tools, 'control_editor', args);
+      
+      // Map 'action' to 'type' for C++ compatibility
+      // C++ expects: type = 'key_down' | 'key_up' | 'mouse_click' | 'mouse_move'
+      // Tests send: action = 'pressed' | 'released' | 'click' | 'move'
+      const inputType = args.action?.toLowerCase() || '';
+      let mappedType = inputType;
+      
+      // Map action values to C++ expected type values
+      if (inputType === 'pressed' || inputType === 'down') {
+        mappedType = 'key_down';
+      } else if (inputType === 'released' || inputType === 'up') {
+        mappedType = 'key_up';
+      } else if (inputType === 'click') {
+        mappedType = 'mouse_click';
+      } else if (inputType === 'move') {
+        mappedType = 'mouse_move';
+      }
+      // If inputType already matches expected values (key_down, key_up, mouse_click, mouse_move), keep it
+      
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'simulate_input',
+        type: mappedType,
+        key: args.key,
+        axis: args.axis,
+        value: args.value
+      });
       return cleanObject(res);
     }
     case 'focus':
