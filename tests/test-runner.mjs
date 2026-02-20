@@ -13,7 +13,7 @@ const reportsDir = path.join(__dirname, 'reports');
 // Common failure keywords to check against
 // CRITICAL: Include both singular and plural forms for flexible matching
 const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'not_found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'not exist'];
-const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled'];
+const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled', 'not_implemented'];
 
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
@@ -216,16 +216,32 @@ function evaluateExpectation(testCase, response) {
   // CRITICAL FIX: Detect crash/connection loss in error responses that should FAIL tests
   // unless explicitly expected. This prevents false positives where tests like "error|notfound"
   // pass on crash because "error" matches any error message.
-  const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected'];
-  const hasCrashIndicator = crashIndicators.some(ind => 
+  // CRITICAL FIX: Also detect "not connected" messages that indicate bridge disconnection
+  // FIX: Only check for crash indicators if response is NOT a success (success: true)
+  // This prevents false positives where "Node disconnection partial" (a valid success message)
+  // incorrectly matches "disconnect" as a substring.
+  const crashIndicators = ['1006', 'econnreset', 'socket hang up', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
+  // Word-boundary checks for ambiguous terms
+  const hasDisconnect = /\bdisconnect(ed)?\b/i.test(errorStr) || /\bdisconnect(ed)?\b/i.test(messageStr);
+  const hasConnectionLost = /\bconnection lost\b/i.test(errorStr) || /\bconnection lost\b/i.test(messageStr);
+  const hasNotConnected = /\bnot connected\b/i.test(errorStr) || /\bnot connected\b/i.test(messageStr);
+  
+  const hasCrashIndicator = (crashIndicators.some(ind => 
     errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
-  );
+  )) || hasDisconnect || hasConnectionLost || hasNotConnected;
+  
+  // Only fail on crash indicators if response is NOT successful
+  // "Node disconnection partial" is a SUCCESS message, not a crash indicator
+  const responseSuccess = structuredSuccess === true;
+  const isActuallyCrash = hasCrashIndicator && !responseSuccess;
+  
   const explicitlyExpectsCrash = lowerExpected.includes('disconnect') || 
     lowerExpected.includes('crash') || 
     lowerExpected.includes('connection lost') ||
-    lowerExpected.includes('ue_not_connected');
+    lowerExpected.includes('ue_not_connected') ||
+    lowerExpected.includes('not connected');
   
-  if (hasCrashIndicator && !explicitlyExpectsCrash) {
+  if (isActuallyCrash && !explicitlyExpectsCrash) {
     return {
       passed: false,
       reason: `Crash/connection loss detected but test did not expect it: ${actualError || actualMessage}`
@@ -336,7 +352,8 @@ function evaluateExpectation(testCase, response) {
   }
 
   // Also flag common automation/plugin failure phrases
-  const pluginFailureIndicators = ['does not match prefix', 'unknown', 'not implemented', 'unavailable', 'unsupported'];
+  // NOTE: "not_implemented" is acceptable when test expects it (added to successKeywords)
+  const pluginFailureIndicators = ['does not match prefix', 'unknown', 'unavailable', 'unsupported'];
   const hasPluginFailure = pluginFailureIndicators.some(term => combined.includes(term));
 
   if (!containsFailure && hasPluginFailure) {

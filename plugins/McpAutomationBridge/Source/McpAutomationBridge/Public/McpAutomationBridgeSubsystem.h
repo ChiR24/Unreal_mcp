@@ -465,6 +465,10 @@ private:
                                const TSharedPtr<FJsonObject> &Payload,
                                TSharedPtr<FMcpBridgeWebSocket>
                                    RequestingSocket);
+  bool
+  HandleRebuildMaterial(const FString &RequestId, const FString &Action,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Landscape, foliage, and Niagara handlers
   bool HandleCreateLandscape(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,

@@ -3930,28 +3930,62 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
   
-  // Check if the map file exists before attempting to load
-  // CRITICAL FIX: Use Mid(6) to skip first 6 chars ("/Game/"), not RightChop(6) which gets LAST 6 chars
-  // RightChop(6) was incorrectly returning ".umap" instead of "Path/To/Level.umap"
-  FString FullMapPath = FPaths::ProjectContentDir() + MapPath.Mid(6); // Remove "/Game/" prefix
-  FullMapPath = FPaths::ConvertRelativePathToFull(FullMapPath);
+  // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
+  // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
+  // 2. Flat (legacy): /Game/Path/LevelName.umap
+  // We must check BOTH paths before returning FILE_NOT_FOUND.
   
-  if (!FPaths::FileExists(FullMapPath)) {
+  // Build both possible paths
+  FString FlatMapPath = LevelPath + TEXT(".umap");
+  FString FullFlatMapPath = FPaths::ProjectContentDir() + FlatMapPath.Mid(6); // Remove "/Game/" prefix
+  FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
+  
+  // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
+  FString LevelName = FPaths::GetBaseFilename(LevelPath);
+  FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
+  FString FullFolderMapPath = FPaths::ProjectContentDir() + FolderMapPath.Mid(6);
+  FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
+  
+  // Check which path exists
+  FString MapPathToLoad;
+  FString FullMapPath;
+  
+  // Prefer folder-based path (Unreal's standard) if it exists
+  if (FPaths::FileExists(FullFolderMapPath)) {
+    MapPathToLoad = FolderMapPath;
+    FullMapPath = FullFolderMapPath;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Found level at folder-based path: %s"), *FullFolderMapPath);
+  } else if (FPaths::FileExists(FullFlatMapPath)) {
+    // Fallback to flat path (legacy format)
+    MapPathToLoad = FlatMapPath;
+    FullMapPath = FullFlatMapPath;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
+  } else {
+    // Neither path exists - return detailed error
     TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
     ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+    ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
+    ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
+    ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
-                              FString::Printf(TEXT("Level file not found: %s"), *FullMapPath), 
+                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
+                                            *FullFolderMapPath, *FullFlatMapPath), 
                               ErrorDetails);
     return true;
   }
   
-  bool bOpened = FEditorFileUtils::LoadMap(*MapPath);
+  bool bOpened = FEditorFileUtils::LoadMap(*MapPathToLoad);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("levelPath"), LevelPath);
+  Resp->SetStringField(TEXT("loadedPath"), MapPathToLoad);
   
   if (bOpened) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Successfully opened level: %s"), *MapPathToLoad);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Level opened"), Resp, FString());
   } else {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"), TEXT("Failed to open level"), Resp);

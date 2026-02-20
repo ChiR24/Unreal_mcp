@@ -81,7 +81,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       return true;
     }
 
-    // Optional path filter to narrow search scope
+    // Optional path filter to narrow search scope - DEFAULT to /Game
     FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
     if (Path.IsEmpty()) {
@@ -93,6 +93,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+    
+    // CRITICAL FIX: Ensure path is scanned before query to prevent hangs
+    TArray<FString> ScanPaths;
+    ScanPaths.Add(Path);
+    AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
     
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*Path));
@@ -267,17 +272,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       }
     }
 
-    // Parse Package Paths
+    // Parse Package Paths - DEFAULT to /Game to prevent massive scans
     const TArray<TSharedPtr<FJsonValue>> *PackagePathsPtr;
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
-        PackagePathsPtr) {
+        PackagePathsPtr && PackagePathsPtr->Num() > 0) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
         Filter.PackagePaths.Add(FName(*Val->AsString()));
       }
+    } else {
+      // Default to /Game if no paths specified to prevent scanning entire project
+      Filter.PackagePaths.Add(FName(TEXT("/Game")));
     }
 
-    // Parse Recursion
-    bool bRecursivePaths = true;
+    // Parse Recursion - DEFAULT to false to prevent massive scans
+    bool bRecursivePaths = false;  // Changed from true to false for safety
     if (Payload->HasField(TEXT("recursivePaths")))
       Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
     Filter.bRecursivePaths = bRecursivePaths;
@@ -287,12 +295,23 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
     Filter.bRecursiveClasses = bRecursiveClasses;
 
-    // Execute Query
+    // Execute Query with safety limit
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+    
+    // CRITICAL FIX: Ensure paths are scanned before query to prevent hangs
+    TArray<FString> ScanPaths;
+    for (const FName &Path : Filter.PackagePaths) {
+      ScanPaths.Add(Path.ToString());
+    }
+    if (ScanPaths.Num() > 0) {
+      AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
+    }
+    
     TArray<FAssetData> AssetDataList;
-    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+    AssetRegistry.GetAssets(Filter, AssetDataList);
 
     // Apply Limit
     int32 Limit = 100;

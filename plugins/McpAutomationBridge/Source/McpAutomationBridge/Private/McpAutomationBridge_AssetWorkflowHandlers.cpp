@@ -129,6 +129,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleBreakMaterialConnections(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_node_details"))
     return HandleGetMaterialNodeDetails(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("rebuild_material"))
+    return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
 
   return false;
 }
@@ -5021,6 +5023,81 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   SendAutomationResponse(Socket, RequestId, false,
                          TEXT("get_asset_graph requires editor build"),
                          nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// ============================================================================
+// REBUILD MATERIAL
+// ============================================================================
+
+bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("rebuild_material"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(Socket, RequestId, TEXT("Missing payload."),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString AssetPath;
+  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
+      !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("assetPath or materialPath is required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (AssetPath.IsEmpty()) {
+    SendAutomationError(Socket, RequestId,
+                        TEXT("assetPath cannot be empty"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Load the material
+  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
+  if (!Material) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Material not found: %s"), *AssetPath),
+                        TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  // Rebuild the material by triggering a recompile
+  // This forces the material to update its shader maps and expressions
+  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, Material, AssetPath]() {
+    // Mark the material as needing recompilation
+    Material->MarkPackageDirty();
+    
+    // Force material to recompile its shader
+    Material->PreEditChange(nullptr);
+    Material->PostEditChange();
+    
+    // Save the material
+    McpSafeAssetSave(Material);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    AddAssetVerification(Result, Material);
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetBoolField(TEXT("rebuilt"), true);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Material rebuilt successfully"), Result, FString());
+  });
+
+  return true;
+#else
+  SendAutomationError(Socket, RequestId, TEXT("Editor only."),
+                      TEXT("EDITOR_ONLY"));
   return true;
 #endif
 }

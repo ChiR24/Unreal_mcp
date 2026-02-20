@@ -18,6 +18,7 @@
 #include "LevelUtils.h"
 #include "EditorBuildUtils.h"
 #include "EditorAssetLibrary.h"
+#include "TickTaskManagerInterface.h"  // Required for proper tick system cleanup
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -44,6 +45,19 @@
  * This is a known issue (UE-197643, UE-138424) where tick functions from
  * the old world remain registered when the new world is created.
  *
+ * Root Cause Analysis:
+ * The FTickTaskManager maintains a LevelList that's filled during StartFrame() 
+ * and cleared during EndFrame(). When NewMap() destroys the old world:
+ * 1. ULevel destructor calls FreeTickTaskLevel()
+ * 2. FreeTickTaskLevel() asserts: check(!LevelList.Contains(TickTaskLevel))
+ * 3. If a tick frame started but didn't complete, LevelList still has entries
+ *
+ * Fix Strategy:
+ * 1. Set all levels to invisible (prevents FillLevelList from adding them)
+ * 2. Disable all actor/component ticking
+ * 3. Force a complete tick frame cycle to clear LevelList
+ * 4. Properly cleanup before world destruction
+ *
  * @param bForceNewMap If true, create a completely new empty map (default: true)
  * @return UWorld* The newly created world, or nullptr on failure
  */
@@ -61,7 +75,17 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
     {
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Cleaning up current world '%s'"), *CurrentWorld->GetName());
         
-        // STEP 1: Disable all actor ticking to prevent tick manager assertions
+        // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
+        // This is CRITICAL - FillLevelList only adds levels where bIsVisible is true
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (Level)
+            {
+                Level->bIsVisible = false;
+            }
+        }
+        
+        // STEP 2: Disable all actor ticking to prevent tick manager assertions
         // This is critical - if any tick function is still registered when NewMap is called,
         // the assertion "!LevelList.Contains(TickTaskLevel)" will fail
         int32 DisabledActorCount = 0;
@@ -90,13 +114,13 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
         }
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Disabled ticking for %d actors"), DisabledActorCount);
         
-        // STEP 2: Send end-of-frame updates to complete any pending tick work
+        // STEP 3: Send end-of-frame updates to complete any pending tick work
         CurrentWorld->SendAllEndOfFrameUpdates();
         
-        // STEP 3: Flush rendering commands to ensure all GPU work is complete
+        // STEP 4: Flush rendering commands to ensure all GPU work is complete
         FlushRenderingCommands();
         
-        // STEP 4: Explicitly unload streaming levels
+        // STEP 5: Explicitly unload streaming levels
         // This prevents UE-197643 where tick prerequisites cross level boundaries
         TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
         for (ULevelStreaming* StreamingLevel : StreamingLevels)
@@ -108,20 +132,29 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
             }
         }
         
-        // STEP 5: Flush rendering commands again after streaming level changes
+        // STEP 6: Flush rendering commands again after streaming level changes
         FlushRenderingCommands();
         
-        // STEP 6: Force garbage collection to clean up any remaining references
+        // STEP 7: Force garbage collection to clean up any remaining references
         GEditor->ForceGarbageCollection(true);
         
-        // STEP 7: Another flush after GC
+        // STEP 8: Another flush after GC
         FlushRenderingCommands();
         
-        // STEP 8: Give the engine a moment to process cleanup
-        FPlatformProcess::Sleep(0.05f); // 50ms delay
+        // STEP 9: Force an empty tick frame to ensure LevelList is cleared
+        // StartFrame fills LevelList, EndFrame clears it
+        // By passing empty levels, we ensure LevelList ends up empty
+        {
+            TArray<ULevel*> EmptyLevels;
+            FTickTaskManagerInterface::Get().StartFrame(CurrentWorld, 0.0f, LEVELTICK_All, EmptyLevels);
+            FTickTaskManagerInterface::Get().EndFrame();
+        }
+        
+        // STEP 10: Give the engine a moment to process cleanup
+        FPlatformProcess::Sleep(0.10f); // 100ms delay for full cleanup
     }
     
-    // STEP 9: Now safe to create new map
+    // STEP 11: Now safe to create new map
     UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s)"), 
            bForceNewMap ? TEXT("true") : TEXT("false"));
     
@@ -464,6 +497,31 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
+    // CRITICAL: Validate path length BEFORE attempting save to prevent silent hangs
+    // McpSafeLevelSave validates internally but may not send error response in all code paths
+    {
+      FString AbsoluteFilePath;
+      if (FPackageName::TryConvertLongPackageNameToFilename(SavePath, AbsoluteFilePath, FPackageName::GetMapPackageExtension()))
+      {
+        AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
+        const int32 SafePathLength = 240;
+        if (AbsoluteFilePath.Len() > SafePathLength)
+        {
+          TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+          ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
+          ErrorDetail->SetStringField(TEXT("absolutePath"), AbsoluteFilePath);
+          ErrorDetail->SetNumberField(TEXT("pathLength"), AbsoluteFilePath.Len());
+          ErrorDetail->SetNumberField(TEXT("maxLength"), SafePathLength);
+          SendAutomationResponse(
+              RequestingSocket, RequestId, false,
+              FString::Printf(TEXT("Path too long (%d chars, max %d): %s"), 
+                  AbsoluteFilePath.Len(), SafePathLength, *SavePath),
+              ErrorDetail, TEXT("PATH_TOO_LONG"));
+          return true;
+        }
+      }
+    }
+
 #if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
     if (ULevelEditorSubsystem *LevelEditorSS =
             GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
@@ -491,6 +549,15 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
             FString());
+      } else {
+        // CRITICAL FIX: Send error response when save fails (was missing before, causing silent hangs)
+        TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+        ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
+        ErrorDetail->SetStringField(TEXT("reason"), TEXT("Save operation failed - check Output Log for details"));
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Failed to save level as: %s"), *SavePath),
+            ErrorDetail, TEXT("SAVE_FAILED"));
       }
       return true;
     }
@@ -571,12 +638,17 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
 
     // Check if map already exists
     if (FPackageName::DoesPackageExist(SavePath)) {
-      // If exists, just open it
-      const FString Cmd = FString::Printf(TEXT("Open %s"), *SavePath);
-      TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
-      P->SetStringField(TEXT("command"), Cmd);
-      return HandleExecuteEditorFunction(
-          RequestId, TEXT("execute_console_command"), P, RequestingSocket);
+      // Level already exists - return success with info instead of trying to open
+      // Opening an existing level can trigger dialogs about unsaved changes, causing hangs
+      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      Resp->SetStringField(TEXT("levelPath"), SavePath);
+      Resp->SetStringField(TEXT("packagePath"), SavePath);
+      Resp->SetBoolField(TEXT("alreadyExists"), true);
+      SendAutomationResponse(
+          RequestingSocket, RequestId, true,
+          FString::Printf(TEXT("Level already exists: %s"), *SavePath), Resp,
+          FString());
+      return true;
     }
 
     // Create new map

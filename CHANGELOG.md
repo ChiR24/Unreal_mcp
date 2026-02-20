@@ -440,7 +440,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | Feature | Description |
 |---------|-------------|
 | **TLS/SSL Support** | Full `wss://` WebSocket support with OpenSSL/TLS integration (TLS 1.2+) |
-| **Rate Limiting** | Per-connection limits: 600 messages/min, 120 automation requests/min |
+| **Rate Limiting** | Per-connection limits: configurable, defaults to disabled (0) for development |
 | **Schema Validation** | New Zod schemas in `src/automation/message-schema.ts` for type-safe message parsing |
 
 **New Plugin Settings:**

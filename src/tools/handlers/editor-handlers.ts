@@ -108,7 +108,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'start_recording': ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],
   'stop_recording': [],
   'set_viewport_realtime': ['enabled', 'realtime'],
-  'simulate_input': ['key', 'action', 'axis', 'value'],
+  'simulate_input': ['key', 'action', 'inputAction', 'axis', 'value'],
 };
 
 /**
@@ -366,10 +366,12 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       // Allowed params are defined in ACTION_ALLOWED_PARAMS: ['key', 'action', 'axis', 'value']
       // This ensures unknown params like 'invalidExtraParam' are rejected.
       
-      // Map 'action' to 'type' for C++ compatibility
-      // C++ expects: type = 'key_down' | 'key_up' | 'mouse_click' | 'mouse_move'
-      // Tests send: action = 'pressed' | 'released' | 'click' | 'move'
-      const inputType = args.action?.toLowerCase() || '';
+      // CRITICAL FIX: Read from 'inputAction' field to avoid conflict with routing 'action' field.
+      // The test generator spreads {...b, action:a} where a='simulate_input', which overwrites
+      // any 'action' field in b. So tests must use 'inputAction' for the input type.
+      // C++ handler also accepts 'inputAction' as an alternative to 'type'.
+      const inputActionValue = args.inputAction ?? args.action ?? '';
+      const inputType = typeof inputActionValue === 'string' ? inputActionValue.toLowerCase() : '';
       let mappedType = inputType;
       
       // Map action values to C++ expected type values

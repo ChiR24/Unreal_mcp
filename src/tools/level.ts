@@ -697,15 +697,9 @@ export class LevelTools extends BaseTool implements ILevelTools {
     const parent = params.parentLevel ? this.resolveLevelPath(params.parentLevel) : this.currentLevelPath;
     const sub = this.normalizeLevelPath(params.subLevelPath).path;
 
-    // Use console command as primary method for adding sublevels
-    // "WorldComposition" commands or generic "AddLevelToWorld"
-    // Since stream_level handles existing sublevels, we just need to ADD it.
-    // Console command: 'LevelEditor.AddLevel <Path>' works in editor context mostly, but might be tricky.
-    // Falling back to automation request if we have      const sub = this.normalizeLevelPath(params.subLevelPath).path;
-
-    // Ensure path corresponds to what automation expects (Package path usually, but C++ might check file)
-    // If C++ FPackageName::DoesPackageExist expects pure package path (e.g. /Game/Map), we are good.
-    // But if it's recently created, it might need to receive the full path as verified in createLevel.
+    // Use automation request to add sublevel
+    // C++ handler converts package path to filename with .umap extension automatically
+    // so we should NOT append .umap here - it would cause path resolution failures
 
     // Attempt automation first (cleaner)
     try {
@@ -716,19 +710,6 @@ export class LevelTools extends BaseTool implements ILevelTools {
         parentPath: parent,
         streamingMethod: params.streamingMethod
       }, { timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS });
-
-      // Retry with .umap if package not found (Workaround for C++ strictness)
-      // Also retry if ADD_FAILED, as UEditorLevelUtils might have failed due to path resolution internally
-      if (response && (response.error === 'PACKAGE_NOT_FOUND' || response.error === 'ADD_FAILED') && !sub.endsWith('.umap')) {
-        const subWithExt = sub + '.umap';
-        response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
-          action: 'add_sublevel',
-          levelPath: subWithExt,
-          subLevelPath: subWithExt,
-          parentPath: parent,
-          streamingMethod: params.streamingMethod
-        }, { timeoutMs: DEFAULT_OPERATION_TIMEOUT_MS });
-      }
 
       if (response.success) {
         this.ensureRecord(sub, { loaded: true, visible: true, streaming: true });

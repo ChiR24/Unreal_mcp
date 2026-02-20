@@ -1,6 +1,8 @@
 #include "McpConnectionManager.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/PlatformMisc.h"
 #include "McpAutomationBridgeSettings.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpBridgeWebSocket.h"
@@ -59,6 +61,29 @@ void FMcpConnectionManager::Initialize(
       TlsCertificatePath = Settings->TlsCertificatePath;
     if (!Settings->TlsPrivateKeyPath.IsEmpty())
       TlsPrivateKeyPath = Settings->TlsPrivateKeyPath;
+  }
+
+  // Allow environment variable overrides for rate limiting (useful for tests)
+  // Set MCP_MAX_MESSAGES_PER_MINUTE=0 or MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=0 to disable
+  FString EnvMaxMessages = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_MESSAGES_PER_MINUTE"));
+  if (!EnvMaxMessages.IsEmpty()) {
+    int32 ParsedValue = 0;
+    if (LexTryParseString(ParsedValue, *EnvMaxMessages)) {
+      MaxMessagesPerMinute = ParsedValue;
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("Rate limit override from env: MCP_MAX_MESSAGES_PER_MINUTE=%d"),
+             MaxMessagesPerMinute);
+    }
+  }
+  FString EnvMaxAutomation = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE"));
+  if (!EnvMaxAutomation.IsEmpty()) {
+    int32 ParsedValue = 0;
+    if (LexTryParseString(ParsedValue, *EnvMaxAutomation)) {
+      MaxAutomationRequestsPerMinute = ParsedValue;
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("Rate limit override from env: MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=%d"),
+             MaxAutomationRequestsPerMinute);
+    }
   }
 }
 
