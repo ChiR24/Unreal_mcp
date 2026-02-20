@@ -372,47 +372,49 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     // Determine export format from file extension
     FString Extension = FPaths::GetExtension(ExportPath).ToLower();
     
-    // Use UExporter system to export the asset
-    UClass* ExporterClass = nullptr;
-    
-    if (Extension == TEXT("fbx")) {
-      // For FBX export, we need to find the appropriate FBX exporter
-      // Try UStaticMesh exporter first
-      if (Cast<UStaticMesh>(Asset) || Cast<USkeletalMesh>(Asset)) {
-        ExporterClass = FindObject<UClass>(nullptr, TEXT("/Script/UnrealEd.FbxMeshExporter"));
-      }
-    } else if (Extension == TEXT("obj")) {
-      ExporterClass = FindObject<UClass>(nullptr, TEXT("/Script/UnrealEd.ObjMeshExporter"));
-    } else if (Extension == TEXT("gltf") || Extension == TEXT("glb")) {
-      // GLTF export requires GLTFExporter plugin
-      ExporterClass = FindObject<UClass>(nullptr, TEXT("/Script/GLTFExporter.GLTFMeshExporter"));
-    }
-    
     // Try generic asset export via AssetTools
     bool bExportSuccess = false;
     FString ExportError;
     
-    if (!ExporterClass) {
-      // Fallback: Try using IAssetTools ExportAsset functionality
-      // This uses the asset's built-in export capability
-      FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-      IAssetTools& AssetTools = AssetToolsModule.Get();
-      
-      // Create a simple export task
-      TArray<UObject*> AssetsToExport;
-      AssetsToExport.Add(Asset);
-      
-      // Try using the generic exporter system
+    // CRITICAL FIX: Use AssetTools ExportAssets with explicit export path
+    // This performs automated export without showing modal dialogs
+    // The bPromptForIndividualFilenames=false suppresses file dialogs
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+    IAssetTools& AssetTools = AssetToolsModule.Get();
+    
+    // Use ExportAssets with explicit path - this suppresses dialogs for automated export
+    // The asset will be exported with its original name to the specified directory
+    TArray<UObject*> AssetsToExport;
+    AssetsToExport.Add(Asset);
+    
+    // ExportAssets exports to the specified directory with the asset's name
+    // For custom filename, we need to rename temporarily or use UExporter directly
+    AssetTools.ExportAssets(AssetsToExport, ExportDir);
+    
+    // Check if file was created
+    FString ExpectedExportPath = ExportDir / FPaths::GetBaseFilename(AssetPath) + TEXT(".") + Extension;
+    if (FPaths::FileExists(ExpectedExportPath))
+    {
+      bExportSuccess = true;
+    }
+    else
+    {
+      // Try with the actual requested filename
+      bExportSuccess = FPaths::FileExists(ExportPath);
+    }
+    
+    if (!bExportSuccess)
+    {
+      // Fallback: Use UExporter::ExportToFile directly with Prompt=false
       UExporter* Exporter = nullptr;
       
-      // Find appropriate exporter for the asset type
+      // Find appropriate exporter for the asset type and extension
       for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt) {
         UClass* CurrentClass = *ClassIt;
         if (CurrentClass->IsChildOf(UExporter::StaticClass()) && !CurrentClass->HasAnyClassFlags(CLASS_Abstract)) {
           UExporter* DefaultExporter = Cast<UExporter>(CurrentClass->GetDefaultObject());
           if (DefaultExporter && DefaultExporter->SupportedClass) {
             if (Asset->GetClass()->IsChildOf(DefaultExporter->SupportedClass)) {
-              // Check if this exporter supports the file extension
               if (DefaultExporter->PreferredFormatIndex < DefaultExporter->FormatExtension.Num()) {
                 FString PreferredExt = DefaultExporter->FormatExtension[DefaultExporter->PreferredFormatIndex].ToLower();
                 if (PreferredExt == Extension || PreferredExt.Contains(Extension)) {
@@ -420,7 +422,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                   break;
                 }
               }
-              // Remember first compatible exporter as fallback
               if (!Exporter) {
                 Exporter = DefaultExporter;
               }
@@ -430,28 +431,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       }
       
       if (Exporter) {
-        // Use the found exporter - ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
+        // ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
+        // The last parameter (Prompt=false) should suppress dialogs for most exporters
         int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *ExportPath, false, false, false);
         bExportSuccess = (ExportResult != 0);
-        if (!bExportSuccess) {
-          ExportError = TEXT("Exporter failed to write file");
-        }
-      } else {
-        // No suitable exporter found
-        ExportError = FString::Printf(TEXT("No exporter found for asset type '%s' and format '%s'"),
-                                       *Asset->GetClass()->GetName(), *Extension);
       }
-    } else {
-      // Use specific exporter class - ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
-      UExporter* Exporter = NewObject<UExporter>(GetTransientPackage(), ExporterClass);
-      if (Exporter) {
-        int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *ExportPath, false, false, false);
-        bExportSuccess = (ExportResult != 0);
-        if (!bExportSuccess) {
-          ExportError = TEXT("Exporter failed to write file");
-        }
-      } else {
-        ExportError = TEXT("Failed to create exporter instance");
+      
+      if (!bExportSuccess) {
+        ExportError = FString::Printf(TEXT("Export failed for asset type '%s' and format '%s'"),
+                                       *Asset->GetClass()->GetName(), *Extension);
       }
     }
     

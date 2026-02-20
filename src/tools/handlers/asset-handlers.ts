@@ -260,10 +260,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'delete': {
         let paths: string[] = [];
         const argsTyped = args as AssetArgs;
-        if (Array.isArray(argsTyped.assetPaths) || Array.isArray(argsTyped.asset_paths)) {
+        // Check for array of paths first (delete_assets uses 'paths')
+        if (Array.isArray(argsTyped.paths)) {
+          paths = argsTyped.paths.filter((p): p is string => typeof p === 'string' && p.trim().length > 0);
+        } else if (Array.isArray(argsTyped.assetPaths) || Array.isArray(argsTyped.asset_paths)) {
           paths = (argsTyped.assetPaths || argsTyped.asset_paths) as string[];
         } else {
-          // Support both camelCase and snake_case parameter names
+          // Support both camelCase and snake_case parameter names for single path
           const single = argsTyped.assetPath || argsTyped.asset_path || argsTyped.path;
           if (typeof single === 'string' && single.trim()) {
             paths = [single.trim()];

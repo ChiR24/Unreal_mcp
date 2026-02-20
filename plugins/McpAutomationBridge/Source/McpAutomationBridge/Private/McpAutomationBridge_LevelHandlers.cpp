@@ -688,20 +688,93 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
       // during level save operations
       bool bSaved = McpSafeLevelSave(NewWorld->PersistentLevel, SavePath, 5);
-      if (bSaved) {
+      
+      // CRITICAL FIX: Verify the save actually succeeded using MULTIPLE methods
+      // 1. File system check (most reliable if path conversion works)
+      // 2. Asset Registry check (works even if path conversion fails)
+      // 3. Package existence check (UE's internal method)
+      
+      FString ActualFilename;
+      bool bFileOnDisk = false;
+      bool bPathConversionOk = FPackageName::TryConvertLongPackageNameToFilename(
+          SavePath, ActualFilename, FPackageName::GetMapPackageExtension());
+      
+      if (bPathConversionOk && !ActualFilename.IsEmpty()) {
+        ActualFilename = FPaths::ConvertRelativePathToFull(ActualFilename);
+        bFileOnDisk = IFileManager::Get().FileExists(*ActualFilename);
+        UE_LOG(LogTemp, Log, TEXT("create_new_level: File check - path=%s, exists=%d"), *ActualFilename, bFileOnDisk);
+      }
+      
+      // Fallback verification using Asset Registry
+      IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+      
+      // Force scan the directory first
+      FString DirectoryPath = FPaths::GetPath(SavePath);
+      if (!DirectoryPath.IsEmpty()) {
+        TArray<FString> ScanPaths;
+        ScanPaths.Add(DirectoryPath);
+        AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
+      }
+      
+      // Check Asset Registry for the saved level
+      bool bAssetRegistryOk = FPackageName::DoesPackageExist(SavePath);
+      if (!bAssetRegistryOk) {
+        // Try checking the Asset Registry directly
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(SavePath));
+        #else
+        FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*SavePath));
+        #endif
+        bAssetRegistryOk = AssetData.IsValid();
+      }
+      
+      UE_LOG(LogTemp, Log, TEXT("create_new_level: Verification - saved=%d, fileOnDisk=%d, assetRegistry=%d, packageExists=%d"), 
+             bSaved, bFileOnDisk, bAssetRegistryOk, FPackageName::DoesPackageExist(SavePath));
+      
+      // Consider success if Asset Registry shows it exists (file check may fail due to path issues)
+      bool bSuccess = bSaved && (bFileOnDisk || bAssetRegistryOk);
+      
+      if (bSuccess) {
+        // Also scan the specific file if path conversion worked
+        if (bFileOnDisk && !ActualFilename.IsEmpty()) {
+          TArray<FString> FilesToScan;
+          FilesToScan.Add(ActualFilename);
+          AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+        }
+        
+        // Wait for Asset Registry to process
+        FlushRenderingCommands();
+        FPlatformProcess::Sleep(0.05f);
+        
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         Resp->SetStringField(TEXT("packagePath"), SavePath);
         Resp->SetStringField(TEXT("objectPath"),
                              SavePath + TEXT(".") +
                                  FPaths::GetBaseFilename(SavePath));
+        if (!ActualFilename.IsEmpty()) {
+          Resp->SetStringField(TEXT("filename"), ActualFilename);
+        }
+        Resp->SetBoolField(TEXT("fileOnDisk"), bFileOnDisk);
+        Resp->SetBoolField(TEXT("assetRegistryOk"), bAssetRegistryOk);
         SendAutomationResponse(
             RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Level created: %s"), *SavePath), Resp,
             FString());
       } else {
+        // Save failed - provide detailed error
+        FString ErrorMsg;
+        if (!bSaved) {
+          ErrorMsg = TEXT("Failed to save new level after 5 retries (check GPU driver stability)");
+        } else if (!bPathConversionOk) {
+          ErrorMsg = FString::Printf(TEXT("Level saved but path conversion failed for: %s"), *SavePath);
+        } else if (!bFileOnDisk && !bAssetRegistryOk) {
+          ErrorMsg = FString::Printf(TEXT("Level save reported success but verification failed for: %s"), *SavePath);
+        } else {
+          ErrorMsg = FString::Printf(TEXT("Level save failed for: %s"), *SavePath);
+        }
         SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Failed to save new level after 5 retries (check GPU driver stability)"), nullptr,
+                               *ErrorMsg, nullptr,
                                TEXT("SAVE_FAILED"));
       }
     } else {
@@ -1044,6 +1117,20 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                                nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
       }
+      
+      // CRITICAL FIX: Check if destination already exists BEFORE trying to duplicate
+      // This prevents "An asset already exists at this location" errors and makes
+      // the operation idempotent
+      if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("sourcePath"), SourcePath);
+        Result->SetStringField(TEXT("destinationPath"), DestinationPath);
+        Result->SetBoolField(TEXT("alreadyExists"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               FString::Printf(TEXT("Destination already exists: %s"), *DestinationPath), Result);
+        return true;
+      }
+      
       if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath) != nullptr) {
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level imported (duplicated)"), nullptr);
@@ -1159,6 +1246,49 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
+    // CRITICAL FIX: Check if sublevel is already in the world BEFORE trying to add it
+    // This prevents "A level with that name already exists in the world" modal dialog
+    // which blocks execution and causes test timeouts
+    // BUT: Also check if the existing level is actually loaded/valid
+    for (ULevelStreaming* ExistingStreamingLevel : World->GetStreamingLevels()) {
+      if (ExistingStreamingLevel) {
+        FString ExistingPath = ExistingStreamingLevel->GetWorldAssetPackageName();
+        // Compare normalized paths (without .umap extension)
+        FString NormalizedExisting = ExistingPath;
+        FString NormalizedNew = SubLevelPath;
+        if (NormalizedExisting.EndsWith(TEXT(".umap"))) {
+          NormalizedExisting = NormalizedExisting.LeftChop(5);
+        }
+        if (NormalizedNew.EndsWith(TEXT(".umap"))) {
+          NormalizedNew = NormalizedNew.LeftChop(5);
+        }
+        if (NormalizedExisting.Equals(NormalizedNew, ESearchCase::IgnoreCase)) {
+          // Check if the existing streaming level is actually valid/loaded
+          // If it failed to load (file doesn't exist), it's a broken reference
+          ULevel* ExistingLevel = ExistingStreamingLevel->GetLoadedLevel();
+          bool bIsValidStreaming = ExistingLevel != nullptr || 
+                                   ExistingStreamingLevel->IsStreamingStatePending();
+          
+          if (bIsValidStreaming) {
+            // Sublevel already exists and is valid - return success with info
+            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
+            Result->SetStringField(TEXT("world"), World->GetName());
+            Result->SetBoolField(TEXT("alreadyExists"), true);
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                                   FString::Printf(TEXT("Sublevel already in world: %s"), *SubLevelPath), Result);
+            return true;
+          } else {
+            // Existing streaming level is broken (failed to load)
+            // Remove it and continue to add the new one
+            UE_LOG(LogTemp, Warning, TEXT("add_sublevel: Removing broken streaming level reference: %s"), *SubLevelPath);
+            World->RemoveStreamingLevel(ExistingStreamingLevel);
+            break;  // Exit the loop to continue adding
+          }
+        }
+      }
+    }
+
     // Determine streaming class
     UClass *StreamingClass = ULevelStreamingDynamic::StaticClass();
     if (StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase)) {
@@ -1168,12 +1298,36 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     ULevelStreaming *NewLevel = UEditorLevelUtils::AddLevelToWorld(
         World, *SubLevelPath, StreamingClass);
     if (NewLevel) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
-      Result->SetStringField(TEXT("world"), World->GetName());
-      Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Sublevel added successfully"), Result);
+      // CRITICAL FIX: Verify the streaming level can actually be loaded
+      // AddLevelToWorld() creates the streaming level object but doesn't verify
+      // the level file exists. Check if the level loaded successfully.
+      // Give the engine a moment to attempt loading
+      FlushRenderingCommands();
+      FPlatformProcess::Sleep(0.1f);
+      
+      // Check if the level is actually loaded or pending load
+      // If the level file doesn't exist, GetLoadedLevel() will be null and
+      // the streaming state will not be pending
+      ULevel* LoadedLevel = NewLevel->GetLoadedLevel();
+      bool bIsPendingLoad = NewLevel->IsStreamingStatePending();
+      
+      // If level is loaded or pending, it's a valid streaming level
+      if (LoadedLevel || bIsPendingLoad) {
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
+        Result->SetStringField(TEXT("world"), World->GetName());
+        Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Sublevel added successfully"), Result);
+      } else {
+        // CRITICAL FIX: Level file doesn't exist - return ERROR not success with warning
+        // The streaming level was added to the world but the level file doesn't exist
+        // This is an error condition, not a warning
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Sublevel file not found: %s"), *SubLevelPath),
+            nullptr, TEXT("FILE_NOT_FOUND"));
+      }
     } else {
       // Did we fail because it's already there?
       SendAutomationResponse(

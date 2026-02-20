@@ -69,11 +69,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
             }
         }
 
-        // Validate parent folder exists
-        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-        IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-        
-        if (!AssetRegistry.PathExists(FName(*PackagePath)))
+        // CRITICAL FIX: Use DoesDirectoryExist for strict validation
+        // AssetRegistry.PathExists() returns true for valid path formats even when no assets exist
+        // We need to check if the parent folder ACTUALLY exists on disk before allowing creation
+        if (!UEditorAssetLibrary::DoesDirectoryExist(PackagePath))
         {
             SendAutomationError(RequestingSocket, RequestId, 
                 FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath), 

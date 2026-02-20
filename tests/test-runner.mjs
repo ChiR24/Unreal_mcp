@@ -1182,7 +1182,9 @@ export async function runToolTests(toolName, testCases) {
     
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.arguments?.timeoutMs ?? '5000');
+      // CRITICAL FIX: Check testCase.timeoutMs FIRST (test case level), then arguments.timeoutMs
+      // Test files put timeoutMs at test case level, not inside arguments
+      const testCaseTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CASE_TIMEOUT_MS ?? testCase.timeoutMs ?? testCase.arguments?.timeoutMs ?? '5000');
       const startTime = performance.now();
 
       try {

@@ -228,18 +228,20 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
 
   AsyncTask(ENamedThreads::GameThread, [this, RequestId, NormalizedPath,
                                         bCheckoutFiles, RequestingSocket]() {
-    FAssetRegistryModule &AssetRegistryModule =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
-            TEXT("AssetRegistry"));
-    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-
-    // Validate directory exists in asset registry
-    if (!AssetRegistry.PathExists(FName(*NormalizedPath))) {
+    // CRITICAL FIX: Use DoesDirectoryExist for strict validation
+    // AssetRegistry.PathExists() returns true for valid path formats even when no assets exist
+    // We need to check if the directory ACTUALLY exists on disk
+    if (!UEditorAssetLibrary::DoesDirectoryExist(NormalizedPath)) {
       SendAutomationError(RequestingSocket, RequestId,
                           FString::Printf(TEXT("Directory not found: %s"), *NormalizedPath),
                           TEXT("PATH_NOT_FOUND"));
       return;
     }
+
+    FAssetRegistryModule &AssetRegistryModule =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+            TEXT("AssetRegistry"));
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
     // Find all redirectors
     FARFilter Filter;
@@ -1610,16 +1612,36 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
 
   int32 DeletedCount = 0;
   TArray<FString> NotFoundPaths;
+  TArray<FString> FailedToDeletePaths;
   
   for (const FString &Path : PathsToDelete) {
     if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
+      // Directory exists - attempt to delete it
       if (UEditorAssetLibrary::DeleteDirectory(Path)) {
-        DeletedCount++;
+        // CRITICAL FIX: Verify the directory was actually deleted
+        // DeleteDirectory may return true even if deletion failed
+        if (!UEditorAssetLibrary::DoesDirectoryExist(Path)) {
+          DeletedCount++;
+        } else {
+          // Delete returned true but directory still exists
+          FailedToDeletePaths.Add(Path);
+        }
+      } else {
+        FailedToDeletePaths.Add(Path);
       }
     } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
       // Asset exists - attempt to delete it
       if (UEditorAssetLibrary::DeleteAsset(Path)) {
-        DeletedCount++;
+        // CRITICAL FIX: Verify the asset was actually deleted
+        // DeleteAsset may return true even if deletion failed
+        if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
+          DeletedCount++;
+        } else {
+          // Delete returned true but asset still exists
+          FailedToDeletePaths.Add(Path);
+        }
+      } else {
+        FailedToDeletePaths.Add(Path);
       }
     } else {
       // Asset/directory does not exist
@@ -1644,13 +1666,38 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
   }
   
+  if (FailedToDeletePaths.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> FailedArray;
+    for (const FString& P : FailedToDeletePaths) {
+      FailedArray.Add(MakeShared<FJsonValueString>(P));
+    }
+    Resp->SetArrayField(TEXT("failedToDeletePaths"), FailedArray);
+    Resp->SetNumberField(TEXT("failedCount"), FailedToDeletePaths.Num());
+  }
+  
   if (bSuccess) {
     SendAutomationResponse(Socket, RequestId, true, TEXT("Assets deleted"), Resp, FString());
   } else {
-    // Nothing was deleted - all paths were not found
-    SendAutomationResponse(Socket, RequestId, false, 
-                           FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num()),
-                           Resp, TEXT("ASSET_NOT_FOUND"));
+    // Nothing was deleted - determine the reason
+    FString ErrorMessage;
+    FString ErrorCode;
+    
+    if (NotFoundPaths.Num() > 0 && FailedToDeletePaths.Num() == 0) {
+      // All paths were not found
+      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num());
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    } else if (FailedToDeletePaths.Num() > 0 && NotFoundPaths.Num() == 0) {
+      // All paths existed but deletion failed
+      ErrorMessage = FString::Printf(TEXT("Failed to delete %d asset(s). They may be in use or locked."), FailedToDeletePaths.Num());
+      ErrorCode = TEXT("DELETE_FAILED");
+    } else {
+      // Mixed: some not found, some failed to delete
+      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found, %d failed to delete."), 
+                                      NotFoundPaths.Num(), FailedToDeletePaths.Num());
+      ErrorCode = TEXT("DELETE_FAILED");
+    }
+    
+    SendAutomationResponse(Socket, RequestId, false, ErrorMessage, Resp, ErrorCode);
   }
   return true;
 #else
