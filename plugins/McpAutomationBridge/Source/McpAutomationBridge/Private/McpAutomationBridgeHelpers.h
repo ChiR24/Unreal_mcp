@@ -706,6 +706,7 @@ static inline bool McpSafeAssetSave(UObject* Asset)
 #include "Engine/LevelStreaming.h"  // ULevelStreaming
 #include "GameFramework/Actor.h"  // AActor
 #include "Components/ActorComponent.h"  // UActorComponent
+#include "EditorAssetLibrary.h"  // UEditorAssetLibrary for DoesAssetDirectoryExistOnDisk
 
 /**
  * Resolve a component from an actor by component name with fuzzy matching.
@@ -930,6 +931,60 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
                     AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
                 UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths (LongPathsEnabled registry key)"));
                 return false;
+            }
+        }
+    }
+
+    // CRITICAL: Check if level already exists BEFORE attempting save
+    // This prevents useless retries when the "A level with that name already exists" 
+    // modal dialog would block automation. If the level exists, we return false 
+    // immediately without retrying (since retrying won't change the outcome).
+    {
+        FString ExistingLevelFilename;
+        bool bLevelExists = false;
+        
+        // Check flat path: /Game/Path/Level.umap
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, ExistingLevelFilename, FPackageName::GetMapPackageExtension()))
+        {
+            FString AbsolutePath = FPaths::ConvertRelativePathToFull(ExistingLevelFilename);
+            bLevelExists = IFileManager::Get().FileExists(*AbsolutePath);
+            
+            // Also check folder-based path: /Game/Path/Level/Level.umap
+            if (!bLevelExists)
+            {
+                FString LevelName = FPaths::GetBaseFilename(PackagePath);
+                FString FolderPath = FPaths::GetPath(AbsolutePath) / LevelName + FPackageName::GetMapPackageExtension();
+                bLevelExists = IFileManager::Get().FileExists(*FolderPath);
+            }
+        }
+        
+        // Also check package system
+        if (!bLevelExists)
+        {
+            bLevelExists = FPackageName::DoesPackageExist(PackagePath);
+        }
+        
+        if (bLevelExists)
+        {
+            // Check if this is the SAME level we're trying to save (save current level)
+            // vs a DIFFERENT level (save_as would fail with "already exists")
+            UWorld* LevelWorld = Level ? Level->GetWorld() : nullptr;
+            if (LevelWorld)
+            {
+                FString CurrentLevelPath = LevelWorld->GetOutermost()->GetName();
+                if (CurrentLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
+                {
+                    // Saving the same level - this is fine, it's an overwrite
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
+                }
+                else
+                {
+                    // Trying to save_as to a path that already exists - fail immediately
+                    UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"), 
+                        *PackagePath, *CurrentLevelPath);
+                    UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Use a different path or delete the existing level first"));
+                    return false;
+                }
             }
         }
     }
@@ -3055,6 +3110,87 @@ static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FSt
     Response->SetBoolField(TEXT("existsAfter"), bExists);
   }
   return bExists;
+}
+
+/**
+ * Check if a UE asset directory path ACTUALLY exists on disk.
+ * 
+ * UEditorAssetLibrary::DoesDirectoryExist() uses the AssetRegistry cache which may
+ * contain stale entries for directories that no longer exist or never existed.
+ * This function converts the UE path to an absolute file system path and checks
+ * if the directory actually exists on disk.
+ * 
+ * @param AssetPath UE asset path (e.g., /Game/MyFolder)
+ * @returns true if the directory exists on disk, false otherwise
+ */
+static inline bool DoesAssetDirectoryExistOnDisk(const FString& AssetPath) {
+#if WITH_EDITOR
+  // Handle root paths that always exist
+  if (AssetPath.Equals(TEXT("/Game"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Game/"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Engine"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Engine/"), ESearchCase::IgnoreCase)) {
+    return true;
+  }
+  
+  // Normalize the path - remove trailing slash
+  FString NormalizedPath = AssetPath;
+  if (NormalizedPath.EndsWith(TEXT("/"))) {
+    NormalizedPath.RemoveAt(NormalizedPath.Len() - 1);
+  }
+  
+  // Convert UE asset path to file system path
+  // /Game/Folder -> Project/Content/Folder
+  FString FileSystemPath;
+  
+  if (NormalizedPath.StartsWith(TEXT("/Game/"))) {
+    // /Game/... -> Project/Content/...
+    FString RelativePath = NormalizedPath.RightChop(6); // Remove "/Game/"
+    FileSystemPath = FPaths::ProjectContentDir() / RelativePath;
+  } else if (NormalizedPath.StartsWith(TEXT("/Engine/"))) {
+    // /Engine/... -> Engine/Content/...
+    FString RelativePath = NormalizedPath.RightChop(8); // Remove "/Engine/"
+    FileSystemPath = FPaths::EngineContentDir() / RelativePath;
+  } else {
+    // For plugin paths or other roots, try to use FPackageName
+    FString PackageName = NormalizedPath;
+    if (FPackageName::TryConvertLongPackageNameToFilename(PackageName, FileSystemPath)) {
+      // Success - FileSystemPath is now set
+    } else {
+      // Fallback: check if it exists in AssetRegistry (less reliable)
+      return UEditorAssetLibrary::DoesDirectoryExist(AssetPath);
+    }
+  }
+  
+  // Check if the directory exists on disk using IFileManager
+  IFileManager& FileManager = IFileManager::Get();
+  return FileManager.DirectoryExists(*FileSystemPath);
+#else
+  // Non-editor builds: fall back to AssetRegistry
+  return false;
+#endif
+}
+
+/**
+ * Check if a parent directory exists for asset creation.
+ * Combines AssetRegistry check (for valid paths) with disk check (for actual existence).
+ * 
+ * @param AssetPath UE asset path for the asset to be created
+ * @return true if parent directory exists, false otherwise
+ */
+static inline bool DoesParentDirectoryExist(const FString& AssetPath) {
+#if WITH_EDITOR
+  // Extract parent path
+  FString ParentPath = FPaths::GetPath(AssetPath);
+  if (ParentPath.IsEmpty()) {
+    return false;
+  }
+  
+  // Check if parent exists on disk
+  return DoesAssetDirectoryExistOnDisk(ParentPath);
+#else
+  return false;
+#endif
 }
 
 #endif

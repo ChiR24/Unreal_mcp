@@ -89,7 +89,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
-      const res = await tools.levelTools.createLevel({ levelName, savePath: argsTyped.savePath || argsTyped.levelPath });
+      // CRITICAL: Pass useWorldPartition to C++ - default to false to avoid 20+ second freeze during World Partition uninitialize
+      // World Partition levels cause permanent hang when unloaded via GEditor->NewMap()
+      const res = await tools.levelTools.createLevel({
+        levelName,
+        savePath: argsTyped.savePath || argsTyped.levelPath,
+        useWorldPartition: argsTyped.useWorldPartition ?? false
+      });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_sublevel': {
@@ -400,10 +406,27 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       });
       return cleanObject(res) as Record<string, unknown>;
     }
-    case 'cleanup_invalid_datalayers': {
+case 'cleanup_invalid_datalayers': {
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'cleanup_invalid_datalayers'
+      }, 'World Partition support not available');
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'create_datalayer': {
+      // Route to manage_world_partition
+      const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
+      if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: dataLayerName',
+          action
+        });
+      }
+      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
+        subAction: 'create_datalayer',
+        dataLayerName
       }, 'World Partition support not available');
       return cleanObject(res) as Record<string, unknown>;
     }

@@ -626,11 +626,25 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  if (!Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase)) {
+  // Handle both direct "console_command" action and "system_control" with action="console_command" in payload
+  const FString LowerAction = Action.ToLower();
+  const bool bIsDirectConsoleCommand = LowerAction.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
+  const bool bIsSystemControl = LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
+  
+  if (!bIsDirectConsoleCommand && !bIsSystemControl) {
     return false;
   }
 
 #if WITH_EDITOR
+  // For system_control, check if the sub-action is console_command
+  if (bIsSystemControl && Payload.IsValid()) {
+    FString SubAction;
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+    if (!SubAction.ToLower().Equals(TEXT("console_command"))) {
+      return false; // Not a console_command, let other handlers try
+    }
+  }
+
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("console_command payload missing"),

@@ -814,6 +814,54 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAssetAction(R, A, P, S);
                   });
 
+  // CRITICAL: Register asset_query for O(1) dispatch - fixes timeout issues
+  // This handler processes search_assets, find_by_tag, get_source_control_state, etc.
+  RegisterHandler(TEXT("asset_query"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleAssetQueryAction(R, A, P, S);
+                  });
+
+  // Direct action aliases for common asset_query subActions
+  // These allow TS to call executeAutomationRequest('search_assets', {...}) directly
+  RegisterHandler(TEXT("search_assets"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleSearchAssets(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("find_by_tag"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleFindByTag(R, A, P, S);
+                  });
+
+  // Direct action aliases for manage_asset subActions that TS calls directly
+  // These allow O(1) dispatch for GPU-heavy and common operations
+  RegisterHandler(TEXT("generate_lods"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGenerateLODs(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("create_thumbnail"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGenerateThumbnail(R, A, P, S);
+                  });
+
+  RegisterHandler(TEXT("get_source_control_state"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleGetSourceControlState(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_material_authoring"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,

@@ -87,6 +87,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     if (Path.IsEmpty()) {
       Path = TEXT("/Game"); // Default search path
     }
+    
+    // SECURITY: Sanitize path to prevent traversal attacks
+    FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    if (SanitizedPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *Path),
+          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
 
     // Use AssetRegistry's cached data instead of loading assets
     FAssetRegistryModule &AssetRegistryModule =
@@ -100,7 +109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     // If a path is not cached, the query returns empty results rather than blocking indefinitely.
     
     FARFilter Filter;
-    Filter.PackagePaths.Add(FName(*Path));
+    Filter.PackagePaths.Add(FName(*SanitizedPath));
     Filter.bRecursivePaths = true;
 
     TArray<FAssetData> AssetDataList;
@@ -273,11 +282,21 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     }
 
     // Parse Package Paths - DEFAULT to /Game to prevent massive scans
+    // SECURITY: Validate all paths to prevent path traversal attacks
     const TArray<TSharedPtr<FJsonValue>> *PackagePathsPtr;
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
         PackagePathsPtr && PackagePathsPtr->Num() > 0) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
-        Filter.PackagePaths.Add(FName(*Val->AsString()));
+        FString PathValue = Val->AsString();
+        // SECURITY: Sanitize path to prevent traversal attacks
+        FString SanitizedPath = SanitizeProjectRelativePath(PathValue);
+        if (SanitizedPath.IsEmpty()) {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *PathValue),
+              TEXT("SECURITY_VIOLATION"));
+          return true;
+        }
+        Filter.PackagePaths.Add(FName(*SanitizedPath));
       }
     } else {
       // Default to /Game if no paths specified to prevent scanning entire project
@@ -385,4 +404,29 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
   SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."),
                       TEXT("INVALID_SUBACTION"));
   return true;
+}
+
+/**
+ * @brief Wrapper for search_assets action when called directly (not via asset_query).
+ * 
+ * This handler is invoked when TS calls executeAutomationRequest(tools, 'search_assets', {...})
+ * directly, rather than via the asset_query tool with subAction="search_assets".
+ * It delegates to the same logic by routing through HandleAssetQueryAction.
+ */
+bool UMcpAutomationBridgeSubsystem::HandleSearchAssets(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  // Build a payload with subAction for the existing handler
+  TSharedPtr<FJsonObject> RoutedPayload = Payload;
+  if (Payload.IsValid()) {
+    // Clone and add subAction if not present
+    if (!Payload->HasField(TEXT("subAction"))) {
+      RoutedPayload = MakeShared<FJsonObject>(*Payload);
+      RoutedPayload->SetStringField(TEXT("subAction"), TEXT("search_assets"));
+    }
+  }
+  
+  // Delegate to HandleAssetQueryAction with "asset_query" as the action
+  return HandleAssetQueryAction(RequestId, TEXT("asset_query"), RoutedPayload, RequestingSocket);
 }

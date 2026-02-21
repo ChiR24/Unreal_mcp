@@ -19,6 +19,7 @@
 #include "EditorBuildUtils.h"
 #include "EditorAssetLibrary.h"
 #include "TickTaskManagerInterface.h"  // Required for proper tick system cleanup
+#include "WorldPartition/WorldPartition.h"  // Required for World Partition detection
 
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
@@ -57,13 +58,14 @@
  * 2. Disable all actor/component ticking
  * 3. Force a complete tick frame cycle to clear LevelList
  * 4. Properly cleanup before world destruction
- *
- * @param bForceNewMap If true, create a completely new empty map (default: true)
- * @param Subsystem Optional subsystem for sending progress updates
- * @param RequestId Optional request ID for progress updates
- * @return UWorld* The newly created world, or nullptr on failure
- */
-static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsystem* Subsystem = nullptr, const FString& RequestId = FString())
+  *
+  * @param bForceNewMap If true, create a completely new empty map (default: true)
+  * @param Subsystem Optional subsystem for sending progress updates
+  * @param RequestId Optional request ID for progress updates
+  * @param bUseWorldPartition If true, create World Partition level (default: false to avoid freeze)
+  * @return UWorld* The newly created world, or nullptr on failure
+  */
+static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsystem* Subsystem = nullptr, const FString& RequestId = FString(), bool bUseWorldPartition = false)
 {
     if (!GEditor)
     {
@@ -72,6 +74,29 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
     }
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    
+    // CRITICAL FIX: Check if current world has World Partition before cleanup
+    // World Partition uninitialize can freeze for 20+ seconds in UE 5.7
+    // We need to handle this specially to avoid the freeze
+    if (CurrentWorld)
+    {
+        AWorldSettings* WorldSettings = CurrentWorld->GetWorldSettings();
+        UWorldPartition* WorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
+        if (WorldPartition)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeNewMap: Current world '%s' has World Partition - cleanup may be slow"), *CurrentWorld->GetName());
+            
+            // Send progress update warning about WP cleanup
+            if (Subsystem && !RequestId.IsEmpty())
+            {
+                Subsystem->SendProgressUpdate(RequestId, 2.0f, TEXT("Warning: Current world has World Partition - cleanup may be slow..."));
+            }
+            
+            // Note: There's no API to speed up WP uninitialize
+            // The freeze is unavoidable if the current world has WP
+            // Solution: Don't create WP levels for tests (useWorldPartition=false)
+        }
+    }
     
     if (CurrentWorld)
     {
@@ -195,8 +220,8 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
     }
     
     // STEP 11: Now safe to create new map
-    UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s)"), 
-           bForceNewMap ? TEXT("true") : TEXT("false"));
+    UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s, bUseWorldPartition=%s)"), 
+           bForceNewMap ? TEXT("true") : TEXT("false"), bUseWorldPartition ? TEXT("true") : TEXT("false"));
     
     // Progress update: creating new map
     if (Subsystem && !RequestId.IsEmpty())
@@ -204,7 +229,40 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         Subsystem->SendProgressUpdate(RequestId, 75.0f, TEXT("Creating new level..."));
     }
     
-    UWorld* NewWorld = GEditor->NewMap(bForceNewMap);
+    // CRITICAL FIX: Use UWorld::CreateWorld() instead of GEditor->NewMap() to control World Partition
+    // GEditor->NewMap() always creates World Partition levels which freeze during Uninitialize
+    // World Partition uninitialization can take 20+ seconds and freeze the editor
+    // Reference: Engine/Source/Editor/UnrealEd/Private/Factories/WorldFactory.cpp line 39-47
+    UWorld* NewWorld = nullptr;
+    
+    if (bForceNewMap)
+    {
+        // Use UWorld::CreateWorld with custom initialization values
+        // This allows us to disable World Partition creation
+        UWorld::InitializationValues InitValues = UWorld::InitializationValues()
+            .ShouldSimulatePhysics(false)
+            .EnableTraceCollision(true)
+            .CreateNavigation(true)  // Editor world
+            .CreateAISystem(true)    // Editor world
+            .CreateWorldPartition(bUseWorldPartition)  // CRITICAL: Control World Partition
+            .EnableWorldPartitionStreaming(bUseWorldPartition);
+        
+        // Create a new editor world without World Partition
+        static int32 WorldCounter = 0;
+        FName WorldName = *FString::Printf(TEXT("MCP_NewWorld_%d"), ++WorldCounter);
+        NewWorld = UWorld::CreateWorld(EWorldType::Editor, false, WorldName, nullptr, false, ERHIFeatureLevel::Num, &InitValues);
+        
+        if (NewWorld)
+        {
+            // Set as current world in editor context
+            GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);
+        }
+    }
+    else
+    {
+        // Fallback to GEditor->NewMap for non-forced creation
+        NewWorld = GEditor->NewMap(bForceNewMap);
+    }
     
     if (NewWorld)
     {
@@ -712,6 +770,13 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
 
+    // Parse useWorldPartition - default to false for faster level creation
+    // World Partition levels take 20+ seconds to unload in UE 5.7
+    bool bUseWorldPartition = false;
+    if (Payload.IsValid()) {
+      Payload->TryGetBoolField(TEXT("useWorldPartition"), bUseWorldPartition);
+    }
+
     // SECURITY: Sanitize LevelPath to prevent path traversal attacks
     // Rejects paths containing "..", double slashes, or invalid characters
     // that could cause engine crashes or security violations
@@ -796,7 +861,9 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // 3. Flushing async loading and streaming levels
     // 4. Proper garbage collection
     // Pass Subsystem and RequestId to enable progress updates for timeout extension
-    UWorld* NewWorld = McpSafeNewMap(true, this, RequestId);
+    // CRITICAL FIX: Pass bUseWorldPartition to control World Partition creation
+    // World Partition levels cause 20+ second freeze during Uninitialize in UE 5.7
+    UWorld* NewWorld = McpSafeNewMap(true, this, RequestId, bUseWorldPartition);
 
     if (NewWorld) {
       GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);

@@ -443,6 +443,10 @@ private:
                   const TSharedPtr<FJsonObject> &Payload,
                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool
+  HandleSearchAssets(const FString &RequestId, const FString &Action,
+                     const TSharedPtr<FJsonObject> &Payload,
+                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
   HandleAddMaterialNode(const FString &RequestId, const FString &Action,
                         const TSharedPtr<FJsonObject> &Payload,
                         TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

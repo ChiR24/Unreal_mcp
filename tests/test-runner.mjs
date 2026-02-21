@@ -657,25 +657,34 @@ export async function runToolTests(toolName, testCases) {
     // argument to the server so server-side automation calls use the same
     // timeout the test harness expects.
     // NOTE: This MUST be defined before the setup code below uses it.
+    // CRITICAL: We use TWO different timeouts:
+    // 1. Server-side timeout (progress-extended) - passed via arguments.timeoutMs
+    // 2. Client SDK timeout (fixed) - should be LONGER to allow progress extension
     callToolOnce = async function (callOptions, baseTimeoutMs) {
       const envDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000') || 60000;
       const perCall = Number(callOptions?.arguments?.timeoutMs) || undefined;
       const base = typeof baseTimeoutMs === 'number' && baseTimeoutMs > 0 ? baseTimeoutMs : (perCall || envDefault);
-      const timeoutMs = base;
+      const serverTimeoutMs = base;  // Server-side timeout (can be extended by progress)
+      
+      // Client SDK timeout should be LONGER than server timeout to allow progress extension
+      // Use 5 minutes (ABSOLUTE_MAX_TIMEOUT_MS) to give progress updates time to extend server timeout
+      const clientTimeoutMs = Number(process.env.UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS ?? '300000') || 300000;
+      
       try {
-        console.log(`[CALL] ${callOptions.name} (timeout ${timeoutMs}ms)`);
-        const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs } });
+        console.log(`[CALL] ${callOptions.name} (server timeout: ${serverTimeoutMs}ms, client timeout: ${clientTimeoutMs}ms)`);
+        const outgoing = Object.assign({}, callOptions, { arguments: { ...(callOptions.arguments || {}), timeoutMs: serverTimeoutMs } });
         // Prefer instructing the MCP client to use a matching timeout if
         // the client library supports per-call options; fall back to the
         // plain call if not supported.
+        // CRITICAL: Use LONG client timeout to allow server-side progress extension
         let callPromise;
         try {
           // Correct parameter order: (params, resultSchema?, options)
-          callPromise = client.callTool(outgoing, undefined, { timeout: timeoutMs });
+          callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
         } catch (err) {
           // Fall back to calling the older signature where options might be second param
           try {
-            callPromise = client.callTool(outgoing, { timeout: timeoutMs });
+            callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
           } catch (inner) {
             try {
               callPromise = client.callTool(outgoing);
@@ -687,7 +696,7 @@ export async function runToolTests(toolName, testCases) {
 
         let timeoutId;
         const timeoutPromise = new Promise((_, rej) => {
-          timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${timeoutMs}ms`)), timeoutMs);
+          timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
           if (timeoutId && typeof timeoutId.unref === 'function') {
             timeoutId.unref();
           }

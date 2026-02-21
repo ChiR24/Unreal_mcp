@@ -410,7 +410,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           type: 'string',
           enum: [
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'unload', 'create_level', 'create_light', 'build_lighting',
-            'set_metadata', 'load_cells', 'set_datalayer',
+            'set_metadata', 'load_cells', 'set_datalayer', 'create_datalayer',
             'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'delete_level', 'validate_level',
             'cleanup_invalid_datalayers', 'add_sublevel', 'rename_level', 'duplicate_level', 'get_current_level'
           ],
@@ -435,6 +435,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         targetPath: commonSchemas.directoryPath,
         cells: commonSchemas.arrayOfStrings,
         dataLayer: commonSchemas.stringProp,
+        dataLayerName: commonSchemas.stringProp,
         dataLayerState: commonSchemas.stringProp,
         sublevelPath: commonSchemas.levelPath,
         buildQuality: commonSchemas.numberProp,

@@ -156,7 +156,7 @@ export interface ILevelTools {
     deleteLevels(params: { levelPaths: string[] }): Promise<StandardActionResponse>;
     loadLevel(params: { levelPath: string; streaming?: boolean; position?: [number, number, number] }): Promise<StandardActionResponse>;
     saveLevel(params: { levelName?: string; savePath?: string }): Promise<StandardActionResponse>;
-    createLevel(params: { levelName: string; template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay'; savePath?: string }): Promise<StandardActionResponse>;
+    createLevel(params: { levelName: string; template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay'; savePath?: string; useWorldPartition?: boolean }): Promise<StandardActionResponse>;
     addSubLevel(params: { parentLevel?: string; subLevelPath: string; streamingMethod?: 'Blueprint' | 'AlwaysLoaded' }): Promise<StandardActionResponse>;
     streamLevel(params: { levelPath?: string; levelName?: string; shouldBeLoaded: boolean; shouldBeVisible?: boolean; position?: [number, number, number] }): Promise<StandardActionResponse>;
     setupWorldComposition(params: { enableComposition: boolean; tileSize?: number; distanceStreaming?: boolean; streamingDistance?: number }): Promise<StandardActionResponse>;

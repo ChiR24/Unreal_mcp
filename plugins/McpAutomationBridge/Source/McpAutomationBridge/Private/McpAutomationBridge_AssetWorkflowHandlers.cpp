@@ -46,6 +46,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return false;
 
   // Dispatch to specific handlers
+  // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
+  // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("duplicate"))
@@ -54,7 +56,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleRenameAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("move"))
     return HandleMoveAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("delete"))
+  if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") || Lower == TEXT("delete_assets"))
     return HandleDeleteAssets(
         RequestId, Payload,
         RequestingSocket); // Single delete routed to bulk delete logic if
@@ -94,6 +96,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleDoesAssetExist(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
+  
+  // CRITICAL: search_assets must be dispatched - it was missing causing timeouts
+  // This handles the case where TS calls executeAutomationRequest(tools, 'search_assets', {...})
+  if (Lower == TEXT("search_assets"))
+    return HandleSearchAssets(RequestId, Action, Payload, RequestingSocket);
 
   // Workflow handlers are called directly from ProcessAutomationRequest, but we
   // can fallback here too if needed
@@ -220,18 +227,27 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     return true;
   }
 
+  // SECURITY: Sanitize path to prevent traversal attacks
+  FString SanitizedPath = SanitizeProjectRelativePath(DirectoryPath);
+  if (SanitizedPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *DirectoryPath),
+        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   // Normalize path
-  FString NormalizedPath = DirectoryPath;
+  FString NormalizedPath = SanitizedPath;
   if (NormalizedPath.StartsWith(TEXT("/Content"), ESearchCase::IgnoreCase)) {
     NormalizedPath = FString::Printf(TEXT("/Game%s"), *NormalizedPath.RightChop(8));
   }
 
   AsyncTask(ENamedThreads::GameThread, [this, RequestId, NormalizedPath,
                                         bCheckoutFiles, RequestingSocket]() {
-    // CRITICAL FIX: Use DoesDirectoryExist for strict validation
-    // AssetRegistry.PathExists() returns true for valid path formats even when no assets exist
-    // We need to check if the directory ACTUALLY exists on disk
-    if (!UEditorAssetLibrary::DoesDirectoryExist(NormalizedPath)) {
+    // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
+    // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
+    // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
+    if (!DoesAssetDirectoryExistOnDisk(NormalizedPath)) {
       SendAutomationError(RequestingSocket, RequestId,
                           FString::Printf(TEXT("Directory not found: %s"), *NormalizedPath),
                           TEXT("PATH_NOT_FOUND"));
@@ -945,6 +961,15 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
     return true;
   }
 
+  // SECURITY: Validate asset path
+  FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SafeAssetPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *AssetPath),
+        TEXT("SECURITY_VIOLATION"));
+    return true;
+  }
+
   int32 Width = 512;
   int32 Height = 512;
 
@@ -957,84 +982,95 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Asset not found"), nullptr,
-                           TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  if (!Asset) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
-    return true;
-  }
-
-  FObjectThumbnail ObjectThumbnail;
-  ThumbnailTools::RenderThumbnail(
-      Asset, Width, Height,
-      ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
-      &ObjectThumbnail);
-
-  bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
-                  ObjectThumbnail.GetImageHeight() > 0;
-
-  if (bSuccess && !OutputPath.IsEmpty()) {
-    const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
-
-    if (ImageData.Num() > 0) {
-      TArray<FColor> ColorData;
-      ColorData.Reserve(Width * Height);
-
-      // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
-      for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
-        FColor Color;
-        Color.B = ImageData[i + 0];
-        Color.G = ImageData[i + 1];
-        Color.R = ImageData[i + 2];
-        Color.A = ImageData[i + 3];
-        ColorData.Add(Color);
-      }
-
-      FString AbsolutePath = OutputPath;
-      if (FPaths::IsRelative(OutputPath)) {
-        AbsolutePath =
-            FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
-      }
-
-      TArray<uint8> CompressedData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
-                                               CompressedData);
-#else
-      // UE 5.0: Use CompressImageArray instead
-      FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
-#endif
-      bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+  // Dispatch to GameThread for async processing
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, RequestingSocket, 
+                                         SafeAssetPath, Width, Height, OutputPath]() {
+    UMcpAutomationBridgeSubsystem* Subsystem = WeakThis.Get();
+    if (!Subsystem) {
+      return;
     }
-  }
 
-  if (Asset->GetOutermost()) {
-    Asset->GetOutermost()->MarkPackageDirty();
-  }
+    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Asset not found"), nullptr,
+                             TEXT("ASSET_NOT_FOUND"));
+      return;
+    }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), bSuccess);
-  Result->SetStringField(TEXT("assetPath"), AssetPath);
-  Result->SetNumberField(TEXT("width"), Width);
-  Result->SetNumberField(TEXT("height"), Height);
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+    if (!Asset) {
+      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Failed to load asset"), nullptr,
+                             TEXT("LOAD_FAILED"));
+      return;
+    }
 
-  if (!OutputPath.IsEmpty()) {
-    Result->SetStringField(TEXT("outputPath"), OutputPath);
-  }
+    FObjectThumbnail ObjectThumbnail;
+    ThumbnailTools::RenderThumbnail(
+        Asset, Width, Height,
+        ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
+        &ObjectThumbnail);
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, bSuccess,
-      bSuccess ? TEXT("Thumbnail generated successfully")
-               : TEXT("Thumbnail generation failed"),
-      Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
+    bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
+                    ObjectThumbnail.GetImageHeight() > 0;
+
+    if (bSuccess && !OutputPath.IsEmpty()) {
+      const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
+
+      if (ImageData.Num() > 0) {
+        TArray<FColor> ColorData;
+        ColorData.Reserve(Width * Height);
+
+        // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
+        for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
+          FColor Color;
+          Color.B = ImageData[i + 0];
+          Color.G = ImageData[i + 1];
+          Color.R = ImageData[i + 2];
+          Color.A = ImageData[i + 3];
+          ColorData.Add(Color);
+        }
+
+        FString AbsolutePath = OutputPath;
+        if (FPaths::IsRelative(OutputPath)) {
+          AbsolutePath =
+              FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+        }
+
+        TArray<uint8> CompressedData;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
+                                                 CompressedData);
+#else
+        // UE 5.0: Use CompressImageArray instead
+        FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+#endif
+        bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+      }
+    }
+
+    if (Asset->GetOutermost()) {
+      Asset->GetOutermost()->MarkPackageDirty();
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetBoolField(TEXT("success"), bSuccess);
+    Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+    Result->SetNumberField(TEXT("width"), Width);
+    Result->SetNumberField(TEXT("height"), Height);
+
+    if (!OutputPath.IsEmpty()) {
+      Result->SetStringField(TEXT("outputPath"), OutputPath);
+    }
+
+    Subsystem->SendAutomationResponse(
+        RequestingSocket, RequestId, bSuccess,
+        bSuccess ? TEXT("Thumbnail generated successfully")
+                 : TEXT("Thumbnail generation failed"),
+        Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
+  });
+
   return true;
 #else
   SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -3072,6 +3108,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
   FString LandscapePath;
   Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
   
+  // Support both assetPath (single) and assetPaths (array)
+  FString SingleAssetPath;
+  Payload->TryGetStringField(TEXT("assetPath"), SingleAssetPath);
+  
   const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
   Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray);
 
@@ -3097,11 +3137,27 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     Paths.Add(SafePath);
   }
   
+  // Add single asset path if provided
+  if (!SingleAssetPath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(SingleAssetPath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe asset path: %s"), *SingleAssetPath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    Paths.Add(SafePath);
+  }
+  
   // Add asset paths if provided
   if (AssetPathsArray) {
     for (const auto &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String)
-        Paths.Add(Val->AsString());
+      if (Val.IsValid() && Val->Type == EJson::String) {
+        FString SafePath = SanitizeProjectRelativePath(Val->AsString());
+        if (!SafePath.IsEmpty()) {
+          Paths.Add(SafePath);
+        }
+      }
     }
   }
 

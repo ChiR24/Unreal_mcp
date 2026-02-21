@@ -607,11 +607,14 @@ export class LevelTools extends BaseTool implements ILevelTools {
     levelName: string;
     template?: 'Empty' | 'Default' | 'VR' | 'TimeOfDay';
     savePath?: string;
+    useWorldPartition?: boolean;
   }): Promise<StandardActionResponse> {
     // SECURITY: Sanitize the base path and level name to prevent path traversal
     // Sanitize the level name to prevent injection attacks
     const sanitizedName = sanitizeCommandArgument(params.levelName);
-    const isPartitioned = true; // default to World Partition for UE5
+    // CRITICAL: World Partition levels take 30+ seconds to create in UE 5.7
+    // Default to false for faster test execution. Set useWorldPartition: true only when needed.
+    const isPartitioned = params.useWorldPartition ?? false;
 
     // Determine the full path for the level
     // If savePath is provided:

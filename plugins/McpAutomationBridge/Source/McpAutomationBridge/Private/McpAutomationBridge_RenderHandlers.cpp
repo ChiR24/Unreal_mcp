@@ -69,38 +69,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
             }
         }
 
-        // CRITICAL FIX: Use AssetRegistry to verify folder ACTUALLY exists
-        // UEditorAssetLibrary::DoesDirectoryExist() returns true for valid path formats
-        // even when the folder doesn't exist. We need to check the AssetRegistry's cached
-        // path list to verify the folder has been scanned and exists.
-        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-        IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-        
-        // Check if the path is cached in the AssetRegistry
-        // This is more reliable than DoesDirectoryExist for non-existent paths
-        FName PackagePathFName(*PackagePath);
-        TArray<FString> CachedPaths;
-        AssetRegistry.GetAllCachedPaths(CachedPaths);
-        
-        bool bFolderExists = false;
-        for (const FString& CachedPath : CachedPaths)
-        {
-            if (CachedPath.Equals(PackagePath, ESearchCase::IgnoreCase))
-            {
-                bFolderExists = true;
-                break;
-            }
-        }
-        
-        // Also check if it's a root path like /Game which always exists
-        if (!bFolderExists && (PackagePath.Equals(TEXT("/Game"), ESearchCase::IgnoreCase) ||
-                               PackagePath.Equals(TEXT("/Engine"), ESearchCase::IgnoreCase) ||
-                               PackagePath.Equals(TEXT("/Game/"), ESearchCase::IgnoreCase)))
-        {
-            bFolderExists = true;
-        }
-        
-        if (!bFolderExists)
+        // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
+        // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
+        // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
+        if (!DoesAssetDirectoryExistOnDisk(PackagePath))
         {
             SendAutomationError(RequestingSocket, RequestId, 
                 FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath), 
