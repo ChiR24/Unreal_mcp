@@ -19,17 +19,17 @@
   ],
   "scripts": {
     "build:core": "tsc -p tsconfig.json",
-    "build": "npm run build:core && (npm run build:wasm || echo \"WASM build failed or wasm-pack missing; continuing with TypeScript-only build. To enable WASM, install wasm-pack and re-run npm run build.\")",
+    "build": "npm run clean && npm run build:core && (npm run build:wasm || echo \"WASM build failed or wasm-pack missing; continuing with TypeScript-only build. To enable WASM, install wasm-pack and re-run npm run build.\")",
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
     "dev": "ts-node-esm src/cli.ts",
-    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "echo \"Lint: typescript/javascript, C, C++, C#\" && eslint .",
+    "lint:fix": "eslint . --fix",
     "lint:cpp": "echo \"Running C/C++ lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C/C++ lint')",
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
     "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",
     "clean": "rimraf dist",
-    "prepare": "npm run build",
+    "prepare": "node -e \"require('fs').existsSync('dist') || require('child_process').execSync('npm run build',{stdio:'inherit'})\"",
     "automation:sync": "node scripts/sync-mcp-plugin.js",
     "clean:tmp": "node scripts/clean-tmp.js",
     "test": "node tests/integration.mjs",
@@ -39,8 +39,7 @@
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
     "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
-    "type-check": "tsc --noEmit",
-    "prebuild": "npm run lint && npm run clean"
+    "type-check": "tsc --noEmit"
   },
   "engines": {
     "node": ">=18"
