@@ -952,8 +952,20 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         // pending operations in the driver's command queue
         FPlatformProcess::Sleep(0.025f); // 25ms reduced from 50ms
 
-        // Perform the actual save after flushing render commands
-        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+        // CRITICAL FIX: Use UEditorLoadingAndSavingUtils::SaveMap for proper path handling
+        // FEditorFileUtils::SaveLevel expects a FILE path, not a package path.
+        // This was causing the OBJ SAVEPACKAGE command to receive incorrect FILE parameter.
+        // SaveMap properly converts the asset path (/Game/MyLevel) to the correct file path.
+        UWorld* World = Level ? Level->GetWorld() : nullptr;
+        if (World)
+        {
+            bSaveSucceeded = UEditorLoadingAndSavingUtils::SaveMap(World, PackagePath);
+        }
+        else
+        {
+            // Fallback to SaveLevel if world is not available
+            bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+        }
 
         if (bSaveSucceeded)
         {

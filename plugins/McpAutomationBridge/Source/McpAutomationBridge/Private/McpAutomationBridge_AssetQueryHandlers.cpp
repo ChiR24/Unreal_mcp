@@ -94,10 +94,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             "AssetRegistry");
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
     
-    // CRITICAL FIX: Ensure path is scanned before query to prevent hangs
-    TArray<FString> ScanPaths;
-    ScanPaths.Add(Path);
-    AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
+    // REMOVED: ScanPathsSynchronous() was causing indefinite hangs when paths weren't indexed.
+    // The AssetRegistry's GetAssets() already uses cached data and will return empty results
+    // for unscanned paths. The cache is populated automatically during editor startup.
+    // If a path is not cached, the query returns empty results rather than blocking indefinitely.
     
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*Path));
@@ -301,14 +301,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             "AssetRegistry");
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
     
-    // CRITICAL FIX: Ensure paths are scanned before query to prevent hangs
-    TArray<FString> ScanPaths;
-    for (const FName &Path : Filter.PackagePaths) {
-      ScanPaths.Add(Path.ToString());
-    }
-    if (ScanPaths.Num() > 0) {
-      AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
-    }
+    // REMOVED: ScanPathsSynchronous() was causing indefinite hangs when paths weren't indexed.
+    // The AssetRegistry's GetAssets() already uses cached data and will return empty results
+    // for unscanned paths. The cache is populated automatically during editor startup.
+    // If a path is not cached, the query returns empty results rather than blocking indefinitely.
     
     TArray<FAssetData> AssetDataList;
     AssetRegistry.GetAssets(Filter, AssetDataList);

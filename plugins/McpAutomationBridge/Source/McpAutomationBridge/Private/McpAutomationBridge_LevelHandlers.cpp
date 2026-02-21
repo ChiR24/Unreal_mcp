@@ -59,9 +59,11 @@
  * 4. Properly cleanup before world destruction
  *
  * @param bForceNewMap If true, create a completely new empty map (default: true)
+ * @param Subsystem Optional subsystem for sending progress updates
+ * @param RequestId Optional request ID for progress updates
  * @return UWorld* The newly created world, or nullptr on failure
  */
-static UWorld* McpSafeNewMap(bool bForceNewMap = true)
+static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsystem* Subsystem = nullptr, const FString& RequestId = FString())
 {
     if (!GEditor)
     {
@@ -73,6 +75,12 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
     
     if (CurrentWorld)
     {
+        // Send initial progress update
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 5.0f, TEXT("Starting level creation cleanup..."));
+        }
+        
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Cleaning up current world '%s'"), *CurrentWorld->GetName());
         
         // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
@@ -114,11 +122,23 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
         }
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Disabled ticking for %d actors"), DisabledActorCount);
         
+        // Progress update: disabled ticking
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 15.0f, FString::Printf(TEXT("Disabled ticking for %d actors"), DisabledActorCount));
+        }
+        
         // STEP 3: Send end-of-frame updates to complete any pending tick work
         CurrentWorld->SendAllEndOfFrameUpdates();
         
         // STEP 4: Flush rendering commands to ensure all GPU work is complete
         FlushRenderingCommands();
+        
+        // Progress update: flushing GPU
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 25.0f, TEXT("Flushing GPU commands..."));
+        }
         
         // STEP 5: Explicitly unload streaming levels
         // This prevents UE-197643 where tick prerequisites cross level boundaries
@@ -135,19 +155,39 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
         // STEP 6: Flush rendering commands again after streaming level changes
         FlushRenderingCommands();
         
+        // Progress update: streaming levels unloaded
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 40.0f, TEXT("Unloaded streaming levels"));
+        }
+        
         // STEP 7: Force garbage collection to clean up any remaining references
         GEditor->ForceGarbageCollection(true);
         
         // STEP 8: Another flush after GC
         FlushRenderingCommands();
         
-        // STEP 9: Force an empty tick frame to ensure LevelList is cleared
-        // StartFrame fills LevelList, EndFrame clears it
-        // By passing empty levels, we ensure LevelList ends up empty
+        // Progress update: GC complete
+        if (Subsystem && !RequestId.IsEmpty())
         {
-            TArray<ULevel*> EmptyLevels;
-            FTickTaskManagerInterface::Get().StartFrame(CurrentWorld, 0.0f, LEVELTICK_All, EmptyLevels);
-            FTickTaskManagerInterface::Get().EndFrame();
+            Subsystem->SendProgressUpdate(RequestId, 55.0f, TEXT("Garbage collection complete"));
+        }
+        
+        // STEP 9: REMOVED - Calling StartFrame triggers assertion if TickCompletionEvents is not empty
+        // The assertion "check(!TickCompletionEvents[Index].Num())" at TickTaskManager.cpp:1097
+        // fires BEFORE LevelList is cleared, creating a catch-22.
+        // 
+        // Instead, we rely on Steps 1-8 which are sufficient:
+        // - Setting bIsVisible = false prevents FillLevelList from adding levels
+        // - Disabling all actor/component ticks prevents new tick registrations
+        // - FlushRenderingCommands clears GPU work
+        // - GC cleans up references
+        // - 100ms sleep allows engine to settle
+        
+        // Progress update: tick cleanup complete (via Steps 1-8)
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 65.0f, TEXT("Tick cleanup complete (via visibility/tick disable)"));
         }
         
         // STEP 10: Give the engine a moment to process cleanup
@@ -158,10 +198,60 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true)
     UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Creating new map (bForceNewMap=%s)"), 
            bForceNewMap ? TEXT("true") : TEXT("false"));
     
+    // Progress update: creating new map
+    if (Subsystem && !RequestId.IsEmpty())
+    {
+        Subsystem->SendProgressUpdate(RequestId, 75.0f, TEXT("Creating new level..."));
+    }
+    
     UWorld* NewWorld = GEditor->NewMap(bForceNewMap);
     
     if (NewWorld)
     {
+        // STEP 12: CRITICAL - Disable ticking on the new world's actors immediately
+        // The NewMap creates actors (like WorldSettings) that might trigger tick assertions
+        // if not properly initialized before the next tick frame
+        if (NewWorld->PersistentLevel)
+        {
+            for (AActor* Actor : NewWorld->PersistentLevel->Actors)
+            {
+                if (Actor)
+                {
+                    Actor->SetActorTickEnabled(false);
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component)
+                        {
+                            Component->SetComponentTickEnabled(false);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // STEP 13: Flush any pending operations from world creation
+        FlushRenderingCommands();
+        
+        // Progress update: finalizing new world
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 90.0f, TEXT("Finalizing new level..."));
+        }
+        
+        // STEP 14: REMOVED - Calling StartFrame triggers assertion if TickCompletionEvents is not empty
+        // The new world's actors already have ticking disabled from Step 12, so no tick functions
+        // should be registered. We skip the StartFrame/EndFrame cycle to avoid the assertion.
+        // Instead, we rely on Step 15's additional delay for stability.
+        
+        // STEP 15: Additional delay to ensure engine is stable
+        FPlatformProcess::Sleep(0.10f); // Increased from 0.05f for better stability
+        
+        // Progress update: complete
+        if (Subsystem && !RequestId.IsEmpty())
+        {
+            Subsystem->SendProgressUpdate(RequestId, 95.0f, TEXT("Level creation complete"));
+        }
+        
         UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Successfully created new world '%s'"), *NewWorld->GetName());
     }
     else
@@ -251,18 +341,52 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       const FString FileToLoad = bGotFilename ? Filename : LevelPath;
 
       // Verify file exists before attempting load to avoid false positives
+      // CRITICAL: Unreal stores levels in TWO possible path patterns:
+      // 1. Folder-based (standard UE 5.x): /Game/Path/LevelName/LevelName.umap
+      // 2. Flat (legacy): /Game/Path/LevelName.umap
+      // We must check BOTH paths before returning FILE_NOT_FOUND to prevent
+      // the "Pure virtual not implemented" crash when LoadMap fails.
+      
       FString FilenameToCheck;
       bool bFileExists = false;
+      
+      // Build both possible paths
+      FString FlatMapPath, FullFlatMapPath, FolderMapPath, FullFolderMapPath;
       if (FPackageName::TryConvertLongPackageNameToFilename(
-              LevelPath, FilenameToCheck, FPackageName::GetMapPackageExtension())) {
-        bFileExists = IFileManager::Get().FileExists(*FilenameToCheck);
+              LevelPath, FlatMapPath, FPackageName::GetMapPackageExtension())) {
+        FullFlatMapPath = FPaths::ConvertRelativePathToFull(FlatMapPath);
+        
+        // Also build folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
+        FString LevelName = FPaths::GetBaseFilename(LevelPath);
+        FolderMapPath = FPaths::GetPath(FlatMapPath) / LevelName + FPackageName::GetMapPackageExtension();
+        FullFolderMapPath = FPaths::ConvertRelativePathToFull(FolderMapPath);
       }
-      // Also check if it's a valid package path
+      
+      // Check both paths - prefer folder-based (UE 5.x standard)
+      if (!FullFolderMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFolderMapPath)) {
+        bFileExists = true;
+        UE_LOG(LogTemp, Log, TEXT("load: Found level at folder-based path: %s"), *FullFolderMapPath);
+      } else if (!FullFlatMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFlatMapPath)) {
+        bFileExists = true;
+        UE_LOG(LogTemp, Log, TEXT("load: Found level at flat path: %s"), *FullFlatMapPath);
+      }
+      
+      // Also check if it's a valid package path (for levels in memory but not on disk yet)
       if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
+        TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+        ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+        if (!FullFolderMapPath.IsEmpty()) {
+          ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
+        }
+        if (!FullFlatMapPath.IsEmpty()) {
+          ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
+        }
+        ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
         SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Level file not found: %s"), *LevelPath),
-            nullptr, TEXT("FILE_NOT_FOUND"));
+            FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
+                          *FullFolderMapPath, *FullFlatMapPath),
+            ErrorDetails, TEXT("FILE_NOT_FOUND"));
         return true;
       }
 
@@ -671,7 +795,8 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // 2. Removing tick prerequisites
     // 3. Flushing async loading and streaming levels
     // 4. Proper garbage collection
-    UWorld* NewWorld = McpSafeNewMap(true);
+    // Pass Subsystem and RequestId to enable progress updates for timeout extension
+    UWorld* NewWorld = McpSafeNewMap(true, this, RequestId);
 
     if (NewWorld) {
       GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);

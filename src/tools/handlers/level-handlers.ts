@@ -172,7 +172,19 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         });
       }
-      const res = await executeAutomationRequest(tools, 'manage_level', args);
+      // CRITICAL FIX: Normalize 'type' to 'lightType' for C++ handler compatibility
+      // The C++ handler checks for 'lightType' field, not 'type'
+      const normalizedArgs = {
+        ...args,
+        lightType: lightType,
+        // Remove 'type' to avoid confusion
+        type: undefined
+      };
+      // Remove undefined fields
+      const cleanNormalizedArgs = Object.fromEntries(
+        Object.entries(normalizedArgs).filter(([, v]) => v !== undefined)
+      );
+      const res = await executeAutomationRequest(tools, 'manage_level', cleanNormalizedArgs);
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'spawn_light': {

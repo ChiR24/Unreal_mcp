@@ -109,7 +109,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
   if (Lower == TEXT("spawn_light") || Lower == TEXT("create_light") || Lower == TEXT("create_dynamic_light")) {
     FString LightClassStr;
     
-    // Support both lightClass (Unreal class name) and lightType (short name)
+    // Support multiple parameter names: lightClass, lightType, type
+    // Priority: lightClass > lightType > type
     if (!Payload->TryGetStringField(TEXT("lightClass"), LightClassStr) || LightClassStr.IsEmpty()) {
       // Try lightType parameter - map short names to Unreal class names
       FString LightType;
@@ -129,6 +130,27 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           // Unknown light type
           SendAutomationError(RequestingSocket, RequestId,
                               FString::Printf(TEXT("Invalid lightType: %s. Must be one of: point, directional, spot, rect, sky"), *LightType),
+                              TEXT("INVALID_LIGHT_TYPE"));
+          return true;
+        }
+      }
+      // CRITICAL FIX: Also check for 'type' parameter (common shorthand)
+      else if (Payload->TryGetStringField(TEXT("type"), LightType) && !LightType.IsEmpty()) {
+        const FString LowerType = LightType.ToLower();
+        if (LowerType == TEXT("point") || LowerType == TEXT("pointlight")) {
+          LightClassStr = TEXT("PointLight");
+        } else if (LowerType == TEXT("directional") || LowerType == TEXT("directionallight")) {
+          LightClassStr = TEXT("DirectionalLight");
+        } else if (LowerType == TEXT("spot") || LowerType == TEXT("spotlight")) {
+          LightClassStr = TEXT("SpotLight");
+        } else if (LowerType == TEXT("rect") || LowerType == TEXT("rectlight")) {
+          LightClassStr = TEXT("RectLight");
+        } else if (LowerType == TEXT("sky") || LowerType == TEXT("skylight")) {
+          LightClassStr = TEXT("SkyLight");
+        } else {
+          // Unknown light type
+          SendAutomationError(RequestingSocket, RequestId,
+                              FString::Printf(TEXT("Invalid type: %s. Must be one of: point, directional, spot, rect, sky"), *LightType),
                               TEXT("INVALID_LIGHT_TYPE"));
           return true;
         }
