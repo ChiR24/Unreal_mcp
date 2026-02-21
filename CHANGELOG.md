@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.18] - 2026-02-21
+
+> [!IMPORTANT]
+> ### 🔧 Installation, Documentation & Dependency Updates
+> This release fixes npm install failures when downloading from GitHub releases, adds first-time project setup guidance, and updates dependencies.
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🐛 npm install failure from release archives</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/215">#215</a>)</summary>
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| `npm install` fails with ESLint config error | Release archives excluded `eslint.config.mjs` and other build files | Added `-source` archives with complete build files |
+| `prepare` script runs build unnecessarily | Checked only `dist/` existence, not build artifacts | Now verifies `dist/cli.js` and `dist/index.js` exist |
+| Deprecated `--ext .ts` flag in lint | ESLint 9.x removed support for `--ext` flag | Removed flag, extensions configured in `eslint.config.mjs` |
+
+**Files Modified:**
+- `package.json` (prepare script, lint scripts, removed prebuild)
+- `.github/workflows/release.yml` (added source archives, fixed plugin path)
+- `README.md` (added Rust/wasm-pack prerequisites)
+
+</details>
+
+### 📚 Documentation
+
+<details>
+<summary><b>📖 First-time project open instructions</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/112df08">112df08</a>)</summary>
+
+Added guidance for users opening Unreal projects for the first time:
+- Explains UE prompt to rebuild missing modules
+- Documents expected plugin load failure after first rebuild
+- Recommends closing and reopening project to resolve
+
+</details>
+
+### ⬆️ Dependencies
+
+| Package | From | To | PR |
+|---------|------|-----|-----|
+| hono | 4.11.7 | 4.12.0 | [#213](https://github.com/ChiR24/Unreal_mcp/pull/213) |
+| ajv | 8.17.1 | 8.18.0 | [#210](https://github.com/ChiR24/Unreal_mcp/pull/210) |
+| actions/stale | 10.1.1 | 10.2.0 | [#208](https://github.com/ChiR24/Unreal_mcp/pull/208) |
+| actions/dependency-review-action | 4.8.2 | 4.8.3 | [#212](https://github.com/ChiR24/Unreal_mcp/pull/212) |
+
+---
+
 ## 🏷️ [0.5.17] - 2026-02-16
 
 > [!IMPORTANT]
