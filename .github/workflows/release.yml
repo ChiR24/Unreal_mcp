@@ -63,6 +63,7 @@ jobs:
         run: |
           mkdir -p release-artifacts
           
+          # Pre-built archive (ready to run)
           tar -czvf release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}.tar.gz \
             dist/ \
             package.json \
@@ -76,6 +77,35 @@ jobs:
             README.md \
             CHANGELOG.md \
             LICENSE
+          
+          # Source archive (for rebuilding)
+          OPTIONAL_PATHS=""
+          [ -d "wasm" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS wasm/"
+          [ -f "server.json" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS server.json"
+          
+          tar -czvf release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}-source.tar.gz \
+            dist/ \
+            src/ \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            eslint.config.mjs \
+            README.md \
+            CHANGELOG.md \
+            LICENSE \
+            $OPTIONAL_PATHS
+          
+          zip -r release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}-source.zip \
+            dist/ \
+            src/ \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            eslint.config.mjs \
+            README.md \
+            CHANGELOG.md \
+            LICENSE \
+            $OPTIONAL_PATHS
 
       - name: Create Plugin archive
         run: |

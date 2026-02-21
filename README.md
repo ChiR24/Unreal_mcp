@@ -255,9 +255,12 @@ Optional WASM acceleration for computationally intensive operations. **Enabled b
 
 ### Building WASM (Optional)
 
+**Prerequisites:**
+1. Install Rust: https://rust-lang.org/tools/install/
+2. Install wasm-pack: `cargo install wasm-pack`
+
 ```bash
-cargo install wasm-pack  # Once per machine
-npm run build:wasm       # Builds  WASM
+npm run build:wasm       # Builds WASM
 ```
 
 To disable: `WASM_ENABLED=false`
