@@ -356,6 +356,21 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         });
       }
 
+      // CRITICAL FIX: If levelPath is specified, load it first
+      // World Partition operations require the level to be the current world
+      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
+        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+        if (loadRes.success === false) {
+          return cleanObject({
+            success: false,
+            error: 'LOAD_FAILED',
+            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+            levelPath: argsTyped.levelPath,
+            action
+          });
+        }
+      }
+
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = argsTyped.origin;
       let extent = argsTyped.extent;
@@ -397,6 +412,21 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         });
       }
 
+      // CRITICAL FIX: If levelPath is specified, load it first
+      // World Partition operations require the level to be the current world
+      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
+        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+        if (loadRes.success === false) {
+          return cleanObject({
+            success: false,
+            error: 'LOAD_FAILED',
+            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+            levelPath: argsTyped.levelPath,
+            action
+          });
+        }
+      }
+
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'set_datalayer',
         actorPath: argsTyped.actorPath,
@@ -407,6 +437,21 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
 case 'cleanup_invalid_datalayers': {
+      // CRITICAL FIX: If levelPath is specified, load it first
+      // World Partition operations require the level to be the current world
+      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
+        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+        if (loadRes.success === false) {
+          return cleanObject({
+            success: false,
+            error: 'LOAD_FAILED',
+            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+            levelPath: argsTyped.levelPath,
+            action
+          });
+        }
+      }
+      
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'cleanup_invalid_datalayers'
@@ -424,6 +469,22 @@ case 'cleanup_invalid_datalayers': {
           action
         });
       }
+      
+      // CRITICAL FIX: If levelPath is specified, load it first
+      // World Partition operations require the level to be the current world
+      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
+        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+        if (loadRes.success === false) {
+          return cleanObject({
+            success: false,
+            error: 'LOAD_FAILED',
+            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+            levelPath: argsTyped.levelPath,
+            action
+          });
+        }
+      }
+      
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'create_datalayer',
         dataLayerName

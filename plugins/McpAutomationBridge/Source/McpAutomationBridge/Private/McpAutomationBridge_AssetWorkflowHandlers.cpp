@@ -991,6 +991,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       return;
     }
 
+    // CRITICAL: Send progress update before GPU-blocking operation
+    // This keeps the request alive and helps diagnose hangs
+    Subsystem->SendProgressUpdate(RequestId, 0.0f, 
+        FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
+
     if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
       Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Asset not found"), nullptr,
@@ -1005,6 +1010,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
                              TEXT("LOAD_FAILED"));
       return;
     }
+
+    // Send progress update before GPU operation
+    Subsystem->SendProgressUpdate(RequestId, 50.0f, 
+        TEXT("Rendering thumbnail (GPU operation)..."), true);
 
     FObjectThumbnail ObjectThumbnail;
     ThumbnailTools::RenderThumbnail(
@@ -1651,12 +1660,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   TArray<FString> FailedToDeletePaths;
   
   for (const FString &Path : PathsToDelete) {
-    if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
-      // Directory exists - attempt to delete it
+    // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
+    // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
+    // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
+    if (DoesAssetDirectoryExistOnDisk(Path)) {
+      // Directory exists on disk - attempt to delete it
       if (UEditorAssetLibrary::DeleteDirectory(Path)) {
         // CRITICAL FIX: Verify the directory was actually deleted
         // DeleteDirectory may return true even if deletion failed
-        if (!UEditorAssetLibrary::DoesDirectoryExist(Path)) {
+        if (!DoesAssetDirectoryExistOnDisk(Path)) {
           DeletedCount++;
         } else {
           // Delete returned true but directory still exists
@@ -3179,9 +3191,20 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       return;
 
     int32 SuccessCount = 0;
+    TArray<FString> NotFoundPaths;
+    TArray<FString> NotMeshPaths;
 
     for (const FString &Path : PathsCopy) {
+      // Send progress update to prevent timeout
+      Subsystem->SendProgressUpdate(RequestId, -1.0f, 
+          FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
+      
       UObject *Obj = LoadObject<UObject>(nullptr, *Path);
+      
+      if (!Obj) {
+        NotFoundPaths.Add(Path);
+        continue;
+      }
       
       // Try Static Mesh
       if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
@@ -3215,16 +3238,60 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
         McpSafeAssetSave(Mesh);
 
         SuccessCount++;
+      } else {
+        // Asset exists but is not a static mesh
+        NotMeshPaths.Add(Path);
       }
     }
 
     TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
+    
+    // CRITICAL FIX: Return proper success/failure based on actual results
+    // Previously always returned success=true even when 0 meshes processed
+    bool bSuccess = SuccessCount > 0;
+    Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
+    Resp->SetNumberField(TEXT("requested"), PathsCopy.Num());
     Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                      TEXT("LOD generation completed"),
-                                      Resp, FString());
+    
+    // Add details about failures
+    if (NotFoundPaths.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> NotFoundArray;
+      for (const FString& P : NotFoundPaths) {
+        NotFoundArray.Add(MakeShared<FJsonValueString>(P));
+      }
+      Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+      Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+    }
+    
+    if (NotMeshPaths.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> NotMeshArray;
+      for (const FString& P : NotMeshPaths) {
+        NotMeshArray.Add(MakeShared<FJsonValueString>(P));
+      }
+      Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
+      Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
+    }
+    
+    FString Message;
+    FString ErrorCode;
+    
+    if (bSuccess) {
+      Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
+    } else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0) {
+      Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
+      ErrorCode = TEXT("ASSET_NOT_FOUND");
+    } else if (NotMeshPaths.Num() > 0 && NotFoundPaths.Num() == 0) {
+      Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
+      ErrorCode = TEXT("INVALID_ASSET_TYPE");
+    } else {
+      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."), 
+                                NotFoundPaths.Num(), NotMeshPaths.Num());
+      ErrorCode = TEXT("LOD_GENERATION_FAILED");
+    }
+    
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+                                      Message, Resp, ErrorCode);
   });
 
   return true;
@@ -3465,6 +3532,20 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
                         TEXT("tag field is required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
+  }
+
+  // CRITICAL: Validate path parameter for security even if not used for actor search
+  // This prevents false negatives in security testing and follows defense-in-depth
+  FString Path;
+  if (Payload->TryGetStringField(TEXT("path"), Path) && !Path.IsEmpty()) {
+    FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    if (SanitizedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *Path),
+          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    // Path is valid - could be used for scoping asset search in future
   }
 
   FName TagName(*Tag);

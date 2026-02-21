@@ -229,40 +229,12 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
         Subsystem->SendProgressUpdate(RequestId, 75.0f, TEXT("Creating new level..."));
     }
     
-    // CRITICAL FIX: Use UWorld::CreateWorld() instead of GEditor->NewMap() to control World Partition
-    // GEditor->NewMap() always creates World Partition levels which freeze during Uninitialize
-    // World Partition uninitialization can take 20+ seconds and freeze the editor
-    // Reference: Engine/Source/Editor/UnrealEd/Private/Factories/WorldFactory.cpp line 39-47
-    UWorld* NewWorld = nullptr;
-    
-    if (bForceNewMap)
-    {
-        // Use UWorld::CreateWorld with custom initialization values
-        // This allows us to disable World Partition creation
-        UWorld::InitializationValues InitValues = UWorld::InitializationValues()
-            .ShouldSimulatePhysics(false)
-            .EnableTraceCollision(true)
-            .CreateNavigation(true)  // Editor world
-            .CreateAISystem(true)    // Editor world
-            .CreateWorldPartition(bUseWorldPartition)  // CRITICAL: Control World Partition
-            .EnableWorldPartitionStreaming(bUseWorldPartition);
-        
-        // Create a new editor world without World Partition
-        static int32 WorldCounter = 0;
-        FName WorldName = *FString::Printf(TEXT("MCP_NewWorld_%d"), ++WorldCounter);
-        NewWorld = UWorld::CreateWorld(EWorldType::Editor, false, WorldName, nullptr, false, ERHIFeatureLevel::Num, &InitValues);
-        
-        if (NewWorld)
-        {
-            // Set as current world in editor context
-            GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);
-        }
-    }
-    else
-    {
-        // Fallback to GEditor->NewMap for non-forced creation
-        NewWorld = GEditor->NewMap(bForceNewMap);
-    }
+    // CRITICAL FIX: Use GEditor->NewMap() with bIsPartitionedWorld parameter
+    // This is the proper way to control World Partition creation
+    // Reference: Engine/Source/Editor/UnrealEd/Classes/Editor/EditorEngine.h line 2007
+    // UWorld* NewMap(bool bIsPartitionedWorld = false);
+    // Default is false, but we pass it explicitly for clarity
+    UWorld* NewWorld = GEditor->NewMap(bUseWorldPartition);
     
     if (NewWorld)
     {

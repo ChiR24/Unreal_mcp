@@ -283,7 +283,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
     // Parse Package Paths - DEFAULT to /Game to prevent massive scans
     // SECURITY: Validate all paths to prevent path traversal attacks
+    // NOTE: Accept both 'packagePaths' (array) and 'path' (string) for flexibility
+    // but SECURITY validation must apply to BOTH to prevent traversal attacks
     const TArray<TSharedPtr<FJsonValue>> *PackagePathsPtr;
+    bool bHasValidPaths = false;
+    
+    // First check for packagePaths array
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
         PackagePathsPtr && PackagePathsPtr->Num() > 0) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
@@ -297,9 +302,28 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
           return true;
         }
         Filter.PackagePaths.Add(FName(*SanitizedPath));
+        bHasValidPaths = true;
       }
-    } else {
-      // Default to /Game if no paths specified to prevent scanning entire project
+    }
+    
+    // Also check for 'path' (singular) string field - common alternative to array
+    // CRITICAL: This was missing, causing security tests to fail because path was ignored!
+    FString SinglePath;
+    if (Payload->TryGetStringField(TEXT("path"), SinglePath) && !SinglePath.IsEmpty()) {
+      // SECURITY: Sanitize path to prevent traversal attacks
+      FString SanitizedPath = SanitizeProjectRelativePath(SinglePath);
+      if (SanitizedPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *SinglePath),
+            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+      Filter.PackagePaths.Add(FName(*SanitizedPath));
+      bHasValidPaths = true;
+    }
+    
+    // Default to /Game if no valid paths specified
+    if (!bHasValidPaths) {
       Filter.PackagePaths.Add(FName(TEXT("/Game")));
     }
 
