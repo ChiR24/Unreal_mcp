@@ -29,7 +29,7 @@
     "lint:c": "echo \"Running C lint (cpplint)\" && (python -m cpplint --recursive plugins || echo 'cpplint not found; skipping C lint')",
     "lint:csharp": "echo \"Running C# lint (dotnet format)\" && (dotnet tool run dotnet-format --verify-no-changes || echo 'dotnet-format not available or formatting required; skipping C# lint')",
     "clean": "rimraf dist",
-    "prepare": "node -e \"require('fs').existsSync('dist') || require('child_process').execSync('npm run build',{stdio:'inherit'})\"",
+    "prepare": "node -e \"const fs=require('fs');(fs.existsSync('dist')&&fs.existsSync('dist/cli.js')&&fs.existsSync('dist/index.js'))||require('child_process').execSync('npm run build',{stdio:'inherit'})\"",
     "automation:sync": "node scripts/sync-mcp-plugin.js",
     "clean:tmp": "node scripts/clean-tmp.js",
     "test": "node tests/integration.mjs",
