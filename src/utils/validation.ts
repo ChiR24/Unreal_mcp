@@ -51,6 +51,8 @@ export function sanitizeCommandArgument(arg: string): string {
   let sanitized = arg.trim();
 
   // Remove null bytes and control characters
+
+  // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
 
   // Escape backslashes and quotes for command safety
