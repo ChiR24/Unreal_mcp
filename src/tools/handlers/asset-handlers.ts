@@ -26,7 +26,7 @@ const VALID_ASSET_ACTIONS = new Set([
   'add_material_node', 'remove_material_node', 'rebuild_material',
   'connect_material_pins', 'break_material_connections', 'get_material_node_details',
   // Source control
-  'source_control_checkout', 'source_control_submit', 'get_source_control_state',
+  'source_control_checkout', 'source_control_submit', 'source_control_enable', 'source_control_disable', 'get_source_control_state',
   // Graph analysis
   'analyze_graph', 'get_asset_graph'
 ]);
@@ -490,6 +490,22 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const res = await tools.assetTools.getSourceControlState({ assetPath });
         return ResponseFactory.success(res, 'Source control state retrieved');
       }
+      case 'source_control_enable': {
+        // Enable source control by specifying a provider (perforce, svn, etc.)
+        const params = normalizeArgs(args, [
+          { key: 'provider', default: 'None' }
+        ]);
+        const provider = extractOptionalString(params, 'provider') ?? 'None';
+        const res = await executeAutomationRequest(tools, 'source_control_enable', {
+          provider
+        });
+        return ResponseFactory.success(res, 'Source control enabled');
+      }
+      case 'source_control_disable': {
+        // Disable source control
+        const res = await executeAutomationRequest(tools, 'source_control_disable', {});
+        return ResponseFactory.success(res, 'Source control disabled');
+      }
       case 'analyze_graph': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true },
@@ -744,6 +760,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       }
       case 'bulk_rename': {
         // Accept either folderPath or assetPaths
+        // Map pattern->searchText and replacement->replaceText for C++ compatibility
         const argsTyped = args as AssetArgs;
         const folderPath = argsTyped.folderPath ?? argsTyped.path;
         const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
@@ -753,9 +770,12 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         }
         
         const res = await executeAutomationRequest(tools, 'bulk_rename', {
-          ...args,
           folderPath,
-          assetPaths
+          assetPaths,
+          searchText: argsTyped.pattern,
+          replaceText: argsTyped.replacement,
+          prefix: argsTyped.prefix,
+          suffix: argsTyped.suffix
         });
         return ResponseFactory.success(res, 'Bulk rename completed');
       }

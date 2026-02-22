@@ -149,7 +149,16 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         coordinateIndex: commonSchemas.numberProp,
         parameterType: commonSchemas.stringProp,
         nodes: commonSchemas.arrayOfObjects,
-        tags: commonSchemas.arrayOfStrings
+        tags: commonSchemas.arrayOfStrings,
+        // Handler aliases (alternative parameter names accepted by handler)
+        folderPath: commonSchemas.directoryPath,
+        sourceNode: commonSchemas.sourceNodeId,
+        targetNode: commonSchemas.targetNodeId,
+        outputPin: commonSchemas.sourcePin,
+        inputPin: commonSchemas.targetPin,
+        type: commonSchemas.stringProp,
+        defaultValue: commonSchemas.value,
+        expressionIndex: commonSchemas.nodeId
       },
       required: ['action']
     },
@@ -386,9 +395,27 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         command: commonSchemas.stringProp,
         steps: commonSchemas.integerProp,
         bookmarkName: commonSchemas.stringProp,
+        // Path parameters for various actions
         assetPath: commonSchemas.assetPath,
-        keyName: commonSchemas.stringProp,
-        eventType: { type: 'string', enum: ['KeyDown', 'KeyUp', 'Both'] }
+        levelPath: commonSchemas.levelPath,
+        path: commonSchemas.directoryPath,
+        // Actor-related parameters
+        actorName: commonSchemas.actorName,
+        name: commonSchemas.name,
+        // Action-specific parameters
+        mode: commonSchemas.stringProp,
+        deltaTime: commonSchemas.numberProp,
+        resolution: commonSchemas.resolution,
+        realtime: commonSchemas.booleanProp,
+        stat: commonSchemas.stringProp,
+        category: commonSchemas.stringProp,
+        preferences: commonSchemas.objectProp,
+        section: commonSchemas.stringProp,
+        key: commonSchemas.stringProp,
+        value: commonSchemas.value,
+        // simulate_input parameters
+        inputAction: commonSchemas.stringProp,
+        axis: commonSchemas.stringProp
       },
       required: ['action']
     },
@@ -416,30 +443,51 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           ],
           description: 'Action'
         },
+        // Level path parameters
         levelPath: commonSchemas.levelPath,
+        levelPaths: commonSchemas.arrayOfStrings,
         levelName: commonSchemas.stringProp,
         path: commonSchemas.directoryPathForCreation,
-        assetPath: commonSchemas.assetPath,
+        // Save/export/import paths
+        savePath: commonSchemas.savePath,
+        destinationPath: commonSchemas.destinationPath,
+        targetPath: commonSchemas.directoryPath,
+        exportPath: commonSchemas.exportPath,
+        packagePath: commonSchemas.directoryPath,
+        sourcePath: commonSchemas.sourcePath,
+        // Sublevel parameters
+        sublevelPath: commonSchemas.levelPath,
+        parentLevel: commonSchemas.parentLevel,
+        parentPath: commonSchemas.directoryPath,
+        streamingMethod: commonSchemas.stringProp,
+        // Streaming control
         streaming: commonSchemas.booleanProp,
         shouldBeLoaded: commonSchemas.booleanProp,
         shouldBeVisible: commonSchemas.booleanProp,
+        // Light creation
         lightType: { type: 'string', enum: ['Directional', 'Point', 'Spot', 'Rect', 'DirectionalLight', 'PointLight', 'SpotLight', 'RectLight', 'directional', 'point', 'spot', 'rect'], description: 'Light type. Accepts short names (Point), class names (PointLight), or lowercase (point).' },
-        lightClass: { type: 'string', description: 'Unreal light class name (e.g., PointLight, SpotLight). Alternative to lightType.' },
         intensity: commonSchemas.numberProp,
         color: commonSchemas.color,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
-        filter: commonSchemas.filter,
-        save: commonSchemas.save,
-        newName: commonSchemas.stringProp,
-        targetPath: commonSchemas.directoryPath,
+        // World Partition / Data Layers
         cells: commonSchemas.arrayOfStrings,
-        dataLayer: commonSchemas.stringProp,
-        dataLayerName: commonSchemas.stringProp,
+        dataLayerName: commonSchemas.dataLayerName,
+        dataLayerLabel: commonSchemas.stringProp,
         dataLayerState: commonSchemas.stringProp,
-        sublevelPath: commonSchemas.levelPath,
-        buildQuality: commonSchemas.numberProp,
-        lightmapRes: commonSchemas.numberProp
+        actorPath: commonSchemas.actorPath,
+        // Cell bounds
+        min: commonSchemas.location,
+        max: commonSchemas.location,
+        origin: commonSchemas.location,
+        extent: commonSchemas.extent,
+        // Level creation
+        template: commonSchemas.stringProp,
+        useWorldPartition: commonSchemas.booleanProp,
+        // Metadata & utilities
+        metadata: commonSchemas.objectProp,
+        newName: commonSchemas.stringProp,
+        timeoutMs: commonSchemas.numberProp
       },
       required: ['action']
     },

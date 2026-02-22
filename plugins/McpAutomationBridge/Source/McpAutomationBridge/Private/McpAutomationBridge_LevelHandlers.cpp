@@ -848,6 +848,47 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (NewWorld) {
       GEditor->GetEditorWorldContext().SetCurrentWorld(NewWorld);
 
+      // CRITICAL: Verify and ensure World Partition is properly initialized
+      // GEditor->NewMap(bUseWorldPartition) should create WP, but sometimes
+      // the initialization is incomplete. We need to verify and potentially
+      // force WP creation if it was requested but not actually enabled.
+      bool bWorldPartitionActuallyEnabled = false;
+      if (bUseWorldPartition)
+      {
+          UWorldPartition* WorldPartition = NewWorld->GetWorldPartition();
+          bWorldPartitionActuallyEnabled = (WorldPartition != nullptr);
+          
+          // If WP was requested but GetWorldPartition() returns null,
+          // we need to explicitly create it via CreateOrRepairWorldPartition
+          if (!bWorldPartitionActuallyEnabled)
+          {
+              UE_LOG(LogTemp, Warning, TEXT("create_new_level: World Partition was requested but not initialized by NewMap. Forcing creation..."));
+              
+              AWorldSettings* WorldSettings = NewWorld->GetWorldSettings();
+              if (WorldSettings)
+              {
+                  WorldPartition = UWorldPartition::CreateOrRepairWorldPartition(WorldSettings);
+                  if (WorldPartition)
+                  {
+                      bWorldPartitionActuallyEnabled = true;
+                      UE_LOG(LogTemp, Log, TEXT("create_new_level: Successfully created World Partition via CreateOrRepairWorldPartition"));
+                  }
+                  else
+                  {
+                      UE_LOG(LogTemp, Error, TEXT("create_new_level: Failed to create World Partition via CreateOrRepairWorldPartition"));
+                  }
+              }
+              else
+              {
+                  UE_LOG(LogTemp, Error, TEXT("create_new_level: Cannot create World Partition - WorldSettings is null"));
+              }
+          }
+          else
+          {
+              UE_LOG(LogTemp, Log, TEXT("create_new_level: World Partition verified - GetWorldPartition() returned valid pointer"));
+          }
+      }
+
       // Save it to valid path
       // ISSUE #1 FIX: Ensure directory exists
       FString Filename;
@@ -929,9 +970,23 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         }
         Resp->SetBoolField(TEXT("fileOnDisk"), bFileOnDisk);
         Resp->SetBoolField(TEXT("assetRegistryOk"), bAssetRegistryOk);
+        Resp->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
+        Resp->SetBoolField(TEXT("worldPartitionRequested"), bUseWorldPartition);
+        
+        // Build response message with WP status if applicable
+        FString ResponseMsg = FString::Printf(TEXT("Level created: %s"), *SavePath);
+        if (bUseWorldPartition && !bWorldPartitionActuallyEnabled)
+        {
+            ResponseMsg += TEXT(" (WARNING: World Partition requested but not enabled)");
+        }
+        else if (bUseWorldPartition && bWorldPartitionActuallyEnabled)
+        {
+            ResponseMsg += TEXT(" (World Partition enabled)");
+        }
+        
         SendAutomationResponse(
             RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Level created: %s"), *SavePath), Resp,
+            *ResponseMsg, Resp,
             FString());
       } else {
         // Save failed - provide detailed error
