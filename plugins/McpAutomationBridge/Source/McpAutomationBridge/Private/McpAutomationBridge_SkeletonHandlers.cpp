@@ -898,12 +898,43 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
         return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
+
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysicsAsset)
     {
         SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
         return true;
+    }
+
+    // CRITICAL: Validate bone exists in the skeleton before creating physics body
+    // This prevents creating physics bodies for non-existent bones (fixes suspicious passes)
+    USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewSkeletalMesh();
+    if (PreviewMesh)
+    {
+        USkeleton* Skeleton = PreviewMesh->GetSkeleton();
+        if (Skeleton)
+        {
+            const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+            int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+            if (BoneIndex == INDEX_NONE)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Bone '%s' does not exist in skeleton"), *BoneName),
+                    TEXT("BONE_NOT_FOUND"));
+                return true;
+            }
+        }
     }
 
     // Find existing body or create new one
@@ -1029,6 +1060,17 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
         return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
+
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysicsAsset)
@@ -1127,6 +1169,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required"), TEXT("MISSING_PARAM"));
         return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -1237,6 +1290,17 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required to identify constraint"), TEXT("MISSING_PARAM"));
         return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -1645,6 +1709,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Morph target manipulation requires editor"), TEXT("NOT_SUPPORTED"));
     return true;
 #endif
+
+
+    // Validate morph target has valid data after setting deltas
+    // This prevents returning success for morph targets that trigger Engine Ensures
+    if (!MorphTarget->HasValidData())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' has no valid data - deltas may be empty or invalid"), *MorphTargetName),
+            TEXT("INVALID_MORPH_DATA"));
+        return true;
+    }
 
     McpSafeAssetSave(Mesh);
 

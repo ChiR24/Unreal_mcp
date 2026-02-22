@@ -11,7 +11,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
 // Common failure keywords to check against
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation'];
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'invalid_path'];
 const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled'];
 
 // Defaults for spawning the MCP server.
@@ -206,7 +206,12 @@ function evaluateExpectation(testCase, response) {
   // CRITICAL FIX: Detect crash/connection loss in error responses that should FAIL tests
   // unless explicitly expected. This prevents false positives where tests like "error|notfound"
   // pass on crash because "error" matches any error message.
-  const crashIndicators = ['disconnect', '1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected'];
+  // IMPORTANT: Only check crash indicators when response indicates FAILURE. A success response
+  // that contains "disconnect" (like "Disconnect operation completed.") is NOT a crash.
+  const baseCrashIndicators = ['1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected'];
+  // Only include 'disconnect' as crash indicator when response indicates FAILURE
+  // This fixes false positives for disconnect_nodes action that returns "Disconnect operation completed."
+  const crashIndicators = actualSuccess ? baseCrashIndicators : [...baseCrashIndicators, 'disconnect'];
   const hasCrashIndicator = crashIndicators.some(ind => 
     errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
   );
@@ -215,7 +220,8 @@ function evaluateExpectation(testCase, response) {
     lowerExpected.includes('connection lost') ||
     lowerExpected.includes('ue_not_connected');
   
-  if (hasCrashIndicator && !explicitlyExpectsCrash) {
+  // Only treat as crash if response indicates failure AND crash indicators found
+  if (hasCrashIndicator && !actualSuccess && !explicitlyExpectsCrash) {
     return {
       passed: false,
       reason: `Crash/connection loss detected but test did not expect it: ${actualError || actualMessage}`
@@ -340,7 +346,7 @@ function evaluateExpectation(testCase, response) {
     const lowerReason = actualMessage?.toLowerCase() || actualError?.toLowerCase() || contentStr || '';
 
     // Check for specific error types (not just generic "error" keyword)
-    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled'];
+    const specificErrorTypes = ['not found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'invalid_path', 'blocked', 'security'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type));
     let errorTypeMatch = expectedErrorType ? lowerReason.includes(expectedErrorType) :
       failureKeywords.some(keyword => lowerExpected.includes(keyword) && lowerReason.includes(keyword));

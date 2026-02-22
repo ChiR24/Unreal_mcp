@@ -703,9 +703,24 @@ Response->SetBoolField(TEXT("success"), true);
         // Options: "luminance", "red", "green", "blue", "alpha", "average"
         FString ChannelMode = GetStringFieldTextAuth(Params, TEXT("channelMode"), TEXT("luminance"));
         
+        // Validate platform data exists before accessing
+        FTexturePlatformData* PlatformData = HeightMap->GetPlatformData();
+        if (!PlatformData)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Height map has no platform data - texture may not be fully loaded"));
+        }
+        if (PlatformData->Mips.Num() == 0)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Height map has no mip levels available"));
+        }
+        
         // Lock source texture for reading
-        FTexture2DMipMap& HeightMip = HeightMap->GetPlatformData()->Mips[0];
+        FTexture2DMipMap& HeightMip = PlatformData->Mips[0];
         const uint8* HeightPixels = static_cast<const uint8*>(HeightMip.BulkData.LockReadOnly());
+        if (!HeightPixels)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock height map pixel data - texture may be compressed or streaming"));
+        }
         
         for (int32 i = 0; i < Width * Height; i++)
         {
@@ -1193,7 +1208,7 @@ Response->SetBoolField(TEXT("success"), true);
     {
         // Validate that no unknown/invalid parameters are present
         TSet<FString> ValidParams = {
-            TEXT("subAction"), TEXT("assetPath"), TEXT("neverStream"), TEXT("save")
+            TEXT("subAction"), TEXT("assetPath"), TEXT("neverStream"), TEXT("streamingPriority"), TEXT("save")
         };
         for (const auto& Field : Params->Values)
         {
@@ -1361,12 +1376,23 @@ Response->SetBoolField(TEXT("success"), true);
         int32 SrcWidth = SourceTexture->GetSizeX();
         int32 SrcHeight = SourceTexture->GetSizeY();
         
+        // Validate platform data exists before accessing
+        FTexturePlatformData* ResizePlatformData = SourceTexture->GetPlatformData();
+        if (!ResizePlatformData)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no platform data - texture may not be fully loaded"));
+        }
+        if (ResizePlatformData->Mips.Num() == 0)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no mip levels available"));
+        }
+        
         // Lock source mip data for reading
-        FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
+        FTexture2DMipMap& SrcMip = ResizePlatformData->Mips[0];
         const FColor* SrcData = static_cast<const FColor*>(SrcMip.BulkData.LockReadOnly());
         if (!SrcData)
         {
-            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data"));
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
         }
         
         // Generate output name and path if not specified
@@ -1468,7 +1494,8 @@ Response->SetBoolField(TEXT("success"), true);
     {
         // Validate that no unknown/invalid parameters are present
         TSet<FString> ValidParams = {
-            TEXT("subAction"), TEXT("assetPath"), TEXT("inPlace"), TEXT("name"), TEXT("path"), TEXT("save")
+            TEXT("subAction"), TEXT("assetPath"), TEXT("inPlace"), TEXT("name"), TEXT("path"), TEXT("save"),
+            TEXT("invertAlpha"), TEXT("channel"), TEXT("outputPath")
         };
         for (const auto& Field : Params->Values)
         {
@@ -1489,6 +1516,8 @@ Response->SetBoolField(TEXT("success"), true);
         AssetPath = SanitizedAssetPath;
         
         bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+        bool bInvertAlpha = GetBoolFieldTextAuth(Params, TEXT("invertAlpha"), false);
+        FString Channel = GetStringFieldTextAuth(Params, TEXT("channel"), TEXT("All"));
         FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
         FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT(""));
         bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
@@ -1552,15 +1581,20 @@ Response->SetBoolField(TEXT("success"), true);
             SrcMip.BulkData.Unlock();
         }
         
-        // Invert RGB, keep alpha
+        // Invert selected channels
+        bool bInvertR = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Red"), ESearchCase::IgnoreCase);
+        bool bInvertG = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Green"), ESearchCase::IgnoreCase);
+        bool bInvertB = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Blue"), ESearchCase::IgnoreCase);
+        bool bInvertA = bInvertAlpha && (Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Alpha"), ESearchCase::IgnoreCase));
+        
         int32 NumPixels = Width * Height;
         for (int32 i = 0; i < NumPixels; ++i)
         {
             int32 Idx = i * 4;
-            MipData[Idx + 0] = 255 - MipData[Idx + 0]; // B
-            MipData[Idx + 1] = 255 - MipData[Idx + 1]; // G
-            MipData[Idx + 2] = 255 - MipData[Idx + 2]; // R
-            // Alpha unchanged
+            if (bInvertB) MipData[Idx + 0] = 255 - MipData[Idx + 0]; // B
+            if (bInvertG) MipData[Idx + 1] = 255 - MipData[Idx + 1]; // G
+            if (bInvertR) MipData[Idx + 2] = 255 - MipData[Idx + 2]; // R
+            if (bInvertA) MipData[Idx + 3] = 255 - MipData[Idx + 3]; // A
         }
         
         TargetTexture->Source.UnlockMip(0);
@@ -1583,7 +1617,7 @@ Response->SetBoolField(TEXT("success"), true);
         // Validate that no unknown/invalid parameters are present
         TSet<FString> ValidParams = {
             TEXT("subAction"), TEXT("assetPath"), TEXT("amount"), TEXT("inPlace"),
-            TEXT("name"), TEXT("path"), TEXT("save")
+            TEXT("name"), TEXT("path"), TEXT("save"), TEXT("method"), TEXT("outputPath")
         };
         for (const auto& Field : Params->Values)
         {

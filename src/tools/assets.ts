@@ -107,7 +107,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       .map(p => this.normalizeAssetPath(p));
 
     return this.sendRequest<AssetResponse>('manage_asset', {
-      assetPaths,
+      paths: assetPaths,  // C++ expects 'paths' not 'assetPaths'
       fixupRedirectors: params.fixupRedirectors,
       subAction: 'delete'
     }, 'manage_asset', { timeoutMs: params.timeoutMs || EXTENDED_ASSET_OP_TIMEOUT_MS });

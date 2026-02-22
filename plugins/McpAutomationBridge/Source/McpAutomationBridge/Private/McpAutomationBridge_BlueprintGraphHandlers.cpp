@@ -80,6 +80,33 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     return true;
   }
 
+  // Extract subAction early to handle actions that don't require a blueprint
+  const FString EarlySubAction = GetJsonStringField(Payload, TEXT("subAction"));
+
+  // Special case: list_node_types doesn't require a blueprint - it lists all UK2Node types globally
+  if (EarlySubAction == TEXT("list_node_types")) {
+    TArray<TSharedPtr<FJsonValue>> NodeTypes;
+    for (TObjectIterator<UClass> It; It; ++It) {
+      if (!It->IsChildOf(UK2Node::StaticClass()))
+        continue;
+      if (It->HasAnyClassFlags(CLASS_Abstract))
+        continue;
+
+      TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
+      TypeObj->SetStringField(TEXT("className"), It->GetName());
+      TypeObj->SetStringField(TEXT("displayName"),
+                              It->GetDisplayNameText().ToString());
+      NodeTypes.Add(MakeShared<FJsonValueObject>(TypeObj));
+    }
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
+    Result->SetNumberField(TEXT("count"), NodeTypes.Num());
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Node types listed."), Result);
+    return true;
+  }
+
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
       AssetPath.IsEmpty()) {

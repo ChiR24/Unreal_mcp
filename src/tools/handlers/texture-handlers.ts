@@ -409,7 +409,7 @@ export async function handleTextureTools(
       case 'adjust_curves': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['texturePath'], required: true },
-          { key: 'curvePoints', required: true }, // Array of {x, y} points defining the curve
+          { key: 'curvePoints' }, // Optional: Array of {x, y} points - C++ has defaults for linear curve
           { key: 'channel', default: 'All' }, // All, Red, Green, Blue, Alpha
           { key: 'outputPath' },
           { key: 'save', default: true },
