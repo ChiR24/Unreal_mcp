@@ -706,7 +706,7 @@ export class LevelTools extends BaseTool implements ILevelTools {
 
     // Attempt automation first (cleaner)
     try {
-      let response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
+      const response = await this.sendAutomationRequest<LevelResponse>('manage_level', {
         action: 'add_sublevel',
         levelPath: sub, // Backwards compat
         subLevelPath: sub,

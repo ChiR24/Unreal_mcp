@@ -172,6 +172,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #if WITH_EDITOR
+#include "Editor.h"  // GEditor for McpSafeLoadMap
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -1084,9 +1085,19 @@ static inline UMaterialInterface* McpLoadMaterialWithFallback(
 
 /**
  * Safe map loading helper - properly cleans up current world before loading a new map.
- * Prevents "Old world not cleaned up by garbage collection while loading new map!" crash.
+ * Prevents TickTaskManager assertion "!LevelList.Contains(TickTaskLevel)" and
+ * "World Memory Leaks" crashes in UE 5.7.
  * 
- * This function performs the same cleanup sequence as McpSafeNewMap before loading.
+ * CRITICAL: This function must be called from the Game Thread.
+ * 
+ * Root Cause Analysis:
+ * The FTickTaskManager maintains a LevelList that's filled during StartFrame()
+ * and cleared during EndFrame(). When LoadMap destroys the old world:
+ * 1. ULevel destructor calls FreeTickTaskLevel()
+ * 2. FreeTickTaskLevel() asserts: check(!LevelList.Contains(TickTaskLevel))
+ * 3. If a tick frame started but didn't complete, LevelList still has entries
+ * 
+ * This is a known UE 5.7 issue (UE-197643, UE-138424).
  * 
  * @param MapPath The map path to load (e.g., /Game/Maps/MyMap)
  * @param bForceCleanup If true, perform aggressive cleanup before loading (default: true)
@@ -1100,6 +1111,43 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         return false;
     }
 
+    // CRITICAL: Ensure we're on the game thread
+    if (!IsInGameThread())
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: Must be called from game thread"));
+        return false;
+    }
+
+    // CRITICAL: Wait for any async loading to complete
+    // Loading a map while async loading is in progress can cause crashes
+    int32 AsyncWaitCount = 0;
+    while (IsAsyncLoading() && AsyncWaitCount < 100)
+    {
+        FlushAsyncLoading();
+        FPlatformProcess::Sleep(0.01f);
+        AsyncWaitCount++;
+    }
+    if (AsyncWaitCount > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Waited %d frames for async loading to complete"), AsyncWaitCount);
+    }
+
+    // CRITICAL: Stop PIE if active - loading a map during PIE causes issues
+    if (GEditor->PlayWorld)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Stopping active PIE session before loading map"));
+        GEditor->RequestEndPlayMap();
+        // Wait for PIE to fully stop
+        int32 PieWaitCount = 0;
+        while (GEditor->PlayWorld && PieWaitCount < 100)
+        {
+            FlushRenderingCommands();
+            FPlatformProcess::Sleep(0.01f);
+            PieWaitCount++;
+        }
+        FlushRenderingCommands();
+    }
+
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
     
     if (CurrentWorld && bForceCleanup)
@@ -1107,6 +1155,7 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"), *CurrentWorld->GetName(), *MapPath);
         
         // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
+        // This is CRITICAL - FillLevelList only adds levels where bIsVisible is true
         for (ULevel* Level : CurrentWorld->GetLevels())
         {
             if (Level)
@@ -1116,6 +1165,9 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         }
         
         // STEP 2: Unregister all tick functions (actors + components)
+        // CRITICAL: SetActorTickEnabled(false) only DISABLES ticking - it doesn't UNREGISTER
+        // the tick function from FTickTaskManager. We must call UnRegisterTickFunction()
+        // to properly remove from LevelList and prevent the assertion.
         int32 UnregisteredActorCount = 0;
         int32 UnregisteredComponentCount = 0;
         for (ULevel* Level : CurrentWorld->GetLevels())
@@ -1132,6 +1184,9 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
                         UnregisteredActorCount++;
                     }
                     
+                    // Clear tick prerequisites to prevent cross-level issues (UE-197643)
+                    Actor->PrimaryActorTick.Prerequisites.Empty();
+                    
                     for (UActorComponent* Component : Actor->GetComponents())
                     {
                         if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
@@ -1145,13 +1200,14 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         }
         UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount);
         
-        // STEP 3: Send end-of-frame updates
+        // STEP 3: Send end-of-frame updates to complete any pending tick work
         CurrentWorld->SendAllEndOfFrameUpdates();
         
-        // STEP 4: Flush rendering commands
+        // STEP 4: Flush rendering commands to ensure all GPU work is complete
         FlushRenderingCommands();
         
-        // STEP 5: Unload streaming levels
+        // STEP 5: Unload streaming levels explicitly
+        // This prevents UE-197643 where tick prerequisites cross level boundaries
         TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
         for (ULevelStreaming* StreamingLevel : StreamingLevels)
         {
@@ -1162,26 +1218,72 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
             }
         }
         
-        // STEP 6: Force garbage collection
-        GEditor->ForceGarbageCollection(true);
-        
-        // STEP 7: Flush again after GC
+        // STEP 6: Flush rendering commands again after streaming level changes
+        // CRITICAL: This was missing and caused crashes
         FlushRenderingCommands();
         
-        // STEP 8: Small delay for engine stabilization
+        // STEP 7: Force garbage collection to clean up any remaining references
+        GEditor->ForceGarbageCollection(true);
+        
+        // STEP 8: Flush again after GC
+        FlushRenderingCommands();
+        
+        // STEP 9: Give the engine a moment to process cleanup
+        // This is essential for the tick system to settle
         FPlatformProcess::Sleep(0.10f);
+        
+        // STEP 10: Final flush to ensure everything is settled
+        FlushRenderingCommands();
     }
     
-    // Final flush before load
-    FlushRenderingCommands();
+    // STEP 11: Check if the map we're trying to load is already the current map
+    // If so, skip loading to avoid unnecessary world transitions
+    if (CurrentWorld)
+    {
+        FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
+        FString NormalizedMapPath = MapPath;
+        
+        // Remove .umap extension for comparison
+        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        {
+            NormalizedMapPath.LeftChopInline(5);
+        }
+        
+        if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
+        {
+            UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
+            return true; // Already loaded, consider it success
+        }
+    }
     
-    // Load the map
+    // STEP 12: Load the map
     UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Loading map '%s'"), *MapPath);
     bool bLoaded = FEditorFileUtils::LoadMap(*MapPath);
     
     if (bLoaded)
     {
         UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Successfully loaded map '%s'"), *MapPath);
+        
+        // STEP 13: Disable ticking on the new world's actors immediately
+        // The loaded world might have actors that trigger tick assertions
+        UWorld* NewWorld = GEditor->GetEditorWorldContext().World();
+        if (NewWorld && NewWorld->PersistentLevel)
+        {
+            for (AActor* Actor : NewWorld->PersistentLevel->Actors)
+            {
+                if (Actor)
+                {
+                    Actor->SetActorTickEnabled(false);
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component)
+                        {
+                            Component->SetComponentTickEnabled(false);
+                        }
+                    }
+                }
+            }
+        }
     }
     else
     {

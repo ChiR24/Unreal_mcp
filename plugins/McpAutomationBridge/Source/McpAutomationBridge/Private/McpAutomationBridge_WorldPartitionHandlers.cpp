@@ -11,6 +11,7 @@
 #include "FileHelpers.h"
 #include "EditorLevelUtils.h"
 #include "WorldPartition/WorldPartition.h"
+#include "EngineUtils.h"  // TActorIterator for WP actor lookup
 
 // Check for WorldPartitionEditorSubsystem (UE 5.0-5.3)
 #if defined(__has_include)

@@ -3901,13 +3901,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString LevelPath;
+  // Accept multiple parameter names for flexibility
+  // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
   if (LevelPath.IsEmpty()) {
     Payload->TryGetStringField(TEXT("path"), LevelPath);
   }
   if (LevelPath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
+  }
+  if (LevelPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("levelPath required"), nullptr);
+                              TEXT("levelPath, path, or assetPath required"), nullptr);
     return true;
   }
 

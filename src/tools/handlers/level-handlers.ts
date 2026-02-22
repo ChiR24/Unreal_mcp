@@ -365,18 +365,10 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         });
       }
 
-      // Load the World Partition level first
-      // World Partition operations require the level to be the current world
-      const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-      if (loadRes.success === false) {
-        return cleanObject({
-          success: false,
-          error: 'LOAD_FAILED',
-          message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-          levelPath: argsTyped.levelPath,
-          action
-        });
-      }
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = argsTyped.origin;
       let extent = argsTyped.extent;
@@ -431,18 +423,10 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         });
       }
 
-      // Load the World Partition level first
-      // World Partition operations require the level to be the current world
-      const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-      if (loadRes.success === false) {
-        return cleanObject({
-          success: false,
-          error: 'LOAD_FAILED',
-          message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-          levelPath: argsTyped.levelPath,
-          action
-        });
-      }
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'set_datalayer',
         levelPath: argsTyped.levelPath,
@@ -452,24 +436,17 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'cleanup_invalid_datalayers': {
-      // CRITICAL FIX: If levelPath is specified, load it first
-      // World Partition operations require the level to be the current world
-      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
-        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-        if (loadRes.success === false) {
-          return cleanObject({
-            success: false,
-            error: 'LOAD_FAILED',
-            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-            levelPath: argsTyped.levelPath,
-            action
-          });
-        }
-      }
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
+      
+      // Route to manage_world_partition
       
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-        subAction: 'cleanup_invalid_datalayers'
+        subAction: 'cleanup_invalid_datalayers',
+        levelPath: argsTyped.levelPath
       }, 'World Partition support not available');
       return cleanObject(res) as Record<string, unknown>;
     }
@@ -484,24 +461,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         });
       }
-      
-      // CRITICAL FIX: If levelPath is specified, load it first
-      // World Partition operations require the level to be the current world
-      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
-        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-        if (loadRes.success === false) {
-          return cleanObject({
-            success: false,
-            error: 'LOAD_FAILED',
-            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-            levelPath: argsTyped.levelPath,
-            action
-          });
-        }
-      }
-      
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'create_datalayer',
+        levelPath: argsTyped.levelPath,
         dataLayerName
       }, 'World Partition support not available');
       return cleanObject(res) as Record<string, unknown>;
