@@ -335,31 +335,29 @@ export async function handleTextureTools(
       // ===== 9.2 Texture Processing =====
       case 'resize_texture': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['texturePath'], required: true },
+          { key: 'sourcePath', aliases: ['assetPath', 'texturePath'], required: true },
+          { key: 'name' }, // Optional output name
+          { key: 'path' }, // Optional output path
           { key: 'newWidth', required: true },
           { key: 'newHeight', required: true },
-          { key: 'filterMethod', default: 'Bilinear' }, // Nearest, Bilinear, Bicubic, Lanczos
-          { key: 'preserveAspect', default: false },
-          { key: 'outputPath' }, // Optional - defaults to overwriting source
+          { key: 'filterMethod', default: 'Bilinear' },
           { key: 'save', default: true },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
-        const newWidth = extractOptionalNumber(params, 'newWidth') ?? 1024;
-        const newHeight = extractOptionalNumber(params, 'newHeight') ?? 1024;
-        const filterMethod = extractOptionalString(params, 'filterMethod') ?? 'Bilinear';
-        const preserveAspect = extractOptionalBoolean(params, 'preserveAspect') ?? false;
-        const outputPath = extractOptionalString(params, 'outputPath');
+        const sourcePath = extractString(params, 'sourcePath');
+        const name = extractOptionalString(params, 'name');
+        const path = extractOptionalString(params, 'path');
+        const newWidth = extractOptionalNumber(params, 'newWidth') ?? 512;
+        const newHeight = extractOptionalNumber(params, 'newHeight') ?? 512;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'resize_texture',
-          assetPath,
+          sourcePath,
+          name,
+          path,
           newWidth,
           newHeight,
-          filterMethod,
-          preserveAspect,
-          outputPath,
           save,
         })) as TextureResponse;
 
@@ -372,36 +370,33 @@ export async function handleTextureTools(
       case 'adjust_levels': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['texturePath'], required: true },
-          { key: 'inputBlackPoint', default: 0.0 },
-          { key: 'inputWhitePoint', default: 1.0 },
+          { key: 'inBlack', aliases: ['inputBlackPoint'], default: 0.0 },
+          { key: 'inWhite', aliases: ['inputWhitePoint'], default: 1.0 },
           { key: 'gamma', default: 1.0 },
-          { key: 'outputBlackPoint', default: 0.0 },
-          { key: 'outputWhitePoint', default: 1.0 },
-          { key: 'channel', default: 'All' }, // All, Red, Green, Blue, Alpha
-          { key: 'outputPath' },
+          { key: 'outBlack', aliases: ['outputBlackPoint'], default: 0.0 },
+          { key: 'outWhite', aliases: ['outputWhitePoint'], default: 1.0 },
+          { key: 'inPlace', default: true },
           { key: 'save', default: true },
         ]);
 
         const assetPath = extractString(params, 'assetPath');
-        const inputBlackPoint = extractOptionalNumber(params, 'inputBlackPoint') ?? 0.0;
-        const inputWhitePoint = extractOptionalNumber(params, 'inputWhitePoint') ?? 1.0;
+        const inBlack = extractOptionalNumber(params, 'inBlack') ?? 0.0;
+        const inWhite = extractOptionalNumber(params, 'inWhite') ?? 1.0;
         const gamma = extractOptionalNumber(params, 'gamma') ?? 1.0;
-        const outputBlackPoint = extractOptionalNumber(params, 'outputBlackPoint') ?? 0.0;
-        const outputWhitePoint = extractOptionalNumber(params, 'outputWhitePoint') ?? 1.0;
-        const channel = extractOptionalString(params, 'channel') ?? 'All';
-        const outputPath = extractOptionalString(params, 'outputPath');
+        const outBlack = extractOptionalNumber(params, 'outBlack') ?? 0.0;
+        const outWhite = extractOptionalNumber(params, 'outWhite') ?? 1.0;
+        const inPlace = extractOptionalBoolean(params, 'inPlace') ?? true;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'adjust_levels',
           assetPath,
-          inputBlackPoint,
-          inputWhitePoint,
+          inBlack,
+          inWhite,
           gamma,
-          outputBlackPoint,
-          outputWhitePoint,
-          channel,
-          outputPath,
+          outBlack,
+          outWhite,
+          inPlace,
           save,
         })) as TextureResponse;
 
@@ -474,27 +469,18 @@ export async function handleTextureTools(
       case 'sharpen': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['texturePath'], required: true },
-          { key: 'strength', default: 1.0 },
-          { key: 'radius', default: 1.0 },
-          { key: 'sharpenType', default: 'UnsharpMask' }, // UnsharpMask, Laplacian
-          { key: 'outputPath' },
+          { key: 'amount', aliases: ['strength'], default: 1.0 },
           { key: 'save', default: true },
         ]);
 
         const assetPath = extractString(params, 'assetPath');
-        const strength = extractOptionalNumber(params, 'strength') ?? 1.0;
-        const radius = extractOptionalNumber(params, 'radius') ?? 1.0;
-        const sharpenType = extractOptionalString(params, 'sharpenType') ?? 'UnsharpMask';
-        const outputPath = extractOptionalString(params, 'outputPath');
+        const amount = extractOptionalNumber(params, 'amount') ?? 1.0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'sharpen',
           assetPath,
-          strength,
-          radius,
-          sharpenType,
-          outputPath,
+          amount,
           save,
         })) as TextureResponse;
 
@@ -620,28 +606,25 @@ export async function handleTextureTools(
 
       case 'channel_extract': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['texturePath'], required: true },
-          { key: 'channel', required: true }, // Red, Green, Blue, Alpha
-          { key: 'name' }, // Optional - defaults to source_R/G/B/A
-          { key: 'path', aliases: ['directory'] },
-          { key: 'outputAsGrayscale', default: true },
+          { key: 'texturePath', aliases: ['assetPath'], required: true },
+          { key: 'channel', required: true },
+          { key: 'outputPath' },
+          { key: 'name' },
           { key: 'save', default: true },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const texturePath = extractString(params, 'texturePath');
         const channel = extractString(params, 'channel');
+        const outputPath = extractOptionalString(params, 'outputPath');
         const name = extractOptionalString(params, 'name');
-        const path = extractOptionalString(params, 'path');
-        const outputAsGrayscale = extractOptionalBoolean(params, 'outputAsGrayscale') ?? true;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, 'manage_texture', {
           subAction: 'channel_extract',
-          assetPath,
+          texturePath,
           channel,
+          outputPath,
           name,
-          path,
-          outputAsGrayscale,
           save,
         })) as TextureResponse;
 

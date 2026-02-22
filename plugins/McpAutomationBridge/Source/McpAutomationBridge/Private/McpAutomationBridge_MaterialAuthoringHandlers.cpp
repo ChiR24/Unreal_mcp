@@ -1389,20 +1389,84 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name (same as create_material)
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    // Check if sanitization significantly changed the name (indicates invalid characters)
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material function name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials/Functions");
     }
+
+    // Validate path doesn't contain traversal sequences (same as create_material)
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: reject Windows absolute paths (contain colon)
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: verify mount point using engine API
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Check for existing asset collision to prevent UE crash
+    // Creating a MaterialFunction over an existing Material causes fatal error
+    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      // Get the existing asset's class to provide helpful error
+      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+      if (ExistingAsset) {
+        UClass* ExistingClass = ExistingAsset->GetClass();
+        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialFunction with the same name."),
+                                            *FullAssetPath, *ExistingClassName),
+                            TEXT("ASSET_EXISTS"));
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
+                                            *FullAssetPath),
+                            TEXT("ASSET_EXISTS"));
+      }
+      return true;
+    }
+
     Payload->TryGetStringField(TEXT("description"), Description);
 
     bool bExposeToLibrary = true;
     Payload->TryGetBoolField(TEXT("exposeToLibrary"), bExposeToLibrary);
 
-    // Create function using factory
+    // Create function using factory - use ValidatedPath, not original Path!
     UMaterialFunctionFactoryNew *Factory =
         NewObject<UMaterialFunctionFactoryNew>();
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -1600,6 +1664,22 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name (same as create_material)
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material instance name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     if (!Payload->TryGetStringField(TEXT("parentMaterial"), ParentMaterial) ||
         ParentMaterial.IsEmpty()) {
       SendAutomationError(Socket, RequestId, TEXT("Missing 'parentMaterial'."),
@@ -1609,6 +1689,49 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
+    }
+
+    // Validate path (same as create_material)
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Check for existing asset collision
+    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+      if (ExistingAsset) {
+        UClass* ExistingClass = ExistingAsset->GetClass();
+        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialInstanceConstant with the same name."),
+                                            *FullAssetPath, *ExistingClassName),
+                            TEXT("ASSET_EXISTS"));
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
+                                            *FullAssetPath),
+                            TEXT("ASSET_EXISTS"));
+      }
+      return true;
     }
 
     UMaterial *Parent = LoadObject<UMaterial>(nullptr, *ParentMaterial);
@@ -1623,8 +1746,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
         NewObject<UMaterialInstanceConstantFactoryNew>();
     Factory->InitialParent = Parent;
 
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -1848,9 +1970,48 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       Path = TEXT("/Game/Materials");
     }
 
+    // Name validation - sanitize and check for invalid characters
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid asset name '%s'. Names can only contain alphanumeric characters and underscores."), *OriginalName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
+    // Path validation - check for traversal and normalize
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+    Path = ValidatedPath;
+
+    // Validate mount point
+    FString PackagePath = Path / Name;
+    if (!FPackageName::IsValidLongPackageName(PackagePath)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path: %s"), *PackagePath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Check for existing asset collision (different class)
+    FString FullAssetPath = PackagePath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Asset already exists at path: %s"), *FullAssetPath),
+                          TEXT("ASSET_EXISTS"));
+      return true;
+    }
+
     // Create material using factory
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    FString PackagePath = Path / Name;
     UPackage *Package = CreatePackage(*PackagePath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
