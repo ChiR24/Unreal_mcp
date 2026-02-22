@@ -517,7 +517,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_procedural_terrain', 'create_procedural_foliage', 'add_foliage_instances',
             'get_foliage_instances', 'remove_foliage', 'paint_landscape', 'paint_landscape_layer',
             'modify_heightmap', 'set_landscape_material', 'create_landscape_grass_type',
-            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete'
+            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete',
+            'create_sky_sphere', 'set_time_of_day', 'create_fog_volume'
           ],
           description: 'Action'
         },
@@ -589,7 +590,15 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         timeoutMs: commonSchemas.numberProp,
         path: commonSchemas.directoryPath,
         filename: commonSchemas.stringProp,
-        assetPaths: commonSchemas.arrayOfStrings
+        assetPaths: commonSchemas.arrayOfStrings,
+        // Additional params for C++ handler alignment (EnvironmentHandlers.cpp)
+        names: commonSchemas.arrayOfStrings,
+        time: commonSchemas.numberProp,
+        spacing: commonSchemas.numberProp,
+        heightScale: commonSchemas.numberProp,
+        material: commonSchemas.materialPath,
+        hour: commonSchemas.numberProp,
+        intensity: commonSchemas.numberProp
       },
       required: ['action']
     },
@@ -3666,7 +3675,14 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           type: 'string',
           enum: ['RoundWholeNumber', 'RoundOneDecimal', 'RoundTwoDecimals'],
           description: 'Location quantization level.'
-        }
+        },
+        // Additional params for C++ handler alignment (NetworkingHandlers.cpp)
+        spatiallyLoaded: { type: 'boolean', description: 'Spatially loaded for replication graph.' },
+        netLoadOnClient: { type: 'boolean', description: 'Net load on client for replication graph.' },
+        replicationPolicy: { type: 'string', description: 'Replication policy for replication graph.' },
+        customSerialization: { type: 'boolean', description: 'Use custom serialization.' },
+        predictionThreshold: { type: 'number', description: 'Prediction threshold for client prediction.' },
+        removeAll: { type: 'boolean', description: 'Remove all foliage instances.' }
       },
       required: ['action']
     },

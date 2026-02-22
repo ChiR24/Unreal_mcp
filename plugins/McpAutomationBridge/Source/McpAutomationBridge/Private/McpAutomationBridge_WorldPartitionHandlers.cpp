@@ -8,6 +8,8 @@
 #include "Editor.h"
 #include "LevelEditor.h"
 #include "Subsystems/EditorActorSubsystem.h"
+#include "FileHelpers.h"
+#include "EditorLevelUtils.h"
 #include "WorldPartition/WorldPartition.h"
 
 // Check for WorldPartitionEditorSubsystem (UE 5.0-5.3)
@@ -83,7 +85,72 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         return true;
     }
 
+    // CRITICAL FIX: Check if levelPath is provided and load it first
+    // World Partition operations require the level to be the active editor world
+    FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"));
     UWorld* World = GEditor->GetEditorWorldContext().World();
+    
+    if (!LevelPath.IsEmpty())
+    {
+        // Normalize the level path
+        FString NormalizedLevelPath = LevelPath;
+        if (!NormalizedLevelPath.StartsWith(TEXT("/Game/")) && !NormalizedLevelPath.StartsWith(TEXT("/Engine/")))
+        {
+            // Try treating as relative to /Game/
+            NormalizedLevelPath = TEXT("/Game/") + NormalizedLevelPath;
+        }
+        
+        // Check if we need to load a different level
+        if (World)
+        {
+            FString CurrentWorldPath = World->GetOutermost()->GetName();
+            if (!CurrentWorldPath.Equals(NormalizedLevelPath, ESearchCase::IgnoreCase))
+            {
+                // Load the specified level
+                UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("HandleWorldPartitionAction: Loading level %s (current: %s)"), *NormalizedLevelPath, *CurrentWorldPath);
+                
+                FString Filename;
+                if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
+                {
+                    FlushRenderingCommands();
+                    bool bLoaded = FEditorFileUtils::LoadMap(Filename);
+                    if (!bLoaded)
+                    {
+                        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
+                        return true;
+                    }
+                    World = GEditor->GetEditorWorldContext().World();
+                }
+                else
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Invalid level path: %s"), *NormalizedLevelPath), TEXT("INVALID_PATH"));
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            // No current world - load the specified level
+            FString Filename;
+            if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
+            {
+                FlushRenderingCommands();
+                bool bLoaded = FEditorFileUtils::LoadMap(Filename);
+                if (!bLoaded)
+                {
+                    SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
+                    return true;
+                }
+                World = GEditor->GetEditorWorldContext().World();
+            }
+            else
+            {
+                SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Invalid level path: %s"), *NormalizedLevelPath), TEXT("INVALID_PATH"));
+                return true;
+            }
+        }
+    }
+    
     if (!World)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("No active editor world."), TEXT("NO_WORLD"));
