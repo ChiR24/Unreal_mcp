@@ -746,6 +746,28 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelName"), LevelName);
 
+    // SECURITY: Sanitize LevelName to prevent path injection
+    // Remove any path separators (only allow the final name component)
+    // and reject traversal sequences
+    if (!LevelName.IsEmpty()) {
+      int32 LastSlash = -1;
+      LevelName.FindLastChar(TEXT('/'), LastSlash);
+      if (LastSlash >= 0) {
+        LevelName = LevelName.RightChop(LastSlash + 1);
+      }
+      LevelName.FindLastChar(TEXT('\\'), LastSlash);
+      if (LastSlash >= 0) {
+        LevelName = LevelName.RightChop(LastSlash + 1);
+      }
+      if (LevelName.Contains(TEXT(".."))) {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("Invalid levelName: contains path traversal (..)"),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+    }
+
     FString LevelPath;
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
@@ -1579,6 +1601,16 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
 
+    // Issue #8: Sanitize path to prevent traversal attacks
+    FString SanitizedPath = SanitizeProjectRelativePath(LevelPath);
+    if (SanitizedPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *LevelPath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    LevelPath = SanitizedPath;
+
     // Use UEditorAssetLibrary to delete the level asset
     bool bDeleted = UEditorAssetLibrary::DeleteAsset(LevelPath);
     if (bDeleted) {
@@ -1611,6 +1643,24 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Issue #8: Sanitize paths to prevent traversal attacks
+    FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
+    if (SanitizedSource.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Invalid source path (traversal/security violation): %s"), *SourcePath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
+    if (SanitizedDest.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Invalid destination path (traversal/security violation): %s"), *DestinationPath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    SourcePath = SanitizedSource;
+    DestinationPath = SanitizedDest;
     if (DestinationPath.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("destinationPath required for rename_level"),
@@ -1657,6 +1707,24 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Issue #8: Sanitize paths to prevent traversal attacks
+    FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
+    if (SanitizedSource.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Invalid source path (traversal/security violation): %s"), *SourcePath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
+    if (SanitizedDest.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Invalid destination path (traversal/security violation): %s"), *DestinationPath),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    SourcePath = SanitizedSource;
+    DestinationPath = SanitizedDest;
 
     // Use UEditorAssetLibrary to duplicate the level asset
     UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);

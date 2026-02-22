@@ -408,17 +408,17 @@ export class IntrospectionTools {
           // Vector conversion
           if ('x' in v || 'X' in v) {
             processedValue = {
-              X: v.x || v.X || 0,
-              Y: v.y || v.Y || 0,
-              Z: v.z || v.Z || 0
+              X: v.x ?? v.X ?? 0,
+              Y: v.y ?? v.Y ?? 0,
+              Z: v.z ?? v.Z ?? 0
             };
           }
           // Rotator conversion
           else if ('pitch' in v || 'Pitch' in v) {
             processedValue = {
-              Pitch: v.pitch || v.Pitch || 0,
-              Yaw: v.yaw || v.Yaw || 0,
-              Roll: v.roll || v.Roll || 0
+              Pitch: v.pitch ?? v.Pitch ?? 0,
+              Yaw: v.yaw ?? v.Yaw ?? 0,
+              Roll: v.roll ?? v.Roll ?? 0
             };
           }
           // Transform conversion

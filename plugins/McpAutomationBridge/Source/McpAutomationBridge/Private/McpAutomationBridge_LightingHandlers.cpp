@@ -582,14 +582,17 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     int32 RemovedCount = 0;
     AActor *KeptActor = nullptr;
 
-    // Keep the one matching the name, or the first one
+    // Two-pass approach: first find exact name match, then destroy others
     for (AActor *SkyLight : SkyLights) {
-      if (!KeptActor &&
-          (SkyLight->GetActorLabel() == TargetName || TargetName.IsEmpty())) {
+      if (SkyLight->GetActorLabel() == TargetName && !TargetName.IsEmpty()) {
         KeptActor = SkyLight;
-        if (!TargetName.IsEmpty())
-          SkyLight->SetActorLabel(TargetName);
-      } else if (!KeptActor) {
+        break;
+      }
+    }
+    
+    // If no exact match, keep first and destroy rest
+    for (AActor *SkyLight : SkyLights) {
+      if (!KeptActor) {
         KeptActor = SkyLight;
         if (!TargetName.IsEmpty())
           SkyLight->SetActorLabel(TargetName);

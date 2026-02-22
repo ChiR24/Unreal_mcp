@@ -787,14 +787,14 @@ static inline UActorComponent* FindComponentByName(AActor* Actor, const FString&
         }
     }
 
-    // Return matches in priority order
-    if (ExactMatch)
-    {
-        return ExactMatch;
-    }
+    // Return matches in priority order: StartsWith is MORE specific than path-contains
     if (StartsWithMatch)
     {
         return StartsWithMatch;
+    }
+    if (ExactMatch)
+    {
+        return ExactMatch;
     }
 
     return nullptr;
@@ -1149,6 +1149,20 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
     }
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    
+    // CRITICAL: Check if current world has World Partition before cleanup
+    // World Partition levels have additional tick registrations that may cause
+    // TickTaskManager assertion crashes even with standard cleanup.
+    // This is a known UE 5.7 issue (UE-197643, UE-138424).
+    if (CurrentWorld)
+    {
+        AWorldSettings* WorldSettings = CurrentWorld->GetWorldSettings();
+        UWorldPartition* CurrentWorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
+        if (CurrentWorldPartition)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeLoadMap: Current world '%s' has World Partition - tick cleanup may be incomplete"), *CurrentWorld->GetName());
+        }
+    }
     
     if (CurrentWorld && bForceCleanup)
     {

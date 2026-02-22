@@ -179,9 +179,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
     
-    if (!AssetRegistry.PathExists(FName(*ValidatedPath))) {
+    FString ParentFolderPath = FPackageName::GetLongPackagePath(ValidatedPath);
+    if (!AssetRegistry.PathExists(FName(*ParentFolderPath))) {
       SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ValidatedPath),
+                          FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ParentFolderPath),
                           TEXT("PARENT_FOLDER_NOT_FOUND"));
       return true;
     }

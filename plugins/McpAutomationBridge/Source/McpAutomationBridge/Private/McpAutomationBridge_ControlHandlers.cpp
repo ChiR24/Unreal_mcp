@@ -3942,13 +3942,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   
   // Build both possible paths
   FString FlatMapPath = LevelPath + TEXT(".umap");
-  FString FullFlatMapPath = FPaths::ProjectContentDir() + FlatMapPath.Mid(6); // Remove "/Game/" prefix
+  // Check if path is /Engine/ or /Game/ and extract accordingly
+  int32 PrefixLen = 6; // Default: "/Game/" is 6 chars
+  FString ContentDir = FPaths::ProjectContentDir();
+  if (LevelPath.StartsWith(TEXT("/Engine/"))) {
+    PrefixLen = 8; // "/Engine/" is 8 chars
+    ContentDir = FPaths::EngineContentDir();
+  }
+  FString FullFlatMapPath = ContentDir + FlatMapPath.Mid(PrefixLen);
   FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
   
   // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
   FString LevelName = FPaths::GetBaseFilename(LevelPath);
   FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
-  FString FullFolderMapPath = FPaths::ProjectContentDir() + FolderMapPath.Mid(6);
+  FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
   FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
   
   // Check which path exists

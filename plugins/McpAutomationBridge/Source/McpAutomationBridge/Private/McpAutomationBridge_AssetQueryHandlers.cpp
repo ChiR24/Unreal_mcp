@@ -51,9 +51,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
     TArray<FName> Dependencies;
+    // TODO: bRecursive naming is confusing - true = Hard dependencies (recursive), false = Soft dependencies
+    // Consider renaming to bIncludeSoftDependencies or using an enum for clarity
     UE::AssetRegistry::EDependencyQuery Query =
         bRecursive ? UE::AssetRegistry::EDependencyQuery::Hard
-                   : UE::AssetRegistry::EDependencyQuery::Hard; // Simplified
+                   : UE::AssetRegistry::EDependencyQuery::Soft;
 
     AssetRegistryModule.Get().GetDependencies(
         FName(*AssetPath), Dependencies,
@@ -129,15 +131,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
       // Use cached tag value from FAssetData (no loading required!)
       // This is O(1) lookup vs O(n) disk I/O for loading each asset
+      // Use GetTagValue() which works across UE 5.0-5.7 (FindTag returns TOptional in 5.1+)
       FString MetadataValue;
-      bool bHasTag = false;
-      
-      // Check if the tag exists in cached data first, then get its value
-      if (Data.TagsAndValues.Contains(TagFName))
-      {
-        MetadataValue = Data.TagsAndValues.FindTag(TagFName).GetValue();
-        bHasTag = true;
-      }
+      bool bHasTag = Data.GetTagValue(TagFName, MetadataValue);
 
       // If we found metadata, check if it matches expected value (or just existence)
       bool bMatches = bHasTag;

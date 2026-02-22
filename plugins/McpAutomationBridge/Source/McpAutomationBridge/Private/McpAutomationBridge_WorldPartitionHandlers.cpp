@@ -114,7 +114,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
                 if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
                 {
                     FlushRenderingCommands();
-                    bool bLoaded = McpSafeLoadMap(Filename);
+                    bool bLoaded = McpSafeLoadMap(NormalizedLevelPath);
                     if (!bLoaded)
                     {
                         SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
@@ -136,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
             if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
             {
                 FlushRenderingCommands();
-                bool bLoaded = McpSafeLoadMap(Filename);
+                bool bLoaded = McpSafeLoadMap(NormalizedLevelPath);
                 if (!bLoaded)
                 {
                     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
