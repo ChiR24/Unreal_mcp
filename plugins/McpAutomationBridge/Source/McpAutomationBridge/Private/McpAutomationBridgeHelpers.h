@@ -185,6 +185,11 @@
 #include "Editor/EditorAssetLibrary.h"
 #endif
 #include "Engine/Blueprint.h"
+#include "Engine/World.h"
+#include "Engine/LevelStreaming.h"
+#include "GameFramework/WorldSettings.h"
+#include "TickTaskManagerInterface.h"
+#include "HAL/PlatformProcess.h"
 #endif
 
 /**
@@ -1075,6 +1080,115 @@ static inline UMaterialInterface* McpLoadMaterialWithFallback(
     
     UE_LOG(LogTemp, Error, TEXT("McpLoadMaterialWithFallback: All fallback materials unavailable - engine content may be missing"));
     return nullptr;
+}
+
+/**
+ * Safe map loading helper - properly cleans up current world before loading a new map.
+ * Prevents "Old world not cleaned up by garbage collection while loading new map!" crash.
+ * 
+ * This function performs the same cleanup sequence as McpSafeNewMap before loading.
+ * 
+ * @param MapPath The map path to load (e.g., /Game/Maps/MyMap)
+ * @param bForceCleanup If true, perform aggressive cleanup before loading (default: true)
+ * @return bool True if the map was loaded successfully
+ */
+static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
+{
+    if (!GEditor)
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: GEditor is null"));
+        return false;
+    }
+
+    UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    
+    if (CurrentWorld && bForceCleanup)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"), *CurrentWorld->GetName(), *MapPath);
+        
+        // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (Level)
+            {
+                Level->bIsVisible = false;
+            }
+        }
+        
+        // STEP 2: Unregister all tick functions (actors + components)
+        int32 UnregisteredActorCount = 0;
+        int32 UnregisteredComponentCount = 0;
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (!Level) continue;
+            
+            for (AActor* Actor : Level->Actors)
+            {
+                if (Actor)
+                {
+                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                    {
+                        Actor->PrimaryActorTick.UnRegisterTickFunction();
+                        UnregisteredActorCount++;
+                    }
+                    
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
+                        {
+                            Component->PrimaryComponentTick.UnRegisterTickFunction();
+                            UnregisteredComponentCount++;
+                        }
+                    }
+                }
+            }
+        }
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount);
+        
+        // STEP 3: Send end-of-frame updates
+        CurrentWorld->SendAllEndOfFrameUpdates();
+        
+        // STEP 4: Flush rendering commands
+        FlushRenderingCommands();
+        
+        // STEP 5: Unload streaming levels
+        TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
+        for (ULevelStreaming* StreamingLevel : StreamingLevels)
+        {
+            if (StreamingLevel)
+            {
+                StreamingLevel->SetShouldBeLoaded(false);
+                StreamingLevel->SetShouldBeVisible(false);
+            }
+        }
+        
+        // STEP 6: Force garbage collection
+        GEditor->ForceGarbageCollection(true);
+        
+        // STEP 7: Flush again after GC
+        FlushRenderingCommands();
+        
+        // STEP 8: Small delay for engine stabilization
+        FPlatformProcess::Sleep(0.10f);
+    }
+    
+    // Final flush before load
+    FlushRenderingCommands();
+    
+    // Load the map
+    UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Loading map '%s'"), *MapPath);
+    bool bLoaded = FEditorFileUtils::LoadMap(*MapPath);
+    
+    if (bLoaded)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Successfully loaded map '%s'"), *MapPath);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: Failed to load map '%s'"), *MapPath);
+    }
+    
+    return bLoaded;
 }
 #endif // WITH_EDITOR
 

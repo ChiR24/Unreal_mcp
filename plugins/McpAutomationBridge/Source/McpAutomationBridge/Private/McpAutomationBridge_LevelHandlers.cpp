@@ -435,7 +435,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       // should carefuly consider. But for now, we assume user wants standard
       // behavior or has saved. There isn't a simple "Force Load" via FileUtils
       // without clearing dirty flags manually. We will proceed with LoadMap.
-      const bool bLoaded = FEditorFileUtils::LoadMap(FileToLoad);
+      const bool bLoaded = McpSafeLoadMap(FileToLoad);
 
       // Post-load verification: check that the loaded world matches the requested path
       if (bLoaded) {

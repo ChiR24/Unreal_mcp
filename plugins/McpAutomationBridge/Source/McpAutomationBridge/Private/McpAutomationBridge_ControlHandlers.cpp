@@ -3976,7 +3976,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     return true;
   }
   
-  bool bOpened = FEditorFileUtils::LoadMap(*MapPathToLoad);
+  bool bOpened = McpSafeLoadMap(MapPathToLoad);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), bOpened);

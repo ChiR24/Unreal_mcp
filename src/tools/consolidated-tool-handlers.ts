@@ -218,10 +218,10 @@ function registerDefaultHandlers() {
   // 5. LEVEL MANAGER
   toolRegistry.register('manage_level', async (args, tools) => {
     const action = getAction(args);
-    if (['load_cells', 'set_datalayer'].includes(action)) {
-      const payload = { ...args, subAction: action };
-      return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
-    }
+    // CRITICAL FIX: Route ALL actions through handleLevelTools for proper validation
+    // Previously load_cells and set_datalayer bypassed validation by going directly to executeAutomationRequest
+    // handleLevelTools validates required params (levelPath, cells/origin/extent, actorPath, dataLayerName, dataLayerState)
+    // and then calls executeAutomationRequest with proper payload
     return await handleLevelTools(action, args, tools);
   });
 

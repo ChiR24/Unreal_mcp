@@ -339,104 +339,119 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'load_cells': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
       // Validate required parameters for load_cells
       const hasCells = Array.isArray(argsTyped.cells) && argsTyped.cells.length > 0;
       const hasOrigin = Array.isArray(argsTyped.origin) && argsTyped.origin.length >= 2;
       const hasExtent = Array.isArray(argsTyped.extent) && argsTyped.extent.length >= 2;
       const hasMin = Array.isArray(argsTyped.min) && argsTyped.min.length >= 2;
       const hasMax = Array.isArray(argsTyped.max) && argsTyped.max.length >= 2;
-      
-      // Must have either cells, or origin+extent, or min+max
       if (!hasCells && !(hasOrigin && hasExtent) && !(hasMin && hasMax)) {
         return cleanObject({
           success: false,
           error: 'INVALID_ARGUMENT',
           message: 'Missing required parameters: must provide either cells array, or origin+extent, or min+max',
-          action
+          action,
+          levelPath: argsTyped.levelPath
         });
       }
 
-      // CRITICAL FIX: If levelPath is specified, load it first
+      // Load the World Partition level first
       // World Partition operations require the level to be the current world
-      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
-        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-        if (loadRes.success === false) {
-          return cleanObject({
-            success: false,
-            error: 'LOAD_FAILED',
-            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-            levelPath: argsTyped.levelPath,
-            action
-          });
-        }
+      const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+      if (loadRes.success === false) {
+        return cleanObject({
+          success: false,
+          error: 'LOAD_FAILED',
+          message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+          levelPath: argsTyped.levelPath,
+          action
+        });
       }
-
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = argsTyped.origin;
       let extent = argsTyped.extent;
-
-      if (!origin && argsTyped.min && argsTyped.max) {
+      if (argsTyped.min && argsTyped.max) {
         const min = argsTyped.min;
         const max = argsTyped.max;
         origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
         extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
       }
-
       const payload = {
         subAction: 'load_cells',
+        levelPath: argsTyped.levelPath,
         origin: origin,
         extent: extent,
         ...args // Allow other args to override if explicit
       };
-
       const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_datalayer': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
+
+      // Validate actorPath is provided
+      const actorPath = argsTyped.actorPath || argsTyped.actorName;
+      if (!actorPath || typeof actorPath !== 'string' || actorPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: actorPath (actor name or path)',
+          action,
+          levelPath: argsTyped.levelPath
+        });
+      }
       const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
       if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
         return cleanObject({
           success: false,
           error: 'INVALID_ARGUMENT',
           message: 'Missing required parameter: dataLayerLabel (or dataLayerName)',
+          action,
+          levelPath: argsTyped.levelPath,
+          actorPath
+        });
+      }
+
+      // Load the World Partition level first
+      // World Partition operations require the level to be the current world
+      const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
+      if (loadRes.success === false) {
+        return cleanObject({
+          success: false,
+          error: 'LOAD_FAILED',
+          message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
+          levelPath: argsTyped.levelPath,
           action
         });
       }
-      if (!argsTyped.dataLayerState || typeof argsTyped.dataLayerState !== 'string') {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: dataLayerState',
-          action,
-          dataLayerName
-        });
-      }
-
-      // CRITICAL FIX: If levelPath is specified, load it first
-      // World Partition operations require the level to be the current world
-      if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {
-        const loadRes = await tools.levelTools.loadLevel({ levelPath: argsTyped.levelPath });
-        if (loadRes.success === false) {
-          return cleanObject({
-            success: false,
-            error: 'LOAD_FAILED',
-            message: `Failed to load level for World Partition operation: ${loadRes.error || loadRes.message}`,
-            levelPath: argsTyped.levelPath,
-            action
-          });
-        }
-      }
-
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'set_datalayer',
-        actorPath: argsTyped.actorPath,
-        dataLayerName, // Map label to name
-        dataLayerState: argsTyped.dataLayerState, // Pass validated dataLayerState to C++
-        ...args
+        levelPath: argsTyped.levelPath,
+        actorPath: actorPath,
+        dataLayerName
       });
       return cleanObject(res) as Record<string, unknown>;
     }
-case 'cleanup_invalid_datalayers': {
+    case 'cleanup_invalid_datalayers': {
       // CRITICAL FIX: If levelPath is specified, load it first
       // World Partition operations require the level to be the current world
       if (argsTyped.levelPath && typeof argsTyped.levelPath === 'string') {

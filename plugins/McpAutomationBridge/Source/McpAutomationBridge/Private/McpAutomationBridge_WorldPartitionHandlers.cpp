@@ -113,7 +113,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
                 if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
                 {
                     FlushRenderingCommands();
-                    bool bLoaded = FEditorFileUtils::LoadMap(Filename);
+                    bool bLoaded = McpSafeLoadMap(Filename);
                     if (!bLoaded)
                     {
                         SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
@@ -135,7 +135,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
             if (FPackageName::TryConvertLongPackageNameToFilename(NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
             {
                 FlushRenderingCommands();
-                bool bLoaded = FEditorFileUtils::LoadMap(Filename);
+                bool bLoaded = McpSafeLoadMap(Filename);
                 if (!bLoaded)
                 {
                     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to load level: %s"), *NormalizedLevelPath), TEXT("LOAD_FAILED"));
@@ -314,20 +314,23 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"));
 
 #if MCP_HAS_DATALAYER_EDITOR
-        AActor* Actor = FindObject<AActor>(nullptr, *ActorPath);
-        if (!Actor)
+        // CRITICAL FIX: Use TActorIterator to find actors in World Partition levels
+        // FindObject and GetAllLevelActors don't reliably find actors in WP external packages
+        AActor* Actor = nullptr;
+        
+        // First try FindObject with the path (for full object paths)
+        Actor = FindObject<AActor>(nullptr, *ActorPath);
+        
+        // If not found, use TActorIterator to search by label/name in the current world
+        if (!Actor && World)
         {
-            // Fallback: Try to find by Actor Label
-            if (UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+            for (TActorIterator<AActor> It(World); It; ++It)
             {
-                TArray<AActor*> AllActors = ActorSS->GetAllLevelActors();
-                for (AActor* A : AllActors)
+                if (It->GetActorLabel().Equals(ActorPath, ESearchCase::IgnoreCase) ||
+                    It->GetName().Equals(ActorPath, ESearchCase::IgnoreCase))
                 {
-                    if (A && A->GetActorLabel().Equals(ActorPath, ESearchCase::IgnoreCase))
-                    {
-                         Actor = A;
-                         break;
-                    }
+                    Actor = *It;
+                    break;
                 }
             }
         }
