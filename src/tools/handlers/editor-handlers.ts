@@ -80,7 +80,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'possess': ['actorName'],
   'open_asset': ['assetPath', 'path'],
   'close_asset': ['assetPath', 'path'],
-  'open_level': ['levelPath', 'path'],
+  'open_level': ['levelPath', 'path', 'assetPath'],
   'focus_actor': ['actorName', 'name'],
   'focus': ['actorName', 'name'],  // Normalized alias for focus_actor
   'set_camera': ['location', 'rotation', 'actorName'],
@@ -357,7 +357,8 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { success: true, message: `Fixed delta time set to ${deltaTime}`, action: 'set_fixed_delta_time' };
     }
     case 'open_level': {
-      const levelPath = requireNonEmptyString(args.levelPath || args.path, 'levelPath');
+      // Accept 'assetPath' as alias since users commonly think of level paths as asset paths
+      const levelPath = requireNonEmptyString(args.levelPath || args.path || args.assetPath, 'levelPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_level', levelPath });
       return cleanObject(res);
     }

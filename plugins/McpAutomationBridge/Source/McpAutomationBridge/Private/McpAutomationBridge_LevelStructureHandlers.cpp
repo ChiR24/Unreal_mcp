@@ -306,7 +306,7 @@ static bool HandleCreateLevel(
         // exceptions on Intel GPUs due to render thread race conditions.
         // The safe wrapper suspends rendering during save and implements retry logic.
         // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time).
-        bSaveSucceeded = McpSafeLevelSave(NewWorld->PersistentLevel, FullPath, 5);
+        bSaveSucceeded = McpSafeLevelSave(NewWorld->PersistentLevel, FullPath);
 
         if (bSaveSucceeded)
         {

@@ -118,10 +118,13 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
             }
         }
         
-        // STEP 2: Disable all actor ticking to prevent tick manager assertions
-        // This is critical - if any tick function is still registered when NewMap is called,
-        // the assertion "!LevelList.Contains(TickTaskLevel)" will fail
-        int32 DisabledActorCount = 0;
+        // STEP 2: Unregister all tick functions (not just disable)
+        // CRITICAL: SetActorTickEnabled(false) only DISABLES ticking - it doesn't UNREGISTER
+        // the tick function from FTickTaskManager. The assertion "!LevelList.Contains(TickTaskLevel)"
+        // still fires because the tick function is still registered in LevelList.
+        // We must call UnRegisterTickFunction() to properly remove from LevelList.
+        int32 UnregisteredActorCount = 0;
+        int32 UnregisteredComponentCount = 0;
         for (ULevel* Level : CurrentWorld->GetLevels())
         {
             if (!Level) continue;
@@ -130,27 +133,32 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
             {
                 if (Actor)
                 {
-                    // Disable actor tick - SetActorTickEnabled is safe to call even if already disabled
-                    Actor->SetActorTickEnabled(false);
-                    DisabledActorCount++;
+                    // CRITICAL FIX: Unregister the actor's primary tick function
+                    // This removes it from FTickTaskManager's LevelList
+                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                    {
+                        Actor->PrimaryActorTick.UnRegisterTickFunction();
+                        UnregisteredActorCount++;
+                    }
                     
-                    // Also disable component ticks
+                    // Also unregister all component tick functions
                     for (UActorComponent* Component : Actor->GetComponents())
                     {
-                        if (Component)
+                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
                         {
-                            Component->SetComponentTickEnabled(false);
+                            Component->PrimaryComponentTick.UnRegisterTickFunction();
+                            UnregisteredComponentCount++;
                         }
                     }
                 }
             }
         }
-        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Disabled ticking for %d actors"), DisabledActorCount);
+        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount);
         
-        // Progress update: disabled ticking
+        // Progress update: unregistered ticking
         if (Subsystem && !RequestId.IsEmpty())
         {
-            Subsystem->SendProgressUpdate(RequestId, 15.0f, FString::Printf(TEXT("Disabled ticking for %d actors"), DisabledActorCount));
+            Subsystem->SendProgressUpdate(RequestId, 15.0f, FString::Printf(TEXT("Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount));
         }
         
         // STEP 3: Send end-of-frame updates to complete any pending tick work
@@ -588,7 +596,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Use McpSafeLevelSave to prevent Intel GPU driver crashes during save
     // FlushRenderingCommands prevents MONZA DdiThreadingContext exceptions
     // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
-    bool bSaved = McpSafeLevelSave(World->PersistentLevel, PackageName, 5);
+    bool bSaved = McpSafeLevelSave(World->PersistentLevel, PackageName);
     if (bSaved) {
       TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       FString LevelPath = World->GetOutermost()->GetName();
@@ -684,7 +692,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
         // Use McpSafeLevelSave to prevent Intel GPU driver crashes
         // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
-        bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath, 5);
+        bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath);
       }
 #endif
       if (bSaved) {
@@ -851,7 +859,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
       // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
       // during level save operations
-      bool bSaved = McpSafeLevelSave(NewWorld->PersistentLevel, SavePath, 5);
+      bool bSaved = McpSafeLevelSave(NewWorld->PersistentLevel, SavePath);
       
       // CRITICAL FIX: Verify the save actually succeeded using MULTIPLE methods
       // 1. File system check (most reliable if path conversion works)
@@ -1244,7 +1252,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
 
     // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
     // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
-    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, ExportPath, 5);
+    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, ExportPath);
     if (bExported) {
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level exported"), nullptr);

@@ -855,16 +855,15 @@ static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, F
  * This helper:
  * 1. Suspends the render thread during save (prevents driver race condition)
  * 2. Flushes all rendering commands before and after save
- * 3. Retries with exponential backoff on failure (default: 5 retries)
- * 4. Verifies the file exists after save with additional file system sync
- * 5. Validates path length to prevent Windows Error 87 (MAX_PATH exceeded)
+ * 3. Verifies the file exists after save
+ * 4. Validates path length to prevent Windows Error 87 (MAX_PATH exceeded)
  *
  * @param Level The ULevel to save
  * @param FullPath The full package path for the level
- * @param MaxRetries Number of retry attempts (default: 5 for Intel GPU resilience)
+ * @param MaxRetries Unused (kept for API compatibility)
  * @return true if save succeeded and file exists
  */
-static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
+static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 1)
 {
     if (!Level)
     {
@@ -873,8 +872,6 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
     }
 
     // CRITICAL: Reject transient/unsaved level paths that would cause double-slash package names
-    // Saving transient levels causes fatal error: "Attempted to create a package with name 
-    // containing double slashes" when HLOD/Instancing generates paths like /Game//Temp/...
     if (FullPath.StartsWith(TEXT("/Temp/")) ||
         FullPath.StartsWith(TEXT("/Engine/Transient")) ||
         FullPath.Contains(TEXT("Untitled")))
@@ -886,24 +883,21 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
     FString PackagePath = FullPath;
     if (!PackagePath.StartsWith(TEXT("/Game/")))
     {
-        // Only prepend /Game/ if the path doesn't start with any slash
-        // (paths like /Temp/ or /Engine/ would create double slashes)
         if (!PackagePath.StartsWith(TEXT("/")))
         {
             PackagePath = TEXT("/Game/") + PackagePath;
         }
         else
         {
-            // Path starts with / but isn't /Game/ - this is likely an invalid path
             UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Invalid path (not under /Game/): %s"), *PackagePath);
             return false;
         }
     }
 
-    // Validate no double slashes in the path (would cause fatal error in CreatePackage)
+    // Validate no double slashes in the path
     if (PackagePath.Contains(TEXT("//")))
     {
-        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path contains double slashes (would cause fatal error): %s"), *PackagePath);
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path contains double slashes: %s"), *PackagePath);
         return false;
     }
 
@@ -913,43 +907,33 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
     }
 
-    // CRITICAL: Validate path length to prevent Windows Error 87 (ERROR_INVALID_PARAMETER)
-    // Windows MAX_PATH is 260 characters including null terminator
-    // We check both the package path and the resulting absolute file path
+    // CRITICAL: Validate path length to prevent Windows Error 87
     {
         FString AbsoluteFilePath;
         if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AbsoluteFilePath, FPackageName::GetMapPackageExtension()))
         {
             AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
-            
-            // Windows MAX_PATH limit (260 chars including null, so 259 usable)
-            // Use 240 as safety margin for temp files and intermediate operations
             const int32 SafePathLength = 240;
             if (AbsoluteFilePath.Len() > SafePathLength)
             {
                 UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"), 
                     AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
-                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths (LongPathsEnabled registry key)"));
+                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths"));
                 return false;
             }
         }
     }
 
-    // CRITICAL: Check if level already exists BEFORE attempting save
-    // This prevents useless retries when the "A level with that name already exists" 
-    // modal dialog would block automation. If the level exists, we return false 
-    // immediately without retrying (since retrying won't change the outcome).
+    // Check if level already exists BEFORE attempting save
     {
         FString ExistingLevelFilename;
         bool bLevelExists = false;
         
-        // Check flat path: /Game/Path/Level.umap
         if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, ExistingLevelFilename, FPackageName::GetMapPackageExtension()))
         {
             FString AbsolutePath = FPaths::ConvertRelativePathToFull(ExistingLevelFilename);
             bLevelExists = IFileManager::Get().FileExists(*AbsolutePath);
             
-            // Also check folder-based path: /Game/Path/Level/Level.umap
             if (!bLevelExists)
             {
                 FString LevelName = FPaths::GetBaseFilename(PackagePath);
@@ -958,7 +942,6 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
             }
         }
         
-        // Also check package system
         if (!bLevelExists)
         {
             bLevelExists = FPackageName::DoesPackageExist(PackagePath);
@@ -966,192 +949,75 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         
         if (bLevelExists)
         {
-            // Check if this is the SAME level we're trying to save (save current level)
-            // vs a DIFFERENT level (save_as would fail with "already exists")
             UWorld* LevelWorld = Level ? Level->GetWorld() : nullptr;
             if (LevelWorld)
             {
                 FString CurrentLevelPath = LevelWorld->GetOutermost()->GetName();
                 if (CurrentLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
                 {
-                    // Saving the same level - this is fine, it's an overwrite
                     UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
                 }
                 else
                 {
-                    // Trying to save_as to a path that already exists - fail immediately
                     UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"), 
                         *PackagePath, *CurrentLevelPath);
-                    UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Use a different path or delete the existing level first"));
                     return false;
                 }
             }
         }
     }
 
+    // CRITICAL: Flush rendering commands to prevent Intel driver race condition
+    FlushRenderingCommands();
+
+    // Small delay after flush to ensure GPU is completely idle
+    FPlatformProcess::Sleep(0.050f); // 50ms wait
+
+    // Perform the actual save
+    UWorld* World = Level ? Level->GetWorld() : nullptr;
     bool bSaveSucceeded = false;
-    // Reduced initial delay for faster test execution while still handling Intel GPU
-    // The driver needs time to complete pending operations before file I/O
-    float DelayMs = 100.0f;
-
-    for (int32 Retry = 0; Retry < MaxRetries; ++Retry)
+    if (World)
     {
-        // CRITICAL: Flush rendering commands to prevent Intel driver race condition
-        // The MONZA DdiThreadingContext crash occurs when rendering commands
-        // overlap with file I/O operations during level save
-        // Note: FSuspendRenderThread was removed in UE 5.x - use FlushRenderingCommands instead
-        FlushRenderingCommands();
+        bSaveSucceeded = UEditorLoadingAndSavingUtils::SaveMap(World, PackagePath);
+    }
+    else
+    {
+        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+    }
 
-        // Additional delay after flush to ensure GPU is completely idle
-        // This is critical for Intel integrated graphics which may have
-        // pending operations in the driver's command queue
-        FPlatformProcess::Sleep(0.025f); // 25ms reduced from 50ms
+    if (bSaveSucceeded)
+    {
+        // Small delay before verification
+        FPlatformProcess::Sleep(0.050f);
 
-        // CRITICAL FIX: Use UEditorLoadingAndSavingUtils::SaveMap for proper path handling
-        // FEditorFileUtils::SaveLevel expects a FILE path, not a package path.
-        // This was causing the OBJ SAVEPACKAGE command to receive incorrect FILE parameter.
-        // SaveMap properly converts the asset path (/Game/MyLevel) to the correct file path.
-        UWorld* World = Level ? Level->GetWorld() : nullptr;
-        if (World)
+        // Verify file exists on disk
+        FString VerifyFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
         {
-            bSaveSucceeded = UEditorLoadingAndSavingUtils::SaveMap(World, PackagePath);
+            FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
+            
+            if (IFileManager::Get().FileExists(*VerifyFilename) || IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
+                return true;
+            }
+            
+            // FALLBACK: Check if package exists in UE's package system
+            if (FPackageName::DoesPackageExist(PackagePath))
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                return true;
+            }
+            
+            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Save reported success but file not found: %s"), *VerifyFilename);
         }
         else
         {
-            // Fallback to SaveLevel if world is not available
-            bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
-        }
-
-        if (bSaveSucceeded)
-        {
-            // Delay for file system sync, especially important for:
-            // 1. Intel GPU driver operations (MONZA)
-            // 2. Network drives
-            // 3. Antivirus software intercepting file operations
-            // INCREASED: 200ms for better reliability with Intel GPU and network drives
-            FPlatformProcess::Sleep(0.200f);
-
-            // Verify file exists on disk with multiple retries
-            FString VerifyFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
-            {
-                // CRITICAL: Convert to absolute path for reliable file existence check
-                // TryConvertLongPackageNameToFilename may return relative paths in some configurations
-                FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
-                
-                // CRITICAL FIX: Retry file verification multiple times to handle:
-                // - File system timing on slow drives
-                // - Antivirus software temporarily blocking access
-                // - Network drive latency
-                bool bFileExists = false;
-                const int32 MaxVerifyRetries = 3;
-                for (int32 VerifyRetry = 0; VerifyRetry < MaxVerifyRetries && !bFileExists; ++VerifyRetry)
-                {
-                    // Try both the original and absolute path
-                    bFileExists = IFileManager::Get().FileExists(*VerifyFilename);
-                    if (!bFileExists && !AbsoluteVerifyFilename.Equals(VerifyFilename, ESearchCase::IgnoreCase))
-                    {
-                        bFileExists = IFileManager::Get().FileExists(*AbsoluteVerifyFilename);
-                        if (bFileExists)
-                        {
-                            UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: File found at absolute path: %s"), *AbsoluteVerifyFilename);
-                        }
-                    }
-                    
-                    if (!bFileExists && VerifyRetry < MaxVerifyRetries - 1)
-                    {
-                        // Wait and retry - file might be flushing to disk
-                        UE_LOG(LogTemp, Verbose, TEXT("McpSafeLevelSave: File not found yet, retrying in 50ms (verify attempt %d/%d)"), 
-                            VerifyRetry + 1, MaxVerifyRetries);
-                        FPlatformProcess::Sleep(0.050f);
-                    }
-                }
-                
-                if (bFileExists)
-                {
-                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level after %d attempt(s): %s"), 
-                        Retry + 1, *PackagePath);
-                    return true;
-                }
-                
-                // CRITICAL FIX: If save reported success but file verification fails due to 
-                // timing/driver issues, check multiple fallback verification methods.
-                // FEditorFileUtils::SaveLevel() may succeed but IFileManager hasn't synced yet.
-                
-                // FALLBACK 1: Check if the package exists in UE's package system
-                if (FPackageName::DoesPackageExist(PackagePath))
-                {
-                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system after save (file verification timed out, but save succeeded): %s"), 
-                        *PackagePath);
-                    return true;
-                }
-                
-                // FALLBACK 2: Check Asset Registry (more reliable for newly saved assets)
-                // The Asset Registry updates asynchronously but is often faster than file system
-                IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(PackagePath));
-#else
-                FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*PackagePath));
-#endif
-                if (AssetData.IsValid())
-                {
-                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Asset found in AssetRegistry after save: %s"), *PackagePath);
-                    return true;
-                }
-                
-                // FALLBACK 3: Try synchronous scan of the directory, then check again
-                FString DirectoryPath = FPaths::GetPath(PackagePath);
-                if (!DirectoryPath.IsEmpty())
-                {
-                    TArray<FString> ScanPaths;
-                    ScanPaths.Add(DirectoryPath);
-                    AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
-                    
-                    // Check Asset Registry again after scan
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                    AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(PackagePath));
-#else
-                    AssetData = AssetRegistry.GetAssetByObjectPath(FName(*PackagePath));
-#endif
-                    if (AssetData.IsValid())
-                    {
-                        UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Asset found in AssetRegistry after synchronous scan: %s"), *PackagePath);
-                        return true;
-                    }
-                }
-                
-                // FALLBACK 4: Check if package is loaded in memory (FindPackage)
-                if (UPackage* Pkg = FindPackage(nullptr, *PackagePath))
-                {
-                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package loaded in memory after save: %s"), *PackagePath);
-                    return true;
-                }
-                
-                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but all verification methods failed (attempt %d/%d): %s (absolute: %s)"), 
-                    Retry + 1, MaxRetries, *VerifyFilename, *AbsoluteVerifyFilename);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
-            }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save attempt %d/%d failed for: %s"),
-                Retry + 1, MaxRetries, *PackagePath);
-        }
-
-        // Exponential backoff before retry (100ms → 200ms → 400ms → 800ms → 1600ms)
-        // Faster than before to stay within test timeouts
-        if (Retry < MaxRetries - 1)
-        {
-            FPlatformProcess::Sleep(DelayMs / 1000.0f);
-            DelayMs *= 2.0f;
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
         }
     }
 
-    UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: All %d save attempts failed for: %s"), MaxRetries, *PackagePath);
+    UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Failed to save level: %s"), *PackagePath);
     return false;
 }
 
