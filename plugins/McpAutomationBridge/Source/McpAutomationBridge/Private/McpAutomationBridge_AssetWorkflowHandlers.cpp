@@ -122,8 +122,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGetSourceControlState(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
     return HandleSourceControlEnable(RequestId, Action, Payload, RequestingSocket);
-  if (Lower == TEXT("source_control_disable"))
-    return HandleSourceControlDisable(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("analyze_graph"))
     return HandleAnalyzeGraph(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("get_asset_graph"))
@@ -613,21 +611,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
     return true;
   }
 
-  // Try to set the provider
+  // Try to set the provider by name
   if (!Provider.IsEmpty() && !Provider.Equals(TEXT("None"), ESearchCase::IgnoreCase)) {
-    EProviderType ProviderType = EProviderType::None;
-    if (Provider.Equals(TEXT("Perforce"), ESearchCase::IgnoreCase)) {
-      ProviderType = EProviderType::Perforce;
-    } else if (Provider.Equals(TEXT("Subversion"), ESearchCase::IgnoreCase) || 
-               Provider.Equals(TEXT("SVN"), ESearchCase::IgnoreCase)) {
-      ProviderType = EProviderType::Subversion;
-    } else if (Provider.Equals(TEXT("Git"), ESearchCase::IgnoreCase)) {
-      ProviderType = EProviderType::Git;
-    }
-    
-    if (ProviderType != EProviderType::None) {
-      SourceControlModule.SetProvider(ProviderType);
-    }
+    SourceControlModule.SetProvider(FName(*Provider));
   }
   
   bool bEnabled = SourceControlModule.IsEnabled();
@@ -654,38 +640,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
 }
 
 // ============================================================================
-// 4B. SOURCE CONTROL DISABLE
-// ============================================================================
-
-bool UMcpAutomationBridgeSubsystem::HandleSourceControlDisable(
-    const FString &RequestId, const FString &Action,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("source_control_disable"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-#if WITH_EDITOR
-  ISourceControlModule& SourceControlModule = ISourceControlModule::Get();
-  
-  // Note: Unreal Engine doesn't allow disabling source control programmatically.
-  // We can only set the provider to None, but the module will report as not enabled.
-  // The best we can do is inform the user.
-  
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), true);
-  Result->SetStringField(TEXT("message"), TEXT("Source control cannot be disabled programmatically in Unreal Engine. Use Editor preferences to disable."));
-  
-  SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Source control info retrieved"), Result, FString());
-  return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("source_control_disable requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
-}
 
 // ============================================================================
 // 4. BULK RENAME ASSETS

@@ -26,7 +26,7 @@ const VALID_ASSET_ACTIONS = new Set([
   'add_material_node', 'remove_material_node', 'rebuild_material',
   'connect_material_pins', 'break_material_connections', 'get_material_node_details',
   // Source control
-  'source_control_checkout', 'source_control_submit', 'source_control_enable', 'source_control_disable', 'get_source_control_state',
+  'source_control_checkout', 'source_control_submit', 'source_control_enable', 'get_source_control_state',
   // Graph analysis
   'analyze_graph', 'get_asset_graph'
 ]);
@@ -500,11 +500,6 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           provider
         });
         return ResponseFactory.success(res, 'Source control enabled');
-      }
-      case 'source_control_disable': {
-        // Disable source control
-        const res = await executeAutomationRequest(tools, 'source_control_disable', {});
-        return ResponseFactory.success(res, 'Source control disabled');
       }
       case 'analyze_graph': {
         const params = normalizeArgs(args, [
