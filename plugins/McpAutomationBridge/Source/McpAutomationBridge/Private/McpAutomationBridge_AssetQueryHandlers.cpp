@@ -51,9 +51,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
     TArray<FName> Dependencies;
+    // TODO: bRecursive naming is confusing - true = Hard dependencies (recursive), false = Soft dependencies
+    // Consider renaming to bIncludeSoftDependencies or using an enum for clarity
     UE::AssetRegistry::EDependencyQuery Query =
         bRecursive ? UE::AssetRegistry::EDependencyQuery::Hard
-                   : UE::AssetRegistry::EDependencyQuery::Hard; // Simplified
+                   : UE::AssetRegistry::EDependencyQuery::Soft;
 
     AssetRegistryModule.Get().GetDependencies(
         FName(*AssetPath), Dependencies,
@@ -67,7 +69,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     Result->SetArrayField(TEXT("dependencies"), DepArray);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Dependencies retrieved."), Result);
+                            TEXT("Dependencies retrieved."), Result);
     return true;
   } else if (SubAction == TEXT("find_by_tag")) {
     FString Tag;
@@ -81,27 +83,44 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       return true;
     }
 
-    // Optional path filter to narrow search scope
+    // Optional path filter to narrow search scope - DEFAULT to /Game
     FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
     if (Path.IsEmpty()) {
       Path = TEXT("/Game"); // Default search path
     }
+    
+    // SECURITY: Sanitize path to prevent traversal attacks
+    FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    if (SanitizedPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *Path),
+          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
 
-    // Get all assets in the specified path
+    // Use AssetRegistry's cached data instead of loading assets
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+    
+    // REMOVED: ScanPathsSynchronous() was causing indefinite hangs when paths weren't indexed.
+    // The AssetRegistry's GetAssets() already uses cached data and will return empty results
+    // for unscanned paths. The cache is populated automatically during editor startup.
+    // If a path is not cached, the query returns empty results rather than blocking indefinitely.
+    
     FARFilter Filter;
-    Filter.PackagePaths.Add(FName(*Path));
+    Filter.PackagePaths.Add(FName(*SanitizedPath));
     Filter.bRecursivePaths = true;
 
     TArray<FAssetData> AssetDataList;
-    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+    AssetRegistry.GetAssets(Filter, AssetDataList);
 
-    // Filter assets by checking their package metadata
+    // Filter assets by checking their CACHED metadata tags (no asset loading!)
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
+    FName TagFName(*Tag);
 
     for (const FAssetData &Data : AssetDataList) {
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
@@ -109,17 +128,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 #else
       const FString AssetPath = Data.ToSoftObjectPath().ToString();
 #endif
-      UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-      if (!Asset)
-        continue;
 
-      // Check if the asset has the metadata tag
-      FString MetadataValue =
-          UEditorAssetLibrary::GetMetadataTag(Asset, FName(*Tag));
+      // Use cached tag value from FAssetData (no loading required!)
+      // This is O(1) lookup vs O(n) disk I/O for loading each asset
+      // Use GetTagValue() which works across UE 5.0-5.7 (FindTag returns TOptional in 5.1+)
+      FString MetadataValue;
+      bool bHasTag = Data.GetTagValue(TagFName, MetadataValue);
 
-      // If we found metadata, check if it matches expected value (or just
-      // existence)
-      bool bMatches = !MetadataValue.IsEmpty();
+      // If we found metadata, check if it matches expected value (or just existence)
+      bool bMatches = bHasTag;
       if (bMatches && !ExpectedValue.IsEmpty()) {
         bMatches = MetadataValue.Equals(ExpectedValue, ESearchCase::IgnoreCase);
       }
@@ -136,7 +153,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
                                  Data.AssetClass.ToString());
 #endif
         AssetObj->SetStringField(TEXT("tagValue"), MetadataValue);
-        AddAssetVerification(AssetObj, Asset);
         AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
       }
     }
@@ -261,17 +277,54 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       }
     }
 
-    // Parse Package Paths
+    // Parse Package Paths - DEFAULT to /Game to prevent massive scans
+    // SECURITY: Validate all paths to prevent path traversal attacks
+    // NOTE: Accept both 'packagePaths' (array) and 'path' (string) for flexibility
+    // but SECURITY validation must apply to BOTH to prevent traversal attacks
     const TArray<TSharedPtr<FJsonValue>> *PackagePathsPtr;
+    bool bHasValidPaths = false;
+    
+    // First check for packagePaths array
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
-        PackagePathsPtr) {
+        PackagePathsPtr && PackagePathsPtr->Num() > 0) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
-        Filter.PackagePaths.Add(FName(*Val->AsString()));
+        FString PathValue = Val->AsString();
+        // SECURITY: Sanitize path to prevent traversal attacks
+        FString SanitizedPath = SanitizeProjectRelativePath(PathValue);
+        if (SanitizedPath.IsEmpty()) {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *PathValue),
+              TEXT("SECURITY_VIOLATION"));
+          return true;
+        }
+        Filter.PackagePaths.Add(FName(*SanitizedPath));
+        bHasValidPaths = true;
       }
     }
+    
+    // Also check for 'path' (singular) string field - common alternative to array
+    // CRITICAL: This was missing, causing security tests to fail because path was ignored!
+    FString SinglePath;
+    if (Payload->TryGetStringField(TEXT("path"), SinglePath) && !SinglePath.IsEmpty()) {
+      // SECURITY: Sanitize path to prevent traversal attacks
+      FString SanitizedPath = SanitizeProjectRelativePath(SinglePath);
+      if (SanitizedPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *SinglePath),
+            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+      Filter.PackagePaths.Add(FName(*SanitizedPath));
+      bHasValidPaths = true;
+    }
+    
+    // Default to /Game if no valid paths specified
+    if (!bHasValidPaths) {
+      Filter.PackagePaths.Add(FName(TEXT("/Game")));
+    }
 
-    // Parse Recursion
-    bool bRecursivePaths = true;
+    // Parse Recursion - DEFAULT to false to prevent massive scans
+    bool bRecursivePaths = false;  // Changed from true to false for safety
     if (Payload->HasField(TEXT("recursivePaths")))
       Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
     Filter.bRecursivePaths = bRecursivePaths;
@@ -281,12 +334,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
       Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
     Filter.bRecursiveClasses = bRecursiveClasses;
 
-    // Execute Query
+    // Execute Query with safety limit
     FAssetRegistryModule &AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
             "AssetRegistry");
+    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
+    
+    // REMOVED: ScanPathsSynchronous() was causing indefinite hangs when paths weren't indexed.
+    // The AssetRegistry's GetAssets() already uses cached data and will return empty results
+    // for unscanned paths. The cache is populated automatically during editor startup.
+    // If a path is not cached, the query returns empty results rather than blocking indefinitely.
+    
     TArray<FAssetData> AssetDataList;
-    AssetRegistryModule.Get().GetAssets(Filter, AssetDataList);
+    AssetRegistry.GetAssets(Filter, AssetDataList);
 
     // Apply Limit
     int32 Limit = 100;
@@ -364,4 +424,29 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
   SendAutomationError(RequestingSocket, RequestId, TEXT("Unknown subAction."),
                       TEXT("INVALID_SUBACTION"));
   return true;
+}
+
+/**
+ * @brief Wrapper for search_assets action when called directly (not via asset_query).
+ * 
+ * This handler is invoked when TS calls executeAutomationRequest(tools, 'search_assets', {...})
+ * directly, rather than via the asset_query tool with subAction="search_assets".
+ * It delegates to the same logic by routing through HandleAssetQueryAction.
+ */
+bool UMcpAutomationBridgeSubsystem::HandleSearchAssets(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  // Build a payload with subAction for the existing handler
+  TSharedPtr<FJsonObject> RoutedPayload = Payload;
+  if (Payload.IsValid()) {
+    // Clone and add subAction if not present
+    if (!Payload->HasField(TEXT("subAction"))) {
+      RoutedPayload = MakeShared<FJsonObject>(*Payload);
+      RoutedPayload->SetStringField(TEXT("subAction"), TEXT("search_assets"));
+    }
+  }
+  
+  // Delegate to HandleAssetQueryAction with "asset_query" as the action
+  return HandleAssetQueryAction(RequestId, TEXT("asset_query"), RoutedPayload, RequestingSocket);
 }

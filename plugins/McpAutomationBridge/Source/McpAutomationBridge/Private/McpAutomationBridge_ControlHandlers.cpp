@@ -81,7 +81,7 @@
 // (ExtractVectorField and ExtractRotatorField moved to
 // McpAutomationBridgeHelpers.h)
 
-AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
+AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
 #if WITH_EDITOR
   if (Target.IsEmpty() || !GEditor)
     return nullptr;
@@ -122,8 +122,10 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
       ExactMatch = A;
       break;
     }
-    // Collect fuzzy matches
-    if (A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+    // Collect fuzzy matches ONLY if exact matching is not required
+    // CRITICAL FIX: Fuzzy matching can cause delete operations to delete wrong actors
+    // (e.g., "TestActor_Copy" matches when searching for "TestActor")
+    if (!bExactMatchOnly && A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
       FuzzyMatches.Add(A);
     }
   }
@@ -132,13 +134,15 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target) {
     return ExactMatch;
   }
 
-  // If no exact match, check fuzzy matches
-  if (FuzzyMatches.Num() == 1) {
-    return FuzzyMatches[0];
-  } else if (FuzzyMatches.Num() > 1) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
-           *Target, FuzzyMatches.Num());
+  // If no exact match, check fuzzy matches ONLY if exact matching is not required
+  if (!bExactMatchOnly) {
+    if (FuzzyMatches.Num() == 1) {
+      return FuzzyMatches[0];
+    } else if (FuzzyMatches.Num() > 1) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
+             *Target, FuzzyMatches.Num());
+    }
   }
 
   // Fallback: try to load as asset if it looks like a path
@@ -546,7 +550,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   TArray<FString> Missing;
 
   for (const FString &Name : Targets) {
-    AActor *Found = FindActorByName(Name);
+    // CRITICAL FIX: Use exact match only for delete operations to prevent
+    // fuzzy matching from deleting wrong actors (e.g., "TestActor_Copy" when
+    // searching for "TestActor")
+    AActor *Found = FindActorByName(Name, true);
     if (!Found) {
       Missing.Add(Name);
       continue;
@@ -1075,15 +1082,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     return true;
   }
 
-  UActorComponent *TargetComponent = nullptr;
-  for (UActorComponent *Comp : Found->GetComponents()) {
-    if (!Comp)
-      continue;
-    if (Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      TargetComponent = Comp;
-      break;
-    }
-  }
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  UActorComponent *TargetComponent = FindComponentByName(Found, ComponentName);
 
   if (!TargetComponent) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("COMPONENT_NOT_FOUND"),
@@ -1513,9 +1513,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
 
+  // DEBUG: Log tag search details
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("HandleControlActorFindByTag: Searching for tag '%s' (FName: %s)"),
+         *TagValue, *TagName.ToString());
+
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  
+  // DEBUG: Log total actors being searched
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+         TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
+         
   for (AActor *Actor : AllActors) {
     if (!Actor)
       continue;
@@ -1529,6 +1539,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
       }
     } else {
       bMatches = Actor->ActorHasTag(TagName);
+    }
+
+    // DEBUG: Log actor tags for troubleshooting
+    if (Actor->Tags.Num() > 0) {
+      FString TagList;
+      for (const FName& T : Actor->Tags) {
+        TagList += T.ToString() + TEXT(", ");
+      }
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+             TEXT("HandleControlActorFindByTag: Actor '%s' has tags: [%s] - match=%d"),
+             *Actor->GetActorLabel(), *TagList, bMatches);
     }
 
     if (bMatches) {
@@ -2095,13 +2116,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
     UClass* ClassToFind = nullptr;
 
-    // Try to find the class
-    if (ClassName.StartsWith(TEXT("/"))) {
-      ClassToFind = LoadObject<UClass>(nullptr, *ClassName);
-    } else {
-      // Use nullptr instead of ANY_PACKAGE for UE 5.7+ compatibility
-      ClassToFind = FindObject<UClass>(nullptr, *ClassName);
-    }
+    // CRITICAL FIX: Use ResolveClassByName for proper engine class resolution
+    // This handles: full paths, short names like "StaticMeshActor", and loads classes if needed
+    // Without this, FindObject only finds already-loaded classes, missing engine classes like
+    // AStaticMeshActor, APawn, etc. that haven't been accessed yet
+    ClassToFind = ResolveClassByName(ClassName);
 
     if (ClassToFind) {
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
@@ -2163,24 +2182,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     return true;
   }
   
-  // Find and destroy component
-  TInlineComponentArray<UActorComponent*> Components;
-  Actor->GetComponents(Components);
-  
-  for (UActorComponent* Component : Components) {
-    if (Component && Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      Component->DestroyComponent();
-      TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-      Data->SetStringField(TEXT("actorName"), ActorName);
-      Data->SetStringField(TEXT("componentName"), ComponentName);
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
+  if (Component) {
+    Component->DestroyComponent();
+    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    Data->SetStringField(TEXT("actorName"), ActorName);
+    Data->SetStringField(TEXT("componentName"), ComponentName);
 
-      // Add verification data for delete operations
-      Data->SetBoolField(TEXT("existsAfter"), false);
-      Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+    // Add verification data for delete operations
+    Data->SetBoolField(TEXT("existsAfter"), false);
+    Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 
-      SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
-      return true;
-    }
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
+    return true;
   }
   
   SendAutomationError(Socket, RequestId,
@@ -2212,29 +2227,40 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
   
-  // Find component
-  TInlineComponentArray<UActorComponent*> Components;
-  Actor->GetComponents(Components);
-  
-  for (UActorComponent* Component : Components) {
-    if (Component && Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-      // Get property using reflection
-      FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
-      if (Property) {
-        TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-        Data->SetStringField(TEXT("actorName"), ActorName);
-        Data->SetStringField(TEXT("componentName"), ComponentName);
-        Data->SetStringField(TEXT("propertyName"), PropertyName);
-        // Note: Full property value serialization would require more complex logic
-        Data->SetStringField(TEXT("value"), TEXT("<property value>"));
-        SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
-        return true;
-      }
-      break;
-    }
+  // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
+  // This handles cases where component names have numeric suffixes (e.g., "StaticMeshComponent0")
+  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
+  if (!Component) {
+    SendAutomationError(Socket, RequestId, 
+        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName), 
+        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
   }
   
-  SendAutomationError(Socket, RequestId, TEXT("Component or property not found"), TEXT("NOT_FOUND"));
+  // Get property using reflection
+  FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
+  if (!Property) {
+    SendAutomationError(Socket, RequestId, 
+        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName), 
+        TEXT("PROPERTY_NOT_FOUND"));
+    return true;
+  }
+  
+  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  Data->SetStringField(TEXT("actorName"), ActorName);
+  Data->SetStringField(TEXT("componentName"), ComponentName);
+  Data->SetStringField(TEXT("propertyName"), PropertyName);
+  Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
+  
+  // Extract property value using the existing helper function
+  TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
+  if (PropertyValue.IsValid()) {
+    Data->SetField(TEXT("value"), PropertyValue);
+  } else {
+    Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
+  }
+  
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
   return true;
 #else
   return false;
@@ -3142,7 +3168,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   }
 
   FString RecordingName;
-  Payload->TryGetStringField(TEXT("name"), RecordingName);
+  // Accept both 'name' and 'filename' fields for flexibility
+  // TS handler sends 'filename', so we check that first
+  Payload->TryGetStringField(TEXT("filename"), RecordingName);
+  if (RecordingName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), RecordingName);
+  }
   if (RecordingName.IsEmpty()) {
     RecordingName = FString::Printf(TEXT("Recording_%s"),
         *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
@@ -3410,9 +3441,32 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     return true;
   }
 
+  // Accept multiple field names for flexibility
+  // - 'type': C++ native field (key_down, key_up, mouse_click, mouse_move)
+  // - 'inputType': Alternative name
+  // - 'inputAction': Action-based naming (pressed, released, click, move)
+  // CRITICAL: Do NOT read from 'action' field - that's the routing action (e.g., "simulate_input")
+  // and will always be present in the payload. Only use type/inputType/inputAction for input type.
   FString InputType;
   Payload->TryGetStringField(TEXT("type"), InputType);
+  if (InputType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("inputType"), InputType);
+  }
+  if (InputType.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("inputAction"), InputType);
+  }
+  
+  // Map action values to C++ expected type values
   InputType = InputType.ToLower();
+  if (InputType == TEXT("pressed") || InputType == TEXT("down")) {
+    InputType = TEXT("key_down");
+  } else if (InputType == TEXT("released") || InputType == TEXT("up")) {
+    InputType = TEXT("key_up");
+  } else if (InputType == TEXT("click")) {
+    InputType = TEXT("mouse_click");
+  } else if (InputType == TEXT("move")) {
+    InputType = TEXT("mouse_move");
+  }
 
   FString Key;
   Payload->TryGetStringField(TEXT("key"), Key);
@@ -3577,10 +3631,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
 
   bool bSuccess = true;
   int32 SavedCount = 0;
+  int32 SkippedCount = 0;
   
   for (UPackage* Package : DirtyPackages) {
     if (Package) {
       FString PackagePath = Package->GetPathName();
+      
+      // Skip transient/temporary packages that cannot be saved
+      // These include /Temp/ paths and packages with RF_Transient flag
+      if (PackagePath.StartsWith(TEXT("/Temp/")) || 
+          PackagePath.StartsWith(TEXT("/Transient/")) ||
+          Package->HasAnyFlags(RF_Transient)) {
+        SkippedCount++;
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+               TEXT("HandleControlEditorSaveAll: Skipping transient package: %s"), *PackagePath);
+        continue;
+      }
+      
       if (UEditorAssetLibrary::SaveAsset(PackagePath, false)) {
         SavedCount++;
       } else {
@@ -3592,17 +3659,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("savedCount"), SavedCount);
+  Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
   Resp->SetNumberField(TEXT("totalDirty"), DirtyPackages.Num());
   
   // Only report outer success if the operation actually succeeded
   if (bSuccess || DirtyPackages.Num() == 0) {
     SendAutomationResponse(Socket, RequestId, true, 
-                           FString::Printf(TEXT("Saved %d of %d dirty assets"), SavedCount, DirtyPackages.Num()), 
+                           FString::Printf(TEXT("Saved %d of %d dirty assets (skipped %d transient)"), SavedCount, DirtyPackages.Num() - SkippedCount, SkippedCount), 
                            Resp, FString());
   } else {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),
                               FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
-                                              SavedCount, DirtyPackages.Num()), 
+                                              SavedCount, DirtyPackages.Num() - SkippedCount), 
                               Resp);
   }
   return true;
@@ -3833,13 +3901,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   FString LevelPath;
+  // Accept multiple parameter names for flexibility
+  // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
   if (LevelPath.IsEmpty()) {
     Payload->TryGetStringField(TEXT("path"), LevelPath);
   }
   if (LevelPath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
+  }
+  if (LevelPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("levelPath required"), nullptr);
+                              TEXT("levelPath, path, or assetPath required"), nullptr);
     return true;
   }
 
@@ -3862,26 +3935,69 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
   
-  // Check if the map file exists before attempting to load
-  FString FullMapPath = FPaths::ProjectContentDir() + MapPath.RightChop(6); // Remove "/Game/" prefix
-  FullMapPath = FPaths::ConvertRelativePathToFull(FullMapPath);
+  // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
+  // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
+  // 2. Flat (legacy): /Game/Path/LevelName.umap
+  // We must check BOTH paths before returning FILE_NOT_FOUND.
   
-  if (!FPaths::FileExists(FullMapPath)) {
+  // Build both possible paths
+  FString FlatMapPath = LevelPath + TEXT(".umap");
+  // Check if path is /Engine/ or /Game/ and extract accordingly
+  int32 PrefixLen = 6; // Default: "/Game/" is 6 chars
+  FString ContentDir = FPaths::ProjectContentDir();
+  if (LevelPath.StartsWith(TEXT("/Engine/"))) {
+    PrefixLen = 8; // "/Engine/" is 8 chars
+    ContentDir = FPaths::EngineContentDir();
+  }
+  FString FullFlatMapPath = ContentDir + FlatMapPath.Mid(PrefixLen);
+  FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
+  
+  // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
+  FString LevelName = FPaths::GetBaseFilename(LevelPath);
+  FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
+  FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
+  FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
+  
+  // Check which path exists
+  FString MapPathToLoad;
+  FString FullMapPath;
+  
+  // Prefer folder-based path (Unreal's standard) if it exists
+  if (FPaths::FileExists(FullFolderMapPath)) {
+    MapPathToLoad = FolderMapPath;
+    FullMapPath = FullFolderMapPath;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Found level at folder-based path: %s"), *FullFolderMapPath);
+  } else if (FPaths::FileExists(FullFlatMapPath)) {
+    // Fallback to flat path (legacy format)
+    MapPathToLoad = FlatMapPath;
+    FullMapPath = FullFlatMapPath;
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
+  } else {
+    // Neither path exists - return detailed error
     TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
     ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+    ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
+    ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
+    ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
-                              FString::Printf(TEXT("Level file not found: %s"), *FullMapPath), 
+                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
+                                            *FullFolderMapPath, *FullFlatMapPath), 
                               ErrorDetails);
     return true;
   }
   
-  bool bOpened = FEditorFileUtils::LoadMap(*MapPath);
+  bool bOpened = McpSafeLoadMap(MapPathToLoad);
 
   TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("levelPath"), LevelPath);
+  Resp->SetStringField(TEXT("loadedPath"), MapPathToLoad);
   
   if (bOpened) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+           TEXT("OpenLevel: Successfully opened level: %s"), *MapPathToLoad);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Level opened"), Resp, FString());
   } else {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"), TEXT("Failed to open level"), Resp);

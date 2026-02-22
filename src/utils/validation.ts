@@ -38,6 +38,33 @@ const RESERVED_KEYWORDS = [
 ];
 
 /**
+ * Sanitize a command argument to prevent injection attacks
+ * @param arg The argument to sanitize
+ * @returns Sanitized argument safe for command execution
+ */
+export function sanitizeCommandArgument(arg: string): string {
+  if (!arg || typeof arg !== 'string') {
+    return '';
+  }
+
+  // Remove leading/trailing whitespace
+  let sanitized = arg.trim();
+
+  // Remove null bytes and control characters
+
+  // eslint-disable-next-line no-control-regex
+  sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
+
+  // Escape backslashes and quotes for command safety
+  sanitized = sanitized.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+  // Remove newlines and carriage returns that could allow command injection
+  sanitized = sanitized.replace(/[\r\n]/g, ' ');
+
+  return sanitized;
+}
+
+/**
  * Sanitize an asset name for Unreal Engine
  * @param name The name to sanitize
  * @returns Sanitized name
@@ -315,21 +342,6 @@ export function ensureVector3(value: unknown, label: string): [number, number, n
     throw new Error(`Invalid ${label}: expected an object with x,y,z or an array of 3 numbers`);
   }
   return tuple;
-}
-
-/**
- * Sanitize a string for use as a command identifier or path argument.
- * Strictly allows only alphanumeric characters, underscores, hyphens, periods, and forward slashes.
- * Replaces any other character with an underscore.
- * @param input The input string
- * @returns Sanitized string
- */
-export function sanitizeCommandArgument(input: string): string {
-  if (!input) return '';
-  // Allow alphanum, -, _, ., /
-  // Replace anything else with _
-  // eslint-disable-next-line no-useless-escape
-  return input.replace(/[^a-zA-Z0-9\-_\.\/]/g, '_');
 }
 
 /**

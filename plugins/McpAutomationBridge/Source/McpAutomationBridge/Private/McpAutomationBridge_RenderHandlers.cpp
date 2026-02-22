@@ -39,6 +39,16 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
     {
         FString Name;
         Payload->TryGetStringField(TEXT("name"), Name);
+        
+        // Validate required 'name' parameter - return error if missing or empty
+        if (Name.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("name parameter is required for create_render_target"), 
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        
         int32 Width = 256;
         int32 Height = 256;
         Payload->TryGetNumberField(TEXT("width"), Width);
@@ -48,9 +58,40 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(const FString& RequestId,
 
         FString PackagePath = TEXT("/Game/RenderTargets");
         Payload->TryGetStringField(TEXT("packagePath"), PackagePath);
+        
+        // Also check for "path" as alias
+        if (PackagePath.IsEmpty() || PackagePath == TEXT("/Game/RenderTargets"))
+        {
+            FString PathAlias;
+            if (Payload->TryGetStringField(TEXT("path"), PathAlias) && !PathAlias.IsEmpty())
+            {
+                PackagePath = PathAlias;
+            }
+        }
 
-        FString AssetName = Name.IsEmpty() ? TEXT("NewRenderTarget") : Name;
+        // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
+        // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
+        // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
+        if (!DoesAssetDirectoryExistOnDisk(PackagePath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *PackagePath), 
+                TEXT("PARENT_FOLDER_NOT_FOUND"));
+            return true;
+        }
+
+        FString AssetName = Name;
         FString FullPath = PackagePath / AssetName;
+
+        // CRITICAL FIX: Check if an asset already exists at this path
+        // This prevents "Cannot replace existing object of a different class" crash
+        if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Asset already exists at path: %s. Delete it first or use a different name."), *FullPath), 
+                TEXT("ASSET_ALREADY_EXISTS"));
+            return true;
+        }
 
         UPackage* Package = CreatePackage(*FullPath);
         UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>(Package, UTextureRenderTarget2D::StaticClass(), FName(*AssetName), RF_Public | RF_Standalone);

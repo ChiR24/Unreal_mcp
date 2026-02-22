@@ -626,11 +626,25 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  if (!Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase)) {
+  // Handle both direct "console_command" action and "system_control" with action="console_command" in payload
+  const FString LowerAction = Action.ToLower();
+  const bool bIsDirectConsoleCommand = LowerAction.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
+  const bool bIsSystemControl = LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
+  
+  if (!bIsDirectConsoleCommand && !bIsSystemControl) {
     return false;
   }
 
 #if WITH_EDITOR
+  // For system_control, check if the sub-action is console_command
+  if (bIsSystemControl && Payload.IsValid()) {
+    FString SubAction;
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+    if (!SubAction.ToLower().Equals(TEXT("console_command"))) {
+      return false; // Not a console_command, let other handlers try
+    }
+  }
+
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("console_command payload missing"),
@@ -1011,6 +1025,27 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     LowerSubAction.Equals(TEXT("find_by_tag")) ||
     LowerSubAction.Equals(TEXT("inspect_class"));
 
+  // Actions that require actorName instead of objectPath
+  const bool bIsActorAction = 
+    LowerSubAction.Equals(TEXT("get_components")) ||
+    LowerSubAction.Equals(TEXT("get_component_property")) ||
+    LowerSubAction.Equals(TEXT("set_component_property")) ||
+    LowerSubAction.Equals(TEXT("get_metadata")) ||
+    LowerSubAction.Equals(TEXT("add_tag")) ||
+    LowerSubAction.Equals(TEXT("create_snapshot")) ||
+    LowerSubAction.Equals(TEXT("restore_snapshot")) ||
+    LowerSubAction.Equals(TEXT("export")) ||
+    LowerSubAction.Equals(TEXT("delete_object")) ||
+    LowerSubAction.Equals(TEXT("get_bounding_box")) ||
+    LowerSubAction.Equals(TEXT("set_property")) ||
+    LowerSubAction.Equals(TEXT("get_property"));
+
+  // Delegate actor-related actions to the control_actor handler
+  if (bIsActorAction) {
+    // These actions are handled by HandleControlActorAction - delegate directly
+    return HandleControlActorAction(RequestId, TEXT("control_actor"), Payload, RequestingSocket);
+  }
+
   // Only require objectPath for non-global actions
   FString ObjectPath;
   if (!bIsGlobalAction) {
@@ -1029,7 +1064,9 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     
     if (LowerSubAction.Equals(TEXT("get_project_settings"))) {
       // Return project settings info
-      Resp->SetStringField(TEXT("action"), SubAction);
+      // Set action to "inspect" (the tool name) for proper action matching in TS message-handler
+      Resp->SetStringField(TEXT("action"), TEXT("inspect"));
+      Resp->SetStringField(TEXT("subAction"), SubAction);
       Resp->SetStringField(TEXT("message"), TEXT("Project settings retrieved"));
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1037,7 +1074,9 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
       return true;
     }
     else if (LowerSubAction.Equals(TEXT("get_editor_settings"))) {
-      Resp->SetStringField(TEXT("action"), SubAction);
+      // Set action to "inspect" (the tool name) for proper action matching in TS message-handler
+      Resp->SetStringField(TEXT("action"), TEXT("inspect"));
+      Resp->SetStringField(TEXT("subAction"), SubAction);
       Resp->SetStringField(TEXT("message"), TEXT("Editor settings retrieved"));
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1235,19 +1274,51 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
   // Find the object (for non-global actions that require objectPath)
   UObject *TargetObject = nullptr;
   
-  // Try to find by path first
-  TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
+  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
+  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
+  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  {
+    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
+    
+    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
+    {
+      // Try to find the actor first
+      if (AActor *Actor = FindActorByName(ActorName))
+      {
+        // Find the component on the actor using fuzzy name matching
+        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
+        {
+          TargetObject = Comp;
+          // Normalize the path for downstream error messages
+          ObjectPath = Comp->GetPathName();
+        }
+      }
+    }
+  }
+  
+  // Try to find by path first (if not already found as component)
+  if (!TargetObject) {
+    TargetObject = FindObject<UObject>(nullptr, *ObjectPath);
+  }
   
   // If not found, try to find actor by name/label
   if (!TargetObject && GEditor) {
-    UWorld *World = GEditor->GetEditorWorldContext().World();
-    if (World) {
-      for (TActorIterator<AActor> It(World); It; ++It) {
-        AActor *Actor = *It;
-        if (Actor && (Actor->GetActorLabel().Equals(ObjectPath, ESearchCase::IgnoreCase) ||
-                      Actor->GetName().Equals(ObjectPath, ESearchCase::IgnoreCase))) {
-          TargetObject = Actor;
-          break;
+    // Also try FindActorByName helper which handles both label and name matching
+    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
+      TargetObject = FoundActor;
+      ObjectPath = FoundActor->GetPathName();
+    } else {
+      // Fallback: iterate all actors
+      UWorld *World = GEditor->GetEditorWorldContext().World();
+      if (World) {
+        for (TActorIterator<AActor> It(World); It; ++It) {
+          AActor *Actor = *It;
+          if (Actor && (Actor->GetActorLabel().Equals(ObjectPath, ESearchCase::IgnoreCase) ||
+                        Actor->GetName().Equals(ObjectPath, ESearchCase::IgnoreCase))) {
+            TargetObject = Actor;
+            break;
+          }
         }
       }
     }
@@ -1335,10 +1406,17 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     Resp->SetBoolField(TEXT("isActor"), false);
   }
   
-  // Tags
+  // Tags - only for Actor-derived classes to avoid assertion failure
   TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : TargetObject->GetClass()->GetDefaultObject<AActor>()->Tags) {
-    TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+  UClass* ObjClass = TargetObject->GetClass();
+  // Check if the class is actually an Actor or Actor-derived class before calling GetDefaultObject<AActor>()
+  // Using IsChildOf instead of Cast to avoid assertion in UE 5.7
+  if (ObjClass && ObjClass->IsChildOf(AActor::StaticClass())) {
+    if (AActor* DefaultActor = ObjClass->GetDefaultObject<AActor>()) {
+      for (const FName &Tag : DefaultActor->Tags) {
+        TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+      }
+    }
   }
   Resp->SetArrayField(TEXT("tags"), TagsArray);
 

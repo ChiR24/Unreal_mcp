@@ -293,6 +293,7 @@ export interface LevelArgs extends HandlerArgs {
     extent?: number[];
     metadata?: Record<string, unknown>;
     timeoutMs?: number;
+    useWorldPartition?: boolean;
 }
 
 // ============================================================================

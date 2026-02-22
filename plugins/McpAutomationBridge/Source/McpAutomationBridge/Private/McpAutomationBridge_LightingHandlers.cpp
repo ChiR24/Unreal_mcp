@@ -29,6 +29,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "LevelEditor.h"
 #include "Subsystems/EditorActorSubsystem.h"
+#include "RenderingThread.h"  // FlushRenderingCommands for safe spawning
 
 #endif
 
@@ -108,7 +109,8 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
   if (Lower == TEXT("spawn_light") || Lower == TEXT("create_light") || Lower == TEXT("create_dynamic_light")) {
     FString LightClassStr;
     
-    // Support both lightClass (Unreal class name) and lightType (short name)
+    // Support multiple parameter names: lightClass, lightType, type
+    // Priority: lightClass > lightType > type
     if (!Payload->TryGetStringField(TEXT("lightClass"), LightClassStr) || LightClassStr.IsEmpty()) {
       // Try lightType parameter - map short names to Unreal class names
       FString LightType;
@@ -128,6 +130,27 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
           // Unknown light type
           SendAutomationError(RequestingSocket, RequestId,
                               FString::Printf(TEXT("Invalid lightType: %s. Must be one of: point, directional, spot, rect, sky"), *LightType),
+                              TEXT("INVALID_LIGHT_TYPE"));
+          return true;
+        }
+      }
+      // CRITICAL FIX: Also check for 'type' parameter (common shorthand)
+      else if (Payload->TryGetStringField(TEXT("type"), LightType) && !LightType.IsEmpty()) {
+        const FString LowerType = LightType.ToLower();
+        if (LowerType == TEXT("point") || LowerType == TEXT("pointlight")) {
+          LightClassStr = TEXT("PointLight");
+        } else if (LowerType == TEXT("directional") || LowerType == TEXT("directionallight")) {
+          LightClassStr = TEXT("DirectionalLight");
+        } else if (LowerType == TEXT("spot") || LowerType == TEXT("spotlight")) {
+          LightClassStr = TEXT("SpotLight");
+        } else if (LowerType == TEXT("rect") || LowerType == TEXT("rectlight")) {
+          LightClassStr = TEXT("RectLight");
+        } else if (LowerType == TEXT("sky") || LowerType == TEXT("skylight")) {
+          LightClassStr = TEXT("SkyLight");
+        } else {
+          // Unknown light type
+          SendAutomationError(RequestingSocket, RequestId,
+                              FString::Printf(TEXT("Invalid type: %s. Must be one of: point, directional, spot, rect, sky"), *LightType),
                               TEXT("INVALID_LIGHT_TYPE"));
           return true;
         }
@@ -205,9 +228,33 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     SpawnParams.SpawnCollisionHandlingOverride =
         ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    // Fix: Declare NewLight before use
-    AActor *NewLight = ActorSS->GetWorld()->SpawnActor(LightClass, &Location,
-                                                       &Rotation, SpawnParams);
+    // CRITICAL FIX: Validate world before spawning to prevent crashes
+    UWorld* World = ActorSS->GetWorld();
+    if (!World || !World->IsValidLowLevel()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("No valid world available for spawning light"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    // CRITICAL FIX: Flush rendering commands to prevent GPU driver crashes
+    // during spawn operations (especially Intel MONZA drivers)
+    FlushRenderingCommands();
+
+    // CRITICAL FIX: Use SpawnActorDeferred for safer initialization
+    FTransform SpawnTransform(Rotation, Location);
+    AActor *NewLight = World->SpawnActorDeferred<AActor>(
+        LightClass,
+        SpawnTransform,
+        nullptr,    // Owner
+        nullptr,    // Instigator
+        ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+    );
+
+    // CRITICAL FIX: Finish spawning with proper transform
+    if (NewLight) {
+        UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
+    }
 
     // Explicitly set location/rotation
     if (NewLight) {
@@ -535,14 +582,21 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     int32 RemovedCount = 0;
     AActor *KeptActor = nullptr;
 
-    // Keep the one matching the name, or the first one
+    // Two-pass approach: first find exact name match, then destroy others
     for (AActor *SkyLight : SkyLights) {
-      if (!KeptActor &&
-          (SkyLight->GetActorLabel() == TargetName || TargetName.IsEmpty())) {
+      if (SkyLight->GetActorLabel() == TargetName && !TargetName.IsEmpty()) {
         KeptActor = SkyLight;
-        if (!TargetName.IsEmpty())
-          SkyLight->SetActorLabel(TargetName);
-      } else if (!KeptActor) {
+        break;
+      }
+    }
+    
+    // If no exact match, keep first and destroy rest
+    for (AActor *SkyLight : SkyLights) {
+      // Skip the actor we want to keep
+      if (SkyLight == KeptActor) {
+        continue;
+      }
+      if (!KeptActor) {
         KeptActor = SkyLight;
         if (!TargetName.IsEmpty())
           SkyLight->SetActorLabel(TargetName);

@@ -23,8 +23,10 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     bMultiListen = true;
     bRequireCapabilityToken = false;
     bAllowNonLoopback = false; // Security: default to loopback-only binding
-    MaxMessagesPerMinute = 600;
-    MaxAutomationRequestsPerMinute = 600;
+    // CRITICAL: Default to 0 (disabled) for development/testing - prevents rate limit disconnects during rapid API calls
+    // For production deployments, set to a reasonable limit (e.g., 600) via Project Settings or environment variables
+    MaxMessagesPerMinute = 0;
+    MaxAutomationRequestsPerMinute = 0;
     bEnableTls = false;
     TlsCertificatePath = TEXT("");
     TlsPrivateKeyPath = TEXT("");

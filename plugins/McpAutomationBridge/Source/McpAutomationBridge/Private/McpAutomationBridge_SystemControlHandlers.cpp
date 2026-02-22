@@ -6,10 +6,20 @@
 #if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
 #include "Misc/App.h"
 #include "Misc/MonitoredProcess.h"
+#include "EditorAssetLibrary.h"
+#include "AssetToolsModule.h"
+#include "IAssetTools.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/SkeletalMesh.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "Exporters/Exporter.h"
+#include "Misc/FileHelper.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
@@ -28,7 +38,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   if (!Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
-      !Lower.StartsWith(TEXT("test_stale"))) {
+      !Lower.StartsWith(TEXT("test_stale")) &&
+      Lower != TEXT("export_asset")) {
     return false; // Not handled by this function
   }
 
@@ -311,6 +322,149 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Stale progress test completed"), Result);
+    return true;
+  } else if (Lower == TEXT("export_asset")) {
+    // Export asset to FBX/OBJ/other format
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    
+    FString ExportPath;
+    Payload->TryGetStringField(TEXT("exportPath"), ExportPath);
+    
+    if (AssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("assetPath is required for export"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    if (ExportPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("exportPath is required for export"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    
+    // Check if asset exists
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    
+    // Ensure export directory exists
+    FString ExportDir = FPaths::GetPath(ExportPath);
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*ExportDir)) {
+      PlatformFile.CreateDirectoryTree(*ExportDir);
+    }
+    
+    // Load the asset
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath),
+                          TEXT("LOAD_FAILED"));
+      return true;
+    }
+    
+    // Determine export format from file extension
+    FString Extension = FPaths::GetExtension(ExportPath).ToLower();
+    
+    // Try generic asset export via AssetTools
+    bool bExportSuccess = false;
+    FString ExportError;
+    
+    // CRITICAL FIX: Use AssetTools ExportAssets with explicit export path
+    // This performs automated export without showing modal dialogs
+    // The bPromptForIndividualFilenames=false suppresses file dialogs
+    FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+    IAssetTools& AssetTools = AssetToolsModule.Get();
+    
+    // Use ExportAssets with explicit path - this suppresses dialogs for automated export
+    // The asset will be exported with its original name to the specified directory
+    TArray<UObject*> AssetsToExport;
+    AssetsToExport.Add(Asset);
+    
+    // ExportAssets exports to the specified directory with the asset's name
+    // For custom filename, we need to rename temporarily or use UExporter directly
+    AssetTools.ExportAssets(AssetsToExport, ExportDir);
+    
+    // Check if file was created
+    FString ExpectedExportPath = ExportDir / FPaths::GetBaseFilename(AssetPath) + TEXT(".") + Extension;
+    if (FPaths::FileExists(ExpectedExportPath))
+    {
+      bExportSuccess = true;
+    }
+    else
+    {
+      // Try with the actual requested filename
+      bExportSuccess = FPaths::FileExists(ExportPath);
+    }
+    
+    if (!bExportSuccess)
+    {
+      // Fallback: Use UExporter::ExportToFile directly with Prompt=false
+      UExporter* Exporter = nullptr;
+      
+      // Find appropriate exporter for the asset type and extension
+      for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt) {
+        UClass* CurrentClass = *ClassIt;
+        if (CurrentClass->IsChildOf(UExporter::StaticClass()) && !CurrentClass->HasAnyClassFlags(CLASS_Abstract)) {
+          UExporter* DefaultExporter = Cast<UExporter>(CurrentClass->GetDefaultObject());
+          if (DefaultExporter && DefaultExporter->SupportedClass) {
+            if (Asset->GetClass()->IsChildOf(DefaultExporter->SupportedClass)) {
+              if (DefaultExporter->PreferredFormatIndex < DefaultExporter->FormatExtension.Num()) {
+                FString PreferredExt = DefaultExporter->FormatExtension[DefaultExporter->PreferredFormatIndex].ToLower();
+                if (PreferredExt == Extension || PreferredExt.Contains(Extension)) {
+                  Exporter = DefaultExporter;
+                  break;
+                }
+              }
+              if (!Exporter) {
+                Exporter = DefaultExporter;
+              }
+            }
+          }
+        }
+      }
+      
+      if (Exporter) {
+        // ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
+        // The last parameter (Prompt=false) should suppress dialogs for most exporters
+        int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *ExportPath, false, false, false);
+        bExportSuccess = (ExportResult != 0);
+      }
+      
+      if (!bExportSuccess) {
+        ExportError = FString::Printf(TEXT("Export failed for asset type '%s' and format '%s'"),
+                                       *Asset->GetClass()->GetName(), *Extension);
+      }
+    }
+    
+    if (bExportSuccess) {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      AddAssetVerification(Result, Asset);
+      Result->SetStringField(TEXT("assetPath"), AssetPath);
+      Result->SetStringField(TEXT("exportPath"), ExportPath);
+      Result->SetStringField(TEXT("format"), Extension);
+      Result->SetBoolField(TEXT("success"), true);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             FString::Printf(TEXT("Asset exported to: %s"), *ExportPath),
+                             Result);
+    } else {
+      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      Result->SetStringField(TEXT("assetPath"), AssetPath);
+      Result->SetStringField(TEXT("exportPath"), ExportPath);
+      Result->SetStringField(TEXT("format"), Extension);
+      Result->SetStringField(TEXT("error"), ExportError);
+      
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Export failed: %s"), *ExportError),
+                             Result, TEXT("EXPORT_FAILED"));
+    }
     return true;
   }
 

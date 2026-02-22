@@ -29,6 +29,7 @@ export class ResponseFactory {
 
         return {
             success: false,
+            isError: true,  // CRITICAL FIX: Set isError: true so test runner recognizes this as an error
             message: errorMessage,
             data: null
         };
@@ -40,6 +41,7 @@ export class ResponseFactory {
     static validationError(message: string): StandardActionResponse {
         return {
             success: false,
+            isError: true,  // CRITICAL FIX: Set isError: true so test runner recognizes this as an error
             message: `Validation Error: ${message}`,
             data: null
         };

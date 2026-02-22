@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, LevelArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString, validateSecurityPatterns } from './common-handlers.js';
 
 /** Response from automation request */
 interface AutomationResponse {
@@ -43,6 +43,17 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
   // Normalize args to support both camelCase and snake_case
   const argsTyped = normalizeLevelArgs(args as LevelArgs);
   
+  // Security validation: check for path traversal attempts
+  const securityError = validateSecurityPatterns(args as Record<string, unknown>);
+  if (securityError) {
+    return cleanObject({
+      success: false,
+      error: 'SECURITY_VIOLATION',
+      message: securityError,
+      action
+    });
+  }
+  
   switch (action) {
     case 'load':
     case 'load_level': {
@@ -78,7 +89,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
-      const res = await tools.levelTools.createLevel({ levelName, savePath: argsTyped.savePath || argsTyped.levelPath });
+      // CRITICAL: Pass useWorldPartition to C++ - default to false to avoid 20+ second freeze during World Partition uninitialize
+      // World Partition levels cause permanent hang when unloaded via GEditor->NewMap()
+      const res = await tools.levelTools.createLevel({
+        levelName,
+        savePath: argsTyped.savePath || argsTyped.levelPath,
+        useWorldPartition: argsTyped.useWorldPartition ?? false
+      });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'add_sublevel': {
@@ -141,8 +158,39 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_light': {
-      // Delegate directly to the plugin's manage_level.create_light handler.
-      const res = await executeAutomationRequest(tools, 'manage_level', args);
+      // Validate required parameters for create_light
+      const lightType = argsTyped.type || argsTyped.lightType;
+      if (!lightType || typeof lightType !== 'string' || lightType.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: type (or lightType). Valid types: Point, Directional, Spot, Sky, Rect',
+          action
+        });
+      }
+      // Validate light type is one of the supported types
+      const validTypes = ['Point', 'Directional', 'Spot', 'Sky', 'Rect', 'PointLight', 'DirectionalLight', 'SpotLight', 'SkyLight', 'RectLight'];
+      if (!validTypes.some(t => t.toLowerCase() === lightType.toLowerCase())) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: `Invalid light type: ${lightType}. Valid types: Point, Directional, Spot, Sky, Rect`,
+          action
+        });
+      }
+      // CRITICAL FIX: Normalize 'type' to 'lightType' for C++ handler compatibility
+      // The C++ handler checks for 'lightType' field, not 'type'
+      const normalizedArgs = {
+        ...args,
+        lightType: lightType,
+        // Remove 'type' to avoid confusion
+        type: undefined
+      };
+      // Remove undefined fields
+      const cleanNormalizedArgs = Object.fromEntries(
+        Object.entries(normalizedArgs).filter(([, v]) => v !== undefined)
+      );
+      const res = await executeAutomationRequest(tools, 'manage_level', cleanNormalizedArgs);
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'spawn_light': {
@@ -205,9 +253,18 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     }
     case 'delete':
     case 'delete_level': {
-      const levelPaths = Array.isArray(argsTyped.levelPaths) 
-        ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string') 
+      const levelPaths = Array.isArray(argsTyped.levelPaths)
+        ? argsTyped.levelPaths.filter((p): p is string => typeof p === 'string')
         : (argsTyped.levelPath ? [argsTyped.levelPath] : []);
+      // Validate at least one path is provided for delete
+      if (levelPaths.length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'levelPath or levelPaths is required for delete',
+          action
+        });
+      }
       const res = await tools.levelTools.deleteLevels({ levelPaths });
       return cleanObject(res) as Record<string, unknown>;
     }
@@ -282,60 +339,136 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'load_cells': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
+      // Validate required parameters for load_cells
+      const hasCells = Array.isArray(argsTyped.cells) && argsTyped.cells.length > 0;
+      const hasOrigin = Array.isArray(argsTyped.origin) && argsTyped.origin.length >= 2;
+      const hasExtent = Array.isArray(argsTyped.extent) && argsTyped.extent.length >= 2;
+      const hasMin = Array.isArray(argsTyped.min) && argsTyped.min.length >= 2;
+      const hasMax = Array.isArray(argsTyped.max) && argsTyped.max.length >= 2;
+      if (!hasCells && !(hasOrigin && hasExtent) && !(hasMin && hasMax)) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameters: must provide either cells array, or origin+extent, or min+max',
+          action,
+          levelPath: argsTyped.levelPath
+        });
+      }
+
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
       // Calculate origin/extent if min/max provided for C++ handler compatibility
       let origin = argsTyped.origin;
       let extent = argsTyped.extent;
-
-      if (!origin && argsTyped.min && argsTyped.max) {
+      if (argsTyped.min && argsTyped.max) {
         const min = argsTyped.min;
         const max = argsTyped.max;
         origin = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
         extent = [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2];
       }
-
       const payload = {
         subAction: 'load_cells',
+        levelPath: argsTyped.levelPath,
         origin: origin,
         extent: extent,
         ...args // Allow other args to override if explicit
       };
-
       const res = await executeAutomationRequest(tools, 'manage_world_partition', payload);
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'set_datalayer': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
+
+      // Validate actorPath is provided
+      const actorPath = argsTyped.actorPath || argsTyped.actorName;
+      if (!actorPath || typeof actorPath !== 'string' || actorPath.trim() === '') {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: actorPath (actor name or path)',
+          action,
+          levelPath: argsTyped.levelPath
+        });
+      }
       const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
       if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
         return cleanObject({
           success: false,
           error: 'INVALID_ARGUMENT',
           message: 'Missing required parameter: dataLayerLabel (or dataLayerName)',
-          action
-        });
-      }
-      if (!argsTyped.dataLayerState || typeof argsTyped.dataLayerState !== 'string') {
-        return cleanObject({
-          success: false,
-          error: 'INVALID_ARGUMENT',
-          message: 'Missing required parameter: dataLayerState',
           action,
-          dataLayerName
+          levelPath: argsTyped.levelPath,
+          actorPath
         });
       }
 
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
         subAction: 'set_datalayer',
-        actorPath: argsTyped.actorPath,
-        dataLayerName, // Map label to name
-        dataLayerState: argsTyped.dataLayerState, // Pass validated dataLayerState to C++
-        ...args
+        levelPath: argsTyped.levelPath,
+        actorPath: actorPath,
+        dataLayerName
       });
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'cleanup_invalid_datalayers': {
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
+      
+      // Route to manage_world_partition
+      
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
-        subAction: 'cleanup_invalid_datalayers'
+        subAction: 'cleanup_invalid_datalayers',
+        levelPath: argsTyped.levelPath
+      }, 'World Partition support not available');
+      return cleanObject(res) as Record<string, unknown>;
+    }
+    case 'create_datalayer': {
+      // Route to manage_world_partition
+      const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
+      if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: dataLayerName',
+          action
+        });
+      }
+      // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
+      // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
+      // and will only load if the current world differs from the requested levelPath.
+      // Loading here would destroy unsaved actors in the current world.
+      const res = await executeAutomationRequest(tools, 'manage_world_partition', {
+        subAction: 'create_datalayer',
+        levelPath: argsTyped.levelPath,
+        dataLayerName
       }, 'World Partition support not available');
       return cleanObject(res) as Record<string, unknown>;
     }

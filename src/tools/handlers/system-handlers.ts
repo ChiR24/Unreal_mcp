@@ -609,6 +609,59 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     }
     case 'read_log':
       return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
+    case 'export_asset': {
+      // Export asset to FBX/OBJ format
+      // This requires editor-only functionality
+      const assetPath = typeof argsTyped.assetPath === 'string' ? argsTyped.assetPath : '';
+      const exportPath = typeof argsTyped.exportPath === 'string' ? argsTyped.exportPath : '';
+      
+      if (!assetPath) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'assetPath is required for export_asset',
+          action: 'export_asset'
+        };
+      }
+      
+      if (!exportPath) {
+        return {
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'exportPath is required for export_asset',
+          action: 'export_asset'
+        };
+      }
+      
+      // Execute via C++ automation bridge
+      const res = await executeAutomationRequest(
+        tools, 
+        'system_control', 
+        { action: 'export_asset', assetPath, exportPath },
+        'Export functionality not available - ensure editor is running'
+      ) as OperationResponse;
+      
+      if (res && res.success) {
+        return cleanObject({
+          success: true,
+          message: `Asset exported to ${exportPath}`,
+          action: 'export_asset',
+          assetPath,
+          exportPath,
+          ...res
+        });
+      }
+      
+      // C++ returned an error
+      return cleanObject({
+        success: false,
+        error: res?.error || 'EXPORT_FAILED',
+        message: res?.message || 'Export operation failed',
+        action: 'export_asset',
+        assetPath,
+        exportPath
+      });
+    }
     default: {
       const res = await executeAutomationRequest(tools, 'system_control', args, 'Automation bridge not available for system control operations');
       return cleanObject(res) as Record<string, unknown>;

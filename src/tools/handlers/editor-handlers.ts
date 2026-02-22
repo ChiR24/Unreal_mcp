@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
+import { executeAutomationRequest, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
 
 /**
  * Action aliases for test compatibility
@@ -27,15 +27,136 @@ const EDITOR_ACTION_ALIASES: Record<string, string> = {
 };
 
 /**
+ * Idempotent actions that accept success even with invalid/missing params.
+ * These are global commands that have sensible defaults or no-ops.
+ * NOTE: Include both original and normalized action names for proper validation.
+ */
+const IDEMPOTENT_ACTIONS = new Set([
+  'stop', 'stop_pie', 'pause', 'resume', 
+  'set_game_speed', 'set_fixed_delta_time', 
+  'set_immersive_mode', 'set_game_view', 
+  'show_stats', 'hide_stats', 
+  'undo', 'redo', 
+  'step_frame', 'single_frame_step'
+]);
+
+/**
+ * Actions that require specific parameters.
+ * Maps action name to array of required parameter names.
+ * NOTE: Includes both original and normalized action names for proper validation.
+ */
+const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
+  'open_asset': ['assetPath'],
+  'close_asset': ['assetPath'],
+  'open_level': ['levelPath'],
+  'focus_actor': ['actorName'],
+  'focus': ['actorName'],  // Normalized alias for focus_actor
+  'possess': ['actorName'],
+  'set_camera': ['location', 'rotation'],
+  'set_viewport_resolution': ['width', 'height'],
+  'set_view_mode': ['viewMode'],
+  'set_editor_mode': ['mode'],
+  'set_camera_fov': ['fov'],
+  'set_game_speed': ['speed'],
+  'set_fixed_delta_time': ['deltaTime'],
+  'screenshot': ['filename'],
+  'set_preferences': ['category', 'preferences'],
+  'execute_command': ['command'],
+  'console_command': ['command'],
+};
+
+/**
+ * Actions that have specific allowed parameters.
+ * Maps action name to array of allowed parameter names (excluding action/subAction/timeoutMs).
+ * NOTE: Includes both original and normalized action names for proper validation.
+ */
+const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
+  'play': [],
+  'stop': [],
+  'stop_pie': [],
+  'pause': [],
+  'resume': [],
+  'eject': [],
+  'possess': ['actorName'],
+  'open_asset': ['assetPath', 'path'],
+  'close_asset': ['assetPath', 'path'],
+  'open_level': ['levelPath', 'path', 'assetPath'],
+  'focus_actor': ['actorName', 'name'],
+  'focus': ['actorName', 'name'],  // Normalized alias for focus_actor
+  'set_camera': ['location', 'rotation', 'actorName'],
+  'set_viewport_resolution': ['width', 'height'],
+  'set_view_mode': ['viewMode'],
+  'set_editor_mode': ['mode'],
+  'set_camera_fov': ['fov'],
+  'set_game_speed': ['speed'],
+  'set_fixed_delta_time': ['deltaTime'],
+  'screenshot': ['filename', 'resolution'],
+  'set_preferences': ['category', 'preferences', 'section', 'key', 'value'],
+  'execute_command': ['command'],
+  'console_command': ['command'],
+  'undo': [],
+  'redo': [],
+  'save_all': [],
+  'show_stats': ['stat'],
+  'hide_stats': ['stat'],
+  'set_game_view': ['enabled'],
+  'set_immersive_mode': ['enabled'],
+  'step_frame': ['steps'],
+  'single_frame_step': ['steps'],
+  'create_bookmark': ['id', 'description', 'bookmarkName'],
+  'jump_to_bookmark': ['id', 'bookmarkName'],
+  'start_recording': ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],
+  'stop_recording': [],
+  'set_viewport_realtime': ['enabled', 'realtime'],
+  'simulate_input': ['key', 'action', 'inputAction', 'axis', 'value'],
+};
+
+/**
  * Normalize editor action names for test compatibility
  */
 function normalizeEditorAction(action: string): string {
   return EDITOR_ACTION_ALIASES[action] ?? action;
 }
 
+/**
+ * Validates arguments for editor actions.
+ * For non-idempotent actions, validates that only expected parameters are present.
+ * Always validates security patterns (path traversal, etc).
+ */
+function validateEditorActionArgs(
+  action: string,
+  args: Record<string, unknown>
+): void {
+  // Always validate security patterns first
+  validateArgsSecurity({ action, ...args } as Record<string, unknown>);
+  
+  // Validate required parameters FIRST (applies to ALL actions including idempotent)
+  // This ensures required param validation is not skipped for idempotent actions
+  const requiredParams = ACTION_REQUIRED_PARAMS[action];
+  if (requiredParams !== undefined) {
+    validateRequiredParams(args, requiredParams, `control_editor:${action}`);
+  }
+  
+  // Idempotent actions skip allowed params validation (they accept extras gracefully)
+  // But they still require their required params to be present (validated above)
+  if (IDEMPOTENT_ACTIONS.has(action)) {
+    return;
+  }
+  
+  // Validate that only expected parameters are present for non-idempotent actions
+  const allowedParams = ACTION_ALLOWED_PARAMS[action];
+  if (allowedParams !== undefined) {
+    validateExpectedParams(args, allowedParams, `control_editor:${action}`);
+  }
+}
+
 export async function handleEditorTools(action: string, args: EditorArgs, tools: ITools) {
   // Normalize action name for test compatibility
   const normalizedAction = normalizeEditorAction(action);
+  
+  // Validate arguments for this action
+  const argsRecord = args as Record<string, unknown>;
+  validateEditorActionArgs(normalizedAction, argsRecord);
   
   switch (normalizedAction) {
     case 'play': {
@@ -48,17 +169,17 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'eject': {
-      const inPie = await tools.editorTools.isInPIE();
-      if (!inPie) {
-        throw new Error('Cannot eject while not in PIE');
-      }
+      // CRITICAL FIX: Removed redundant isInPIE() check that caused race condition.
+      // PIE state is now validated atomically in the C++ handler (HandleControlEditorEject)
+      // which checks GEditor->PlayWorld directly before executing the eject command.
+      // This prevents the race where PIE stops between TS check and C++ execution.
       return await executeAutomationRequest(tools, 'control_editor', { action: 'eject' });
     }
     case 'possess': {
-      const inPie = await tools.editorTools.isInPIE();
-      if (!inPie) {
-        throw new Error('Cannot possess actor while not in PIE');
-      }
+      // CRITICAL FIX: Removed redundant isInPIE() check that caused race condition.
+      // PIE state is now validated atomically in the C++ handler (HandleControlEditorPossess)
+      // which checks GEditor->PlayWorld directly before executing the possess command.
+      // This prevents the race where PIE stops between TS check and C++ execution.
       return await executeAutomationRequest(tools, 'control_editor', args);
     }
     case 'pause': {
@@ -236,8 +357,43 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { success: true, message: `Fixed delta time set to ${deltaTime}`, action: 'set_fixed_delta_time' };
     }
     case 'open_level': {
-      const levelPath = requireNonEmptyString(args.levelPath || args.path, 'levelPath');
+      // Accept 'assetPath' as alias since users commonly think of level paths as asset paths
+      const levelPath = requireNonEmptyString(args.levelPath || args.path || args.assetPath, 'levelPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_level', levelPath });
+      return cleanObject(res);
+    }
+    case 'simulate_input': {
+      // CRITICAL: Validation runs in validateEditorActionArgs before reaching here.
+      // Allowed params are defined in ACTION_ALLOWED_PARAMS: ['key', 'action', 'axis', 'value']
+      // This ensures unknown params like 'invalidExtraParam' are rejected.
+      
+      // CRITICAL FIX: Read from 'inputAction' field to avoid conflict with routing 'action' field.
+      // The test generator spreads {...b, action:a} where a='simulate_input', which overwrites
+      // any 'action' field in b. So tests must use 'inputAction' for the input type.
+      // C++ handler also accepts 'inputAction' as an alternative to 'type'.
+      const inputActionValue = args.inputAction ?? args.action ?? '';
+      const inputType = typeof inputActionValue === 'string' ? inputActionValue.toLowerCase() : '';
+      let mappedType = inputType;
+      
+      // Map action values to C++ expected type values
+      if (inputType === 'pressed' || inputType === 'down') {
+        mappedType = 'key_down';
+      } else if (inputType === 'released' || inputType === 'up') {
+        mappedType = 'key_up';
+      } else if (inputType === 'click') {
+        mappedType = 'mouse_click';
+      } else if (inputType === 'move') {
+        mappedType = 'mouse_move';
+      }
+      // If inputType already matches expected values (key_down, key_up, mouse_click, mouse_move), keep it
+      
+      const res = await executeAutomationRequest(tools, 'control_editor', { 
+        action: 'simulate_input',
+        type: mappedType,
+        key: args.key,
+        axis: args.axis,
+        value: args.value
+      });
       return cleanObject(res);
     }
     case 'focus':
