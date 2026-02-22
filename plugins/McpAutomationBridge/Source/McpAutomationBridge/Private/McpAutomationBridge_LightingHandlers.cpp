@@ -592,6 +592,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     
     // If no exact match, keep first and destroy rest
     for (AActor *SkyLight : SkyLights) {
+      // Skip the actor we want to keep
+      if (SkyLight == KeptActor) {
+        continue;
+      }
       if (!KeptActor) {
         KeptActor = SkyLight;
         if (!TargetName.IsEmpty())

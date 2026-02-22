@@ -343,6 +343,16 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
         return true;
       }
 
+      // SECURITY: Sanitize LevelPath to prevent path traversal attacks
+      FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
+      if (SanitizedLevelPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Invalid levelPath: contains path traversal (..) or invalid characters"),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+      LevelPath = SanitizedLevelPath;
+
       // Auto-resolve short names
       if (!LevelPath.StartsWith(TEXT("/")) && !FPaths::FileExists(LevelPath)) {
         FString TryPath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);
