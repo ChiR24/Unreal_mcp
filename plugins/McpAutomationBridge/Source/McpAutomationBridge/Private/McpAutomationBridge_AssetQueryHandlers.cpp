@@ -82,9 +82,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     }
 
     // Optional path filter to narrow search scope
+    FString RawPath;
+    Payload->TryGetStringField(TEXT("path"), RawPath);
+    
+    // SECURITY: Validate and sanitize the path to prevent directory traversal
     FString Path;
-    Payload->TryGetStringField(TEXT("path"), Path);
-    if (Path.IsEmpty()) {
+    if (!RawPath.IsEmpty()) {
+      Path = SanitizeProjectRelativePath(RawPath);
+      if (Path.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *RawPath),
+            TEXT("INVALID_PATH"));
+        return true;
+      }
+    } else {
       Path = TEXT("/Game"); // Default search path
     }
 
@@ -262,11 +273,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     }
 
     // Parse Package Paths
+    // SECURITY: Validate each path to prevent directory traversal
     const TArray<TSharedPtr<FJsonValue>> *PackagePathsPtr;
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
         PackagePathsPtr) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
-        Filter.PackagePaths.Add(FName(*Val->AsString()));
+        FString RawPath = Val->AsString();
+        FString SanitizedPath = SanitizeProjectRelativePath(RawPath);
+        if (SanitizedPath.IsEmpty()) {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Invalid package path '%s': contains traversal sequences or invalid root"), *RawPath),
+              TEXT("INVALID_PATH"));
+          return true;
+        }
+        Filter.PackagePaths.Add(FName(*SanitizedPath));
       }
     }
 

@@ -418,8 +418,35 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
     case 'set_pin_default_value': {
       // Normalize blueprintPath to assetPath for C++ handler compatibility
       const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
+      
+      // Map TypeScript parameter names to C++ expected names
+      // C++ expects: nodeId, fromNodeId, toNodeId, fromPinName, toPinName
+      // TS uses: nodeGuid, sourceNode, targetNode, sourcePin, targetPin
+      const mappedArgs: Record<string, unknown> = { ...args };
+      
+      // nodeGuid -> nodeId (for delete_node, break_pin_links, set_node_property, get_node_details, get_pin_details, set_pin_default_value)
+      if (argsRecord.nodeGuid !== undefined) {
+        mappedArgs.nodeId = argsRecord.nodeGuid;
+      }
+      
+      // sourceNode -> fromNodeId, targetNode -> toNodeId (for connect_pins)
+      if (argsRecord.sourceNode !== undefined) {
+        mappedArgs.fromNodeId = argsRecord.sourceNode;
+      }
+      if (argsRecord.targetNode !== undefined) {
+        mappedArgs.toNodeId = argsRecord.targetNode;
+      }
+      
+      // sourcePin -> fromPinName, targetPin -> toPinName (for connect_pins)
+      if (argsRecord.sourcePin !== undefined) {
+        mappedArgs.fromPinName = argsRecord.sourcePin;
+      }
+      if (argsRecord.targetPin !== undefined) {
+        mappedArgs.toPinName = argsRecord.targetPin;
+      }
+      
       const processedArgs = {
-        ...args,
+        ...mappedArgs,
         subAction: action,
         // Ensure both blueprintPath and assetPath are set for C++ compatibility
         blueprintPath,

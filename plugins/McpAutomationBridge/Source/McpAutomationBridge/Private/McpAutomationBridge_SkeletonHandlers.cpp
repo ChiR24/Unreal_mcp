@@ -96,6 +96,15 @@ static USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString&
         return nullptr;
     }
 
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(SkeletonPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid skeleton path '%s': contains traversal sequences"), *SkeletonPath);
+        return nullptr;
+    }
+
     UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SkeletonPath);
     if (!Asset)
     {
@@ -125,6 +134,15 @@ static USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FStr
         return nullptr;
     }
 
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(MeshPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid skeletal mesh path '%s': contains traversal sequences"), *MeshPath);
+        return nullptr;
+    }
+
     UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshPath);
     if (!Asset)
     {
@@ -151,6 +169,15 @@ static UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FStri
     if (PhysicsPath.IsEmpty())
     {
         OutError = TEXT("Physics asset path is required");
+        return nullptr;
+    }
+
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences"), *PhysicsPath);
         return nullptr;
     }
 
@@ -919,7 +946,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
 
     // CRITICAL: Validate bone exists in the skeleton before creating physics body
     // This prevents creating physics bodies for non-existent bones (fixes suspicious passes)
-    USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewSkeletalMesh();
+    USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewMesh();
     if (PreviewMesh)
     {
         USkeleton* Skeleton = PreviewMesh->GetSkeleton();
@@ -1597,8 +1624,26 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
     
+    // Set BaseSkelMesh - required for HasValidData() to work properly
+    NewMorphTarget->BaseSkelMesh = Mesh;
+    
     // Register with mesh
     Mesh->RegisterMorphTarget(NewMorphTarget);
+    
+    // CRITICAL: UE 5.7 requires morph targets to have valid delta data
+    // An empty morph target will trigger: "Ensure condition failed: MorphTarget->HasValidData()"
+    // We must validate before returning success to prevent false positives
+    if (!NewMorphTarget->HasValidData())
+    {
+        // Remove the invalid morph target we just created
+        Mesh->UnregisterMorphTarget(NewMorphTarget);
+        
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' created but has no valid data. Use create_morph_target with 'deltas' parameter or call set_morph_target_deltas to add vertex deltas."), *MorphTargetName),
+            TEXT("EMPTY_MORPH_TARGET"));
+        return true;
+    }
+    
     McpSafeAssetSave(Mesh);
 
     // Save if requested
@@ -1613,7 +1658,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     Result->SetNumberField(TEXT("morphTargetCount"), Mesh->GetMorphTargets().Num());
 
     SendAutomationResponse(RequestingSocket, RequestId, true, 
-        FString::Printf(TEXT("Morph target '%s' created"), *MorphTargetName), Result);
+        FString::Printf(TEXT("Morph target '%s' created with valid data"), *MorphTargetName), Result);
     return true;
 }
 

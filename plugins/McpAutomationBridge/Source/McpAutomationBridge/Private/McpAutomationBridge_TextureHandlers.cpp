@@ -691,9 +691,14 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create normal map texture"));
         }
         
+        // CRITICAL: Use PreEditChange/PostEditChange lifecycle for texture property modifications
+        // This prevents TextureCompiler fatal error when setting CompressionSettings
+        NormalMap->PreEditChange(nullptr);
         // Set normal map properties
         NormalMap->SRGB = false;
         NormalMap->CompressionSettings = TC_Normalmap;
+        NormalMap->PostEditChange();
+        NormalMap->UpdateResource();
         
         // Read height data with proper luminance or channel selection
         TArray<float> HeightData;
@@ -1826,7 +1831,29 @@ Response->SetBoolField(TEXT("success"), true);
     
     if (SubAction == TEXT("blur"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        // Validate that no unknown/invalid parameters are present
+        TSet<FString> ValidParams = {
+            TEXT("subAction"), TEXT("assetPath"), TEXT("radius"), TEXT("blurType"),
+            TEXT("outputPath"), TEXT("save")
+        };
+        for (const auto& Field : Params->Values)
+        {
+            if (!ValidParams.Contains(Field.Key))
+            {
+                TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid parameter: %s"), *Field.Key));
+            }
+        }
+
+        FString AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
+        
+        // SECURITY: Validate assetPath
+        FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
+        if (SanitizedAssetPath.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid assetPath: contains traversal or invalid characters"));
+        }
+        AssetPath = SanitizedAssetPath;
+        
         int32 Radius = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("radius"), 2));
         bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
@@ -1841,6 +1868,18 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
+        // CRITICAL: Check source validity before locking
+        if (!Texture->Source.IsValid())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Texture has no source data - may be compressed or not fully loaded"));
+        }
+        
+        // Force mips resident if texture uses streaming
+        if (Texture->IsStreamable())
+        {
+            Texture->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
         int32 Width = Texture->GetSizeX();
         int32 Height = Texture->GetSizeY();
         Radius = FMath::Clamp(Radius, 1, 10);
@@ -1848,7 +1887,7 @@ Response->SetBoolField(TEXT("success"), true);
         uint8* MipData = Texture->Source.LockMip(0);
         if (!MipData)
         {
-            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data"));
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data - texture may be compressed or streaming"));
         }
         
         // Create copy of original data
@@ -1905,9 +1944,17 @@ Response->SetBoolField(TEXT("success"), true);
     
     if (SubAction == TEXT("sharpen"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+        FString AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
         float Amount = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("amount"), 1.0));
         bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+        
+        // SECURITY: Validate and sanitize path
+        FString SanitizedPath = SanitizeProjectRelativePath(AssetPath);
+        if (SanitizedPath.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid assetPath: contains traversal or invalid characters"));
+        }
+        AssetPath = SanitizedPath;
         
         if (AssetPath.IsEmpty())
         {
@@ -1920,6 +1967,18 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
+        // CRITICAL: Check source validity before locking
+        if (!Texture->Source.IsValid())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Texture has no source data - may be compressed or not fully loaded"));
+        }
+        
+        // Force mips resident if texture uses streaming
+        if (Texture->IsStreamable())
+        {
+            Texture->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
         int32 Width = Texture->GetSizeX();
         int32 Height = Texture->GetSizeY();
         Amount = FMath::Clamp(Amount, 0.0f, 5.0f);
@@ -1927,7 +1986,7 @@ Response->SetBoolField(TEXT("success"), true);
         uint8* MipData = Texture->Source.LockMip(0);
         if (!MipData)
         {
-            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data"));
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data - texture may be compressed or streaming"));
         }
         
         // Create copy of original data

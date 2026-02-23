@@ -1625,6 +1625,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
 
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterialFunction *Func =
         LoadObject<UMaterialFunction>(nullptr, *AssetPath);
     if (!Func) {
@@ -1896,6 +1906,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     }
     Payload->TryGetNumberField(TEXT("value"), Value);
 
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
     if (!Instance) {
@@ -1943,6 +1963,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
@@ -2006,6 +2036,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
