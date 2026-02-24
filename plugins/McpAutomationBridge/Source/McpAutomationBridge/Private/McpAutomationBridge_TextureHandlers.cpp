@@ -1472,7 +1472,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SourceTexture->Source.UnlockMip(0);
+            SrcMip.BulkData.Unlock();
         }
         
         // Invert selected channels
@@ -1591,7 +1591,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SourceTexture->Source.UnlockMip(0);
+            SrcMip.BulkData.Unlock();
         }
         
         Amount = FMath::Clamp(Amount, 0.0f, 1.0f);
@@ -2341,7 +2341,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SourceTexture->Source.UnlockMip(0);
+            SrcMip.BulkData.Unlock();
         }
         
         // Apply LUT to each pixel (BGRA format: B=0, G=1, R=2, A=3)
@@ -2782,6 +2782,28 @@ Response->SetBoolField(TEXT("success"), true);
         {
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
         }
+        
+        // SECURITY: Sanitize paths to prevent traversal attacks
+        FString SanitizedMeshPath = SanitizeProjectRelativePath(MeshPath);
+        if (SanitizedMeshPath.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid meshPath: contains traversal sequences or invalid characters"));
+        }
+        MeshPath = SanitizedMeshPath;
+        
+        FString SanitizedPath = SanitizeProjectRelativePath(Path);
+        if (SanitizedPath.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal sequences or invalid characters"));
+        }
+        Path = SanitizedPath;
+        
+        FString SanitizedName = SanitizeAssetName(Name);
+        if (SanitizedName.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid name: contains invalid characters"));
+        }
+        Name = SanitizedName;
         
         // Validate mesh exists
         UStaticMesh* SourceMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath));

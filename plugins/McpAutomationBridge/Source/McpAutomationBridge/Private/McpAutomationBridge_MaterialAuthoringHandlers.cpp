@@ -2137,17 +2137,8 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     }
     Path = ValidatedPath;
 
-    // Validate mount point
-    FString PackagePath = Path / Name;
-    if (!FPackageName::IsValidLongPackageName(PackagePath)) {
-      SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid package path: %s"), *PackagePath),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-
     // Check for existing asset collision (different class)
-    FString FullAssetPath = PackagePath + TEXT(".") + Name;
+    FString FullAssetPath = Path + TEXT(".") + Name;
     if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
       SendAutomationError(Socket, RequestId,
                           FString::Printf(TEXT("Asset already exists at path: %s"), *FullAssetPath),
@@ -2157,7 +2148,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
 
     // Create material using factory
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*Path);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));

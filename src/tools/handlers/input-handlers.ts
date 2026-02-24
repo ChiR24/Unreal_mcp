@@ -46,17 +46,29 @@ function validateNoExtraParams(action: string, args: Record<string, unknown>): {
 }
 
 /** Validate and sanitize path parameters */
-function validateAndSanitizePaths(paths: Record<string, unknown>): { valid: boolean; sanitized: Record<string, string>; error?: string } {
+function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: string[] = []): { valid: boolean; sanitized: Record<string, string>; error?: string } {
     const sanitized: Record<string, string> = {};
     
     for (const [key, value] of Object.entries(paths)) {
-        if (value === undefined || value === null) continue;
+        if (value === undefined || value === null) {
+            // If this is a required key, missing value is an error
+            if (requiredKeys.includes(key)) {
+                return { valid: false, sanitized: {}, error: `${key} is required and must be provided` };
+            }
+            continue;
+        }
         
         if (typeof value !== 'string') {
             return { valid: false, sanitized: {}, error: `${key} must be a string` };
         }
         
-        if (value.length === 0) continue;
+        if (value.length === 0) {
+            // If this is a required key, empty string is an error
+            if (requiredKeys.includes(key)) {
+                return { valid: false, sanitized: {}, error: `${key} must be a non-empty string` };
+            }
+            continue;
+        }
         
         try {
             sanitized[key] = sanitizePath(value);
@@ -123,7 +135,7 @@ export async function handleInputTools(
       if (argsRecord.path !== undefined) pathParams.path = argsRecord.path;
       if (argsRecord.assetPath !== undefined) pathParams.assetPath = argsRecord.assetPath;
       
-      const pathValidation = validateAndSanitizePaths(pathParams);
+      const pathValidation = validateAndSanitizePaths(pathParams, requiredPaths);
       if (!pathValidation.valid) {
           return ResponseFactory.error(pathValidation.error || 'Invalid path');
       }
@@ -149,7 +161,7 @@ export async function handleInputTools(
     switch (action) {
         case 'create_input_action': {
             // Validate path parameter
-            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path });
+            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path }, ['path']);
             if (!pathValidation.valid) {
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }
@@ -158,7 +170,7 @@ export async function handleInputTools(
         }
         case 'create_input_mapping_context': {
             // Validate path parameter
-            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path });
+            const pathValidation = validateAndSanitizePaths({ path: argsTyped.path }, ['path']);
             if (!pathValidation.valid) {
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }
@@ -170,7 +182,7 @@ export async function handleInputTools(
             const pathValidation = validateAndSanitizePaths({ 
                 contextPath: argsTyped.contextPath, 
                 actionPath: argsTyped.actionPath 
-            });
+            }, ['contextPath', 'actionPath']);
             if (!pathValidation.valid) {
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }
@@ -187,7 +199,7 @@ export async function handleInputTools(
             const pathValidation = validateAndSanitizePaths({ 
                 contextPath: argsTyped.contextPath, 
                 actionPath: argsTyped.actionPath 
-            });
+            }, ['contextPath', 'actionPath']);
             if (!pathValidation.valid) {
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }

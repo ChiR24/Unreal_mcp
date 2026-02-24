@@ -105,7 +105,7 @@ static USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString&
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SkeletonPath);
+    UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load skeleton: %s"), *SkeletonPath);
@@ -143,7 +143,7 @@ static USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FStr
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshPath);
+    UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load skeletal mesh: %s"), *MeshPath);
@@ -181,7 +181,7 @@ static UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FStri
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsPath);
+    UObject* Asset = StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load physics asset: %s"), *PhysicsPath);

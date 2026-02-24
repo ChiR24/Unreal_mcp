@@ -86,25 +86,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
   // SECURITY: Validate any provided path even for actions that don't require a blueprint
   // This prevents false negatives in security tests where malicious paths should still be rejected
   {
-    FString PathToValidate;
-    bool bPathTraversalDetected = false;
+    FString AssetPathParam;
+    FString BlueprintPathParam;
     
-    if (Payload->TryGetStringField(TEXT("assetPath"), PathToValidate) && !PathToValidate.IsEmpty()) {
-      if (PathToValidate.Contains(TEXT(".."))) {
-        bPathTraversalDetected = true;
+    if (Payload->TryGetStringField(TEXT("assetPath"), AssetPathParam) && !AssetPathParam.IsEmpty()) {
+      FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPathParam);
+      if (SanitizedAssetPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Invalid assetPath: contains traversal sequences or invalid characters."),
+                            TEXT("INVALID_PATH"));
+        return true;
       }
     }
-    if (!bPathTraversalDetected && Payload->TryGetStringField(TEXT("blueprintPath"), PathToValidate) && !PathToValidate.IsEmpty()) {
-      if (PathToValidate.Contains(TEXT(".."))) {
-        bPathTraversalDetected = true;
-      }
-    }
     
-    if (bPathTraversalDetected) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Path traversal detected in blueprint/asset path."),
-                          TEXT("SECURITY_VIOLATION"));
-      return true;
+    if (Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPathParam) && !BlueprintPathParam.IsEmpty()) {
+      FString SanitizedBlueprintPath = SanitizeProjectRelativePath(BlueprintPathParam);
+      if (SanitizedBlueprintPath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Invalid blueprintPath: contains traversal sequences or invalid characters."),
+                            TEXT("INVALID_PATH"));
+        return true;
+      }
     }
   }
 
@@ -144,6 +146,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       AssetPath = BlueprintPath;
     }
   }
+  
+  // SECURITY: Sanitize the path before loading
+  FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
+  if (SanitizedAssetPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid asset path: contains traversal sequences or invalid characters."),
+                        TEXT("INVALID_PATH"));
+    return true;
+  }
+  AssetPath = SanitizedAssetPath;
 
   if (AssetPath.IsEmpty()) {
     SendAutomationError(
