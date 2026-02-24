@@ -84,9 +84,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     }
 
     // Optional path filter to narrow search scope - DEFAULT to /Game
+    FString RawPath;
+    Payload->TryGetStringField(TEXT("path"), RawPath);
+    
+    // SECURITY: Validate and sanitize the path to prevent directory traversal attacks
     FString Path;
-    Payload->TryGetStringField(TEXT("path"), Path);
-    if (Path.IsEmpty()) {
+    if (!RawPath.IsEmpty()) {
+      Path = SanitizeProjectRelativePath(RawPath);
+      if (Path.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *RawPath),
+            TEXT("INVALID_PATH"));
+        return true;
+      }
+    } else {
       Path = TEXT("/Game"); // Default search path
     }
     
@@ -288,18 +299,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
     if (Payload->TryGetArrayField(TEXT("packagePaths"), PackagePathsPtr) &&
         PackagePathsPtr && PackagePathsPtr->Num() > 0) {
       for (const TSharedPtr<FJsonValue> &Val : *PackagePathsPtr) {
-        FString PathValue = Val->AsString();
+        FString RawPath = Val->AsString();
         // SECURITY: Sanitize path to prevent traversal attacks
-        FString SanitizedPath = SanitizeProjectRelativePath(PathValue);
+        FString SanitizedPath = SanitizeProjectRelativePath(RawPath);
         if (SanitizedPath.IsEmpty()) {
           SendAutomationError(RequestingSocket, RequestId,
-              FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *PathValue),
-              TEXT("SECURITY_VIOLATION"));
+              FString::Printf(TEXT("Invalid package path '%s': contains traversal sequences or invalid root"), *RawPath),
+              TEXT("INVALID_PATH"));
           return true;
         }
         Filter.PackagePaths.Add(FName(*SanitizedPath));
         bHasValidPaths = true;
-      }
     }
     
     // Also check for 'path' (singular) string field - common alternative to array

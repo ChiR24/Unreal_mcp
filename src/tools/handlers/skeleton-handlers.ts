@@ -53,6 +53,12 @@ function normalizeSkeletonArgs(action: string, args: HandlerArgs): Record<string
   const canonicalAction = actionAliases[action] ?? action;
   const normalized: Record<string, unknown> = { ...args, subAction: canonicalAction };
 
+  // Normalize parameter name aliases for C++ handlers
+  // C++ expects 'parentBone' but tests may use 'parentBoneName'
+  if (args.parentBoneName && !args.parentBone) {
+    normalized.parentBone = args.parentBoneName;
+  }
+
   // Normalize location/position parameters
   if (args.location) {
     normalized.location = normalizeLocation(args.location);

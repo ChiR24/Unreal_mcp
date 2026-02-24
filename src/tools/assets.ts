@@ -111,7 +111,6 @@ export class AssetTools extends BaseTool implements IAssetTools {
     return this.sendRequest<AssetResponse>('manage_asset', {
       paths: normalizedPaths,
       assetPaths: normalizedPaths,  // Keep for backward compatibility
-      fixupRedirectors: params.fixupRedirectors,
       subAction: 'delete'
     }, 'manage_asset', { timeoutMs: params.timeoutMs || EXTENDED_ASSET_OP_TIMEOUT_MS });
   }

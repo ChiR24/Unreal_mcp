@@ -96,7 +96,16 @@ static USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString&
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SkeletonPath);
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(SkeletonPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid skeleton path '%s': contains traversal sequences"), *SkeletonPath);
+        return nullptr;
+    }
+
+    UObject* Asset = StaticLoadObject(USkeleton::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load skeleton: %s"), *SkeletonPath);
@@ -125,7 +134,16 @@ static USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FStr
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *MeshPath);
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(MeshPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid skeletal mesh path '%s': contains traversal sequences"), *MeshPath);
+        return nullptr;
+    }
+
+    UObject* Asset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load skeletal mesh: %s"), *MeshPath);
@@ -154,7 +172,16 @@ static UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FStri
         return nullptr;
     }
 
-    UObject* Asset = StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsPath);
+
+    // Validate path security before loading
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences"), *PhysicsPath);
+        return nullptr;
+    }
+
+    UObject* Asset = StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *SanitizedPath);
     if (!Asset)
     {
         OutError = FString::Printf(TEXT("Failed to load physics asset: %s"), *PhysicsPath);
@@ -898,12 +925,43 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
         return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
+
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysicsAsset)
     {
         SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
         return true;
+    }
+
+    // CRITICAL: Validate bone exists in the skeleton before creating physics body
+    // This prevents creating physics bodies for non-existent bones (fixes suspicious passes)
+    USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewMesh();
+    if (PreviewMesh)
+    {
+        USkeleton* Skeleton = PreviewMesh->GetSkeleton();
+        if (Skeleton)
+        {
+            const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+            int32 BoneIndex = RefSkeleton.FindBoneIndex(FName(*BoneName));
+            if (BoneIndex == INDEX_NONE)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Bone '%s' does not exist in skeleton"), *BoneName),
+                    TEXT("BONE_NOT_FOUND"));
+                return true;
+            }
+        }
     }
 
     // Find existing body or create new one
@@ -1029,6 +1087,17 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
         return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
+
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysicsAsset)
@@ -1127,6 +1196,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required"), TEXT("MISSING_PARAM"));
         return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -1237,6 +1317,17 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required to identify constraint"), TEXT("MISSING_PARAM"));
         return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
+    if (SanitizedPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
+            TEXT("INVALID_PATH"));
+        return true;
+    }
+    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -1525,6 +1616,71 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
+    // CRITICAL FIX: UE 5.7 requires morph targets to have valid delta data BEFORE registration.
+    // RegisterMorphTarget() internally checks HasValidData() and fires an ensure() for empty morphs.
+    // We must either:
+    // 1. Provide deltas and populate them BEFORE registering, OR
+    // 2. Return EMPTY_MORPH_TARGET error immediately without creating the morph target
+    
+    // Check if deltas parameter is provided
+    const TArray<TSharedPtr<FJsonValue>>* DeltasArray = nullptr;
+    bool bHasDeltas = Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) && DeltasArray && DeltasArray->Num() > 0;
+    
+    if (!bHasDeltas)
+    {
+        // No deltas provided - cannot create a valid morph target in UE 5.7+
+        // Return error WITHOUT creating/registering to avoid engine ensure failure
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' requires vertex deltas. Provide 'deltas' array with vertex indices and position offsets. Example: {\"deltas\": [{\"vertexIndex\": 0, \"positionDelta\": {\"x\": 1, \"y\": 0, \"z\": 0}}]}"), *MorphTargetName),
+            TEXT("EMPTY_MORPH_TARGET"));
+        return true;
+    }
+    
+    // Parse deltas array
+    TArray<FMorphTargetDelta> Deltas;
+    for (const TSharedPtr<FJsonValue>& DeltaValue : *DeltasArray)
+    {
+        const TSharedPtr<FJsonObject>* DeltaObj = nullptr;
+        if (DeltaValue->TryGetObject(DeltaObj) && DeltaObj && DeltaObj->IsValid())
+        {
+            FMorphTargetDelta Delta;
+            
+            double VertexIndex = 0;
+            (*DeltaObj)->TryGetNumberField(TEXT("vertexIndex"), VertexIndex);
+            Delta.SourceIdx = static_cast<uint32>(VertexIndex);
+
+            const TSharedPtr<FJsonObject>* PositionDelta = nullptr;
+            if ((*DeltaObj)->TryGetObjectField(TEXT("positionDelta"), PositionDelta) && PositionDelta && PositionDelta->IsValid())
+            {
+                double X = 0, Y = 0, Z = 0;
+                (*PositionDelta)->TryGetNumberField(TEXT("x"), X);
+                (*PositionDelta)->TryGetNumberField(TEXT("y"), Y);
+                (*PositionDelta)->TryGetNumberField(TEXT("z"), Z);
+                Delta.PositionDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
+            }
+
+            const TSharedPtr<FJsonObject>* TangentDelta = nullptr;
+            if ((*DeltaObj)->TryGetObjectField(TEXT("tangentDelta"), TangentDelta) && TangentDelta && TangentDelta->IsValid())
+            {
+                double X = 0, Y = 0, Z = 0;
+                (*TangentDelta)->TryGetNumberField(TEXT("x"), X);
+                (*TangentDelta)->TryGetNumberField(TEXT("y"), Y);
+                (*TangentDelta)->TryGetNumberField(TEXT("z"), Z);
+                Delta.TangentZDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
+            }
+
+            Deltas.Add(Delta);
+        }
+    }
+    
+    if (Deltas.Num() == 0)
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            TEXT("Deltas array was provided but contained no valid delta entries. Each delta must have vertexIndex and positionDelta."),
+            TEXT("INVALID_MORPH_DATA"));
+        return true;
+    }
+    
     // Create new morph target
     UMorphTarget* NewMorphTarget = NewObject<UMorphTarget>(Mesh, FName(*MorphTargetName));
     if (!NewMorphTarget)
@@ -1533,8 +1689,45 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
     
-    // Register with mesh
+    // Set BaseSkelMesh - required for HasValidData() to work properly
+    NewMorphTarget->BaseSkelMesh = Mesh;
+    
+    // Get LOD index (default to 0)
+    int32 LODIndex = 0;
+    Payload->TryGetNumberField(TEXT("lodIndex"), LODIndex);
+    
+    // Populate deltas BEFORE registering - this is critical for UE 5.7+
+    // PopulateDeltas requires the sections array from the skeletal mesh LOD model
+#if WITH_EDITOR
+    const FSkeletalMeshModel* SkelMeshModel = Mesh->GetImportedModel();
+    TArray<FSkelMeshSection> Sections;
+    if (SkelMeshModel && SkelMeshModel->LODModels.IsValidIndex(LODIndex))
+    {
+        const FSkeletalMeshLODModel& LODModel = SkelMeshModel->LODModels[LODIndex];
+        Sections = LODModel.Sections;
+    }
+    
+    NewMorphTarget->PopulateDeltas(Deltas, LODIndex, Sections, false, false);
+#else
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Morph target creation with deltas requires editor"), TEXT("NOT_SUPPORTED"));
+    return true;
+#endif
+    
+    // NOW validate that we have valid data
+    if (!NewMorphTarget->HasValidData())
+    {
+        // This shouldn't happen if deltas were valid, but check anyway
+        NewMorphTarget->MarkAsGarbage();
+        
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' has no valid data after populating deltas. Check vertex indices are valid."), *MorphTargetName),
+            TEXT("INVALID_MORPH_DATA"));
+        return true;
+    }
+    
+    // Only register AFTER the morph target has valid data
     Mesh->RegisterMorphTarget(NewMorphTarget);
+    
     McpSafeAssetSave(Mesh);
 
     // Save if requested
@@ -1547,9 +1740,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("morphTargetCount"), Mesh->GetMorphTargets().Num());
+    Result->SetNumberField(TEXT("deltaCount"), Deltas.Num());
 
     SendAutomationResponse(RequestingSocket, RequestId, true, 
-        FString::Printf(TEXT("Morph target '%s' created"), *MorphTargetName), Result);
+        FString::Printf(TEXT("Morph target '%s' created with %d deltas"), *MorphTargetName, Deltas.Num()), Result);
     return true;
 }
 
@@ -1645,6 +1839,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Morph target manipulation requires editor"), TEXT("NOT_SUPPORTED"));
     return true;
 #endif
+
+
+    // Validate morph target has valid data after setting deltas
+    // This prevents returning success for morph targets that trigger Engine Ensures
+    if (!MorphTarget->HasValidData())
+    {
+        SendAutomationError(RequestingSocket, RequestId, 
+            FString::Printf(TEXT("Morph target '%s' has no valid data - deltas may be empty or invalid"), *MorphTargetName),
+            TEXT("INVALID_MORPH_DATA"));
+        return true;
+    }
 
     McpSafeAssetSave(Mesh);
 
@@ -3508,6 +3713,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("sourceMeshPath and targetMeshPath are required"), TEXT("MISSING_PARAM"));
             return true;
+        }
+        
+        // CRITICAL: Validate any extra path parameters for security and existence
+        // This prevents false negatives where unused parameters contain invalid paths
+        FString ExtraSkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        if (!ExtraSkeletalMeshPath.IsEmpty())
+        {
+            FString SanitizedExtraPath = SanitizeProjectRelativePath(ExtraSkeletalMeshPath);
+            if (SanitizedExtraPath.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Invalid skeletalMeshPath parameter '%s': contains traversal sequences or invalid characters"), *ExtraSkeletalMeshPath),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+            // Also verify the asset exists - this prevents false negatives when test provides invalid path
+            UObject* ExtraMeshAsset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *ExtraSkeletalMeshPath);
+            if (!ExtraMeshAsset)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("skeletalMeshPath parameter '%s' does not exist"), *ExtraSkeletalMeshPath),
+                    TEXT("MESH_NOT_FOUND"));
+                return true;
+            }
         }
         
         FString Error;

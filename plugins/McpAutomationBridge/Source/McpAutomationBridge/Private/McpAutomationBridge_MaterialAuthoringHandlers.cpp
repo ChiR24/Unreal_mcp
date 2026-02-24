@@ -187,6 +187,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    // Check for existing asset collision to prevent UE crash
+    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+      if (ExistingAsset) {
+        UClass* ExistingClass = ExistingAsset->GetClass();
+        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create Material with the same name."),
+                                            *FullAssetPath, *ExistingClassName),
+                            TEXT("ASSET_EXISTS"));
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists."),
+                                            *FullAssetPath),
+                            TEXT("ASSET_EXISTS"));
+      }
+      return true;
+    }
     // Create material using factory - use ValidatedPath, not original Path!
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
     UPackage *Package = CreatePackage(*ValidatedPath);
@@ -209,62 +228,110 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     // Set properties
     FString MaterialDomain;
     if (Payload->TryGetStringField(TEXT("materialDomain"), MaterialDomain)) {
-    if (MaterialDomain == TEXT("Surface"))
+      bool bValidMaterialDomain = false;
+      if (MaterialDomain == TEXT("Surface")) {
         NewMaterial->MaterialDomain = MD_Surface;
-      else if (MaterialDomain == TEXT("DeferredDecal"))
+        bValidMaterialDomain = true;
+      } else if (MaterialDomain == TEXT("DeferredDecal")) {
         NewMaterial->MaterialDomain = MD_DeferredDecal;
-      else if (MaterialDomain == TEXT("LightFunction"))
+        bValidMaterialDomain = true;
+      } else if (MaterialDomain == TEXT("LightFunction")) {
         NewMaterial->MaterialDomain = MD_LightFunction;
-      else if (MaterialDomain == TEXT("Volume"))
+        bValidMaterialDomain = true;
+      } else if (MaterialDomain == TEXT("Volume")) {
         NewMaterial->MaterialDomain = MD_Volume;
-      else if (MaterialDomain == TEXT("PostProcess"))
+        bValidMaterialDomain = true;
+      } else if (MaterialDomain == TEXT("PostProcess")) {
         NewMaterial->MaterialDomain = MD_PostProcess;
-      else if (MaterialDomain == TEXT("UI"))
+        bValidMaterialDomain = true;
+      } else if (MaterialDomain == TEXT("UI")) {
         NewMaterial->MaterialDomain = MD_UI;
+        bValidMaterialDomain = true;
+      }
+      if (!bValidMaterialDomain) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid materialDomain '%s'. Valid values: Surface, DeferredDecal, LightFunction, Volume, PostProcess, UI"), *MaterialDomain),
+                            TEXT("INVALID_ENUM"));
+        return true;
+      }
     }
 
     FString BlendMode;
     if (Payload->TryGetStringField(TEXT("blendMode"), BlendMode)) {
-      if (BlendMode == TEXT("Opaque"))
+      bool bValidBlendMode = false;
+      if (BlendMode == TEXT("Opaque")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_Opaque;
-      else if (BlendMode == TEXT("Masked"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("Masked")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_Masked;
-      else if (BlendMode == TEXT("Translucent"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("Translucent")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_Translucent;
-      else if (BlendMode == TEXT("Additive"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("Additive")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_Additive;
-      else if (BlendMode == TEXT("Modulate"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("Modulate")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_Modulate;
-      else if (BlendMode == TEXT("AlphaComposite"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("AlphaComposite")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_AlphaComposite;
-      else if (BlendMode == TEXT("AlphaHoldout"))
+        bValidBlendMode = true;
+      } else if (BlendMode == TEXT("AlphaHoldout")) {
         NewMaterial->BlendMode = EBlendMode::BLEND_AlphaHoldout;
+        bValidBlendMode = true;
+      }
+      if (!bValidBlendMode) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid blendMode '%s'. Valid values: Opaque, Masked, Translucent, Additive, Modulate, AlphaComposite, AlphaHoldout"), *BlendMode),
+                            TEXT("INVALID_ENUM"));
+        return true;
+      }
     }
 
     FString ShadingModel;
     if (Payload->TryGetStringField(TEXT("shadingModel"), ShadingModel)) {
-      if (ShadingModel == TEXT("Unlit"))
+      bool bValidShadingModel = false;
+      if (ShadingModel == TEXT("Unlit")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Unlit);
-      else if (ShadingModel == TEXT("DefaultLit"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("DefaultLit")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_DefaultLit);
-      else if (ShadingModel == TEXT("Subsurface"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("Subsurface")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Subsurface);
-      else if (ShadingModel == TEXT("SubsurfaceProfile"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("SubsurfaceProfile")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_SubsurfaceProfile);
-      else if (ShadingModel == TEXT("PreintegratedSkin"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("PreintegratedSkin")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_PreintegratedSkin);
-      else if (ShadingModel == TEXT("ClearCoat"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("ClearCoat")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_ClearCoat);
-      else if (ShadingModel == TEXT("Hair"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("Hair")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Hair);
-      else if (ShadingModel == TEXT("Cloth"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("Cloth")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Cloth);
-      else if (ShadingModel == TEXT("Eye"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("Eye")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Eye);
-      else if (ShadingModel == TEXT("TwoSidedFoliage"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("TwoSidedFoliage")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_TwoSidedFoliage);
-      else if (ShadingModel == TEXT("ThinTranslucent"))
+        bValidShadingModel = true;
+      } else if (ShadingModel == TEXT("ThinTranslucent")) {
         NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_ThinTranslucent);
+        bValidShadingModel = true;
+      }
+      if (!bValidShadingModel) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid shadingModel '%s'. Valid values: Unlit, DefaultLit, Subsurface, SubsurfaceProfile, PreintegratedSkin, ClearCoat, Hair, Cloth, Eye, TwoSidedFoliage, ThinTranslucent"), *ShadingModel),
+                            TEXT("INVALID_ENUM"));
+        return true;
+      }
     }
 
     bool bTwoSided = false;
@@ -309,6 +376,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
@@ -316,20 +393,37 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
-    if (BlendMode == TEXT("Opaque"))
+    bool bValidBlendMode = false;
+    if (BlendMode == TEXT("Opaque")) {
       Material->BlendMode = EBlendMode::BLEND_Opaque;
-    else if (BlendMode == TEXT("Masked"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("Masked")) {
       Material->BlendMode = EBlendMode::BLEND_Masked;
-    else if (BlendMode == TEXT("Translucent"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("Translucent")) {
       Material->BlendMode = EBlendMode::BLEND_Translucent;
-    else if (BlendMode == TEXT("Additive"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("Additive")) {
       Material->BlendMode = EBlendMode::BLEND_Additive;
-    else if (BlendMode == TEXT("Modulate"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("Modulate")) {
       Material->BlendMode = EBlendMode::BLEND_Modulate;
-    else if (BlendMode == TEXT("AlphaComposite"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("AlphaComposite")) {
       Material->BlendMode = EBlendMode::BLEND_AlphaComposite;
-    else if (BlendMode == TEXT("AlphaHoldout"))
+      bValidBlendMode = true;
+    } else if (BlendMode == TEXT("AlphaHoldout")) {
       Material->BlendMode = EBlendMode::BLEND_AlphaHoldout;
+      bValidBlendMode = true;
+    }
+
+    if (!bValidBlendMode) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid blendMode '%s'. Valid values: Opaque, Masked, Translucent, Additive, Modulate, AlphaComposite, AlphaHoldout"),
+                                          *BlendMode),
+                          TEXT("INVALID_ENUM"));
+      return true;
+    }
 
     Material->PostEditChange();
     Material->MarkPackageDirty();
@@ -365,6 +459,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
@@ -372,28 +476,49 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
-    if (ShadingModel == TEXT("Unlit"))
+    bool bValidShadingModel = false;
+    if (ShadingModel == TEXT("Unlit")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_Unlit);
-    else if (ShadingModel == TEXT("DefaultLit"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("DefaultLit")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_DefaultLit);
-    else if (ShadingModel == TEXT("Subsurface"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("Subsurface")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_Subsurface);
-    else if (ShadingModel == TEXT("SubsurfaceProfile"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("SubsurfaceProfile")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_SubsurfaceProfile);
-    else if (ShadingModel == TEXT("PreintegratedSkin"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("PreintegratedSkin")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_PreintegratedSkin);
-    else if (ShadingModel == TEXT("ClearCoat"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("ClearCoat")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_ClearCoat);
-    else if (ShadingModel == TEXT("Hair"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("Hair")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_Hair);
-    else if (ShadingModel == TEXT("Cloth"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("Cloth")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_Cloth);
-    else if (ShadingModel == TEXT("Eye"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("Eye")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_Eye);
-    else if (ShadingModel == TEXT("TwoSidedFoliage"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("TwoSidedFoliage")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_TwoSidedFoliage);
-    else if (ShadingModel == TEXT("ThinTranslucent"))
+      bValidShadingModel = true;
+    } else if (ShadingModel == TEXT("ThinTranslucent")) {
       Material->SetShadingModel(EMaterialShadingModel::MSM_ThinTranslucent);
+      bValidShadingModel = true;
+    }
+
+    if (!bValidShadingModel) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid shadingModel '%s'. Valid values: Unlit, DefaultLit, Subsurface, SubsurfaceProfile, PreintegratedSkin, ClearCoat, Hair, Cloth, Eye, TwoSidedFoliage, ThinTranslucent"),
+                                          *ShadingModel),
+                          TEXT("INVALID_ENUM"));
+      return true;
+    }
 
     Material->PostEditChange();
     Material->MarkPackageDirty();
@@ -429,6 +554,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
@@ -436,18 +571,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
-    if (Domain == TEXT("Surface"))
+    bool bValidDomain = false;
+    if (Domain == TEXT("Surface")) {
       Material->MaterialDomain = EMaterialDomain::MD_Surface;
-    else if (Domain == TEXT("DeferredDecal"))
+      bValidDomain = true;
+    } else if (Domain == TEXT("DeferredDecal")) {
       Material->MaterialDomain = EMaterialDomain::MD_DeferredDecal;
-    else if (Domain == TEXT("LightFunction"))
+      bValidDomain = true;
+    } else if (Domain == TEXT("LightFunction")) {
       Material->MaterialDomain = EMaterialDomain::MD_LightFunction;
-    else if (Domain == TEXT("Volume"))
+      bValidDomain = true;
+    } else if (Domain == TEXT("Volume")) {
       Material->MaterialDomain = EMaterialDomain::MD_Volume;
-    else if (Domain == TEXT("PostProcess"))
+      bValidDomain = true;
+    } else if (Domain == TEXT("PostProcess")) {
       Material->MaterialDomain = EMaterialDomain::MD_PostProcess;
-    else if (Domain == TEXT("UI"))
+      bValidDomain = true;
+    } else if (Domain == TEXT("UI")) {
       Material->MaterialDomain = EMaterialDomain::MD_UI;
+      bValidDomain = true;
+    }
+
+    if (!bValidDomain) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid materialDomain '%s'. Valid values: Surface, DeferredDecal, LightFunction, Volume, PostProcess, UI"),
+                                          *Domain),
+                          TEXT("INVALID_ENUM"));
+      return true;
+    }
 
     Material->PostEditChange();
     Material->MarkPackageDirty();
@@ -470,7 +621,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // 8.2 Material Expressions
   // ==========================================================================
 
-  // Helper macro for expression creation
+  // Helper macro for expression creation - validates path BEFORE loading
 #define LOAD_MATERIAL_OR_RETURN()                                              \
   FString AssetPath;                                                           \
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||             \
@@ -479,6 +630,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \
+  /* SECURITY: Validate path BEFORE loading asset */                           \
+  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
+  if (ValidatedAssetPath.IsEmpty()) {                                          \
+    SendAutomationError(Socket, RequestId,                                     \
+                        FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath), \
+                        TEXT("INVALID_PATH"));                                \
+    return true;                                                               \
+  }                                                                            \
+  AssetPath = ValidatedAssetPath;                                              \
   UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);            \
   if (!Material) {                                                             \
     SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),   \
@@ -500,6 +660,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     Payload->TryGetStringField(TEXT("parameterName"), ParameterName);
     Payload->TryGetStringField(TEXT("samplerType"), SamplerType);
 
+    // SECURITY: Validate texturePath if provided
+    if (!TexturePath.IsEmpty()) {
+      FString ValidatedTexturePath = SanitizeProjectRelativePath(TexturePath);
+      if (ValidatedTexturePath.IsEmpty()) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid texturePath '%s': contains traversal sequences or invalid root"), *TexturePath),
+                            TEXT("INVALID_PATH"));
+        return true;
+      }
+      TexturePath = ValidatedTexturePath;
+    }
     UMaterialExpressionTextureSampleParameter2D *TexSample = nullptr;
     if (!ParameterName.IsEmpty()) {
       TexSample = NewObject<UMaterialExpressionTextureSampleParameter2D>(
@@ -948,6 +1119,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       SendAutomationResponse(
           Socket, RequestId, true,
           FString::Printf(TEXT("%s node added."), *NodeName), Result);
+    } else {
+      // NewExpr was null - could be class lookup failure or UE < 5.1 for rotator
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Failed to create %s node."), *NodeName),
+                          TEXT("CREATE_FAILED"));
     }
     return true;
   }
@@ -1401,20 +1577,84 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name (same as create_material)
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    // Check if sanitization significantly changed the name (indicates invalid characters)
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material function name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials/Functions");
     }
+
+    // Validate path doesn't contain traversal sequences (same as create_material)
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: reject Windows absolute paths (contain colon)
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Additional validation: verify mount point using engine API
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Check for existing asset collision to prevent UE crash
+    // Creating a MaterialFunction over an existing Material causes fatal error
+    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      // Get the existing asset's class to provide helpful error
+      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+      if (ExistingAsset) {
+        UClass* ExistingClass = ExistingAsset->GetClass();
+        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialFunction with the same name."),
+                                            *FullAssetPath, *ExistingClassName),
+                            TEXT("ASSET_EXISTS"));
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
+                                            *FullAssetPath),
+                            TEXT("ASSET_EXISTS"));
+      }
+      return true;
+    }
+
     Payload->TryGetStringField(TEXT("description"), Description);
 
     bool bExposeToLibrary = true;
     Payload->TryGetBoolField(TEXT("exposeToLibrary"), bExposeToLibrary);
 
-    // Create function using factory
+    // Create function using factory - use ValidatedPath, not original Path!
     UMaterialFunctionFactoryNew *Factory =
         NewObject<UMaterialFunctionFactoryNew>();
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -1479,6 +1719,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     float X = 0.0f, Y = 0.0f;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
+
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterialFunction *Func =
         LoadObject<UMaterialFunction>(nullptr, *AssetPath);
@@ -1566,6 +1816,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       return true;
     }
 
+    // SECURITY: Validate functionPath before loading
+    FString ValidatedFunctionPath = SanitizeProjectRelativePath(FunctionPath);
+    if (ValidatedFunctionPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid functionPath '%s': contains traversal sequences or invalid root"), *FunctionPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    FunctionPath = ValidatedFunctionPath;
+
     UMaterialFunction *Func =
         LoadObject<UMaterialFunction>(nullptr, *FunctionPath);
     if (!Func) {
@@ -1612,6 +1872,22 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate and sanitize the asset name (same as create_material)
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid material instance name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                                          *OriginalName, *SanitizedName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
     if (!Payload->TryGetStringField(TEXT("parentMaterial"), ParentMaterial) ||
         ParentMaterial.IsEmpty()) {
       SendAutomationError(Socket, RequestId, TEXT("Missing 'parentMaterial'."),
@@ -1622,6 +1898,58 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     if (Path.IsEmpty()) {
       Path = TEXT("/Game/Materials");
     }
+
+    // Validate path (same as create_material)
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    if (ValidatedPath.Contains(TEXT(":"))) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // Check for existing asset collision
+    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+      if (ExistingAsset) {
+        UClass* ExistingClass = ExistingAsset->GetClass();
+        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialInstanceConstant with the same name."),
+                                            *FullAssetPath, *ExistingClassName),
+                            TEXT("ASSET_EXISTS"));
+      } else {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
+                                            *FullAssetPath),
+                            TEXT("ASSET_EXISTS"));
+      }
+      return true;
+    }
+    // SECURITY: Validate parentMaterial path before loading
+    FString ValidatedParentPath = SanitizeProjectRelativePath(ParentMaterial);
+    if (ValidatedParentPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid parentMaterial path '%s': contains traversal sequences or invalid root"), *ParentMaterial),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    ParentMaterial = ValidatedParentPath;
 
     UMaterial *Parent = LoadObject<UMaterial>(nullptr, *ParentMaterial);
     if (!Parent) {
@@ -1635,8 +1963,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
         NewObject<UMaterialInstanceConstantFactoryNew>();
     Factory->InitialParent = Parent;
 
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*ValidatedPath);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -1693,6 +2020,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
     }
     Payload->TryGetNumberField(TEXT("value"), Value);
 
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
     if (!Instance) {
@@ -1740,6 +2077,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
@@ -1804,6 +2151,16 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       return true;
     }
 
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterialInstanceConstant *Instance =
         LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
     if (!Instance) {
@@ -1812,6 +2169,15 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
+    // SECURITY: Validate texturePath before loading
+    FString ValidatedTexturePath = SanitizeProjectRelativePath(TexturePath);
+    if (ValidatedTexturePath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid texturePath '%s': contains traversal sequences or invalid root"), *TexturePath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    TexturePath = ValidatedTexturePath;
 
     UTexture *Texture = LoadObject<UTexture>(nullptr, *TexturePath);
     if (!Texture) {
@@ -1860,10 +2226,40 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       Path = TEXT("/Game/Materials");
     }
 
+    // Name validation - sanitize and check for invalid characters
+    FString OriginalName = Name;
+    FString SanitizedName = SanitizeAssetName(Name);
+    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
+    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
+    if (NormalizedSanitized != NormalizedOriginal) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid asset name '%s'. Names can only contain alphanumeric characters and underscores."), *OriginalName),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+    Name = SanitizedName;
+
+    // Path validation - check for traversal and normalize
+    FString ValidatedPath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
+      SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+      return true;
+    }
+    Path = ValidatedPath;
+
+    // Check for existing asset collision (different class)
+    FString FullAssetPath = Path + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Asset already exists at path: %s"), *FullAssetPath),
+                          TEXT("ASSET_EXISTS"));
+      return true;
+    }
+
     // Create material using factory
     UMaterialFactoryNew *Factory = NewObject<UMaterialFactoryNew>();
-    FString PackagePath = Path / Name;
-    UPackage *Package = CreatePackage(*PackagePath);
+    UPackage *Package = CreatePackage(*Path);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."),
                           TEXT("PACKAGE_ERROR"));
@@ -1923,13 +2319,39 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       return true;
     }
     
+    // Accept path via multiple parameter names (assetPath, materialPath, or path)
     FString Path;
-    if (!Payload->TryGetStringField(TEXT("path"), Path)) {
+    if (Payload->TryGetStringField(TEXT("assetPath"), Path) && !Path.IsEmpty()) {
+      // Use assetPath
+    } else if (Payload->TryGetStringField(TEXT("materialPath"), Path) && !Path.IsEmpty()) {
+      // Use materialPath
+    } else if (Payload->TryGetStringField(TEXT("path"), Path) && !Path.IsEmpty()) {
+      // Use path
+    } else {
       Path = TEXT("/Game/Landscape/Layers");
     }
     
+    // Validate path security - reject traversal and invalid paths
+    FString ValidatedPath = SanitizeProjectRelativePath(Path);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid characters"), *Path),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    Path = ValidatedPath;
+    
+    // Validate the full package path
+    FString PackagePath = Path / LayerName;
+    if (!FPackageName::IsValidLongPackageName(PackagePath)) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid package path: %s"), *PackagePath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    
     // Create the landscape layer info asset
-    FString PackageName = Path / LayerName;
+    FString PackageName = PackagePath;
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
@@ -1960,6 +2382,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     // Set physical material if provided
     FString PhysMaterialPath;
     if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
+      // SECURITY: Validate physicalMaterialPath before loading
+      FString ValidatedPhysMatPath = SanitizeProjectRelativePath(PhysMaterialPath);
+      if (ValidatedPhysMatPath.IsEmpty()) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid physicalMaterialPath '%s': contains traversal sequences or invalid root"), *PhysMaterialPath),
+                            TEXT("INVALID_PATH"));
+        return true;
+      }
+      PhysMaterialPath = ValidatedPhysMatPath;
+
       UPhysicalMaterial* PhysMat = LoadObject<UPhysicalMaterial>(nullptr, *PhysMaterialPath);
       if (PhysMat) {
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -2012,12 +2444,26 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   if (SubAction == TEXT("configure_layer_blend")) {
     // Configure layer blend by adding layer weight parameters and blend setup
     FString AssetPath;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    // Accept both assetPath and materialPath as parameter names
+    if (Payload->TryGetStringField(TEXT("assetPath"), AssetPath) && !AssetPath.IsEmpty()) {
+      // Use assetPath
+    } else if (Payload->TryGetStringField(TEXT("materialPath"), AssetPath) && !AssetPath.IsEmpty()) {
+      // Use materialPath
+    } else {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+    
+    // SECURITY: Validate path BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
     
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
@@ -2117,6 +2563,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
@@ -2154,6 +2610,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
@@ -2248,16 +2714,17 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
 
-    // Normalize and validate asset path
-    FNormalizedAssetPath NormalizedPath = NormalizeAssetPath(AssetPath);
-    if (!NormalizedPath.bIsValid) {
-      SendAutomationError(Socket, RequestId, 
-                          NormalizedPath.ErrorMessage.IsEmpty() ? TEXT("Invalid asset path.") : NormalizedPath.ErrorMessage,
+    // SECURITY: Validate asset path using SanitizeProjectRelativePath
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid assetPath '%s': contains traversal sequences or invalid root"), *AssetPath),
                           TEXT("INVALID_PATH"));
       return true;
     }
+    AssetPath = ValidatedPath;
 
-    UMaterial *Material = LoadObject<UMaterial>(nullptr, *NormalizedPath.Path);
+    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
       return true;
@@ -2424,6 +2891,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
@@ -2442,9 +2919,8 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     // In UE 5.1+, expressions are accessed through GetExpressionCollection()
     Material->GetExpressionCollection().RemoveExpression(Expr);
-#else
-    Material->Expressions.Remove(Expr);
 #endif
+    Material->PostEditChange();
     Material->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -2470,6 +2946,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     Payload->TryGetStringField(TEXT("parameterType"), ParameterType);
 
+    // SECURITY: Validate assetPath before use
+    FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedAssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid assetPath '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedAssetPath;
+
     // This is a stub that routes to appropriate parameter handler
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
@@ -2494,6 +2980,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
 
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
@@ -2526,6 +3022,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       return true;
     }
 
+    // Validate path security BEFORE loading asset
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {
       SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
@@ -2554,6 +3060,20 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    // SECURITY: Validate assetPath before use
+    FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedAssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid assetPath '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedAssetPath;
+
+    // Note: Cast shadows is typically a material property but may be on the component
+    // This is a stub that acknowledges the request
+    bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
 
     // Note: Cast shadows is typically a material property but may be on the component
     // This is a stub that acknowledges the request
@@ -2592,28 +3112,24 @@ static bool SaveMaterialAsset(UMaterial *Material) {
   if (!Material)
     return false;
 
-  // UE 5.7: Do NOT call SaveAsset - triggers modal dialogs that crash D3D12RHI.
-  // Just mark dirty. Assets save when editor closes.
-  Material->MarkPackageDirty();
-  return true;
+  // Use McpSafeAssetSave for proper asset registry notification
+  return McpSafeAssetSave(Material);
 }
 
 static bool SaveMaterialFunctionAsset(UMaterialFunction *Function) {
   if (!Function)
     return false;
 
-  // UE 5.7: Do NOT call SaveAsset - triggers modal dialogs that crash D3D12RHI.
-  Function->MarkPackageDirty();
-  return true;
+  // Use McpSafeAssetSave for proper asset registry notification
+  return McpSafeAssetSave(Function);
 }
 
 static bool SaveMaterialInstanceAsset(UMaterialInstanceConstant *Instance) {
   if (!Instance)
     return false;
 
-  // UE 5.7: Do NOT call SaveAsset - triggers modal dialogs that crash D3D12RHI.
-  Instance->MarkPackageDirty();
-  return true;
+  // Use McpSafeAssetSave for proper asset registry notification
+  return McpSafeAssetSave(Instance);
 }
 
 static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,

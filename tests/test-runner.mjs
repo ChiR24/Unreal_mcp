@@ -10,11 +10,9 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const reportsDir = path.join(__dirname, 'reports');
 
-// Common failure keywords to check against
 // CRITICAL: Include both singular and plural forms for flexible matching
-const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'not_found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'not exist'];
+const failureKeywords = ['failed', 'error', 'exception', 'invalid', 'not found', 'not_found', 'missing', 'timed out', 'timeout', 'unsupported', 'unknown', 'traversal', 'blocked', 'denied', 'forbidden', 'security', 'violation', 'invalid_path', 'object_not_found', 'actor_not_found', 'actors not found', 'not exist'];
 const successKeywords = ['success', 'created', 'updated', 'deleted', 'completed', 'done', 'ok', 'skipped', 'handled', 'not_implemented'];
-
 // Defaults for spawning the MCP server.
 let serverCommand = process.env.UNREAL_MCP_SERVER_CMD ?? 'node';
 let serverArgs = process.env.UNREAL_MCP_SERVER_ARGS ? process.env.UNREAL_MCP_SERVER_ARGS.split(',') : [path.join(repoRoot, 'dist', 'cli.js')];
@@ -199,9 +197,10 @@ function evaluateExpectation(testCase, response) {
   // as that would fail tests that expect actor_not_found as the error.
   const infrastructureErrorCodes = [
     'no_navmesh', 'no_nav_sys', 'no_world', 'no_component', 'no_smart_link',
-    'create_failed', 'spawn_failed', 'invalid_bp', 'cdo_failed', 
-    'level_already_exists', 'physics_failed', 'function_not_found'
-  ];
+    'not_found', 'invalid_class', 'create_failed', 'spawn_failed', 'already_exists',
+    'asset_exists', 'invalid_bp', 'cdo_failed', 'level_already_exists', 'asset_not_found',
+    'texture_error', 'invalid_texture', 'source_invalid', 'lock_failed', 'node_not_found',
+    'physics_failed', 'function_not_found'
   const hasInfrastructureError = infrastructureErrorCodes.some(code => 
     errorStr === code || errorStr.includes(code) || messageStr.includes(code)
   );
@@ -216,16 +215,21 @@ function evaluateExpectation(testCase, response) {
   // CRITICAL FIX: Detect crash/connection loss in error responses that should FAIL tests
   // unless explicitly expected. This prevents false positives where tests like "error|notfound"
   // pass on crash because "error" matches any error message.
+  // IMPORTANT: Only check crash indicators when response indicates FAILURE. A success response
+  // that contains "disconnect" (like "Disconnect operation completed.") is NOT a crash.
   // CRITICAL FIX: Also detect "not connected" messages that indicate bridge disconnection
   // FIX: Only check for crash indicators if response is NOT a success (success: true)
   // This prevents false positives where "Node disconnection partial" (a valid success message)
   // incorrectly matches "disconnect" as a substring.
-  const crashIndicators = ['1006', 'econnreset', 'socket hang up', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
+  const baseCrashIndicators = ['1006', 'econnreset', 'socket hang up', 'connection lost', 'bridge disconnected', 'ue_not_connected', 'automation bridge not connected'];
   // Word-boundary checks for ambiguous terms
   const hasDisconnect = /\bdisconnect(ed)?\b/i.test(errorStr) || /\bdisconnect(ed)?\b/i.test(messageStr);
   const hasConnectionLost = /\bconnection lost\b/i.test(errorStr) || /\bconnection lost\b/i.test(messageStr);
   const hasNotConnected = /\bnot connected\b/i.test(errorStr) || /\bnot connected\b/i.test(messageStr);
   
+  // Only include 'disconnect' as crash indicator when response indicates FAILURE
+  // This fixes false positives for disconnect_nodes action that returns "Disconnect operation completed."
+  const crashIndicators = actualSuccess ? baseCrashIndicators : [...baseCrashIndicators, 'disconnect'];
   const hasCrashIndicator = (crashIndicators.some(ind => 
     errorStr.includes(ind) || messageStr.includes(ind) || combined.includes(ind)
   )) || hasDisconnect || hasConnectionLost || hasNotConnected;
@@ -241,6 +245,7 @@ function evaluateExpectation(testCase, response) {
     lowerExpected.includes('ue_not_connected') ||
     lowerExpected.includes('not connected');
   
+  // Only treat as crash if response indicates failure AND crash indicators found
   if (isActuallyCrash && !explicitlyExpectsCrash) {
     return {
       passed: false,
@@ -252,7 +257,9 @@ function evaluateExpectation(testCase, response) {
   // unless "timeout" is the PRIMARY expectation. This prevents false positives where
   // tests like "error" or "error|timeout" pass on timeout when the timeout is an
   // infrastructure failure, not a validation error.
-  const hasTimeout = combined.includes('timeout') || combined.includes('timed out');
+  // IMPORTANT: Use word-boundary matching to avoid false positives from "timeoutMs"
+  // in valid parameter lists (e.g., "Valid params: action, name, path, timeoutMs").
+  const hasTimeout = /\btimeout\b/i.test(combined) || combined.includes('timed out');
   const explicitlyExpectsTimeout = primaryCondition === 'timeout' || primaryCondition.includes('timeout');
   
   if (hasTimeout && !explicitlyExpectsTimeout) {
@@ -309,8 +316,9 @@ function evaluateExpectation(testCase, response) {
       // the PRIMARY expected outcome (not just an alternative).
       // This prevents false positives where "error|timeout" passes on timeout
       // when the primary expectation is actually "error" (validation failure).
+      // Use word-boundary matching to avoid false positives from "timeoutMs"
       if ((condition === 'timeout' || condition.includes('timeout')) && primaryCondition === condition) {
-        if (combined.includes('timeout') || combined.includes('timed out')) {
+        if (/\btimeout\b/i.test(combined) || combined.includes('timed out')) {
           return { passed: true, reason: `Expected timeout condition met: ${condition}` };
         }
       }
@@ -400,7 +408,7 @@ function evaluateExpectation(testCase, response) {
     // Support both lowercase (for readability) and uppercase (engine output) variants
     // CRITICAL FIX: Include plural forms like 'actors not found' to match 'actor_not_found'
     // The engine may return "Actors not found" (plural) for batch operations
-    const specificErrorTypes = ['not found', 'not_found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'security', 'blocked', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'CLASS_NOT_FOUND', 'ACTOR_NOT_FOUND', 'OBJECT_NOT_FOUND', 'COMPONENT_NOT_FOUND', 'PHYSICS_FAILED', 'FUNCTION_NOT_FOUND', 'NOT_FOUND', 'PROPERTY_NOT_FOUND'];
+    const specificErrorTypes = ['not found', 'not_found', 'invalid', 'missing', 'already exists', 'does not exist', 'sc_disabled', 'invalid_path', 'security', 'blocked', 'violation', 'object_not_found', 'actor_not_found', 'actors not found', 'CLASS_NOT_FOUND', 'ACTOR_NOT_FOUND', 'OBJECT_NOT_FOUND', 'COMPONENT_NOT_FOUND', 'PHYSICS_FAILED', 'FUNCTION_NOT_FOUND', 'NOT_FOUND', 'PROPERTY_NOT_FOUND'];
     const expectedErrorType = specificErrorTypes.find(type => lowerExpected.includes(type.toLowerCase()));
     // Normalize underscores/spaces for comparison (engine may return NOT_FOUND or "not found")
     const normalizedReason = lowerReason.replace(/_/g, ' ');
@@ -473,6 +481,65 @@ export async function runToolTests(toolName, testCases) {
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
+
+    // === CAPTURED VALUES SUPPORT ===
+    // Stores values captured from previous test responses for use in subsequent tests
+    // Test cases can specify captureResult: { key: 'nodeName', fromField: 'nodeId' }
+    // to capture a value, and use ${captured:key} in arguments to inject it.
+    const capturedValues = {};
+
+    /**
+     * Resolves ${captured:key} placeholders in arguments with values from previous tests
+     */
+    function resolveCapturedValues(args) {
+      if (!args || typeof args !== 'object') return args;
+      const resolved = {};
+      for (const [key, value] of Object.entries(args)) {
+        if (typeof value === 'string') {
+          // Replace all ${captured:key} placeholders
+          resolved[key] = value.replace(/\$\{captured:([^}]+)\}/g, (match, captureKey) => {
+            const captured = capturedValues[captureKey];
+            if (captured === undefined) {
+              console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
+              return match;
+            }
+            return captured;
+          });
+        } else if (Array.isArray(value)) {
+          resolved[key] = value.map(item => typeof item === 'string' ? 
+            item.replace(/\$\{captured:([^}]+)\}/g, (match, captureKey) => {
+              const captured = capturedValues[captureKey];
+              if (captured === undefined) {
+                console.warn(`⚠️  Captured value '${captureKey}' not found, using placeholder`);
+                return match;
+              }
+              return captured;
+            }) : item);
+        } else if (typeof value === 'object' && value !== null) {
+          resolved[key] = resolveCapturedValues(value);
+        } else {
+          resolved[key] = value;
+        }
+      }
+      return resolved;
+    }
+
+    /**
+     * Captures values from a response based on captureResult configuration
+     */
+    function captureResultValues(testCase, response) {
+      if (!testCase.captureResult || !response?.structuredContent) return;
+      
+      const { key, fromField } = testCase.captureResult;
+      if (!key || !fromField) return;
+      
+      const value = response.structuredContent[fromField];
+      if (value !== undefined) {
+        capturedValues[key] = value;
+        console.log(`📦 Captured: ${key} = ${value}`);
+      }
+    }
+
 
   let transport;
   let client;
@@ -1206,7 +1273,9 @@ export async function runToolTests(toolName, testCases) {
       } catch (e) { /* ignore */ }
 
       try {
-        const response = await callToolOnce({ name: testCase.toolName, arguments: testCase.arguments }, testCaseTimeoutMs);
+        // Resolve captured values in arguments before executing
+        const resolvedArgs = resolveCapturedValues(testCase.arguments);
+        const response = await callToolOnce({ name: testCase.toolName, arguments: resolvedArgs }, testCaseTimeoutMs);
 
         const endTime = performance.now();
         const durationMs = endTime - startTime;
@@ -1223,6 +1292,10 @@ export async function runToolTests(toolName, testCases) {
           logMcpResponse(testCase.toolName + " :: " + testCase.scenario, normalizeMcpResponse(normalizedResponse));
         }
         let { passed, reason } = evaluateExpectation(testCase, normalizedResponse);
+        // Capture results if specified in test case
+        if (passed && testCase.captureResult) {
+          captureResultValues(testCase, normalizedResponse);
+        }
 
         // CRITICAL FIX: For performance tests (tests with timeoutMs), if the response
         // has success=false AND the PRIMARY expectation is success, the test should FAIL.
