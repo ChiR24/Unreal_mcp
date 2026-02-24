@@ -18,9 +18,10 @@
 #include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
 
-// BehaviorTreeGraph classes are in BehaviorTreeEditor module, which may not be available in UE 5.0
-// or may have different API. Wrap with version guards.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+// BehaviorTreeGraph classes are in BehaviorTreeEditor module
+// UBehaviorTreeGraph is only exported (BEHAVIORTREEEDITOR_API) starting from UE 5.3
+// UE 5.0-5.2: Class is not exported, cannot use NewObject<UBehaviorTreeGraph>() from outside module
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"
 #include "BehaviorTreeGraphNode_Composite.h"

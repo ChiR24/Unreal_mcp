@@ -4009,37 +4009,37 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
     bool bFound = false;
 #if WITH_EDITORONLY_DATA
     if (InputName == TEXT("BaseColor")) {
-      Material->GetEditorOnlyData()->BaseColor.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("EmissiveColor")) {
-      Material->GetEditorOnlyData()->EmissiveColor.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("Roughness")) {
-      Material->GetEditorOnlyData()->Roughness.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("Metallic")) {
-      Material->GetEditorOnlyData()->Metallic.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("Specular")) {
-      Material->GetEditorOnlyData()->Specular.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("Normal")) {
-      Material->GetEditorOnlyData()->Normal.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("Opacity")) {
-      Material->GetEditorOnlyData()->Opacity.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("OpacityMask")) {
-      Material->GetEditorOnlyData()->OpacityMask.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("AmbientOcclusion") || InputName == TEXT("AO")) {
-      Material->GetEditorOnlyData()->AmbientOcclusion.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("SubsurfaceColor")) {
-      Material->GetEditorOnlyData()->SubsurfaceColor.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = FromExpression;
       bFound = true;
     } else if (InputName == TEXT("WorldPositionOffset")) {
-      Material->GetEditorOnlyData()->WorldPositionOffset.Expression = FromExpression;
+      MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression = FromExpression;
       bFound = true;
     }
     // Note: TessellationMultiplier removed - not available in all UE versions
@@ -4398,34 +4398,34 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
     bool bFound = false;
 #if WITH_EDITORONLY_DATA
     if (PinName == TEXT("BaseColor")) {
-      Material->GetEditorOnlyData()->BaseColor.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("EmissiveColor")) {
-      Material->GetEditorOnlyData()->EmissiveColor.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("Roughness")) {
-      Material->GetEditorOnlyData()->Roughness.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("Metallic")) {
-      Material->GetEditorOnlyData()->Metallic.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("Specular")) {
-      Material->GetEditorOnlyData()->Specular.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("Normal")) {
-      Material->GetEditorOnlyData()->Normal.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("Opacity")) {
-      Material->GetEditorOnlyData()->Opacity.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("OpacityMask")) {
-      Material->GetEditorOnlyData()->OpacityMask.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) {
-      Material->GetEditorOnlyData()->AmbientOcclusion.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = nullptr;
       bFound = true;
     } else if (PinName == TEXT("SubsurfaceColor")) {
-      Material->GetEditorOnlyData()->SubsurfaceColor.Expression = nullptr;
+      MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = nullptr;
       bFound = true;
     }
 #endif
@@ -4975,7 +4975,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
       Expressions = &Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
     }
 #else
-    const TArray<UMaterialExpression *> *Expressions = nullptr;
+    // UE 5.0: Direct access, but also uses TObjectPtr
+    const TArray<TObjectPtr<UMaterialExpression>> *Expressions = nullptr;
     if (Material) {
       Expressions = &Material->Expressions;
     }

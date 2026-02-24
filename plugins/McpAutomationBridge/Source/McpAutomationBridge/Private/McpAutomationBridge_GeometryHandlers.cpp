@@ -23,6 +23,13 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 
+// GeometryCore includes for low-level mesh operations (FMeshBoundaryLoops, FEdgeLoop)
+// Required for bridge operations in UE 5.5+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#include "MeshBoundaryLoops.h"
+#include "EdgeLoop.h"
+#endif
+
 // Geometry Script Includes
 // Paths may vary by UE version (e.g. 5.0 vs 5.3 vs 5.7)
 #if __has_include("GeometryScript/GeometryScriptTypes.h")
@@ -55,9 +62,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/CollisionFunctions.h"
 #endif
 
-// UE 5.3+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
-// UE 5.0-5.2: These functions are in MeshDeformFunctions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+// UE 5.1+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
+// UE 5.0: These functions are in a different location or not available
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "GeometryScript/MeshTransformFunctions.h"
 #endif
 
@@ -504,8 +511,8 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
         Transform,
         Radius, Length,
         HemisphereSteps, Segments,
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        1,  // SegmentSteps parameter required in UE 5.4+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+        0,  // SegmentSteps parameter added in UE 5.5
 #endif
         EGeometryScriptPrimitiveOriginMode::Center,
         nullptr
@@ -1016,12 +1023,22 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
     NormalOptions.bAreaWeighted = bAreaWeighted;
     NormalOptions.bAngleWeighted = true;
 
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters (with bDeferChangeNotifications)
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(
         Mesh,
         NormalOptions,
-        false,  // bDeferChangeNotifications - UE 5.7 API change
+        false,  // bDeferChangeNotifications
         nullptr
     );
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(
+        Mesh,
+        NormalOptions,
+        nullptr
+    );
+#endif
 
     // Force refresh
     DMC->NotifyMeshUpdated();
@@ -1722,7 +1739,7 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = BevelDistance;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     BevelOptions.Subdivisions = Subdivisions;
 #endif
 
@@ -2414,9 +2431,10 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-// Geometry Script collision API is stable in UE 5.4, 5.5, 5.6, 5.7
-// Verified: CollisionFunctions.h headers are identical across versions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+// Geometry Script collision API differs between UE 5.4 and 5.5+
+// UE 5.4: Use SetDynamicMeshCollisionFromMesh directly
+// UE 5.5+: Use GenerateCollisionFromMesh + SetSimpleCollisionOfDynamicMeshComponent
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
     
@@ -2460,6 +2478,48 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("collisionType"), CollisionType);
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+    // UE 5.4: Use SetDynamicMeshCollisionFromMesh directly (GenerateCollisionFromMesh not available)
+    FGeometryScriptCollisionFromMeshOptions CollisionOptions;
+    CollisionOptions.bEmitTransaction = false;
+    
+    // Set method based on collision type
+    if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
+    }
+    else if (CollisionType == TEXT("sphere") || CollisionType == TEXT("spheres"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::MinimalSpheres;
+    }
+    else if (CollisionType == TEXT("capsule") || CollisionType == TEXT("capsules"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::Capsules;
+    }
+    else if (CollisionType == TEXT("convex"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
+        CollisionOptions.MaxConvexHullsPerMesh = 1;
+    }
+    else if (CollisionType == TEXT("convex_decomposition"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
+        CollisionOptions.MaxConvexHullsPerMesh = 8;
+    }
+    else
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::MinVolumeShapes;
+    }
+
+    // UE 5.4: SetDynamicMeshCollisionFromMesh sets collision directly on the component
+    UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
+        Mesh, DMC, CollisionOptions, nullptr);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("collisionType"), CollisionType);
+    Result->SetNumberField(TEXT("shapeCount"), 1); // Approximate count for UE 5.4
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -2521,7 +2581,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     else if (Axis == TEXT("Y")) MirrorScale.Y = -1.0;
     else if (Axis == TEXT("Z")) MirrorScale.Z = -1.0;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(MirroredMesh, MirrorScale, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -3447,7 +3507,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     else if (Axis == TEXT("Y")) ScaleVec.Y = Factor;
     else ScaleVec.Z = Factor;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, ScaleVec, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -3565,7 +3625,13 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
     }
     
     // Recompute normals after vertex modifications
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -3711,7 +3777,13 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
     }
     
     // Recompute normals after vertex modifications
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -4131,11 +4203,11 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     int32 TrianglesCreated = 0;
     FString BridgeStatus;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
-    // Find boundary loops using GeometryCore's FMeshBoundaryLoops (UE 5.4+)
+    // Find boundary loops using GeometryCore's FMeshBoundaryLoops (UE 5.5+)
     UE::Geometry::FMeshBoundaryLoops BoundaryLoops(&EditMesh, true);
     
     if (BoundaryLoops.bAborted)
@@ -4397,37 +4469,22 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                     }
                     
                     // Use AppendSweepPolygon to create the lofted surface
-                    FGeometryScriptSimplePolygon Polygon;
-                    for (const FVector2D& V : PolygonVertices)
-                    {
-                        // Note: In UE 5.6, Polygon.Vertices is TSharedPtr, need to dereference
-                    // In UE 5.7+, it may have changed. Always check validity.
-                    if (Polygon.Vertices.IsValid())
-                    {
-                        Polygon.Vertices->Add(V);
-                    }
-                    }
-                    
+                    // Note: FGeometryScriptSimplePolygon was introduced in UE 5.4 but is not needed here
+                    // as AppendSweepPolygon takes TArray<FVector2D> directly
                     FGeometryScriptPrimitiveOptions PrimOptions;
                     PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
                     PrimOptions.bFlipOrientation = false;
-                    
-                    // Transform the target mesh location to start of path
                     FTransform SweepTransform(FRotator::ZeroRotator, StartPos);
-                    
-                    // Convert polygon vertices to 2D array format required by AppendSweepPolygon
-                    TArray<FVector2D> PolygonVerts2D;
-                    if (Polygon.Vertices.IsValid())
-                    {
-                        PolygonVerts2D = *Polygon.Vertices;
-                    }
+                    // Use PolygonVertices directly for AppendSweepPolygon (no conversion needed)
                     
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+    // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
+                    //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
-                        Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
+                        Mesh, PrimOptions, SweepTransform, PolygonVertices, PathFrames,
                         false,    // bLoop
                         bCap,     // bCapped
                         1.0f,     // StartScale
@@ -4436,9 +4493,16 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                         1.0f,     // MiterLimit
                         nullptr); // Debug
 #else
-                    // UE 5.3 fallback: Simple extrusion using AppendExtrude or manual mesh building
-                    // Since AppendSweepPolygon may not exist or have different signature in 5.3
-                    // We fall back to using AppendBox or manual lofting
+                    // UE 5.3 and earlier: No MiterLimit parameter
+                    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+                        Mesh, PrimOptions, SweepTransform, PolygonVertices, PathFrames,
+                        false,    // bLoop
+                        bCap,     // bCapped
+                        1.0f,     // StartScale
+                        1.0f,     // EndScale
+                        0.0f,     // RotationAngleDeg
+                        nullptr); // Debug
+#endif
                     for (int32 i = 0; i < PathFrames.Num() - 1; ++i)
                     {
                         FVector PosA = PathFrames[i].GetLocation();
@@ -4457,13 +4521,9 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                                 Mesh, PrimOptions, SegmentTransform,
                                 ProfileRadius * 0.5, SegmentLength,
                                 2, 8,
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-                                1,  // SegmentSteps parameter required in UE 5.4+
-#endif
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }
                     }
-#endif
                     
                     ProfilesUsed = ProfileMeshActors.Num();
                 }
@@ -4506,20 +4566,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
             PathFrames.Add(FTransform(FQuat::Identity, Pos));
         }
         
-        // Create the lofted surface
-        FGeometryScriptSimplePolygon Polygon;
-        for (const FVector2D& V : PolygonVertices)
-        {
-            // Polygon.Vertices is TSharedPtr in UE 5.6+
-            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
-        }
-        
-        FGeometryScriptPrimitiveOptions PrimOptions;
-        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
-        PrimOptions.bFlipOrientation = false;
-        
-        FTransform SweepTransform(FRotator::ZeroRotator, Center);
-        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
         // For compatibility, just log that sweep was attempted
         UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
@@ -4527,7 +4574,13 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Recompute normals for smooth shading if requested
     if (bSmooth)
     {
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+: RecomputeNormals takes 4 parameters
         UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+        // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+        UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
     }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
@@ -4706,19 +4759,7 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
     // Perform the sweep using Geometry Script
     if (PathFrames.Num() >= 2)
     {
-        FGeometryScriptSimplePolygon Polygon;
-        for (const FVector2D& V : PolygonVertices)
-        {
-            // Polygon.Vertices is TSharedPtr in UE 5.6+
-            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
-        }
-        
-        FGeometryScriptPrimitiveOptions PrimOptions;
-        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
-        PrimOptions.bFlipOrientation = false;
-        
-        FTransform SweepTransform = FTransform::Identity;
-        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
         UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
 
@@ -6151,9 +6192,9 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     FGeometryScriptPrimitiveOptions PrimOptions;
 
     // Clear existing mesh and sweep the profile along the path
-    // UE 5.4+: AppendSweepPolygon has MiterLimit parameter
-    // UE 5.3 and earlier: No MiterLimit parameter
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    // UE 5.5+: AppendSweepPolygon has MiterLimit parameter
+    // UE 5.4 and earlier: No MiterLimit parameter
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
         Mesh,
         PrimOptions,
@@ -6574,8 +6615,7 @@ static bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, 
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-    // Use convex decomposition for complex collision
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(MaxHullCount, 1, 64);
@@ -6666,19 +6706,21 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
         Mesh, TargetTris, SimplifyOptions, nullptr);
 
-    // Generate simplified collision
+    // Generate simplified collision using SetDynamicMeshCollisionFromMesh (UE 5.4+)
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     CollisionOptions.MaxConvexHullsPerMesh = FMath::Clamp(TargetHullCount, 1, 16);
     CollisionOptions.bEmitTransaction = false;
     
-    FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GenerateCollisionFromMesh(
-        Mesh, CollisionOptions, nullptr);
+    // SetDynamicMeshCollisionFromMesh generates and applies collision in one step
+    UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
+        Mesh, DMC, CollisionOptions, nullptr);
 
+    // Get collision info from the component for reporting
     FGeometryScriptSetSimpleCollisionOptions SetOptions;
-    UGeometryScriptLibrary_CollisionFunctions::SetSimpleCollisionOfDynamicMeshComponent(
-        Collision, DMC, SetOptions, nullptr);
-
+    FGeometryScriptSimpleCollision Collision = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionFromComponent(
+        DMC, nullptr);
+    
     int32 ShapeCount = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision);
 
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();

@@ -1736,16 +1736,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenAtRandom"), ESearchCase::IgnoreCase))
             {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenAtRandom;
 #else
-                UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenAtRandom requires UE 5.4+. Using TrySelectChildrenInOrder instead."));
+            UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenAtRandom requires UE 5.5+. Using TrySelectChildrenInOrder instead."));
+
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenInOrder;
 #endif
             }
             else if (Behavior.Equals(TEXT("TrySelectChildrenWithHighestUtility"), ESearchCase::IgnoreCase))
             {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
                 FoundState->SelectionBehavior = EStateTreeStateSelectionBehavior::TrySelectChildrenWithHighestUtility;
 #else
                 UE_LOG(LogMcpAIHandlers, Warning, TEXT("TrySelectChildrenWithHighestUtility requires UE 5.4+. Using TryEnterState instead."));
@@ -1864,8 +1865,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         
         // Create and add a new slot using reflection to access private Slots array
         FSmartObjectSlotDefinition NewSlot;
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+ uses FVector3f/FRotator3f and has bEnabled/ID members
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+ uses FVector3f/FRotator3f and has bEnabled/ID members
         NewSlot.Offset = FVector3f(Offset);
         NewSlot.Rotation = FRotator3f(Rotation);
         NewSlot.bEnabled = bEnabled;
@@ -1873,7 +1874,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         NewSlot.ID = FGuid::NewGuid();
 #endif
 #else
-        // UE 5.0 uses FVector/FRotator
+        // UE 5.0-5.2 uses FVector/FRotator
         NewSlot.Offset = Offset;
         NewSlot.Rotation = Rotation;
 #endif
@@ -2158,13 +2159,31 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FMassEntityConfig& Config = ConfigAsset->GetMutableConfig();
         
         // Set parent config if provided
+        // UE 5.3+: Use SetParentAsset() method
+        // UE 5.0-5.2: Use property reflection since Parent is protected
         if (!ParentConfigPath.IsEmpty())
         {
             UMassEntityConfigAsset* ParentConfig = LoadObject<UMassEntityConfigAsset>(nullptr, *ParentConfigPath);
             if (ParentConfig)
             {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
                 Config.SetParentAsset(*ParentConfig);
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                // UE 5.1-5.2: SetValue_InContainer is available
+                static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
+                if (ParentProp)
+                {
+                    ParentProp->SetValue_InContainer(&Config, &ParentConfig);
+                }
+#else
+                // UE 5.0: SetValue_InContainer not available, use CopyCompleteValue_InContainer
+                static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
+                if (ParentProp)
+                {
+                    // Create a temporary struct to hold the pointer value, then copy
+                    void* DestPtr = ParentProp->ContainerPtrToValuePtr<void>(&Config);
+                    ParentProp->CopyCompleteValue(DestPtr, &ParentConfig);
+                }
 #endif
             }
         }

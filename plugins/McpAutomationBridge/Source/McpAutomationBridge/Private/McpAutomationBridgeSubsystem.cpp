@@ -1249,6 +1249,8 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
 #else
 #include "ControlRigBlueprint.h"
 #endif
+// Include the generated class header for UControlRigBlueprintGeneratedClass
+#include "ControlRigBlueprintGeneratedClass.h"
 // Note: ControlRigBlueprintFactory header is Public only in UE 5.5+
 // For UE 5.1-5.4 we use a fallback implementation with FKismetEditorUtilities
 #if MCP_HAS_CONTROLRIG_FACTORY && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
@@ -1315,6 +1317,8 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 
   // Create the Control Rig Blueprint using FKismetEditorUtilities
   // This works across all UE versions without needing ControlRigBlueprintFactory
+  // Note: Use UControlRigBlueprintGeneratedClass instead of URigVMBlueprintGeneratedClass
+  // to avoid needing to include RigVM module headers
   UControlRigBlueprint *NewBlueprint = Cast<UControlRigBlueprint>(
       FKismetEditorUtilities::CreateBlueprint(
           UControlRig::StaticClass(),  // Parent class
@@ -1322,7 +1326,7 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
           *AssetName,                   // Name
           BPTYPE_Normal,                // Blueprint type
           UControlRigBlueprint::StaticClass(),  // Blueprint class
-          URigVMBlueprintGeneratedClass::StaticClass(),  // Generated class
+          UControlRigBlueprintGeneratedClass::StaticClass(),  // Generated class
           NAME_None));
 
   if (!NewBlueprint) {

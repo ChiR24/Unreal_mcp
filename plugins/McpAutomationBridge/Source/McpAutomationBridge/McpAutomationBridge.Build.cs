@@ -71,15 +71,18 @@ public class McpAutomationBridge : ModuleRules
         bUseUnity = true;
         Console.WriteLine("McpAutomationBridge: Unity builds enabled");
         
-        // UE 5.0 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
-        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion == 0)
+        // UE 5.0-5.2 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
+        // The __has_feature macro is a Clang-specific feature detection mechanism
+        // that MSVC doesn't understand, causing C4668 and C4067 warnings
+        // Note: For full fix, also add GlobalDefinitions.Add("__has_feature(x)=0") in project's Target.cs
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion <= 2)
         {
             if (Target.Platform == UnrealTargetPlatform.Win64)
             {
                 // C4668: '__has_feature' is not defined as a preprocessor macro
                 // C4067: unexpected tokens following preprocessor directive
                 PublicDefinitions.Add("__has_feature(x)=0");
-                Console.WriteLine("McpAutomationBridge: Added MSVC warning suppression for UE 5.0");
+                Console.WriteLine(string.Format("McpAutomationBridge: Added MSVC warning suppression for UE 5.{0}", Target.Version.MinorVersion));
             }
         }
 

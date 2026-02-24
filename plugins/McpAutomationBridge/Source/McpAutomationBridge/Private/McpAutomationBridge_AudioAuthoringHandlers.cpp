@@ -128,8 +128,8 @@
 #include "MetasoundFrontendDocumentBuilder.h"
 #include "MetasoundFrontendDocument.h"
 #define MCP_HAS_METASOUND_FRONTEND 1
-// UE 5.4+ has 3-arg constructor and FinishBuilding method
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+// UE 5.5+ has 3-arg constructor and FinishBuilding method
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #define MCP_HAS_METASOUND_FRONTEND_V2 1
 #else
 #define MCP_HAS_METASOUND_FRONTEND_V2 0

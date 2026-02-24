@@ -118,11 +118,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSequencerKeyframe(
     FFrameRate DisplayRate = MovieScene->GetDisplayRate();
     FFrameTime FrameTime = DisplayRate.AsFrameTime(TimeSeconds);
     FFrameNumber FrameNumber = FrameTime.GetFrame();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: GetChannel returns mutable reference
     FMovieSceneFloatChannel& Channel = FloatSection->GetChannel();
     Channel.AddCubicKey(FrameNumber, static_cast<float>(Value));
 #else
-    // UE 5.0: GetChannel returns const reference, need to const_cast to modify
+    // UE 5.0-5.2: GetChannel returns const reference, need to const_cast to modify
     const FMovieSceneFloatChannel& Channel = FloatSection->GetChannel();
     const_cast<FMovieSceneFloatChannel&>(Channel).AddCubicKey(FrameNumber, static_cast<float>(Value));
 #endif

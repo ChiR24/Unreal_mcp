@@ -18,8 +18,8 @@
 #include "Engine/SkeletalMeshSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
-// Note: SkeletalBodySetup.h was introduced in UE 5.4
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+// Note: SkeletalBodySetup.h was introduced in UE 5.5
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #include "PhysicsEngine/SkeletalBodySetup.h"
 #endif
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
@@ -1877,11 +1877,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     {
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            // UE 5.1+ uses TObjectPtr
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+            // UE 5.3+ uses TObjectPtr in non-const getter
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
 #else
-            // UE 5.0 uses raw pointers
+            // UE 5.0-5.2 uses raw pointers
             UClothingAssetBase* ClothAsset = ClothAssetPtr;
 #endif
             if (ClothAsset && ClothAsset->GetName() == ClothAssetName)
@@ -1928,7 +1928,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
         TArray<TSharedPtr<FJsonValue>> ClothingArray;
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
 #else
             UClothingAssetBase* ClothAsset = ClothAssetPtr;
@@ -1990,7 +1990,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     TArray<TSharedPtr<FJsonValue>> ClothingArray;
     for (const auto& ClothAssetPtr : Mesh->GetMeshClothingAssets())
     {
-        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
         #else
         UClothingAssetBase* ClothAsset = ClothAssetPtr;
@@ -3083,10 +3083,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
 #if WITH_EDITORONLY_DATA
         RootBone.ExportName = RootBoneName;
 #endif
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
 #else
-        // UE 5.0: Add() only takes 2 parameters
+        // UE 5.0-5.2: Add() only takes 2 parameters
         Modifier.Add(RootBone, FTransform::Identity);
 #endif
         
@@ -3172,10 +3172,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         // Allow multiple roots only if no parent is specified and this is the first bone
         bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         Modifier.Add(NewBone, BoneTransform, bAllowMultipleRoots);
 #else
-        // UE 5.0: Add() only takes 2 parameters
+        // UE 5.0-5.2: Add() only takes 2 parameters
         Modifier.Add(NewBone, BoneTransform);
 #endif
         
@@ -3230,7 +3230,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         }
         
         // Remove the bone using FReferenceSkeletonModifier
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FReferenceSkeletonModifier Modifier(Skeleton);
         Modifier.Remove(FName(*BoneName), bRemoveChildren);
         McpSafeAssetSave(Skeleton);
@@ -3244,9 +3244,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
             FString::Printf(TEXT("Bone '%s' removed from skeleton"), *BoneName), Result);
         return true;
 #else
-        // UE 5.0: FReferenceSkeletonModifier doesn't have Remove() method
+        // UE 5.0-5.2: FReferenceSkeletonModifier doesn't have Remove() method
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("remove_bone is not supported in UE 5.0. Please use a newer UE version."),
+            TEXT("remove_bone is not supported in UE 5.0-5.2. Please use UE 5.3 or later."),
             TEXT("NOT_SUPPORTED"));
         return true;
 #endif
@@ -3287,7 +3287,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         // Set new parent using FReferenceSkeletonModifier
         // NewParentName can be empty/NAME_None to unparent (make root)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FReferenceSkeletonModifier Modifier(Skeleton);
         FName ParentFName = NewParentName.IsEmpty() ? NAME_None : FName(*NewParentName);
         int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), ParentFName, true);
@@ -3311,9 +3311,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
             FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, NewParentName.IsEmpty() ? TEXT("(none)") : *NewParentName), Result);
         return true;
 #else
-        // UE 5.0: FReferenceSkeletonModifier doesn't have SetParent() method
+        // UE 5.0-5.2: FReferenceSkeletonModifier doesn't have SetParent() method
         SendAutomationError(RequestingSocket, RequestId, 
-            TEXT("set_bone_parent is not supported in UE 5.0. Please use a newer UE version."), 
+            TEXT("set_bone_parent is not supported in UE 5.0-5.2. Please use UE 5.3 or later."), 
             TEXT("NOT_SUPPORTED"));
         return true;
 #endif
