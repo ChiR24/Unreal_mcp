@@ -209,20 +209,19 @@ function registerDefaultHandlers() {
   // 4. EDITOR CONTROL
   toolRegistry.register('control_editor', async (args, tools) => {
     const action = getAction(args);
-    if (action === 'simulate_input') {
-      const payload = { ...args, subAction: action };
-      return cleanObject(await executeAutomationRequest(tools, 'manage_ui', payload, 'Automation bridge not available'));
-    }
+    // CRITICAL FIX: Removed simulate_input special case that bypassed validation.
+    // All actions now go through handleEditorTools which validates via validateEditorActionArgs.
+    // This ensures unknown parameters like 'invalidExtraParam' are properly rejected.
     return await handleEditorTools(action, args, tools);
   });
 
   // 5. LEVEL MANAGER
   toolRegistry.register('manage_level', async (args, tools) => {
     const action = getAction(args);
-    if (['load_cells', 'set_datalayer'].includes(action)) {
-      const payload = { ...args, subAction: action };
-      return cleanObject(await executeAutomationRequest(tools, 'manage_world_partition', payload, 'Automation bridge not available'));
-    }
+    // CRITICAL FIX: Route ALL actions through handleLevelTools for proper validation
+    // Previously load_cells and set_datalayer bypassed validation by going directly to executeAutomationRequest
+    // handleLevelTools validates required params (levelPath, cells/origin/extent, actorPath, dataLayerName, dataLayerState)
+    // and then calls executeAutomationRequest with proper payload
     return await handleLevelTools(action, args, tools);
   });
 

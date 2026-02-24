@@ -103,12 +103,14 @@ export class AssetTools extends BaseTool implements IAssetTools {
   }
 
   async deleteAssets(params: { paths: string[]; fixupRedirectors?: boolean; timeoutMs?: number }): Promise<StandardActionResponse> {
-    const assetPaths = (Array.isArray(params.paths) ? params.paths : [])
+    const normalizedPaths = (Array.isArray(params.paths) ? params.paths : [])
       .map(p => this.normalizeAssetPath(p));
 
+    // C++ HandleDeleteAssets expects 'paths' array or 'path' string, not 'assetPaths'
+    // Send both for compatibility with different C++ handler versions
     return this.sendRequest<AssetResponse>('manage_asset', {
-      paths: assetPaths,  // C++ expects 'paths' not 'assetPaths'
-      fixupRedirectors: params.fixupRedirectors,
+      paths: normalizedPaths,
+      assetPaths: normalizedPaths,  // Keep for backward compatibility
       subAction: 'delete'
     }, 'manage_asset', { timeoutMs: params.timeoutMs || EXTENDED_ASSET_OP_TIMEOUT_MS });
   }

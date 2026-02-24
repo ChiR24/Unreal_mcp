@@ -48,8 +48,31 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  UObject *RootObject = nullptr;
 #if WITH_EDITOR
+  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
+  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
+  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  {
+    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
+    
+    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
+    {
+      // Try to find the actor first
+      if (AActor *Actor = FindActorByName(ActorName))
+      {
+        // Find the component on the actor using fuzzy name matching
+        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
+        {
+          RootObject = Comp;
+          // Normalize the path for downstream error messages
+          ObjectPath = Comp->GetPathName();
+        }
+      }
+    }
+  }
+  
   if (!RootObject) {
     if (AActor *FoundActor = FindActorByName(ObjectPath)) {
       RootObject = FoundActor;
@@ -57,6 +80,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       ObjectPath = FoundActor->GetPathName();
     }
   }
+  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
+    FString PackagePath = ObjectPath;
+    if (PackagePath.Contains(TEXT("."))) {
+      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
+    if (LoadedPackage) {
+      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
+      if (!RootObject) {
+        RootObject = LoadedPackage;
+      }
+    }
+  }
+#else
+  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #endif
   if (!RootObject) {
     SendAutomationError(
@@ -315,8 +353,31 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  UObject *RootObject = FindObject<UObject>(nullptr, *ObjectPath);
+  UObject *RootObject = nullptr;
 #if WITH_EDITOR
+  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
+  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
+  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  {
+    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
+    
+    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
+    {
+      // Try to find the actor first
+      if (AActor *Actor = FindActorByName(ActorName))
+      {
+        // Find the component on the actor using fuzzy name matching
+        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
+        {
+          RootObject = Comp;
+          // Normalize the path for downstream error messages
+          ObjectPath = Comp->GetPathName();
+        }
+      }
+    }
+  }
+  
   if (!RootObject) {
     if (AActor *FoundActor = FindActorByName(ObjectPath)) {
       RootObject = FoundActor;
@@ -324,6 +385,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
       ObjectPath = FoundActor->GetPathName();
     }
   }
+  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
+    FString PackagePath = ObjectPath;
+    if (PackagePath.Contains(TEXT("."))) {
+      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+    }
+    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
+    if (LoadedPackage) {
+      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
+      if (!RootObject) {
+        RootObject = LoadedPackage;
+      }
+    }
+  }
+#else
+  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
 #endif
   if (!RootObject) {
     SendAutomationError(
@@ -336,7 +412,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   // Special handling for common AActor properties that are actually functions
   // or require setters
   if (AActor *Actor = Cast<AActor>(RootObject)) {
-if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+ if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
       TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);

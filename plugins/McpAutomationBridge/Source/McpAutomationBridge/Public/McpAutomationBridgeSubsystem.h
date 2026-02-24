@@ -409,6 +409,22 @@ private:
   HandleSourceControlSubmit(const FString &RequestId, const FString &Action,
                             const TSharedPtr<FJsonObject> &Payload,
                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleGetSourceControlState(const FString &RequestId, const FString &Action,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleSourceControlEnable(const FString &RequestId, const FString &Action,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleAnalyzeGraph(const FString &RequestId, const FString &Action,
+                     const TSharedPtr<FJsonObject> &Payload,
+                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleGetAssetGraph(const FString &RequestId, const FString &Action,
+                      const TSharedPtr<FJsonObject> &Payload,
+                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool HandleFixupRedirectors(const FString &RequestId, const FString &Action,
                               const TSharedPtr<FJsonObject> &Payload,
                               TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
@@ -430,6 +446,10 @@ private:
   HandleFindByTag(const FString &RequestId, const FString &Action,
                   const TSharedPtr<FJsonObject> &Payload,
                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+  bool
+  HandleSearchAssets(const FString &RequestId, const FString &Action,
+                     const TSharedPtr<FJsonObject> &Payload,
+                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   bool
   HandleAddMaterialNode(const FString &RequestId, const FString &Action,
                         const TSharedPtr<FJsonObject> &Payload,
@@ -453,6 +473,10 @@ private:
                                const TSharedPtr<FJsonObject> &Payload,
                                TSharedPtr<FMcpBridgeWebSocket>
                                    RequestingSocket);
+  bool
+  HandleRebuildMaterial(const FString &RequestId, const FString &Action,
+                        const TSharedPtr<FJsonObject> &Payload,
+                        TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
   // Landscape, foliage, and Niagara handlers
   bool HandleCreateLandscape(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
@@ -910,7 +934,7 @@ private:
                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
 
   // Control handlers
-  AActor *FindActorByName(const FString &Target);
+  AActor *FindActorByName(const FString &Target, bool bExactMatchOnly = false);
 
   // Control Actor Subhandlers
   bool HandleControlActorSpawn(const FString &RequestId,

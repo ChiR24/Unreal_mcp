@@ -172,6 +172,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #if WITH_EDITOR
+#include "Editor.h"  // GEditor for McpSafeLoadMap
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -185,6 +186,11 @@
 #include "Editor/EditorAssetLibrary.h"
 #endif
 #include "Engine/Blueprint.h"
+#include "Engine/World.h"
+#include "Engine/LevelStreaming.h"
+#include "GameFramework/WorldSettings.h"
+#include "TickTaskManagerInterface.h"
+#include "HAL/PlatformProcess.h"
 #endif
 
 /**
@@ -700,7 +706,152 @@ static inline bool McpSafeAssetSave(UObject* Asset)
 #include "HAL/FileManager.h"  // IFileManager
 #include "RenderingThread.h"  // FlushRenderingCommands
 #include "Materials/MaterialInterface.h"  // UMaterialInterface for McpLoadMaterialWithFallback
+#include "Editor/EditorEngine.h"  // UEditorEngine (forward decl if needed)
+#include "Engine/World.h"  // UWorld
+#include "Engine/Level.h"  // ULevel
+#include "Engine/LevelStreaming.h"  // ULevelStreaming
+#include "GameFramework/Actor.h"  // AActor
+#include "Components/ActorComponent.h"  // UActorComponent
+#include "EditorAssetLibrary.h"  // UEditorAssetLibrary for DoesAssetDirectoryExistOnDisk
+
+/**
+ * Resolve a component from an actor by component name with fuzzy matching.
+ * Supports exact name match, partial name match (starts with), and common suffixes.
+ * 
+ * This helper resolves component paths in "ActorName.ComponentName" format where
+ * the component name may be a partial match (e.g., "StaticMeshComponent" matches "StaticMeshComponent0").
+ *
+ * @param Actor The actor to search for components
+ * @param ComponentName The component name to search for (exact or partial match)
+ * @return UActorComponent* or nullptr if not found
+ */
+static inline UActorComponent* FindComponentByName(AActor* Actor, const FString& ComponentName)
+{
+    if (!Actor || ComponentName.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    const FString Needle = ComponentName.ToLower();
+    UActorComponent* ExactMatch = nullptr;
+    UActorComponent* StartsWithMatch = nullptr;
+
+    // Iterate all components on the actor
+    TArray<UActorComponent*> Components;
+    Actor->GetComponents(Components);
+    
+    for (UActorComponent* Comp : Components)
+    {
+        if (!Comp)
+        {
+            continue;
+        }
+
+        const FString CompName = Comp->GetName().ToLower();
+        const FString CompPath = Comp->GetPathName().ToLower();
+
+        // 1. Exact name match (highest priority)
+        if (CompName.Equals(Needle))
+        {
+            return Comp; // Exact match, return immediately
+        }
+
+        // 2. Exact path match
+        if (CompPath.Equals(Needle))
+        {
+            return Comp;
+        }
+
+        // 3. Path ends with component name (e.g., "ActorName.StaticMeshComponent0")
+        if (CompPath.EndsWith(FString::Printf(TEXT(".%s"), *Needle)))
+        {
+            return Comp;
+        }
+
+        // 4. Path ends with ":ComponentName" (subobject format)
+        if (CompPath.EndsWith(FString::Printf(TEXT(":%s"), *Needle)))
+        {
+            return Comp;
+        }
+
+        // 5. Fuzzy match: ComponentName starts with the needle (e.g., "StaticMeshComponent" matches "StaticMeshComponent0")
+        if (CompName.StartsWith(Needle) && !StartsWithMatch)
+        {
+            StartsWithMatch = Comp;
+        }
+
+        // 6. Path contains the component name
+        if (!ExactMatch && CompPath.Contains(Needle))
+        {
+            ExactMatch = Comp;
+        }
+    }
+
+    // Return matches in priority order: StartsWith is MORE specific than path-contains
+    if (StartsWithMatch)
+    {
+        return StartsWithMatch;
+    }
+    if (ExactMatch)
+    {
+        return ExactMatch;
+    }
+
+    return nullptr;
+}
+
+/**
+ * Resolve an object path that may be in "ActorName.ComponentName" format.
+ * Returns the component if the path is in component path format, or nullptr otherwise.
+ *
+ * @param ObjectPath The path to resolve (e.g., "TestActor.StaticMeshComponent0")
+ * @param OutActorName If not nullptr, receives the actor name portion of the path
+ * @param OutComponentName If not nullptr, receives the component name portion of the path
+ * @return UActorComponent* if the path is a valid component path, nullptr otherwise
+ */
+static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, FString* OutActorName = nullptr, FString* OutComponentName = nullptr)
+{
+    // Check if this looks like a component path: "ActorName.ComponentName"
+    // Must contain exactly one dot, no slashes, and both parts must be non-empty
+    if (ObjectPath.IsEmpty() || 
+        ObjectPath.Contains(TEXT("/")) || 
+        ObjectPath.Contains(TEXT("\\")) ||
+        !ObjectPath.Contains(TEXT(".")))
+    {
+        return nullptr;
+    }
+
+    // Split on the first dot
+    int32 DotIndex;
+    if (!ObjectPath.FindChar(TEXT('.'), DotIndex))
+    {
+        return nullptr;
+    }
+
+    FString ActorName = ObjectPath.Left(DotIndex);
+    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - DotIndex - 1);
+
+    // Both parts must be non-empty
+    if (ActorName.IsEmpty() || ComponentName.IsEmpty())
+    {
+        return nullptr;
+    }
+
+    // Output the parsed names if requested
+    if (OutActorName)
+    {
+        *OutActorName = ActorName;
+    }
+    if (OutComponentName)
+    {
+        *OutComponentName = ComponentName;
+    }
+
+    return nullptr; // Caller must find actor and then find component
+}
+
 #endif
+
 /**
  * Safely save a level with UE 5.7+ compatibility workarounds.
  *
@@ -710,15 +861,15 @@ static inline bool McpSafeAssetSave(UObject* Asset)
  * This helper:
  * 1. Suspends the render thread during save (prevents driver race condition)
  * 2. Flushes all rendering commands before and after save
- * 3. Retries with exponential backoff on failure (default: 5 retries)
- * 4. Verifies the file exists after save with additional file system sync
+ * 3. Verifies the file exists after save
+ * 4. Validates path length to prevent Windows Error 87 (MAX_PATH exceeded)
  *
  * @param Level The ULevel to save
  * @param FullPath The full package path for the level
- * @param MaxRetries Number of retry attempts (default: 5 for Intel GPU resilience)
+ * @param MaxRetries Unused (kept for API compatibility)
  * @return true if save succeeded and file exists
  */
-static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
+static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 1)
 {
     if (!Level)
     {
@@ -726,10 +877,34 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         return false;
     }
 
+    // CRITICAL: Reject transient/unsaved level paths that would cause double-slash package names
+    if (FullPath.StartsWith(TEXT("/Temp/")) ||
+        FullPath.StartsWith(TEXT("/Engine/Transient")) ||
+        FullPath.Contains(TEXT("Untitled")))
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Cannot save transient level: %s. Use save_as with a valid path."), *FullPath);
+        return false;
+    }
+
     FString PackagePath = FullPath;
     if (!PackagePath.StartsWith(TEXT("/Game/")))
     {
-        PackagePath = TEXT("/Game/") + PackagePath;
+        if (!PackagePath.StartsWith(TEXT("/")))
+        {
+            PackagePath = TEXT("/Game/") + PackagePath;
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Invalid path (not under /Game/): %s"), *PackagePath);
+            return false;
+        }
+    }
+
+    // Validate no double slashes in the path
+    if (PackagePath.Contains(TEXT("//")))
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path contains double slashes: %s"), *PackagePath);
+        return false;
     }
 
     // Ensure path has proper format
@@ -738,61 +913,117 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
         PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
     }
 
-    bool bSaveSucceeded = false;
-    // Increased initial delay for Intel GPU driver stability (MONZA DdiThreadingContext)
-    // The driver needs more time to complete pending operations before file I/O
-    float DelayMs = 250.0f;
-
-    for (int32 Retry = 0; Retry < MaxRetries; ++Retry)
+    // CRITICAL: Validate path length to prevent Windows Error 87
     {
-        // CRITICAL: Flush rendering commands to prevent Intel driver race condition
-        // The MONZA DdiThreadingContext crash occurs when rendering commands
-        // overlap with file I/O operations during level save
-        // Note: FSuspendRenderThread was removed in UE 5.x - use FlushRenderingCommands instead
-        FlushRenderingCommands();
-
-        // Additional delay after flush to ensure GPU is completely idle
-        // This is critical for Intel integrated graphics which may have
-        // pending operations in the driver's command queue
-        FPlatformProcess::Sleep(0.050f); // 50ms additional wait
-
-        // Perform the actual save after flushing render commands
-        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
-
-        if (bSaveSucceeded)
+        FString AbsoluteFilePath;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AbsoluteFilePath, FPackageName::GetMapPackageExtension()))
         {
-            // Small delay before verification to allow file system to flush
-            FPlatformProcess::Sleep(0.100f); // 100ms
-
-            // Verify file exists on disk
-            FString VerifyFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
+            AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
+            const int32 SafePathLength = 240;
+            if (AbsoluteFilePath.Len() > SafePathLength)
             {
-                if (IFileManager::Get().FileExists(*VerifyFilename))
-                {
-                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level after %d attempt(s): %s"), 
-                        Retry + 1, *PackagePath);
-                    return true;
-                }
-                UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save reported success but file not found (attempt %d/%d): %s"), 
-                    Retry + 1, MaxRetries, *VerifyFilename);
+                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"), 
+                    AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
+                UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths"));
+                return false;
             }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Save attempt %d/%d failed for: %s"),
-                Retry + 1, MaxRetries, *PackagePath);
-        }
-
-        // Exponential backoff before retry (250ms → 500ms → 1000ms → 2000ms → 4000ms)
-        if (Retry < MaxRetries - 1)
-        {
-            FPlatformProcess::Sleep(DelayMs / 1000.0f);
-            DelayMs *= 2.0f;
         }
     }
 
-    UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: All %d save attempts failed for: %s"), MaxRetries, *PackagePath);
+    // Check if level already exists BEFORE attempting save
+    {
+        FString ExistingLevelFilename;
+        bool bLevelExists = false;
+        
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, ExistingLevelFilename, FPackageName::GetMapPackageExtension()))
+        {
+            FString AbsolutePath = FPaths::ConvertRelativePathToFull(ExistingLevelFilename);
+            bLevelExists = IFileManager::Get().FileExists(*AbsolutePath);
+            
+            if (!bLevelExists)
+            {
+                FString LevelName = FPaths::GetBaseFilename(PackagePath);
+                FString FolderPath = FPaths::GetPath(AbsolutePath) / LevelName + FPackageName::GetMapPackageExtension();
+                bLevelExists = IFileManager::Get().FileExists(*FolderPath);
+            }
+        }
+        
+        if (!bLevelExists)
+        {
+            bLevelExists = FPackageName::DoesPackageExist(PackagePath);
+        }
+        
+        if (bLevelExists)
+        {
+            UWorld* LevelWorld = Level ? Level->GetWorld() : nullptr;
+            if (LevelWorld)
+            {
+                FString CurrentLevelPath = LevelWorld->GetOutermost()->GetName();
+                if (CurrentLevelPath.Equals(PackagePath, ESearchCase::IgnoreCase))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Overwriting existing level: %s"), *PackagePath);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Level already exists at %s (current level is %s)"), 
+                        *PackagePath, *CurrentLevelPath);
+                    return false;
+                }
+            }
+        }
+    }
+
+    // CRITICAL: Flush rendering commands to prevent Intel driver race condition
+    FlushRenderingCommands();
+
+    // Small delay after flush to ensure GPU is completely idle
+    FPlatformProcess::Sleep(0.050f); // 50ms wait
+
+    // Perform the actual save
+    UWorld* World = Level ? Level->GetWorld() : nullptr;
+    bool bSaveSucceeded = false;
+    if (World)
+    {
+        bSaveSucceeded = UEditorLoadingAndSavingUtils::SaveMap(World, PackagePath);
+    }
+    else
+    {
+        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
+    }
+
+    if (bSaveSucceeded)
+    {
+        // Small delay before verification
+        FPlatformProcess::Sleep(0.050f);
+
+        // Verify file exists on disk
+        FString VerifyFilename;
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
+        {
+            FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
+            
+            if (IFileManager::Get().FileExists(*VerifyFilename) || IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
+                return true;
+            }
+            
+            // FALLBACK: Check if package exists in UE's package system
+            if (FPackageName::DoesPackageExist(PackagePath))
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                return true;
+            }
+            
+            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Save reported success but file not found: %s"), *VerifyFilename);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
+        }
+    }
+
+    UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Failed to save level: %s"), *PackagePath);
     return false;
 }
 
@@ -850,6 +1081,230 @@ static inline UMaterialInterface* McpLoadMaterialWithFallback(
     
     UE_LOG(LogTemp, Error, TEXT("McpLoadMaterialWithFallback: All fallback materials unavailable - engine content may be missing"));
     return nullptr;
+}
+
+/**
+ * Safe map loading helper - properly cleans up current world before loading a new map.
+ * Prevents TickTaskManager assertion "!LevelList.Contains(TickTaskLevel)" and
+ * "World Memory Leaks" crashes in UE 5.7.
+ * 
+ * CRITICAL: This function must be called from the Game Thread.
+ * 
+ * Root Cause Analysis:
+ * The FTickTaskManager maintains a LevelList that's filled during StartFrame()
+ * and cleared during EndFrame(). When LoadMap destroys the old world:
+ * 1. ULevel destructor calls FreeTickTaskLevel()
+ * 2. FreeTickTaskLevel() asserts: check(!LevelList.Contains(TickTaskLevel))
+ * 3. If a tick frame started but didn't complete, LevelList still has entries
+ * 
+ * This is a known UE 5.7 issue (UE-197643, UE-138424).
+ * 
+ * @param MapPath The map path to load (e.g., /Game/Maps/MyMap)
+ * @param bForceCleanup If true, perform aggressive cleanup before loading (default: true)
+ * @return bool True if the map was loaded successfully
+ */
+static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
+{
+    if (!GEditor)
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: GEditor is null"));
+        return false;
+    }
+
+    // CRITICAL: Ensure we're on the game thread
+    if (!IsInGameThread())
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: Must be called from game thread"));
+        return false;
+    }
+
+    // CRITICAL: Wait for any async loading to complete
+    // Loading a map while async loading is in progress can cause crashes
+    int32 AsyncWaitCount = 0;
+    while (IsAsyncLoading() && AsyncWaitCount < 100)
+    {
+        FlushAsyncLoading();
+        FPlatformProcess::Sleep(0.01f);
+        AsyncWaitCount++;
+    }
+    if (AsyncWaitCount > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Waited %d frames for async loading to complete"), AsyncWaitCount);
+    }
+
+    // CRITICAL: Stop PIE if active - loading a map during PIE causes issues
+    if (GEditor->PlayWorld)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Stopping active PIE session before loading map"));
+        GEditor->RequestEndPlayMap();
+        // Wait for PIE to fully stop
+        int32 PieWaitCount = 0;
+        while (GEditor->PlayWorld && PieWaitCount < 100)
+        {
+            FlushRenderingCommands();
+            FPlatformProcess::Sleep(0.01f);
+            PieWaitCount++;
+        }
+        FlushRenderingCommands();
+    }
+
+    UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    
+    // CRITICAL: Check if current world has World Partition before cleanup
+    // World Partition levels have additional tick registrations that may cause
+    // TickTaskManager assertion crashes even with standard cleanup.
+    // This is a known UE 5.7 issue (UE-197643, UE-138424).
+    if (CurrentWorld)
+    {
+        AWorldSettings* WorldSettings = CurrentWorld->GetWorldSettings();
+        UWorldPartition* CurrentWorldPartition = WorldSettings ? WorldSettings->GetWorldPartition() : nullptr;
+        if (CurrentWorldPartition)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("McpSafeLoadMap: Current world '%s' has World Partition - tick cleanup may be incomplete"), *CurrentWorld->GetName());
+        }
+    }
+    
+    if (CurrentWorld && bForceCleanup)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"), *CurrentWorld->GetName(), *MapPath);
+        
+        // STEP 1: Mark all levels as invisible to prevent FillLevelList from adding them
+        // This is CRITICAL - FillLevelList only adds levels where bIsVisible is true
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (Level)
+            {
+                Level->bIsVisible = false;
+            }
+        }
+        
+        // STEP 2: Unregister all tick functions (actors + components)
+        // CRITICAL: SetActorTickEnabled(false) only DISABLES ticking - it doesn't UNREGISTER
+        // the tick function from FTickTaskManager. We must call UnRegisterTickFunction()
+        // to properly remove from LevelList and prevent the assertion.
+        int32 UnregisteredActorCount = 0;
+        int32 UnregisteredComponentCount = 0;
+        for (ULevel* Level : CurrentWorld->GetLevels())
+        {
+            if (!Level) continue;
+            
+            for (AActor* Actor : Level->Actors)
+            {
+                if (Actor)
+                {
+                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                    {
+                        Actor->PrimaryActorTick.UnRegisterTickFunction();
+                        UnregisteredActorCount++;
+                    }
+                    
+                    // Clear tick prerequisites to prevent cross-level issues (UE-197643)
+                    Actor->PrimaryActorTick.Prerequisites.Empty();
+                    
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
+                        {
+                            Component->PrimaryComponentTick.UnRegisterTickFunction();
+                            UnregisteredComponentCount++;
+                        }
+                    }
+                }
+            }
+        }
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Unregistered %d actor ticks and %d component ticks"), UnregisteredActorCount, UnregisteredComponentCount);
+        
+        // STEP 3: Send end-of-frame updates to complete any pending tick work
+        CurrentWorld->SendAllEndOfFrameUpdates();
+        
+        // STEP 4: Flush rendering commands to ensure all GPU work is complete
+        FlushRenderingCommands();
+        
+        // STEP 5: Unload streaming levels explicitly
+        // This prevents UE-197643 where tick prerequisites cross level boundaries
+        TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
+        for (ULevelStreaming* StreamingLevel : StreamingLevels)
+        {
+            if (StreamingLevel)
+            {
+                StreamingLevel->SetShouldBeLoaded(false);
+                StreamingLevel->SetShouldBeVisible(false);
+            }
+        }
+        
+        // STEP 6: Flush rendering commands again after streaming level changes
+        // CRITICAL: This was missing and caused crashes
+        FlushRenderingCommands();
+        
+        // STEP 7: Force garbage collection to clean up any remaining references
+        GEditor->ForceGarbageCollection(true);
+        
+        // STEP 8: Flush again after GC
+        FlushRenderingCommands();
+        
+        // STEP 9: Give the engine a moment to process cleanup
+        // This is essential for the tick system to settle
+        FPlatformProcess::Sleep(0.10f);
+        
+        // STEP 10: Final flush to ensure everything is settled
+        FlushRenderingCommands();
+    }
+    
+    // STEP 11: Check if the map we're trying to load is already the current map
+    // If so, skip loading to avoid unnecessary world transitions
+    if (CurrentWorld)
+    {
+        FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
+        FString NormalizedMapPath = MapPath;
+        
+        // Remove .umap extension for comparison
+        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        {
+            NormalizedMapPath.LeftChopInline(5);
+        }
+        
+        if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
+        {
+            UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
+            return true; // Already loaded, consider it success
+        }
+    }
+    
+    // STEP 12: Load the map
+    UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Loading map '%s'"), *MapPath);
+    bool bLoaded = FEditorFileUtils::LoadMap(*MapPath);
+    
+    if (bLoaded)
+    {
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Successfully loaded map '%s'"), *MapPath);
+        
+        // STEP 13: Disable ticking on the new world's actors immediately
+        // The loaded world might have actors that trigger tick assertions
+        UWorld* NewWorld = GEditor->GetEditorWorldContext().World();
+        if (NewWorld && NewWorld->PersistentLevel)
+        {
+            for (AActor* Actor : NewWorld->PersistentLevel->Actors)
+            {
+                if (Actor)
+                {
+                    Actor->SetActorTickEnabled(false);
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component)
+                        {
+                            Component->SetComponentTickEnabled(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLoadMap: Failed to load map '%s'"), *MapPath);
+    }
+    
+    return bLoaded;
 }
 #endif // WITH_EDITOR
 
@@ -2751,6 +3206,87 @@ static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response, const FSt
     Response->SetBoolField(TEXT("existsAfter"), bExists);
   }
   return bExists;
+}
+
+/**
+ * Check if a UE asset directory path ACTUALLY exists on disk.
+ * 
+ * UEditorAssetLibrary::DoesDirectoryExist() uses the AssetRegistry cache which may
+ * contain stale entries for directories that no longer exist or never existed.
+ * This function converts the UE path to an absolute file system path and checks
+ * if the directory actually exists on disk.
+ * 
+ * @param AssetPath UE asset path (e.g., /Game/MyFolder)
+ * @returns true if the directory exists on disk, false otherwise
+ */
+static inline bool DoesAssetDirectoryExistOnDisk(const FString& AssetPath) {
+#if WITH_EDITOR
+  // Handle root paths that always exist
+  if (AssetPath.Equals(TEXT("/Game"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Game/"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Engine"), ESearchCase::IgnoreCase) ||
+      AssetPath.Equals(TEXT("/Engine/"), ESearchCase::IgnoreCase)) {
+    return true;
+  }
+  
+  // Normalize the path - remove trailing slash
+  FString NormalizedPath = AssetPath;
+  if (NormalizedPath.EndsWith(TEXT("/"))) {
+    NormalizedPath.RemoveAt(NormalizedPath.Len() - 1);
+  }
+  
+  // Convert UE asset path to file system path
+  // /Game/Folder -> Project/Content/Folder
+  FString FileSystemPath;
+  
+  if (NormalizedPath.StartsWith(TEXT("/Game/"))) {
+    // /Game/... -> Project/Content/...
+    FString RelativePath = NormalizedPath.RightChop(6); // Remove "/Game/"
+    FileSystemPath = FPaths::ProjectContentDir() / RelativePath;
+  } else if (NormalizedPath.StartsWith(TEXT("/Engine/"))) {
+    // /Engine/... -> Engine/Content/...
+    FString RelativePath = NormalizedPath.RightChop(8); // Remove "/Engine/"
+    FileSystemPath = FPaths::EngineContentDir() / RelativePath;
+  } else {
+    // For plugin paths or other roots, try to use FPackageName
+    FString PackageName = NormalizedPath;
+    if (FPackageName::TryConvertLongPackageNameToFilename(PackageName, FileSystemPath)) {
+      // Success - FileSystemPath is now set
+    } else {
+      // Fallback: check if it exists in AssetRegistry (less reliable)
+      return UEditorAssetLibrary::DoesDirectoryExist(AssetPath);
+    }
+  }
+  
+  // Check if the directory exists on disk using IFileManager
+  IFileManager& FileManager = IFileManager::Get();
+  return FileManager.DirectoryExists(*FileSystemPath);
+#else
+  // Non-editor builds: fall back to AssetRegistry
+  return false;
+#endif
+}
+
+/**
+ * Check if a parent directory exists for asset creation.
+ * Combines AssetRegistry check (for valid paths) with disk check (for actual existence).
+ * 
+ * @param AssetPath UE asset path for the asset to be created
+ * @return true if parent directory exists, false otherwise
+ */
+static inline bool DoesParentDirectoryExist(const FString& AssetPath) {
+#if WITH_EDITOR
+  // Extract parent path
+  FString ParentPath = FPaths::GetPath(AssetPath);
+  if (ParentPath.IsEmpty()) {
+    return false;
+  }
+  
+  // Check if parent exists on disk
+  return DoesAssetDirectoryExistOnDisk(ParentPath);
+#else
+  return false;
+#endif
 }
 
 #endif

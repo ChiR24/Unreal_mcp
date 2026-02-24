@@ -149,7 +149,16 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         coordinateIndex: commonSchemas.numberProp,
         parameterType: commonSchemas.stringProp,
         nodes: commonSchemas.arrayOfObjects,
-        tags: commonSchemas.arrayOfStrings
+        tags: commonSchemas.arrayOfStrings,
+        // Handler aliases (alternative parameter names accepted by handler)
+        folderPath: commonSchemas.directoryPath,
+        sourceNode: commonSchemas.sourceNodeId,
+        targetNode: commonSchemas.targetNodeId,
+        outputPin: commonSchemas.sourcePin,
+        inputPin: commonSchemas.targetPin,
+        type: commonSchemas.stringProp,
+        defaultValue: commonSchemas.value,
+        expressionIndex: commonSchemas.nodeId
       },
       required: ['action']
     },
@@ -386,9 +395,27 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         command: commonSchemas.stringProp,
         steps: commonSchemas.integerProp,
         bookmarkName: commonSchemas.stringProp,
+        // Path parameters for various actions
         assetPath: commonSchemas.assetPath,
-        keyName: commonSchemas.stringProp,
-        eventType: { type: 'string', enum: ['KeyDown', 'KeyUp', 'Both'] }
+        levelPath: commonSchemas.levelPath,
+        path: commonSchemas.directoryPath,
+        // Actor-related parameters
+        actorName: commonSchemas.actorName,
+        name: commonSchemas.name,
+        // Action-specific parameters
+        mode: commonSchemas.stringProp,
+        deltaTime: commonSchemas.numberProp,
+        resolution: commonSchemas.resolution,
+        realtime: commonSchemas.booleanProp,
+        stat: commonSchemas.stringProp,
+        category: commonSchemas.stringProp,
+        preferences: commonSchemas.objectProp,
+        section: commonSchemas.stringProp,
+        key: commonSchemas.stringProp,
+        value: commonSchemas.value,
+        // simulate_input parameters
+        inputAction: commonSchemas.stringProp,
+        axis: commonSchemas.stringProp
       },
       required: ['action']
     },
@@ -410,35 +437,57 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           type: 'string',
           enum: [
             'load', 'save', 'save_as', 'save_level_as', 'stream', 'unload', 'create_level', 'create_light', 'build_lighting',
-            'set_metadata', 'load_cells', 'set_datalayer',
+            'set_metadata', 'load_cells', 'set_datalayer', 'create_datalayer',
             'export_level', 'import_level', 'list_levels', 'get_summary', 'delete', 'delete_level', 'validate_level',
             'cleanup_invalid_datalayers', 'add_sublevel', 'rename_level', 'duplicate_level', 'get_current_level'
           ],
           description: 'Action'
         },
+        // Level path parameters
         levelPath: commonSchemas.levelPath,
+        levelPaths: commonSchemas.arrayOfStrings,
         levelName: commonSchemas.stringProp,
         path: commonSchemas.directoryPathForCreation,
-        assetPath: commonSchemas.assetPath,
+        // Save/export/import paths
+        savePath: commonSchemas.savePath,
+        destinationPath: commonSchemas.destinationPath,
+        targetPath: commonSchemas.directoryPath,
+        exportPath: commonSchemas.exportPath,
+        packagePath: commonSchemas.directoryPath,
+        sourcePath: commonSchemas.sourcePath,
+        // Sublevel parameters
+        sublevelPath: commonSchemas.levelPath,
+        parentLevel: commonSchemas.parentLevel,
+        parentPath: commonSchemas.directoryPath,
+        streamingMethod: commonSchemas.stringProp,
+        // Streaming control
         streaming: commonSchemas.booleanProp,
         shouldBeLoaded: commonSchemas.booleanProp,
         shouldBeVisible: commonSchemas.booleanProp,
+        // Light creation
         lightType: { type: 'string', enum: ['Directional', 'Point', 'Spot', 'Rect', 'DirectionalLight', 'PointLight', 'SpotLight', 'RectLight', 'directional', 'point', 'spot', 'rect'], description: 'Light type. Accepts short names (Point), class names (PointLight), or lowercase (point).' },
-        lightClass: { type: 'string', description: 'Unreal light class name (e.g., PointLight, SpotLight). Alternative to lightType.' },
         intensity: commonSchemas.numberProp,
         color: commonSchemas.color,
         location: commonSchemas.location,
         rotation: commonSchemas.rotation,
-        filter: commonSchemas.filter,
-        save: commonSchemas.save,
-        newName: commonSchemas.stringProp,
-        targetPath: commonSchemas.directoryPath,
+        // World Partition / Data Layers
         cells: commonSchemas.arrayOfStrings,
-        dataLayer: commonSchemas.stringProp,
+        dataLayerName: commonSchemas.dataLayerName,
+        dataLayerLabel: commonSchemas.stringProp,
         dataLayerState: commonSchemas.stringProp,
-        sublevelPath: commonSchemas.levelPath,
-        buildQuality: commonSchemas.numberProp,
-        lightmapRes: commonSchemas.numberProp
+        actorPath: commonSchemas.actorPath,
+        // Cell bounds
+        min: commonSchemas.location,
+        max: commonSchemas.location,
+        origin: commonSchemas.location,
+        extent: commonSchemas.extent,
+        // Level creation
+        template: commonSchemas.stringProp,
+        useWorldPartition: commonSchemas.booleanProp,
+        // Metadata & utilities
+        metadata: commonSchemas.objectProp,
+        newName: commonSchemas.stringProp,
+        timeoutMs: commonSchemas.numberProp
       },
       required: ['action']
     },
@@ -468,7 +517,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_procedural_terrain', 'create_procedural_foliage', 'add_foliage_instances',
             'get_foliage_instances', 'remove_foliage', 'paint_landscape', 'paint_landscape_layer',
             'modify_heightmap', 'set_landscape_material', 'create_landscape_grass_type',
-            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete'
+            'generate_lods', 'bake_lightmap', 'export_snapshot', 'import_snapshot', 'delete',
+            'create_sky_sphere', 'set_time_of_day', 'create_fog_volume'
           ],
           description: 'Action'
         },
@@ -523,9 +573,32 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         volumeName: commonSchemas.stringProp,
         seed: commonSchemas.numberProp,
         foliageTypes: commonSchemas.arrayOfObjects,
+        // Additional handler-used params
+        quadsPerSection: commonSchemas.numberProp,
+        enableWorldPartition: commonSchemas.booleanProp,
+        runtimeGrid: commonSchemas.stringProp,
+        isSpatiallyLoaded: commonSchemas.booleanProp,
+        dataLayers: commonSchemas.arrayOfStrings,
+        count: commonSchemas.numberProp,
+        assets: commonSchemas.arrayOfStrings,
+        numLODs: commonSchemas.numberProp,
+        subdivisions: commonSchemas.numberProp,
+        settings: commonSchemas.objectProp,
+        tileSize: commonSchemas.numberProp,
+        quality: commonSchemas.stringProp,
+        staticMesh: commonSchemas.meshPath,
+        timeoutMs: commonSchemas.numberProp,
         path: commonSchemas.directoryPath,
         filename: commonSchemas.stringProp,
-        assetPaths: commonSchemas.arrayOfStrings
+        assetPaths: commonSchemas.arrayOfStrings,
+        // Additional params for C++ handler alignment (EnvironmentHandlers.cpp)
+        names: commonSchemas.arrayOfStrings,
+        time: commonSchemas.numberProp,
+        spacing: commonSchemas.numberProp,
+        heightScale: commonSchemas.numberProp,
+        material: commonSchemas.materialPath,
+        hour: commonSchemas.numberProp,
+        intensity: commonSchemas.numberProp
       },
       required: ['action']
     },
@@ -1561,6 +1634,171 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   // [MERGED] manage_animation_authoring actions now in animation_physics (Phase 53: Strategic Tool Merging)
   // [MERGED] manage_audio_authoring actions now in manage_audio (Phase 53: Strategic Tool Merging)
   // [MERGED] manage_niagara_authoring actions now in manage_effect (Phase 53: Strategic Tool Merging)
+  {
+    name: 'manage_effect',
+    category: 'gameplay',
+    description: 'Niagara particle systems, VFX, debug shapes, and GPU simulations. Create systems, emitters, modules, and control particle effects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'particle', 'niagara', 'debug_shape', 'spawn_niagara', 'create_dynamic_light',
+            'create_niagara_system', 'create_niagara_emitter', 'create_volumetric_fog',
+            'create_particle_trail', 'create_environment_effect', 'create_impact_effect',
+            'create_niagara_ribbon', 'activate', 'activate_effect', 'deactivate', 'reset',
+            'advance_simulation', 'add_niagara_module', 'connect_niagara_pins',
+            'remove_niagara_node', 'set_niagara_parameter', 'clear_debug_shapes', 'cleanup',
+            'list_debug_shapes', 'add_emitter_to_system', 'set_emitter_properties',
+            'add_spawn_rate_module', 'add_spawn_burst_module', 'add_spawn_per_unit_module',
+            'add_initialize_particle_module', 'add_particle_state_module', 'add_force_module',
+            'add_velocity_module', 'add_acceleration_module', 'add_size_module', 'add_color_module',
+            'add_sprite_renderer_module', 'add_mesh_renderer_module', 'add_ribbon_renderer_module',
+            'add_light_renderer_module', 'add_collision_module', 'add_kill_particles_module',
+            'add_camera_offset_module', 'add_user_parameter', 'set_parameter_value',
+            'bind_parameter_to_source', 'add_skeletal_mesh_data_interface',
+            'add_static_mesh_data_interface', 'add_spline_data_interface', 'add_audio_spectrum_data_interface',
+            'add_collision_query_data_interface', 'add_event_generator', 'add_event_receiver',
+            'configure_event_payload', 'enable_gpu_simulation', 'add_simulation_stage',
+            'get_niagara_info', 'validate_niagara_system'
+          ],
+          description: 'Effect/Niagara action to perform.'
+        },
+        // Common parameters
+        name: commonSchemas.name,
+        assetPath: commonSchemas.assetPath,
+        savePath: commonSchemas.savePath,
+        template: commonSchemas.stringProp,
+        // System/Emitter parameters
+        system: commonSchemas.assetPath,
+        systemPath: commonSchemas.assetPath,
+        systemName: commonSchemas.stringProp,
+        emitter: commonSchemas.stringProp,
+        emitterName: commonSchemas.stringProp,
+        emitterTemplate: commonSchemas.assetPath,
+        // Location and transform
+        location: commonSchemas.location,
+        rotation: commonSchemas.rotation,
+        scale: commonSchemas.scale,
+        // Effect control
+        effect: commonSchemas.assetPath,
+        effectId: commonSchemas.stringProp,
+        effectHandle: commonSchemas.stringProp,
+        niagaraHandle: commonSchemas.stringProp,
+        actorName: commonSchemas.actorName,
+        reset: commonSchemas.booleanProp,
+        time: commonSchemas.numberProp,
+        // Debug shapes
+        shape: commonSchemas.stringProp,
+        shapeType: commonSchemas.stringProp,
+        radius: commonSchemas.numberProp,
+        color: { type: 'array', items: commonSchemas.numberProp },
+        duration: commonSchemas.numberProp,
+        // Dynamic light
+        lightType: commonSchemas.stringProp,
+        intensity: commonSchemas.numberProp,
+        // Particle/VFX parameters
+        preset: commonSchemas.stringProp,
+        type: commonSchemas.stringProp,
+        width: commonSchemas.numberProp,
+        density: commonSchemas.numberProp,
+        scattering: commonSchemas.numberProp,
+        // Trail and ribbon
+        attachTo: commonSchemas.stringProp,
+        ribbonPath: commonSchemas.assetPath,
+        // Impact effect
+        surfaceType: commonSchemas.stringProp,
+        impactType: commonSchemas.stringProp,
+        // Environment effect
+        effectType: commonSchemas.stringProp,
+        // Niagara parameters
+        parameterName: commonSchemas.parameterName,
+        parameterType: commonSchemas.stringProp,
+        value: commonSchemas.value,
+        // Niagara modules
+        moduleName: commonSchemas.stringProp,
+        fromNode: commonSchemas.stringProp,
+        toNode: commonSchemas.stringProp,
+        fromPin: commonSchemas.sourcePin,
+        toPin: commonSchemas.targetPin,
+        outputPin: commonSchemas.sourcePin,
+        inputPin: commonSchemas.targetPin,
+        node: commonSchemas.stringProp,
+        // Emitter properties
+        loopBehavior: commonSchemas.stringProp,
+        spawnRate: commonSchemas.numberProp,
+        count: commonSchemas.numberProp,
+        loopCount: commonSchemas.numberProp,
+        unitsPerSpawn: commonSchemas.numberProp,
+        // Particle attributes
+        attributes: commonSchemas.objectProp,
+        updateScript: commonSchemas.stringProp,
+        // Force/velocity/acceleration
+        forceType: commonSchemas.stringProp,
+        strength: commonSchemas.numberProp,
+        velocityMode: commonSchemas.stringProp,
+        speedMin: commonSchemas.numberProp,
+        speedMax: commonSchemas.numberProp,
+        acceleration: commonSchemas.location,
+        // Size
+        sizeMode: commonSchemas.stringProp,
+        sizeMin: commonSchemas.location,
+        sizeMax: commonSchemas.location,
+        // Color
+        colorMode: commonSchemas.stringProp,
+        gradientStart: { type: 'array', items: commonSchemas.numberProp },
+        gradientEnd: { type: 'array', items: commonSchemas.numberProp },
+        // Renderers
+        material: commonSchemas.materialPath,
+        mesh: commonSchemas.meshPath,
+        lightIntensity: commonSchemas.numberProp,
+        lightRadius: commonSchemas.numberProp,
+        // Collision
+        collisionMode: commonSchemas.stringProp,
+        collisionRadius: commonSchemas.numberProp,
+        // Kill particles
+        killCondition: commonSchemas.stringProp,
+        // Camera offset
+        offsetMode: commonSchemas.stringProp,
+        offsetAmount: commonSchemas.numberProp,
+        // User parameters
+        paramName: commonSchemas.stringProp,
+        paramType: commonSchemas.stringProp,
+        sourceActor: commonSchemas.stringProp,
+        // Data interfaces
+        skeletalMesh: commonSchemas.meshPath,
+        staticMesh: commonSchemas.meshPath,
+        splineComponent: commonSchemas.stringProp,
+        audioComponent: commonSchemas.stringProp,
+        queryChannel: commonSchemas.stringProp,
+        // Events
+        eventName: commonSchemas.eventName,
+        condition: commonSchemas.stringProp,
+        receiverScript: commonSchemas.stringProp,
+        payload: commonSchemas.objectProp,
+        // GPU simulation
+        enabled: commonSchemas.booleanProp,
+        // Simulation stage
+        stageName: commonSchemas.stringProp,
+        stageType: commonSchemas.stringProp,
+        // Timeout
+        timeoutMs: commonSchemas.numberProp
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        systemPath: commonSchemas.assetPath,
+        emitterName: commonSchemas.stringProp,
+        shapes: commonSchemas.arrayOfObjects,
+        niagaraInfo: commonSchemas.objectProp,
+        validationResult: commonSchemas.objectProp
+      }
+    }
+  },
   {
     name: 'manage_gas',
     category: 'gameplay',
@@ -3438,7 +3676,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           enum: ['RoundWholeNumber', 'RoundOneDecimal', 'RoundTwoDecimals'],
           description: 'Location quantization level.'
         },
-        save: commonSchemas.save
+        // Additional params for C++ handler alignment (NetworkingHandlers.cpp)
+        spatiallyLoaded: { type: 'boolean', description: 'Spatially loaded for replication graph.' },
+        netLoadOnClient: { type: 'boolean', description: 'Net load on client for replication graph.' },
+        replicationPolicy: { type: 'string', description: 'Replication policy for replication graph.' },
+        customSerialization: { type: 'boolean', description: 'Use custom serialization.' },
+        predictionThreshold: { type: 'number', description: 'Prediction threshold for client prediction.' },
+        removeAll: { type: 'boolean', description: 'Remove all foliage instances.' }
       },
       required: ['action']
     },

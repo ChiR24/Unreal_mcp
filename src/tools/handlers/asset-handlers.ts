@@ -6,6 +6,39 @@ import { normalizeArgs, extractString, extractOptionalString, extractOptionalNum
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { sanitizePath } from '../../utils/validation.js';
 
+/**
+ * Valid actions for manage_asset tool.
+ * Actions not in this list will return UNKNOWN_ACTION error immediately.
+ */
+const VALID_ASSET_ACTIONS = new Set([
+  // Core asset operations
+  'list', 'import', 'duplicate', 'rename', 'move', 'delete',
+  'create_folder', 'search_assets', 'get_dependencies', 'validate',
+  'fixup_redirectors', 'find_by_tag', 'exists', 'bulk_rename', 'bulk_delete',
+  'duplicate_asset', 'rename_asset', 'move_asset', 'delete_asset', 'delete_assets',
+  // Asset metadata
+  'create_thumbnail', 'set_tags', 'get_metadata', 'set_metadata', 'generate_report',
+  // Material operations
+  'create_material', 'create_material_instance', 'create_render_target',
+  'generate_lods', 'add_material_parameter', 'list_instances',
+  'reset_instance_parameters', 'get_material_stats', 'nanite_rebuild_mesh',
+  // Material graph operations
+  'add_material_node', 'remove_material_node', 'rebuild_material',
+  'connect_material_pins', 'break_material_connections', 'get_material_node_details',
+  // Source control
+  'source_control_checkout', 'source_control_submit', 'source_control_enable', 'get_source_control_state',
+  // Graph analysis
+  'analyze_graph', 'get_asset_graph'
+]);
+
+/**
+ * Check if an action is valid for the manage_asset tool.
+ * Returns true if the action is recognized, false otherwise.
+ */
+function isValidAssetAction(action: string): boolean {
+  return VALID_ASSET_ACTIONS.has(action);
+}
+
 /** Asset info from list response */
 interface AssetListItem {
   path?: string;
@@ -227,10 +260,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'delete': {
         let paths: string[] = [];
         const argsTyped = args as AssetArgs;
-        if (Array.isArray(argsTyped.assetPaths) || Array.isArray(argsTyped.asset_paths)) {
+        // Check for array of paths first (delete_assets uses 'paths')
+        if (Array.isArray(argsTyped.paths)) {
+          paths = argsTyped.paths.filter((p): p is string => typeof p === 'string' && p.trim().length > 0);
+        } else if (Array.isArray(argsTyped.assetPaths) || Array.isArray(argsTyped.asset_paths)) {
           paths = (argsTyped.assetPaths || argsTyped.asset_paths) as string[];
         } else {
-          // Support both camelCase and snake_case parameter names
+          // Support both camelCase and snake_case parameter names for single path
           const single = argsTyped.assetPath || argsTyped.asset_path || argsTyped.path;
           if (typeof single === 'string' && single.trim()) {
             paths = [single.trim()];
@@ -454,6 +490,17 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const res = await tools.assetTools.getSourceControlState({ assetPath });
         return ResponseFactory.success(res, 'Source control state retrieved');
       }
+      case 'source_control_enable': {
+        // Enable source control by specifying a provider (perforce, svn, etc.)
+        const params = normalizeArgs(args, [
+          { key: 'provider', default: 'None' }
+        ]);
+        const provider = extractOptionalString(params, 'provider') ?? 'None';
+        const res = await executeAutomationRequest(tools, 'source_control_enable', {
+          provider
+        });
+        return ResponseFactory.success(res, 'Source control enabled');
+      }
       case 'analyze_graph': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', required: true },
@@ -578,16 +625,6 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Material stats retrieved');
       }
-      case 'rebuild_material': {
-        const params = normalizeArgs(args, [
-          { key: 'assetPath', required: true }
-        ]);
-        const assetPath = extractString(params, 'assetPath');
-        const res = await executeAutomationRequest(tools, 'rebuild_material', {
-          assetPath
-        });
-        return ResponseFactory.success(res, 'Material rebuilt successfully');
-      }
       case 'add_material_node': {
         const materialNodeAliases: Record<string, string> = {
           'Multiply': 'MaterialExpressionMultiply',
@@ -619,7 +656,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         };
 
         const params = normalizeArgs(args, [
-          { key: 'assetPath', required: true },
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
           { key: 'nodeType', aliases: ['type'], required: true, map: materialNodeAliases },
           { key: 'posX' },
           { key: 'posY' }
@@ -638,8 +675,136 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         });
         return ResponseFactory.success(res, 'Material node added successfully');
       }
+      case 'connect_material_pins': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'sourceNodeId', aliases: ['sourceNode'], required: true },
+          { key: 'sourcePin', aliases: ['fromPin', 'outputPin'], required: true },
+          { key: 'targetNodeId', aliases: ['targetNode'], required: true },
+          { key: 'targetPin', aliases: ['toPin', 'inputPin'], required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const sourceNodeId = extractString(params, 'sourceNodeId');
+        const sourcePin = extractString(params, 'sourcePin');
+        const targetNodeId = extractString(params, 'targetNodeId');
+        const targetPin = extractString(params, 'targetPin');
+        const res = await executeAutomationRequest(tools, 'connect_material_pins', {
+          assetPath,
+          sourceNodeId,
+          sourcePin,
+          targetNodeId,
+          targetPin
+        });
+        return ResponseFactory.success(res, 'Material pins connected successfully');
+      }
+      case 'remove_material_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+        const res = await executeAutomationRequest(tools, 'remove_material_node', {
+          assetPath,
+          nodeId
+        });
+        return ResponseFactory.success(res, 'Material node removed successfully');
+      }
+      case 'break_material_connections': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId' },
+          { key: 'pinName' }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractOptionalString(params, 'nodeId');
+        const pinName = extractOptionalString(params, 'pinName');
+        const res = await executeAutomationRequest(tools, 'break_material_connections', {
+          assetPath,
+          nodeId,
+          pinName
+        });
+        return ResponseFactory.success(res, 'Material connections broken successfully');
+      }
+      case 'get_material_node_details': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: false },  // Optional - if not provided, lists all nodes
+          { key: 'expressionIndex' }  // Alternative to nodeId - numeric index
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractOptionalString(params, 'nodeId');
+        const expressionIndex = extractOptionalNumber(params, 'expressionIndex');
+        
+        const res = await executeAutomationRequest(tools, 'get_material_node_details', {
+          assetPath,
+          nodeId,
+          expressionIndex
+        });
+        return ResponseFactory.success(res, 'Material node details retrieved');
+      }
+      case 'rebuild_material': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true }
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const res = await executeAutomationRequest(tools, 'rebuild_material', {
+          assetPath
+        });
+        return ResponseFactory.success(res, 'Material rebuilt successfully');
+      }
+      case 'bulk_rename': {
+        // Accept either folderPath or assetPaths
+        // Map pattern->searchText and replacement->replaceText for C++ compatibility
+        const argsTyped = args as AssetArgs;
+        const folderPath = argsTyped.folderPath ?? argsTyped.path;
+        const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
+        
+        if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_rename');
+        }
+        
+        const res = await executeAutomationRequest(tools, 'bulk_rename', {
+          folderPath,
+          assetPaths,
+          searchText: argsTyped.pattern,
+          replaceText: argsTyped.replacement,
+          prefix: argsTyped.prefix,
+          suffix: argsTyped.suffix
+        });
+        return ResponseFactory.success(res, 'Bulk rename completed');
+      }
+      case 'bulk_delete': {
+        // Accept either folderPath or assetPaths
+        const argsTyped = args as AssetArgs;
+        const folderPath = argsTyped.folderPath ?? argsTyped.path;
+        const assetPaths = argsTyped.assetPaths ?? argsTyped.paths;
+        
+        if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
+          return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_delete');
+        }
+        
+        const res = await executeAutomationRequest(tools, 'bulk_delete', {
+          ...args,
+          folderPath,
+          assetPaths
+        });
+        return ResponseFactory.success(res, 'Bulk delete completed');
+      }
       default: {
-        // Pass all args through to C++ handler for unhandled actions
+        // Validate action first - return error immediately for unknown actions
+        // This prevents sending invalid requests to C++ and avoids timeout issues
+        if (!isValidAssetAction(action)) {
+          return cleanObject({
+            success: false,
+            error: 'UNKNOWN_ACTION',
+            message: `Unknown asset action: ${action}. Valid actions are: ${Array.from(VALID_ASSET_ACTIONS).join(', ')}`,
+            action: action || 'manage_asset',
+            assetPath: (args as AssetArgs).assetPath ?? (args as AssetArgs).path
+          });
+        }
+        
+        // Pass all args through to C++ handler for actions that are valid but not explicitly handled
         const res = await executeAutomationRequest(tools, action || 'manage_asset', { ...args, subAction: action }) as AssetOperationResponse;
         const result = res ?? {};
         const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
@@ -655,6 +820,19 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
             message: `Unknown asset action: ${action}`,
             action: action || 'manage_asset',
             assetPath: argsTyped.assetPath ?? argsTyped.path
+          });
+        }
+
+        // CRITICAL FIX: Check if C++ returned success=false and pass it through
+        // This prevents false positives where TS wraps a failed C++ response as success
+        if (typeof result.success === 'boolean' && result.success === false) {
+          return cleanObject({
+            success: false,
+            error: errorCode || 'OPERATION_FAILED',
+            message: message || 'Asset operation failed',
+            action: action || 'manage_asset',
+            assetPath: argsTyped.assetPath ?? argsTyped.path,
+            data: result
           });
         }
 
