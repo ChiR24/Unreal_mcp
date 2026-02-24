@@ -145,10 +145,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
 #endif
       }
       
-      // Now safe to add emitter handle
+      // AddEmitterHandle: UE 5.0 uses 2 params, UE 5.1+ uses 3 params (with FGuid)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
 #else
       NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());

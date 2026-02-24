@@ -1340,10 +1340,7 @@ static bool HandleCreateDataLayer(
     }
 
     // Configure initial visibility and loaded state
-    // Note: SetDataLayerIsInitiallyVisible was removed in UE 5.5
-    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 5
-    DataLayerEditorSubsystem->SetDataLayerIsInitiallyVisible(NewDataLayerInstance, bIsInitiallyVisible);
-#endif
+    DataLayerEditorSubsystem->SetDataLayerVisibility(NewDataLayerInstance, bIsInitiallyVisible);
     DataLayerEditorSubsystem->SetDataLayerIsLoadedInEditor(NewDataLayerInstance, bIsInitiallyLoaded, false);
 
     // Mark world dirty
