@@ -420,8 +420,8 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
       
       // Map TypeScript parameter names to C++ expected names
-      // C++ expects: nodeId, fromNodeId, toNodeId, fromPinName, toPinName
-      // TS uses: nodeGuid, sourceNode, targetNode, sourcePin, targetPin
+      // C++ expects: nodeId, fromNodeId, toNodeId, fromPinName, toPinName, value
+      // TS uses: nodeGuid, sourceNode, targetNode, sourcePin, targetPin, defaultValue
       const mappedArgs: Record<string, unknown> = { ...args };
       
       // nodeGuid -> nodeId (for delete_node, break_pin_links, set_node_property, get_node_details, get_pin_details, set_pin_default_value)
@@ -443,6 +443,11 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       }
       if (argsRecord.targetPin !== undefined) {
         mappedArgs.toPinName = argsRecord.targetPin;
+      }
+      
+      // defaultValue -> value (for set_pin_default_value)
+      if (argsRecord.defaultValue !== undefined) {
+        mappedArgs.value = argsRecord.defaultValue;
       }
       
       const processedArgs = {

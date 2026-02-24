@@ -554,10 +554,10 @@ export async function handleTextureTools(
         const params = normalizeArgs(args, [
           { key: 'name', required: true },
           { key: 'path', aliases: ['directory'], default: '/Game/Textures' },
-          { key: 'redChannel' }, // Asset path or null for black
-          { key: 'greenChannel' },
-          { key: 'blueChannel' },
-          { key: 'alphaChannel' },
+          { key: 'redTexture', aliases: ['redChannel'] }, // Asset path or null for black
+          { key: 'greenTexture', aliases: ['greenChannel'] },
+          { key: 'blueTexture', aliases: ['blueChannel'] },
+          { key: 'alphaTexture', aliases: ['alphaChannel'] },
           { key: 'redSourceChannel', default: 'Red' }, // Which channel to extract from source
           { key: 'greenSourceChannel', default: 'Green' },
           { key: 'blueSourceChannel', default: 'Blue' },
@@ -569,10 +569,10 @@ export async function handleTextureTools(
 
         const name = extractString(params, 'name');
         const path = extractOptionalString(params, 'path') ?? '/Game/Textures';
-        const redChannel = extractOptionalString(params, 'redChannel');
-        const greenChannel = extractOptionalString(params, 'greenChannel');
-        const blueChannel = extractOptionalString(params, 'blueChannel');
-        const alphaChannel = extractOptionalString(params, 'alphaChannel');
+        const redTexture = extractOptionalString(params, 'redTexture');
+        const greenTexture = extractOptionalString(params, 'greenTexture');
+        const blueTexture = extractOptionalString(params, 'blueTexture');
+        const alphaTexture = extractOptionalString(params, 'alphaTexture');
         const redSourceChannel = extractOptionalString(params, 'redSourceChannel') ?? 'Red';
         const greenSourceChannel = extractOptionalString(params, 'greenSourceChannel') ?? 'Green';
         const blueSourceChannel = extractOptionalString(params, 'blueSourceChannel') ?? 'Blue';
@@ -585,10 +585,10 @@ export async function handleTextureTools(
           subAction: 'channel_pack',
           name,
           path,
-          redChannel,
-          greenChannel,
-          blueChannel,
-          alphaChannel,
+          redTexture,
+          greenTexture,
+          blueTexture,
+          alphaTexture,
           redSourceChannel,
           greenSourceChannel,
           blueSourceChannel,

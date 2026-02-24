@@ -2259,6 +2259,7 @@ Response->SetBoolField(TEXT("success"), true);
         const uint8* BaseData = BaseTex->Source.LockMipReadOnly(0);
         const uint8* OverlayData = OverlayTex->Source.LockMipReadOnly(0);
         uint8* OutData = OutputTexture->Source.LockMip(0);
+        if (!BaseData || !OverlayData || !OutData)
         {
             if (BaseData) BaseTex->Source.UnlockMip(0);
             if (OverlayData) OverlayTex->Source.UnlockMip(0);
