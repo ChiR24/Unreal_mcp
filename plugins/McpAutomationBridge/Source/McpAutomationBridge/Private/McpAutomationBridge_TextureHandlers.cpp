@@ -1940,13 +1940,26 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
         }
         
+        // SECURITY: Sanitize all input texture paths
+        auto SanitizeOptionalTexturePath = [&](FString& P, const TCHAR* Label) {
+            if (P.IsEmpty()) return;
+            FString S = SanitizeProjectRelativePath(P);
+            if (S.IsEmpty()) {
+                TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid %s path: contains traversal or invalid characters"), Label));
+            }
+            P = S;
+        };
+        SanitizeOptionalTexturePath(RedPath, TEXT("redTexture"));
+        SanitizeOptionalTexturePath(GreenPath, TEXT("greenTexture"));
+        SanitizeOptionalTexturePath(BluePath, TEXT("blueTexture"));
+        SanitizeOptionalTexturePath(AlphaPath, TEXT("alphaTexture"));
+        
         // Load channel textures
         // Validate that at least one source texture is provided
                 if (RedPath.IsEmpty() && GreenPath.IsEmpty() && BluePath.IsEmpty() && AlphaPath.IsEmpty())
                 {
                     TEXTURE_ERROR_RESPONSE(TEXT("At least one source texture (redTexture, greenTexture, blueTexture, or alphaTexture) is required"));
                 }
-                
                 // Load channel textures - validate each specified path
                 UTexture2D* RedTex = nullptr;
                 UTexture2D* GreenTex = nullptr;
@@ -2083,6 +2096,17 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("baseTexture and overlayTexture are required"));
         }
         
+        // SECURITY: Sanitize base and overlay texture paths
+        FString SanitizedBase = SanitizeProjectRelativePath(BaseTexturePath);
+        FString SanitizedOverlay = SanitizeProjectRelativePath(OverlayTexturePath);
+        if (SanitizedBase.IsEmpty() || SanitizedOverlay.IsEmpty()) {
+            TEXTURE_ERROR_RESPONSE(TEXT("Invalid baseTexture or overlayTexture path: contains traversal or invalid characters"));
+        }
+        BaseTexturePath = SanitizedBase;
+        OverlayTexturePath = SanitizedOverlay;
+        
+        UTexture2D* BaseTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BaseTexturePath));
+        UTexture2D* OverlayTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *OverlayTexturePath));
         UTexture2D* BaseTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BaseTexturePath));
         UTexture2D* OverlayTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *OverlayTexturePath));
         

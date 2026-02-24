@@ -66,6 +66,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       return true;
     }
 
+    // SECURITY: Validate asset name - reject names with path traversal or illegal characters
+    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\")) || Name.Contains(TEXT(".."))) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid asset name '%s': contains path separators or traversal sequences"), *Name),
+                          TEXT("INVALID_NAME"));
+      return true;
+    }
+
     const FString FullPath = FString::Printf(TEXT("%s/%s"), *SanitizedPath, *Name);
     if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
       SendAutomationError(
@@ -118,6 +126,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
       SendAutomationError(RequestingSocket, RequestId,
                           FString::Printf(TEXT("Invalid path: '%s' contains traversal or invalid characters."), *Path),
                           TEXT("INVALID_PATH"));
+      return true;
+    }
+
+    // SECURITY: Validate asset name - reject names with path traversal or illegal characters
+    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\")) || Name.Contains(TEXT(".."))) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid asset name '%s': contains path separators or traversal sequences"), *Name),
+                          TEXT("INVALID_NAME"));
       return true;
     }
 

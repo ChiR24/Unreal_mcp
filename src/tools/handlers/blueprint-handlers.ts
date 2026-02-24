@@ -42,9 +42,13 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
   if (argsRecord.path) {
     argsRecord.path = normalizeBlueprintPath(argsRecord.path as string);
   }
+  // SECURITY: Normalize assetPath as well
+  if (argsRecord.assetPath) {
+    argsRecord.assetPath = normalizeBlueprintPath(argsRecord.assetPath as string);
+  }
 
   const isUnsafePath = (value: unknown): boolean => typeof value === 'string' && hasBlueprintPathTraversal(value);
-  if (isUnsafePath(argsTyped.blueprintPath) || isUnsafePath(argsRecord.path)) {
+  if (isUnsafePath(argsTyped.blueprintPath) || isUnsafePath(argsRecord.path) || isUnsafePath(argsRecord.assetPath)) {
     return cleanObject({
       success: false,
       error: 'INVALID_BLUEPRINT_PATH',

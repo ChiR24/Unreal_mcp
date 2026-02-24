@@ -29,7 +29,7 @@ const VALID_PARAMS_BY_ACTION: Record<string, Set<string>> = {
 function validateNoExtraParams(action: string, args: Record<string, unknown>): { valid: boolean; error?: string } {
     const validParams = VALID_PARAMS_BY_ACTION[action];
     if (!validParams) {
-        return { valid: false, error: `Unknown action: ${action}` };
+        return { valid: false, error: `manage_input/${action}: Unknown action` };
     }
     
     const providedParams = Object.keys(args);
@@ -38,7 +38,7 @@ function validateNoExtraParams(action: string, args: Record<string, unknown>): {
     if (extraParams.length > 0) {
         return { 
             valid: false, 
-            error: `Invalid parameters for ${action}: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}` 
+            error: `manage_input/${action}: Invalid parameters: ${extraParams.join(', ')}. Valid params: ${[...validParams].join(', ')}` 
         };
     }
     
@@ -77,7 +77,7 @@ function validateAndSanitizePaths(paths: Record<string, unknown>, requiredKeys: 
             return { 
                 valid: false, 
                 sanitized: {}, 
-                error: `Invalid ${key}: ${message}` 
+                error: `manage_input: Invalid ${key}: ${message}` 
             };
         }
     }
@@ -116,7 +116,7 @@ export async function handleInputTools(
     // Validate no extraneous parameters
     const paramValidation = validateNoExtraParams(action, argsRecord);
     if (!paramValidation.valid) {
-        return ResponseFactory.error(paramValidation.error || 'Invalid parameters');
+        return ResponseFactory.error(paramValidation.error || 'manage_input: Invalid parameters');
     }
 
     // All actions are dispatched to C++ via automation bridge
@@ -137,7 +137,7 @@ export async function handleInputTools(
       
       const pathValidation = validateAndSanitizePaths(pathParams, requiredPaths);
       if (!pathValidation.valid) {
-          return ResponseFactory.error(pathValidation.error || 'Invalid path');
+          return ResponseFactory.error(`manage_input/${subAction}: ${pathValidation.error || 'Invalid path'}`);
       }
       
       // Build sanitized payload
