@@ -275,7 +275,7 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
             if (DataLayerSubsys)
             {
                 // Check via DataLayerEditorSubsystem for editor operations
-                TArray<UDataLayerInstance*> ExistingLayers = DataLayerSubsystem->GetActorEditorContextDataLayers();
+                TArray<UDataLayerInstance*> ExistingLayers = DataLayerSubsys->GetActorEditorContextDataLayers();
                 for (UDataLayerInstance* LayerInstance : ExistingLayers)
                 {
                     if (LayerInstance && (LayerInstance->GetDataLayerShortName() == DataLayerName || LayerInstance->GetDataLayerFullName() == DataLayerName))

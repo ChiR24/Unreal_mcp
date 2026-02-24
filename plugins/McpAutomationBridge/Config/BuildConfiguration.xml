@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  BuildConfiguration.xml - Place this file in:
+  %APPDATA%\Unreal Engine\UnrealBuildTool\
+  
+  This configuration suppresses MSVC warnings C4668 and C4067 that occur
+  when building with UE 5.0-5.2 due to the Clang-specific __has_feature macro
+  used in engine headers (e.g., ConcurrentLinearAllocator.h).
+  
+  These warnings are treated as errors when -WarningsAsErrors is enabled,
+  which is the default for UE projects.
+-->
+<Configuration xmlns="https://www.unrealengine.com/BuildConfiguration">
+  <WindowsPlatform>
+    <CompilerWarningsAsErrors>false</CompilerWarningsAsErrors>
+  </WindowsPlatform>
+  <BuildConfiguration>
+    <!-- Disable specific MSVC warnings that fire on UE 5.0-5.2 engine headers -->
+    <AdditionalCompilerArguments>/wd4668 /wd4067</AdditionalCompilerArguments>
+  </BuildConfiguration>
+</Configuration>

@@ -2167,12 +2167,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
                 Config.SetParentAsset(*ParentConfig);
-#else
-                // UE 5.0-5.2: Parent is protected, use property reflection
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                // UE 5.1-5.2: SetValue_InContainer is available
                 static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
                 if (ParentProp)
                 {
                     ParentProp->SetValue_InContainer(&Config, &ParentConfig);
+                }
+#else
+                // UE 5.0: SetValue_InContainer not available, use CopyCompleteValue_InContainer
+                static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
+                if (ParentProp)
+                {
+                    // Create a temporary struct to hold the pointer value, then copy
+                    void* DestPtr = ParentProp->ContainerPtrToValuePtr<void>(&Config);
+                    ParentProp->CopyCompleteValue(DestPtr, &ParentConfig);
                 }
 #endif
             }

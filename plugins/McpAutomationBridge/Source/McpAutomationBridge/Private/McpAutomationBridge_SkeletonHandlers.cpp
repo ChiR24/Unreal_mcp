@@ -1877,11 +1877,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     {
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            // UE 5.1+ uses TObjectPtr
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+            // UE 5.3+ uses TObjectPtr in non-const getter
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
 #else
-            // UE 5.0 uses raw pointers
+            // UE 5.0-5.2 uses raw pointers
             UClothingAssetBase* ClothAsset = ClothAssetPtr;
 #endif
             if (ClothAsset && ClothAsset->GetName() == ClothAssetName)
@@ -1928,7 +1928,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
         TArray<TSharedPtr<FJsonValue>> ClothingArray;
         for (const auto& ClothAssetPtr : ClothingAssets)
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
             UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
 #else
             UClothingAssetBase* ClothAsset = ClothAssetPtr;
@@ -1990,7 +1990,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     TArray<TSharedPtr<FJsonValue>> ClothingArray;
     for (const auto& ClothAssetPtr : Mesh->GetMeshClothingAssets())
     {
-        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
         #else
         UClothingAssetBase* ClothAsset = ClothAssetPtr;
