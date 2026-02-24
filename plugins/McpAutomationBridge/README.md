@@ -23,7 +23,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 | **Audio** | Sound cues, audio components, MetaSounds |
 | **System** | Console commands, UBT, tests, logs, project settings |
 
-**200+ automation actions** across 35 MCP tools.
+**200+ automation actions** across 36 MCP tools.
 
 ---
 
@@ -51,12 +51,40 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 3. Open your project in Unreal Editor
 
 4. Enable required plugins in **Edit → Plugins**:
+
+<details>
+<summary><b>Core Plugins (Required)</b></summary>
+
    - ✅ MCP Automation Bridge
    - ✅ Editor Scripting Utilities
-   - ✅ Sequencer
+   - ✅ Niagara
+
+</details>
+
+<details>
+<summary><b>Optional Plugins (Auto-enabled)</b></summary>
+
    - ✅ Level Sequence Editor (for `manage_sequence`)
    - ✅ Control Rig (for `animation_physics`)
-   - ✅ Geometry Script (for `manage_geometry`)
+   - ✅ GeometryScripting (for `manage_geometry`)
+   - ✅ Behavior Tree Editor (for `manage_behavior_tree`)
+   - ✅ Niagara Editor (for Niagara authoring)
+   - ✅ Gameplay Abilities (for `manage_gas`)
+   - ✅ MetaSound (for `manage_audio` MetaSounds)
+   - ✅ StateTree (for `manage_ai` State Trees)
+   - ✅ Enhanced Input (for `manage_input`)
+   - ✅ Environment Query Editor (for AI/EQS)
+   - ✅ Smart Objects (for AI smart objects)
+   - ✅ Chaos Cloth (for cloth simulation)
+   - ✅ Interchange (for asset import/export)
+   - ✅ Data Validation (for data validation)
+   - ✅ Procedural Mesh Component (for procedural geometry)
+   - ✅ OnlineSubsystem (for sessions/networking)
+   - ✅ OnlineSubsystemUtils (for sessions/networking)
+
+</details>
+
+   > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin. Only the core plugins require manual verification.
 
 5. Restart the editor
 

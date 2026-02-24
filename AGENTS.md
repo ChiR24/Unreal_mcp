@@ -1,11 +1,11 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-16 11:20:00 IST
-**Commit:** 1d0b04a
+**Generated:** 2026-02-24 19:23:00 IST
+**Commit:** 02f9b17
 **Branch:** main
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + C++ Bridge Plugin + optional Rust WASM. 35+ consolidated tools with action-based dispatch. Version 0.5.16.
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + C++ Bridge Plugin + optional Rust WASM. 36 consolidated tools with action-based dispatch. Version 0.5.16.
 
 ## STRUCTURE
 ```
@@ -66,7 +66,7 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 - **Raw WS Calls**: Use `executeAutomationRequest()` instead of WebSocket directly.
 
 ## UNIQUE STYLES
-- **Consolidated Tools**: 35 tools with action-based dispatch (single schema file).
+- **Consolidated Tools**: 36 tools with action-based dispatch (single schema file).
 - **Dual Test Runners**: Vitest (unit) + Custom MCP runner (integration).
 - **WASM Fallback**: Math-heavy logic uses Rust/WASM with automatic TS fallback.
 - **Mock Mode**: Set `MOCK_UNREAL_CONNECTION=true` for offline CI.

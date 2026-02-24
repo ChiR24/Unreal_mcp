@@ -103,17 +103,45 @@ https://github.com/user-attachments/assets/d8b86ebc-4364-48c9-9781-de854bf3ef7d
 
 ### Step 3: Enable Required Plugins
 
-Enable via **Edit → Plugins**, then restart the editor:
+Enable via **Edit → Plugins**, then restart the editor.
+
+<details>
+<summary><b>Core Plugins (Required)</b></summary>
 
 | Plugin | Required For |
 |--------|--------------|
 | **MCP Automation Bridge** | All automation operations |
 | **Editor Scripting Utilities** | Asset/Actor subsystem operations |
-| **Sequencer** | Sequencer tools |
+| **Niagara** | Visual effects and particle systems |
+
+</details>
+
+<details>
+<summary><b>Optional Plugins (Auto-enabled)</b></summary>
+
+| Plugin | Required For |
+|--------|--------------|
 | **Level Sequence Editor** | `manage_sequence` operations |
 | **Control Rig** | `animation_physics` operations |
-| **Subobject Data Interface** | Blueprint components (UE 5.7+) |
-| **Geometry Script** | `manage_geometry` operations (procedural mesh) |
+| **GeometryScripting** | `manage_geometry` operations |
+| **Behavior Tree Editor** | `manage_behavior_tree` operations |
+| **Niagara Editor** | Niagara authoring |
+| **Environment Query Editor** | AI/EQS operations |
+| **Gameplay Abilities** | `manage_gas` operations |
+| **MetaSound** | `manage_audio` MetaSound authoring |
+| **StateTree** | `manage_ai` State Tree operations |
+| **Smart Objects** | AI smart object operations |
+| **Enhanced Input** | `manage_input` operations |
+| **Chaos Cloth** | Cloth simulation |
+| **Interchange** | Asset import/export |
+| **Data Validation** | Data validation |
+| **Procedural Mesh Component** | Procedural geometry |
+| **OnlineSubsystem** | Session/networking operations |
+| **OnlineSubsystemUtils** | Session/networking operations |
+
+</details>
+
+> 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
 
 ### Step 4: Configure MCP Client
 
@@ -200,42 +228,99 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ## Available Tools
 
+**36 MCP tools** with action-based dispatch for comprehensive Unreal Engine automation.
+
+<details>
+<summary><b>Core Tools</b></summary>
+
 | Tool | Description |
 |------|-------------|
 | `manage_asset` | Assets, Materials, Render Targets, Behavior Trees |
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |
 | `manage_level` | Load/Save, World Partition, streaming |
-| `manage_lighting` | Spawn lights, GI, shadows, build lighting, **list_light_types** |
-| `manage_performance` | Profiling, optimization, scalability |
-| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
-| `manage_effect` | Niagara, Particles, Debug Shapes, Niagara authoring, GPU sim |
-| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation |
-| `build_environment` | Landscape, Foliage, Procedural |
 | `system_control` | UBT, Tests, Logs, Project Settings, CVars |
-| `manage_sequence` | Sequencer / Cinematics, **list_track_types** |
 | `inspect` | Object Introspection |
-| `manage_audio` | Audio Assets, Components, Sound Cues, MetaSounds, Attenuation |
-| `manage_behavior_tree` | Behavior Tree Graph Editing |
-| `manage_input` | Enhanced Input Actions & Contexts |
-| `manage_geometry` | Procedural mesh creation (Geometry Script) |
-| `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
-| `manage_material_authoring` | Material creation, expressions, landscape layers |
-| `manage_texture` | Texture creation, modification, compression settings |
-| `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
-| `manage_character` | Character creation, movement, advanced locomotion |
-| `manage_combat` | Weapons, projectiles, damage, melee combat |
-| `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
-| `manage_inventory` | Items, equipment, loot tables, crafting |
-| `manage_interaction` | Interactables, destructibles, triggers |
-| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
-| `manage_networking` | Replication, RPCs, network prediction |
-| `manage_game_framework` | Game modes, game states, player controllers, match flow |
-| `manage_sessions` | Sessions, split-screen, LAN, voice chat |
+| `manage_pipeline` | Build automation, UBT compilation, status checks |
+| `manage_tools` | Dynamic tool management (enable/disable at runtime) |
+
+</details>
+
+<details>
+<summary><b>World Building</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_lighting` | Spawn lights, GI, shadows, build lighting, list_light_types |
 | `manage_level_structure` | Level creation, sublevels, World Partition, data layers, HLOD |
 | `manage_volumes` | Trigger volumes, blocking, physics, audio, navigation volumes |
 | `manage_navigation` | NavMesh settings, nav modifiers, nav links, smart links, pathfinding |
+| `build_environment` | Landscape, Foliage, Procedural |
+| `manage_splines` | Spline creation, spline mesh deformation |
 
+</details>
+
+<details>
+<summary><b>Animation & Physics</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `animation_physics` | Animation BPs, Vehicles, Ragdolls, Control Rig, IK, Blend Spaces |
+| `manage_skeleton` | Skeleton, sockets, physics assets, cloth binding |
+| `manage_geometry` | Procedural mesh creation (Geometry Script) |
+
+</details>
+
+<details>
+<summary><b>Visuals & Effects</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_effect` | Niagara, Particles, Debug Shapes, GPU simulations |
+| `manage_material_authoring` | Material creation, expressions, landscape layers |
+| `manage_texture` | Texture creation, modification, compression settings |
+| `manage_blueprint` | Create, SCS, Graph Editing, Node manipulation |
+| `manage_sequence` | Sequencer / Cinematics, list_track_types |
+| `manage_performance` | Profiling, optimization, scalability |
+
+</details>
+
+<details>
+<summary><b>Audio & Input</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_audio` | Audio Assets, Components, Sound Cues, MetaSounds, Attenuation |
+| `manage_input` | Enhanced Input Actions & Contexts |
+
+</details>
+
+<details>
+<summary><b>Gameplay Systems</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_behavior_tree` | Behavior Tree Graph Editing |
+| `manage_ai` | AI controllers, EQS, perception, State Trees, Smart Objects |
+| `manage_gas` | Gameplay Ability System: abilities, effects, attributes |
+| `manage_character` | Character creation, movement, advanced locomotion |
+| `manage_combat` | Weapons, projectiles, damage, melee combat |
+| `manage_inventory` | Items, equipment, loot tables, crafting |
+| `manage_interaction` | Interactables, destructibles, triggers |
+| `manage_widget_authoring` | UMG widget creation, layout, styling, animations |
+
+</details>
+
+<details>
+<summary><b>Networking & Sessions</b></summary>
+
+| Tool | Description |
+|------|-------------|
+| `manage_networking` | Replication, RPCs, network prediction |
+| `manage_game_framework` | Game modes, game states, player controllers, match flow |
+| `manage_sessions` | Sessions, split-screen, LAN, voice chat |
+
+</details>
 ### Supported Asset Types
 
 Blueprints • Materials • Textures • Static Meshes • Skeletal Meshes • Levels • Sounds • Particles • Niagara Systems • Behavior Trees
