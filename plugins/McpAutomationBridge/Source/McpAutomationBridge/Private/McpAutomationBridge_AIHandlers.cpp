@@ -1864,8 +1864,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         
         // Create and add a new slot using reflection to access private Slots array
         FSmartObjectSlotDefinition NewSlot;
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+ uses FVector3f/FRotator3f and has bEnabled/ID members
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+ uses FVector3f/FRotator3f and has bEnabled/ID members
         NewSlot.Offset = FVector3f(Offset);
         NewSlot.Rotation = FRotator3f(Rotation);
         NewSlot.bEnabled = bEnabled;
@@ -1873,7 +1873,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         NewSlot.ID = FGuid::NewGuid();
 #endif
 #else
-        // UE 5.0 uses FVector/FRotator
+        // UE 5.0-5.2 uses FVector/FRotator
         NewSlot.Offset = Offset;
         NewSlot.Rotation = Rotation;
 #endif
@@ -2158,13 +2158,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FMassEntityConfig& Config = ConfigAsset->GetMutableConfig();
         
         // Set parent config if provided
+        // UE 5.3+: Use SetParentAsset() method
+        // UE 5.0-5.2: Use property reflection since Parent is protected
         if (!ParentConfigPath.IsEmpty())
         {
             UMassEntityConfigAsset* ParentConfig = LoadObject<UMassEntityConfigAsset>(nullptr, *ParentConfigPath);
             if (ParentConfig)
             {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
                 Config.SetParentAsset(*ParentConfig);
+#else
+                // UE 5.0-5.2: Parent is protected, use property reflection
+                static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
+                if (ParentProp)
+                {
+                    ParentProp->SetValue_InContainer(&Config, &ParentConfig);
+                }
 #endif
             }
         }

@@ -206,12 +206,13 @@ static bool HandleConfigureNavMeshSettings(
         bModified = true;
     }
 
-    // UE 5.2+ uses NavMeshResolutionParams array for cellSize, cellHeight, agentMaxStepHeight
+    // UE 5.2+ uses NavMeshResolutionParams array for cellSize, cellHeight
+    // UE 5.3+ uses NavMeshResolutionParams for agentMaxStepHeight (UE 5.2 doesn't have it in struct)
     // UE 5.0-5.1 use deprecated direct properties
-    if (Payload->HasField(TEXT("cellSize")) || Payload->HasField(TEXT("cellHeight")) || Payload->HasField(TEXT("agentStepHeight")))
+    if (Payload->HasField(TEXT("cellSize")) || Payload->HasField(TEXT("cellHeight")))
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-        // UE 5.2+: Use NavMeshResolutionParams array
+        // UE 5.2+: Use NavMeshResolutionParams array for cell size/height
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
         
         if (Payload->HasField(TEXT("cellSize")))
@@ -222,11 +223,6 @@ static bool HandleConfigureNavMeshSettings(
         if (Payload->HasField(TEXT("cellHeight")))
         {
             DefaultParams.CellHeight = GetJsonNumberFieldNav(Payload, TEXT("cellHeight"), 10.0f);
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("agentStepHeight")))
-        {
-            DefaultParams.AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
             bModified = true;
         }
 #else
@@ -242,13 +238,23 @@ static bool HandleConfigureNavMeshSettings(
             NavMesh->CellHeight = GetJsonNumberFieldNav(Payload, TEXT("cellHeight"), 10.0f);
             bModified = true;
         }
-        if (Payload->HasField(TEXT("agentStepHeight")))
-        {
-            NavMesh->AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
-            bModified = true;
-        }
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
+    }
+
+    // AgentMaxStepHeight: UE 5.3+ uses NavMeshResolutionParams, UE 5.0-5.2 use direct property
+    if (Payload->HasField(TEXT("agentStepHeight")))
+    {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
+        DefaultParams.AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+#else
+        // UE 5.0-5.2: Use direct property
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        NavMesh->AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+        bModified = true;
     }
 
     if (bModified)
@@ -345,10 +351,10 @@ static bool HandleSetNavAgentProperties(
         bModified = true;
     }
 
-    // AgentMaxStepHeight is per-resolution in UE 5.2+, deprecated direct property in 5.0-5.1
+    // AgentMaxStepHeight: UE 5.3+ uses NavMeshResolutionParams, UE 5.0-5.2 use direct property
     if (Payload->HasField(TEXT("agentStepHeight")))
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
         DefaultParams.AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
 #else
@@ -1319,13 +1325,22 @@ static bool HandleGetNavigationInfo(
             NavInfo->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
             NavInfo->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
             
-            // Get resolution params - UE 5.2+ uses NavMeshResolutionParams, 5.0-5.1 use deprecated direct properties
+            // Get resolution params - UE 5.2+ uses NavMeshResolutionParams for CellSize/CellHeight
+            // UE 5.3+ uses NavMeshResolutionParams for AgentMaxStepHeight
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
             const FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
             NavInfo->SetNumberField(TEXT("cellSize"), DefaultParams.CellSize);
             NavInfo->SetNumberField(TEXT("cellHeight"), DefaultParams.CellHeight);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
             NavInfo->SetNumberField(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
 #else
+            // UE 5.2: AgentMaxStepHeight is not in NavMeshResolutionParam
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
+            NavInfo->SetNumberField(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+#else
+            // UE 5.0-5.1: Use deprecated direct properties
             PRAGMA_DISABLE_DEPRECATION_WARNINGS
             NavInfo->SetNumberField(TEXT("cellSize"), NavMesh->CellSize);
             NavInfo->SetNumberField(TEXT("cellHeight"), NavMesh->CellHeight);

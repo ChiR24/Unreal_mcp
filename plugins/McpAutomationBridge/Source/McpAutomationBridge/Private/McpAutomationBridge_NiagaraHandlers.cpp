@@ -123,12 +123,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         
         // Set GraphSource - API differs between engine versions
         // UE 5.0: GraphSource is directly on UNiagaraEmitter
-        // UE 5.3+: GraphSource is on FVersionedNiagaraEmitterData
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        // UE 5.3+: Need to use CreateWithParentAndOwner or similar factory method
-        // For now, skip the detailed initialization - the emitter will be initialized on first compile
-#else
-        // UE 5.0-5.2: Set GraphSource directly on emitter
+        // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+        // UE 5.0: Set GraphSource directly on emitter
         NewEmitter->GraphSource = EmitterSource;
         
         // Set source on emitter scripts
@@ -142,6 +139,25 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
         if (NewEmitter->EmitterUpdateScriptProps.Script)
           NewEmitter->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
 #endif
+#else
+        // UE 5.1+: Access via GetLatestEmitterData()
+        FVersionedNiagaraEmitterData* EmitterData = NewEmitter->GetLatestEmitterData();
+        if (EmitterData)
+        {
+          EmitterData->GraphSource = EmitterSource;
+          
+          // Set source on emitter scripts
+          if (EmitterData->SpawnScriptProps.Script)
+            EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
+          if (EmitterData->UpdateScriptProps.Script)
+            EmitterData->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
+#if WITH_EDITORONLY_DATA
+          if (EmitterData->EmitterSpawnScriptProps.Script)
+            EmitterData->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
+          if (EmitterData->EmitterUpdateScriptProps.Script)
+            EmitterData->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
+#endif
+        }
 #endif
       }
       
@@ -269,12 +285,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
       
       // Set GraphSource - API differs between engine versions
       // UE 5.0: GraphSource is directly on UNiagaraEmitter
-      // UE 5.3+: GraphSource is on FVersionedNiagaraEmitterData
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-      // UE 5.3+: Need to use CreateWithParentAndOwner or similar factory method
-      // For now, skip the detailed initialization - the emitter will be initialized on first compile
-#else
-      // UE 5.0-5.2: Set GraphSource directly on emitter
+      // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+      // UE 5.0: Set GraphSource directly on emitter
       NiagaraEmitter->GraphSource = EmitterSource;
       
       // Set source on emitter scripts
@@ -288,6 +301,25 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
       if (NiagaraEmitter->EmitterUpdateScriptProps.Script)
         NiagaraEmitter->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
 #endif
+#else
+      // UE 5.1+: Access via GetLatestEmitterData()
+      FVersionedNiagaraEmitterData* EmitterData = NiagaraEmitter->GetLatestEmitterData();
+      if (EmitterData)
+      {
+        EmitterData->GraphSource = EmitterSource;
+        
+        // Set source on emitter scripts
+        if (EmitterData->SpawnScriptProps.Script)
+          EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
+        if (EmitterData->UpdateScriptProps.Script)
+          EmitterData->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
+#if WITH_EDITORONLY_DATA
+        if (EmitterData->EmitterSpawnScriptProps.Script)
+          EmitterData->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
+        if (EmitterData->EmitterUpdateScriptProps.Script)
+          EmitterData->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
+#endif
+      }
 #endif
     }
   }

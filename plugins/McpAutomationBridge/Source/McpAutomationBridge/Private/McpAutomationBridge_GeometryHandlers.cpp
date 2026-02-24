@@ -62,9 +62,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "GeometryScript/CollisionFunctions.h"
 #endif
 
-// UE 5.3+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
-// UE 5.0-5.2: These functions are in MeshDeformFunctions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+// UE 5.1+: MeshTransformFunctions contains TranslateMesh, ScaleMesh, etc.
+// UE 5.0: These functions are in a different location or not available
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "GeometryScript/MeshTransformFunctions.h"
 #endif
 
@@ -1023,12 +1023,22 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
     NormalOptions.bAreaWeighted = bAreaWeighted;
     NormalOptions.bAngleWeighted = true;
 
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters (with bDeferChangeNotifications)
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(
         Mesh,
         NormalOptions,
-        false,  // bDeferChangeNotifications - UE 5.7 API change
+        false,  // bDeferChangeNotifications
         nullptr
     );
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(
+        Mesh,
+        NormalOptions,
+        nullptr
+    );
+#endif
 
     // Force refresh
     DMC->NotifyMeshUpdated();
@@ -3615,7 +3625,13 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
     }
     
     // Recompute normals after vertex modifications
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -3761,7 +3777,13 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
     }
     
     // Recompute normals after vertex modifications
+    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // UE 5.3+: RecomputeNormals takes 4 parameters
     UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
 
     DMC->NotifyMeshUpdated();
 
@@ -4447,30 +4469,13 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                     }
                     
                     // Use AppendSweepPolygon to create the lofted surface
-                    FGeometryScriptSimplePolygon Polygon;
-                    for (const FVector2D& V : PolygonVertices)
-                    {
-                        // Note: In UE 5.6, Polygon.Vertices is TSharedPtr, need to dereference
-                    // In UE 5.7+, it may have changed. Always check validity.
-                    if (Polygon.Vertices.IsValid())
-                    {
-                        Polygon.Vertices->Add(V);
-                    }
-                    }
-                    
+                    // Note: FGeometryScriptSimplePolygon was introduced in UE 5.4 but is not needed here
+                    // as AppendSweepPolygon takes TArray<FVector2D> directly
                     FGeometryScriptPrimitiveOptions PrimOptions;
                     PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
                     PrimOptions.bFlipOrientation = false;
-                    
-                    // Transform the target mesh location to start of path
                     FTransform SweepTransform(FRotator::ZeroRotator, StartPos);
-                    
-                    // Convert polygon vertices to 2D array format required by AppendSweepPolygon
-                    TArray<FVector2D> PolygonVerts2D;
-                    if (Polygon.Vertices.IsValid())
-                    {
-                        PolygonVerts2D = *Polygon.Vertices;
-                    }
+                    // Use PolygonVertices directly for AppendSweepPolygon (no conversion needed)
                     
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
@@ -4479,7 +4484,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
-                        Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
+                        Mesh, PrimOptions, SweepTransform, PolygonVertices, PathFrames,
                         false,    // bLoop
                         bCap,     // bCapped
                         1.0f,     // StartScale
@@ -4490,7 +4495,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 #else
                     // UE 5.3 and earlier: No MiterLimit parameter
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
-                        Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
+                        Mesh, PrimOptions, SweepTransform, PolygonVertices, PathFrames,
                         false,    // bLoop
                         bCap,     // bCapped
                         1.0f,     // StartScale
@@ -4519,7 +4524,6 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }
                     }
-#endif
                     
                     ProfilesUsed = ProfileMeshActors.Num();
                 }
@@ -4562,20 +4566,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
             PathFrames.Add(FTransform(FQuat::Identity, Pos));
         }
         
-        // Create the lofted surface
-        FGeometryScriptSimplePolygon Polygon;
-        for (const FVector2D& V : PolygonVertices)
-        {
-            // Polygon.Vertices is TSharedPtr in UE 5.6+
-            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
-        }
-        
-        FGeometryScriptPrimitiveOptions PrimOptions;
-        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
-        PrimOptions.bFlipOrientation = false;
-        
-        FTransform SweepTransform(FRotator::ZeroRotator, Center);
-        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
         // For compatibility, just log that sweep was attempted
         UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
@@ -4583,7 +4574,13 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     // Recompute normals for smooth shading if requested
     if (bSmooth)
     {
+        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+: RecomputeNormals takes 4 parameters
         UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
+#else
+        // UE 5.0-5.2: RecomputeNormals takes 3 parameters
+        UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
+#endif
     }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
@@ -4762,19 +4759,7 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
     // Perform the sweep using Geometry Script
     if (PathFrames.Num() >= 2)
     {
-        FGeometryScriptSimplePolygon Polygon;
-        for (const FVector2D& V : PolygonVertices)
-        {
-            // Polygon.Vertices is TSharedPtr in UE 5.6+
-            if (Polygon.Vertices.IsValid()) { Polygon.Vertices->Add(V); }
-        }
-        
-        FGeometryScriptPrimitiveOptions PrimOptions;
-        PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
-        PrimOptions.bFlipOrientation = false;
-        
-        FTransform SweepTransform = FTransform::Identity;
-        // Note: FGeometryScriptSweepPolygonOptions API varies by version
+        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
         UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
     }
 

@@ -64,11 +64,16 @@
 #  define MCP_HAS_DATALAYER_EDITOR 0
 #endif
 
-// Note: DataLayerInstance.h, DataLayerManager.h and DataLayerAsset.h were introduced in UE 5.1
+// Note: DataLayerInstance.h and DataLayerAsset.h were introduced in UE 5.1
+// DataLayerManager.h was introduced in UE 5.3
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
-#include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
+#include "WorldPartition/DataLayer/DataLayerInstanceWithAsset.h"
+#include "WorldPartition/DataLayer/DataLayerSubsystem.h"
+#endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#include "WorldPartition/DataLayer/DataLayerManager.h"
 #endif
 #endif
 
@@ -250,6 +255,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         {
             // Check existence
             bool bExists = false;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+            // UE 5.3+: Use UDataLayerManager
             UWorldPartition* WP = World->GetWorldPartition();
             if (UDataLayerManager* DataLayerManager = WP ? WP->GetDataLayerManager() : nullptr)
             {
@@ -262,6 +269,23 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
                     return true;
                 });
             }
+#else
+            // UE 5.0-5.2: Use UDataLayerSubsystem
+            UDataLayerSubsystem* DataLayerSubsys = World->GetSubsystem<UDataLayerSubsystem>();
+            if (DataLayerSubsys)
+            {
+                // Check via DataLayerEditorSubsystem for editor operations
+                TArray<UDataLayerInstance*> ExistingLayers = DataLayerSubsystem->GetActorEditorContextDataLayers();
+                for (UDataLayerInstance* LayerInstance : ExistingLayers)
+                {
+                    if (LayerInstance && (LayerInstance->GetDataLayerShortName() == DataLayerName || LayerInstance->GetDataLayerFullName() == DataLayerName))
+                    {
+                        bExists = true;
+                        break;
+                    }
+                }
+            }
+#endif
 
             if (bExists)
             {
@@ -347,6 +371,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
         {
             UDataLayerInstance* TargetLayer = nullptr;
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+            // UE 5.3+: Use UDataLayerManager
             if (UDataLayerManager* DataLayerManager = WorldPartition->GetDataLayerManager())
             {
                 DataLayerManager->ForEachDataLayerInstance([&](UDataLayerInstance* LayerInstance) {
@@ -358,6 +384,21 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(const FString& Re
                     return true; // Continue
                 });
             }
+#else
+            // UE 5.0-5.2: Use UDataLayerSubsystem
+            if (UDataLayerSubsystem* DataLayerSubsys = World->GetSubsystem<UDataLayerSubsystem>())
+            {
+                TArray<UDataLayerInstance*> ExistingLayers = DataLayerSubsys->GetActorEditorContextDataLayers();
+                for (UDataLayerInstance* LayerInstance : ExistingLayers)
+                {
+                    if (LayerInstance && (LayerInstance->GetDataLayerShortName() == DataLayerName || LayerInstance->GetDataLayerFullName() == DataLayerName))
+                    {
+                        TargetLayer = LayerInstance;
+                        break;
+                    }
+                }
+            }
+#endif
 
             if (TargetLayer)
             {
@@ -404,6 +445,8 @@ DataLayerSubsystem->AddActorsToDataLayers(Actors, Layers);
              return true;
         }
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+: Use UDataLayerManager
         UDataLayerManager* DataLayerManager = WorldPartition ? WorldPartition->GetDataLayerManager() : nullptr;
         if (!DataLayerManager)
         {
@@ -413,13 +456,34 @@ DataLayerSubsystem->AddActorsToDataLayers(Actors, Layers);
 
         TArray<UDataLayerInstance*> InvalidInstances;
         DataLayerManager->ForEachDataLayerInstance([&](UDataLayerInstance* LayerInstance) {
-            // Use GetAsset() as GetDataLayerAsset() is not a member (UE 5.x change)
             if (LayerInstance && !LayerInstance->GetAsset())
             {
                 InvalidInstances.Add(LayerInstance);
             }
             return true;
         });
+#else
+        // UE 5.0-5.2: Use UDataLayerSubsystem
+        UDataLayerSubsystem* DataLayerSubsys = World ? World->GetSubsystem<UDataLayerSubsystem>() : nullptr;
+        if (!DataLayerSubsys)
+        {
+             SendAutomationError(RequestingSocket, RequestId, TEXT("DataLayerSubsystem not found."), TEXT("SUBSYSTEM_NOT_FOUND"));
+             return true;
+        }
+
+        TArray<UDataLayerInstance*> InvalidInstances;
+        // In UE 5.2, only UDataLayerInstanceWithAsset has GetAsset()
+        TArray<UDataLayerInstance*> ExistingLayers = DataLayerSubsys->GetActorEditorContextDataLayers();
+        for (UDataLayerInstance* LayerInstance : ExistingLayers)
+        {
+            // Check if it's a UDataLayerInstanceWithAsset with valid asset
+            UDataLayerInstanceWithAsset* LayerWithAsset = Cast<UDataLayerInstanceWithAsset>(LayerInstance);
+            if (LayerInstance && !LayerWithAsset)
+            {
+                InvalidInstances.Add(LayerInstance);
+            }
+        }
+#endif
 
         int32 DeletedCount = 0;
         for (UDataLayerInstance* InvalidInstance : InvalidInstances)

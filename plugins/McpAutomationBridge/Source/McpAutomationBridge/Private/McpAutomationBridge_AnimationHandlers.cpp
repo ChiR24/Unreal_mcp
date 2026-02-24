@@ -2119,10 +2119,24 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         AnimSeq->Modify();
 
 #if WITH_EDITOR
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+: FAnimationCurveIdentifier takes FName directly
+        FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1-5.2: FAnimationCurveIdentifier takes FSmartName
+        FSmartName SmartCurveName;
+        SmartCurveName.DisplayName = FName(*CurveName);
+        FAnimationCurveIdentifier CurveId(SmartCurveName, ERawCurveTrackTypes::RCT_Float);
+#else
+        // UE 5.0: Curve editing API not available in the same form
+        Message = TEXT("set_curve_key requires UE 5.1+");
+        ErrorCode = TEXT("NOT_IMPLEMENTED");
+        Resp->SetStringField(TEXT("error"), Message);
+#endif
+
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: GetController() returns IAnimationDataController& (reference)
         IAnimationDataController& Controller = AnimSeq->GetController();
-        FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
         
         // Add curve if it doesn't exist
         Controller.AddCurve(CurveId, AACF_DefaultCurve);
@@ -2136,11 +2150,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         Resp->SetStringField(TEXT("curveName"), CurveName);
         Resp->SetNumberField(TEXT("time"), Time);
         Resp->SetNumberField(TEXT("value"), Value);
-#else
-        // UE 5.0: Curve editing API not available in the same form
-        Message = TEXT("set_curve_key requires UE 5.1+");
-        ErrorCode = TEXT("NOT_IMPLEMENTED");
-        Resp->SetStringField(TEXT("error"), Message);
 #endif
 
 #else

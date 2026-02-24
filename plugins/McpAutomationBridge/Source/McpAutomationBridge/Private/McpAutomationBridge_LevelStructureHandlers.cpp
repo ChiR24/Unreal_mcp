@@ -54,6 +54,8 @@
 #include "AssetToolsModule.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
+#endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #endif
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
@@ -884,7 +886,7 @@ static bool HandleConfigureGridSize(
 
     // Check if we're dealing with RuntimeSpatialHash or RuntimeHashSet
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     UWorldPartitionRuntimeHashSet* HashSet = Cast<UWorldPartitionRuntimeHashSet>(RuntimeHash);
 
     if (!SpatialHash && !HashSet)
@@ -895,7 +897,7 @@ static bool HandleConfigureGridSize(
         // Neither supported hash type
         TSharedPtr<FJsonObject> ErrorJson = MakeShareable(new FJsonObject());
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash, WorldPartitionRuntimeHashSet"));
 #else
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash"));
@@ -911,8 +913,8 @@ static bool HandleConfigureGridSize(
     }
 
 #if WITH_EDITORONLY_DATA
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    // Handle RuntimeHashSet (UE 5.1+ only)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    // Handle RuntimeHashSet (UE 5.3+ only)
     if (HashSet)
     {
         // For HashSet, we use the RuntimePartitions API instead of Grids
@@ -1113,7 +1115,7 @@ static bool HandleConfigureGridSize(
             NewGrid->LoadingRange = LoadingRange;
             NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
             NewGrid->Priority = Priority;
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
             NewGrid->Origin = FVector2D::ZeroVector;
 #endif
             NewGrid->DebugColor = FLinearColor::MakeRandomColor();
@@ -1328,7 +1330,9 @@ static bool HandleCreateDataLayer(
     FDataLayerCreationParameters CreationParams;
     CreationParams.DataLayerAsset = NewDataLayerAsset;
     CreationParams.WorldDataLayers = World->GetWorldDataLayers();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     CreationParams.bIsPrivate = bIsPrivate;
+#endif
 
     UDataLayerInstance* NewDataLayerInstance = DataLayerEditorSubsystem->CreateDataLayerInstance(CreationParams);
     if (!NewDataLayerInstance)

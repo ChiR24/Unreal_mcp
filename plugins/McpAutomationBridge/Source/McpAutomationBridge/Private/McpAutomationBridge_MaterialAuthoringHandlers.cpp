@@ -2437,10 +2437,10 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     // Remove the expression
-    // UE 5.3+: Expressions array removed from UMaterial - need to use GetExpressionCollection()
-    // UE 5.0-5.2: Expressions is a direct member
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    // In UE 5.3+, expressions are accessed through GetExpressionCollection()
+    // UE 5.1+: Expressions array removed from UMaterial - need to use GetExpressionCollection()
+    // UE 5.0: Expressions is a direct member
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    // In UE 5.1+, expressions are accessed through GetExpressionCollection()
     Material->GetExpressionCollection().RemoveExpression(Expr);
 #else
     Material->Expressions.Remove(Expr);

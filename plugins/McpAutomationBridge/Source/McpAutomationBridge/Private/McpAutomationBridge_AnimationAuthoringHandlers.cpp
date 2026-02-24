@@ -657,28 +657,19 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+ API - FAnimationCurveIdentifier takes FName directly
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+        // UE 5.3+ API - FAnimationCurveIdentifier takes FName directly
         IAnimationDataController& Controller = Sequence->GetController();
         FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
-        
-        // Find or create curve
-        const FFloatCurve* ExistingCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
-        if (!ExistingCurve && bCreateIfMissing)
-        {
-            Controller.AddCurve(CurveId, AACF_DefaultCurve);
-        }
-        
-        // Set key value
-        float FrameTime = static_cast<float>(Frame) / Sequence->GetSamplingFrameRate().AsDecimal();
-        Controller.SetCurveKey(CurveId, FRichCurveKey(FrameTime, Value));
-#elif ENGINE_MAJOR_VERSION >= 5
-        // UE 5.0 API - FAnimationCurveIdentifier takes FSmartName
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+        // UE 5.1-5.2 API - FAnimationCurveIdentifier takes FSmartName
         IAnimationDataController& Controller = Sequence->GetController();
         FSmartName SmartCurveName;
         SmartCurveName.DisplayName = FName(*CurveName);
         FAnimationCurveIdentifier CurveId(SmartCurveName, ERawCurveTrackTypes::RCT_Float);
-        
+#endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // Find or create curve
         const FFloatCurve* ExistingCurve = Sequence->GetDataModel()->FindFloatCurve(CurveId);
         if (!ExistingCurve && bCreateIfMissing)
