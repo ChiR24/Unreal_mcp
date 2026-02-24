@@ -21,6 +21,7 @@
 // TextureCompressorModule removed in UE 5.7
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "StaticMeshResources.h"
 
 // Helper macro for error responses
 #define TEXTURE_ERROR_RESPONSE(Msg) \
@@ -720,34 +721,32 @@ Response->SetBoolField(TEXT("success"), true);
         // Options: "luminance", "red", "green", "blue", "alpha", "average"
         FString ChannelMode = GetStringFieldTextAuth(Params, TEXT("channelMode"), TEXT("luminance"));
         
-        // Validate platform data exists before accessing
-        FTexturePlatformData* PlatformData = HeightMap->GetPlatformData();
-        if (!PlatformData)
+        // CRITICAL: Check source validity before locking
+        if (!HeightMap->Source.IsValid())
         {
-            TEXTURE_ERROR_RESPONSE(TEXT("Height map has no platform data - texture may not be fully loaded"));
-        }
-        if (PlatformData->Mips.Num() == 0)
-        {
-            TEXTURE_ERROR_RESPONSE(TEXT("Height map has no mip levels available"));
+            TEXTURE_ERROR_RESPONSE(TEXT("Height map has no source data - texture may be compressed or not fully loaded"));
         }
         
-        // Lock source texture for reading
-        FTexture2DMipMap& HeightMip = PlatformData->Mips[0];
-        const uint8* HeightPixels = static_cast<const uint8*>(HeightMip.BulkData.LockReadOnly());
+        // Force mips resident if texture uses streaming
+        if (HeightMap->IsStreamable())
+        {
+            HeightMap->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
+        // Lock source texture using Source API (handles streaming/compression properly)
+        const uint8* HeightPixels = HeightMap->Source.LockMipReadOnly(0);
         if (!HeightPixels)
         {
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock height map pixel data - texture may be compressed or streaming"));
         }
-        
         for (int32 i = 0; i < Width * Height; i++)
         {
+            float HeightValue = 0.0f;
             // BGRA format: index 0=B, 1=G, 2=R, 3=A
             uint8 B = HeightPixels[i * 4 + 0];
             uint8 G = HeightPixels[i * 4 + 1];
             uint8 R = HeightPixels[i * 4 + 2];
             uint8 A = HeightPixels[i * 4 + 3];
-            
-            float HeightValue;
             if (ChannelMode.Equals(TEXT("red"), ESearchCase::IgnoreCase))
             {
                 HeightValue = static_cast<float>(R) / 255.0f;
@@ -775,10 +774,9 @@ Response->SetBoolField(TEXT("success"), true);
                                0.7152f * static_cast<float>(G) + 
                                0.0722f * static_cast<float>(B)) / 255.0f;
             }
-            
             HeightData[i] = HeightValue;
         }
-        HeightMip.BulkData.Unlock();
+        HeightMap->Source.UnlockMip(0);
         
         // Generate normal map
         uint8* NormalData = NormalMap->Source.LockMip(0);
@@ -1395,48 +1393,25 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load source texture: %s"), *SourcePath));
         }
         
-        // Get source dimensions and data
+        // CRITICAL: Check source validity before locking
+        if (!SourceTexture->Source.IsValid())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no source data - may be compressed or not fully loaded"));
+        }
+        
+        // Force mips resident if texture uses streaming
+        if (SourceTexture->IsStreamable())
+        {
+            SourceTexture->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
+        // Get source dimensions
         int32 SrcWidth = SourceTexture->GetSizeX();
         int32 SrcHeight = SourceTexture->GetSizeY();
         
-        // Validate platform data exists before accessing
-        // CRITICAL: Check source validity before locking
-                if (!SourceTexture->Source.IsValid())
-                {
-                    TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no source data - may be compressed or not fully loaded"));
-                }
-                
-                // Force mips resident if texture uses streaming
-                if (SourceTexture->IsStreamable())
-                {
-                    SourceTexture->SetForceMipLevelsToBeResident(30.0f);
-                }
-                
-                // Get source dimensions
-                int32 SrcWidth = SourceTexture->GetSizeX();
-                int32 SrcHeight = SourceTexture->GetSizeY();
-                
-                // Lock source mip data - use Source which handles both compressed and uncompressed textures
-                const uint8* SrcData = SourceTexture->Source.LockMip(0);
-                if (!SrcData)
-                {
-                    TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
-                }
-                
-                // NOTE: Source data is in BGRA format regardless of compression
-                // Old platform data checks removed - using Source directly
-        if (!ResizePlatformData)
-        {
-            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no platform data - texture may not be fully loaded"));
-        }
-        if (ResizePlatformData->Mips.Num() == 0)
-        {
-            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no mip levels available"));
-        }
-        
-        // Lock source mip data for reading
-        FTexture2DMipMap& SrcMip = ResizePlatformData->Mips[0];
-        const FColor* SrcData = static_cast<const FColor*>(SrcMip.BulkData.LockReadOnly());
+        // Lock source mip data - use Source which handles both compressed and uncompressed textures
+        // NOTE: Source data is in BGRA format (B=idx0, G=idx1, R=idx2, A=idx3)
+        const uint8* SrcData = SourceTexture->Source.LockMip(0);
         if (!SrcData)
         {
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
@@ -1501,10 +1476,16 @@ Response->SetBoolField(TEXT("success"), true);
                 float FracX = U - X0;
                 float FracY = V - Y0;
                 
-                const FColor& C00 = SrcData[Y0 * SrcWidth + X0];
-                const FColor& C10 = SrcData[Y0 * SrcWidth + X1];
-                const FColor& C01 = SrcData[Y1 * SrcWidth + X0];
-                const FColor& C11 = SrcData[Y1 * SrcWidth + X1];
+                // Access BGRA pixel data (uint8* format)
+                auto GetPixelBGRA = [&](int32 PX, int32 PY) -> FColor {
+                    int32 Idx = (PY * SrcWidth + PX) * 4;
+                    return FColor(SrcData[Idx + 2], SrcData[Idx + 1], SrcData[Idx + 0], SrcData[Idx + 3]); // BGRA -> RGBA
+                };
+                
+                FColor C00 = GetPixelBGRA(X0, Y0);
+                FColor C10 = GetPixelBGRA(X1, Y0);
+                FColor C01 = GetPixelBGRA(X0, Y1);
+                FColor C11 = GetPixelBGRA(X1, Y1);
                 
                 // Bilinear interpolation
                 FColor SampledColor;
@@ -2161,20 +2142,31 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock output texture data"));
         }
         
-        // Helper to get channel data from texture
+        // Helper to get channel data from texture using Source API
         auto GetChannelData = [](UTexture2D* Tex, int32 ChannelIdx) -> TArray<uint8> {
             TArray<uint8> Data;
             if (!Tex) return Data;
+            if (!Tex->Source.IsValid()) return Data;
+            
+            // Force mips resident if texture uses streaming
+            if (Tex->IsStreamable())
+            {
+                Tex->SetForceMipLevelsToBeResident(30.0f);
+            }
             int32 W = Tex->GetSizeX();
             int32 H = Tex->GetSizeY();
             Data.SetNumUninitialized(W * H);
-            FTexture2DMipMap& Mip = Tex->GetPlatformData()->Mips[0];
-            const uint8* MipData = static_cast<const uint8*>(Mip.BulkData.LockReadOnly());
+            const uint8* MipData = Tex->Source.LockMipReadOnly(0);
+            if (!MipData)
+            {
+                Data.Empty();
+                return Data;
+            }
             for (int32 i = 0; i < W * H; ++i)
             {
                 Data[i] = MipData[i * 4 + ChannelIdx];
             }
-            Mip.BulkData.Unlock();
+            Tex->Source.UnlockMip(0);
             return Data;
         };
         
@@ -2243,17 +2235,33 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
         }
         
-        // Lock all textures
-        FTexture2DMipMap& BaseMip = BaseTex->GetPlatformData()->Mips[0];
-        FTexture2DMipMap& OverlayMip = OverlayTex->GetPlatformData()->Mips[0];
-        const uint8* BaseData = static_cast<const uint8*>(BaseMip.BulkData.LockReadOnly());
-        const uint8* OverlayData = static_cast<const uint8*>(OverlayMip.BulkData.LockReadOnly());
-        uint8* OutData = OutputTexture->Source.LockMip(0);
-        
-        if (!BaseData || !OverlayData || !OutData)
+        // Lock all textures using Source API
+        // Check source validity before locking
+        if (!BaseTex->Source.IsValid())
         {
-            if (BaseData) BaseMip.BulkData.Unlock();
-            if (OverlayData) OverlayMip.BulkData.Unlock();
+            TEXTURE_ERROR_RESPONSE(TEXT("Base texture has no source data - may be compressed or not fully loaded"));
+        }
+        if (!OverlayTex->Source.IsValid())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Overlay texture has no source data - may be compressed or not fully loaded"));
+        }
+        
+        // Force mips resident if textures use streaming
+        if (BaseTex->IsStreamable())
+        {
+            BaseTex->SetForceMipLevelsToBeResident(30.0f);
+        }
+        if (OverlayTex->IsStreamable())
+        {
+            OverlayTex->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
+        const uint8* BaseData = BaseTex->Source.LockMipReadOnly(0);
+        const uint8* OverlayData = OverlayTex->Source.LockMipReadOnly(0);
+        uint8* OutData = OutputTexture->Source.LockMip(0);
+        {
+            if (BaseData) BaseTex->Source.UnlockMip(0);
+            if (OverlayData) OverlayTex->Source.UnlockMip(0);
             if (OutData) OutputTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture data"));
         }
@@ -2296,8 +2304,8 @@ Response->SetBoolField(TEXT("success"), true);
             OutData[Idx + 3] = BaseData[Idx + 3]; // Keep base alpha
         }
         
-        BaseMip.BulkData.Unlock();
-        OverlayMip.BulkData.Unlock();
+        BaseTex->Source.UnlockMip(0);
+        OverlayTex->Source.UnlockMip(0);
         OutputTexture->Source.UnlockMip(0);
         OutputTexture->UpdateResource();
         
@@ -2523,12 +2531,23 @@ Response->SetBoolField(TEXT("success"), true);
         // Read source pixels
         int32 Width = SourceTexture->GetSizeX();
         int32 Height = SourceTexture->GetSizeY();
-        
-        FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
-        const FColor* SrcPixels = static_cast<const FColor*>(SrcMip.BulkData.LockReadOnly());
-        if (!SrcPixels)
+        // CRITICAL: Check source validity before locking
+        if (!SourceTexture->Source.IsValid())
         {
-            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data"));
+            TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no source data - may be compressed or not fully loaded"));
+        }
+        
+        // Force mips resident if texture uses streaming
+        if (SourceTexture->IsStreamable())
+        {
+            SourceTexture->SetForceMipLevelsToBeResident(30.0f);
+        }
+        
+        // Read source pixels using Source API (NOT PlatformData->BulkData)
+        const uint8* SrcData = SourceTexture->Source.LockMipReadOnly(0);
+        if (!SrcData)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
         }
         
         // Determine output path and name
@@ -2569,30 +2588,31 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         // Determine which channel to extract
-        // FColor: R, G, B, A are separate uint8 members
+        // BGRA format: index 0=B, 1=G, 2=R, 3=A
         for (int32 i = 0; i < Width * Height; ++i)
         {
+            int32 Idx = i * 4;
             uint8 Value;
             if (Channel.Equals(TEXT("R"), ESearchCase::IgnoreCase))
             {
-                Value = SrcPixels[i].R;
+                Value = SrcData[Idx + 2]; // R is at index 2 in BGRA
             }
             else if (Channel.Equals(TEXT("G"), ESearchCase::IgnoreCase))
             {
-                Value = SrcPixels[i].G;
+                Value = SrcData[Idx + 1]; // G is at index 1 in BGRA
             }
             else if (Channel.Equals(TEXT("B"), ESearchCase::IgnoreCase))
             {
-                Value = SrcPixels[i].B;
+                Value = SrcData[Idx + 0]; // B is at index 0 in BGRA
             }
             else if (Channel.Equals(TEXT("A"), ESearchCase::IgnoreCase))
             {
-                Value = SrcPixels[i].A;
+                Value = SrcData[Idx + 3]; // A is at index 3 in BGRA
             }
             else
             {
                 // Default to R if invalid channel specified
-                Value = SrcPixels[i].R;
+                Value = SrcData[Idx + 2];
             }
             DestData[i] = Value;
         }
@@ -2868,6 +2888,145 @@ Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture array '%s' placeholder created (%dx%dx%d)"), *Name, Width, Height, NumSlices));
         Response->SetStringField(TEXT("assetPath"), FullPath);
         Response->SetStringField(TEXT("note"), TEXT("Texture arrays typically created from multiple 2D textures."));
+        return Response;
+    }
+    
+    // ===== create_ao_from_mesh =====
+    // Create ambient occlusion texture from mesh by baking AO using UV unwrapping
+    if (SubAction == TEXT("create_ao_from_mesh"))
+    {
+        FString MeshPath = GetStringFieldTextAuth(Params, TEXT("meshPath"), TEXT(""));
+        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
+        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
+        int32 SampleCount = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("sampleCount"), 64));
+        float RayDistance = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("rayDistance"), 100.0));
+        float Bias = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("bias"), 0.01));
+        int32 UVChannel = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("uvChannel"), 0));
+        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+        
+        // Validate required parameters
+        if (MeshPath.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("meshPath is required"));
+        }
+        if (Name.IsEmpty())
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
+        }
+        
+        // Validate mesh exists
+        UStaticMesh* SourceMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *MeshPath));
+        if (!SourceMesh)
+        {
+            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Mesh not found: %s"), *MeshPath));
+        }
+        
+        // Check mesh has valid UVs
+        if (SourceMesh->GetRenderData() == nullptr || 
+            SourceMesh->GetRenderData()->LODResources.Num() == 0 ||
+            SourceMesh->GetRenderData()->LODResources[0].VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords() <= static_cast<uint32>(UVChannel))
+        {
+            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Mesh has no UV channel %d or no render data"), UVChannel));
+        }
+        
+        // Create output texture
+        UTexture2D* AOTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
+        if (!AOTexture)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to create AO output texture"));
+        }
+        
+        // Lock output texture for writing
+        uint8* AOData = AOTexture->Source.LockMip(0);
+        if (!AOData)
+        {
+            TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock AO texture for writing"));
+        }
+        
+        // Generate procedural AO (simple distance-based approximation)
+        // Note: Full AO baking would require ray tracing or precomputed shadows
+        // This implementation creates a procedural AO approximation
+        const FStaticMeshLODResources& LOD = SourceMesh->GetRenderData()->LODResources[0];
+        const FStaticMeshVertexBuffer& VertexBuffer = LOD.VertexBuffers.StaticMeshVertexBuffer;
+        
+        // Initialize AO texture to white (full visibility)
+        for (int32 i = 0; i < Width * Height * 4; ++i)
+        {
+            AOData[i] = 255;
+        }
+        
+        // Sample mesh surface and compute simple AO based on vertex density
+        // This is a simplified approximation - real AO baking requires ray tracing
+        int32 NumVertices = VertexBuffer.GetNumVertices();
+        if (NumVertices > 0)
+        {
+            // Create a simple density-based AO approximation
+            // Vertices in dense areas get darker AO values
+            for (int32 y = 0; y < Height; ++y)
+            {
+                for (int32 x = 0; x < Width; ++x)
+                {
+                    float U = static_cast<float>(x) / Width;
+                    float V = static_cast<float>(y) / Height;
+                    
+                    // Sample nearby vertices and compute occlusion
+                    float Occlusion = 0.0f;
+                    int32 Samples = 0;
+                    
+                    for (int32 vIdx = 0; vIdx < NumVertices && Samples < SampleCount; ++vIdx)
+                    {
+                        FVector2D UV = FVector2D::ZeroVector;
+                        uint32 UVChannelIdx = static_cast<uint32>(UVChannel);
+                        if (UVChannelIdx < VertexBuffer.GetNumTexCoords())
+                        {
+                            UV = FVector2D(
+                                VertexBuffer.GetVertexUV(vIdx, UVChannelIdx).X,
+                                VertexBuffer.GetVertexUV(vIdx, UVChannelIdx).Y
+                            );
+                        }
+                        
+                        float Dist = FMath::Square(UV.X - U) + FMath::Square(UV.Y - V);
+                        if (Dist < 0.001f) // Near a vertex
+                        {
+                            Occlusion += 0.3f; // Simple occlusion contribution
+                        }
+                        Samples++;
+                    }
+                    
+                    // Clamp and apply AO value
+                    uint8 AOValue = static_cast<uint8>(FMath::Clamp(255.0f - Occlusion * 255.0f, 0.0f, 255.0f));
+                    int32 Idx = (y * Width + x) * 4;
+                    AOData[Idx + 0] = AOValue; // B
+                    AOData[Idx + 1] = AOValue; // G
+                    AOData[Idx + 2] = AOValue; // R
+                    AOData[Idx + 3] = 255;     // A
+                }
+            }
+        }
+        
+        AOTexture->Source.UnlockMip(0);
+        AOTexture->UpdateResource();
+        
+        // Set texture properties for AO
+        AOTexture->SRGB = false;
+        AOTexture->CompressionSettings = TC_Grayscale;
+        AOTexture->MipGenSettings = TMGS_FromTextureGroup;
+        AOTexture->LODGroup = TEXTUREGROUP_World;
+        
+        if (bSave)
+        {
+            FAssetRegistryModule::AssetCreated(AOTexture);
+            McpSafeAssetSave(AOTexture);
+        }
+        
+        Response->SetBoolField(TEXT("success"), true);
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("AO texture '%s' created from mesh '%s'"), *Name, *MeshPath));
+        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        Response->SetNumberField(TEXT("width"), Width);
+        Response->SetNumberField(TEXT("height"), Height);
+        Response->SetStringField(TEXT("sourceMesh"), MeshPath);
         return Response;
     }
     

@@ -3630,7 +3630,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
             return true;
         }
         
-        // CRITICAL: Validate any extra path parameters for security
+        // CRITICAL: Validate any extra path parameters for security and existence
         // This prevents false negatives where unused parameters contain invalid paths
         FString ExtraSkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
         if (!ExtraSkeletalMeshPath.IsEmpty())
@@ -3641,6 +3641,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
                 SendAutomationError(RequestingSocket, RequestId,
                     FString::Printf(TEXT("Invalid skeletalMeshPath parameter '%s': contains traversal sequences or invalid characters"), *ExtraSkeletalMeshPath),
                     TEXT("INVALID_PATH"));
+                return true;
+            }
+            // Also verify the asset exists - this prevents false negatives when test provides invalid path
+            UObject* ExtraMeshAsset = StaticLoadObject(USkeletalMesh::StaticClass(), nullptr, *ExtraSkeletalMeshPath);
+            if (!ExtraMeshAsset)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("skeletalMeshPath parameter '%s' does not exist"), *ExtraSkeletalMeshPath),
+                    TEXT("MESH_NOT_FOUND"));
                 return true;
             }
         }

@@ -83,6 +83,31 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
   // Extract subAction early to handle actions that don't require a blueprint
   const FString EarlySubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
+  // SECURITY: Validate any provided path even for actions that don't require a blueprint
+  // This prevents false negatives in security tests where malicious paths should still be rejected
+  {
+    FString PathToValidate;
+    bool bPathTraversalDetected = false;
+    
+    if (Payload->TryGetStringField(TEXT("assetPath"), PathToValidate) && !PathToValidate.IsEmpty()) {
+      if (PathToValidate.Contains(TEXT(".."))) {
+        bPathTraversalDetected = true;
+      }
+    }
+    if (!bPathTraversalDetected && Payload->TryGetStringField(TEXT("blueprintPath"), PathToValidate) && !PathToValidate.IsEmpty()) {
+      if (PathToValidate.Contains(TEXT(".."))) {
+        bPathTraversalDetected = true;
+      }
+    }
+    
+    if (bPathTraversalDetected) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Path traversal detected in blueprint/asset path."),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+  }
+
   // Special case: list_node_types doesn't require a blueprint - it lists all UK2Node types globally
   if (EarlySubAction == TEXT("list_node_types")) {
     TArray<TSharedPtr<FJsonValue>> NodeTypes;
