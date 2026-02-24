@@ -201,6 +201,7 @@ function evaluateExpectation(testCase, response) {
     'asset_exists', 'invalid_bp', 'cdo_failed', 'level_already_exists', 'asset_not_found',
     'texture_error', 'invalid_texture', 'source_invalid', 'lock_failed', 'node_not_found',
     'physics_failed', 'function_not_found'
+  ];
   const hasInfrastructureError = infrastructureErrorCodes.some(code => 
     errorStr === code || errorStr.includes(code) || messageStr.includes(code)
   );
