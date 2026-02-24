@@ -23,6 +23,13 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 
+// GeometryCore includes for low-level mesh operations (FMeshBoundaryLoops, FEdgeLoop)
+// Required for bridge operations in UE 5.5+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#include "MeshBoundaryLoops.h"
+#include "EdgeLoop.h"
+#endif
+
 // Geometry Script Includes
 // Paths may vary by UE version (e.g. 5.0 vs 5.3 vs 5.7)
 #if __has_include("GeometryScript/GeometryScriptTypes.h")
@@ -504,8 +511,8 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
         Transform,
         Radius, Length,
         HemisphereSteps, Segments,
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        1,  // SegmentSteps parameter required in UE 5.4+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+        0,  // SegmentSteps parameter added in UE 5.5
 #endif
         EGeometryScriptPrimitiveOriginMode::Center,
         nullptr
@@ -1722,7 +1729,7 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = BevelDistance;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     BevelOptions.Subdivisions = Subdivisions;
 #endif
 
@@ -2414,9 +2421,10 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
-// Geometry Script collision API is stable in UE 5.4, 5.5, 5.6, 5.7
-// Verified: CollisionFunctions.h headers are identical across versions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+// Geometry Script collision API differs between UE 5.4 and 5.5+
+// UE 5.4: Use SetDynamicMeshCollisionFromMesh directly
+// UE 5.5+: Use GenerateCollisionFromMesh + SetSimpleCollisionOfDynamicMeshComponent
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     FGeometryScriptCollisionFromMeshOptions CollisionOptions;
     CollisionOptions.bEmitTransaction = false;
     
@@ -2460,6 +2468,48 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("collisionType"), CollisionType);
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+    // UE 5.4: Use SetDynamicMeshCollisionFromMesh directly (GenerateCollisionFromMesh not available)
+    FGeometryScriptCollisionFromMeshOptions CollisionOptions;
+    CollisionOptions.bEmitTransaction = false;
+    
+    // Set method based on collision type
+    if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
+    }
+    else if (CollisionType == TEXT("sphere") || CollisionType == TEXT("spheres"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::MinimalSpheres;
+    }
+    else if (CollisionType == TEXT("capsule") || CollisionType == TEXT("capsules"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::Capsules;
+    }
+    else if (CollisionType == TEXT("convex"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
+        CollisionOptions.MaxConvexHullsPerMesh = 1;
+    }
+    else if (CollisionType == TEXT("convex_decomposition"))
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
+        CollisionOptions.MaxConvexHullsPerMesh = 8;
+    }
+    else
+    {
+        CollisionOptions.Method = EGeometryScriptCollisionGenerationMethod::MinVolumeShapes;
+    }
+
+    // UE 5.4: SetDynamicMeshCollisionFromMesh sets collision directly on the component
+    UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
+        Mesh, DMC, CollisionOptions, nullptr);
+
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("collisionType"), CollisionType);
+    Result->SetNumberField(TEXT("shapeCount"), 1); // Approximate count for UE 5.4
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision generated"), Result);
 #else
     Self->SendAutomationError(Socket, RequestId, TEXT("Collision generation requires UE 5.4+"), TEXT("VERSION_NOT_SUPPORTED"));
@@ -2521,7 +2571,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     else if (Axis == TEXT("Y")) MirrorScale.Y = -1.0;
     else if (Axis == TEXT("Z")) MirrorScale.Z = -1.0;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(MirroredMesh, MirrorScale, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -3447,7 +3497,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     else if (Axis == TEXT("Y")) ScaleVec.Y = Factor;
     else ScaleVec.Z = Factor;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, ScaleVec, FVector::ZeroVector, true, nullptr);
 #else
     // UE 5.3 fallback: Scale mesh using low-level API
@@ -4131,7 +4181,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     int32 TrianglesCreated = 0;
     FString BridgeStatus;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
     
@@ -4425,7 +4475,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                     // AppendSweepPolygon signature varies by UE version
                     // UE 5.4+ signature: AppendSweepPolygon(TargetMesh, PrimOptions, Transform, PolygonVertices, SweepPath,
                     //                                         bLoop, bCapped, StartScale, EndScale, RotationAngleDeg, MiterLimit, Debug)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
                     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
                         Mesh, PrimOptions, SweepTransform, PolygonVerts2D, PathFrames,
                         false,    // bLoop

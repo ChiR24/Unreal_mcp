@@ -1199,7 +1199,7 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
                     }
                     
                     // Clear tick prerequisites to prevent cross-level issues (UE-197643)
-                    Actor->PrimaryActorTick.Prerequisites.Empty();
+                    Actor->PrimaryActorTick.GetPrerequisites().Empty();
                     
                     for (UActorComponent* Component : Actor->GetComponents())
                     {
