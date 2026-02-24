@@ -60,6 +60,15 @@ static UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString&
     FString FullPath = PackagePath / TextureName;
     FullPath = NormalizeTexturePath(FullPath);
     
+    // SECURITY: Validate path before calling LongPackageNameToFilename to prevent engine crash
+    FString SanitizedFullPath = SanitizeProjectRelativePath(FullPath);
+    if (SanitizedFullPath.IsEmpty())
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("CreateEmptyTexture: Invalid path rejected: %s"), *FullPath);
+        return nullptr;
+    }
+    FullPath = SanitizedFullPath;
+    
     // Create package
     FString PackageFileName = FPackageName::LongPackageNameToFilename(FullPath, FPackageName::GetAssetPackageExtension());
     UPackage* Package = CreatePackage(*FullPath);
@@ -96,9 +105,12 @@ static UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString&
     
     NewTexture->Source.Init(Width, Height, 1, 1, bHDR ? TSF_RGBA16F : TSF_BGRA8);
     
-    // Set properties
+    // Set properties - CRITICAL: Disable compression and streaming for editable textures
+    // This prevents BulkData IsUnlocked() assertion failures when locking for read/write
     NewTexture->SRGB = !bHDR;
     NewTexture->CompressionSettings = bHDR ? TC_HDR : TC_Default;
+    NewTexture->CompressionNone = true;  // No compression for CPU-accessible textures
+    NewTexture->NeverStream = true;       // Disable streaming to ensure data is always resident
     NewTexture->MipGenSettings = TMGS_FromTextureGroup;
     NewTexture->LODGroup = TEXTUREGROUP_World;
     
@@ -841,10 +853,11 @@ Response->SetBoolField(TEXT("success"), true);
     {
         // Validate that no unknown/invalid parameters are present
         TSet<FString> ValidParams = {
-            TEXT("subAction"), TEXT("meshPath"), TEXT("name"), TEXT("path"),
-            TEXT("width"), TEXT("height"), TEXT("sampleCount"),
-            TEXT("intensity"), TEXT("radius"), TEXT("save")
-        };
+                    TEXT("subAction"), TEXT("meshPath"), TEXT("name"), TEXT("path"),
+                    TEXT("width"), TEXT("height"), TEXT("sampleCount"), TEXT("samples"),
+                    TEXT("intensity"), TEXT("radius"), TEXT("rayDistance"), TEXT("bias"),
+                    TEXT("uvChannel"), TEXT("save")
+                };
         for (const auto& Field : Params->Values)
         {
             if (!ValidParams.Contains(Field.Key))
@@ -884,9 +897,14 @@ Response->SetBoolField(TEXT("success"), true);
         
         int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 1024));
         int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 1024));
-        int32 SampleCount = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("sampleCount"), 16));
+        int32 SampleCount = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("sampleCount"), 
+            static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("samples"), 16))));
         float Intensity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("intensity"), 1.0));
-        float Radius = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("radius"), 0.1));
+        // Support both rayDistance (from TS handler) and radius (legacy)
+                float Radius = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("rayDistance"),
+                    static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("radius"), 0.1))));
+                float Bias = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("bias"), 0.01));
+                int32 UVChannel = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("uvChannel"), 0));
         bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
         
         if (MeshPath.IsEmpty() || Name.IsEmpty())
@@ -1382,7 +1400,31 @@ Response->SetBoolField(TEXT("success"), true);
         int32 SrcHeight = SourceTexture->GetSizeY();
         
         // Validate platform data exists before accessing
-        FTexturePlatformData* ResizePlatformData = SourceTexture->GetPlatformData();
+        // CRITICAL: Check source validity before locking
+                if (!SourceTexture->Source.IsValid())
+                {
+                    TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no source data - may be compressed or not fully loaded"));
+                }
+                
+                // Force mips resident if texture uses streaming
+                if (SourceTexture->IsStreamable())
+                {
+                    SourceTexture->SetForceMipLevelsToBeResident(30.0f);
+                }
+                
+                // Get source dimensions
+                int32 SrcWidth = SourceTexture->GetSizeX();
+                int32 SrcHeight = SourceTexture->GetSizeY();
+                
+                // Lock source mip data - use Source which handles both compressed and uncompressed textures
+                const uint8* SrcData = SourceTexture->Source.LockMip(0);
+                if (!SrcData)
+                {
+                    TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
+                }
+                
+                // NOTE: Source data is in BGRA format regardless of compression
+                // Old platform data checks removed - using Source directly
         if (!ResizePlatformData)
         {
             TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no platform data - texture may not be fully loaded"));
@@ -1414,7 +1456,7 @@ Response->SetBoolField(TEXT("success"), true);
         FString SanitizedPath = SanitizeProjectRelativePath(Path);
         if (SanitizedPath.IsEmpty())
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal or invalid characters"));
         }
         Path = SanitizedPath;
@@ -1423,7 +1465,7 @@ Response->SetBoolField(TEXT("success"), true);
         FString SanitizedName = SanitizeAssetName(Name);
         if (SanitizedName.IsEmpty())
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Invalid name: contains invalid characters"));
         }
         Name = SanitizedName;
@@ -1432,14 +1474,14 @@ Response->SetBoolField(TEXT("success"), true);
         UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, NewWidth, NewHeight, false);
         if (!NewTexture)
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create resized texture"));
         }
         
         uint8* DstMipData = NewTexture->Source.LockMip(0);
         if (!DstMipData)
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock destination texture data"));
         }
         
@@ -1479,7 +1521,7 @@ Response->SetBoolField(TEXT("success"), true);
             }
         }
         
-        SrcMip.BulkData.Unlock();
+        SourceTexture->Source.UnlockMip(0);
         NewTexture->Source.UnlockMip(0);
         NewTexture->UpdateResource();
         
@@ -1583,7 +1625,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
         }
         
         // Invert selected channels
@@ -1702,7 +1744,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
         }
         
         Amount = FMath::Clamp(Amount, 0.0f, 1.0f);
@@ -2052,10 +2094,50 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         // Load channel textures
-        UTexture2D* RedTex = !RedPath.IsEmpty() ? Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *RedPath)) : nullptr;
-        UTexture2D* GreenTex = !GreenPath.IsEmpty() ? Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *GreenPath)) : nullptr;
-        UTexture2D* BlueTex = !BluePath.IsEmpty() ? Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BluePath)) : nullptr;
-        UTexture2D* AlphaTex = !AlphaPath.IsEmpty() ? Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AlphaPath)) : nullptr;
+        // Validate that at least one source texture is provided
+                if (RedPath.IsEmpty() && GreenPath.IsEmpty() && BluePath.IsEmpty() && AlphaPath.IsEmpty())
+                {
+                    TEXTURE_ERROR_RESPONSE(TEXT("At least one source texture (redTexture, greenTexture, blueTexture, or alphaTexture) is required"));
+                }
+                
+                // Load channel textures - validate each specified path
+                UTexture2D* RedTex = nullptr;
+                UTexture2D* GreenTex = nullptr;
+                UTexture2D* BlueTex = nullptr;
+                UTexture2D* AlphaTex = nullptr;
+                
+                if (!RedPath.IsEmpty())
+                {
+                    RedTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *RedPath));
+                    if (!RedTex)
+                    {
+                        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load red texture: %s"), *RedPath));
+                    }
+                }
+        if (!GreenPath.IsEmpty())
+                {
+                    GreenTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *GreenPath));
+                    if (!GreenTex)
+                    {
+                        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load green texture: %s"), *GreenPath));
+                    }
+                }
+        if (!BluePath.IsEmpty())
+                {
+                    BlueTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BluePath));
+                    if (!BlueTex)
+                    {
+                        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load blue texture: %s"), *BluePath));
+                    }
+                }
+        if (!AlphaPath.IsEmpty())
+                {
+                    AlphaTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AlphaPath));
+                    if (!AlphaTex)
+                    {
+                        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load alpha texture: %s"), *AlphaPath));
+                    }
+                }
         
         // Determine output size from first available texture
         int32 Width = 1024, Height = 1024;
@@ -2129,7 +2211,9 @@ Response->SetBoolField(TEXT("success"), true);
     if (SubAction == TEXT("combine_textures"))
     {
         FString BaseTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("baseTexture"), TEXT("")));
-        FString OverlayTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("overlayTexture"), TEXT("")));
+        // Support both overlayTexture (C++ naming) and blendTexture (TS handler naming)
+                FString OverlayTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("overlayTexture"), 
+                    GetStringFieldTextAuth(Params, TEXT("blendTexture"), TEXT(""))));
         FString BlendMode = GetStringFieldTextAuth(Params, TEXT("blendMode"), TEXT("Normal"));
         float Opacity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("opacity"), 1.0));
         FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("Combined"));
@@ -2382,7 +2466,7 @@ Response->SetBoolField(TEXT("success"), true);
             FTexture2DMipMap& SrcMip = SourceTexture->GetPlatformData()->Mips[0];
             const uint8* SrcData = static_cast<const uint8*>(SrcMip.BulkData.LockReadOnly());
             FMemory::Memcpy(MipData, SrcData, Width * Height * 4);
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
         }
         
         // Apply LUT to each pixel (BGRA format: B=0, G=1, R=2, A=3)
@@ -2462,7 +2546,7 @@ Response->SetBoolField(TEXT("success"), true);
         UPackage* Package = CreatePackage(*FullAssetPath);
         if (!Package)
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create package for output texture"));
         }
         
@@ -2470,7 +2554,7 @@ Response->SetBoolField(TEXT("success"), true);
         UTexture2D* NewTexture = NewObject<UTexture2D>(Package, FName(*Name), RF_Public | RF_Standalone);
         if (!NewTexture)
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
         }
         
@@ -2480,7 +2564,7 @@ Response->SetBoolField(TEXT("success"), true);
         uint8* DestData = NewTexture->Source.LockMip(0);
         if (!DestData)
         {
-            SrcMip.BulkData.Unlock();
+            SourceTexture->Source.UnlockMip(0);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock destination texture data"));
         }
         
@@ -2514,7 +2598,7 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         NewTexture->Source.UnlockMip(0);
-        SrcMip.BulkData.Unlock();
+        SourceTexture->Source.UnlockMip(0);
         
         // Set texture properties for grayscale mask
         NewTexture->SRGB = false;

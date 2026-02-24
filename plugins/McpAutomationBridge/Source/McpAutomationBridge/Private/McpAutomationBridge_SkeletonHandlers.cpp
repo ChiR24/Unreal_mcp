@@ -3630,6 +3630,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
             return true;
         }
         
+        // CRITICAL: Validate any extra path parameters for security
+        // This prevents false negatives where unused parameters contain invalid paths
+        FString ExtraSkeletalMeshPath = GetStringFieldSkel(Payload, TEXT("skeletalMeshPath"));
+        if (!ExtraSkeletalMeshPath.IsEmpty())
+        {
+            FString SanitizedExtraPath = SanitizeProjectRelativePath(ExtraSkeletalMeshPath);
+            if (SanitizedExtraPath.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Invalid skeletalMeshPath parameter '%s': contains traversal sequences or invalid characters"), *ExtraSkeletalMeshPath),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+        }
+        
         FString Error;
         USkeletalMesh* SourceMesh = LoadSkeletalMeshFromPathSkel(SourceMeshPath, Error);
         if (!SourceMesh)

@@ -294,7 +294,7 @@ export async function handleTextureTools(
           { key: 'path', aliases: ['directory'], default: '/Game/Textures' },
           { key: 'width', default: 1024 },
           { key: 'height', default: 1024 },
-          { key: 'samples', default: 64 },
+          { key: 'samples', aliases: ['sampleCount'], default: 64 },
           { key: 'rayDistance', default: 100.0 },
           { key: 'bias', default: 0.01 },
           { key: 'uvChannel', default: 0 },
@@ -319,7 +319,7 @@ export async function handleTextureTools(
           path,
           width,
           height,
-          samples,
+          sampleCount: samples,
           rayDistance,
           bias,
           uvChannel,
@@ -639,7 +639,7 @@ export async function handleTextureTools(
           { key: 'name', required: true },
           { key: 'path', aliases: ['directory'], default: '/Game/Textures' },
           { key: 'baseTexture', required: true },
-          { key: 'blendTexture', required: true },
+          { key: 'blendTexture', aliases: ['overlayTexture'], required: true },
           { key: 'blendMode', default: 'Multiply' }, // Multiply, Add, Subtract, Screen, Overlay, SoftLight, HardLight, Difference, Normal
           { key: 'opacity', default: 1.0 },
           { key: 'maskTexture' }, // Optional mask for blending
