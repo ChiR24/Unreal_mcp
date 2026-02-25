@@ -4520,7 +4520,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                             UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
                                 Mesh, PrimOptions, SegmentTransform,
                                 ProfileRadius * 0.5, SegmentLength,
-                                2, 8,
+                                2, 8, 0,
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }
                     }

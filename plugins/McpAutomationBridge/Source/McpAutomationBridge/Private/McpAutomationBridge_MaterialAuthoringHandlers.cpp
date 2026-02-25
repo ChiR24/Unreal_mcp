@@ -3075,10 +3075,6 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     // This is a stub that acknowledges the request
     bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
 
-    // Note: Cast shadows is typically a material property but may be on the component
-    // This is a stub that acknowledges the request
-    bool CastShadows = GetJsonBoolField(Payload, TEXT("castShadows"), true);
-
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetBoolField(TEXT("castShadows"), CastShadows);

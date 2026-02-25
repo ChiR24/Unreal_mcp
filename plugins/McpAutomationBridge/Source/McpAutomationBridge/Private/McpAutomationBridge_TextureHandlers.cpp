@@ -1941,18 +1941,34 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         // SECURITY: Sanitize all input texture paths
-        auto SanitizeOptionalTexturePath = [&](FString& P, const TCHAR* Label) {
-            if (P.IsEmpty()) return;
-            FString S = SanitizeProjectRelativePath(P);
+        if (!RedPath.IsEmpty()) {
+            FString S = SanitizeProjectRelativePath(RedPath);
             if (S.IsEmpty()) {
-                TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid %s path: contains traversal or invalid characters"), Label));
+                TEXTURE_ERROR_RESPONSE(TEXT("Invalid redTexture path: contains traversal or invalid characters"));
             }
-            P = S;
-        };
-        SanitizeOptionalTexturePath(RedPath, TEXT("redTexture"));
-        SanitizeOptionalTexturePath(GreenPath, TEXT("greenTexture"));
-        SanitizeOptionalTexturePath(BluePath, TEXT("blueTexture"));
-        SanitizeOptionalTexturePath(AlphaPath, TEXT("alphaTexture"));
+            RedPath = S;
+        }
+        if (!GreenPath.IsEmpty()) {
+            FString S = SanitizeProjectRelativePath(GreenPath);
+            if (S.IsEmpty()) {
+                TEXTURE_ERROR_RESPONSE(TEXT("Invalid greenTexture path: contains traversal or invalid characters"));
+            }
+            GreenPath = S;
+        }
+        if (!BluePath.IsEmpty()) {
+            FString S = SanitizeProjectRelativePath(BluePath);
+            if (S.IsEmpty()) {
+                TEXTURE_ERROR_RESPONSE(TEXT("Invalid blueTexture path: contains traversal or invalid characters"));
+            }
+            BluePath = S;
+        }
+        if (!AlphaPath.IsEmpty()) {
+            FString S = SanitizeProjectRelativePath(AlphaPath);
+            if (S.IsEmpty()) {
+                TEXTURE_ERROR_RESPONSE(TEXT("Invalid alphaTexture path: contains traversal or invalid characters"));
+            }
+            AlphaPath = S;
+        }
         
         // Load channel textures
         // Validate that at least one source texture is provided
@@ -2105,8 +2121,6 @@ Response->SetBoolField(TEXT("success"), true);
         BaseTexturePath = SanitizedBase;
         OverlayTexturePath = SanitizedOverlay;
         
-        UTexture2D* BaseTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BaseTexturePath));
-        UTexture2D* OverlayTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *OverlayTexturePath));
         UTexture2D* BaseTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BaseTexturePath));
         UTexture2D* OverlayTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *OverlayTexturePath));
         

@@ -311,6 +311,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Filter.PackagePaths.Add(FName(*SanitizedPath));
         bHasValidPaths = true;
     }
+    }
     
     // Also check for 'path' (singular) string field - common alternative to array
     // CRITICAL: This was missing, causing security tests to fail because path was ignored!
