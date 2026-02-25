@@ -8,7 +8,7 @@
 [![Project Board](https://img.shields.io/badge/Project-Roadmap-blueviolet?logo=github)](https://github.com/users/ChiR24/projects/3)
 [![Discussions](https://img.shields.io/badge/Discussions-Join-brightgreen?logo=github)](https://github.com/ChiR24/Unreal_mcp/discussions)
 
-A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript, C++, and Rust (WebAssembly).
+A comprehensive Model Context Protocol (MCP) server that enables AI assistants to control Unreal Engine through a native C++ Automation Bridge plugin. Built with TypeScript and C++.
 
 ---
 
@@ -18,7 +18,6 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Available Tools](#available-tools)
-- [WebAssembly Acceleration](#webassembly-acceleration)
 - [GraphQL API](#graphql-api)
 - [Docker](#docker)
 - [Documentation](#documentation)
@@ -201,7 +200,6 @@ MCP_AUTOMATION_ALLOW_NON_LOOPBACK=false
 LOG_LEVEL=info  # debug | info | warn | error
 
 # Optional
-WASM_ENABLED=true
 MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
 ASSET_LIST_TTL_MS=10000
 ```
@@ -327,32 +325,6 @@ Blueprints • Materials • Textures • Static Meshes • Skeletal Meshes • 
 
 ---
 
-## WebAssembly Acceleration
-
-Optional WASM acceleration for computationally intensive operations. **Enabled by default** when available, falls back to TypeScript automatically.
-
-| Operation | Speedup |
-|-----------|---------|
-| JSON parsing | 5–8x |
-| Transform calculations | 5–10x |
-| Vector/matrix math | 5x |
-| Dependency resolution | 3–5x |
-
-### Building WASM (Optional)
-
-**Prerequisites:**
-1. Install Rust: https://rust-lang.org/tools/install/
-2. Install wasm-pack: `cargo install wasm-pack`
-
-```bash
-npm run build:wasm       # Builds WASM
-```
-
-To disable: `WASM_ENABLED=false`
-
----
-
-## GraphQL API
 
 Optional GraphQL endpoint for complex queries. **Disabled by default.**
 
@@ -380,7 +352,6 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 |----------|-------------|
 | [Handler Mappings](docs/handler-mapping.md) | TypeScript to C++ routing |
 | [GraphQL API](docs/GraphQL-API.md) | Query and mutation reference |
-| [WebAssembly Integration](docs/WebAssembly-Integration.md) | WASM performance guide |
 | [Plugin Extension](docs/editor-plugin-extension.md) | C++ plugin architecture |
 | [Testing Guide](docs/testing-guide.md) | How to run and write tests |
 | [Migration Guide v0.5.0](docs/Migration-Guide-v0.5.0.md) | Upgrade to v0.5.0 |
@@ -392,7 +363,7 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 ## Development
 
 ```bash
-npm run build       # Build TypeScript + WASM
+npm run build       # Build TypeScript
 npm run lint        # Run ESLint
 npm run test:unit   # Run unit tests
 npm run test:all    # Run all tests

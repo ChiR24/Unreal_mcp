@@ -18,8 +18,8 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build:core": "tsc -p tsconfig.json",
-    "build": "npm run clean && npm run build:core && (npm run build:wasm || echo \"WASM build failed or wasm-pack missing; continuing with TypeScript-only build. To enable WASM, install wasm-pack and re-run npm run build.\")",
+"build:core": "tsc -p tsconfig.json",
+    "build": "npm run clean && npm run build:core",
     "build:watch": "tsc -p tsconfig.json --watch",
     "start": "node dist/cli.js",
     "dev": "ts-node-esm src/cli.ts",
@@ -38,7 +38,6 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:all": "node tests/integration.mjs",
     "test:smoke": "node --loader ts-node/esm scripts/smoke-test.ts",
-    "build:wasm": "echo 'Building WebAssembly module...' && cd wasm && wasm-pack build --target web --out-dir ../src/wasm/pkg && cd .. && node scripts/patch-wasm.js",
     "type-check": "tsc --noEmit"
   },
   "engines": {

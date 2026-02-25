@@ -5,8 +5,7 @@
 **Branch:** main
 
 ## OVERVIEW
-MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + C++ Bridge Plugin + optional Rust WASM. 36 consolidated tools with action-based dispatch. Version 0.5.16.
-
+MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + C++ Bridge Plugin. 36 consolidated tools with action-based dispatch. Version 0.5.18.
 ## STRUCTURE
 ```
 ./
@@ -17,12 +16,9 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 │   │   └── handlers/       # Domain handlers (40 files)
 │   ├── automation/         # Bridge Client & Handshake (9 files)
 │   ├── utils/              # Normalization & Security
-│   └── wasm/               # WASM compiled output (from ../wasm/)
 ├── Plugins/                # UE Plugin (C++) — note: "Plugins" not "plugins"
-│   └── McpAutomationBridge/
 │       ├── Source/         # Native Handlers (56 files) & Subsystem
 │       └── Config/         # Plugin Settings
-├── wasm/                   # Rust Source (Math/Parsing)
 ├── tests/                  # Integration + Unit Tests
 │   ├── test-runner.mjs     # Custom MCP test runner (1100+ lines)
 │   └── mcp-tools/          # Domain-specific test files (core/world/authoring/gameplay/utility)
@@ -68,15 +64,13 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 ## UNIQUE STYLES
 - **Consolidated Tools**: 36 tools with action-based dispatch (single schema file).
 - **Dual Test Runners**: Vitest (unit) + Custom MCP runner (integration).
-- **WASM Fallback**: Math-heavy logic uses Rust/WASM with automatic TS fallback.
 - **Mock Mode**: Set `MOCK_UNREAL_CONNECTION=true` for offline CI.
 - **Non-Standard Layout**: `src/tools/handlers/` nested 2 levels deep.
 
 ## COMMANDS
 ```bash
 npm run build:core   # TS only
-npm run build        # TS + WASM (WASM failure is non-fatal)
-npm run start        # Launch server
+npm run build:core   # Build TypeScript
 npm run test:unit    # Vitest unit tests
 npm test             # UE Integration (Requires Editor)
 npm run test:smoke   # Mock mode smoke test
@@ -84,5 +78,5 @@ npm run test:smoke   # Mock mode smoke test
 
 ## NOTES
 - **Engine Reference**: Check engine code at `X:\Unreal_Engine\UE_5.7\Engine`, `UE_5.6`, `UE_5.3`.
-- **Version Files**: Version in `package.json`, `server.json`, `src/index.ts`, `wasm/Cargo.toml`.
+- **Version Files**: Version in `package.json`, `server.json`, `src/index.ts`.
 - **Test Patterns**: Integration tests use pipe-separated expectations (`success|error|timeout`).

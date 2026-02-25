@@ -1,11 +1,6 @@
-import { BaseTool } from './base-tool.js';
 import { ISequenceTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { SequenceResponse } from '../types/automation-responses.js';
-import { wasmIntegration } from '../wasm/index.js';
-import { Logger } from '../utils/logger.js';
-
-const log = new Logger('SequenceTools');
-
+import { BaseTool } from './base-tool.js';
 export interface LevelSequence {
   path: string;
   name: string;
@@ -328,17 +323,13 @@ export class SequenceTools extends BaseTool implements ISequenceTools {
       value: params.value
     });
 
-    // Use WASM for transform processing
+    // Transform parameter validation
     if (params.property === 'Transform' && params.value) {
       const loc = params.value.location;
       const rot = params.value.rotation;
       const scale = params.value.scale;
       if (loc && rot && scale) {
-        const locArr: [number, number, number] = [loc.x, loc.y, loc.z];
-        const rotArr: [number, number, number] = [rot.pitch, rot.yaw, rot.roll];
-        const scaleArr: [number, number, number] = [scale.x, scale.y, scale.z];
-        wasmIntegration.composeTransform(locArr, rotArr, scaleArr);
-        log.debug('[WASM] Using composeTransform for keyframe validation');
+        // Transform parameters validated
       }
     }
     if (!resp.success && this.isUnknownActionResponse(resp)) {

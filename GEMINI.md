@@ -20,17 +20,11 @@ The system is composed of three main components:
     *   **Key Functionality:** Handles `execute_console_command`, `set_object_property`, and other engine-level operations on the Game Thread.
     *   **Communication:** Listens on `ws://localhost:8091` (default).
 
-3.  **WebAssembly Module (Rust):**
-    *   **Role:** Provides high-performance utilities for the Node.js server, such as complex property parsing and vector math.
-    *   **Location:** `wasm/`
-    *   **Key File:** `wasm/src/lib.rs`.
-
 ## Building and Running
 
 ### Prerequisites
 *   Node.js (v18 or higher)
 *   Unreal Engine (5.0-5.7)
-*   Rust (optional, if modifying WASM components)
 
 ### Setup
 
@@ -44,14 +38,7 @@ The system is composed of three main components:
     npm run build
     ```
 
-3.  **Build WebAssembly (Optional):**
-    If you are working on the Rust module:
-    ```bash
-    npm run build:wasm
-    ```
-
-4.  **Unreal Plugin Installation:**
-    *   Copy the `Plugins/McpAutomationBridge` folder into your Unreal Project's `Plugins` directory (e.g., `YourProject/Plugins/`).
+    3.  **Unreal Plugin Installation:**
     *   Regenerate project files and recompile your Unreal project.
     *   Enable the plugin in the Unreal Editor if it's not automatically enabled.
     *   Ensure the plugin is running (it should log "MCP Automation Bridge listening" to the Output Log).
@@ -77,7 +64,6 @@ The project includes a suite of integration tests located in the `tests/` direct
     ```bash
     npm run test:control_actor
     npm run test:manage_asset
-    npm run test:wasm
     ```
 
 ## Development Conventions
@@ -98,9 +84,7 @@ The project includes a suite of integration tests located in the `tests/` direct
 *   `src/`: Source code for the Node.js MCP server.
     *   `tools/`: Definitions for MCP tools (Actors, Assets, etc.).
     *   `resources/`: Definitions for MCP resources.
-    *   `wasm/`: Compiled WebAssembly bindings.
 *   `Plugins/`: Source code for the Unreal Engine C++ plugin.
-*   `wasm/`: Source code for the Rust WebAssembly module.
 *   `tests/`: Integration tests and test runners.
 *   `scripts/`: Utility scripts for build and maintenance.
 

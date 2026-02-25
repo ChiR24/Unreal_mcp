@@ -7,8 +7,7 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | Action | Current State | Needed Work |
 | --- | --- | --- |
 | `get_source_control_state` | Implemented (checkout status, user). | ✅ Done |
-| `analyze_graph` | Implemented (recursive dependencies + WASM analysis). | ✅ Done |
-| `create_thumbnail` | Implemented (supports width/height params). | ✅ Done |
+| `analyze_graph` | Implemented (recursive dependencies analysis). | ✅ Done |
 | `import` / `export` | Native AssetTools implementation. | ✅ Done |
 
 ## Sequence Handlers

@@ -2,11 +2,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { ensureVector3 } from '../utils/validation.js';
-import { wasmIntegration } from '../wasm/index.js';
 import { ILandscapeTools, StandardActionResponse } from '../types/tool-interfaces.js';
-import { Logger } from '../utils/logger.js';
-
-const log = new Logger('LandscapeTools');
 
 export class LandscapeTools implements ILandscapeTools {
   constructor(private bridge: UnrealBridge, private automationBridge?: AutomationBridge) { }
@@ -51,18 +47,14 @@ export class LandscapeTools implements ILandscapeTools {
     }
 
     const [locX, locY, locZ] = ensureVector3(params.location ?? [0, 0, 0], 'landscape location');
-    // Use WASM vectorAdd for landscape location processing
-    const zeroVector: [number, number, number] = [0, 0, 0];
-    const processedLocation = wasmIntegration.vectorAdd(zeroVector, [locX, locY, locZ]);
-    log.debug('[WASM] Using vectorAdd for landscape positioning');
+    const processedLocation = [locX, locY, locZ];
     const sectionsPerComponent = Math.max(1, Math.floor(params.sectionsPerComponent ?? 1));
     const quadsPerSection = Math.max(1, Math.floor(params.quadsPerSection ?? 63));
 
     try {
-      // Map to plugin-native payload shape
       const componentsX = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeX ?? 1000) / 1000)))));
       const componentsY = Math.max(1, Math.floor((params.componentCount ?? Math.max(1, Math.floor((params.sizeY ?? 1000) / 1000)))));
-      const quadsPerComponent = quadsPerSection; // Plugin uses quadsPerComponent
+      const quadsPerComponent = quadsPerSection;
 
       const payload: Record<string, unknown> = {
         name,

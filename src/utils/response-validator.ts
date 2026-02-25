@@ -1,8 +1,6 @@
 import Ajv, { ValidateFunction } from 'ajv';
 import { Logger } from './logger.js';
 import { cleanObject } from './safe-json.js';
-import { wasmIntegration } from '../wasm/index.js';
-
 const log = new Logger('ResponseValidator');
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -227,17 +225,12 @@ export class ResponseValidator {
 
         if (looksLikeJson) {
           try {
-            // Check if text is JSON - use WASM for high-performance parsing (5-8x faster)
-            structuredContent = await wasmIntegration.parseProperties(rawText);
+            // Parse JSON using native JSON.parse
+            structuredContent = JSON.parse(rawText);
           } catch {
-            // If JSON parsing fails, fall back to using the full response without
-            // emitting noisy parse errors for plain-text messages.
+            // If JSON parsing fails, fall back to using the full response
             structuredContent = response;
           }
-        } else {
-          // Plain-text summary or error message; keep the original structured
-          // response object instead of attempting JSON parsing.
-          structuredContent = response;
         }
       }
     }
