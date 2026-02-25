@@ -193,15 +193,12 @@ static bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
         return false;
     }
     
-    // 5. Validate path starts with known mount points
-    // Only allow /Game/ or /Engine/ as valid mount points for AI assets
-    if (!OutSanitizedPath.StartsWith(TEXT("/Game/")) && 
-        !OutSanitizedPath.StartsWith(TEXT("/Engine/")) &&
-        OutSanitizedPath != TEXT("/Game") &&
-        OutSanitizedPath != TEXT("/Engine"))
+    // 5. Validate path against engine's registered mount points.
+    // This automatically supports /Game, /Engine, and all plugin mount points
+    // (e.g., Game Feature Plugins like /ShooterCore/, /TopDownArena/, etc.)
+    if (!FPackageName::IsValidLongPackageName(OutSanitizedPath, /*bIncludeReadOnlyRoots=*/true))
     {
-        // Could be a path traversal attempt like /etc/passwd/Test
-        OutError = FString::Printf(TEXT("Invalid path: must start with /Game/ or /Engine/ (got: %s)"), *InputPath);
+        OutError = FString::Printf(TEXT("Invalid path: not a registered mount point (got: %s)"), *InputPath);
         return false;
     }
     
