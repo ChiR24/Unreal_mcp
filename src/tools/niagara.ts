@@ -124,8 +124,8 @@ export class NiagaraTools {
     };
 
     const requestPayload: Record<string, unknown> = { systemPath: params.systemPath };
-    let start = toVector(params.start);
-    let end = toVector(params.end);
+    const start = toVector(params.start);
+    const end = toVector(params.end);
 
     // Vector parameters are already valid
     if (start) requestPayload.start = start;

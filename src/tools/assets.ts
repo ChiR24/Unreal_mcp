@@ -393,7 +393,10 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const visit = (path: string, depth: number) => {
       if (visited.has(path) || depth > maxDepth) return;
       visited.add(path);
-      result.push(path);
+      // Don't include the root asset in dependencies
+      if (path !== assetPath) {
+        result.push(path);
+      }
       const deps = graph[path] || [];
       for (const dep of deps) {
         visit(dep, depth + 1);
@@ -412,7 +415,8 @@ export class AssetTools extends BaseTool implements IAssetTools {
     const visited = new Set<string>();
 
     const getDepth = (path: string, depth: number): number => {
-      if (visited.has(path) || depth > maxDepth) return depth;
+      if (visited.has(path)) return depth;
+      if (depth > maxDepth) return maxDepth; // Cap at maxDepth
       visited.add(path);
       const deps = graph[path] || [];
       if (deps.length === 0) return depth;
@@ -420,7 +424,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
       for (const dep of deps) {
         maxChildDepth = Math.max(maxChildDepth, getDepth(dep, depth + 1));
       }
-      return maxChildDepth;
+      return Math.min(maxChildDepth, maxDepth); // Ensure we don't exceed maxDepth
     };
 
     return getDepth(assetPath, 0);

@@ -69,7 +69,6 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 
 ## COMMANDS
 ```bash
-npm run build:core   # TS only
 npm run build:core   # Build TypeScript
 npm run test:unit    # Vitest unit tests
 npm test             # UE Integration (Requires Editor)
