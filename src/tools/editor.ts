@@ -3,7 +3,6 @@ import { IEditorTools, StandardActionResponse } from '../types/tool-interfaces.j
 import { toVec3Object, toRotObject } from '../utils/normalize.js';
 import { DEFAULT_SCREENSHOT_RESOLUTION } from '../constants.js';
 import { EditorResponse } from '../types/automation-responses.js';
-import { wasmIntegration } from '../wasm/index.js';
 import path from 'path';
 
 export class EditorTools extends BaseTool implements IEditorTools {
@@ -186,18 +185,6 @@ export class EditorTools extends BaseTool implements IEditorTools {
 
     // Use native control_editor.set_camera when available
     try {
-      // Use WASM composeTransform for camera transform calculation
-      const locRecord = location as unknown as Record<string, number> | undefined;
-      const rotRecord = rotation as unknown as Record<string, number> | undefined;
-      const locArray: [number, number, number] = location
-        ? [Number(locRecord?.x ?? 0), Number(locRecord?.y ?? 0), Number(locRecord?.z ?? 0)]
-        : [0, 0, 0];
-      const rotArray: [number, number, number] = rotation
-        ? [Number(rotRecord?.pitch ?? 0), Number(rotRecord?.yaw ?? 0), Number(rotRecord?.roll ?? 0)]
-        : [0, 0, 0];
-      // Compose transform to validate and process camera positioning via WASM
-      wasmIntegration.composeTransform(locArray, rotArray, [1, 1, 1]);
-
       const resp = await this.sendAutomationRequest<EditorResponse>('control_editor', {
         action: 'set_camera',
         location: location,

@@ -2,7 +2,6 @@ import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { cleanObject } from '../utils/safe-json.js';
 import { validateAssetParams } from '../utils/validation.js';
-import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 
 type CreateAnimationBlueprintSuccess = {
   success: true;

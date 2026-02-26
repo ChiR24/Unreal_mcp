@@ -68,9 +68,8 @@ npm run test:all
 ### Building
 
 ```bash
-npm run build        # Full build (TypeScript + WASM)
+npm run build        # Full build (TypeScript)
 npm run build:core   # TypeScript only
-npm run build:wasm   # WASM only (requires wasm-pack)
 ```
 
 ## Pull Request Process

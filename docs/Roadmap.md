@@ -11,8 +11,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Native C++ Bridge**: Replace Python-based bridge with native C++ WebSocket plugin.
 - [x] **Consolidated Tools**: Unify disparate tools into cohesive domains (`manage_asset`, `control_actor`, etc.).
 - [x] **Modular Server**: Refactor monolithic `index.ts` into specialized subsystems (`ServerSetup`, `HealthMonitor`, `ResourceHandler`).
-- [x] **WASM Acceleration**: Integrate Rust/WASM for high-performance JSON parsing and math.
-- [x] **Robust Error Handling**: Standardize error responses, codes, and logging.
+- [x] **Performance Optimization**: Pure TypeScript implementation for all math/JSON operations (WASM removed - FFI overhead made it 4-33x slower).
 - [x] **Offline Capabilities**: Implement file-based fallback for project settings (`DefaultEngine.ini`).
 
 ## Phase 2: Graph & Logic Automation (Completed)
@@ -41,7 +40,6 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 ## Phase 5: Infrastructure Improvements (Current)
 
 - [ ] **Real-time Streaming**: Streaming logs and test results via SSE or chunked responses.
-- [ ] **WASM Expansion**: Move more tools (graph handlers) into Rust/WASM for performance and safety.
 - [ ] **Extensibility Framework**: Dynamic handler registry via JSON config and support for custom C++ handlers.
 - [ ] **Remote Profiling**: Deep integration with Unreal Insights for remote performance tuning.
 

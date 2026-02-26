@@ -1,7 +1,6 @@
 import { BaseTool } from './base-tool.js';
 import { ILevelTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { LevelResponse } from '../types/automation-responses.js';
-import { wasmIntegration as _wasmIntegration } from '../wasm/index.js';
 import { sanitizePath } from '../utils/path-security.js';
 import { sanitizeCommandArgument } from '../utils/validation.js';
 import {

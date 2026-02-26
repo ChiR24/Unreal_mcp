@@ -3,11 +3,8 @@ import { ensureRotation, ensureVector3 } from '../utils/validation.js';
 import { BaseTool } from './base-tool.js';
 import { IActorTools, StandardActionResponse } from '../types/tool-interfaces.js';
 import { ActorResponse } from '../types/automation-responses.js';
-import { wasmIntegration } from '../wasm/index.js';
-import { Logger } from '../utils/logger.js';
 
-const log = new Logger('ActorTools');
-
+/** Extended actor response with spawn-specific fields */
 /** Extended actor response with spawn-specific fields */
 interface SpawnActorResponse extends ActorResponse {
   data?: {
@@ -399,11 +396,7 @@ export class ActorTools extends BaseTool implements IActorTools {
     }
     if (params.offset) {
       const offs = ensureVector3(params.offset, 'duplicate offset');
-      // Use WASM vectorAdd for offset calculation (origin + offset)
-      const origin: [number, number, number] = [0, 0, 0];
-      const calculatedOffset = wasmIntegration.vectorAdd(origin, offs);
-      log.debug('[WASM] Using vectorAdd for duplicate offset calculation');
-      payload.offset = { x: calculatedOffset[0], y: calculatedOffset[1], z: calculatedOffset[2] };
+      payload.offset = { x: offs[0], y: offs[1], z: offs[2] };
     }
 
     return this.sendRequest<StandardActionResponse>('duplicate', payload, 'control_actor');

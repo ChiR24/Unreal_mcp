@@ -1,8 +1,7 @@
 # Copilot instructions for Unreal MCP
 
 ## Big picture
-- Dual-process system: TypeScript MCP server in `src/` + Unreal Editor plugin in `plugins/McpAutomationBridge/` (+ optional Rust/WASM in `wasm/`).
-- Data flow: MCP tool call → TS dispatch (`src/tools/consolidated-tool-handlers.ts`) → `executeAutomationRequest()` → WebSocket client (`src/automation/bridge.ts`) → UE subsystem dispatch (`UMcpAutomationBridgeSubsystem::ProcessAutomationRequest()` in `plugins/.../McpAutomationBridge_ProcessRequest.cpp`) → handler registered in `UMcpAutomationBridgeSubsystem::InitializeHandlers()`.
+- Dual-process system: TypeScript MCP server in `src/` + Unreal Editor plugin in `plugins/McpAutomationBridge/`.
 
 ## Non-obvious constraints (don’t break MCP I/O)
 - Keep stdout JSON-only: runtime logs must go through `Logger` (see `routeStdoutLogsToStderr()` in `src/index.ts`). Avoid `console.log` in runtime code.
@@ -10,8 +9,7 @@
 
 ## Key dev commands (from `package.json`)
 - Dev: `npm run dev` (ts-node-esm)
-- Build: `npm run build` (WASM build is best-effort) / `npm run build:core`
-- Tests: `npm test` (integration via `tests/integration.mjs`) and `npm run test:unit` (vitest)
+- Build: `npm run build:core`
 - Plugin sync: `npm run automation:sync`
 
 ## Connection + ports
