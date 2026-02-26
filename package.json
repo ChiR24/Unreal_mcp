@@ -68,12 +68,13 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.0",
     "@types/node": "^25.0.2",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.49.0",
     "@vitest/coverage-v8": "^4.0.16",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.2",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",

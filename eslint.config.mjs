@@ -63,6 +63,9 @@ export default [
       'no-case-declarations': 'off',
       'prefer-const': 'warn',
       'no-unused-vars': 'off',
+      // ESLint 10 new rules - disabled to maintain compatibility with existing codebase
+      'preserve-caught-error': 'off',
+      'no-useless-assignment': 'off',
     },
   },
 ];
