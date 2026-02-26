@@ -203,7 +203,6 @@ The plugin uses `PCHUsageMode.NoPCHs` to prevent memory issues during compilatio
 
 - **Full Documentation**: [GitHub README](https://github.com/ChiR24/Unreal_mcp#readme)
 - **Handler Mapping**: [docs/handler-mapping.md](https://github.com/ChiR24/Unreal_mcp/blob/main/docs/handler-mapping.md)
-- **Migration Guide**: [docs/Migration-Guide-v0.5.0.md](https://github.com/ChiR24/Unreal_mcp/blob/main/docs/Migration-Guide-v0.5.0.md)
 
 ---
 
