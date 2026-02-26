@@ -32,7 +32,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   // Route specific actions to their dedicated handlers
   if (animAction === 'create_animation_blueprint' || animAction === 'create_anim_blueprint' || animAction === 'create_animation_bp') {
     const name = argsTyped.name ?? argsTyped.blueprintName;
-    let skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
+    const skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
     let meshPath = argsTyped.meshPath;
     const savePath = argsTyped.savePath ?? argsTyped.path ?? '/Game/Animations';
 
