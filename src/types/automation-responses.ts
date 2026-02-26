@@ -11,13 +11,17 @@ export interface AutomationResponse {
     success: boolean;
     message?: string;
     error?: string | { message: string; code?: string };
+    /** Optional error code for business logic errors (e.g., 'SECURITY_VIOLATION', 'NOT_FOUND') */
+    errorCode?: string;
     result?: unknown;
+    assetPath?: string;
     // Common additional fields
     warnings?: string[];
     details?: unknown;
     data?: unknown;
     [key: string]: unknown;
 }
+
 
 /**
  * Level-related response fields

@@ -16,27 +16,14 @@ import { LevelResources } from '../resources/levels.js';
 import { ActorTools } from '../tools/actors.js';
 import { AssetTools } from '../tools/assets.js';
 import { EditorTools } from '../tools/editor.js';
-import { MaterialTools } from '../tools/materials.js';
-import { AnimationTools } from '../tools/animation.js';
-import { PhysicsTools } from '../tools/physics.js';
-import { NiagaraTools } from '../tools/niagara.js';
 import { BlueprintTools } from '../tools/blueprint.js';
 import { LevelTools } from '../tools/level.js';
-import { LightingTools } from '../tools/lighting.js';
 import { LandscapeTools } from '../tools/landscape.js';
 import { FoliageTools } from '../tools/foliage.js';
 import { EnvironmentTools } from '../tools/environment.js';
-import { DebugVisualizationTools } from '../tools/debug.js';
-import { PerformanceTools } from '../tools/performance.js';
-import { AudioTools } from '../tools/audio.js';
-import { UITools } from '../tools/ui.js';
 import { SequenceTools } from '../tools/sequence.js';
-import { IntrospectionTools } from '../tools/introspection.js';
-import { EngineTools } from '../tools/engine.js';
-import { BehaviorTreeTools } from '../tools/behavior-tree.js';
-import { InputTools } from '../tools/input.js';
-
 import { LogTools } from '../tools/logs.js';
+
 import { getProjectSetting } from '../utils/ini-reader.js';
 import { config } from '../config.js';
 import { mcpClients } from 'mcp-client-capabilities';
@@ -322,41 +309,21 @@ export class ToolRegistry {
     }
 
     register() {
-        // Initialize tools
+        // Initialize tools needed for file I/O operations
         const actorTools = new ActorTools(this.bridge);
         const assetTools = new AssetTools(this.bridge);
         const editorTools = new EditorTools(this.bridge);
-        const materialTools = new MaterialTools(this.bridge);
-        const animationTools = new AnimationTools(this.bridge);
-        const physicsTools = new PhysicsTools(this.bridge);
-        const niagaraTools = new NiagaraTools(this.bridge);
         const blueprintTools = new BlueprintTools(this.bridge);
         const levelTools = new LevelTools(this.bridge);
-        const lightingTools = new LightingTools(this.bridge);
         const landscapeTools = new LandscapeTools(this.bridge);
         const foliageTools = new FoliageTools(this.bridge);
         const environmentTools = new EnvironmentTools(this.bridge);
-        const debugTools = new DebugVisualizationTools(this.bridge);
-        const performanceTools = new PerformanceTools(this.bridge);
-        const audioTools = new AudioTools(this.bridge);
-        const uiTools = new UITools(this.bridge);
         const sequenceTools = new SequenceTools(this.bridge);
-        const introspectionTools = new IntrospectionTools(this.bridge);
-        const engineTools = new EngineTools(this.bridge);
-        const behaviorTreeTools = new BehaviorTreeTools(this.bridge);
-
-        const inputTools = new InputTools();
         const logTools = new LogTools(this.bridge);
 
-        // Wire AutomationBridge
-        const toolsWithAutomation = [
-            materialTools, animationTools, physicsTools, niagaraTools,
-            lightingTools, landscapeTools, foliageTools, debugTools,
-            performanceTools, audioTools, uiTools, introspectionTools,
+        // Wire AutomationBridge for EnvironmentTools (needed for non-file I/O operations)
+        environmentTools.setAutomationBridge(this.automationBridge);
 
-            engineTools, environmentTools, inputTools
-        ];
-        toolsWithAutomation.forEach(t => t.setAutomationBridge(this.automationBridge));
 
         // Lightweight system tools facade
         const systemTools = {
@@ -560,12 +527,9 @@ export class ToolRegistry {
             }
 
             const tools = {
-                actorTools, assetTools, materialTools, editorTools, animationTools,
-                physicsTools, niagaraTools, blueprintTools, levelTools, lightingTools,
-                landscapeTools, foliageTools, environmentTools, debugTools, performanceTools,
-                audioTools, systemTools, uiTools, sequenceTools, introspectionTools,
-
-                engineTools, behaviorTreeTools, inputTools, logTools,
+                actorTools, assetTools, editorTools, blueprintTools, levelTools,
+                landscapeTools, foliageTools, environmentTools, sequenceTools, logTools,
+                systemTools,
                 elicit: elicitation.elicit,
                 supportsElicitation: elicitation.supports,
                 elicitationTimeoutMs: this.defaultElicitationTimeoutMs,

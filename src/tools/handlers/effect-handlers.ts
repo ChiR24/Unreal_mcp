@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, EffectArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, EffectArgs, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString } from './common-handlers.js';
 
 function ensureActionAndSubAction(action: string, args: Record<string, unknown>): void {
@@ -19,16 +19,12 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === 'string' && val.trim().length > 0;
 }
 
-/** Response from automation request */
-interface AutomationResponse {
-  success?: boolean;
+// AutomationResponse now imported from types/handler-types.js
+
+/** Result payload structure for effect responses */
+interface ResultPayload {
   error?: string;
   message?: string;
-  result?: {
-    error?: string;
-    message?: string;
-    [key: string]: unknown;
-  };
   [key: string]: unknown;
 }
 
@@ -45,21 +41,21 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
 
   // Handle creation actions explicitly to use NiagaraTools helper
   if (action === 'create_niagara_system') {
-    const res = await tools.niagaraTools.createSystem({
+    const res = await executeAutomationRequest(tools, 'create_niagara_system', {
       name: argsTyped.name,
       savePath: (mutableArgs.savePath as string | undefined),
       template: (mutableArgs.template as string | undefined)
-    });
-    return cleanObject(res) as Record<string, unknown>;
+    }) as Record<string, unknown>;
+    return cleanObject(res);
   }
   if (action === 'create_niagara_emitter') {
-    const res = await tools.niagaraTools.createEmitter({
+    const res = await executeAutomationRequest(tools, 'create_niagara_emitter', {
       name: argsTyped.name,
       savePath: (mutableArgs.savePath as string | undefined),
       systemPath: argsTyped.systemPath,
       template: (mutableArgs.template as string | undefined)
-    });
-    return cleanObject(res) as Record<string, unknown>;
+    }) as Record<string, unknown>;
+    return cleanObject(res);
   }
 
   // Pre-process arguments for particle presets
@@ -214,7 +210,8 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     'Automation bridge not available for effect creation operations'
   ) as AutomationResponse;
 
-  const result = res?.result ?? res ?? {};
+  const result = (res?.result ?? res ?? {}) as ResultPayload;
+
   const topError = typeof res?.error === 'string' ? res.error : '';
   const nestedError = typeof result.error === 'string' ? result.error : '';
   const errorCode = (topError || nestedError).toUpperCase();

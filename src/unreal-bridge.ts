@@ -42,8 +42,8 @@ interface EngineVersionResult {
   [key: string]: unknown;
 }
 
-/** Console command response */
-interface ConsoleCommandResponse {
+/** Internal bridge response for console commands (distinct from public ConsoleCommandResponse in tool-types.ts) */
+interface BridgeConsoleResponse {
   success?: boolean;
   message?: string;
   error?: string;
@@ -518,7 +518,7 @@ export class UnrealBridge {
         throw new Error('Automation bridge not connected');
       }
 
-      const pluginResp: ConsoleCommandResponse = await this.automationBridge.sendAutomationRequest(
+      const pluginResp: BridgeConsoleResponse = await this.automationBridge.sendAutomationRequest(
         'console_command',
         { command: cmdTrimmed },
         { timeoutMs: CONSOLE_COMMAND_TIMEOUT_MS }

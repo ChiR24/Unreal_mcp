@@ -8,6 +8,7 @@
 
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
+import type { AutomationResponse } from '../../types/automation-responses.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import {
   normalizeArgs,
@@ -15,35 +16,13 @@ import {
   extractOptionalString,
   extractOptionalNumber,
   extractOptionalBoolean,
+  extractOptionalArray,
+  extractOptionalObject,
 } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
-/** Helper to extract optional array from params */
-function extractOptionalArray(params: Record<string, unknown>, key: string): unknown[] | undefined {
-  const val = params[key];
-  if (val === undefined || val === null) return undefined;
-  if (Array.isArray(val)) return val;
-  return undefined;
-}
 
-/** Helper to extract optional object from params */
-function extractOptionalObject(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
-  const val = params[key];
-  if (val === undefined || val === null) return undefined;
-  if (typeof val === 'object' && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-/** Animation authoring response */
-interface AnimationAuthoringResponse {
-  success?: boolean;
-  message?: string;
-  error?: string;
-  errorCode?: string;
-  result?: Record<string, unknown>;
-  assetPath?: string;
-  [key: string]: unknown;
-}
 
 /**
  * Handle animation authoring actions
@@ -73,7 +52,7 @@ export async function handleAnimationAuthoringTools(
         const frameRate = extractOptionalNumber(params, 'frameRate') ?? 30;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_animation_sequence',
           name,
           path,
@@ -81,7 +60,7 @@ export async function handleAnimationAuthoringTools(
           numFrames,
           frameRate,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create animation sequence', res.errorCode);
@@ -102,13 +81,13 @@ export async function handleAnimationAuthoringTools(
         const frameRate = extractOptionalNumber(params, 'frameRate');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_sequence_length',
           assetPath,
           numFrames,
           frameRate,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set sequence length', res.errorCode);
@@ -127,12 +106,12 @@ export async function handleAnimationAuthoringTools(
         const boneName = extractString(params, 'boneName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_bone_track',
           assetPath,
           boneName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add bone track', res.errorCode);
@@ -159,7 +138,7 @@ export async function handleAnimationAuthoringTools(
         const scale = extractOptionalObject(params, 'scale');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_bone_key',
           assetPath,
           boneName,
@@ -168,7 +147,7 @@ export async function handleAnimationAuthoringTools(
           rotation,
           scale,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set bone key', res.errorCode);
@@ -193,7 +172,7 @@ export async function handleAnimationAuthoringTools(
         const createIfMissing = extractOptionalBoolean(params, 'createIfMissing') ?? true;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_curve_key',
           assetPath,
           curveName,
@@ -201,7 +180,7 @@ export async function handleAnimationAuthoringTools(
           value,
           createIfMissing,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set curve key', res.errorCode);
@@ -226,7 +205,7 @@ export async function handleAnimationAuthoringTools(
         const notifyName = extractOptionalString(params, 'notifyName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_notify',
           assetPath,
           notifyClass,
@@ -234,7 +213,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add notify', res.errorCode);
@@ -261,7 +240,7 @@ export async function handleAnimationAuthoringTools(
         const notifyName = extractOptionalString(params, 'notifyName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_notify_state',
           assetPath,
           notifyClass,
@@ -270,7 +249,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add notify state', res.errorCode);
@@ -291,13 +270,13 @@ export async function handleAnimationAuthoringTools(
         const frame = extractOptionalNumber(params, 'frame') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_sync_marker',
           assetPath,
           markerName,
           frame,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add sync marker', res.errorCode);
@@ -320,14 +299,14 @@ export async function handleAnimationAuthoringTools(
         const forceRootLock = extractOptionalBoolean(params, 'forceRootLock') ?? false;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_root_motion_settings',
           assetPath,
           enableRootMotion,
           rootMotionRootLock,
           forceRootLock,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set root motion settings', res.errorCode);
@@ -352,7 +331,7 @@ export async function handleAnimationAuthoringTools(
         const basePoseFrame = extractOptionalNumber(params, 'basePoseFrame') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_additive_settings',
           assetPath,
           additiveAnimType,
@@ -360,7 +339,7 @@ export async function handleAnimationAuthoringTools(
           basePoseAnimation,
           basePoseFrame,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set additive settings', res.errorCode);
@@ -384,14 +363,14 @@ export async function handleAnimationAuthoringTools(
         const slotName = extractOptionalString(params, 'slotName') ?? 'DefaultSlot';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_montage',
           name,
           path,
           skeletonPath,
           slotName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create montage', res.errorCode);
@@ -412,13 +391,13 @@ export async function handleAnimationAuthoringTools(
         const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_montage_section',
           assetPath,
           sectionName,
           startTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage section', res.errorCode);
@@ -441,14 +420,14 @@ export async function handleAnimationAuthoringTools(
         const startTime = extractOptionalNumber(params, 'startTime') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_montage_slot',
           assetPath,
           animationPath,
           slotName,
           startTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage slot', res.errorCode);
@@ -471,14 +450,14 @@ export async function handleAnimationAuthoringTools(
         const length = extractOptionalNumber(params, 'length');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_section_timing',
           assetPath,
           sectionName,
           startTime,
           length,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set section timing', res.errorCode);
@@ -503,7 +482,7 @@ export async function handleAnimationAuthoringTools(
         const notifyName = extractOptionalString(params, 'notifyName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_montage_notify',
           assetPath,
           notifyClass,
@@ -511,7 +490,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage notify', res.errorCode);
@@ -532,13 +511,13 @@ export async function handleAnimationAuthoringTools(
         const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_blend_in',
           assetPath,
           blendTime,
           blendOption,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set blend in', res.errorCode);
@@ -559,13 +538,13 @@ export async function handleAnimationAuthoringTools(
         const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_blend_out',
           assetPath,
           blendTime,
           blendOption,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set blend out', res.errorCode);
@@ -586,13 +565,13 @@ export async function handleAnimationAuthoringTools(
         const toSection = extractString(params, 'toSection');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'link_sections',
           assetPath,
           fromSection,
           toSection,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to link sections', res.errorCode);
@@ -620,7 +599,7 @@ export async function handleAnimationAuthoringTools(
         const axisMax = extractOptionalNumber(params, 'axisMax') ?? 600;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_blend_space_1d',
           name,
           path,
@@ -629,7 +608,7 @@ export async function handleAnimationAuthoringTools(
           axisMin,
           axisMax,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create blend space 1D', res.errorCode);
@@ -662,7 +641,7 @@ export async function handleAnimationAuthoringTools(
         const verticalMax = extractOptionalNumber(params, 'verticalMax') ?? 600;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_blend_space_2d',
           name,
           path,
@@ -674,7 +653,7 @@ export async function handleAnimationAuthoringTools(
           verticalMin,
           verticalMax,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create blend space 2D', res.errorCode);
@@ -695,13 +674,13 @@ export async function handleAnimationAuthoringTools(
         const sampleValue = params['sampleValue'];
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_blend_sample',
           assetPath,
           animationPath,
           sampleValue,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add blend sample', res.errorCode);
@@ -728,7 +707,7 @@ export async function handleAnimationAuthoringTools(
         const gridDivisions = extractOptionalNumber(params, 'gridDivisions');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_axis_settings',
           assetPath,
           axis,
@@ -737,7 +716,7 @@ export async function handleAnimationAuthoringTools(
           maxValue,
           gridDivisions,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set axis settings', res.errorCode);
@@ -758,13 +737,13 @@ export async function handleAnimationAuthoringTools(
         const targetWeightInterpolationSpeed = extractOptionalNumber(params, 'targetWeightInterpolationSpeed') ?? 5.0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_interpolation_settings',
           assetPath,
           interpolationType,
           targetWeightInterpolationSpeed,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set interpolation settings', res.errorCode);
@@ -785,13 +764,13 @@ export async function handleAnimationAuthoringTools(
         const skeletonPath = extractString(params, 'skeletonPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_aim_offset',
           name,
           path,
           skeletonPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create aim offset', res.errorCode);
@@ -814,14 +793,14 @@ export async function handleAnimationAuthoringTools(
         const pitch = extractOptionalNumber(params, 'pitch') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_aim_offset_sample',
           assetPath,
           animationPath,
           yaw,
           pitch,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add aim offset sample', res.errorCode);
@@ -845,14 +824,14 @@ export async function handleAnimationAuthoringTools(
         const parentClass = extractOptionalString(params, 'parentClass') ?? 'AnimInstance';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_anim_blueprint',
           name,
           path,
           skeletonPath,
           parentClass,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create anim blueprint', res.errorCode);
@@ -871,12 +850,12 @@ export async function handleAnimationAuthoringTools(
         const stateMachineName = extractString(params, 'stateMachineName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_state_machine',
           blueprintPath,
           stateMachineName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add state machine', res.errorCode);
@@ -901,7 +880,7 @@ export async function handleAnimationAuthoringTools(
         const isEntryState = extractOptionalBoolean(params, 'isEntryState') ?? false;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_state',
           blueprintPath,
           stateMachineName,
@@ -909,7 +888,7 @@ export async function handleAnimationAuthoringTools(
           animationPath,
           isEntryState,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add state', res.errorCode);
@@ -932,14 +911,14 @@ export async function handleAnimationAuthoringTools(
         const toState = extractString(params, 'toState');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_transition',
           blueprintPath,
           stateMachineName,
           fromState,
           toState,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add transition', res.errorCode);
@@ -970,7 +949,7 @@ export async function handleAnimationAuthoringTools(
         const automaticTriggerTime = extractOptionalNumber(params, 'automaticTriggerTime');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_transition_rules',
           blueprintPath,
           stateMachineName,
@@ -981,7 +960,7 @@ export async function handleAnimationAuthoringTools(
           automaticTriggerRule,
           automaticTriggerTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set transition rules', res.errorCode);
@@ -1006,7 +985,7 @@ export async function handleAnimationAuthoringTools(
         const y = extractOptionalNumber(params, 'y') ?? 0;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_blend_node',
           blueprintPath,
           blendType,
@@ -1014,7 +993,7 @@ export async function handleAnimationAuthoringTools(
           x,
           y,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add blend node', res.errorCode);
@@ -1033,12 +1012,12 @@ export async function handleAnimationAuthoringTools(
         const cacheName = extractString(params, 'cacheName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_cached_pose',
           blueprintPath,
           cacheName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add cached pose', res.errorCode);
@@ -1057,12 +1036,12 @@ export async function handleAnimationAuthoringTools(
         const slotName = extractString(params, 'slotName');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_slot_node',
           blueprintPath,
           slotName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add slot node', res.errorCode);
@@ -1081,12 +1060,12 @@ export async function handleAnimationAuthoringTools(
         const layerSetup = extractOptionalArray(params, 'layerSetup');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_layered_blend_per_bone',
           blueprintPath,
           layerSetup,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add layered blend per bone', res.errorCode);
@@ -1109,14 +1088,14 @@ export async function handleAnimationAuthoringTools(
         const value = params['value'];
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_anim_graph_node_value',
           blueprintPath,
           nodeName,
           propertyName,
           value,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set anim graph node value', res.errorCode);
@@ -1138,13 +1117,13 @@ export async function handleAnimationAuthoringTools(
         const skeletalMeshPath = extractString(params, 'skeletalMeshPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_control_rig',
           name,
           path,
           skeletalMeshPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create control rig', res.errorCode);
@@ -1169,7 +1148,7 @@ export async function handleAnimationAuthoringTools(
         const parentControl = extractOptionalString(params, 'parentControl');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_control',
           assetPath,
           controlName,
@@ -1177,7 +1156,7 @@ export async function handleAnimationAuthoringTools(
           parentBone,
           parentControl,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add control', res.errorCode);
@@ -1200,14 +1179,14 @@ export async function handleAnimationAuthoringTools(
         const settings = extractOptionalObject(params, 'settings');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_rig_unit',
           assetPath,
           unitType,
           unitName,
           settings,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add rig unit', res.errorCode);
@@ -1232,7 +1211,7 @@ export async function handleAnimationAuthoringTools(
         const targetPin = extractString(params, 'targetPin');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'connect_rig_elements',
           assetPath,
           sourceElement,
@@ -1240,7 +1219,7 @@ export async function handleAnimationAuthoringTools(
           targetElement,
           targetPin,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to connect rig elements', res.errorCode);
@@ -1261,13 +1240,13 @@ export async function handleAnimationAuthoringTools(
         const skeletonPath = extractString(params, 'skeletonPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_pose_library',
           name,
           path,
           skeletonPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create pose library', res.errorCode);
@@ -1289,13 +1268,13 @@ export async function handleAnimationAuthoringTools(
         const skeletalMeshPath = extractString(params, 'skeletalMeshPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_ik_rig',
           name,
           path,
           skeletalMeshPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create IK rig', res.errorCode);
@@ -1320,7 +1299,7 @@ export async function handleAnimationAuthoringTools(
         const goal = extractOptionalString(params, 'goal');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'add_ik_chain',
           assetPath,
           chainName,
@@ -1328,7 +1307,7 @@ export async function handleAnimationAuthoringTools(
           endBone,
           goal,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add IK chain', res.errorCode);
@@ -1351,14 +1330,14 @@ export async function handleAnimationAuthoringTools(
         const targetIKRigPath = extractString(params, 'targetIKRigPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'create_ik_retargeter',
           name,
           path,
           sourceIKRigPath,
           targetIKRigPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create IK retargeter', res.errorCode);
@@ -1379,13 +1358,13 @@ export async function handleAnimationAuthoringTools(
         const targetChain = extractString(params, 'targetChain');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'set_retarget_chain_mapping',
           assetPath,
           sourceChain,
           targetChain,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set retarget chain mapping', res.errorCode);
@@ -1401,10 +1380,10 @@ export async function handleAnimationAuthoringTools(
 
         const assetPath = extractString(params, 'assetPath');
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_ANIMATION_AUTHORING, {
           subAction: 'get_animation_info',
           assetPath,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to get animation info', res.errorCode);

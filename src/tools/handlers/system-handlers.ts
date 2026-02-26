@@ -28,7 +28,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
   
   switch (sysAction) {
     case 'show_fps':
-      await tools.systemTools.executeConsoleCommand(argsTyped.enabled !== false ? 'stat fps' : 'stat fps 0');
+      await executeAutomationRequest(tools, 'console_command', { command: argsTyped.enabled !== false ? 'stat fps' : 'stat fps 0' });
       return { success: true, message: `FPS display ${argsTyped.enabled !== false ? 'enabled' : 'disabled'}`, action: 'show_fps' };
     case 'profile': {
       const rawType = typeof argsTyped.profileType === 'string' ? argsTyped.profileType.trim() : '';
@@ -58,7 +58,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      await tools.systemTools.executeConsoleCommand(cmd);
+      await executeAutomationRequest(tools, 'console_command', { command: cmd });
       return {
         success: true,
         message: `Profiling ${enabled ? 'enabled' : 'disabled'} (${rawType || 'CPU'})`,
@@ -70,7 +70,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const category = typeof argsTyped.category === 'string' ? argsTyped.category.trim() : 'Unit';
       const enabled = argsTyped.enabled !== false;
       const cmd = `stat ${category}`;
-      await tools.systemTools.executeConsoleCommand(cmd);
+      await executeAutomationRequest(tools, 'console_command', { command: cmd });
       return {
         success: true,
         message: `Stats display ${enabled ? 'enabled' : 'disabled'} for category: ${category}`,
@@ -104,11 +104,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       else if (category.includes('reflection')) cvar = 'sg.ReflectionQuality';
       else if (category.includes('viewdistance')) cvar = 'sg.ViewDistanceQuality';
 
-      await tools.systemTools.executeConsoleCommand(`${cvar} ${qVal}`);
+      await executeAutomationRequest(tools, 'console_command', { command: `${cvar} ${qVal}` });
       return { success: true, message: `${category} quality derived from '${quality}' set to ${qVal} via ${cvar}`, action: 'set_quality' };
     }
     case 'execute_command':
-      return cleanObject(await tools.systemTools.executeConsoleCommand(argsTyped.command ?? '') as Record<string, unknown>);
+      return cleanObject(await executeAutomationRequest(tools, 'console_command', { command: argsTyped.command ?? '' }) as Record<string, unknown>);
     case 'create_widget': {
       const name = typeof argsTyped.name === 'string' ? argsTyped.name.trim() : '';
       const widgetPathRaw = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
@@ -143,11 +143,13 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await tools.uiTools.createWidget({
+        const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
+          action: 'create_widget',
           name: effectiveName,
-          type: widgetType, // Pass widgetType to C++
+          type: widgetType,
           savePath: effectivePath
-        });
+        }) as Record<string, unknown>;
+
 
         return cleanObject({
           ...res,
@@ -178,7 +180,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           : undefined;
 
         try {
-          const res = await tools.uiTools.showNotification({ text, duration }) as OperationResponse;
+          const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
+            action: 'show_notification',
+            text,
+            duration
+          }) as OperationResponse;
           const ok = res && res.success !== false;
           if (ok) {
             return {
@@ -220,7 +226,10 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      return cleanObject(await tools.uiTools.showWidget(widgetPath));
+      return cleanObject(await executeAutomationRequest(tools, 'manage_widget_authoring', {
+        action: 'show_widget',
+        widgetPath
+      }) as Record<string, unknown>);
     }
     case 'add_widget_child': {
       const widgetPath = typeof argsTyped.widgetPath === 'string' ? argsTyped.widgetPath.trim() : '';
@@ -237,12 +246,12 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await tools.uiTools.addWidgetComponent({
-          widgetName: widgetPath,
-          componentType: childClass,
-          componentName: 'NewChild',
-          slot: parentName ? { position: [0, 0] } : undefined
-        });
+        const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
+          action: 'add_widget_child',
+          widgetPath,
+          childClass: childClass,
+          parentName: parentName
+        }) as Record<string, unknown>;
         return cleanObject({
           ...res,
           action: 'add_widget_child'
@@ -286,7 +295,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const value = (argsTyped.value !== undefined && argsTyped.value !== null)
         ? argsTyped.value
         : (tokens.length > 1 ? tokens.slice(1).join(' ') : '');
-      await tools.systemTools.executeConsoleCommand(`${rawName} ${value}`);
+      await executeAutomationRequest(tools, 'console_command', { command: `${rawName} ${value}` });
       return {
         success: true,
         message: `CVar ${rawName} set to ${value}`,
@@ -299,7 +308,10 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const section = typeof argsTyped.category === 'string' && argsTyped.category.trim().length > 0
         ? argsTyped.category
         : argsTyped.section;
-      const resp = await tools.systemTools.getProjectSettings(section) as OperationResponse;
+      const resp = await executeAutomationRequest(tools, 'system_control', {
+        action: 'get_project_settings',
+        section
+      }) as OperationResponse;
       if (resp && resp.success && (resp.settings || resp.data || resp.result)) {
         return cleanObject({
           success: true,
@@ -328,7 +340,10 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       for (const rawPath of paths) {
         const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
         try {
-          const res = await tools.assetTools.validate({ assetPath });
+          const res = await executeAutomationRequest(tools, 'manage_asset', {
+            action: 'validate',
+            assetPath
+          }) as Record<string, unknown>;
           // Extract error message from potentially complex error object
           let errorStr: string | null = null;
           if (res.error) {
@@ -340,7 +355,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
               errorStr = String(res.error);
             }
           }
-          results.push({ assetPath, success: res.success, error: errorStr });
+          results.push({ assetPath, success: res.success as boolean | undefined, error: errorStr });
         } catch (error) {
           results.push({
             assetPath,
@@ -382,7 +397,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await tools.audioTools.playSound(soundPath, volume, pitch) as OperationResponse;
+        const res = await executeAutomationRequest(tools, 'play_sound_2d', {
+          soundPath,
+          volume: volume ?? 1.0,
+          pitch: pitch ?? 1.0
+        }) as OperationResponse;
         if (!res || res.success === false) {
           const errText = String(res?.error || '').toLowerCase();
           const isMissingAsset = errText.includes('asset_not_found') || errText.includes('asset not found');
@@ -391,7 +410,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
             // Attempt fallback to a known engine sound
             const fallbackPath = '/Engine/EditorSounds/Notifications/CompileSuccess_Cue';
             if (soundPath !== fallbackPath) {
-              const fallbackRes = await tools.audioTools.playSound(fallbackPath, volume, pitch) as OperationResponse;
+              const fallbackRes = await executeAutomationRequest(tools, 'play_sound_2d', {
+                soundPath: fallbackPath,
+                volume: volume ?? 1.0,
+                pitch: pitch ?? 1.0
+              }) as OperationResponse;
               if (fallbackRes.success) {
                 return {
                   success: true,
@@ -454,7 +477,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         if (isMissingAsset) {
           const fallbackSound = '/Engine/EditorSounds/Notifications/CompileSuccess_Cue';
           try {
-            const fallbackRes = await tools.audioTools.playSound(fallbackSound, volume, pitch) as OperationResponse;
+            const fallbackRes = await executeAutomationRequest(tools, 'play_sound_2d', {
+              soundPath: fallbackSound,
+              volume: volume ?? 1.0,
+              pitch: pitch ?? 1.0
+            }) as OperationResponse;
             if (fallbackRes && fallbackRes.success) {
               return {
                 success: true,
@@ -512,7 +539,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           });
         } catch {
           // Fallback to standard screenshot
-          await tools.editorTools.takeScreenshot(baseName);
+          await executeAutomationRequest(tools, 'control_editor', {
+            action: 'screenshot',
+            filename: baseName
+          });
+
         }
 
         return {
@@ -527,7 +558,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       // Standard screenshot - pass all args through
-      const res = await tools.editorTools.takeScreenshot(filenameArg, resolution as string | undefined);
+      const res = await executeAutomationRequest(tools, 'control_editor', {
+        action: 'screenshot',
+        filename: filenameArg,
+        resolution
+      }) as Record<string, unknown>;
       const cleanedStdRes = typeof res === 'object' && res !== null ? res : {};
       return cleanObject({
         ...cleanedStdRes,
@@ -557,7 +592,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
       const windowed = argsRecord.windowed !== false; // default to windowed=true
       const suffix = windowed ? 'w' : 'f';
-      await tools.systemTools.executeConsoleCommand(`r.SetRes ${width}x${height}${suffix}`);
+      await executeAutomationRequest(tools, 'console_command', { command: `r.SetRes ${width}x${height}${suffix}` });
       return {
         success: true,
         message: `Resolution set to ${width}x${height} (${windowed ? 'windowed' : 'fullscreen'})`,
@@ -583,7 +618,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         // If only toggling mode and no resolution provided, attempt a mode toggle.
         if (typeof argsRecord.windowed === 'boolean' || typeof argsTyped.enabled === 'boolean') {
-          await tools.systemTools.executeConsoleCommand(`r.FullScreenMode ${windowed ? 1 : 0}`);
+          await executeAutomationRequest(tools, 'console_command', { command: `r.FullScreenMode ${windowed ? 1 : 0}` });
           return {
             success: true,
             message: `Fullscreen mode toggled (${windowed ? 'windowed' : 'fullscreen'})`,
@@ -600,7 +635,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      await tools.systemTools.executeConsoleCommand(`r.SetRes ${width}x${height}${suffix}`);
+      await executeAutomationRequest(tools, 'console_command', { command: `r.SetRes ${width}x${height}${suffix}` });
       return {
         success: true,
         message: `Fullscreen mode set to ${width}x${height} (${windowed ? 'windowed' : 'fullscreen'})`,

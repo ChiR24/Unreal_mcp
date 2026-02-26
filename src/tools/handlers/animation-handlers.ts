@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, AnimationArgs, ComponentInfo } from '../../types/handler-types.js';
+import type { HandlerArgs, AnimationArgs, ComponentInfo, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from getComponents */
@@ -18,14 +18,8 @@ interface SkeletalMeshComponentInfo extends ComponentInfo {
   path?: string;
 }
 
-/** Response from automation request */
-interface AutomationResponse {
-  success?: boolean;
-  result?: {
-    error?: string;
-    message?: string;
-    [key: string]: unknown;
-  };
+/** Result payload structure for animation responses */
+interface ResultPayload {
   error?: string;
   message?: string;
   [key: string]: unknown;
@@ -39,37 +33,22 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   if (animAction === 'create_animation_blueprint' || animAction === 'create_anim_blueprint' || animAction === 'create_animation_bp') {
     const name = argsTyped.name ?? argsTyped.blueprintName;
     const skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
+    let meshPath = argsTyped.meshPath;
     const savePath = argsTyped.savePath ?? argsTyped.path ?? '/Game/Animations';
 
-    // Auto-resolve skeleton from actorName if not provided
+    // Auto-resolve skeleton/mesh from actorName if not provided
     if (!skeletonPath && argsTyped.actorName) {
       try {
-        const compsRes = await tools.actorTools.getComponents(argsTyped.actorName) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
             (c as SkeletalMeshComponentInfo).className === 'SkeletalMeshComponent'
           );
-          if (meshComp && meshComp.skeletalMesh) {
-            // SkeletalMeshComponent usually has a 'skeletalMesh' property which is the path to the mesh
-            // We can use inspect on that mesh to find its skeleton? 
-            // Or maybe getComponents returned extra details?
-            // Assuming we get the mesh path, we still need the skeleton.
-            // But often creating AnimBP for a Mesh acts as shortcut?
-            // Actually, if we have the *mesh* path, we can try to use that if the C++ handler supports it, 
-            // OR we might need to inspect the mesh asset to find its skeleton.
-            // For now, let's settle for: if user provided meshPath but not skeletonPath, we might need a way to look it up.
-            // But here we only have actorName.
-            // Let's defer this complexity unless required. 
-            // Correction: The walkthrough issue said "Skeleton missing".
-            // Let's assume user MUST provide it or we fail.
-            // But if we can help, we should.
-            // If we have meshPath, we can pass it as 'meshPath' and let C++ handle finding the skeleton?
-            // The C++ 'create_animation_blueprint' handler expects 'skeletonPath'.
-            // So we'd need to modify C++ to check meshPath->Skeleton.
-            // Since I'm editing TS only right now, I'll allow passing 'meshPath' in payload if skeletonPath is missing, 
-            // and hope C++ was updated or I should update C++ later.
-            // Actually, checking args, if 'meshPath' is passed, we should pass it along.
+          // Write back resolved path to the outgoing payload
+          if (meshComp) {
+            if (!meshPath && meshComp.path) meshPath = meshComp.path;
+            if (!meshPath && meshComp.skeletalMesh) meshPath = meshComp.skeletalMesh;
           }
         }
       } catch (_e) { }
@@ -79,6 +58,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       ...args,
       name,
       skeletonPath,
+      meshPath,
       savePath
     };
 
@@ -93,7 +73,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       args,
       'Automation bridge not available for montage playback'
     ) as AutomationResponse;
-    const result = resp?.result ?? resp ?? {};
+    const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+
     const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
     const message = typeof result.message === 'string' ? result.message : '';
     const msgLower = message.toLowerCase();
@@ -130,7 +111,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     
     if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
       try {
-        const compsRes = await tools.actorTools.getComponents(argsTyped.actorName) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
@@ -146,7 +127,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     }
 
     const resp = await executeAutomationRequest(tools, 'setup_ragdoll', mutableArgs, 'Automation bridge not available for ragdoll setup') as AutomationResponse;
-    const result = resp?.result ?? resp ?? {};
+    const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+
     const message = typeof result.message === 'string' ? result.message : '';
     const msgLower = message.toLowerCase();
 
@@ -197,35 +179,43 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_state_machine':
-      return cleanObject(await tools.animationTools.createStateMachine({
+      return cleanObject(await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        subAction: 'add_state_machine',
         machineName: mutableArgs.machineName || mutableArgs.name,
         states: mutableArgs.states as unknown[],
         transitions: mutableArgs.transitions as unknown[],
         blueprintPath: mutableArgs.blueprintPath || mutableArgs.path || mutableArgs.savePath
-      }));
+      })) as Record<string, unknown>;
     case 'setup_ik':
-      return cleanObject(await tools.animationTools.setupIK({
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'setup_ik',
         actorName: mutableArgs.actorName,
         ikBones: mutableArgs.ikBones as unknown[],
         enableFootPlacement: mutableArgs.enableFootPlacement
-      }));
-    case 'create_procedural_anim':
-      return cleanObject(await tools.animationTools.createProceduralAnim({
-        systemName: mutableArgs.systemName || mutableArgs.name,
-        baseAnimation: mutableArgs.baseAnimation,
-        modifiers: mutableArgs.modifiers as unknown[],
-        savePath: mutableArgs.savePath || mutableArgs.path
-      }));
-    case 'create_blend_tree':
-      return cleanObject(await tools.animationTools.createBlendTree({
-        treeName: mutableArgs.treeName || mutableArgs.name,
-        blendType: mutableArgs.blendType,
-        basePose: mutableArgs.basePose,
-        additiveAnimations: mutableArgs.additiveAnimations as unknown[],
-        savePath: mutableArgs.savePath || mutableArgs.path
-      }));
+      })) as Record<string, unknown>;
+    case 'create_procedural_anim': {
+      // TODO: Requires C++ implementation for procedural animation system creation
+      return cleanObject({
+        success: false,
+        isError: true,
+        error: 'NOT_IMPLEMENTED',
+        message: 'create_procedural_anim requires engine-side implementation. C++ handler needed.'
+      });
+    }
+    case 'create_blend_tree': {
+      // TODO: Requires C++ implementation for blend tree creation
+      return cleanObject({
+        success: false,
+        isError: true,
+        error: 'NOT_IMPLEMENTED',
+        message: 'create_blend_tree requires engine-side implementation. C++ handler needed.'
+      });
+    }
     case 'cleanup':
-      return cleanObject(await tools.animationTools.cleanup(mutableArgs.artifacts as unknown[]));
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'cleanup',
+        artifacts: mutableArgs.artifacts as unknown[]
+      })) as Record<string, unknown>;
     case 'create_animation_asset': {
       let assetType = mutableArgs.assetType;
       if (!assetType && mutableArgs.name) {
@@ -233,29 +223,31 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
           assetType = 'montage';
         }
       }
-      return cleanObject(await tools.animationTools.createAnimationAsset({
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_animation_asset',
         name: mutableArgs.name,
-        path: mutableArgs.path || mutableArgs.savePath,
+        savePath: mutableArgs.path || mutableArgs.savePath,
         skeletonPath: mutableArgs.skeletonPath,
         assetType
-      }));
+      })) as Record<string, unknown>;
     }
     case 'add_notify':
-      return cleanObject(await tools.animationTools.addNotify({
-        animationPath: mutableArgs.animationPath,
-        assetPath: mutableArgs.assetPath,
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'add_notify',
+        assetPath: mutableArgs.animationPath || mutableArgs.assetPath,
         notifyName: mutableArgs.notifyName || mutableArgs.name,
         time: mutableArgs.time ?? mutableArgs.startTime
-      }));
+      })) as Record<string, unknown>;
     case 'configure_vehicle':
-      return cleanObject(await tools.physicsTools.configureVehicle({
+      // configureVehicle uses console commands via automation bridge
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'configure_vehicle',
         vehicleName: mutableArgs.vehicleName,
         vehicleType: mutableArgs.vehicleType,
         wheels: mutableArgs.wheels as unknown[],
         engine: mutableArgs.engine,
-        transmission: mutableArgs.transmission,
-        pluginDependencies: (mutableArgs.pluginDependencies ?? mutableArgs.plugins) as string[] | undefined
-      }));
+        transmission: mutableArgs.transmission
+      })) as Record<string, unknown>;
     case 'setup_physics_simulation': {
       // Support both meshPath/skeletonPath and actorName parameters
       const payload: Record<string, unknown> = {
@@ -279,7 +271,10 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         });
       }
 
-      return cleanObject(await tools.physicsTools.setupPhysicsSimulation(payload));
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'setup_physics_simulation',
+        ...payload
+      })) as Record<string, unknown>;
     }
     default: {
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
