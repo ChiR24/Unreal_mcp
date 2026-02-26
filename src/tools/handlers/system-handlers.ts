@@ -143,7 +143,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await executeAutomationRequest(tools, 'manage_widget', {
+        const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
           action: 'create_widget',
           name: effectiveName,
           type: widgetType,
@@ -180,7 +180,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           : undefined;
 
         try {
-          const res = await executeAutomationRequest(tools, 'manage_widget', {
+          const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
             action: 'show_notification',
             text,
             duration
@@ -226,7 +226,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      return cleanObject(await executeAutomationRequest(tools, 'manage_widget', {
+      return cleanObject(await executeAutomationRequest(tools, 'manage_widget_authoring', {
         action: 'show_widget',
         widgetPath
       }) as Record<string, unknown>);
@@ -246,7 +246,7 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       }
 
       try {
-        const res = await executeAutomationRequest(tools, 'manage_widget', {
+        const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
           action: 'add_widget_child',
           widgetPath,
           childClass: childClass,

@@ -516,8 +516,14 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           functionName: 'ASSET_EXISTS_SIMPLE',
           path: levelPath
         }) as AutomationResponse;
-        const result = (resp?.result ?? resp ?? {}) as ResultPayload;
 
+        // Check for error envelope first
+        const respState = resp as { success?: boolean; isError?: boolean };
+        if (respState.success === false || respState.isError === true) {
+          return cleanObject(resp as Record<string, unknown>);
+        }
+
+        const result = (resp?.result ?? {}) as ResultPayload;
         const exists = Boolean(result.exists);
 
         return cleanObject({

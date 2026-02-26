@@ -32,10 +32,11 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   // Route specific actions to their dedicated handlers
   if (animAction === 'create_animation_blueprint' || animAction === 'create_anim_blueprint' || animAction === 'create_animation_bp') {
     const name = argsTyped.name ?? argsTyped.blueprintName;
-    const skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
+    let skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
+    let meshPath = argsTyped.meshPath;
     const savePath = argsTyped.savePath ?? argsTyped.path ?? '/Game/Animations';
 
-    // Auto-resolve skeleton from actorName if not provided
+    // Auto-resolve skeleton/mesh from actorName if not provided
     if (!skeletonPath && argsTyped.actorName) {
       try {
         const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
@@ -44,26 +45,10 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
             (c as SkeletalMeshComponentInfo).className === 'SkeletalMeshComponent'
           );
-          if (meshComp && meshComp.skeletalMesh) {
-            // SkeletalMeshComponent usually has a 'skeletalMesh' property which is the path to the mesh
-            // We can use inspect on that mesh to find its skeleton? 
-            // Or maybe getComponents returned extra details?
-            // Assuming we get the mesh path, we still need the skeleton.
-            // But often creating AnimBP for a Mesh acts as shortcut?
-            // Actually, if we have the *mesh* path, we can try to use that if the C++ handler supports it, 
-            // OR we might need to inspect the mesh asset to find its skeleton.
-            // For now, let's settle for: if user provided meshPath but not skeletonPath, we might need a way to look it up.
-            // But here we only have actorName.
-            // Let's defer this complexity unless required. 
-            // Correction: The walkthrough issue said "Skeleton missing".
-            // Let's assume user MUST provide it or we fail.
-            // But if we can help, we should.
-            // If we have meshPath, we can pass it as 'meshPath' and let C++ handle finding the skeleton?
-            // The C++ 'create_animation_blueprint' handler expects 'skeletonPath'.
-            // So we'd need to modify C++ to check meshPath->Skeleton.
-            // Since I'm editing TS only right now, I'll allow passing 'meshPath' in payload if skeletonPath is missing, 
-            // and hope C++ was updated or I should update C++ later.
-            // Actually, checking args, if 'meshPath' is passed, we should pass it along.
+          // Write back resolved path to the outgoing payload
+          if (meshComp) {
+            if (!meshPath && meshComp.path) meshPath = meshComp.path;
+            if (!meshPath && meshComp.skeletalMesh) meshPath = meshComp.skeletalMesh;
           }
         }
       } catch (_e) { }
@@ -73,6 +58,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       ...args,
       name,
       skeletonPath,
+      meshPath,
       savePath
     };
 
@@ -208,25 +194,21 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         enableFootPlacement: mutableArgs.enableFootPlacement
       })) as Record<string, unknown>;
     case 'create_procedural_anim': {
-      // createProceduralAnim is a local artifact tracking operation
-      const systemName = (mutableArgs.systemName || mutableArgs.name || 'ProceduralSystem') as string;
-      const basePath = ((mutableArgs.savePath || mutableArgs.path || '/Game/Animations') as string).replace(/\/+$/, '');
+      // TODO: Requires C++ implementation for procedural animation system creation
       return cleanObject({
-        success: true,
-        message: `Procedural animation system '${systemName}' specification recorded`,
-        path: `${basePath}/${systemName}`,
-        systemName
+        success: false,
+        isError: true,
+        error: 'NOT_IMPLEMENTED',
+        message: 'create_procedural_anim requires engine-side implementation. C++ handler needed.'
       });
     }
     case 'create_blend_tree': {
-      // createBlendTree is a local artifact tracking operation
-      const treeName = (mutableArgs.treeName || mutableArgs.name || 'BlendTree') as string;
-      const basePath = ((mutableArgs.savePath || mutableArgs.path || '/Game/Animations') as string).replace(/\/+$/, '');
+      // TODO: Requires C++ implementation for blend tree creation
       return cleanObject({
-        success: true,
-        message: `Blend tree '${treeName}' specification recorded`,
-        path: `${basePath}/${treeName}`,
-        treeName
+        success: false,
+        isError: true,
+        error: 'NOT_IMPLEMENTED',
+        message: 'create_blend_tree requires engine-side implementation. C++ handler needed.'
       });
     }
     case 'cleanup':

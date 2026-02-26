@@ -282,6 +282,17 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     return null;
   }
 
+  // Sanitize path if it contains slashes (indicates it's a path, not just a name)
+  let normalizedInput = input;
+  if (input.includes('/')) {
+    try {
+      normalizedInput = sanitizePath(input);
+    } catch {
+      // If sanitization fails, return null (invalid path)
+      return null;
+    }
+  }
+
   // Common skeleton to mesh mappings
   const skeletonToMeshMap: { [key: string]: string } = {
     '/Game/Mannequin/Character/Mesh/UE4_Mannequin_Skeleton': '/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple',
@@ -295,14 +306,14 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   };
 
   // Check if this is a known skeleton path
-  if (skeletonToMeshMap[input]) {
-    return skeletonToMeshMap[input];
+  if (skeletonToMeshMap[normalizedInput]) {
+    return skeletonToMeshMap[normalizedInput];
   }
 
   // If it contains _Skeleton, try to convert to mesh name
-  if (input.includes('_Skeleton')) {
+  if (normalizedInput.includes('_Skeleton')) {
     // Try common replacements
-    let meshPath = input.replace('_Skeleton', '');
+    let meshPath = normalizedInput.replace('_Skeleton', '');
     // Mapping for replacements
     const replacements: { [key: string]: string } = {
       '/SK_': '/SKM_',
@@ -320,9 +331,9 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   }
 
   // Generic fallback: convert any /SK_ prefix to /SKM_ for skeletal mesh paths
-  if (input.includes('/SK_')) {
-    return input.replace('/SK_', '/SKM_');
+  if (normalizedInput.includes('/SK_')) {
+    return normalizedInput.replace('/SK_', '/SKM_');
   }
 
-  return input;
+  return normalizedInput;
 }
