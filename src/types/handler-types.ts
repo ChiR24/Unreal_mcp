@@ -44,14 +44,9 @@ export interface HandlerArgs {
 
 /**
  * Standard response from automation bridge requests.
+ * Re-exported from automation-responses.ts for convenience.
  */
-export interface AutomationResponse {
-    success: boolean;
-    message?: string;
-    error?: string;
-    result?: unknown;
-    [key: string]: unknown;
-}
+export { AutomationResponse } from './automation-responses.js';
 
 /**
  * Component information returned from getComponents.

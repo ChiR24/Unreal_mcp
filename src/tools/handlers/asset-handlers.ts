@@ -138,7 +138,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         if (!folderPath.startsWith('/')) {
           return ResponseFactory.error('VALIDATION_ERROR', `Invalid folder path: '${folderPath}'. Path must start with '/'`);
         }
-        const res = await tools.assetTools.createFolder(folderPath);
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          path: folderPath,
+          subAction: 'create_folder'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Folder created successfully');
       }
       case 'import': {
@@ -154,12 +157,13 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const overwrite = extractOptionalBoolean(params, 'overwrite') ?? false;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = await tools.assetTools.importAsset({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           sourcePath,
           destinationPath,
           overwrite,
-          save
-        });
+          save,
+          subAction: 'import'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Asset imported successfully');
       }
       case 'duplicate_asset':
@@ -190,10 +194,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           throw new Error('destinationPath or newName is required for duplicate action');
         }
 
-        const res = await tools.assetTools.duplicateAsset({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           sourcePath,
-          destinationPath
-        });
+          destinationPath,
+          subAction: 'duplicate'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Asset duplicated successfully');
       }
       case 'rename_asset':
@@ -216,9 +221,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
 
         if (!destinationPath) throw new Error('Missing destinationPath or newName');
 
-        const res = await tools.assetTools.renameAsset({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           sourcePath,
-          destinationPath
+          destinationPath,
+          subAction: 'rename'
         }) as AssetOperationResponse;
 
         if (res && res.success === false) {
@@ -249,10 +255,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           destinationPath = `${destinationPath.replace(/\/$/, '')}/${assetName}`;
         }
 
-        const res = await tools.assetTools.moveAsset({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           sourcePath,
-          destinationPath: destinationPath ?? ''
-        });
+          destinationPath: destinationPath ?? '',
+          subAction: 'move'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Asset moved successfully');
       }
       case 'delete_assets':
@@ -296,7 +303,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           return normalized;
         });
 
-        const res = await tools.assetTools.deleteAssets({ paths: normalizedPaths });
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          paths: normalizedPaths,
+          subAction: 'delete'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Assets deleted successfully');
       }
 
@@ -307,10 +317,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const assetPath = extractString(params, 'assetPath');
         const lodCount = typeof params.lodCount === 'number' ? params.lodCount : Number(params.lodCount);
-        const res = await tools.assetTools.generateLODs({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           assetPath,
-          lodCount
-        });
+          lodCount,
+          subAction: 'generate_lods'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'LODs generated successfully');
       }
       case 'create_thumbnail': {
@@ -322,11 +333,12 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const assetPath = extractString(params, 'assetPath');
         const width = extractOptionalNumber(params, 'width');
         const height = extractOptionalNumber(params, 'height');
-        const res = await tools.assetTools.createThumbnail({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           assetPath,
           width,
-          height
-        });
+          height,
+          subAction: 'generate_thumbnail'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Thumbnail created successfully');
       }
       case 'set_tags': {
@@ -355,7 +367,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await tools.assetTools.getMetadata({ assetPath }) as AssetOperationResponse;
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          assetPath,
+          subAction: 'get_metadata'
+        }) as AssetOperationResponse;
         const tags = res.tags || {};
         const metadata = res.metadata || {};
         const merged = { ...tags, ...metadata };
@@ -386,7 +401,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await tools.assetTools.validate({ assetPath });
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          assetPath,
+          subAction: 'validate'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Asset validation complete');
       }
       case 'generate_report': {
@@ -398,11 +416,12 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const directory = extractOptionalString(params, 'directory') ?? '';
         const reportType = extractOptionalString(params, 'reportType');
         const outputPath = extractOptionalString(params, 'outputPath');
-        const res = await tools.assetTools.generateReport({
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
           directory,
           reportType,
-          outputPath
-        });
+          outputPath,
+          subAction: 'generate_report'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Report generated successfully');
       }
       case 'create_material_instance': {
@@ -453,13 +472,14 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const recursivePaths = extractOptionalBoolean(params, 'recursivePaths');
         const recursiveClasses = extractOptionalBoolean(params, 'recursiveClasses');
         const limit = extractOptionalNumber(params, 'limit');
-        const res = await tools.assetTools.searchAssets({
+        const res = await executeAutomationRequest(tools, 'asset_query', {
           classNames,
           packagePaths,
           recursivePaths,
           recursiveClasses,
-          limit
-        });
+          limit,
+          subAction: 'search_assets'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Assets found');
       }
       case 'find_by_tag': {
@@ -469,7 +489,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const tag = extractString(params, 'tag');
         const value = extractOptionalString(params, 'value');
-        const res = await tools.assetTools.findByTag({ tag, value });
+        const res = await executeAutomationRequest(tools, 'asset_query', {
+          tag,
+          value,
+          subAction: 'find_by_tag'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Assets found by tag');
       }
       case 'get_dependencies': {
@@ -479,7 +503,11 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         ]);
         const assetPath = extractString(params, 'assetPath');
         const recursive = extractOptionalBoolean(params, 'recursive');
-        const res = await tools.assetTools.getDependencies({ assetPath, recursive });
+        const res = await executeAutomationRequest(tools, 'manage_asset', {
+          assetPath,
+          recursive,
+          subAction: 'get_dependencies'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Dependencies retrieved');
       }
       case 'get_source_control_state': {
@@ -487,7 +515,10 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'assetPath', required: true }
         ]);
         const assetPath = extractString(params, 'assetPath');
-        const res = await tools.assetTools.getSourceControlState({ assetPath });
+        const res = await executeAutomationRequest(tools, 'asset_query', {
+          assetPath,
+          subAction: 'get_source_control_state'
+        }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Source control state retrieved');
       }
       case 'source_control_enable': {

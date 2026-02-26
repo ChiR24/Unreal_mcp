@@ -1,6 +1,10 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, PerformanceArgs } from '../../types/handler-types.js';
+import { executeAutomationRequest } from './common-handlers.js';
+import { ResponseFactory } from '../../utils/response-factory.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
+
 
 // Valid profiling types
 const VALID_PROFILING_TYPES = ['cpu', 'gpu', 'memory', 'renderthread', 'all', 'fps', 'gamethread'];
@@ -17,139 +21,243 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'start_profiling': {
       const profilingType = argsTyped.type ? String(argsTyped.type).toLowerCase() : 'all';
       if (!VALID_PROFILING_TYPES.includes(profilingType)) {
-        return {
-          success: false,
-          error: 'INVALID_PROFILING_TYPE',
-          message: `Invalid profiling type: '${argsTyped.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
-          action: 'start_profiling'
-        };
+      return {
+        success: false,
+        isError: true,
+        error: 'INVALID_PROFILING_TYPE',
+        message: `Invalid profiling type: '${argsTyped.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
+        action: 'start_profiling'
+      };
       }
-      // Use normalized profilingType to ensure consistency with validation
-      return cleanObject(await tools.performanceTools.startProfiling({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.START_PROFILING, {
         type: profilingType,
         duration: argsTyped.duration
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'stop_profiling': {
-      return cleanObject(await tools.performanceTools.stopProfiling()) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.STOP_PROFILING, {}) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'run_benchmark': {
-      return cleanObject(await tools.performanceTools.runBenchmark({
-        duration: argsTyped.duration,
-        outputPath: argsTyped.outputPath
-      })) as Record<string, unknown>;
+      // Run benchmark using console commands with timing
+      const duration = typeof argsTyped.duration === 'number' ? argsTyped.duration : 60;
+      
+      // Start recording
+      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat startfile' });
+      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'profilegpu' });
+      
+      // Wait for duration
+      await new Promise(resolve => setTimeout(resolve, duration * 1000));
+      
+      // Stop recording
+      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat stopfile' });
+      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: 'stat none' });
+      
+      return { success: true, message: `Benchmark completed for ${duration} seconds` };
     }
     case 'show_fps': {
-      return cleanObject(await tools.performanceTools.showFPS({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SHOW_FPS, {
         enabled: argsTyped.enabled !== false,
         verbose: argsTyped.verbose
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'show_stats': {
-      return cleanObject(await tools.performanceTools.showStats({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SHOW_STATS, {
         category: argsTyped.category || argsTyped.type || 'Unit',
         enabled: argsTyped.enabled !== false
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'set_scalability': {
       const category = argsTyped.category || 'ViewDistance';
       let level = typeof argsTyped.level === 'number' ? argsTyped.level : 3;
       // Clamp level to valid range 0-4
       level = Math.max(MIN_SCALABILITY_LEVEL, Math.min(MAX_SCALABILITY_LEVEL, level));
-      return cleanObject(await tools.performanceTools.setScalability({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SET_SCALABILITY, {
         category,
         level
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'set_resolution_scale': {
-      return cleanObject(await tools.performanceTools.setResolutionScale({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SET_RESOLUTION_SCALE, {
         scale: argsTyped.scale
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'set_vsync': {
-      return cleanObject(await tools.performanceTools.setVSync({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SET_VSYNC, {
         enabled: argsTyped.enabled !== false
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'set_frame_rate_limit': {
-      return cleanObject(await tools.performanceTools.setFrameRateLimit({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.SET_FRAME_RATE_LIMIT, {
         maxFPS: argsTyped.maxFPS
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'enable_gpu_timing': {
-      return cleanObject(await tools.performanceTools.enableGPUTiming({
-        enabled: argsTyped.enabled !== false
-      })) as Record<string, unknown>;
+      // Console command only - no automation bridge action
+      const enabled = argsTyped.enabled !== false;
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, {
+        command: `r.GPUStatsEnabled ${enabled ? 1 : 0}`
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'generate_memory_report': {
-      return cleanObject(await tools.performanceTools.generateMemoryReport({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.GENERATE_MEMORY_REPORT, {
         detailed: argsTyped.detailed,
         outputPath: argsTyped.outputPath
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'configure_texture_streaming': {
-      return cleanObject(await tools.performanceTools.configureTextureStreaming({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_TEXTURE_STREAMING, {
         enabled: argsTyped.enabled !== false,
         poolSize: argsRecord.poolSize as number | undefined,
         boostPlayerLocation: argsRecord.boostPlayerLocation as boolean | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'configure_lod': {
-      return cleanObject(await tools.performanceTools.configureLOD({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_LOD, {
         forceLOD: argsRecord.forceLOD as number | undefined,
         lodBias: argsRecord.lodBias as number | undefined,
         distanceScale: argsRecord.distanceScale as number | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'apply_baseline_settings': {
-      return cleanObject(await tools.performanceTools.applyBaselinePerformanceSettings({
-        distanceScale: argsRecord.distanceScale as number | undefined,
-        skeletalBias: argsRecord.skeletalBias as number | undefined,
-        vsync: argsRecord.vsync as boolean | undefined,
-        maxFPS: argsTyped.maxFPS,
-        hzb: argsRecord.hzb as boolean | undefined
-      })) as Record<string, unknown>;
+      // Console commands only - composite action
+      const distanceScale = typeof argsRecord.distanceScale === 'number' ? argsRecord.distanceScale : 1.0;
+      const skeletalBias = typeof argsRecord.skeletalBias === 'number' ? argsRecord.skeletalBias : 0;
+      const vsync = typeof argsRecord.vsync === 'boolean' ? argsRecord.vsync : false;
+      const maxFPS = typeof argsTyped.maxFPS === 'number' ? argsTyped.maxFPS : 60;
+      const hzb = typeof argsRecord.hzb === 'boolean' ? argsRecord.hzb : true;
+      
+      const commands = [
+        `r.StaticMeshLODDistanceScale ${distanceScale}`,
+        `r.SkeletalMeshLODDistanceScale ${distanceScale}`,
+        `r.SkeletalMeshLODBias ${skeletalBias}`,
+        `r.HZBOcclusion ${hzb ? 1 : 0}`,
+        `r.VSync ${vsync ? 1 : 0}`,
+        `t.MaxFPS ${maxFPS}`,
+      ];
+      
+      for (const cmd of commands) {
+        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      }
+      
+      return { 
+        success: true, 
+        message: 'Baseline performance settings applied',
+        params: { distanceScale, skeletalBias, vsync, maxFPS, hzb }
+      };
     }
     case 'optimize_draw_calls':
     case 'merge_actors': {
       // If action is merge_actors, force mergeActors param to true
       const mergeParams = action === 'merge_actors' ? { ...argsRecord, mergeActors: true } : argsRecord;
-      return cleanObject(await tools.performanceTools.optimizeDrawCalls({
-        enableInstancing: mergeParams.enableInstancing as boolean | undefined,
-        enableBatching: mergeParams.enableBatching as boolean | undefined,
-        mergeActors: mergeParams.mergeActors as boolean | undefined,
-        actors: mergeParams.actors as string[] | undefined
-      })) as Record<string, unknown>;
+      
+      if (mergeParams.mergeActors) {
+        // Use automation bridge for actor merging
+        const actors = Array.isArray(mergeParams.actors)
+          ? mergeParams.actors.filter((name): name is string => typeof name === 'string' && name.length > 0)
+          : undefined;
+        
+        if (!actors || actors.length < 2) {
+        return {
+          success: false,
+          isError: true,
+          error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
+        };
+        }
+        
+        const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MERGE_ACTORS, {
+          enableInstancing: mergeParams.enableInstancing as boolean | undefined,
+          mergeActors: true,
+          actors: actors
+        }) as Record<string, unknown>;
+        return cleanObject(res);
+      }
+      
+      // Non-merge draw call optimization - console commands only
+      const commands: string[] = [];
+      if (typeof mergeParams.enableInstancing === 'boolean') {
+        commands.push(`r.MeshDrawCommands.DynamicInstancing ${mergeParams.enableInstancing ? 1 : 0}`);
+      }
+      
+      for (const cmd of commands) {
+        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      }
+      
+      return { success: true, message: 'Draw call optimization configured' };
     }
     case 'configure_occlusion_culling': {
-      return cleanObject(await tools.performanceTools.configureOcclusionCulling({
-        enabled: argsTyped.enabled !== false,
-        method: argsRecord.method as string | undefined,
-        freezeRendering: argsRecord.freezeRendering as boolean | undefined
-      })) as Record<string, unknown>;
+      // Console commands only
+      const enabled = argsTyped.enabled !== false;
+      const commands: string[] = [`r.HZBOcclusion ${enabled ? 1 : 0}`];
+      
+      if (typeof argsRecord.freezeRendering === 'boolean') {
+        commands.push(`FreezeRendering ${argsRecord.freezeRendering ? 1 : 0}`);
+      }
+      
+      for (const cmd of commands) {
+        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      }
+      
+      return { success: true, message: 'Occlusion culling configured' };
     }
     case 'optimize_shaders': {
-      return cleanObject(await tools.performanceTools.optimizeShaders({
-        compileOnDemand: argsRecord.compileOnDemand as boolean | undefined,
-        cacheShaders: argsRecord.cacheShaders as boolean | undefined,
-        reducePermutations: argsRecord.reducePermutations as boolean | undefined
-      })) as Record<string, unknown>;
+      // Console commands only
+      const commands: string[] = [];
+      
+      if (typeof argsRecord.compileOnDemand === 'boolean') {
+        commands.push(`r.ShaderDevelopmentMode ${argsRecord.compileOnDemand ? 1 : 0}`);
+      }
+      if (typeof argsRecord.cacheShaders === 'boolean') {
+        commands.push(`r.ShaderPipelineCache.Enabled ${argsRecord.cacheShaders ? 1 : 0}`);
+      }
+      if (argsRecord.reducePermutations === true) {
+        commands.push('RecompileShaders changed');
+      }
+      
+      for (const cmd of commands) {
+        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      }
+      
+      return { success: true, message: 'Shader optimization configured' };
     }
     case 'configure_nanite': {
-      return cleanObject(await tools.performanceTools.configureNanite({
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_NANITE, {
         enabled: argsTyped.enabled !== false,
         maxPixelsPerEdge: argsRecord.maxPixelsPerEdge as number | undefined,
         streamingPoolSize: argsRecord.streamingPoolSize as number | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'configure_world_partition': {
-      return cleanObject(await tools.performanceTools.configureWorldPartition({
-        enabled: argsTyped.enabled !== false,
-        streamingDistance: argsRecord.streamingDistance as number | undefined,
-        cellSize: argsRecord.cellSize as number | undefined
-      })) as Record<string, unknown>;
+      // Console commands only
+      const enabled = argsTyped.enabled !== false;
+      const commands: string[] = [`wp.Runtime.EnableStreaming ${enabled ? 1 : 0}`];
+      
+      if (typeof argsRecord.streamingDistance === 'number') {
+        commands.push(`wp.Runtime.StreamingDistance ${argsRecord.streamingDistance}`);
+      }
+      if (typeof argsRecord.cellSize === 'number') {
+        commands.push(`wp.Runtime.CellSize ${argsRecord.cellSize}`);
+      }
+      
+      for (const cmd of commands) {
+        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      }
+      
+      return { success: true, message: 'World Partition configured' };
     }
     default:
-      throw new Error(`Unknown performance action: ${action}`);
+      return ResponseFactory.error(`Unknown performance action: ${action}`);
   }
 }

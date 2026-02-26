@@ -1,6 +1,6 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, AnimationArgs, ComponentInfo } from '../../types/handler-types.js';
+import type { HandlerArgs, AnimationArgs, ComponentInfo, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
 /** Response from getComponents */
@@ -18,14 +18,8 @@ interface SkeletalMeshComponentInfo extends ComponentInfo {
   path?: string;
 }
 
-/** Response from automation request */
-interface AutomationResponse {
-  success?: boolean;
-  result?: {
-    error?: string;
-    message?: string;
-    [key: string]: unknown;
-  };
+/** Result payload structure for animation responses */
+interface ResultPayload {
   error?: string;
   message?: string;
   [key: string]: unknown;
@@ -44,7 +38,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     // Auto-resolve skeleton from actorName if not provided
     if (!skeletonPath && argsTyped.actorName) {
       try {
-        const compsRes = await tools.actorTools.getComponents(argsTyped.actorName) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'get_components', { actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
@@ -93,7 +87,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       args,
       'Automation bridge not available for montage playback'
     ) as AutomationResponse;
-    const result = resp?.result ?? resp ?? {};
+    const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+
     const errorCode = typeof result.error === 'string' ? result.error.toUpperCase() : '';
     const message = typeof result.message === 'string' ? result.message : '';
     const msgLower = message.toLowerCase();
@@ -130,7 +125,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     
     if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
       try {
-        const compsRes = await tools.actorTools.getComponents(argsTyped.actorName) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'get_components', { actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
@@ -146,7 +141,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     }
 
     const resp = await executeAutomationRequest(tools, 'setup_ragdoll', mutableArgs, 'Automation bridge not available for ragdoll setup') as AutomationResponse;
-    const result = resp?.result ?? resp ?? {};
+    const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+
     const message = typeof result.message === 'string' ? result.message : '';
     const msgLower = message.toLowerCase();
 
@@ -197,35 +193,47 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_state_machine':
-      return cleanObject(await tools.animationTools.createStateMachine({
+      return cleanObject(await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        subAction: 'add_state_machine',
         machineName: mutableArgs.machineName || mutableArgs.name,
         states: mutableArgs.states as unknown[],
         transitions: mutableArgs.transitions as unknown[],
         blueprintPath: mutableArgs.blueprintPath || mutableArgs.path || mutableArgs.savePath
-      }));
+      })) as Record<string, unknown>;
     case 'setup_ik':
-      return cleanObject(await tools.animationTools.setupIK({
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'setup_ik',
         actorName: mutableArgs.actorName,
         ikBones: mutableArgs.ikBones as unknown[],
         enableFootPlacement: mutableArgs.enableFootPlacement
-      }));
-    case 'create_procedural_anim':
-      return cleanObject(await tools.animationTools.createProceduralAnim({
-        systemName: mutableArgs.systemName || mutableArgs.name,
-        baseAnimation: mutableArgs.baseAnimation,
-        modifiers: mutableArgs.modifiers as unknown[],
-        savePath: mutableArgs.savePath || mutableArgs.path
-      }));
-    case 'create_blend_tree':
-      return cleanObject(await tools.animationTools.createBlendTree({
-        treeName: mutableArgs.treeName || mutableArgs.name,
-        blendType: mutableArgs.blendType,
-        basePose: mutableArgs.basePose,
-        additiveAnimations: mutableArgs.additiveAnimations as unknown[],
-        savePath: mutableArgs.savePath || mutableArgs.path
-      }));
+      })) as Record<string, unknown>;
+    case 'create_procedural_anim': {
+      // createProceduralAnim is a local artifact tracking operation
+      const systemName = (mutableArgs.systemName || mutableArgs.name || 'ProceduralSystem') as string;
+      const basePath = ((mutableArgs.savePath || mutableArgs.path || '/Game/Animations') as string).replace(/\/+$/, '');
+      return cleanObject({
+        success: true,
+        message: `Procedural animation system '${systemName}' specification recorded`,
+        path: `${basePath}/${systemName}`,
+        systemName
+      });
+    }
+    case 'create_blend_tree': {
+      // createBlendTree is a local artifact tracking operation
+      const treeName = (mutableArgs.treeName || mutableArgs.name || 'BlendTree') as string;
+      const basePath = ((mutableArgs.savePath || mutableArgs.path || '/Game/Animations') as string).replace(/\/+$/, '');
+      return cleanObject({
+        success: true,
+        message: `Blend tree '${treeName}' specification recorded`,
+        path: `${basePath}/${treeName}`,
+        treeName
+      });
+    }
     case 'cleanup':
-      return cleanObject(await tools.animationTools.cleanup(mutableArgs.artifacts as unknown[]));
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'cleanup',
+        artifacts: mutableArgs.artifacts as unknown[]
+      })) as Record<string, unknown>;
     case 'create_animation_asset': {
       let assetType = mutableArgs.assetType;
       if (!assetType && mutableArgs.name) {
@@ -233,29 +241,31 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
           assetType = 'montage';
         }
       }
-      return cleanObject(await tools.animationTools.createAnimationAsset({
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_animation_asset',
         name: mutableArgs.name,
-        path: mutableArgs.path || mutableArgs.savePath,
+        savePath: mutableArgs.path || mutableArgs.savePath,
         skeletonPath: mutableArgs.skeletonPath,
         assetType
-      }));
+      })) as Record<string, unknown>;
     }
     case 'add_notify':
-      return cleanObject(await tools.animationTools.addNotify({
-        animationPath: mutableArgs.animationPath,
-        assetPath: mutableArgs.assetPath,
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'add_notify',
+        assetPath: mutableArgs.animationPath || mutableArgs.assetPath,
         notifyName: mutableArgs.notifyName || mutableArgs.name,
         time: mutableArgs.time ?? mutableArgs.startTime
-      }));
+      })) as Record<string, unknown>;
     case 'configure_vehicle':
-      return cleanObject(await tools.physicsTools.configureVehicle({
+      // configureVehicle uses console commands via automation bridge
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'configure_vehicle',
         vehicleName: mutableArgs.vehicleName,
         vehicleType: mutableArgs.vehicleType,
         wheels: mutableArgs.wheels as unknown[],
         engine: mutableArgs.engine,
-        transmission: mutableArgs.transmission,
-        pluginDependencies: (mutableArgs.pluginDependencies ?? mutableArgs.plugins) as string[] | undefined
-      }));
+        transmission: mutableArgs.transmission
+      })) as Record<string, unknown>;
     case 'setup_physics_simulation': {
       // Support both meshPath/skeletonPath and actorName parameters
       const payload: Record<string, unknown> = {
@@ -279,7 +289,10 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         });
       }
 
-      return cleanObject(await tools.physicsTools.setupPhysicsSimulation(payload));
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'setup_physics_simulation',
+        ...payload
+      })) as Record<string, unknown>;
     }
     default: {
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');

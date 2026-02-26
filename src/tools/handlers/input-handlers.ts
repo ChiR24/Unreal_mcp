@@ -2,10 +2,9 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import type { HandlerArgs, InputArgs } from '../../types/handler-types.js';
-import { InputTools } from '../input.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import { sanitizePath } from '../../utils/path-security.js';
-
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
   return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
@@ -106,10 +105,6 @@ export async function handleInputTools(
 ): Promise<Record<string, unknown>> {
     const argsTyped = args as InputArgs;
     const argsRecord = args as Record<string, unknown>;
-    const inputTools = tools.inputTools as InputTools;
-    if (!inputTools) {
-        return ResponseFactory.error('Input tools not available');
-    }
 
     const timeoutMs = getTimeoutMs();
 
@@ -166,7 +161,12 @@ export async function handleInputTools(
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }
             const sanitizedPath = pathValidation.sanitized.path ?? (argsTyped.path ?? '');
-            return cleanObject(await inputTools.createInputAction(argsTyped.name || '', sanitizedPath)) as Record<string, unknown>;
+            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
+                action: 'create_input_action',
+                name: argsTyped.name || '',
+                path: sanitizedPath
+            }, undefined, { timeoutMs });
+            return cleanObject(result) as Record<string, unknown>;
         }
         case 'create_input_mapping_context': {
             // Validate path parameter
@@ -175,7 +175,12 @@ export async function handleInputTools(
                 return ResponseFactory.error(pathValidation.error || 'Invalid path');
             }
             const sanitizedPath = pathValidation.sanitized.path ?? (argsTyped.path ?? '');
-            return cleanObject(await inputTools.createInputMappingContext(argsTyped.name || '', sanitizedPath)) as Record<string, unknown>;
+            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
+                action: 'create_input_mapping_context',
+                name: argsTyped.name || '',
+                path: sanitizedPath
+            }, undefined, { timeoutMs });
+            return cleanObject(result) as Record<string, unknown>;
         }
         case 'add_mapping': {
             // Validate path parameters
@@ -188,11 +193,13 @@ export async function handleInputTools(
             }
             const sanitizedContextPath = pathValidation.sanitized.contextPath ?? (argsTyped.contextPath ?? '');
             const sanitizedActionPath = pathValidation.sanitized.actionPath ?? (argsTyped.actionPath ?? '');
-            return cleanObject(await inputTools.addMapping(
-                sanitizedContextPath,
-                sanitizedActionPath,
-                argsTyped.key ?? ''
-            )) as Record<string, unknown>;
+            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
+                action: 'add_mapping',
+                contextPath: sanitizedContextPath,
+                actionPath: sanitizedActionPath,
+                key: argsTyped.key ?? ''
+            }, undefined, { timeoutMs });
+            return cleanObject(result) as Record<string, unknown>;
         }
         case 'remove_mapping': {
             // Validate path parameters
@@ -205,10 +212,12 @@ export async function handleInputTools(
             }
             const sanitizedContextPath = pathValidation.sanitized.contextPath ?? (argsTyped.contextPath ?? '');
             const sanitizedActionPath = pathValidation.sanitized.actionPath ?? (argsTyped.actionPath ?? '');
-            return cleanObject(await inputTools.removeMapping(
-                sanitizedContextPath,
-                sanitizedActionPath
-            )) as Record<string, unknown>;
+            const result = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_INPUT, {
+                action: 'remove_mapping',
+                contextPath: sanitizedContextPath,
+                actionPath: sanitizedActionPath
+            }, undefined, { timeoutMs });
+            return cleanObject(result) as Record<string, unknown>;
         }
 
         // New actions - dispatched to C++ via automation bridge

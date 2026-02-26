@@ -1,18 +1,11 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { GraphArgs, HandlerArgs } from '../../types/handler-types.js';
+import type { GraphArgs, HandlerArgs, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
 
-/** Response from automation requests */
-interface AutomationResponse {
-    success?: boolean;
-    error?: string;
-    message?: string;
-    result?: Record<string, unknown>;
-    [key: string]: unknown;
-}
+// AutomationResponse imported from types/handler-types.js
 
-/** Extended GraphArgs for internal processing */
+
 interface ProcessedGraphArgs extends GraphArgs {
     subAction?: string;
     nodeCategory?: string;

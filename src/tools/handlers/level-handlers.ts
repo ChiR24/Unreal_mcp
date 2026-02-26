@@ -1,17 +1,17 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, LevelArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, LevelArgs, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString, validateSecurityPatterns } from './common-handlers.js';
 
-/** Response from automation request */
-interface AutomationResponse {
-  success?: boolean;
-  result?: {
-    exists?: boolean;
-    path?: string;
-    class?: string;
-    [key: string]: unknown;
-  };
+// AutomationResponse now imported from types/handler-types.js
+
+/** Result payload structure for level responses */
+interface ResultPayload {
+  exists?: boolean;
+  path?: string;
+  class?: string;
+  error?: string;
+  message?: string;
   [key: string]: unknown;
 }
 
@@ -55,23 +55,30 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
   }
   
   switch (action) {
-    case 'load':
     case 'load_level': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
-      const res = await tools.levelTools.loadLevel({ levelPath, streaming: !!argsTyped.streaming });
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'load',
+        levelPath,
+        streaming: !!argsTyped.streaming
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
-    case 'save':
     case 'save_level': {
       const targetPath = argsTyped.levelPath || argsTyped.savePath;
       if (targetPath) {
-        const res = await tools.levelTools.saveLevelAs({ targetPath });
-        return cleanObject(res) as Record<string, unknown>;
+        const res = await executeAutomationRequest(tools, 'manage_level', {
+          action: 'save_level_as',
+          savePath: targetPath
+        }) as Record<string, unknown>;
+        return cleanObject(res);
       }
-      const res = await tools.levelTools.saveLevel({ levelName: argsTyped.levelName });
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'save',
+        levelName: argsTyped.levelName
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
-    case 'save_as':
     case 'save_level_as': {
       // Accept savePath, destinationPath, or levelPath as the target
       const targetPath = argsTyped.savePath || argsTyped.destinationPath || argsTyped.levelPath;
@@ -83,29 +90,33 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         };
       }
-      const res = await tools.levelTools.saveLevelAs({ targetPath });
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'save_level_as',
+        savePath: targetPath
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'create_level': {
       const levelPathStr = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : '';
       const levelName = requireNonEmptyString(argsTyped.levelName || levelPathStr.split('/').pop() || '', 'levelName', 'Missing required parameter: levelName');
       // CRITICAL: Pass useWorldPartition to C++ - default to false to avoid 20+ second freeze during World Partition uninitialize
       // World Partition levels cause permanent hang when unloaded via GEditor->NewMap()
-      const res = await tools.levelTools.createLevel({
+      const res = await executeAutomationRequest(tools, 'create_new_level', {
+        levelPath: argsTyped.savePath || argsTyped.levelPath || `/Game/Maps/${levelName}`,
         levelName,
-        savePath: argsTyped.savePath || argsTyped.levelPath,
         useWorldPartition: argsTyped.useWorldPartition ?? false
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'add_sublevel': {
       const subLevelPath = requireNonEmptyString(argsTyped.subLevelPath || argsTyped.levelPath, 'subLevelPath', 'Missing required parameter: subLevelPath');
-      const res = await tools.levelTools.addSubLevel({
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'add_sublevel',
         subLevelPath,
         parentLevel: argsTyped.parentLevel || argsTyped.parentPath,
         streamingMethod: argsTyped.streamingMethod
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'stream': {
       const levelPath = typeof argsTyped.levelPath === 'string' ? argsTyped.levelPath : undefined;
@@ -129,13 +140,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
         });
       }
 
-      const res = await tools.levelTools.streamLevel({
+      const res = await executeAutomationRequest(tools, 'stream_level', {
         levelPath,
         levelName,
         shouldBeLoaded: argsTyped.shouldBeLoaded,
         shouldBeVisible: argsTyped.shouldBeVisible
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'unload': {
       // unload is a convenience alias for stream with shouldBeLoaded=false
@@ -149,13 +160,13 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         });
       }
-      const res = await tools.levelTools.streamLevel({
+      const res = await executeAutomationRequest(tools, 'stream_level', {
         levelPath,
         levelName,
         shouldBeLoaded: false,
         shouldBeVisible: false
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'create_light': {
       // Validate required parameters for create_light
@@ -207,13 +218,14 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       const classPath = lightClassMap[lightType] || '/Script/Engine.PointLight';
 
       try {
-        const res = await tools.actorTools.spawn({
+        const res = await executeAutomationRequest(tools, 'control_actor', {
+          action: 'spawn',
           classPath,
           actorName: argsTyped.name,
           location: argsTyped.location,
           rotation: argsTyped.rotation
-        });
-        return { ...cleanObject(res) as Record<string, unknown>, action: 'spawn_light' };
+        }) as Record<string, unknown>;
+        return { ...cleanObject(res), action: 'spawn_light' };
       } catch (_e) {
         return await executeAutomationRequest(tools, 'manage_level', args) as Record<string, unknown>;
       }
@@ -221,35 +233,42 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
     case 'build_lighting': {
       // Pass user-provided values, default to false if not specified
       const argsRecord = args as Record<string, unknown>;
-      return cleanObject(await tools.lightingTools.buildLighting({
+      const res = await executeAutomationRequest(tools, 'manage_lighting', {
+        action: 'build_lighting',
         quality: (argsTyped.quality as string) || 'Preview',
         buildOnlySelected: typeof argsRecord.buildOnlySelected === 'boolean' ? argsRecord.buildOnlySelected : false,
         buildReflectionCaptures: typeof argsRecord.buildReflectionCaptures === 'boolean' ? argsRecord.buildReflectionCaptures : false
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'export_level': {
-      const res = await tools.levelTools.exportLevel({
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'export_level',
         levelPath: argsTyped.levelPath,
         exportPath: argsTyped.exportPath ?? argsTyped.destinationPath ?? '',
         timeoutMs: typeof argsTyped.timeoutMs === 'number' ? argsTyped.timeoutMs : undefined
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'import_level': {
-      const res = await tools.levelTools.importLevel({
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'import_level',
         packagePath: argsTyped.packagePath ?? argsTyped.sourcePath ?? '',
         destinationPath: argsTyped.destinationPath,
         timeoutMs: typeof argsTyped.timeoutMs === 'number' ? argsTyped.timeoutMs : undefined
-      });
-      return cleanObject(res) as Record<string, unknown>;
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'list_levels': {
-      const res = await tools.levelTools.listLevels();
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'list_levels', {}) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'get_summary': {
-      const res = await tools.levelTools.getLevelSummary(argsTyped.levelPath);
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'get_summary',
+        levelPath: argsTyped.levelPath
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'delete':
     case 'delete_level': {
@@ -265,8 +284,11 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           action
         });
       }
-      const res = await tools.levelTools.deleteLevels({ levelPaths });
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'manage_level', {
+        action: 'delete_levels',
+        levelPaths
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'rename_level': {
       const sourcePath = argsTyped.levelPath || argsTyped.sourcePath;
@@ -323,14 +345,14 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'get_current_level': {
-      const res = await tools.levelTools.listLevels();
+      const res = await executeAutomationRequest(tools, 'list_levels', {}) as Record<string, unknown>;
       const resTyped = res as { currentMap?: string; currentMapPath?: string };
       return cleanObject({
         success: true,
         levelName: resTyped.currentMap,
         levelPath: resTyped.currentMapPath,
-        ...(res as Record<string, unknown>)
-      }) as Record<string, unknown>;
+        ...res
+      });
     }
     case 'set_metadata': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
@@ -491,7 +513,8 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
           functionName: 'ASSET_EXISTS_SIMPLE',
           path: levelPath
         }) as AutomationResponse;
-        const result = resp?.result ?? resp ?? {};
+        const result = (resp?.result ?? resp ?? {}) as ResultPayload;
+
         const exists = Boolean(result.exists);
 
         return cleanObject({

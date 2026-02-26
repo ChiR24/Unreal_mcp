@@ -1,20 +1,7 @@
 import { AutomationBridge } from '../automation/index.js';
 
-// Import tool class types (using import type to avoid circular dependencies)
-import type { MaterialTools } from '../tools/materials.js';
-import type { NiagaraTools } from '../tools/niagara.js';
-import type { AnimationTools } from '../tools/animation.js';
-import type { PhysicsTools } from '../tools/physics.js';
-import type { LightingTools } from '../tools/lighting.js';
-import type { DebugVisualizationTools } from '../tools/debug.js';
-import type { PerformanceTools } from '../tools/performance.js';
-import type { AudioTools } from '../tools/audio.js';
-import type { UITools } from '../tools/ui.js';
-import type { IntrospectionTools } from '../tools/introspection.js';
-import type { EngineTools } from '../tools/engine.js';
-import type { BehaviorTreeTools } from '../tools/behavior-tree.js';
+// Import tool class types for file I/O operations (using import type to avoid circular dependencies)
 import type { LogTools } from '../tools/logs.js';
-import type { InputTools } from '../tools/input.js';
 
 export interface IBaseTool {
     getAutomationBridge(): AutomationBridge;
@@ -244,28 +231,26 @@ export interface ITools {
     foliageTools: IFoliageTools;
     environmentTools: IEnvironmentTools;
 
-    // Tool class types (imported to replace 'any')
-    materialTools: MaterialTools;
-    niagaraTools: NiagaraTools;
-    animationTools: AnimationTools;
-    physicsTools: PhysicsTools;
-    lightingTools: LightingTools;
-    debugTools: DebugVisualizationTools;
-    performanceTools: PerformanceTools;
-    audioTools: AudioTools;
-    uiTools: UITools;
-    introspectionTools: IntrospectionTools;
-    visualTools?: DebugVisualizationTools;
-    engineTools: EngineTools;
+    // File I/O tool classes (kept for local file operations)
+    logTools: LogTools;
+
     systemTools: {
         executeConsoleCommand: (command: string) => Promise<unknown>;
         getProjectSettings: (section?: string) => Promise<Record<string, unknown>>;
     };
-    behaviorTreeTools: BehaviorTreeTools;
-    logTools: LogTools;
-    inputTools?: InputTools;
 
+    // Elicitation support - using function types
+    elicit?: unknown;
+    supportsElicitation?: () => boolean;
+    elicitationTimeoutMs?: number;
+    // Resources
+    actorResources?: unknown;
+    levelResources?: unknown;
+
+    // Bridge references
     automationBridge?: AutomationBridge;
+    bridge?: unknown; // UnrealBridge
+
     // Index signature allows additional tool properties
     // Using 'unknown' instead of 'any' for type safety - callers must narrow types when accessing
     [key: string]: unknown;
