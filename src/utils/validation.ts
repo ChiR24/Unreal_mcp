@@ -319,5 +319,10 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     return meshPath;
   }
 
+  // Generic fallback: convert any /SK_ prefix to /SKM_ for skeletal mesh paths
+  if (input.includes('/SK_')) {
+    return input.replace('/SK_', '/SKM_');
+  }
+
   return input;
 }

@@ -38,7 +38,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     // Auto-resolve skeleton from actorName if not provided
     if (!skeletonPath && argsTyped.actorName) {
       try {
-        const compsRes = await executeAutomationRequest(tools, 'get_components', { actorName: argsTyped.actorName }) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 
@@ -125,7 +125,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     
     if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
       try {
-        const compsRes = await executeAutomationRequest(tools, 'get_components', { actorName: argsTyped.actorName }) as ComponentsResponse;
+        const compsRes = await executeAutomationRequest(tools, 'control_actor', { action: 'get_components', actorName: argsTyped.actorName }) as ComponentsResponse;
         if (compsRes && Array.isArray(compsRes.components)) {
           const meshComp = compsRes.components.find((c): c is SkeletalMeshComponentInfo => 
             (c as SkeletalMeshComponentInfo).type === 'SkeletalMeshComponent' || 

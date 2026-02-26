@@ -55,6 +55,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
   }
   
   switch (action) {
+    case 'load':
     case 'load_level': {
       const levelPath = requireNonEmptyString(argsTyped.levelPath, 'levelPath', 'Missing required parameter: levelPath');
       const res = await executeAutomationRequest(tools, 'manage_level', {
@@ -64,6 +65,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
+    case 'save':
     case 'save_level': {
       const targetPath = argsTyped.levelPath || argsTyped.savePath;
       if (targetPath) {
@@ -79,6 +81,7 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
+    case 'save_as':
     case 'save_level_as': {
       // Accept savePath, destinationPath, or levelPath as the target
       const targetPath = argsTyped.savePath || argsTyped.destinationPath || argsTyped.levelPath;
