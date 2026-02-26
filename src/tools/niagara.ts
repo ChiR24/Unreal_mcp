@@ -24,16 +24,6 @@ export class NiagaraTools {
         throw new Error('Automation Bridge not available. Niagara system creation requires plugin support.');
       }
 
-      // Process emitter params
-      if (Array.isArray(params.emitters)) {
-        for (const emitterRaw of params.emitters) {
-          const emitter = emitterRaw as Record<string, unknown> | undefined;
-          if (emitter && Array.isArray(emitter.shapeSize)) {
-            // shapeSize is already valid
-          }
-        }
-      }
-
       const systemName = params.name ?? 'NiagaraSystem';
       const path = params.savePath || '/Game/Effects/Niagara';
       const response = await this.automationBridge.sendAutomationRequest(
@@ -210,10 +200,7 @@ export class NiagaraTools {
       return { success: false, error: 'AUTOMATION_BRIDGE_UNAVAILABLE', message: 'addEmitter requires automation bridge' } as const;
     }
 
-    // Velocity parameters are already valid
-    if (params.properties) {
-      // Properties passed as-is
-    }
+    // Properties passed through to plugin-side validation
 
     try {
       const resp = await this.automationBridge.sendAutomationRequest('manage_niagara_graph', {

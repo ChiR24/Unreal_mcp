@@ -283,7 +283,7 @@ export class AssetTools extends BaseTool implements IAssetTools {
         circularDependencies,
         topologicalOrder,
         stats: {
-          nodeCount: resolvedDeps.length,
+          nodeCount: resolvedDeps.length + 1, // Include root asset
           leafCount: resolvedDeps.filter(d => {
             const deps = graph[d];
             return !deps || deps.length === 0;
