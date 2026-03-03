@@ -145,6 +145,38 @@ static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, 
         return nullptr;
     }
 
+    // Guard against duplicate asset creation. FactoryCreateNew asserts in UE when
+    // an object with the same name already exists in the package.
+    const FString FullAssetPath = PackageName + TEXT(".") + SanitizedName;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath))
+    {
+        UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+        UBlueprint* ExistingBlueprint = Cast<UBlueprint>(ExistingAsset);
+        if (!ExistingBlueprint)
+        {
+            OutError = FString::Printf(
+                TEXT("Asset already exists and is not a Blueprint: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+
+        UClass* ExistingParentClass = ExistingBlueprint->ParentClass;
+        if (!ExistingParentClass && ExistingBlueprint->GeneratedClass)
+        {
+            ExistingParentClass = ExistingBlueprint->GeneratedClass->GetSuperClass();
+        }
+
+        if (ExistingParentClass && !ExistingParentClass->IsChildOf(ParentClass))
+        {
+            OutError = FString::Printf(
+                TEXT("Blueprint already exists with incompatible parent class: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+
+        return ExistingBlueprint;
+    }
+
     UPackage* Package = CreatePackage(*PackageName);
     if (!Package)
     {

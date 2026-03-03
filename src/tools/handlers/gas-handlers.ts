@@ -14,6 +14,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { sanitizeAssetName, sanitizePath } from '../../utils/validation.js';
 
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
@@ -132,8 +133,71 @@ export async function handleGASTools(
     // =========================================================================
 
     case 'create_gameplay_effect': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      return sendRequest('create_gameplay_effect');
+      const requestedName = requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+
+      const requestedPath = typeof argsRecord.path === 'string' && argsRecord.path.trim().length > 0
+        ? argsRecord.path
+        : '/Game';
+      const normalizedPath = sanitizePath(requestedPath);
+      const normalizedName = sanitizeAssetName(requestedName);
+      const normalizedAssetPath = `${normalizedPath}/${normalizedName}`;
+
+      let effectAlreadyExists = false;
+      try {
+        const existsResponseRaw = await executeAutomationRequest(
+          tools,
+          'exists',
+          {
+            assetPath: normalizedAssetPath,
+            subAction: 'exists'
+          } as HandlerArgs,
+          'manage_gas.create_gameplay_effect: Automation bridge not available for asset existence pre-check (action: exists)',
+          { timeoutMs }
+        );
+
+        const existsResponse = cleanObject(existsResponseRaw) as Record<string, unknown>;
+        const result = existsResponse.result;
+        const resultRecord = typeof result === 'object' && result !== null
+          ? result as Record<string, unknown>
+          : undefined;
+
+        const nestedExists = resultRecord?.exists;
+        const topLevelExists = existsResponse.exists;
+        effectAlreadyExists = (typeof nestedExists === 'boolean' && nestedExists)
+          || (typeof topLevelExists === 'boolean' && topLevelExists);
+      } catch {
+        effectAlreadyExists = false;
+      }
+
+      if (effectAlreadyExists) {
+        const durationType = typeof argsRecord.durationType === 'string' && argsRecord.durationType.trim().length > 0
+          ? argsRecord.durationType
+          : 'instant';
+
+        return cleanObject({
+          type: 'automation_response',
+          success: true,
+          message: 'Effect already exists',
+          result: {
+            assetPath: normalizedAssetPath,
+            name: normalizedName,
+            parentClass: 'GameplayEffect',
+            durationType,
+            reusedExisting: true
+          }
+        });
+      }
+
+      // Pass normalized values to C++ to ensure consistency with existence check
+      const payload = { ...argsRecord, name: normalizedName, path: normalizedPath, subAction: 'create_gameplay_effect' };
+      const result = await executeAutomationRequest(
+        tools,
+        'manage_gas',
+        payload as HandlerArgs,
+        'Automation bridge not available for GAS action: create_gameplay_effect',
+        { timeoutMs }
+      );
+      return cleanObject(result) as Record<string, unknown>;
     }
 
     case 'set_effect_duration': {
