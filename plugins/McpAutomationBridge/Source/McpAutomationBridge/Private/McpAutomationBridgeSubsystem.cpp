@@ -1004,6 +1004,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAnimationPhysicsAction(R, A, P, S);
                   });
 
+  // Animation authoring - uses subAction field (different from animation_physics which uses action)
+  RegisterHandler(TEXT("manage_animation_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAnimationAuthoringAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_effect"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
