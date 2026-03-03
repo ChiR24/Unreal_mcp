@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, BlueprintArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 
 /**
@@ -326,7 +327,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         }
       }
 
-      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', {
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, {
         subAction: 'create_node',
         assetPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         nodeType: resolvedNodeType,
@@ -471,7 +472,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         blueprintPath,
         assetPath: argsRecord.assetPath || blueprintPath
       };
-      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs, 'Automation bridge not available for blueprint graph operations');
       return cleanObject(res) as Record<string, unknown>;
     }
     default: {

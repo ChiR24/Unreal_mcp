@@ -15,6 +15,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
@@ -37,7 +38,7 @@ export async function handleNiagaraAuthoringTools(
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
-      'manage_niagara_authoring',
+      TOOL_ACTIONS.MANAGE_EFFECT,
       payload as HandlerArgs,
       `Automation bridge not available for Niagara authoring action: ${subAction}`,
       { timeoutMs }
