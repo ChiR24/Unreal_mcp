@@ -1106,28 +1106,33 @@ static inline UMaterialInterface* McpLoadMaterialWithFallback(
  */
 
 #if WITH_EDITOR
- /**
+/**
  * Safe compilation helper to avoid D3D12RHI viewport crashes in UE 5.7
  * 
  * Compiling blueprints can trigger Slate UI updates (progress bars, compiler logs)
  * When invoked from the automation bridge, this can race with the render thread
  * and cause Fatal Error 80070005 in WindowsD3D12Viewport.cpp
+ * 
+ * @param Blueprint The blueprint to compile
+ * @return True if compilation succeeded, false otherwise
  */
-static inline void McpSafeCompileBlueprint(UBlueprint* Blueprint)
-    {
-    if (!Blueprint) return;
+static inline bool McpSafeCompileBlueprint(UBlueprint* Blueprint)
+{
+    if (!Blueprint) return false;
     
     // 1. Flush rendering commands to ensure GPU is idle before compilation UI opens
     FlushRenderingCommands();
     
     // 2. Compile without forcing garbage collection (can cause issues during automation)
-    FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+    const bool bSuccess = FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
     
     // 3. Flush again to ensure any UI updates from compilation are complete
     FlushRenderingCommands();
-    }
-    #else
-static inline void McpSafeCompileBlueprint(UBlueprint* Blueprint) {}
+    
+    return bSuccess;
+}
+#else
+static inline bool McpSafeCompileBlueprint(UBlueprint* Blueprint) { return Blueprint != nullptr; }
 #endif
 
 static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)

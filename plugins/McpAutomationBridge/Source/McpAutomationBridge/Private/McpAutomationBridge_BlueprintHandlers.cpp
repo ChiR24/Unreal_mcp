@@ -5415,8 +5415,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
       bool bCompiled = false;
       bool bSaved = false;
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-      McpSafeCompileBlueprint(Blueprint);
-      bCompiled = true;
+      bCompiled = McpSafeCompileBlueprint(Blueprint);
+
       bSaved = SaveLoadedAssetThrottled(Blueprint);
 
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -5523,8 +5523,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bSaved = false;
         if (bModified) {
           FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-          McpSafeCompileBlueprint(Blueprint);
-          bCompiled = true;
+          bCompiled = McpSafeCompileBlueprint(Blueprint);
+
           bSaved = SaveLoadedAssetThrottled(Blueprint);
         }
 
@@ -5594,8 +5594,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bCompiled = false;
         bool bSaved = false;
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        bCompiled = true;
+        bCompiled = McpSafeCompileBlueprint(Blueprint);
+
         bSaved = SaveLoadedAssetThrottled(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -5773,8 +5773,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bCompiled = false;
         bool bSaved = false;
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        bCompiled = true;
+        bCompiled = McpSafeCompileBlueprint(Blueprint);
+
         bSaved = SaveLoadedAssetThrottled(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
@@ -6040,8 +6040,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
       bool bCompiled = false;
       bool bSaved = false;
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-      McpSafeCompileBlueprint(Blueprint);
-      bCompiled = true;
+      bCompiled = McpSafeCompileBlueprint(Blueprint);
+
       bSaved = SaveLoadedAssetThrottled(Blueprint);
 
       Result->SetBoolField(TEXT("compiled"), bCompiled);
