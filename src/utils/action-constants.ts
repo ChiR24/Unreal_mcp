@@ -16,16 +16,61 @@
 
 /** Primary tool/domain action names */
 export const TOOL_ACTIONS = {
-  // Actor control
+  // ==================== CORE TOOLS ====================
+  MANAGE_ASSET: 'manage_asset',
   CONTROL_ACTOR: 'control_actor',
+  CONTROL_EDITOR: 'control_editor',
+  MANAGE_LEVEL: 'manage_level',
+  SYSTEM_CONTROL: 'system_control',
+  INSPECT: 'inspect',
+  MANAGE_TOOLS: 'manage_tools',
+  MANAGE_PIPELINE: 'manage_pipeline',
   
-  // Console/system
+  // ==================== WORLD TOOLS ====================
+  BUILD_ENVIRONMENT: 'build_environment',
+  MANAGE_LIGHTING: 'manage_lighting',
+  MANAGE_VOLUMES: 'manage_volumes',
+  MANAGE_NAVIGATION: 'manage_navigation',
+  MANAGE_SPLINES: 'manage_splines',
+  MANAGE_LEVEL_STRUCTURE: 'manage_level_structure',
+  
+  // ==================== AUTHORING TOOLS ====================
+  MANAGE_BLUEPRINT: 'manage_blueprint',
+  MANAGE_MATERIAL_AUTHORING: 'manage_material_authoring',
+  MANAGE_TEXTURE: 'manage_texture',
+  MANAGE_GEOMETRY: 'manage_geometry',
+  MANAGE_SKELETON: 'manage_skeleton',
+  
+  // ==================== GAMEPLAY TOOLS ====================
+  ANIMATION_PHYSICS: 'animation_physics',
+  MANAGE_EFFECT: 'manage_effect',
+  MANAGE_AUDIO: 'manage_audio',
+  MANAGE_INPUT: 'manage_input',
+  MANAGE_SEQUENCE: 'manage_sequence',
+  MANAGE_BEHAVIOR_TREE: 'manage_behavior_tree',
+  MANAGE_GAS: 'manage_gas',
+  MANAGE_CHARACTER: 'manage_character',
+  MANAGE_COMBAT: 'manage_combat',
+  MANAGE_AI: 'manage_ai',
+  MANAGE_INVENTORY: 'manage_inventory',
+  MANAGE_INTERACTION: 'manage_interaction',
+  MANAGE_WIDGET_AUTHORING: 'manage_widget_authoring',
+  MANAGE_NETWORKING: 'manage_networking',
+  MANAGE_GAME_FRAMEWORK: 'manage_game_framework',
+  MANAGE_SESSIONS: 'manage_sessions',
+  
+  // ==================== UTILITY TOOLS ====================
+  MANAGE_PERFORMANCE: 'manage_performance',
+  
+  // ==================== INTERNAL ROUTING TOOLS ====================
+  // These are not in schema but used for internal dispatch
+  MANAGE_RENDER: 'manage_render',
+  MANAGE_WORLD_PARTITION: 'manage_world_partition',
+  
+  // ==================== CONSOLE/SYSTEM ====================
   CONSOLE_COMMAND: 'console_command',
   
-  // Input management
-  MANAGE_INPUT: 'manage_input',
-  
-  // Audio actions
+  // ==================== AUDIO ACTIONS ====================
   CREATE_SOUND_CUE: 'create_sound_cue',
   PLAY_SOUND_AT_LOCATION: 'play_sound_at_location',
   PLAY_SOUND_2D: 'play_sound_2d',
@@ -48,7 +93,7 @@ export const TOOL_ACTIONS = {
   SET_BASE_SOUND_MIX: 'set_base_sound_mix',
   PRIME_SOUND: 'prime_sound',
   
-  // Lighting actions
+  // ==================== LIGHTING ACTIONS ====================
   SPAWN_LIGHT: 'spawn_light',
   SPAWN_SKY_LIGHT: 'spawn_sky_light',
   ENSURE_SINGLE_SKY_LIGHT: 'ensure_single_sky_light',
@@ -62,7 +107,7 @@ export const TOOL_ACTIONS = {
   SETUP_VOLUMETRIC_FOG: 'setup_volumetric_fog',
   LIST_LIGHT_TYPES: 'list_light_types',
   
-  // Performance actions
+  // ==================== PERFORMANCE ACTIONS ====================
   START_PROFILING: 'start_profiling',
   STOP_PROFILING: 'stop_profiling',
   SHOW_FPS: 'show_fps',
@@ -76,11 +121,6 @@ export const TOOL_ACTIONS = {
   CONFIGURE_LOD: 'configure_lod',
   MERGE_ACTORS: 'merge_actors',
   CONFIGURE_NANITE: 'configure_nanite',
-  
-  // Authoring tools
-  MANAGE_ANIMATION_AUTHORING: 'manage_animation_authoring',
-  MANAGE_MATERIAL_AUTHORING: 'manage_material_authoring',
-  MANAGE_TEXTURE: 'manage_texture',
 } as const;
 
 // ============================================================================

@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, AnimationArgs, ComponentInfo, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 /** Response from getComponents */
 interface ComponentsResponse {
@@ -179,7 +180,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_state_machine':
-      return cleanObject(await executeAutomationRequest(tools, 'manage_animation_authoring', {
+      return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.ANIMATION_PHYSICS, {
         subAction: 'add_state_machine',
         machineName: mutableArgs.machineName || mutableArgs.name,
         states: mutableArgs.states as unknown[],
