@@ -186,6 +186,7 @@
 #include "Editor/EditorAssetLibrary.h"
 #endif
 #include "Engine/Blueprint.h"
+#include "KismetCompilerModule.h"
 #include "Engine/World.h"
 #include "Engine/LevelStreaming.h"
 #include "GameFramework/WorldSettings.h"
@@ -1103,6 +1104,32 @@ static inline UMaterialInterface* McpLoadMaterialWithFallback(
  * @param bForceCleanup If true, perform aggressive cleanup before loading (default: true)
  * @return bool True if the map was loaded successfully
  */
+
+/**
+ * Safe compilation helper to avoid D3D12RHI viewport crashes in UE 5.7
+ * 
+ * Compiling blueprints can trigger Slate UI updates (progress bars, compiler logs)
+ * When invoked from the automation bridge, this can race with the render thread
+ * and cause Fatal Error 80070005 in WindowsD3D12Viewport.cpp
+ */
+static inline void McpSafeCompileBlueprint(UBlueprint* Blueprint)
+{
+    if (!Blueprint) return;
+    
+#if WITH_EDITOR
+    // 1. Flush rendering commands to ensure GPU is idle before compilation UI opens
+    FlushRenderingCommands();
+    
+    // 2. Compile without forcing garbage collection (can cause issues during automation)
+    // Need to include KismetCompilerModule for this enum, but if it's not available 
+    // we can use standard CompileBlueprint which is fine as long as we flushed rendering
+    FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+    
+    // 3. Flush again to ensure any UI updates from compilation are complete
+    FlushRenderingCommands();
+#endif
+}
+
 static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
 {
     if (!GEditor)

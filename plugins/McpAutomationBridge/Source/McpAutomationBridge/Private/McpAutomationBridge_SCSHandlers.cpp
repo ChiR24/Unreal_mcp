@@ -40,7 +40,7 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   }
 
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-  FKismetEditorUtilities::CompileBlueprint(Blueprint);
+  McpSafeCompileBlueprint(Blueprint);
   bOutCompiled = true;
   
   // UE 5.7+ Fix: Use McpSafeAssetSave instead of SaveLoadedAssetThrottled.

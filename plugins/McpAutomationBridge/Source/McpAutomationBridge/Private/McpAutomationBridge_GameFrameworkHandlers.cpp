@@ -55,7 +55,7 @@ static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const F
     }
     
     // Compile the blueprint first to ensure GeneratedClass exists
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     
     if (Blueprint->GeneratedClass)
     {
@@ -213,7 +213,7 @@ namespace GameFrameworkHelpers
         Blueprint->MarkPackageDirty();
         
         // Compile the blueprint
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         
         return Blueprint;
     }
@@ -752,7 +752,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         
         if (bSave)
         {
@@ -802,7 +802,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
 
         if (bSave)
         {
@@ -852,7 +852,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
 
         if (bSave)
         {
@@ -902,7 +902,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
 
         if (bSave)
         {
@@ -963,7 +963,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         if (bModified)
         {
             CDO->MarkPackageDirty();
-            FKismetEditorUtilities::CompileBlueprint(BP);
+            McpSafeCompileBlueprint(BP);
         }
 
         if (bSave)
@@ -1056,7 +1056,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             VarsAdded++;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1155,7 +1155,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             VarsAdded++;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1246,7 +1246,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             VarsAdded++;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1332,7 +1332,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             VarsAdded++;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1436,7 +1436,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             }
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1630,7 +1630,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             VarsAdded++;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
@@ -1684,7 +1684,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             }
         }
 
-        FKismetEditorUtilities::CompileBlueprint(BP);
+        McpSafeCompileBlueprint(BP);
         BP->MarkPackageDirty();
 
         if (bSave)
