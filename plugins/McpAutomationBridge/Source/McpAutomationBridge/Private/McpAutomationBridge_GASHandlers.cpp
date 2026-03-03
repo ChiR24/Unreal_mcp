@@ -153,6 +153,14 @@ static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, 
     if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath))
     {
         UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+        if (!ExistingAsset)
+        {
+            OutError = FString::Printf(
+                TEXT("Failed to load existing asset: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+        
         UBlueprint* ExistingBlueprint = Cast<UBlueprint>(ExistingAsset);
         if (!ExistingBlueprint)
         {
@@ -385,6 +393,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             bReusedExisting ? TEXT("Attribute set already exists") : TEXT("Attribute set created"), Result);
         return true;
+    }
 
     // add_attribute
     if (SubAction == TEXT("add_attribute"))
