@@ -557,7 +557,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -905,7 +905,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("TargetLocation"), nullptr, FText::FromString(TEXT("Targeting")));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1077,7 +1077,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         VariablesAdded.Add(TaskNameVarName);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -2583,7 +2583,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             FText::FromString(TEXT("Execution Calculation")));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         // Use the actual blueprint name (which may have been sanitized) in the response

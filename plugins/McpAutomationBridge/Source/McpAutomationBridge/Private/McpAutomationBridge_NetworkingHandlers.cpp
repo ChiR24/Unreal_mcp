@@ -339,7 +339,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
@@ -588,7 +588,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-            FKismetEditorUtilities::CompileBlueprint(Blueprint);
+            McpSafeCompileBlueprint(Blueprint);
 
             ResultJson->SetBoolField(TEXT("success"), true);
             ResultJson->SetStringField(TEXT("functionName"), FunctionName);
@@ -668,7 +668,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
@@ -741,7 +741,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("reliable"), bReliable);
@@ -837,7 +837,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-            FKismetEditorUtilities::CompileBlueprint(Blueprint);
+            McpSafeCompileBlueprint(Blueprint);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -1132,7 +1132,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
@@ -1184,7 +1184,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {
             Blueprint->Modify();
             FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-            FKismetEditorUtilities::CompileBlueprint(Blueprint);
+            McpSafeCompileBlueprint(Blueprint);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -1357,7 +1357,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         ResultJson->SetBoolField(TEXT("success"), bSuccess);
         ResultJson->SetStringField(TEXT("variableName"), VarName);

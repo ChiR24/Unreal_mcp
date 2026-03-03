@@ -309,7 +309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("Spread"), MakeFloatPinType());
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         
         // Set default values for the variables using CDO
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -380,7 +380,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             }
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -416,7 +416,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set default values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -474,7 +474,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("Spread"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values via CDO
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -544,7 +544,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("HitscanRange"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -603,7 +603,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("ProjectileSpeed"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -660,7 +660,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("CurrentSpread"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -725,7 +725,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("RecoilRecoverySpeed"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -789,7 +789,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsAiming"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -890,7 +890,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             MovementComp->ProjectileGravityScale = static_cast<float>(GravityScale);
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -929,7 +929,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             MovementComp->ProjectileGravityScale = static_cast<float>(GravityScale);
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -976,7 +976,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             }
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1012,7 +1012,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             MovementComp->HomingAccelerationMagnitude = static_cast<float>(HomingAcceleration);
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1084,7 +1084,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             Blueprint->MarkPackageDirty();
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1121,7 +1121,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1229,7 +1229,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1307,7 +1307,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         // Mark modified and compile
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set default values via CDO after compile
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1385,7 +1385,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bInfiniteAmmo"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1505,7 +1505,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -1579,7 +1579,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1688,7 +1688,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1748,7 +1748,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1807,7 +1807,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1868,7 +1868,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bEjectShells"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -1937,7 +1937,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsTracing"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2001,7 +2001,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bInComboWindow"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2063,7 +2063,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bEnableHitPause"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2133,7 +2133,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2210,7 +2210,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2295,7 +2295,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bShowWeaponTrail"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         // Set values
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
@@ -2431,7 +2431,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -2475,7 +2475,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
@@ -2549,7 +2549,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bIsActive"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
@@ -2598,7 +2598,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("AppliedDamageType"), MakeStringPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
@@ -2645,7 +2645,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("HealAmount"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
@@ -2698,7 +2698,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("bShieldActive"), MakeBoolPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
@@ -2751,7 +2751,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         AddBlueprintVariableCombat(Blueprint, TEXT("ArmorDamageReduction"), MakeFloatPinType());
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
