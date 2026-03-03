@@ -140,55 +140,9 @@ export async function handleGASTools(
         : '/Game';
       const normalizedPath = sanitizePath(requestedPath);
       const normalizedName = sanitizeAssetName(requestedName);
-      const normalizedAssetPath = `${normalizedPath}/${normalizedName}`;
 
-      let effectAlreadyExists = false;
-      try {
-        const existsResponseRaw = await executeAutomationRequest(
-          tools,
-          'exists',
-          {
-            assetPath: normalizedAssetPath,
-            subAction: 'exists'
-          } as HandlerArgs,
-          'manage_gas.create_gameplay_effect: Automation bridge not available for asset existence pre-check (action: exists)',
-          { timeoutMs }
-        );
-
-        const existsResponse = cleanObject(existsResponseRaw) as Record<string, unknown>;
-        const result = existsResponse.result;
-        const resultRecord = typeof result === 'object' && result !== null
-          ? result as Record<string, unknown>
-          : undefined;
-
-        const nestedExists = resultRecord?.exists;
-        const topLevelExists = existsResponse.exists;
-        effectAlreadyExists = (typeof nestedExists === 'boolean' && nestedExists)
-          || (typeof topLevelExists === 'boolean' && topLevelExists);
-      } catch {
-        effectAlreadyExists = false;
-      }
-
-      if (effectAlreadyExists) {
-        const durationType = typeof argsRecord.durationType === 'string' && argsRecord.durationType.trim().length > 0
-          ? argsRecord.durationType
-          : 'instant';
-
-        return cleanObject({
-          type: 'automation_response',
-          success: true,
-          message: 'Effect already exists',
-          result: {
-            assetPath: normalizedAssetPath,
-            name: normalizedName,
-            parentClass: 'GameplayEffect',
-            durationType,
-            reusedExisting: true
-          }
-        });
-      }
-
-      // Pass normalized values to C++ to ensure consistency with existence check
+      // Pass normalized values to C++ to ensure consistency
+      // C++ handles duplicate detection, type verification, and reusedExisting flag
       const payload = { ...argsRecord, name: normalizedName, path: normalizedPath, subAction: 'create_gameplay_effect' };
       const result = await executeAutomationRequest(
         tools,
