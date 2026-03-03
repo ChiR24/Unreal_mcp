@@ -120,8 +120,10 @@ static bool AddTagToAbilityContainer(UGameplayAbility* Ability, const FName& Pro
 }
 
 // Helper to create blueprint asset with validated path
-static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError)
+static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError, bool& bOutReusedExisting)
 {
+    bOutReusedExisting = false;
+    
     if (!ParentClass)
     {
         OutError = TEXT("Invalid parent class");
@@ -143,6 +145,48 @@ static UBlueprint* CreateGASBlueprint(const FString& Path, const FString& Name, 
     {
         OutError = FString::Printf(TEXT("Invalid asset path: %s"), *PackageName);
         return nullptr;
+    }
+
+    // Guard against duplicate asset creation. FactoryCreateNew asserts in UE when
+    // an object with the same name already exists in the package.
+    const FString FullAssetPath = PackageName + TEXT(".") + SanitizedName;
+    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath))
+    {
+        UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+        if (!ExistingAsset)
+        {
+            OutError = FString::Printf(
+                TEXT("Failed to load existing asset: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+        
+        UBlueprint* ExistingBlueprint = Cast<UBlueprint>(ExistingAsset);
+        if (!ExistingBlueprint)
+        {
+            OutError = FString::Printf(
+                TEXT("Asset already exists and is not a Blueprint: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+
+        UClass* ExistingParentClass = ExistingBlueprint->ParentClass;
+        if (!ExistingParentClass && ExistingBlueprint->GeneratedClass)
+        {
+            ExistingParentClass = ExistingBlueprint->GeneratedClass->GetSuperClass();
+        }
+
+        if (ExistingParentClass && !ExistingParentClass->IsChildOf(ParentClass))
+        {
+            OutError = FString::Printf(
+                TEXT("Blueprint already exists with incompatible parent class: %s"),
+                *FullAssetPath);
+            return nullptr;
+        }
+
+        // Signal to caller that we returned an existing blueprint
+        bOutReusedExisting = true;
+        return ExistingBlueprint;
     }
 
     UPackage* Package = CreatePackage(*PackageName);
@@ -328,20 +372,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         }
 
         FString Error;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UAttributeSet::StaticClass(), Error);
+        bool bReusedExisting = false;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UAttributeSet::StaticClass(), Error, bReusedExisting);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
 
-        McpSafeAssetSave(Blueprint);
+        if (!bReusedExisting)
+        {
+            McpSafeAssetSave(Blueprint);
+        }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
+        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         AddAssetVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attribute set created"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bReusedExisting ? TEXT("Attribute set already exists") : TEXT("Attribute set created"), Result);
         return true;
     }
 
@@ -587,14 +637,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         }
 
         FString Error;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayAbility::StaticClass(), Error);
+        bool bReusedExisting = false;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayAbility::StaticClass(), Error, bReusedExisting);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
 
-        McpSafeAssetSave(Blueprint);
+        if (!bReusedExisting)
+        {
+            McpSafeAssetSave(Blueprint);
+        }
 
         // Use the actual blueprint name (which may have been sanitized) in the response
         FString ActualName = Blueprint->GetName();
@@ -604,7 +658,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Result->SetStringField(TEXT("assetPath"), ActualPath);
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayAbility"));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability created"), Result);
+        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bReusedExisting ? TEXT("Ability already exists") : TEXT("Ability created"), Result);
         return true;
     }
 
@@ -1232,7 +1288,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         }
 
         FString Error;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayEffect::StaticClass(), Error);
+        bool bReusedExisting = false;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayEffect::StaticClass(), Error, bReusedExisting);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
@@ -1241,35 +1298,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FString DurationType = GetStringFieldGAS(Payload, TEXT("durationType"), TEXT("instant"));
 
-        // Set duration policy on CDO
-        if (Blueprint->GeneratedClass)
+        // Only set duration policy on CDO if we created a new blueprint
+        if (!bReusedExisting)
         {
-            UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
-            if (EffectCDO)
+            // Set duration policy on CDO
+            if (Blueprint->GeneratedClass)
             {
-                if (DurationType == TEXT("instant"))
+                UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+                if (EffectCDO)
                 {
-                    EffectCDO->DurationPolicy = EGameplayEffectDurationType::Instant;
-                }
-                else if (DurationType == TEXT("infinite"))
-                {
-                    EffectCDO->DurationPolicy = EGameplayEffectDurationType::Infinite;
-                }
-                else if (DurationType == TEXT("has_duration"))
-                {
-                    EffectCDO->DurationPolicy = EGameplayEffectDurationType::HasDuration;
+                    if (DurationType == TEXT("instant"))
+                    {
+                        EffectCDO->DurationPolicy = EGameplayEffectDurationType::Instant;
+                    }
+                    else if (DurationType == TEXT("infinite"))
+                    {
+                        EffectCDO->DurationPolicy = EGameplayEffectDurationType::Infinite;
+                    }
+                    else if (DurationType == TEXT("has_duration"))
+                    {
+                        EffectCDO->DurationPolicy = EGameplayEffectDurationType::HasDuration;
+                    }
                 }
             }
-        }
 
-        McpSafeAssetSave(Blueprint);
+            McpSafeAssetSave(Blueprint);
+        }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("assetPath"), Path / Name);
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffect"));
         Result->SetStringField(TEXT("durationType"), DurationType);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Effect created"), Result);
+        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bReusedExisting ? TEXT("Effect already exists") : TEXT("Effect created"), Result);
         return true;
     }
 
@@ -1696,15 +1759,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             : UGameplayCueNotify_Static::StaticClass();
 
         FString Error;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, ParentClass, Error);
+        bool bReusedExisting = false;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, ParentClass, Error, bReusedExisting);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
 
-        // Set cue tag if provided
-        if (!CueTag.IsEmpty() && Blueprint->GeneratedClass)
+        // Set cue tag if provided (only for new blueprints)
+        if (!bReusedExisting && !CueTag.IsEmpty() && Blueprint->GeneratedClass)
         {
             FGameplayTag Tag = GetOrRequestTag(CueTag);
             
@@ -1728,14 +1792,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             }
         }
 
-        McpSafeAssetSave(Blueprint);
+        if (!bReusedExisting)
+        {
+            McpSafeAssetSave(Blueprint);
+        }
 
         TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         Result->SetStringField(TEXT("assetPath"), Path / Name);
         Result->SetStringField(TEXT("name"), Name);
         Result->SetStringField(TEXT("cueType"), CueType);
         Result->SetStringField(TEXT("cueTag"), CueTag);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cue notify created"), Result);
+        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bReusedExisting ? TEXT("Cue notify already exists") : TEXT("Cue notify created"), Result);
         return true;
     }
 
@@ -2540,51 +2609,55 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         }
 
         FString Error;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayEffectExecutionCalculation::StaticClass(), Error);
+        bool bReusedExisting = false;
+        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayEffectExecutionCalculation::StaticClass(), Error, bReusedExisting);
         if (!Blueprint)
         {
             SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
 
-        // Add common execution calculation variables for configuration
-        
-        // 1. RelevantAttributesToCapture - array of FGameplayAttribute references for captured attributes
-        FEdGraphPinType StructArrayType;
-        StructArrayType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        StructArrayType.PinSubCategoryObject = FGameplayAttribute::StaticStruct();
-        StructArrayType.ContainerType = EPinContainerType::Array;
-        
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedSourceAttributes"), StructArrayType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedSourceAttributes"), nullptr, 
-            FText::FromString(TEXT("Execution Calculation")));
-        
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedTargetAttributes"), StructArrayType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedTargetAttributes"), nullptr, 
-            FText::FromString(TEXT("Execution Calculation")));
+        // Add common execution calculation variables for configuration (only for new blueprints)
+        if (!bReusedExisting)
+        {
+            // 1. RelevantAttributesToCapture - array of FGameplayAttribute references for captured attributes
+            FEdGraphPinType StructArrayType;
+            StructArrayType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+            StructArrayType.PinSubCategoryObject = FGameplayAttribute::StaticStruct();
+            StructArrayType.ContainerType = EPinContainerType::Array;
+            
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedSourceAttributes"), StructArrayType);
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedSourceAttributes"), nullptr, 
+                FText::FromString(TEXT("Execution Calculation")));
+            
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CapturedTargetAttributes"), StructArrayType);
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CapturedTargetAttributes"), nullptr, 
+                FText::FromString(TEXT("Execution Calculation")));
 
-        // 2. bRequiresPassedInTags - whether the calculation needs gameplay tags passed in
-        FEdGraphPinType BoolPinType;
-        BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bRequiresPassedInTags"), BoolPinType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("bRequiresPassedInTags"), nullptr, 
-            FText::FromString(TEXT("Execution Calculation")));
+            // 2. bRequiresPassedInTags - whether the calculation needs gameplay tags passed in
+            FEdGraphPinType BoolPinType;
+            BoolPinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("bRequiresPassedInTags"), BoolPinType);
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("bRequiresPassedInTags"), nullptr, 
+                FText::FromString(TEXT("Execution Calculation")));
 
-        // 3. CalculationDescription - human readable description
-        FEdGraphPinType StringPinType;
-        StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CalculationDescription"), StringPinType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CalculationDescription"), nullptr, 
-            FText::FromString(TEXT("Execution Calculation")));
+            // 3. CalculationDescription - human readable description
+            FEdGraphPinType StringPinType;
+            StringPinType.PinCategory = UEdGraphSchema_K2::PC_String;
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("CalculationDescription"), StringPinType);
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("CalculationDescription"), nullptr, 
+                FText::FromString(TEXT("Execution Calculation")));
 
-        // 4. OutputModifiers - array to configure output modifier attributes
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OutputModifierAttributes"), StructArrayType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("OutputModifierAttributes"), nullptr, 
-            FText::FromString(TEXT("Execution Calculation")));
+            // 4. OutputModifiers - array to configure output modifier attributes
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OutputModifierAttributes"), StructArrayType);
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TEXT("OutputModifierAttributes"), nullptr, 
+                FText::FromString(TEXT("Execution Calculation")));
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+            McpSafeCompileBlueprint(Blueprint);
+            McpSafeAssetSave(Blueprint);
+        }
 
         // Use the actual blueprint name (which may have been sanitized) in the response
         FString ActualName = Blueprint->GetName();
@@ -2594,6 +2667,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Result->SetStringField(TEXT("assetPath"), ActualPath);
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffectExecutionCalculation"));
+        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
         VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CapturedSourceAttributes"))));
@@ -2605,7 +2679,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         
         Result->SetStringField(TEXT("note"), TEXT("Override Execute_Implementation in Blueprint to implement custom calculation logic. Use CapturedSourceAttributes and CapturedTargetAttributes to define which attributes to capture."));
         
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Execution calculation created"), Result);
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            bReusedExisting ? TEXT("Execution calculation already exists") : TEXT("Execution calculation created"), Result);
         return true;
     }
 
