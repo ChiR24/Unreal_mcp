@@ -327,7 +327,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         }
       }
 
-      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, {
+      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', {
         subAction: 'create_node',
         assetPath: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
         nodeType: resolvedNodeType,
@@ -472,7 +472,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         blueprintPath,
         assetPath: argsRecord.assetPath || blueprintPath
       };
-      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs, 'Automation bridge not available for blueprint graph operations');
+      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
       return cleanObject(res) as Record<string, unknown>;
     }
     default: {

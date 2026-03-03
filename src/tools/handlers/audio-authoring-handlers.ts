@@ -39,7 +39,7 @@ export async function handleAudioAuthoringTools(
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
-      TOOL_ACTIONS.MANAGE_AUDIO,
+      'manage_audio_authoring',
       payload as HandlerArgs,
       `Automation bridge not available for audio authoring action: ${subAction}`,
       { timeoutMs }

@@ -38,7 +38,7 @@ export async function handleNiagaraAuthoringTools(
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
-      TOOL_ACTIONS.MANAGE_EFFECT,
+      'manage_niagara_authoring',
       payload as HandlerArgs,
       `Automation bridge not available for Niagara authoring action: ${subAction}`,
       { timeoutMs }

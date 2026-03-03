@@ -81,6 +81,7 @@ export async function handleGraphTools(toolName: string, action: string, args: G
     // Dispatch based on tool name
     switch (toolName) {
         case TOOL_ACTIONS.MANAGE_BLUEPRINT:
+        case 'manage_blueprint_graph': // Backward compat - callers still pass this
             return handleBlueprintGraph(action, args, tools);
         case 'manage_niagara_graph':
             return handleNiagaraGraph(action, args, tools);
@@ -165,7 +166,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
         }
     }
 
-    const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
 }
 
