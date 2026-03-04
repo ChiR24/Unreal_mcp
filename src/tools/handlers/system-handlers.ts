@@ -336,34 +336,35 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
         };
       }
 
-      const results: AssetValidationResult[] = [];
-      for (const rawPath of paths) {
-        const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
-        try {
-          const res = await executeAutomationRequest(tools, 'manage_asset', {
-            action: 'validate',
-            assetPath
-          }) as Record<string, unknown>;
-          // Extract error message from potentially complex error object
-          let errorStr: string | null = null;
-          if (res.error) {
-            if (typeof res.error === 'string') {
-              errorStr = res.error;
-            } else if (typeof res.error === 'object' && res.error !== null && 'message' in res.error) {
-              errorStr = String((res.error as { message: string }).message);
-            } else {
-              errorStr = String(res.error);
+      const results: AssetValidationResult[] = await Promise.all(
+        paths.map(async (rawPath) => {
+          const assetPath = typeof rawPath === 'string' ? rawPath : String(rawPath ?? '');
+          try {
+            const res = await executeAutomationRequest(tools, 'manage_asset', {
+              action: 'validate',
+              assetPath
+            }) as Record<string, unknown>;
+            // Extract error message from potentially complex error object
+            let errorStr: string | null = null;
+            if (res.error) {
+              if (typeof res.error === 'string') {
+                errorStr = res.error;
+              } else if (typeof res.error === 'object' && res.error !== null && 'message' in res.error) {
+                errorStr = String((res.error as { message: string }).message);
+              } else {
+                errorStr = String(res.error);
+              }
             }
+            return { assetPath, success: res.success as boolean | undefined, error: errorStr };
+          } catch (error) {
+            return {
+              assetPath,
+              success: false,
+              error: error instanceof Error ? error.message : String(error)
+            };
           }
-          results.push({ assetPath, success: res.success as boolean | undefined, error: errorStr });
-        } catch (error) {
-          results.push({
-            assetPath,
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
+        })
+      );
 
       return {
         success: true,
