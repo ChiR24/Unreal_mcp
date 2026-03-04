@@ -41,6 +41,20 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(const FString& RequestI
         FString ExtraArgs;
         Payload->TryGetStringField(TEXT("extraArgs"), ExtraArgs);
 
+        if (!ExtraArgs.IsEmpty())
+        {
+            // Validate additional arguments for forbidden characters
+            const TArray<TCHAR> ForbiddenChars = { TEXT('\n'), TEXT('\r'), TEXT(';'), TEXT('|'), TEXT('`'), TEXT('&'), TEXT('>'), TEXT('<') };
+            for (TCHAR ForbiddenChar : ForbiddenChars)
+            {
+                if (ExtraArgs.Contains(FString::Chr(ForbiddenChar)))
+                {
+                    SendAutomationError(RequestingSocket, RequestId, TEXT("UBT arguments contain forbidden character(s) and are blocked for safety."), TEXT("INVALID_ARGUMENT"));
+                    return true;
+                }
+            }
+        }
+
         // Construct UBT command line
         // Path to UBT... usually in Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe
         FString UBTPath = FPaths::ConvertRelativePathToFull(FPaths::EngineDir() / TEXT("Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe"));

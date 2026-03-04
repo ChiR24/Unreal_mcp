@@ -118,6 +118,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     
     // Additional args
     if (!AdditionalArgs.IsEmpty()) {
+      // Validate additional arguments for forbidden characters
+      const TArray<TCHAR> ForbiddenChars = { TEXT('\n'), TEXT('\r'), TEXT(';'), TEXT('|'), TEXT('`'), TEXT('&'), TEXT('>'), TEXT('<') };
+      for (TCHAR ForbiddenChar : ForbiddenChars) {
+        if (AdditionalArgs.Contains(FString::Chr(ForbiddenChar))) {
+          SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("UBT arguments contain forbidden character(s) and are blocked for safety."),
+                              TEXT("INVALID_ARGUMENT"));
+          return true;
+        }
+      }
       Arguments += AdditionalArgs;
     }
 
