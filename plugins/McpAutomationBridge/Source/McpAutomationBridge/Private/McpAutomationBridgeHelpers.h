@@ -1124,10 +1124,14 @@ static inline bool McpSafeCompileBlueprint(UBlueprint* Blueprint)
     FlushRenderingCommands();
     
     // 2. Compile without forcing garbage collection (can cause issues during automation)
-    const bool bSuccess = FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
+    // Note: FKismetEditorUtilities::CompileBlueprint returns void in UE 5.7+
+    FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::SkipGarbageCollection);
     
     // 3. Flush again to ensure any UI updates from compilation are complete
     FlushRenderingCommands();
+    
+    // 4. Check compilation status - success if UpToDate or UpToDateWithWarnings
+    const bool bSuccess = (Blueprint->Status == EBlueprintStatus::BS_UpToDate || Blueprint->Status == EBlueprintStatus::BS_UpToDateWithWarnings);
     
     return bSuccess;
 }
