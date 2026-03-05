@@ -70,14 +70,15 @@ jobs:
 
       - name: Validate version format
         if: inputs.auto_increment == ''
+        env:
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
+          if [[ ! "$VERSION_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION_INPUT"
             echo "Version must be in semver format: X.Y.Z"
             exit 1
           fi
-          echo "✅ Version format validated: $VERSION"
+          echo "✅ Version format validated: $VERSION_INPUT"
 
       - name: Calculate new version (auto-increment)
         if: inputs.auto_increment != ''
@@ -113,7 +114,6 @@ jobs:
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New npm version: $NEW_VERSION"
-
       - name: Get current WASM crate version
         id: current_wasm_version
         if: inputs.update_wasm_crate == 'true'
@@ -142,11 +142,14 @@ jobs:
 
       - name: Set final npm version
         id: final_version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          AUTO_INCREMENT: ${{ inputs.auto_increment }}
         run: |
-          if [ "${{ inputs.auto_increment }}" != "" ]; then
+          if [ "$AUTO_INCREMENT" != "" ]; then
             VERSION="${{ steps.calc_version.outputs.version }}"
           else
-            VERSION="${{ github.event.inputs.version }}"
+            VERSION="$INPUT_VERSION"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Final npm version: $VERSION"
@@ -304,13 +307,13 @@ jobs:
           echo "✅ Committed changes"
 
       - name: Push changes
+        env:
+          TARGET_BRANCH: ${{ github.event.inputs.branch || 'main' }}
         run: |
-          BRANCH="${{ github.event.inputs.branch || 'main' }}"
-          
           # Push commit only (no tag creation - tags are created manually)
-          git push origin "$BRANCH"
+          git push origin "$TARGET_BRANCH"
           
-          echo "✅ Pushed changes to $BRANCH"
+          echo "✅ Pushed changes to $TARGET_BRANCH"
 
       - name: Create Release Summary
         run: |
