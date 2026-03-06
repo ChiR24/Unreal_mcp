@@ -16,9 +16,11 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Factories/BlueprintFactory.h"
+#include "Factories/BlueprintFunctionLibraryFactory.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UObjectIterator.h"
@@ -432,7 +434,16 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     return true;
   }
 
-  UBlueprintFactory *Factory = NewObject<UBlueprintFactory>();
+  const FString NormalizedParentClassSpec =
+      ParentClassSpec.ToLower().Replace(TEXT(" "), TEXT(""));
+  const bool bRequestedFunctionLibraryByParentSpec =
+      NormalizedParentClassSpec.EndsWith(TEXT("blueprintfunctionlibrary"));
+  const FString LowerType = BlueprintTypeSpec.ToLower();
+  const bool bRequestedFunctionLibraryByType =
+      LowerType == TEXT("functionlibrary") ||
+      LowerType == TEXT("function_library") ||
+      LowerType == TEXT("function library");
+
   UClass *ResolvedParent = nullptr;
   if (!ParentClassSpec.IsEmpty()) {
     if (ParentClassSpec.StartsWith(TEXT("/Script/"))) {
@@ -477,19 +488,32 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
       }
     }
   }
+  if (!ResolvedParent && bRequestedFunctionLibraryByParentSpec) {
+    ResolvedParent = UBlueprintFunctionLibrary::StaticClass();
+  }
   if (!ResolvedParent && !BlueprintTypeSpec.IsEmpty()) {
-    const FString LowerType = BlueprintTypeSpec.ToLower();
     if (LowerType == TEXT("actor"))
       ResolvedParent = AActor::StaticClass();
     else if (LowerType == TEXT("pawn"))
       ResolvedParent = APawn::StaticClass();
     else if (LowerType == TEXT("character"))
       ResolvedParent = ACharacter::StaticClass();
+    else if (bRequestedFunctionLibraryByType)
+      ResolvedParent = UBlueprintFunctionLibrary::StaticClass();
   }
-  if (ResolvedParent)
-    Factory->ParentClass = ResolvedParent;
-  else
-    Factory->ParentClass = AActor::StaticClass();
+
+  UFactory *Factory = nullptr;
+  if (ResolvedParent == UBlueprintFunctionLibrary::StaticClass()) {
+    UBlueprintFunctionLibraryFactory *FunctionLibraryFactory =
+        NewObject<UBlueprintFunctionLibraryFactory>();
+    FunctionLibraryFactory->ParentClass = UBlueprintFunctionLibrary::StaticClass();
+    Factory = FunctionLibraryFactory;
+  } else {
+    UBlueprintFactory *BlueprintFactory = NewObject<UBlueprintFactory>();
+    BlueprintFactory->ParentClass =
+        ResolvedParent ? ResolvedParent : AActor::StaticClass();
+    Factory = BlueprintFactory;
+  }
 
   FAssetToolsModule &AssetToolsModule =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
