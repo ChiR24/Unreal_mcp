@@ -437,8 +437,7 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   const FString NormalizedParentClassSpec =
       ParentClassSpec.ToLower().Replace(TEXT(" "), TEXT(""));
   const bool bRequestedFunctionLibraryByParentSpec =
-      NormalizedParentClassSpec.EndsWith(TEXT("blueprintfunctionlibrary")) ||
-      NormalizedParentClassSpec.EndsWith(TEXT("ublueprintfunctionlibrary"));
+      NormalizedParentClassSpec.EndsWith(TEXT("blueprintfunctionlibrary"));
   const FString LowerType = BlueprintTypeSpec.ToLower();
   const bool bRequestedFunctionLibraryByType =
       LowerType == TEXT("functionlibrary") ||
