@@ -38,7 +38,8 @@ export class GraphQLServer {
       host: config.host ?? process.env.GRAPHQL_HOST ?? '127.0.0.1',
       path: config.path ?? process.env.GRAPHQL_PATH ?? '/graphql',
       cors: config.cors ?? {
-        origin: process.env.GRAPHQL_CORS_ORIGIN ?? '*',
+        // Secure by default: restrict CORS to safe loopback origins instead of '*'
+        origin: process.env.GRAPHQL_CORS_ORIGIN ?? ['http://localhost:4000', 'http://127.0.0.1:4000', 'http://localhost:3000', 'http://127.0.0.1:3000'],
         credentials: process.env.GRAPHQL_CORS_CREDENTIALS === 'true'
       }
     };
@@ -72,13 +73,12 @@ export class GraphQLServer {
       return;
     }
 
-    if (!isLoopback && allowRemote) {
-      if (this.config.cors.origin === '*') {
-        this.log.warn(
-          "GraphQL server is binding to a remote host with permissive CORS origin '*'. " +
-            'Set GRAPHQL_CORS_ORIGIN to specific origins for production. Using permissive CORS for now.'
-        );
-      }
+    if (this.config.cors.origin === '*') {
+      this.log.warn(
+        "SECURITY WARNING: GraphQL server is running with permissive CORS origin '*'. " +
+          'This allows any website to make requests to this server. ' +
+          'Set GRAPHQL_CORS_ORIGIN to specific origins for better security.'
+      );
     }
 
     try {
