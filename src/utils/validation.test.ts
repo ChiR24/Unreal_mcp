@@ -3,6 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+    sanitizeCommandArgument,
     sanitizeAssetName,
     sanitizePath,
     validatePathLength,
@@ -10,6 +11,34 @@ import {
     ensureVector3,
     ensureRotation
 } from './validation.js';
+
+describe('sanitizeCommandArgument', () => {
+    it('handles semicolon injection', () => {
+        expect(sanitizeCommandArgument('Unit;Quit')).toBe('Unit_Quit');
+    });
+
+    it('handles newline injection', () => {
+        expect(sanitizeCommandArgument('Unit\nQuit')).toBe('UnitQuit');
+        expect(sanitizeCommandArgument('Unit\rQuit')).toBe('UnitQuit');
+    });
+
+    it('handles null bytes', () => {
+        expect(sanitizeCommandArgument('Unit\x00Quit')).toBe('UnitQuit');
+    });
+
+    it('escapes quotes and backslashes', () => {
+        expect(sanitizeCommandArgument('Unit"Quit')).toBe('Unit\\"Quit');
+        expect(sanitizeCommandArgument('Unit\\Quit')).toBe('Unit\\\\Quit');
+    });
+
+    it('handles empty or null input', () => {
+        expect(sanitizeCommandArgument('')).toBe('');
+        // @ts-expect-error testing invalid input type
+        expect(sanitizeCommandArgument(null)).toBe('');
+        // @ts-expect-error testing invalid input type
+        expect(sanitizeCommandArgument(undefined)).toBe('');
+    });
+});
 
 describe('sanitizeAssetName', () => {
     it('removes invalid characters', () => {
