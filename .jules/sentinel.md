@@ -27,3 +27,7 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+## 2026-03-06 - [Command Injection via Console Command Interpolation]
+**Vulnerability:** `system-handlers.ts` methods constructed console commands using string interpolation with user-provided text (`category`, `rawName`, `value`). This allowed attackers to break out of expected boundaries and potentially inject additional commands or arguments.
+**Learning:** Relying on basic string interpolation for console commands is unsafe if the input itself is untrusted.
+**Prevention:** Implement and use a dedicated `sanitizeCommandArgument` utility to sanitize user input into command strings. Always treat user-facing text as untrusted when building command lines.

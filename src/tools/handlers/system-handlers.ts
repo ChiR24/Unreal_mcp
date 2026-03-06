@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, SystemArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { sanitizeCommandArgument } from '../../utils/validation.js';
 
 /** Response from various operations */
 interface OperationResponse {
@@ -69,7 +70,8 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
     case 'show_stats': {
       const category = typeof argsTyped.category === 'string' ? argsTyped.category.trim() : 'Unit';
       const enabled = argsTyped.enabled !== false;
-      const cmd = `stat ${category}`;
+      const safeCategory = sanitizeCommandArgument(category);
+      const cmd = `stat ${safeCategory}`;
       await executeAutomationRequest(tools, 'console_command', { command: cmd });
       return {
         success: true,
@@ -295,7 +297,9 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const value = (argsTyped.value !== undefined && argsTyped.value !== null)
         ? argsTyped.value
         : (tokens.length > 1 ? tokens.slice(1).join(' ') : '');
-      await executeAutomationRequest(tools, 'console_command', { command: `${rawName} ${value}` });
+      const safeName = sanitizeCommandArgument(rawName);
+      const safeValue = sanitizeCommandArgument(String(value));
+      await executeAutomationRequest(tools, 'console_command', { command: `${safeName} ${safeValue}` });
       return {
         success: true,
         message: `CVar ${rawName} set to ${value}`,
