@@ -909,6 +909,136 @@ static bool FMcpAutomationBridge_CollectVariableMetadata(
 
 static TSharedPtr<FJsonObject>
 FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
+                                       const FBPVariableDescription &VarDesc);
+
+static FString
+FMcpAutomationBridge_DescribePropertyType(const FProperty *Property) {
+  if (!Property) {
+    return FString();
+  }
+
+  FString ExtendedType;
+  const FString BaseType = Property->GetCPPType(&ExtendedType);
+  return ExtendedType.IsEmpty() ? BaseType : BaseType + ExtendedType;
+}
+
+static void FMcpAutomationBridge_AnnotateVariableJson(
+    const TSharedPtr<FJsonObject> &Obj, const UBlueprint *RequestedBlueprint,
+    const UBlueprint *DeclaringBlueprint, bool bIsSCSVariable) {
+  if (!Obj.IsValid()) {
+    return;
+  }
+
+  Obj->SetBoolField(TEXT("inherited"), RequestedBlueprint && DeclaringBlueprint &&
+                                           RequestedBlueprint != DeclaringBlueprint);
+  if (DeclaringBlueprint) {
+    Obj->SetStringField(TEXT("declaredInBlueprintPath"),
+                        DeclaringBlueprint->GetPathName());
+  }
+  if (bIsSCSVariable) {
+    Obj->SetBoolField(TEXT("component"), true);
+  }
+}
+
+static TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildPropertyVariableJson(
+    UBlueprint *Blueprint, const FName &VariableName, FProperty *Property,
+    bool bIsSCSVariable) {
+  if (!Blueprint || VariableName.IsNone()) {
+    return nullptr;
+  }
+
+  UBlueprint *DeclaringBlueprint = nullptr;
+  const int32 NewVarIndex = FBlueprintEditorUtils::FindNewVariableIndexAndBlueprint(
+      Blueprint, VariableName, DeclaringBlueprint);
+  if (DeclaringBlueprint && NewVarIndex != INDEX_NONE &&
+      DeclaringBlueprint->NewVariables.IsValidIndex(NewVarIndex)) {
+    TSharedPtr<FJsonObject> Obj = FMcpAutomationBridge_BuildVariableJson(
+        DeclaringBlueprint, DeclaringBlueprint->NewVariables[NewVarIndex]);
+    if (Property) {
+      const FText Tooltip = Property->GetToolTipText();
+      if (!Tooltip.IsEmpty()) {
+        Obj->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+      }
+      const FString DisplayName = Property->IsNative()
+                                      ? Property->GetDisplayNameText().ToString()
+                                      : VariableName.ToString();
+      if (!DisplayName.IsEmpty() &&
+          !DisplayName.Equals(VariableName.ToString(), ESearchCase::CaseSensitive)) {
+        Obj->SetStringField(TEXT("displayName"), DisplayName);
+      }
+    }
+    FMcpAutomationBridge_AnnotateVariableJson(Obj, Blueprint, DeclaringBlueprint,
+                                              bIsSCSVariable);
+    return Obj;
+  }
+
+  TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+  Obj->SetStringField(TEXT("name"), VariableName.ToString());
+  Obj->SetBoolField(TEXT("component"), bIsSCSVariable);
+
+  if (Property) {
+    const FString PropertyType =
+        FMcpAutomationBridge_DescribePropertyType(Property);
+    if (!PropertyType.IsEmpty()) {
+      Obj->SetStringField(TEXT("type"), PropertyType);
+    }
+    Obj->SetBoolField(TEXT("replicated"),
+                      Property->HasAnyPropertyFlags(CPF_Net));
+    Obj->SetBoolField(TEXT("public"),
+                      !Property->HasAnyPropertyFlags(CPF_BlueprintReadOnly));
+
+    const FText CategoryText =
+        FBlueprintEditorUtils::GetBlueprintVariableCategory(Blueprint,
+                                                            VariableName, nullptr);
+    const FString Category = CategoryText.IsEmpty() ? FString() : CategoryText.ToString();
+    if (!Category.IsEmpty() && !Category.Equals(Blueprint->GetName())) {
+      Obj->SetStringField(TEXT("category"), Category);
+    }
+
+    const FString DisplayName = Property->IsNative()
+                                    ? Property->GetDisplayNameText().ToString()
+                                    : VariableName.ToString();
+    if (!DisplayName.IsEmpty() &&
+        !DisplayName.Equals(VariableName.ToString(), ESearchCase::CaseSensitive)) {
+      Obj->SetStringField(TEXT("displayName"), DisplayName);
+    }
+
+    const FText Tooltip = Property->GetToolTipText();
+    if (!Tooltip.IsEmpty()) {
+      Obj->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+    }
+
+    TSharedPtr<FJsonObject> Metadata = MakeShared<FJsonObject>();
+    bool bHasMetadata = false;
+    if (const TMap<FName, FString> *MetaMap = Property->GetMetaDataMap()) {
+      for (const TPair<FName, FString> &Pair : *MetaMap) {
+        if (!Pair.Value.IsEmpty()) {
+          Metadata->SetStringField(Pair.Key.ToString(), Pair.Value);
+          bHasMetadata = true;
+        }
+      }
+    }
+    if (bHasMetadata) {
+      Obj->SetObjectField(TEXT("metadata"), Metadata);
+    }
+
+    if (!DeclaringBlueprint) {
+      if (const UClass *OwnerClass = Property->GetOwnerClass()) {
+        DeclaringBlueprint = UBlueprint::GetBlueprintFromClass(OwnerClass);
+      }
+    }
+  } else {
+    Obj->SetBoolField(TEXT("replicated"), false);
+    Obj->SetBoolField(TEXT("public"), true);
+  }
+
+  FMcpAutomationBridge_AnnotateVariableJson(Obj, Blueprint, DeclaringBlueprint,
+                                            bIsSCSVariable);
+  return Obj;
+}
+
+static TSharedPtr<FJsonObject>
+FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
                                        const FBPVariableDescription &VarDesc) {
   TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
   Obj->SetStringField(TEXT("name"), VarDesc.VarName.ToString());
@@ -937,11 +1067,99 @@ FMcpAutomationBridge_CollectBlueprintVariables(UBlueprint *Blueprint) {
     return Out;
   }
 
+#if WITH_EDITOR
+  TSet<FName> VisibleVariables;
+  TSet<FName> SCSVariables;
+  FBlueprintEditorUtils::GetClassVariableList(Blueprint, VisibleVariables,
+                                              true);
+  FBlueprintEditorUtils::GetSCSVariableNameList(Blueprint, SCSVariables);
+  for (const FName &SCSName : SCSVariables) {
+    VisibleVariables.Add(SCSName);
+  }
+
+  TArray<FName> SortedVariableNames = VisibleVariables.Array();
+  SortedVariableNames.Sort([](const FName &A, const FName &B) {
+    return A.ToString() < B.ToString();
+  });
+
+  for (const FName &VariableName : SortedVariableNames) {
+    if (VariableName.IsNone()) {
+      continue;
+    }
+
+    FProperty *Property = FMcpAutomationBridge_FindProperty(
+        Blueprint, VariableName.ToString());
+    TSharedPtr<FJsonObject> VariableJson =
+        FMcpAutomationBridge_BuildPropertyVariableJson(
+            Blueprint, VariableName, Property, SCSVariables.Contains(VariableName));
+    if (VariableJson.IsValid()) {
+      Out.Add(MakeShared<FJsonValueObject>(VariableJson));
+    }
+  }
+
+  if (Out.Num() > 0) {
+    return Out;
+  }
+#endif
+
   for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
     Out.Add(MakeShared<FJsonValueObject>(
         FMcpAutomationBridge_BuildVariableJson(Blueprint, Var)));
   }
   return Out;
+}
+
+static TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
+    UBlueprint *Blueprint, const TArray<TSharedPtr<FJsonValue>> &Variables) {
+  TSharedPtr<FJsonObject> Defaults = MakeShared<FJsonObject>();
+  if (!Blueprint) {
+    return Defaults;
+  }
+
+#if WITH_EDITOR
+  UClass *GeneratedClass = Blueprint->GeneratedClass;
+  UObject *GeneratedCDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+
+  for (const TSharedPtr<FJsonValue> &VariableValue : Variables) {
+    if (!VariableValue.IsValid() || VariableValue->Type != EJson::Object) {
+      continue;
+    }
+
+    const TSharedPtr<FJsonObject> VariableObj = VariableValue->AsObject();
+    FString VariableName;
+    if (!VariableObj.IsValid() ||
+        !VariableObj->TryGetStringField(TEXT("name"), VariableName) ||
+        VariableName.IsEmpty()) {
+      continue;
+    }
+
+    FProperty *Property =
+        FMcpAutomationBridge_FindProperty(Blueprint, VariableName);
+    if (Property && GeneratedCDO) {
+      if (void *PropertyAddress =
+              Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
+        FString ExportedDefault;
+        Property->ExportTextItem_Direct(ExportedDefault, PropertyAddress,
+                                        PropertyAddress, nullptr,
+                                        PPF_SerializedAsImportText);
+        Defaults->SetStringField(VariableName, ExportedDefault);
+        continue;
+      }
+    }
+
+    UBlueprint *DeclaringBlueprint = nullptr;
+    const int32 NewVarIndex = FBlueprintEditorUtils::FindNewVariableIndexAndBlueprint(
+        Blueprint, FName(*VariableName), DeclaringBlueprint);
+    if (DeclaringBlueprint && NewVarIndex != INDEX_NONE &&
+        DeclaringBlueprint->NewVariables.IsValidIndex(NewVarIndex)) {
+      Defaults->SetStringField(
+          VariableName,
+          DeclaringBlueprint->NewVariables[NewVarIndex].DefaultValue);
+    }
+  }
+#endif
+
+  return Defaults;
 }
 
 static TArray<TSharedPtr<FJsonValue>>
@@ -1095,26 +1313,37 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   }
 
   TSharedPtr<FJsonObject> Snapshot = MakeShared<FJsonObject>();
+  TArray<TSharedPtr<FJsonValue>> Variables =
+      FMcpAutomationBridge_CollectBlueprintVariables(Blueprint);
+  TSharedPtr<FJsonObject> Defaults =
+      FMcpAutomationBridge_CollectBlueprintDefaults(Blueprint, Variables);
   Snapshot->SetStringField(TEXT("blueprintPath"), NormalizedPath);
   Snapshot->SetStringField(TEXT("resolvedPath"), NormalizedPath);
   Snapshot->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
-  Snapshot->SetArrayField(
-      TEXT("variables"),
-      FMcpAutomationBridge_CollectBlueprintVariables(Blueprint));
+  Snapshot->SetArrayField(TEXT("variables"), Variables);
   Snapshot->SetArrayField(
       TEXT("functions"),
       FMcpAutomationBridge_CollectBlueprintFunctions(Blueprint));
   Snapshot->SetArrayField(
       TEXT("events"), FMcpAutomationBridge_CollectBlueprintEvents(Blueprint));
+  Snapshot->SetObjectField(TEXT("defaults"), Defaults);
 
   // Aggregate metadata by variable for compatibility with legacy responses.
   TSharedPtr<FJsonObject> MetadataRoot = MakeShared<FJsonObject>();
-  for (const FBPVariableDescription &VarDesc : Blueprint->NewVariables) {
-    TSharedPtr<FJsonObject> MetaJson;
-    if (FMcpAutomationBridge_CollectVariableMetadata(Blueprint, VarDesc,
-                                                     MetaJson) &&
-        MetaJson.IsValid()) {
-      MetadataRoot->SetObjectField(VarDesc.VarName.ToString(), MetaJson);
+  for (const TSharedPtr<FJsonValue> &VariableValue : Variables) {
+    if (!VariableValue.IsValid() || VariableValue->Type != EJson::Object) {
+      continue;
+    }
+    const TSharedPtr<FJsonObject> VariableObj = VariableValue->AsObject();
+    if (!VariableObj.IsValid() || !VariableObj->HasField(TEXT("metadata"))) {
+      continue;
+    }
+
+    FString VariableName;
+    const TSharedPtr<FJsonObject> MetaJson = VariableObj->GetObjectField(TEXT("metadata"));
+    if (VariableObj->TryGetStringField(TEXT("name"), VariableName) &&
+        !VariableName.IsEmpty() && MetaJson.IsValid()) {
+      MetadataRoot->SetObjectField(VariableName, MetaJson);
     }
   }
   if (MetadataRoot->Values.Num() > 0) {
@@ -4375,39 +4604,48 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     if (bExists) {
       const FString Key =
           !Normalized.TrimStartAndEnd().IsEmpty() ? Normalized : Path;
-      Entry = MakeShared<FJsonObject>();
-      Entry->SetStringField(TEXT("resolvedPath"), Key);
-      Entry->SetStringField(TEXT("assetPath"), BP->GetPathName());
-
-      // Merge variables from on-disk blueprint
-      TArray<TSharedPtr<FJsonValue>> VarsJson =
-          Entry->HasField(TEXT("variables"))
-              ? Entry->GetArrayField(TEXT("variables"))
-              : TArray<TSharedPtr<FJsonValue>>();
-      TSet<FString> Existing;
-      for (const TSharedPtr<FJsonValue> &VVal : VarsJson) {
-        if (VVal.IsValid() && VVal->Type == EJson::Object) {
-          const TSharedPtr<FJsonObject> VObj = VVal->AsObject();
-          FString N;
-          if (VObj.IsValid() && VObj->TryGetStringField(TEXT("name"), N))
-            Existing.Add(N);
-        }
-      }
-      for (const FBPVariableDescription &V : BP->NewVariables) {
-        const FString N = V.VarName.ToString();
-        if (!Existing.Contains(N)) {
-          TSharedPtr<FJsonObject> VObj = MakeShared<FJsonObject>();
-          VObj->SetStringField(TEXT("name"), N);
-          VarsJson.Add(MakeShared<FJsonValueObject>(VObj));
-          Existing.Add(N);
-        }
-      }
-      Entry->SetArrayField(TEXT("variables"), VarsJson);
+      Entry = FMcpAutomationBridge_BuildBlueprintSnapshot(BP, Key);
 
       // Merge functions and events from registry
       TSharedPtr<FJsonObject> RegistryEntry =
           FMcpAutomationBridge_EnsureBlueprintEntry(Key);
       if (RegistryEntry.IsValid()) {
+        if (RegistryEntry->HasField(TEXT("defaults"))) {
+          TSharedPtr<FJsonObject> EntryDefaults =
+              Entry->HasField(TEXT("defaults"))
+                  ? Entry->GetObjectField(TEXT("defaults"))
+                  : MakeShared<FJsonObject>();
+          const TSharedPtr<FJsonObject> RegistryDefaults =
+              RegistryEntry->GetObjectField(TEXT("defaults"));
+          if (RegistryDefaults.IsValid()) {
+            for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
+                 RegistryDefaults->Values) {
+              if (!EntryDefaults->HasField(Pair.Key)) {
+                EntryDefaults->SetField(Pair.Key, Pair.Value);
+              }
+            }
+          }
+          Entry->SetObjectField(TEXT("defaults"), EntryDefaults);
+        }
+        if (RegistryEntry->HasField(TEXT("metadata"))) {
+          TSharedPtr<FJsonObject> EntryMetadata =
+              Entry->HasField(TEXT("metadata"))
+                  ? Entry->GetObjectField(TEXT("metadata"))
+                  : MakeShared<FJsonObject>();
+          const TSharedPtr<FJsonObject> RegistryMetadata =
+              RegistryEntry->GetObjectField(TEXT("metadata"));
+          if (RegistryMetadata.IsValid()) {
+            for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
+                 RegistryMetadata->Values) {
+              if (!EntryMetadata->HasField(Pair.Key)) {
+                EntryMetadata->SetField(Pair.Key, Pair.Value);
+              }
+            }
+          }
+          if (EntryMetadata->Values.Num() > 0) {
+            Entry->SetObjectField(TEXT("metadata"), EntryMetadata);
+          }
+        }
         if (RegistryEntry->HasField(TEXT("functions"))) {
           TArray<TSharedPtr<FJsonValue>> RegFuncs =
               RegistryEntry->GetArrayField(TEXT("functions"));
