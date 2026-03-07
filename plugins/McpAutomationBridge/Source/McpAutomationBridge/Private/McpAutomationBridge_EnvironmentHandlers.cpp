@@ -1406,16 +1406,12 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
     Resp->SetBoolField(TEXT("isActor"), false);
   }
   
-  // Tags - only for Actor-derived classes to avoid assertion failure
+  // Tags - read from the actual inspected actor instance.
+  // Using Cast avoids checked-cast assertions on non-actor assets in UE 5.7.
   TArray<TSharedPtr<FJsonValue>> TagsArray;
-  UClass* ObjClass = TargetObject->GetClass();
-  // Check if the class is actually an Actor or Actor-derived class before calling GetDefaultObject<AActor>()
-  // Using IsChildOf instead of Cast to avoid assertion in UE 5.7
-  if (ObjClass && ObjClass->IsChildOf(AActor::StaticClass())) {
-    if (AActor* DefaultActor = ObjClass->GetDefaultObject<AActor>()) {
-      for (const FName &Tag : DefaultActor->Tags) {
-        TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-      }
+  if (AActor *TagActor = Cast<AActor>(TargetObject)) {
+    for (const FName &Tag : TagActor->Tags) {
+      TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
     }
   }
   Resp->SetArrayField(TEXT("tags"), TagsArray);
