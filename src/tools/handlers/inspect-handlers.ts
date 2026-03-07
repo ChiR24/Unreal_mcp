@@ -142,6 +142,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
+  const originalAction = action;
   
   // Normalize action name for test compatibility
   const normalizedAction = normalizeInspectAction(action);
@@ -158,6 +159,26 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
   
   switch (normalizedAction) {
     case 'inspect_object': {
+      if (originalAction === 'get_blueprint_details') {
+        const requestedPath = await resolveObjectPath(normalizedArgs, tools) ?? '';
+
+        if (!requestedPath) {
+          throw new Error('Invalid objectPath: must be a non-empty string');
+        }
+
+        const res = await executeAutomationRequest(
+          tools,
+          'blueprint_get',
+          {
+            requestedPath,
+            blueprintCandidates: [requestedPath]
+          },
+          'Automation bridge not available for blueprint detail operations'
+        ) as InspectResponse;
+
+        return cleanObject(res);
+      }
+
       // Check if this is a component path (dot notation like "Actor.Component")
       // Must NOT be a file path (contains slashes or backslashes)
       // and componentName must be provided OR objectPath looks like "ActorName.ComponentName"
