@@ -812,6 +812,23 @@ FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
     }
   }
 
+  // SCS component properties are stored with "_GEN_VARIABLE" suffix
+  const FString GenVariableName = PropertyName + TEXT("_GEN_VARIABLE");
+  const FName GenVarFName(*GenVariableName);
+  for (UClass *Candidate : CandidateClasses) {
+    if (!Candidate) {
+      continue;
+    }
+    if (FProperty *Found = Candidate->FindPropertyByName(GenVarFName)) {
+      return Found;
+    }
+  }
+
+  return nullptr;
+      return Found;
+    }
+  }
+
   return nullptr;
 }
 #endif // MCP_HAS_EDGRAPH_SCHEMA_K2
@@ -1140,6 +1157,8 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
               Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
         FString ExportedDefault;
         Property->ExportTextItem_Direct(ExportedDefault, PropertyAddress,
+                                        nullptr, GeneratedCDO,
+                                        PPF_SerializedAsImportText);
                                         PropertyAddress, nullptr,
                                         PPF_SerializedAsImportText);
         Defaults->SetStringField(VariableName, ExportedDefault);

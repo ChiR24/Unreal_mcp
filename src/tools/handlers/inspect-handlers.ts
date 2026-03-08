@@ -163,7 +163,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         const requestedPath = await resolveObjectPath(normalizedArgs, tools) ?? '';
 
         if (!requestedPath) {
-          throw new Error('Invalid objectPath: must be a non-empty string');
+          throw new Error('inspect:get_blueprint_details - invalid objectPath: must be a non-empty string');
         }
 
         const res = await executeAutomationRequest(
@@ -173,7 +173,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
             requestedPath,
             blueprintCandidates: [requestedPath]
           },
-          'Automation bridge not available for blueprint detail operations'
+          'inspect:get_blueprint_details -> blueprint_get: automation bridge not available'
         ) as InspectResponse;
 
         return cleanObject(res);

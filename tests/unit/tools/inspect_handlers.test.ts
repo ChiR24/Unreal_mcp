@@ -38,7 +38,7 @@ describe('Inspect Handlers', () => {
         requestedPath: '/Game/Abilities/Shared/AS_CharacterStats',
         blueprintCandidates: ['/Game/Abilities/Shared/AS_CharacterStats']
       },
-      'Automation bridge not available for blueprint detail operations'
+      'inspect:get_blueprint_details -> blueprint_get: automation bridge not available'
     );
     expect(result).toEqual({ success: true, variables: [{ name: 'Strength_Min' }] });
   });

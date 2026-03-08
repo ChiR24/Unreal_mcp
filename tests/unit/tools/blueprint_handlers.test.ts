@@ -29,7 +29,7 @@ describe('Blueprint Handlers', () => {
       resolvedPath: '/Game/Abilities/Shared/AS_CharacterStats',
       defaults: {
         Strength_Min: '0.0',
-        StatsComponent: "None"
+        StatsComponent: 'None'
       },
       variables: [
         {
