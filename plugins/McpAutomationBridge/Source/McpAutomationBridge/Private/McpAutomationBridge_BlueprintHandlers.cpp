@@ -825,11 +825,6 @@ FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
   }
 
   return nullptr;
-      return Found;
-    }
-  }
-
-  return nullptr;
 }
 #endif // MCP_HAS_EDGRAPH_SCHEMA_K2
 
@@ -1158,8 +1153,6 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
         FString ExportedDefault;
         Property->ExportTextItem_Direct(ExportedDefault, PropertyAddress,
                                         nullptr, GeneratedCDO,
-                                        PPF_SerializedAsImportText);
-                                        PropertyAddress, nullptr,
                                         PPF_SerializedAsImportText);
         Defaults->SetStringField(VariableName, ExportedDefault);
         continue;
