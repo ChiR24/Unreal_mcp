@@ -176,6 +176,22 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
           'inspect:get_blueprint_details -> blueprint_get: automation bridge not available'
         ) as InspectResponse;
 
+        // Handle not-found envelope for consistency with other inspect paths
+        if (res && res.success === false) {
+          const errorCode = String(res.error || '').toUpperCase();
+          const msg = String(res.message || '');
+          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || msg.toLowerCase().includes('not found')) {
+            return cleanObject({
+              success: false,
+              handled: true,
+              notFound: true,
+              error: res.error,
+              message: res.message || 'Blueprint not found',
+              requestedPath
+            });
+          }
+        }
+
         return cleanObject(res);
       }
 
