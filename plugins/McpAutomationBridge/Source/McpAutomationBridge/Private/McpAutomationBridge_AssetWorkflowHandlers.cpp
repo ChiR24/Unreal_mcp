@@ -1105,11 +1105,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
           ColorData.Add(Color);
         }
 
-        FString AbsolutePath = OutputPath;
-        if (FPaths::IsRelative(OutputPath)) {
-          AbsolutePath =
-              FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+        // SECURITY: Validate file path to prevent directory traversal and arbitrary file access
+        FString SafePath = SanitizeProjectFilePath(OutputPath);
+        if (SafePath.IsEmpty()) {
+          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 FString::Printf(TEXT("Invalid or unsafe outputPath: %s"), *OutputPath), nullptr,
+                                 TEXT("SECURITY_VIOLATION"));
+          return;
         }
+
+        FString AbsolutePath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), SafePath);
+        FPaths::MakeStandardFilename(AbsolutePath);
 
         TArray<uint8> CompressedData;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -2566,11 +2572,18 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
 
     bool bFileWritten = false;
     if (!OutputPath.IsEmpty()) {
-      FString AbsoluteOutput = OutputPath;
-      if (FPaths::IsRelative(OutputPath)) {
-        AbsoluteOutput =
-            FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+      // SECURITY: Validate file path to prevent directory traversal and arbitrary file access
+      FString SafePath = SanitizeProjectFilePath(OutputPath);
+      if (SafePath.IsEmpty()) {
+        // Use the lambda captured 'this'
+        SendAutomationResponse(Socket, RequestId, false,
+                               FString::Printf(TEXT("Invalid or unsafe outputPath: %s"), *OutputPath), nullptr,
+                               TEXT("SECURITY_VIOLATION"));
+        return;
       }
+
+      FString AbsoluteOutput = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), SafePath);
+      FPaths::MakeStandardFilename(AbsoluteOutput);
 
       const FString DirPath = FPaths::GetPath(AbsoluteOutput);
       IPlatformFile &PlatformFile =
