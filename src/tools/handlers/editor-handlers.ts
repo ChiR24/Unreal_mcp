@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
+import { sanitizeCommandArgument } from '../../utils/validation.js';
 
 /**
  * Action aliases for test compatibility
@@ -204,7 +205,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     }
     case 'start_recording': {
       // Use console command as fallback if bridge doesn't support it
-      const filename = args.filename || 'TestRecording';
+      const filename = sanitizeCommandArgument(String(args.filename || 'TestRecording'));
       const frameRate = typeof args.frameRate === 'number' ? args.frameRate : undefined;
       const durationSeconds = typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
       const metadata = args.metadata;
@@ -269,12 +270,14 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { ...cleanObject(res), action: 'execute_command' };
     }
     case 'set_camera_fov': {
-      await executeAutomationRequest(tools, 'console_command', { command: `fov ${args.fov}` });
-      return { success: true, message: `Set FOV to ${args.fov}`, action: 'set_camera_fov' };
+      const safeFov = sanitizeCommandArgument(String(args.fov));
+      await executeAutomationRequest(tools, 'console_command', { command: `fov ${safeFov}` });
+      return { success: true, message: `Set FOV to ${safeFov}`, action: 'set_camera_fov' };
     }
     case 'set_game_speed': {
-      await executeAutomationRequest(tools, 'console_command', { command: `slomo ${args.speed}` });
-      return { success: true, message: `Set game speed to ${args.speed}`, action: 'set_game_speed' };
+      const safeSpeed = sanitizeCommandArgument(String(args.speed));
+      await executeAutomationRequest(tools, 'console_command', { command: `slomo ${safeSpeed}` });
+      return { success: true, message: `Set game speed to ${safeSpeed}`, action: 'set_game_speed' };
     }
     case 'set_view_mode': {
       const viewMode = requireNonEmptyString(args.viewMode, 'viewMode');
