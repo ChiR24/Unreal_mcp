@@ -1,35 +1,231 @@
+// =============================================================================
+// McpAutomationBridge_AudioHandlers.cpp
+// =============================================================================
+// Audio System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// --------------------
+// Section 1: Main Dispatcher
+//   - HandleAudioAction                  : Routes audio_*, create_sound_*, play_sound_*,
+//                                          set_sound_*, push_sound_*, pop_sound_*,
+//                                          create_audio_*, create_ambient_*, create_reverb_*,
+//                                          enable_audio_*, fade_sound*, set_doppler_*,
+//                                          set_audio_*, clear_sound_*, set_base_sound_*,
+//                                          prime_*, spawn_sound_* actions
+//
+// Section 2: Sound Asset Creation
+//   - create_sound_cue                   : Create SoundCue with optional wave, looping,
+//                                          modulation, and attenuation nodes
+//   - create_sound_class                 : Create SoundClass with properties and parent
+//   - create_sound_mix                   : Create SoundMix with class adjusters
+//
+// Section 3: Sound Playback
+//   - play_sound_at_location             : Play 3D sound at world location
+//   - play_sound_2d                      : Play non-spatialized 2D sound
+//   - play_sound_attached                : Attach and play sound on actor component
+//   - create_ambient_sound               : Spawn persistent ambient sound at location
+//   - spawn_sound_at_location            : Spawn sound component at location
+//
+// Section 4: Sound Mix Control
+//   - push_sound_mix                     : Push SoundMix modifier onto audio stack
+//   - pop_sound_mix                      : Pop SoundMix modifier from audio stack
+//   - set_sound_mix_class_override       : Override SoundClass within a SoundMix
+//   - clear_sound_mix_class_override     : Clear SoundClass override from SoundMix
+//   - set_base_sound_mix                 : Set the base (default) SoundMix
+//
+// Section 5: Sound Fading & Utility
+//   - fade_sound_in / fade_sound_out     : Fade audio component in/out over time
+//   - prime_sound                        : Pre-load sound for instant playback
+//   - create_audio_component             : Create UAudioComponent on actor or at location
+//
+// Section 6: Dialogue System
+//   - HandleCreateDialogueVoice          : Create UDialogueVoice with gender/plurality
+//   - HandleCreateDialogueWave           : Create UDialogueWave with sound and context
+//   - HandleSetDialogueContext            : Set speaker voice on dialogue wave context
+//
+// Section 7: Audio Effects
+//   - HandleCreateReverbEffect           : Create UReverbEffect with reverb parameters
+//   - HandleCreateSourceEffectChain      : Create USoundEffectSourcePresetChain
+//   - HandleAddSourceEffect              : Add effect entry to source effect chain
+//   - HandleCreateSubmixEffect           : Create USoundEffectSubmixPreset
+//
+// PAYLOAD/RESPONSE FORMATS:
+// -------------------------
+// create_sound_cue:
+//   Payload:  { "name": string, "packagePath"?: string, "wavePath"?: string,
+//               "looping"?: bool, "volume"?: number, "pitch"?: number,
+//               "attenuationPath"?: string }
+//   Response: { "success": bool, "path": string }
+//
+// play_sound_at_location:
+//   Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+//               "volume"?: number, "pitch"?: number, "startTime"?: number,
+//               "attenuationPath"?: string, "concurrencyPath"?: string }
+//   Response: { "success": bool, "soundPath": string, "location": {x,y,z} }
+//
+// play_sound_2d:
+//   Payload:  { "soundPath": string, "volume"?: number, "pitch"?: number,
+//               "startTime"?: number }
+//   Response: { "success": bool, "soundPath": string, "volume": number, "pitch": number }
+//
+// create_sound_class:
+//   Payload:  { "name": string, "properties"?: { "volume"?: number, "pitch"?: number },
+//               "parentClass"?: string }
+//   Response: { "success": bool, "path": string, "name": string }
+//
+// create_sound_mix:
+//   Payload:  { "name": string, "packagePath"?: string, "savePath"?: string,
+//               "classAdjusters"?: [{ "soundClass": string, "volumeAdjuster"?: number,
+//               "pitchAdjuster"?: number }] }
+//   Response: { "success": bool, "path": string, "name": string }
+//
+// push_sound_mix / pop_sound_mix:
+//   Payload:  { "mixName": string }
+//   Response: { "success": bool, "mixName": string }
+//
+// set_sound_mix_class_override:
+//   Payload:  { "mixName": string, "soundClassName": string, "volume"?: number,
+//               "pitch"?: number, "fadeInTime"?: number, "applyToChildren"?: bool }
+//   Response: { "success": bool, "mixName": string, "className": string }
+//
+// play_sound_attached:
+//   Payload:  { "soundPath": string, "actorName": string, "attachPointName"?: string }
+//   Response: { "componentName": string }
+//
+// fade_sound_in / fade_sound_out:
+//   Payload:  { "actorName": string, "fadeTime"?: number, "targetVolume"?: number }
+//   Response: { "success": bool, "actorName": string, "action": string }
+//
+// create_ambient_sound / spawn_sound_at_location:
+//   Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+//               "volume"?: number, "pitch"?: number, "startTime"?: number,
+//               "attenuationPath"?: string, "concurrencyPath"?: string }
+//   Response: { "componentName": string }
+//
+// prime_sound:
+//   Payload:  { "soundPath": string }
+//   Response: { "success": bool, "message": "Sound primed" }
+//
+// create_audio_component:
+//   Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+//               "attachTo"?: string, "volume"?: string, "pitch"?: string }
+//   Response: { "success": bool, "componentPath": string, "componentName": string }
+//
+// create_dialogue_voice:
+//   Payload:  { "voiceName": string, "outputPath"?: string, "gender"?: string,
+//               "pluralization"?: string }
+//   Response: { "voicePath": string, "voiceName": string }
+//
+// create_dialogue_wave:
+//   Payload:  { "waveName": string, "soundPath": string, "outputPath"?: string }
+//   Response: { "wavePath": string, "waveName": string, "soundPath": string }
+//
+// set_dialogue_context:
+//   Payload:  { "wavePath": string, "voicePath": string, "contextIndex"?: number }
+//   Response: { "wavePath": string, "voicePath": string, "contextIndex": number }
+//
+// create_reverb_effect:
+//   Payload:  { "effectName": string, "outputPath"?: string, "density"?: number,
+//               "diffusion"?: number, "gain"?: number, "gainHF"?: number,
+//               "decayTime"?: number, "decayHFRatio"?: number,
+//               "reflectionsGain"?: number, "lateGain"?: number }
+//   Response: { "effectPath": string, "effectName": string }
+//
+// create_source_effect_chain:
+//   Payload:  { "chainName": string, "outputPath"?: string }
+//   Response: { "chainPath": string, "chainName": string }
+//
+// add_source_effect:
+//   Payload:  { "chainPath": string, "effectType": string, "effectName"?: string }
+//   Response: { "chainPath": string, "effectType": string, "effectName": string,
+//               "effectIndex": number }
+//
+// create_submix_effect:
+//   Payload:  { "effectName": string, "outputPath"?: string, "effectType"?: string }
+//   Response: { "effectPath": string, "effectName": string, "effectType": string }
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: FARFilter uses ClassNames (FName) for asset registry queries
+// UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath) for asset registry queries
+// UE 5.7: UDialogueVoice.VoiceName removed; Gender uses EGrammaticalGender;
+//         bIsPlural replaced with Plurality (EGrammaticalNumber)
+// UE 5.7: UDialogueWave.DialogueVoice renamed to Speaker
+//
+// SECURITY CONSIDERATIONS:
+// - Asset path validation via ResolveSoundAsset/ResolveSoundMix/ResolveSoundClass
+// - Actor name validation via FindAudioActorByName (scoped to world)
+// - Package path validation for /Game/ prefix enforcement
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
+#include "McpHandlerUtils.h"          // Utility functions for JSON parsing
+
+// =============================================================================
+// Core Includes
+// =============================================================================
 #include "EngineUtils.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
+
+// --- Asset Registry & Tools ---
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#include "EditorAssetLibrary.h"
+
+// --- Audio Core ---
 #include "AudioDevice.h"
 #include "Components/AudioComponent.h"
-#include "EditorAssetLibrary.h"
+
+// --- Sound Asset Factories ---
 #include "Factories/SoundAttenuationFactory.h"
 #include "Factories/SoundClassFactory.h"
 #include "Factories/SoundCueFactoryNew.h"
 #include "Factories/SoundMixFactory.h"
+
+// --- Gameplay ---
 #include "Kismet/GameplayStatics.h"
+
+// --- Sound Assets ---
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundClass.h"
 #include "Sound/SoundCue.h"
 #include "Sound/SoundMix.h"
+
+// --- Sound Cue Graph Nodes ---
 #include "Sound/SoundNodeAttenuation.h"
 #include "Sound/SoundNodeLooping.h"
 #include "Sound/SoundNodeModulator.h"
 #include "Sound/SoundNodeWavePlayer.h"
 #include "Sound/SoundWave.h"
+
+// --- Dialogue System ---
 #include "Sound/DialogueVoice.h"
 #include "Sound/DialogueWave.h"
+
+// --- Audio Effects ---
 #include "Sound/ReverbEffect.h"
 #include "Sound/SoundEffectSubmix.h"
 
-#endif
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Logging Category
+// =============================================================================
+DEFINE_LOG_CATEGORY_STATIC(LogMcpAudioHandlers, Log, All);
+
+// =============================================================================
+// Section 0: Helper Functions
+// =============================================================================
 
 /**
  * Finds an actor by object path/name or by actor label/name within an optional world.
@@ -69,6 +265,10 @@ static AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
  * (no path separators), searches the project's /Game assets for a matching USoundWave or
  * USoundCue by name.
  *
+ * VERSION COMPATIBILITY:
+ * - UE 5.0: FARFilter uses ClassNames (FName)
+ * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
+ *
  * @param SoundPath Asset path (e.g. "/Game/Audio/MyCue.MyCue") or an asset name (e.g. "MyCue").
  * @return USoundBase* Pointer to the resolved sound asset, or nullptr if not found.
  */
@@ -86,7 +286,7 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 
   // Optimization: If it looks like a path and wasn't found, fail immediately
   if (SoundPath.Contains(TEXT("/"))) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+    UE_LOG(LogMcpAudioHandlers, Warning,
            TEXT("Sound asset '%s' not found (skipping recursive search)."),
            *SoundPath);
     return nullptr;
@@ -114,7 +314,7 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
     if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
       Sound = Cast<USoundBase>(Data.GetAsset());
       if (Sound) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+        UE_LOG(LogMcpAudioHandlers, Log,
                TEXT("Resolved sound '%s' to '%s'"), *SoundPath,
                *Sound->GetPathName());
         return Sound;
@@ -122,7 +322,7 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
     }
   }
 
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+  UE_LOG(LogMcpAudioHandlers, Warning,
          TEXT("Sound asset '%s' not found."), *SoundPath);
   return nullptr;
 }
@@ -134,6 +334,10 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
  * full asset path and the asset exists, that asset is returned. If MixPath does
  * not contain a path separator, the function treats it as an asset name and
  * searches the /Game packages for a matching USoundMix (case-insensitive).
+ *
+ * VERSION COMPATIBILITY:
+ * - UE 5.0: FARFilter uses ClassNames (FName)
+ * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
  *
  * @param MixPath Asset path or asset name to resolve.
  * @return USoundMix* Pointer to the resolved USoundMix, or nullptr if not found.
@@ -183,6 +387,10 @@ static USoundMix *ResolveSoundMix(const FString &MixPath) {
  * if ClassPath does not contain a '/' it searches the project's /Game assets for a sound class
  * with a matching name (case-insensitive).
  *
+ * VERSION COMPATIBILITY:
+ * - UE 5.0: FARFilter uses ClassNames (FName)
+ * - UE 5.1+: FARFilter uses ClassPaths (FTopLevelAssetPath)
+ *
  * @param ClassPath Asset path (e.g. "/Game/Audio/MyClass") or asset name ("MyClass").
  * @return USoundClass* Pointer to the resolved sound class, or nullptr if not found or ClassPath is empty.
  */
@@ -224,21 +432,36 @@ static USoundClass *ResolveSoundClass(const FString &ClassPath) {
   return nullptr;
 }
 
+// =============================================================================
+// Section 1: Main Audio Action Dispatcher
+// =============================================================================
+
 /**
- * @brief Handle audio-related automation actions described by a JSON payload and perform corresponding editor-side audio operations.
+ * @brief Handle audio-related automation actions described by a JSON payload.
  *
- * Processes actions whose names start with audio_/create_sound_/play_sound_/set_sound_/push_sound_/pop_sound_/create_audio_/create_ambient_/create_reverb_/enable_audio_/fade_sound/set_doppler_/set_audio_/clear_sound_/set_base_sound_/prime_/spawn_sound_. In editor builds this may create audio assets (SoundCue, SoundClass, SoundMix), play or spawn sounds (2D/3D, attached or at location), manage SoundMix state and overrides, fade audio, prime sounds, and create audio components; non-editor builds return a NOT_IMPLEMENTED response.
+ * Routes actions whose names start with audio_/create_sound_/play_sound_/set_sound_/
+ * push_sound_/pop_sound_/create_audio_/create_ambient_/create_reverb_/enable_audio_/
+ * fade_sound/set_doppler_/set_audio_/clear_sound_/set_base_sound_/prime_/spawn_sound_.
+ *
+ * In editor builds this may create audio assets (SoundCue, SoundClass, SoundMix),
+ * play or spawn sounds (2D/3D, attached or at location), manage SoundMix state
+ * and overrides, fade audio, prime sounds, and create audio components.
+ * Non-editor builds return a NOT_IMPLEMENTED response.
  *
  * @param RequestId Identifier for the automation request.
- * @param Action Action name to handle (comparison is case-insensitive and matched by known prefixes).
- * @param Payload JSON object containing action parameters (e.g., asset paths, location/rotation arrays, volume, pitch, names).
- * @param RequestingSocket Optional socket that initiated the request (used for sending responses/errors).
- * @return bool `true` if the request was processed (either handled successfully or an error/response was sent); `false` if the action name is not an audio-related command and was not handled. 
+ * @param Action Action name to handle (case-insensitive, matched by known prefixes).
+ * @param Payload JSON object containing action parameters.
+ * @param RequestingSocket Optional socket that initiated the request.
+ * @return bool `true` if handled (success or error sent); `false` if action not recognized.
  */
 bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+
+  // -------------------------------------------------------------------------
+  // Action Routing
+  // -------------------------------------------------------------------------
   const FString Lower = Action.ToLower();
   if (!Lower.StartsWith(TEXT("audio_")) &&
       !Lower.StartsWith(TEXT("create_sound_")) &&
@@ -261,12 +484,31 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   }
 
 #if WITH_EDITOR
+
+  // -------------------------------------------------------------------------
+  // Payload Validation
+  // -------------------------------------------------------------------------
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Audio payload missing"), TEXT("INVALID_PAYLOAD"));
     return true;
   }
 
+  // =========================================================================
+  // Section 2: Sound Asset Creation
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // create_sound_cue / audio_create_sound_cue
+  // -------------------------------------------------------------------------
+  // Creates a USoundCue asset with optional wave player, looping, modulation,
+  // and attenuation nodes wired into the cue graph.
+  //
+  // Payload:  { "name": string, "packagePath"?: string, "wavePath"?: string,
+  //             "looping"?: bool, "volume"?: number, "pitch"?: number,
+  //             "attenuationPath"?: string }
+  // Response: { "success": bool, "path": string }
+  // -------------------------------------------------------------------------
   if (Lower == TEXT("create_sound_cue") ||
       Lower == TEXT("audio_create_sound_cue")) {
     FString Name;
@@ -354,14 +596,169 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SoundCue->GetPathName());
-    AddAssetVerification(Resp, SoundCue);
+    McpHandlerUtils::AddVerification(Resp, SoundCue);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("SoundCue created"), Resp);
     return true;
-  } else if (Lower == TEXT("play_sound_at_location") ||
+  }
+
+  // -------------------------------------------------------------------------
+  // create_sound_class / audio_create_sound_class
+  // -------------------------------------------------------------------------
+  // Creates a USoundClass asset with optional volume/pitch properties and parent.
+  //
+  // Payload:  { "name": string, "properties"?: { "volume"?: number, "pitch"?: number },
+  //             "parentClass"?: string }
+  // Response: { "success": bool, "path": string, "name": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("create_sound_class") ||
+             Lower == TEXT("audio_create_sound_class")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString PackagePath = TEXT("/Game/Audio/Classes");
+
+    USoundClassFactory *Factory = NewObject<USoundClassFactory>();
+    FAssetToolsModule &AssetToolsModule =
+        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+        Name, PackagePath, USoundClass::StaticClass(), Factory);
+    USoundClass *SoundClass = Cast<USoundClass>(NewAsset);
+
+    if (SoundClass) {
+      const TSharedPtr<FJsonObject> *Props;
+      if (Payload->TryGetObjectField(TEXT("properties"), Props)) {
+        double Vol = 1.0;
+        if ((*Props)->TryGetNumberField(TEXT("volume"), Vol)) {
+          SoundClass->Properties.Volume = (float)Vol;
+        }
+        double Pitch = 1.0;
+        if ((*Props)->TryGetNumberField(TEXT("pitch"), Pitch)) {
+          SoundClass->Properties.Pitch = (float)Pitch;
+        }
+      }
+
+      FString ParentClassPath;
+      if (Payload->TryGetStringField(TEXT("parentClass"), ParentClassPath) &&
+          !ParentClassPath.IsEmpty()) {
+        USoundClass *Parent =
+            LoadObject<USoundClass>(nullptr, *ParentClassPath);
+        if (Parent) {
+          SoundClass->ParentClass = Parent;
+        }
+      }
+
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
+      Resp->SetStringField(TEXT("name"), SoundClass->GetName());
+
+      McpHandlerUtils::AddVerification(Resp, SoundClass);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("SoundClass created"), Resp);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to create SoundClass"),
+                          TEXT("ASSET_CREATION_FAILED"));
+    }
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // create_sound_mix / audio_create_sound_mix
+  // -------------------------------------------------------------------------
+  // Creates a USoundMix asset with optional class adjusters for volume/pitch.
+  //
+  // Payload:  { "name": string, "packagePath"?: string, "savePath"?: string,
+  //             "classAdjusters"?: [{ "soundClass": string,
+  //             "volumeAdjuster"?: number, "pitchAdjuster"?: number }] }
+  // Response: { "success": bool, "path": string, "name": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("create_sound_mix") ||
+             Lower == TEXT("audio_create_sound_mix")) {
+    FString Name;
+    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString PackagePath = TEXT("/Game/Audio/Mixes");
+    if (Payload->HasField(TEXT("packagePath"))) {
+      PackagePath = GetJsonStringField(Payload, TEXT("packagePath"));
+    } else if (Payload->HasField(TEXT("savePath"))) {
+      PackagePath = GetJsonStringField(Payload, TEXT("savePath"));
+    }
+
+    USoundMixFactory *Factory = NewObject<USoundMixFactory>();
+    FAssetToolsModule &AssetToolsModule =
+        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+    UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+        Name, PackagePath, USoundMix::StaticClass(), Factory);
+    USoundMix *SoundMix = Cast<USoundMix>(NewAsset);
+
+    if (SoundMix) {
+      const TArray<TSharedPtr<FJsonValue>> *Adjusters;
+      if (Payload->TryGetArrayField(TEXT("classAdjusters"), Adjusters)) {
+        for (const auto &Val : *Adjusters) {
+          const TSharedPtr<FJsonObject> AdjObj = Val->AsObject();
+          FString ClassPath;
+          if (AdjObj->TryGetStringField(TEXT("soundClass"), ClassPath)) {
+            USoundClass *SC = LoadObject<USoundClass>(nullptr, *ClassPath);
+            if (SC) {
+              FSoundClassAdjuster Adjuster;
+              Adjuster.SoundClassObject = SC;
+              double Vol = 1.0;
+              AdjObj->TryGetNumberField(TEXT("volumeAdjuster"), Vol);
+              Adjuster.VolumeAdjuster = (float)Vol;
+              double Pitch = 1.0;
+              AdjObj->TryGetNumberField(TEXT("pitchAdjuster"), Pitch);
+              Adjuster.PitchAdjuster = (float)Pitch;
+              SoundMix->SoundClassEffects.Add(Adjuster);
+            }
+          }
+        }
+      }
+
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("path"), SoundMix->GetPathName());
+      Resp->SetStringField(TEXT("name"), SoundMix->GetName());
+
+      McpHandlerUtils::AddVerification(Resp, SoundMix);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("SoundMix created"), Resp);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Failed to create SoundMix"),
+                          TEXT("ASSET_CREATION_FAILED"));
+    }
+    return true;
+  }
+
+  // =========================================================================
+  // Section 3: Sound Playback
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // play_sound_at_location / audio_play_sound_at_location
+  // -------------------------------------------------------------------------
+  // Plays a resolved sound asset at a 3D world location with optional
+  // rotation, volume, pitch, start time, attenuation, and concurrency.
+  //
+  // Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+  //             "volume"?: number, "pitch"?: number, "startTime"?: number,
+  //             "attenuationPath"?: string, "concurrencyPath"?: string }
+  // Response: { "success": bool, "soundPath": string, "location": {x,y,z} }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("play_sound_at_location") ||
              Lower == TEXT("audio_play_sound_at_location")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
@@ -428,10 +825,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         World, Sound, Location, Rotation, (float)Volume, (float)Pitch,
         (float)StartTime, Attenuation, Concurrency);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
-    TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
     LocObj->SetNumberField(TEXT("x"), Location.X);
     LocObj->SetNumberField(TEXT("y"), Location.Y);
     LocObj->SetNumberField(TEXT("z"), Location.Z);
@@ -440,7 +837,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played at location"), Resp);
     return true;
-  } else if (Lower == TEXT("play_sound_2d") ||
+  }
+
+  // -------------------------------------------------------------------------
+  // play_sound_2d / audio_play_sound_2d
+  // -------------------------------------------------------------------------
+  // Plays a non-spatialized 2D sound with optional volume, pitch, start time.
+  //
+  // Payload:  { "soundPath": string, "volume"?: number, "pitch"?: number,
+  //             "startTime"?: number }
+  // Response: { "success": bool, "soundPath": string, "volume": number,
+  //             "pitch": number }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("play_sound_2d") ||
              Lower == TEXT("audio_play_sound_2d")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
@@ -477,233 +886,29 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     UGameplayStatics::PlaySound2D(World, Sound, (float)Volume, (float)Pitch,
                                   (float)StartTime);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
     Resp->SetNumberField(TEXT("volume"), Volume);
     Resp->SetNumberField(TEXT("pitch"), Pitch);
 
     // Sound played - add sound asset verification
-    AddAssetVerification(Resp, Sound);
+    McpHandlerUtils::AddVerification(Resp, Sound);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played 2D"), Resp);
     return true;
-  } else if (Lower == TEXT("create_sound_class") ||
-             Lower == TEXT("audio_create_sound_class")) {
-    FString Name;
-    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
+  }
 
-    FString PackagePath = TEXT("/Game/Audio/Classes");
-
-    USoundClassFactory *Factory = NewObject<USoundClassFactory>();
-    FAssetToolsModule &AssetToolsModule =
-        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-    UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-        Name, PackagePath, USoundClass::StaticClass(), Factory);
-    USoundClass *SoundClass = Cast<USoundClass>(NewAsset);
-
-    if (SoundClass) {
-      const TSharedPtr<FJsonObject> *Props;
-      if (Payload->TryGetObjectField(TEXT("properties"), Props)) {
-        double Vol = 1.0;
-        if ((*Props)->TryGetNumberField(TEXT("volume"), Vol)) {
-          SoundClass->Properties.Volume = (float)Vol;
-        }
-        double Pitch = 1.0;
-        if ((*Props)->TryGetNumberField(TEXT("pitch"), Pitch)) {
-          SoundClass->Properties.Pitch = (float)Pitch;
-        }
-      }
-
-      FString ParentClassPath;
-      if (Payload->TryGetStringField(TEXT("parentClass"), ParentClassPath) &&
-          !ParentClassPath.IsEmpty()) {
-        USoundClass *Parent =
-            LoadObject<USoundClass>(nullptr, *ParentClassPath);
-        if (Parent) {
-          SoundClass->ParentClass = Parent;
-        }
-      }
-
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("path"), SoundClass->GetPathName());
-      Resp->SetStringField(TEXT("name"), SoundClass->GetName());
-
-      AddAssetVerification(Resp, SoundClass);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("SoundClass created"), Resp);
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create SoundClass"),
-                          TEXT("ASSET_CREATION_FAILED"));
-    }
-    return true;
-  } else if (Lower == TEXT("create_sound_mix") ||
-             Lower == TEXT("audio_create_sound_mix")) {
-    FString Name;
-    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    FString PackagePath = TEXT("/Game/Audio/Mixes");
-    if (Payload->HasField(TEXT("packagePath"))) {
-      PackagePath = GetJsonStringField(Payload, TEXT("packagePath"));
-    } else if (Payload->HasField(TEXT("savePath"))) {
-      PackagePath = GetJsonStringField(Payload, TEXT("savePath"));
-    }
-
-    USoundMixFactory *Factory = NewObject<USoundMixFactory>();
-    FAssetToolsModule &AssetToolsModule =
-        FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-    UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-        Name, PackagePath, USoundMix::StaticClass(), Factory);
-    USoundMix *SoundMix = Cast<USoundMix>(NewAsset);
-
-    if (SoundMix) {
-      const TArray<TSharedPtr<FJsonValue>> *Adjusters;
-      if (Payload->TryGetArrayField(TEXT("classAdjusters"), Adjusters)) {
-        for (const auto &Val : *Adjusters) {
-          const TSharedPtr<FJsonObject> AdjObj = Val->AsObject();
-          FString ClassPath;
-          if (AdjObj->TryGetStringField(TEXT("soundClass"), ClassPath)) {
-            USoundClass *SC = LoadObject<USoundClass>(nullptr, *ClassPath);
-            if (SC) {
-              FSoundClassAdjuster Adjuster;
-              Adjuster.SoundClassObject = SC;
-              double Vol = 1.0;
-              AdjObj->TryGetNumberField(TEXT("volumeAdjuster"), Vol);
-              Adjuster.VolumeAdjuster = (float)Vol;
-              double Pitch = 1.0;
-              AdjObj->TryGetNumberField(TEXT("pitchAdjuster"), Pitch);
-              Adjuster.PitchAdjuster = (float)Pitch;
-              SoundMix->SoundClassEffects.Add(Adjuster);
-            }
-          }
-        }
-      }
-
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("path"), SoundMix->GetPathName());
-      Resp->SetStringField(TEXT("name"), SoundMix->GetName());
-
-      AddAssetVerification(Resp, SoundMix);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("SoundMix created"), Resp);
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create SoundMix"),
-                          TEXT("ASSET_CREATION_FAILED"));
-    }
-    return true;
-  } else if (Lower == TEXT("push_sound_mix") ||
-             Lower == TEXT("audio_push_sound_mix")) {
-    FString MixName;
-    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
-        MixName.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("mixName required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundMix *Mix = ResolveSoundMix(MixName);
-    if (Mix) {
-      if (GEditor && GEditor->GetEditorWorldContext().World()) {
-        UGameplayStatics::PushSoundMixModifier(
-            GEditor->GetEditorWorldContext().World(), Mix);
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("mixName"), MixName);
-        AddAssetVerification(Resp, Mix);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("SoundMix pushed"), Resp);
-      } else {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("No World Context"), TEXT("NO_WORLD"));
-      }
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
-    }
-    return true;
-  } else if (Lower == TEXT("pop_sound_mix") ||
-             Lower == TEXT("audio_pop_sound_mix")) {
-    FString MixName;
-    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
-        MixName.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("mixName required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    USoundMix *Mix = ResolveSoundMix(MixName);
-    if (Mix) {
-      if (GEditor && GEditor->GetEditorWorldContext().World()) {
-        UGameplayStatics::PopSoundMixModifier(
-            GEditor->GetEditorWorldContext().World(), Mix);
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("mixName"), MixName);
-        AddAssetVerification(Resp, Mix);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("SoundMix popped"), Resp);
-      } else {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("No World Context"), TEXT("NO_WORLD"));
-      }
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
-    }
-    return true;
-  } else if (Lower == TEXT("set_sound_mix_class_override") ||
-             Lower == TEXT("audio_set_sound_mix_class_override")) {
-    FString MixName, ClassName;
-    Payload->TryGetStringField(TEXT("mixName"), MixName);
-    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
-
-    USoundMix *Mix = ResolveSoundMix(MixName);
-    USoundClass *Class = ResolveSoundClass(ClassName);
-
-    if (!Mix || !Class) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Mix or Class not found"),
-                          TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
-
-    double Volume = 1.0;
-    Payload->TryGetNumberField(TEXT("volume"), Volume);
-    double Pitch = 1.0;
-    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    double FadeTime = 1.0;
-    Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
-    bool bApply = true;
-    Payload->TryGetBoolField(TEXT("applyToChildren"), bApply);
-
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
-      UGameplayStatics::SetSoundMixClassOverride(
-          GEditor->GetEditorWorldContext().World(), Mix, Class, (float)Volume,
-          (float)Pitch, (float)FadeTime, bApply);
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("mixName"), MixName);
-      Resp->SetStringField(TEXT("className"), ClassName);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Sound mix override set"), Resp);
-    } else {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                          TEXT("NO_WORLD"));
-    }
-    return true;
-  } else if (Lower == TEXT("play_sound_attached") ||
+  // -------------------------------------------------------------------------
+  // play_sound_attached / audio_play_sound_attached
+  // -------------------------------------------------------------------------
+  // Attaches and plays a sound on an actor's component or socket.
+  //
+  // Payload:  { "soundPath": string, "actorName": string,
+  //             "attachPointName"?: string }
+  // Response: { "componentName": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("play_sound_attached") ||
              Lower == TEXT("audio_play_sound_attached")) {
     FString SoundPath, ActorName, AttachPoint;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
@@ -754,10 +959,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         Sound, AttachComp, FName(*AttachPoint), FVector::ZeroVector,
         EAttachLocation::KeepRelativeOffset, true);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     if (AudioComp) {
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-      AddAssetVerification(Resp, Sound);
+      McpHandlerUtils::AddVerification(Resp, Sound);
       AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound attached"), Resp);
@@ -767,56 +972,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("ATTACH_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("fade_sound_out") ||
-             Lower == TEXT("fade_sound_in") ||
-             Lower == TEXT("audio_fade_sound_out") ||
-             Lower == TEXT("audio_fade_sound_in")) {
-    FString ActorName;
-    Payload->TryGetStringField(TEXT("actorName"), ActorName);
-    double FadeTime = 1.0;
-    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
-    double TargetVol =
-        (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
-            ? 1.0
-            : 0.0;
-    if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
-      Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
+  }
 
-    if (!GEditor)
-      return true;
-    UWorld *World = GEditor->GetEditorWorldContext().World();
-    if (!World) {
-      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                          TEXT("NO_WORLD"));
-      return true;
-    }
-
-    AActor *TargetActor = FindAudioActorByName(ActorName, World);
-    if (TargetActor) {
-      UAudioComponent *AudioComp =
-          TargetActor->FindComponentByClass<UAudioComponent>();
-      if (AudioComp) {
-        if (Lower == TEXT("fade_sound_in") ||
-            Lower == TEXT("audio_fade_sound_in"))
-          AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
-        else
-          AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
-
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        Resp->SetBoolField(TEXT("success"), true);
-        Resp->SetStringField(TEXT("actorName"), ActorName);
-        Resp->SetStringField(TEXT("action"), Lower);
-        AddActorVerification(Resp, TargetActor);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Sound fading"), Resp);
-        return true;
-      }
-    }
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Audio component not found on actor"),
-                        TEXT("COMPONENT_NOT_FOUND"));
-    return true;
-  } else if (Lower == TEXT("create_ambient_sound") ||
+  // -------------------------------------------------------------------------
+  // create_ambient_sound / audio_create_ambient_sound
+  // -------------------------------------------------------------------------
+  // Spawns a persistent ambient sound component at a world location.
+  //
+  // Payload:  { "soundPath": string, "location"?: [x,y,z], "volume"?: number,
+  //             "pitch"?: number, "startTime"?: number,
+  //             "attenuationPath"?: string, "concurrencyPath"?: string }
+  // Response: { "componentName": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("create_ambient_sound") ||
              Lower == TEXT("audio_create_ambient_sound")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
@@ -879,9 +1047,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     if (AudioComp) {
       AudioComp->Play();
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-      AddAssetVerification(Resp, Sound);
+      McpHandlerUtils::AddVerification(Resp, Sound);
       AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Ambient sound created"), Resp);
@@ -891,7 +1059,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("SPAWN_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("spawn_sound_at_location") ||
+  }
+
+  // -------------------------------------------------------------------------
+  // spawn_sound_at_location / audio_spawn_sound_at_location
+  // -------------------------------------------------------------------------
+  // Spawns a UAudioComponent at a world location (similar to create_ambient_sound
+  // but with explicit action name and rotation support).
+  //
+  // Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+  //             "volume"?: number, "pitch"?: number, "startTime"?: number }
+  // Response: { "componentName": string, "componentPath": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("spawn_sound_at_location") ||
              Lower == TEXT("audio_spawn_sound_at_location")) {
     // Similar to create_ambient_sound but explicit action name
     FString SoundPath;
@@ -947,10 +1127,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
         (float)StartTime, nullptr, nullptr, true);
 
     if (AudioComp) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
-      AddAssetVerification(Resp, Sound);
+      McpHandlerUtils::AddVerification(Resp, Sound);
       AddComponentVerification(Resp, AudioComp);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound spawned"), Resp);
@@ -959,7 +1139,154 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("Failed to spawn sound"), TEXT("SPAWN_FAILED"));
     }
     return true;
-  } else if (Lower == TEXT("clear_sound_mix_class_override") ||
+  }
+
+  // =========================================================================
+  // Section 4: Sound Mix Control
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // push_sound_mix / audio_push_sound_mix
+  // -------------------------------------------------------------------------
+  // Pushes a SoundMix modifier onto the audio stack.
+  //
+  // Payload:  { "mixName": string }
+  // Response: { "success": bool, "mixName": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("push_sound_mix") ||
+             Lower == TEXT("audio_push_sound_mix")) {
+    FString MixName;
+    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
+        MixName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("mixName required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    USoundMix *Mix = ResolveSoundMix(MixName);
+    if (Mix) {
+      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+        UGameplayStatics::PushSoundMixModifier(
+            GEditor->GetEditorWorldContext().World(), Mix);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("mixName"), MixName);
+        McpHandlerUtils::AddVerification(Resp, Mix);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("SoundMix pushed"), Resp);
+      } else {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("No World Context"), TEXT("NO_WORLD"));
+      }
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
+    }
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // pop_sound_mix / audio_pop_sound_mix
+  // -------------------------------------------------------------------------
+  // Pops a SoundMix modifier from the audio stack.
+  //
+  // Payload:  { "mixName": string }
+  // Response: { "success": bool, "mixName": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("pop_sound_mix") ||
+             Lower == TEXT("audio_pop_sound_mix")) {
+    FString MixName;
+    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
+        MixName.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("mixName required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    USoundMix *Mix = ResolveSoundMix(MixName);
+    if (Mix) {
+      if (GEditor && GEditor->GetEditorWorldContext().World()) {
+        UGameplayStatics::PopSoundMixModifier(
+            GEditor->GetEditorWorldContext().World(), Mix);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("mixName"), MixName);
+        McpHandlerUtils::AddVerification(Resp, Mix);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("SoundMix popped"), Resp);
+      } else {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("No World Context"), TEXT("NO_WORLD"));
+      }
+    } else {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("SoundMix not found"), TEXT("ASSET_NOT_FOUND"));
+    }
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // set_sound_mix_class_override / audio_set_sound_mix_class_override
+  // -------------------------------------------------------------------------
+  // Overrides a SoundClass's volume/pitch within a SoundMix.
+  //
+  // Payload:  { "mixName": string, "soundClassName": string,
+  //             "volume"?: number, "pitch"?: number, "fadeInTime"?: number,
+  //             "applyToChildren"?: bool }
+  // Response: { "success": bool, "mixName": string, "className": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("set_sound_mix_class_override") ||
+             Lower == TEXT("audio_set_sound_mix_class_override")) {
+    FString MixName, ClassName;
+    Payload->TryGetStringField(TEXT("mixName"), MixName);
+    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
+
+    USoundMix *Mix = ResolveSoundMix(MixName);
+    USoundClass *Class = ResolveSoundClass(ClassName);
+
+    if (!Mix || !Class) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Mix or Class not found"),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    double Volume = 1.0;
+    Payload->TryGetNumberField(TEXT("volume"), Volume);
+    double Pitch = 1.0;
+    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    double FadeTime = 1.0;
+    Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
+    bool bApply = true;
+    Payload->TryGetBoolField(TEXT("applyToChildren"), bApply);
+
+    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      UGameplayStatics::SetSoundMixClassOverride(
+          GEditor->GetEditorWorldContext().World(), Mix, Class, (float)Volume,
+          (float)Pitch, (float)FadeTime, bApply);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("mixName"), MixName);
+      Resp->SetStringField(TEXT("className"), ClassName);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Sound mix override set"), Resp);
+    } else {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+    }
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // clear_sound_mix_class_override / audio_clear_sound_mix_class_override
+  // -------------------------------------------------------------------------
+  // Clears a SoundClass override from a SoundMix with optional fade out.
+  //
+  // Payload:  { "mixName": string, "soundClassName": string,
+  //             "fadeOutTime"?: number }
+  // Response: { "success": bool, "message": "Sound mix override cleared" }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("clear_sound_mix_class_override") ||
              Lower == TEXT("audio_clear_sound_mix_class_override")) {
     FString MixName, ClassName;
     Payload->TryGetStringField(TEXT("mixName"), MixName);
@@ -989,7 +1316,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("NO_WORLD"));
     }
     return true;
-  } else if (Lower == TEXT("set_base_sound_mix")) {
+  }
+
+  // -------------------------------------------------------------------------
+  // set_base_sound_mix
+  // -------------------------------------------------------------------------
+  // Sets the base (default) SoundMix for the world.
+  //
+  // Payload:  { "mixName": string }
+  // Response: { "success": bool, "message": "Base sound mix set" }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("set_base_sound_mix")) {
     FString MixName;
     Payload->TryGetStringField(TEXT("mixName"), MixName);
     USoundMix *Mix = ResolveSoundMix(MixName);
@@ -1008,7 +1345,81 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                           TEXT("NO_WORLD"));
     }
     return true;
-  } else if (Lower == TEXT("prime_sound")) {
+  }
+
+  // =========================================================================
+  // Section 5: Sound Fading & Utility
+  // =========================================================================
+
+  // -------------------------------------------------------------------------
+  // fade_sound_out / fade_sound_in / audio_fade_sound_out / audio_fade_sound_in
+  // -------------------------------------------------------------------------
+  // Fades an actor's audio component in or out over a specified duration.
+  //
+  // Payload:  { "actorName": string, "fadeTime"?: number,
+  //             "targetVolume"?: number (fade_in only) }
+  // Response: { "success": bool, "actorName": string, "action": string }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("fade_sound_out") ||
+             Lower == TEXT("fade_sound_in") ||
+             Lower == TEXT("audio_fade_sound_out") ||
+             Lower == TEXT("audio_fade_sound_in")) {
+    FString ActorName;
+    Payload->TryGetStringField(TEXT("actorName"), ActorName);
+    double FadeTime = 1.0;
+    Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+    double TargetVol =
+        (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+            ? 1.0
+            : 0.0;
+    if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+      Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
+
+    if (!GEditor)
+      return true;
+    UWorld *World = GEditor->GetEditorWorldContext().World();
+    if (!World) {
+      SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                          TEXT("NO_WORLD"));
+      return true;
+    }
+
+    AActor *TargetActor = FindAudioActorByName(ActorName, World);
+    if (TargetActor) {
+      UAudioComponent *AudioComp =
+          TargetActor->FindComponentByClass<UAudioComponent>();
+      if (AudioComp) {
+        if (Lower == TEXT("fade_sound_in") ||
+            Lower == TEXT("audio_fade_sound_in"))
+          AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
+        else
+          AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
+
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), true);
+        Resp->SetStringField(TEXT("actorName"), ActorName);
+        Resp->SetStringField(TEXT("action"), Lower);
+        McpHandlerUtils::AddVerification(Resp, TargetActor);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Sound fading"), Resp);
+        return true;
+      }
+    }
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Audio component not found on actor"),
+                        TEXT("COMPONENT_NOT_FOUND"));
+    return true;
+  }
+
+  // -------------------------------------------------------------------------
+  // prime_sound
+  // -------------------------------------------------------------------------
+  // Pre-loads a sound asset for instant playback (reduces first-play latency).
+  //
+  // Payload:  { "soundPath": string }
+  // Response: { "success": bool, "message": "Sound primed" }
+  // -------------------------------------------------------------------------
+  else if (Lower == TEXT("prime_sound")) {
     FString SoundPath;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
     USoundBase *Sound = ResolveSoundAsset(SoundPath);
@@ -1023,6 +1434,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // create_audio_component
+  // -------------------------------------------------------------------------
+  // Creates a UAudioComponent, optionally attached to an actor or at a location.
+  //
+  // Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
+  //             "attachTo"?: string, "actorName"?: string,
+  //             "volume"?: string, "pitch"?: string }
+  // Response: { "success": bool, "componentPath": string,
+  //             "componentName": string }
+  // -------------------------------------------------------------------------
   if (Lower.StartsWith(TEXT("create_audio_component"))) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath))
@@ -1068,7 +1490,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
             Sound, ParentActor->GetRootComponent(), NAME_None, Location,
             Rotation, EAttachLocation::KeepRelativeOffset, false);
       } else {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+        UE_LOG(LogMcpAudioHandlers, Warning,
                TEXT("create_audio_component: attachTo actor '%s' not found, "
                     "spawning at location."),
                *AttachTo);
@@ -1088,7 +1510,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       if (Payload->TryGetStringField(TEXT("pitch"), PitchStr))
         AudioComp->SetPitchMultiplier(FCString::Atof(*PitchStr));
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
@@ -1102,6 +1524,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     return true;
   }
 
+  // =========================================================================
+  // Section 6: Dialogue System Dispatch
+  // =========================================================================
+
   if (Lower == TEXT("create_dialogue_voice")) {
     return HandleCreateDialogueVoice(RequestId, Payload, RequestingSocket);
   }
@@ -1111,6 +1537,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   if (Lower == TEXT("set_dialogue_context")) {
     return HandleSetDialogueContext(RequestId, Payload, RequestingSocket);
   }
+
+  // =========================================================================
+  // Section 7: Audio Effects Dispatch
+  // =========================================================================
+
   if (Lower == TEXT("create_reverb_effect")) {
     return HandleCreateReverbEffect(RequestId, Payload, RequestingSocket);
   }
@@ -1124,7 +1555,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     return HandleCreateSubmixEffect(RequestId, Payload, RequestingSocket);
   }
 
-  // Fallback for other audio actions not fully implemented yet
+  // -------------------------------------------------------------------------
+  // Fallback: Unrecognized audio action
+  // -------------------------------------------------------------------------
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       FString::Printf(TEXT("Audio action '%s' not fully implemented"), *Action),
@@ -1138,7 +1571,24 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 #endif
 }
 
-// Dialogue Voice handler implementation
+// =============================================================================
+// Section 6: Dialogue System Handlers
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// HandleCreateDialogueVoice
+// -----------------------------------------------------------------------------
+// Creates a UDialogueVoice asset with gender and plurality settings.
+//
+// VERSION COMPATIBILITY:
+// - UE 5.0-5.6: VoiceName property available, bIsPlural for plural flag
+// - UE 5.7: VoiceName removed; Gender uses EGrammaticalGender;
+//           bIsPlural replaced with Plurality (EGrammaticalNumber)
+//
+// Payload:  { "voiceName": string, "outputPath"?: string,
+//             "gender"?: "Male"|"Female", "pluralization"?: "Singular"|"Plural" }
+// Response: { "voicePath": string, "voiceName": string }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1202,7 +1652,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(NewVoice);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("voicePath"), NewVoice->GetPathName());
   Resp->SetStringField(TEXT("voiceName"), VoiceName);
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1215,7 +1665,18 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
 #endif
 }
 
-// Dialogue Wave handler implementation
+// -----------------------------------------------------------------------------
+// HandleCreateDialogueWave
+// -----------------------------------------------------------------------------
+// Creates a UDialogueWave asset with a sound wave and initial context mapping.
+//
+// VERSION COMPATIBILITY:
+// - UE 5.0-5.6: FDialogueContextMapping uses DialogueVoice for speaker
+// - UE 5.7: DialogueVoice renamed to Speaker
+//
+// Payload:  { "waveName": string, "soundPath": string, "outputPath"?: string }
+// Response: { "wavePath": string, "waveName": string, "soundPath": string }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1277,7 +1738,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(DialogueWave);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
   Resp->SetStringField(TEXT("waveName"), WaveName);
   Resp->SetStringField(TEXT("soundPath"), SoundPath);
@@ -1291,7 +1752,18 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
 #endif
 }
 
-// Set Dialogue Context handler implementation
+// -----------------------------------------------------------------------------
+// HandleSetDialogueContext
+// -----------------------------------------------------------------------------
+// Sets the speaker voice on a dialogue wave's context mapping.
+//
+// VERSION COMPATIBILITY:
+// - UE 5.0-5.6: Uses DialogueVoice property
+// - UE 5.7: DialogueVoice renamed to Speaker
+//
+// Payload:  { "wavePath": string, "voicePath": string, "contextIndex"?: number }
+// Response: { "wavePath": string, "voicePath": string, "contextIndex": number }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleSetDialogueContext(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1339,7 +1811,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetDialogueContext(
   DialogueWave->ContextMappings[ContextIndex].Context.Speaker = Voice;
   DialogueWave->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
   Resp->SetStringField(TEXT("voicePath"), VoicePath);
   Resp->SetNumberField(TEXT("contextIndex"), ContextIndex);
@@ -1353,7 +1825,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSetDialogueContext(
 #endif
 }
 
-// Create Reverb Effect handler implementation
+// =============================================================================
+// Section 7: Audio Effects Handlers
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// HandleCreateReverbEffect
+// -----------------------------------------------------------------------------
+// Creates a UReverbEffect asset with configurable reverb parameters.
+//
+// Payload:  { "effectName": string, "outputPath"?: string, "density"?: number,
+//             "diffusion"?: number, "gain"?: number, "gainHF"?: number,
+//             "decayTime"?: number, "decayHFRatio"?: number,
+//             "reflectionsGain"?: number, "lateGain"?: number }
+// Response: { "effectPath": string, "effectName": string }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1420,7 +1906,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(ReverbEffect);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), ReverbEffect->GetPathName());
   Resp->SetStringField(TEXT("effectName"), EffectName);
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1433,7 +1919,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
 #endif
 }
 
-// Create Source Effect Chain handler implementation
+// -----------------------------------------------------------------------------
+// HandleCreateSourceEffectChain
+// -----------------------------------------------------------------------------
+// Creates a USoundEffectSourcePresetChain asset.
+//
+// Payload:  { "chainName": string, "outputPath"?: string }
+// Response: { "chainPath": string, "chainName": string }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1474,7 +1967,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(Chain);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
   Resp->SetStringField(TEXT("chainName"), ChainName);
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1487,7 +1980,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
 #endif
 }
 
-// Add Source Effect handler implementation
+// -----------------------------------------------------------------------------
+// HandleAddSourceEffect
+// -----------------------------------------------------------------------------
+// Adds an effect entry (EQ, Reverb, or Delay) to a source effect chain.
+//
+// Payload:  { "chainPath": string, "effectType": string, "effectName"?: string }
+// Response: { "chainPath": string, "effectType": string, "effectName": string,
+//             "effectIndex": number }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1543,7 +2044,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
   Chain->Chain.Add(Entry);
   Chain->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
   Resp->SetStringField(TEXT("effectType"), EffectType);
   Resp->SetStringField(TEXT("effectName"), EffectName);
@@ -1558,7 +2059,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
 #endif
 }
 
-// Create Submix Effect handler implementation
+// -----------------------------------------------------------------------------
+// HandleCreateSubmixEffect
+// -----------------------------------------------------------------------------
+// Creates a USoundEffectSubmixPreset asset.
+//
+// Payload:  { "effectName": string, "outputPath"?: string,
+//             "effectType"?: string }
+// Response: { "effectPath": string, "effectName": string,
+//             "effectType": string }
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -1605,7 +2115,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(SubmixEffect);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), SubmixEffect->GetPathName());
   Resp->SetStringField(TEXT("effectName"), EffectName);
   Resp->SetStringField(TEXT("effectType"), EffectType);

@@ -1,28 +1,164 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_NetworkingHandlers.cpp
-// Phase 20: Networking & Multiplayer System Handlers
+// =============================================================================
+// Phase 20: Networking & Multiplayer System Handlers for MCP Automation Bridge.
 //
-// Complete networking and replication system including:
-// - Replication (property replication, conditions, net update frequency, dormancy)
-// - RPCs (Server, Client, NetMulticast functions with validation)
-// - Authority & Ownership (owner, autonomous proxy, authority checks)
-// - Network Relevancy (cull distance, always relevant, only relevant to owner)
-// - Net Serialization (custom serialization, struct replication)
-// - Network Prediction (client-side prediction, server reconciliation)
-// - Utility (info queries)
+// This file implements the following handlers:
+// - manage_networking (main dispatcher)
+//
+// 20.1 Replication Actions:
+//   - set_property_replicated
+//     Payload:  { blueprintPath, propertyName, replicated? }
+//     Response: { success, message, assetVerification }
+//
+//   - set_replication_condition
+//     Payload:  { blueprintPath, propertyName, condition }
+//     Response: { success, message, assetVerification }
+//
+//   - configure_net_update_frequency
+//     Payload:  { blueprintPath, netUpdateFrequency?, minNetUpdateFrequency? }
+//     Response: { success, message, assetVerification }
+//
+//   - configure_net_priority
+//     Payload:  { blueprintPath, netPriority? }
+//     Response: { success, message, assetVerification }
+//
+//   - set_net_dormancy
+//     Payload:  { blueprintPath, dormancy }
+//     Response: { success, message, assetVerification }
+//
+//   - configure_replication_graph
+//     Payload:  { blueprintPath, spatiallyLoaded?, netLoadOnClient?, replicationPolicy? }
+//     Response: { success, spatiallyLoaded, netLoadOnClient, replicationPolicy, message, assetVerification }
+//
+// 20.2 RPC Actions:
+//   - create_rpc_function
+//     Payload:  { blueprintPath, functionName, rpcType, reliable? }
+//     Response: { success, functionName, rpcType, reliable, message, assetVerification }
+//
+//   - configure_rpc_validation
+//     Payload:  { blueprintPath, functionName, withValidation? }
+//     Response: { success, withValidation, message, assetVerification }
+//
+//   - set_rpc_reliability
+//     Payload:  { blueprintPath, functionName, reliable? }
+//     Response: { success, reliable, message, assetVerification }
+//
+// 20.3 Authority & Ownership Actions:
+//   - set_owner
+//     Payload:  { actorName, ownerActorName? }
+//     Response: { success, message, actorVerification }
+//
+//   - set_autonomous_proxy
+//     Payload:  { blueprintPath, isAutonomousProxy? }
+//     Response: { success, isAutonomousProxy, message, assetVerification }
+//
+//   - check_has_authority
+//     Payload:  { actorName }
+//     Response: { success, hasAuthority, role }
+//
+//   - check_is_locally_controlled
+//     Payload:  { actorName }
+//     Response: { success, isLocallyControlled, isLocalController }
+//
+// 20.4 Network Relevancy Actions:
+//   - configure_net_cull_distance
+//     Payload:  { blueprintPath, netCullDistanceSquared?, useOwnerNetRelevancy? }
+//     Response: { success, message, assetVerification }
+//
+//   - set_always_relevant
+//     Payload:  { blueprintPath, alwaysRelevant? }
+//     Response: { success, message, assetVerification }
+//
+//   - set_only_relevant_to_owner
+//     Payload:  { blueprintPath, onlyRelevantToOwner? }
+//     Response: { success, message, assetVerification }
+//
+// 20.5 Net Serialization Actions:
+//   - configure_net_serialization
+//     Payload:  { blueprintPath, structName?, customSerialization? }
+//     Response: { success, customSerialization, structName?, message, assetVerification }
+//
+//   - set_replicated_using
+//     Payload:  { blueprintPath, propertyName, repNotifyFunc }
+//     Response: { success, message, assetVerification }
+//
+//   - configure_push_model
+//     Payload:  { blueprintPath, usePushModel? }
+//     Response: { success, usePushModel, message, assetVerification }
+//
+// 20.6 Network Prediction Actions:
+//   - configure_client_prediction
+//     Payload:  { blueprintPath, enablePrediction?, predictionThreshold? }
+//     Response: { success, enablePrediction, predictionThreshold, message, assetVerification }
+//
+//   - configure_server_correction
+//     Payload:  { blueprintPath, correctionThreshold?, smoothingRate? }
+//     Response: { success, correctionThreshold, smoothingRate, message, assetVerification }
+//
+//   - add_network_prediction_data
+//     Payload:  { blueprintPath, dataType, variableName? }
+//     Response: { success, variableName, dataType, message, assetVerification }
+//
+//   - configure_movement_prediction
+//     Payload:  { blueprintPath, networkSmoothingMode?, networkMaxSmoothUpdateDistance?, networkNoSmoothUpdateDistance? }
+//     Response: { success, message, assetVerification }
+//
+// 20.7 Connection & Session Actions:
+//   - configure_net_driver
+//     Payload:  { maxClientRate?, maxInternetClientRate?, netServerMaxTickRate? }
+//     Response: { success, appliedToActiveDriver, maxClientRate, maxInternetClientRate, netServerMaxTickRate, message }
+//
+//   - set_net_role
+//     Payload:  { blueprintPath, role }
+//     Response: { success, role, replicates, message, assetVerification }
+//
+//   - configure_replicated_movement
+//     Payload:  { blueprintPath, replicateMovement? }
+//     Response: { success, message, assetVerification }
+//
+// 20.8 Utility Actions:
+//   - get_networking_info
+//     Payload:  { blueprintPath? | actorName? }
+//     Response: { success, networkingInfo }
+//
+// UE VERSION COMPATIBILITY:
+// - UE 5.0: NetUpdateFrequency/MinNetUpdateFrequency/NetCullDistanceSquared not available
+// - UE 5.1-5.4: Direct property access (deprecated in 5.5)
+// - UE 5.5+: NetUpdateFrequency, MinNetUpdateFrequency, NetCullDistanceSquared
+//            use getter/setter functions instead of direct property access
+// - UE 5.7: NetServerMaxTickRate uses SetNetServerMaxTickRate() setter
+// - Replication APIs stable across versions with deprecation warnings in 5.5+
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
+#include "McpHandlerUtils.h"          // Utility functions for JSON parsing
+
+// ---- Core Includes ----
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
+// ---- Editor Includes ----
 #include "Editor.h"
+#include "EditorAssetLibrary.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+
+// ---- Blueprint & Graph Includes ----
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#include "EditorAssetLibrary.h"
-#include "AssetRegistry/AssetRegistryModule.h"
+#include "K2Node_FunctionEntry.h"
+#include "K2Node_CallFunction.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
+
+// ---- World & Actor Includes ----
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
@@ -30,13 +166,11 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+
+// ---- Networking & Replication Includes ----
 #include "Net/UnrealNetwork.h"
 #include "Engine/NetDriver.h"
 #include "UObject/UnrealType.h"
-#include "K2Node_FunctionEntry.h"
-#include "K2Node_CallFunction.h"
-#include "EdGraph/EdGraph.h"
-#include "EdGraphSchema_K2.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpNetworkingHandlers, Log, All);
 
@@ -46,7 +180,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpNetworkingHandlers, Log, All);
 
 namespace NetworkingHelpers
 {
-    // Get string field with default
+    // ---- JSON Field Extraction ----
+
+    /** Get string field with default value. */
     FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""))
     {
         FString Value = Default;
@@ -57,7 +193,7 @@ namespace NetworkingHelpers
         return Value;
     }
 
-    // Get number field with default
+    /** Get number field with default value. */
     double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0)
     {
         double Value = Default;
@@ -68,7 +204,7 @@ namespace NetworkingHelpers
         return Value;
     }
 
-    // Get bool field with default
+    /** Get bool field with default value. */
     bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false)
     {
         bool Value = Default;
@@ -79,7 +215,7 @@ namespace NetworkingHelpers
         return Value;
     }
 
-    // Get object field
+    /** Get object field or nullptr if not present. */
     TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
     {
         if (Payload.IsValid() && Payload->HasTypedField<EJson::Object>(FieldName))
@@ -89,7 +225,7 @@ namespace NetworkingHelpers
         return nullptr;
     }
 
-    // Get array field
+    /** Get array field or nullptr if not present. */
     const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
     {
         if (Payload.IsValid() && Payload->HasTypedField<EJson::Array>(FieldName))
@@ -99,7 +235,14 @@ namespace NetworkingHelpers
         return nullptr;
     }
 
-    // Load Blueprint from path
+    // ---- Blueprint Utilities ----
+
+    /**
+     * Load Blueprint from asset path.
+     * Handles paths with and without .uasset suffix.
+     * @param BlueprintPath Asset path (e.g., "/Game/BP_MyActor")
+     * @return Loaded UBlueprint or nullptr
+     */
     UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
     {
         FString CleanPath = BlueprintPath;
@@ -120,7 +263,14 @@ namespace NetworkingHelpers
         return nullptr;
     }
 
-    // Find actor by name in world
+    // ---- Actor Utilities ----
+
+    /**
+     * Find actor by name in the given world.
+     * @param World The world to search in
+     * @param ActorName Exact actor name to match
+     * @return Found AActor or nullptr
+     */
     AActor* FindActorByName(UWorld* World, const FString& ActorName)
     {
         if (!World) return nullptr;
@@ -136,7 +286,13 @@ namespace NetworkingHelpers
         return nullptr;
     }
 
-    // Get replication condition from string
+    // ---- Enum Conversion Utilities ----
+
+    /**
+     * Convert replication condition string to ELifetimeCondition enum.
+     * @param ConditionStr String like "COND_None", "COND_OwnerOnly", etc.
+     * @return Matching ELifetimeCondition (defaults to COND_None)
+     */
     ELifetimeCondition GetReplicationCondition(const FString& ConditionStr)
     {
         if (ConditionStr == TEXT("COND_None")) return COND_None;
@@ -157,7 +313,11 @@ namespace NetworkingHelpers
         return COND_None;
     }
 
-    // Get dormancy mode from string
+    /**
+     * Convert dormancy mode string to ENetDormancy enum.
+     * @param DormancyStr String like "DORM_Never", "DORM_Awake", etc.
+     * @return Matching ENetDormancy (defaults to DORM_Never)
+     */
     ENetDormancy GetNetDormancy(const FString& DormancyStr)
     {
         if (DormancyStr == TEXT("DORM_Never")) return DORM_Never;
@@ -168,7 +328,11 @@ namespace NetworkingHelpers
         return DORM_Never;
     }
 
-    // Get net role from string
+    /**
+     * Convert net role string to ENetRole enum.
+     * @param RoleStr String like "ROLE_None", "ROLE_Authority", etc.
+     * @return Matching ENetRole (defaults to ROLE_None)
+     */
     ENetRole GetNetRole(const FString& RoleStr)
     {
         if (RoleStr == TEXT("ROLE_None")) return ROLE_None;
@@ -178,7 +342,11 @@ namespace NetworkingHelpers
         return ROLE_None;
     }
 
-    // Net role to string
+    /**
+     * Convert ENetRole to human-readable string.
+     * @param Role The net role enum value
+     * @return String representation (e.g., "ROLE_Authority")
+     */
     FString NetRoleToString(ENetRole Role)
     {
         switch (Role)
@@ -191,7 +359,11 @@ namespace NetworkingHelpers
         }
     }
 
-    // Net dormancy to string
+    /**
+     * Convert ENetDormancy to human-readable string.
+     * @param Dormancy The dormancy enum value
+     * @return String representation (e.g., "DORM_Awake")
+     */
     FString NetDormancyToString(ENetDormancy Dormancy)
     {
         switch (Dormancy)
@@ -233,12 +405,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
     UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("HandleManageNetworkingAction: %s"), *SubAction);
 
-    TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResultJson = McpHandlerUtils::CreateResultObject();
 
     // =========================================================================
     // 20.1 Replication Actions
     // =========================================================================
 
+    // ----- set_property_replicated -----
+    // Sets or clears the CPF_Net flag on a Blueprint property to enable/disable
+    // property replication.
+    //
+    // Payload:  { blueprintPath: string, propertyName: string, replicated?: bool }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_property_replicated"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -291,11 +469,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property replication configured"), ResultJson);
         return true;
     }
 
+    // ----- set_replication_condition -----
+    // Sets the replication condition (ELifetimeCondition) on a Blueprint variable.
+    // Also ensures the property has CPF_Net flag set.
+    //
+    // Payload:  { blueprintPath: string, propertyName: string, condition: string }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_replication_condition"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -343,11 +527,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication condition configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_net_update_frequency -----
+    // Configures the net update frequency and minimum net update frequency on an
+    // Actor CDO. Uses setter methods on UE 5.5+ and direct property access on 5.1-5.4.
+    //
+    // Version notes:
+    //   UE 5.0:   API not available
+    //   UE 5.1-5.4: Direct property access (CDO->NetUpdateFrequency)
+    //   UE 5.5+:  Setter methods (CDO->SetNetUpdateFrequency())
+    //
+    // Payload:  { blueprintPath: string, netUpdateFrequency?: number, minNetUpdateFrequency?: number }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("configure_net_update_frequency"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -393,11 +588,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), NetUpdateFrequency, MinNetUpdateFrequency));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net update frequency configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_net_priority -----
+    // Sets the NetPriority on an Actor CDO, controlling how bandwidth is
+    // allocated for replication.
+    //
+    // Payload:  { blueprintPath: string, netPriority?: number }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("configure_net_priority"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -427,11 +628,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net priority set to %.2f"), NetPriority));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net priority configured"), ResultJson);
         return true;
     }
 
+    // ----- set_net_dormancy -----
+    // Sets the net dormancy mode on an Actor CDO, controlling whether the actor
+    // can go dormant to save bandwidth when not changing.
+    //
+    // Payload:  { blueprintPath: string, dormancy: string }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_net_dormancy"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -462,11 +669,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net dormancy configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_replication_graph -----
+    // Configures replication graph settings on an Actor CDO including
+    // bNetLoadOnClient and spatial loading hints.
+    //
+    // Note: bReplicateUsingRegisteredSubObjectList is protected in UE 5.6/5.7
+    // and cannot be accessed from external code.
+    //
+    // Payload:  { blueprintPath: string, spatiallyLoaded?: bool, netLoadOnClient?: bool, replicationPolicy?: string }
+    // Response: { success: bool, spatiallyLoaded, netLoadOnClient, replicationPolicy, message, assetVerification }
     if (SubAction == TEXT("configure_replication_graph"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -512,7 +728,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"), 
             bNetLoadOnClient ? TEXT("true") : TEXT("false"),
             bSpatiallyLoaded ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replication graph configured"), ResultJson);
         return true;
     }
@@ -521,6 +737,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.2 RPC Actions
     // =========================================================================
 
+    // ----- create_rpc_function -----
+    // Creates a new RPC function graph in a Blueprint with the specified
+    // RPC type (Server, Client, NetMulticast) and reliability setting.
+    //
+    // Payload:  { blueprintPath: string, functionName: string, rpcType: string, reliable?: bool }
+    // Response: { success: bool, functionName, rpcType, reliable, message, assetVerification }
     if (SubAction == TEXT("create_rpc_function"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -595,7 +817,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             ResultJson->SetStringField(TEXT("rpcType"), RpcType);
             ResultJson->SetBoolField(TEXT("reliable"), bReliable);
             ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created %s RPC function: %s"), *RpcType, *FunctionName));
-            AddAssetVerification(ResultJson, Blueprint);
+            McpHandlerUtils::AddVerification(ResultJson, Blueprint);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC function created"), ResultJson);
         }
         else
@@ -605,6 +827,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         return true;
     }
 
+    // ----- configure_rpc_validation -----
+    // Enables or disables FUNC_NetValidate on an existing RPC function, which
+    // adds a server-side validation step before the RPC executes.
+    //
+    // Payload:  { blueprintPath: string, functionName: string, withValidation?: bool }
+    // Response: { success: bool, withValidation, message, assetVerification }
     if (SubAction == TEXT("configure_rpc_validation"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -673,11 +901,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC validation %s for function %s"), bWithValidation ? TEXT("enabled") : TEXT("disabled"), *FunctionName));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC validation configured"), ResultJson);
         return true;
     }
 
+    // ----- set_rpc_reliability -----
+    // Sets or clears FUNC_NetReliable on an existing RPC function, controlling
+    // whether the RPC is guaranteed to arrive.
+    //
+    // Payload:  { blueprintPath: string, functionName: string, reliable?: bool }
+    // Response: { success: bool, reliable, message, assetVerification }
     if (SubAction == TEXT("set_rpc_reliability"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -746,7 +980,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("reliable"), bReliable);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s reliability set to %s"), *FunctionName, bReliable ? TEXT("reliable") : TEXT("unreliable")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("RPC reliability configured"), ResultJson);
         return true;
     }
@@ -755,6 +989,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.3 Authority & Ownership Actions
     // =========================================================================
 
+    // ----- set_owner -----
+    // Sets the owner of an actor in the world. Pass empty ownerActorName to clear.
+    //
+    // Payload:  { actorName: string, ownerActorName?: string }
+    // Response: { success: bool, message: string, actorVerification }
     if (SubAction == TEXT("set_owner"))
     {
         FString ActorName = GetStringField(Payload, TEXT("actorName"));
@@ -790,11 +1029,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), Owner ? FString::Printf(TEXT("Set owner of %s to %s"), *ActorName, *OwnerActorName) : FString::Printf(TEXT("Cleared owner of %s"), *ActorName));
-        AddActorVerification(ResultJson, Actor);
+        McpHandlerUtils::AddVerification(ResultJson, Actor);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Owner set"), ResultJson);
         return true;
     }
 
+    // ----- set_autonomous_proxy -----
+    // Configures all replicated properties in a Blueprint to use
+    // COND_AutonomousOnly replication condition, or resets to COND_None.
+    //
+    // Payload:  { blueprintPath: string, isAutonomousProxy?: bool }
+    // Response: { success: bool, isAutonomousProxy, message, assetVerification }
     if (SubAction == TEXT("set_autonomous_proxy"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -843,11 +1088,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Autonomous proxy configuration %s for replicated properties"), bIsAutonomousProxy ? TEXT("enabled") : TEXT("disabled")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);
         return true;
     }
 
+    // ----- check_has_authority -----
+    // Checks whether an actor in the world has network authority and reports
+    // its current net role.
+    //
+    // Payload:  { actorName: string }
+    // Response: { success: bool, hasAuthority: bool, role: string }
     if (SubAction == TEXT("check_has_authority"))
     {
         FString ActorName = GetStringField(Payload, TEXT("actorName"));
@@ -882,6 +1133,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         return true;
     }
 
+    // ----- check_is_locally_controlled -----
+    // Checks if an actor (must be a Pawn) is locally controlled and whether
+    // its controller is a local player controller.
+    //
+    // Payload:  { actorName: string }
+    // Response: { success: bool, isLocallyControlled: bool, isLocalController: bool }
     if (SubAction == TEXT("check_is_locally_controlled"))
     {
         FString ActorName = GetStringField(Payload, TEXT("actorName"));
@@ -928,6 +1185,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.4 Network Relevancy Actions
     // =========================================================================
 
+    // ----- configure_net_cull_distance -----
+    // Sets the net cull distance squared and owner relevancy on an Actor CDO.
+    // Uses setter methods on UE 5.5+ and direct property access on 5.1-5.4.
+    //
+    // Version notes:
+    //   UE 5.0:   API not available
+    //   UE 5.1-5.4: Direct property access (CDO->NetCullDistanceSquared)
+    //   UE 5.5+:  Setter method (CDO->SetNetCullDistanceSquared())
+    //
+    // Payload:  { blueprintPath: string, netCullDistanceSquared?: number, useOwnerNetRelevancy?: bool }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("configure_net_cull_distance"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -971,11 +1239,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net cull distance squared set to %.0f"), NetCullDistanceSquared));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net cull distance configured"), ResultJson);
         return true;
     }
 
+    // ----- set_always_relevant -----
+    // Sets the bAlwaysRelevant flag on an Actor CDO, making the actor always
+    // replicated to all clients regardless of distance.
+    //
+    // Payload:  { blueprintPath: string, alwaysRelevant?: bool }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_always_relevant"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1005,11 +1279,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Always relevant set to %s"), bAlwaysRelevant ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Always relevant configured"), ResultJson);
         return true;
     }
 
+    // ----- set_only_relevant_to_owner -----
+    // Sets the bOnlyRelevantToOwner flag on an Actor CDO, restricting
+    // replication to only the owning client.
+    //
+    // Payload:  { blueprintPath: string, onlyRelevantToOwner?: bool }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_only_relevant_to_owner"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1039,7 +1319,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Only relevant to owner set to %s"), bOnlyRelevantToOwner ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Only relevant to owner configured"), ResultJson);
         return true;
     }
@@ -1048,6 +1328,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.5 Net Serialization Actions
     // =========================================================================
 
+    // ----- configure_net_serialization -----
+    // Configures net serialization settings on an Actor CDO. Logs a warning
+    // about bReplicateUsingRegisteredSubObjectList being protected.
+    //
+    // Note: bReplicateUsingRegisteredSubObjectList is protected in UE 5.6/5.7.
+    //
+    // Payload:  { blueprintPath: string, structName?: string, customSerialization?: bool }
+    // Response: { success: bool, customSerialization, structName?, message, assetVerification }
     if (SubAction == TEXT("configure_net_serialization"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1086,11 +1374,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
             ResultJson->SetStringField(TEXT("structName"), StructName);
         }
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net serialization configured (customSerialization=%s)"), bCustomSerialization ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net serialization configured"), ResultJson);
         return true;
     }
 
+    // ----- set_replicated_using -----
+    // Sets a RepNotify function on a Blueprint variable. Enables CPF_Net and
+    // CPF_RepNotify flags on the property and assigns the RepNotifyFunc name.
+    //
+    // Payload:  { blueprintPath: string, propertyName: string, repNotifyFunc: string }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("set_replicated_using"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1136,11 +1430,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("ReplicatedUsing set to %s for property %s"), *RepNotifyFunc, *PropertyName));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ReplicatedUsing configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_push_model -----
+    // Enables or disables push model replication metadata on all replicated
+    // properties in a Blueprint. Push model reduces replication overhead by
+    // only sending properties when explicitly marked dirty.
+    //
+    // Payload:  { blueprintPath: string, usePushModel?: bool }
+    // Response: { success: bool, usePushModel, message, assetVerification }
     if (SubAction == TEXT("configure_push_model"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1190,7 +1491,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("usePushModel"), bUsePushModel);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for all replicated properties"), bUsePushModel ? TEXT("enabled") : TEXT("disabled")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Push model configured"), ResultJson);
         return true;
     }
@@ -1199,6 +1500,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.6 Network Prediction Actions
     // =========================================================================
 
+    // ----- configure_client_prediction -----
+    // Configures client-side prediction on a Character Blueprint's
+    // CharacterMovementComponent. Enables/disables timestamp replication
+    // and sets the smoothing threshold.
+    //
+    // Payload:  { blueprintPath: string, enablePrediction?: bool, predictionThreshold?: number }
+    // Response: { success: bool, enablePrediction, predictionThreshold, message, assetVerification }
     if (SubAction == TEXT("configure_client_prediction"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1243,11 +1551,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
         ResultJson->SetNumberField(TEXT("predictionThreshold"), PredictionThreshold);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Client prediction %s"), bEnablePrediction ? TEXT("enabled") : TEXT("disabled")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Client prediction configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_server_correction -----
+    // Configures server correction smoothing parameters on a Character
+    // Blueprint's CharacterMovementComponent for networked movement.
+    //
+    // Payload:  { blueprintPath: string, correctionThreshold?: number, smoothingRate?: number }
+    // Response: { success: bool, correctionThreshold, smoothingRate, message, assetVerification }
     if (SubAction == TEXT("configure_server_correction"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1287,11 +1601,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetNumberField(TEXT("correctionThreshold"), CorrectionThreshold);
         ResultJson->SetNumberField(TEXT("smoothingRate"), SmoothingRate);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Server correction configured (threshold=%.2f, smoothing=%.2f)"), CorrectionThreshold, SmoothingRate));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Server correction configured"), ResultJson);
         return true;
     }
 
+    // ----- add_network_prediction_data -----
+    // Adds a replicated variable to a Blueprint for storing network prediction
+    // data. The variable is configured with COND_AutonomousOnly replication
+    // condition (only sent to locally controlled pawns).
+    //
+    // Supported dataType values: "Transform", "Vector", "Rotator", or float default.
+    //
+    // Payload:  { blueprintPath: string, dataType: string, variableName?: string }
+    // Response: { success: bool, variableName, dataType, message, assetVerification }
     if (SubAction == TEXT("add_network_prediction_data"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1363,11 +1686,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("variableName"), VarName);
         ResultJson->SetStringField(TEXT("dataType"), DataType);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' added"), *VarName, *DataType));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network prediction data added"), ResultJson);
         return true;
     }
 
+    // ----- configure_movement_prediction -----
+    // Configures movement prediction smoothing parameters on a Character
+    // Blueprint's CharacterMovementComponent for networked movement.
+    //
+    // Payload:  { blueprintPath: string, networkSmoothingMode?: string, networkMaxSmoothUpdateDistance?: number, networkNoSmoothUpdateDistance?: number }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("configure_movement_prediction"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1402,7 +1731,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Movement prediction configured"));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Movement prediction configured"), ResultJson);
         return true;
     }
@@ -1411,6 +1740,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.7 Connection & Session Actions
     // =========================================================================
 
+    // ----- configure_net_driver -----
+    // Configures net driver settings on the active world's net driver including
+    // client rate limits and server tick rate.
+    //
+    // Version notes:
+    //   UE 5.0-5.6: Direct property access for NetServerMaxTickRate (deprecated in 5.5)
+    //   UE 5.7:     Uses SetNetServerMaxTickRate() setter method
+    //
+    // Payload:  { maxClientRate?: number, maxInternetClientRate?: number, netServerMaxTickRate?: number }
+    // Response: { success: bool, appliedToActiveDriver, maxClientRate, maxInternetClientRate, netServerMaxTickRate, message }
     if (SubAction == TEXT("configure_net_driver"))
     {
         double MaxClientRate = GetNumberField(Payload, TEXT("maxClientRate"), 15000.0);
@@ -1450,6 +1789,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         return true;
     }
 
+    // ----- set_net_role -----
+    // Configures replication on an Actor CDO based on a desired net role.
+    // ROLE_Authority and proxy roles enable replication; ROLE_None disables it.
+    //
+    // Payload:  { blueprintPath: string, role: string }
+    // Response: { success: bool, role, replicates, message, assetVerification }
     if (SubAction == TEXT("set_net_role"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1496,11 +1841,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetStringField(TEXT("role"), Role);
         ResultJson->SetBoolField(TEXT("replicates"), CDO ? CDO->GetIsReplicated() : false);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net role configured to %s (replicates=%s)"), *Role, CDO && CDO->GetIsReplicated() ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Net role configured"), ResultJson);
         return true;
     }
 
+    // ----- configure_replicated_movement -----
+    // Enables or disables movement replication on an Actor CDO via
+    // SetReplicatingMovement().
+    //
+    // Payload:  { blueprintPath: string, replicateMovement?: bool }
+    // Response: { success: bool, message: string, assetVerification }
     if (SubAction == TEXT("configure_replicated_movement"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
@@ -1530,7 +1881,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replicate movement set to %s"), bReplicateMovement ? TEXT("true") : TEXT("false")));
-        AddAssetVerification(ResultJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResultJson, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Replicated movement configured"), ResultJson);
         return true;
     }
@@ -1539,12 +1890,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
     // 20.8 Utility Actions
     // =========================================================================
 
+    // ----- get_networking_info -----
+    // Retrieves comprehensive networking configuration for a Blueprint CDO or
+    // a live actor in the world. Returns replication settings, relevancy flags,
+    // net update frequency, dormancy, roles, and authority status.
+    //
+    // Version notes:
+    //   UE 5.0:   Net frequency/cull distance values returned as 0.0
+    //   UE 5.1-5.4: Direct property access
+    //   UE 5.5+:  Getter methods for net frequency and cull distance
+    //
+    // Payload:  { blueprintPath?: string, actorName?: string }  (one required)
+    // Response: { success: bool, networkingInfo: object }
     if (SubAction == TEXT("get_networking_info"))
     {
         FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
         FString ActorName = GetStringField(Payload, TEXT("actorName"));
 
-        TSharedPtr<FJsonObject> NetworkingInfo = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> NetworkingInfo = McpHandlerUtils::CreateResultObject();
 
         if (!BlueprintPath.IsEmpty())
         {

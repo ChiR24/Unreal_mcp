@@ -1,15 +1,135 @@
+// =============================================================================
+// McpAutomationBridge_LandscapeHandlers.cpp
+// =============================================================================
+// Landscape automation handlers for MCP Automation Bridge.
+// Provides landscape creation, heightmap modification, layer painting,
+// sculpting, material assignment, and grass type management.
+//
+// HANDLERS IMPLEMENTED (7 total):
+// -----------------------------------------------------------------------------
+// Section A - Landscape Dispatch:
+//   - HandleEditLandscape           : Dispatcher for edit operations (modify_heightmap,
+//                                     paint_landscape_layer, sculpt_landscape,
+//                                     set_landscape_material)
+//
+// Section B - Landscape Creation:
+//   - HandleCreateLandscape         : Create a new landscape actor with configurable
+//                                     components, quads, material, and location
+//
+// Section C - Heightmap Operations:
+//   - HandleModifyHeightmap         : Modify heightmap data (set/raise/lower/flatten)
+//                                     with optional region targeting and flush control
+//   - HandleSculptLandscape         : Brush-based sculpting at world-space positions
+//                                     (Raise/Lower/Flatten tool modes)
+//
+// Section D - Layer & Material Operations:
+//   - HandlePaintLandscapeLayer     : Paint weight-map layers with auto-creation
+//                                     of missing layer info objects
+//   - HandleSetLandscapeMaterial    : Assign a material to a landscape actor
+//
+// Section E - Grass Type Management:
+//   - HandleCreateLandscapeGrassType: Create ULandscapeGrassType asset with
+//                                     configurable density/scale/rotation
+//
+// =============================================================================
+// PAYLOAD/RESPONSE FORMATS:
+// -----------------------------------------------------------------------------
+// create_landscape:
+//   Payload:  { "name": string, "x"?: number, "y"?: number, "z"?: number,
+//               "location"?: {x,y,z} | [x,y,z], "componentsX"?: int(8),
+//               "componentsY"?: int(8), "componentCount"?: int,
+//               "sizeX"?: number, "sizeY"?: number,
+//               "quadsPerComponent"?: int(63), "quadsPerSection"?: int,
+//               "sectionsPerComponent"?: int(1), "materialPath"?: string }
+//   Response: { "success": bool, "landscapePath": string, "actorLabel": string,
+//               "componentsX": int, "componentsY": int, "quadsPerComponent": int }
+//
+// modify_heightmap:
+//   Payload:  { "landscapePath"?: string, "landscapeName"?: string,
+//               "operation"?: "set"|"raise"|"lower"|"flatten",
+//               "heightData"?: uint16[], "region"?: {minX,minY,maxX,maxY},
+//               "skipFlush"?: bool }
+//   Response: { "success": bool, "landscapePath": string, "landscapeName": string,
+//               "operation": string, "modifiedVertices": int,
+//               "regionSizeX": int, "regionSizeY": int, "flushSkipped": bool }
+//
+// paint_landscape_layer:
+//   Payload:  { "landscapePath"?: string, "landscapeName"?: string,
+//               "layerName": string, "region"?: {minX,minY,maxX,maxY},
+//               "strength"?: number(0-1), "skipFlush"?: bool }
+//   Response: { "success": bool, "landscapePath": string, "landscapeName": string,
+//               "layerName": string, "strength": number }
+//
+// sculpt_landscape:
+//   Payload:  { "landscapePath"?: string, "landscapeName"?: string,
+//               "location"|"position": {x,y,z}, "toolMode"?: "Raise"|"Lower"|"Flatten",
+//               "brushRadius"?: number(1000), "brushFalloff"?: number(0.5),
+//               "strength"?: number(0.1), "skipFlush"?: bool }
+//   Response: { "success": bool, "toolMode": string, "modifiedVertices": int }
+//
+// set_landscape_material:
+//   Payload:  { "landscapePath"?: string, "landscapeName"?: string,
+//               "materialPath": string }
+//   Response: { "success": bool, "landscapePath": string, "landscapeName": string,
+//               "materialPath": string }
+//
+// create_landscape_grass_type:
+//   Payload:  { "name": string, "meshPath": string, "density"?: number(1.0),
+//               "minScale"?: number(0.8), "maxScale"?: number(1.2) }
+//   Response: { "success": bool, "asset_path": string }
+//
+// =============================================================================
+// UE VERSION COMPATIBILITY (5.0 - 5.7):
+// -----------------------------------------------------------------------------
+// - UE 5.0-5.4: Uses ALandscape::Import() with PRAGMA_DISABLE_DEPRECATION_WARNINGS
+// - UE 5.5-5.6: Uses FLandscapeEditDataInterface to avoid deprecated Import()
+// - UE 5.7:     Import() causes crashes - use FLandscapeEditDataInterface and
+//               CreateDefaultLayer() instead
+// - UE 5.7:     ULandscapeLayerInfoObject::LayerName deprecated - use SetLayerName()
+// - All:        Pass false for bInUploadTextureChangesToGPU in
+//               FLandscapeEditDataInterface to prevent GPU sync hangs
+// - All:        Use MarkPackageDirty() instead of PostEditChange() for heightmap
+//               edits to avoid full landscape rebuild (60+ second hangs)
+//
+// =============================================================================
+// SECURITY NOTES:
+// -----------------------------------------------------------------------------
+// - Landscape/material paths validated via SanitizeProjectRelativePath()
+// - Mesh paths for grass types validated via SanitizeProjectRelativePath()
+// - Name parameters validated for invalid characters and length
+// - Path traversal attacks blocked at validation layer
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first include
+#include "McpHandlerUtils.h"
+
+// -----------------------------------------------------------------------------
+// Core Includes
+// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
-#include "Runtime/Launch/Resources/Version.h"
 #include "ScopedTransaction.h"
 
-
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
+
+// -----------------------------------------------------------------------------
+// Core Engine
+// -----------------------------------------------------------------------------
 #include "Async/Async.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/World.h"
+#include "Misc/ScopedSlowTask.h"
+#include "UObject/SavePackage.h"
+
+// -----------------------------------------------------------------------------
+// Landscape System
+// -----------------------------------------------------------------------------
 #include "Landscape.h"
 #include "LandscapeComponent.h"
 #include "LandscapeDataAccess.h"
@@ -20,18 +140,52 @@
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
 #include "LandscapeStreamingProxy.h"
+
+// -----------------------------------------------------------------------------
+// Materials
+// -----------------------------------------------------------------------------
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "Misc/ScopedSlowTask.h"
-#include "UObject/SavePackage.h"
 
+// -----------------------------------------------------------------------------
+// Editor Subsystems
+// -----------------------------------------------------------------------------
+#include "EditorAssetLibrary.h"
+
+// Version-specific subsystem includes
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Logging Category
+// =============================================================================
+DEFINE_LOG_CATEGORY_STATIC(LogMcpLandscapeHandlers, Log, All);
+
+// =============================================================================
+// Section A: Landscape Dispatch
+// =============================================================================
+
+/**
+ * HandleEditLandscape
+ *
+ * Top-level dispatcher for landscape edit operations.
+ * Delegates to specific handlers based on action type:
+ *   - modify_heightmap       -> HandleModifyHeightmap
+ *   - paint_landscape_layer  -> HandlePaintLandscapeLayer
+ *   - sculpt_landscape       -> HandleSculptLandscape
+ *   - set_landscape_material -> HandleSetLandscapeMaterial
+ *
+ * @param RequestId  Unique request identifier for response correlation
+ * @param Action     Action string (matched by sub-handlers)
+ * @param Payload    JSON payload forwarded to sub-handler
+ * @param RequestingSocket  WebSocket connection for response delivery
+ * @return true if any sub-handler claimed the action
+ */
 bool UMcpAutomationBridgeSubsystem::HandleEditLandscape(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -48,6 +202,32 @@ bool UMcpAutomationBridgeSubsystem::HandleEditLandscape(
   return false;
 }
 
+// =============================================================================
+// Section B: Landscape Creation
+// =============================================================================
+
+/**
+ * HandleCreateLandscape
+ *
+ * Creates a new ALandscape actor in the editor world with configurable
+ * components, quads per component, sections, location, and material.
+ *
+ * Accepts multiple input formats for location:
+ *   - Top-level x/y/z fields
+ *   - "location" object: { "x": N, "y": N, "z": N }
+ *   - "location" array:  [x, y, z]
+ *
+ * Version-specific landscape initialization:
+ *   - UE 5.7+:  FLandscapeEditDataInterface + CreateDefaultLayer()
+ *   - UE 5.5-5.6: FLandscapeEditDataInterface + CreateDefaultLayer()
+ *   - UE 5.0-5.4: ALandscape::Import() (deprecated path)
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "create_landscape" (case-insensitive)
+ * @param Payload    JSON payload with landscape configuration
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
 bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -184,7 +364,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   const FString CaptName = NameOverride;
 
   // Debug log to confirm name capture
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+  UE_LOG(LogMcpLandscapeHandlers, Display,
          TEXT("HandleCreateLandscape: Captured name '%s' (from override '%s')"),
          *CaptName, *NameOverride);
 
@@ -290,6 +470,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
           FText::FromString(TEXT("Create Landscape")));
       Landscape->Modify();
 
+      // -----------------------------------------------------------------------
+      // Version-specific landscape initialization
+      // -----------------------------------------------------------------------
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
       // UE 5.7+: The Import() function has a known issue with fresh landscapes.
       // Use CreateDefaultLayer instead to initialize a valid landscape
@@ -329,7 +512,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         );
         LandscapeEdit.Flush();
 
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+        UE_LOG(LogMcpLandscapeHandlers, Display,
                TEXT("HandleCreateLandscape: Applied height data via "
                     "FLandscapeEditDataInterface (%d vertices)"),
                HeightArray.Num());
@@ -370,7 +553,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
           TEXT("Landscape_%dx%d"), CaptComponentsX, CaptComponentsY));
     } else {
       Landscape->SetActorLabel(CaptName);
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+      UE_LOG(LogMcpLandscapeHandlers, Display,
              TEXT("HandleCreateLandscape: Set ActorLabel to '%s'"), *CaptName);
     }
 
@@ -396,7 +579,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
       Landscape->PostEditChange();
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPathName());
     Resp->SetStringField(TEXT("actorLabel"), Landscape->GetActorLabel());
@@ -418,6 +601,35 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
 #endif
 }
 
+// =============================================================================
+// Section C: Heightmap Operations
+// =============================================================================
+
+/**
+ * HandleModifyHeightmap
+ *
+ * Modifies the heightmap of an existing landscape. Supports four operations:
+ *   - "set":     Direct height values from heightData array
+ *   - "raise":   Raise terrain by delta (from first heightData value)
+ *   - "lower":   Lower terrain by delta (from first heightData value)
+ *   - "flatten": Set all heights to a uniform target value
+ *
+ * Landscape lookup priority:
+ *   1. By landscapeName (actor label) in current world
+ *   2. By landscapePath (package path) in current world
+ *   3. Load from disk via StaticLoadObject
+ *
+ * Performance notes:
+ *   - Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hangs
+ *   - skipFlush=true defers expensive GPU synchronization for batch operations
+ *   - Uses MarkPackageDirty() instead of PostEditChange() to avoid rebuild
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "modify_heightmap" (case-insensitive)
+ * @param Payload    JSON payload with heightmap modification parameters
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
 bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -678,7 +890,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     // which can take 60+ seconds for large landscapes
     Landscape->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
@@ -689,7 +901,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
     Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);
     
     // Add verification data
-    AddActorVerification(Resp, Landscape);
+    McpHandlerUtils::AddVerification(Resp, Landscape);
 
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                       TEXT("Heightmap modified successfully"),
@@ -705,245 +917,30 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
 #endif
 }
 
-bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
-    const FString &RequestId, const FString &Action,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("paint_landscape_layer"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
+// =============================================================================
+// Section C (continued): Sculpt Landscape
+// =============================================================================
 
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("paint_landscape_layer payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString LandscapePath;
-  Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
-  FString LandscapeName;
-  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
-
-  // Security: Validate landscape path if provided
-  if (!LandscapePath.IsEmpty()) {
-    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
-    if (SafePath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
-                          TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    LandscapePath = SafePath;
-  }
-
-  FString LayerName;
-  if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) ||
-      LayerName.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("layerName required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  // Paint region (optional - if not specified, paint entire landscape)
-  int32 MinX = -1, MinY = -1, MaxX = -1, MaxY = -1;
-  const TSharedPtr<FJsonObject> *RegionObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("region"), RegionObj) && RegionObj) {
-    (*RegionObj)->TryGetNumberField(TEXT("minX"), MinX);
-    (*RegionObj)->TryGetNumberField(TEXT("minY"), MinY);
-    (*RegionObj)->TryGetNumberField(TEXT("maxX"), MaxX);
-    (*RegionObj)->TryGetNumberField(TEXT("maxY"), MaxY);
-  }
-
-  double Strength = 1.0;
-  Payload->TryGetNumberField(TEXT("strength"), Strength);
-  Strength = FMath::Clamp(Strength, 0.0, 1.0);
-
-  // Optional: Skip the expensive Flush() operation for performance
-  bool bSkipFlush = false;
-  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
-
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
-
-  AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
-                                        RequestingSocket, LandscapePath,
-                                        LandscapeName, LayerName, MinX, MinY,
-                                        MaxX, MaxY, Strength, bSkipFlush]() {
-    UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
-    if (!Subsystem)
-      return;
-
-    // PRIORITY 1: Find landscape in current world by name (works for transient actors)
-    ALandscape *Landscape = nullptr;
-    if (GEditor) {
-      if (UEditorActorSubsystem *ActorSS =
-              GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-        TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-
-        for (AActor *A : AllActors) {
-          if (ALandscape *L = Cast<ALandscape>(A)) {
-            // Match by landscapeName if provided (actor label)
-            if (!LandscapeName.IsEmpty() &&
-                L->GetActorLabel().Equals(LandscapeName,
-                                          ESearchCase::IgnoreCase)) {
-              Landscape = L;
-              break;
-            }
-            // Match by path: compare asset path from the landscape's package
-            if (!LandscapePath.IsEmpty()) {
-              FString ActorAssetPath = L->GetPackage()->GetPathName();
-              // Normalize both paths for comparison
-              FString NormalizedRequest = LandscapePath;
-              FString NormalizedActor = ActorAssetPath;
-              NormalizedRequest.ReplaceInline(TEXT("\\"), TEXT("/"));
-              NormalizedActor.ReplaceInline(TEXT("\\"), TEXT("/"));
-              // Remove .uasset extension if present
-              if (NormalizedActor.EndsWith(TEXT(".uasset"))) {
-                NormalizedActor = NormalizedActor.LeftChop(7);
-              }
-              if (NormalizedActor.Equals(NormalizedRequest, ESearchCase::IgnoreCase)) {
-                Landscape = L;
-                break;
-              }
-            }
-          }
-        }
-
-        // NOTE: Removed silent fallback to single landscape - this was causing false positives
-        // If a specific landscape was requested but not found, we should fail, not silently use another
-      }
-    }
-
-    // PRIORITY 2: Try to load from disk (for saved landscape assets)
-    if (!Landscape && !LandscapePath.IsEmpty()) {
-      Landscape = Cast<ALandscape>(
-          StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
-    }
-    if (!Landscape) {
-      // Provide helpful error message distinguishing between "no landscape found" and "wrong name"
-      FString ErrorMessage = LandscapeName.IsEmpty() 
-          ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
-          : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
-      Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                                     *ErrorMessage,
-                                     TEXT("LANDSCAPE_NOT_FOUND"));
-      return;
-    }
-
-    ULandscapeInfo *LandscapeInfo = Landscape->GetLandscapeInfo();
-    if (!LandscapeInfo) {
-      Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                                     TEXT("Landscape has no info"),
-                                     TEXT("INVALID_LANDSCAPE"));
-      return;
-    }
-
-    ULandscapeLayerInfoObject *LayerInfo = nullptr;
-    for (const FLandscapeInfoLayerSettings &Layer : LandscapeInfo->Layers) {
-      if (Layer.LayerName == FName(*LayerName)) {
-        LayerInfo = Layer.LayerInfoObj;
-        break;
-      }
-    }
-
-    // Auto-create layer if it doesn't exist (matches UE Landscape Editor behavior)
-    if (!LayerInfo) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-             TEXT("HandlePaintLandscapeLayer: Layer '%s' not found, auto-creating..."),
-             *LayerName);
-
-      // Create a new layer info object
-      ULandscapeLayerInfoObject* NewLayerInfo = NewObject<ULandscapeLayerInfoObject>(
-          Landscape, FName(*FString::Printf(TEXT("LayerInfo_%s"), *LayerName)),
-          RF_Public | RF_Transactional);
-
-      if (NewLayerInfo) {
-        // Set the layer name using the public API (handles deprecation in 5.7+)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-        NewLayerInfo->SetLayerName(FName(*LayerName), true);
-#else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NewLayerInfo->LayerName = FName(*LayerName);
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-
-        // Add to landscape info layers
-        FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
-        LandscapeInfo->Layers.Add(NewLayerSettings);
-
-        LayerInfo = NewLayerInfo;
-
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-               TEXT("HandlePaintLandscapeLayer: Auto-created layer '%s'"),
-               *LayerName);
-      } else {
-        Subsystem->SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("Failed to create layer '%s'"),
-                            *LayerName),
-            TEXT("LAYER_CREATION_FAILED"));
-        return;
-      }
-    }
-
-    // Note: Do NOT call MakeDialog() - it blocks indefinitely in headless environments
-    FScopedSlowTask SlowTask(
-        1.0f, FText::FromString(TEXT("Painting landscape layer...")));
-
-    int32 PaintMinX = MinX;
-    int32 PaintMinY = MinY;
-    int32 PaintMaxX = MaxX;
-    int32 PaintMaxY = MaxY;
-    if (PaintMinX < 0 || PaintMaxX < 0) {
-      LandscapeInfo->GetLandscapeExtent(PaintMinX, PaintMinY, PaintMaxX,
-                                        PaintMaxY);
-    }
-
-    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
-    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
-    const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
-    const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
-    const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
-
-    TArray<uint8> AlphaData;
-    AlphaData.Init(PaintValue, RegionSizeX * RegionSizeY);
-
-    LandscapeEdit.SetAlphaData(LayerInfo, PaintMinX, PaintMinY, PaintMaxX,
-                               PaintMaxY, AlphaData.GetData(), RegionSizeX);
-
-    // Flush is expensive - it forces render thread synchronization
-    // Skip if requested for batch operations
-    if (!bSkipFlush) {
-      LandscapeEdit.Flush();
-    }
-
-    // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
-    // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
-    Landscape->MarkPackageDirty();
-
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
-    Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
-    Resp->SetStringField(TEXT("layerName"), LayerName);
-    Resp->SetNumberField(TEXT("strength"), Strength);
-
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                      TEXT("Layer painted successfully"), Resp,
-                                      FString());
-  });
-
-  return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("paint_landscape_layer requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
-}
-
+/**
+ * HandleSculptLandscape
+ *
+ * Brush-based landscape sculpting at a world-space position. Applies a
+ * circular brush with configurable radius, falloff, and strength.
+ *
+ * Supported tool modes:
+ *   - "Raise":   Raise terrain within brush radius
+ *   - "Lower":   Lower terrain within brush radius
+ *   - "Flatten": Flatten terrain to target Z height
+ *
+ * The brush converts world-space coordinates to landscape local vertex
+ * coordinates, accounting for actor transform and scale.
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "sculpt_landscape" (case-insensitive)
+ * @param Payload    JSON payload with sculpt parameters
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
 bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -978,7 +975,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     LandscapePath = SafePath;
   }
 
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+  UE_LOG(LogMcpLandscapeHandlers, Warning,
          TEXT("HandleSculptLandscape: RequestId=%s Path='%s' Name='%s'"),
          *RequestId, *LandscapePath, *LandscapeName);
 
@@ -1198,7 +1195,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
       Landscape->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("toolMode"), ToolMode);
     Resp->SetNumberField(TEXT("modifiedVertices"),
@@ -1218,6 +1215,285 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
 #endif
 }
 
+// =============================================================================
+// Section D: Layer & Material Operations
+// =============================================================================
+
+/**
+ * HandlePaintLandscapeLayer
+ *
+ * Paints a weight-map layer on a landscape. Auto-creates the layer info
+ * object if the specified layer doesn't exist on the landscape.
+ *
+ * Version compatibility for layer name assignment:
+ *   - UE 5.7+:  Uses SetLayerName() (public API)
+ *   - UE 5.0-5.6: Uses direct LayerName assignment (deprecated in 5.7)
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "paint_landscape_layer" (case-insensitive)
+ * @param Payload    JSON payload with layer painting parameters
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
+bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
+    const FString &RequestId, const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const FString Lower = Action.ToLower();
+  if (!Lower.Equals(TEXT("paint_landscape_layer"), ESearchCase::IgnoreCase)) {
+    return false;
+  }
+
+#if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("paint_landscape_layer payload missing"),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString LandscapePath;
+  Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);
+  FString LandscapeName;
+  Payload->TryGetStringField(TEXT("landscapeName"), LandscapeName);
+
+  // Security: Validate landscape path if provided
+  if (!LandscapePath.IsEmpty()) {
+    FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+    LandscapePath = SafePath;
+  }
+
+  FString LayerName;
+  if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) ||
+      LayerName.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("layerName required"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  // Paint region (optional - if not specified, paint entire landscape)
+  int32 MinX = -1, MinY = -1, MaxX = -1, MaxY = -1;
+  const TSharedPtr<FJsonObject> *RegionObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("region"), RegionObj) && RegionObj) {
+    (*RegionObj)->TryGetNumberField(TEXT("minX"), MinX);
+    (*RegionObj)->TryGetNumberField(TEXT("minY"), MinY);
+    (*RegionObj)->TryGetNumberField(TEXT("maxX"), MaxX);
+    (*RegionObj)->TryGetNumberField(TEXT("maxY"), MaxY);
+  }
+
+  double Strength = 1.0;
+  Payload->TryGetNumberField(TEXT("strength"), Strength);
+  Strength = FMath::Clamp(Strength, 0.0, 1.0);
+
+  // Optional: Skip the expensive Flush() operation for performance
+  bool bSkipFlush = false;
+  Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
+
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
+
+  AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
+                                        RequestingSocket, LandscapePath,
+                                        LandscapeName, LayerName, MinX, MinY,
+                                        MaxX, MaxY, Strength, bSkipFlush]() {
+    UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
+    if (!Subsystem)
+      return;
+
+    // PRIORITY 1: Find landscape in current world by name (works for transient actors)
+    ALandscape *Landscape = nullptr;
+    if (GEditor) {
+      if (UEditorActorSubsystem *ActorSS =
+              GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+        TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+
+        for (AActor *A : AllActors) {
+          if (ALandscape *L = Cast<ALandscape>(A)) {
+            // Match by landscapeName if provided (actor label)
+            if (!LandscapeName.IsEmpty() &&
+                L->GetActorLabel().Equals(LandscapeName,
+                                          ESearchCase::IgnoreCase)) {
+              Landscape = L;
+              break;
+            }
+            // Match by path: compare asset path from the landscape's package
+            if (!LandscapePath.IsEmpty()) {
+              FString ActorAssetPath = L->GetPackage()->GetPathName();
+              // Normalize both paths for comparison
+              FString NormalizedRequest = LandscapePath;
+              FString NormalizedActor = ActorAssetPath;
+              NormalizedRequest.ReplaceInline(TEXT("\\"), TEXT("/"));
+              NormalizedActor.ReplaceInline(TEXT("\\"), TEXT("/"));
+              // Remove .uasset extension if present
+              if (NormalizedActor.EndsWith(TEXT(".uasset"))) {
+                NormalizedActor = NormalizedActor.LeftChop(7);
+              }
+              if (NormalizedActor.Equals(NormalizedRequest, ESearchCase::IgnoreCase)) {
+                Landscape = L;
+                break;
+              }
+            }
+          }
+        }
+
+        // NOTE: Removed silent fallback to single landscape - this was causing false positives
+        // If a specific landscape was requested but not found, we should fail, not silently use another
+      }
+    }
+
+    // PRIORITY 2: Try to load from disk (for saved landscape assets)
+    if (!Landscape && !LandscapePath.IsEmpty()) {
+      Landscape = Cast<ALandscape>(
+          StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
+    }
+    if (!Landscape) {
+      // Provide helpful error message distinguishing between "no landscape found" and "wrong name"
+      FString ErrorMessage = LandscapeName.IsEmpty() 
+          ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
+          : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath);
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     *ErrorMessage,
+                                     TEXT("LANDSCAPE_NOT_FOUND"));
+      return;
+    }
+
+    ULandscapeInfo *LandscapeInfo = Landscape->GetLandscapeInfo();
+    if (!LandscapeInfo) {
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     TEXT("Landscape has no info"),
+                                     TEXT("INVALID_LANDSCAPE"));
+      return;
+    }
+
+    ULandscapeLayerInfoObject *LayerInfo = nullptr;
+    for (const FLandscapeInfoLayerSettings &Layer : LandscapeInfo->Layers) {
+      if (Layer.LayerName == FName(*LayerName)) {
+        LayerInfo = Layer.LayerInfoObj;
+        break;
+      }
+    }
+
+    // Auto-create layer if it doesn't exist (matches UE Landscape Editor behavior)
+    if (!LayerInfo) {
+      UE_LOG(LogMcpLandscapeHandlers, Display,
+             TEXT("HandlePaintLandscapeLayer: Layer '%s' not found, auto-creating..."),
+             *LayerName);
+
+      // Create a new layer info object
+      ULandscapeLayerInfoObject* NewLayerInfo = NewObject<ULandscapeLayerInfoObject>(
+          Landscape, FName(*FString::Printf(TEXT("LayerInfo_%s"), *LayerName)),
+          RF_Public | RF_Transactional);
+
+      if (NewLayerInfo) {
+        // -----------------------------------------------------------------------
+        // Version-specific layer name assignment
+        // -----------------------------------------------------------------------
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+        // UE 5.7+: LayerName property deprecated, use SetLayerName()
+        NewLayerInfo->SetLayerName(FName(*LayerName), true);
+#else
+        // UE 5.0-5.6: Direct property assignment
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        NewLayerInfo->LayerName = FName(*LayerName);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+
+        // Add to landscape info layers
+        FLandscapeInfoLayerSettings NewLayerSettings(NewLayerInfo, Landscape);
+        LandscapeInfo->Layers.Add(NewLayerSettings);
+
+        LayerInfo = NewLayerInfo;
+
+        UE_LOG(LogMcpLandscapeHandlers, Display,
+               TEXT("HandlePaintLandscapeLayer: Auto-created layer '%s'"),
+               *LayerName);
+      } else {
+        Subsystem->SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Failed to create layer '%s'"),
+                            *LayerName),
+            TEXT("LAYER_CREATION_FAILED"));
+        return;
+      }
+    }
+
+    // Note: Do NOT call MakeDialog() - it blocks indefinitely in headless environments
+    FScopedSlowTask SlowTask(
+        1.0f, FText::FromString(TEXT("Painting landscape layer...")));
+
+    int32 PaintMinX = MinX;
+    int32 PaintMinY = MinY;
+    int32 PaintMaxX = MaxX;
+    int32 PaintMaxY = MaxY;
+    if (PaintMinX < 0 || PaintMaxX < 0) {
+      LandscapeInfo->GetLandscapeExtent(PaintMinX, PaintMinY, PaintMaxX,
+                                        PaintMaxY);
+    }
+
+    // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
+    FLandscapeEditDataInterface LandscapeEdit(LandscapeInfo, false);
+    const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
+    const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
+    const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
+
+    TArray<uint8> AlphaData;
+    AlphaData.Init(PaintValue, RegionSizeX * RegionSizeY);
+
+    LandscapeEdit.SetAlphaData(LayerInfo, PaintMinX, PaintMinY, PaintMaxX,
+                               PaintMaxY, AlphaData.GetData(), RegionSizeX);
+
+    // Flush is expensive - it forces render thread synchronization
+    // Skip if requested for batch operations
+    if (!bSkipFlush) {
+      LandscapeEdit.Flush();
+    }
+
+    // Use MarkPackageDirty instead of PostEditChange to avoid full landscape rebuild
+    // PostEditChange triggers collision rebuild, shader recompilation, and nav mesh update
+    Landscape->MarkPackageDirty();
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
+    Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
+    Resp->SetStringField(TEXT("layerName"), LayerName);
+    Resp->SetNumberField(TEXT("strength"), Strength);
+
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
+                                      TEXT("Layer painted successfully"), Resp,
+                                      FString());
+  });
+
+  return true;
+#else
+  SendAutomationResponse(RequestingSocket, RequestId, false,
+                         TEXT("paint_landscape_layer requires editor build."),
+                         nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif
+}
+
+// -----------------------------------------------------------------------------
+// Set Landscape Material
+// -----------------------------------------------------------------------------
+
+/**
+ * HandleSetLandscapeMaterial
+ *
+ * Assigns a material to an existing landscape actor. Validates the material
+ * path and distinguishes between "asset not found" and "wrong type" errors.
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "set_landscape_material" (case-insensitive)
+ * @param Payload    JSON payload with material assignment parameters
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
 bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -1349,7 +1625,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
     Landscape->LandscapeMaterial = Mat;
     Landscape->PostEditChange();
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
@@ -1369,6 +1645,28 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
 #endif
 }
 
+// =============================================================================
+// Section E: Grass Type Management
+// =============================================================================
+
+/**
+ * HandleCreateLandscapeGrassType
+ *
+ * Creates a ULandscapeGrassType asset with a single grass variety configured
+ * from the provided static mesh, density, and scale parameters.
+ *
+ * The asset is saved to /Game/Landscape/<name> using McpSafeAssetSave
+ * (required for UE 5.7+ compatibility).
+ *
+ * Note: Uses GrassVarieties.AddZeroed() to avoid calling the unexported
+ * FGrassVariety constructor, then explicitly initializes all fields.
+ *
+ * @param RequestId  Unique request identifier
+ * @param Action     Must match "create_landscape_grass_type" (case-insensitive)
+ * @param Payload    JSON payload with grass type configuration
+ * @param RequestingSocket  WebSocket for response delivery
+ * @return true if action was handled
+ */
 bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -1449,7 +1747,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
     // Check if already exists
     if (UObject *ExistingAsset = StaticLoadObject(
             ULandscapeGrassType::StaticClass(), nullptr, *FullPackagePath)) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("asset_path"), ExistingAsset->GetPathName());
       Resp->SetStringField(TEXT("message"), TEXT("Asset already exists"));
@@ -1487,7 +1785,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
     Variety.AlignToSurface = true;
 
     McpSafeAssetSave(GrassType);
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("asset_path"), GrassType->GetPathName());
 

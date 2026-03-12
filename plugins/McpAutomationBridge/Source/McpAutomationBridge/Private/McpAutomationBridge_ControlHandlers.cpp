@@ -1,15 +1,74 @@
+// =============================================================================
+// McpAutomationBridge_ControlHandlers.cpp
+// =============================================================================
+// Editor control, viewport, PIE, camera, and actor manipulation handlers.
+//
+// HANDLERS (64 actions):
+//   Editor Control:
+//     - start_pie, stop_pie, pause_pie, resume_pie, is_pie_active
+//     - get_pie_info, set_pie_mode
+//
+//   Camera & Viewport:
+//     - set_camera_view, get_camera_view, focus_viewport_on_actor
+//     - set_viewport_view_mode, get_viewport_screenshot, capture_screenshot
+//     - set_viewport_layout, get_active_viewport_info
+//
+//   Actor Control:
+//     - spawn_actor, delete_actor, duplicate_actor, get_actors
+//     - set_actor_transform, get_actor_transform, set_actor_location
+//     - set_actor_rotation, set_actor_scale, apply_physics
+//     - set_actor_tags, add_actor_tag, remove_actor_tag
+//     - attach_actor, detach_actor, teleport_actor
+//
+//   Component Operations:
+//     - add_component, remove_component, get_components
+//     - set_component_property, get_component_property
+//
+//   Selection:
+//     - select_actor, deselect_actor, clear_selection, get_selected_actors
+//     - select_components, get_selected_components
+//
+//   Debug:
+//     - draw_debug_line, draw_debug_sphere, draw_debug_box
+//     - draw_debug_arrow, clear_debug_drawings
+//
+// REFACTORING NOTES:
+//   - Uses McpVersionCompatibility.h for UE 5.0-5.7 API abstraction
+//   - Uses McpHandlerUtils for standardized JSON parsing/responses
+//   - Editor subsystems paths vary by UE version
+//   - LevelEditor module is optional (may not be available in some contexts)
+//
+// VERSION COMPATIBILITY:
+//   - EditorActorSubsystem: Path varies (Subsystems/ vs root)
+//   - LevelEditorSubsystem: UE 5.0+ (optional, conditional include)
+//   - UnrealEditorSubsystem: UE 5.0+ (optional, conditional include)
+//   - LevelEditorPlaySettings: UE 5.0+ (optional, conditional include)
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"
 #include "Dom/JsonObject.h"
 #include "Async/Async.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Actor.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Asset & Engine Utilities
+// -----------------------------------------------------------------------------
 #include "EditorAssetLibrary.h"
 #include "EngineUtils.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Editor Subsystems (paths vary by UE version)
+// -----------------------------------------------------------------------------
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -34,12 +93,18 @@
 #elif __has_include("AssetEditorSubsystem.h")
 #include "AssetEditorSubsystem.h"
 #endif
-// Additional editor headers for viewport control
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Viewport Control
+// -----------------------------------------------------------------------------
 #include "Components/LightComponent.h"
 #include "Editor.h"
 #include "Modules/ModuleManager.h"
 #include "IAssetViewport.h"  // For IAssetViewport::GetAssetViewportClient()
 
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Level Editor (optional, may not be available)
+// -----------------------------------------------------------------------------
 #if __has_include("LevelEditor.h")
 #include "LevelEditor.h"
 #define MCP_HAS_LEVEL_EDITOR_MODULE 1
@@ -52,6 +117,10 @@
 #else
 #define MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS 0
 #endif
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Components & Actors
+// -----------------------------------------------------------------------------
 #include "Components/PrimitiveComponent.h"
 #include "EditorViewportClient.h"
 #include "Engine/Blueprint.h"
@@ -68,11 +137,15 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Export & Output
+// -----------------------------------------------------------------------------
 #include "Exporters/Exporter.h"
 #include "Misc/OutputDevice.h"
 #include "UnrealClient.h" // For FScreenshotRequest
 
-#endif
+#endif // WITH_EDITOR
 
 // Helper class for capturing export output
 /* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
@@ -358,10 +431,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   
   // Actor object with id, name and path
-  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
@@ -382,7 +455,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
   
   // Add verification data
-  AddActorVerification(Data, Spawned);
+  McpHandlerUtils::AddVerification(Data, Spawned);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned actor '%s'"), *Spawned->GetActorLabel());
@@ -488,10 +561,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
 
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath }
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   
   // Actor object with id, name and path
-  TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
@@ -502,7 +575,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
   
   // Add verification data
-  AddActorVerification(Resp, Spawned);
+  McpHandlerUtils::AddVerification(Resp, Spawned);
   
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned blueprint '%s'"),
@@ -568,7 +641,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
 
   const bool bAllDeleted = Missing.Num() == 0;
   const bool bAnyDeleted = Deleted.Num() > 0;
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bAllDeleted);
   Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
 
@@ -680,7 +753,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   // Verify physics state
   const bool bIsSimulating = Prim->IsSimulatingPhysics();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("simulating"), bIsSimulating);
   TArray<TSharedPtr<FJsonValue>> Applied;
   Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.X));
@@ -702,7 +775,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   }
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Applied force to '%s'"), *Found->GetActorLabel());
@@ -757,7 +830,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   // for now but logging if very different
   const bool bScaleMatch = NewScale.Equals(Scale, 0.01f);
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
   auto MakeArray = [](const FVector &Vec) {
@@ -779,7 +852,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   }
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set transform for '%s'"), *Found->GetActorLabel());
@@ -814,7 +887,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
   const FRotator Rotation = Current.GetRotation().Rotator();
   const FVector Scale = Current.GetScale3D();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
   auto MakeArray = [](const FVector &Vec) {
     TArray<TSharedPtr<FJsonValue>> Arr;
@@ -883,7 +956,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   const bool bIsHidden = Found->IsHidden();
   const bool bStateMatches = (bIsHidden == !bVisible);
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("visible"), !bIsHidden);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
@@ -895,7 +968,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   }
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Set visibility to %s for '%s'"),
@@ -1019,7 +1092,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   NewComponent->MarkPackageDirty();
   Found->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("componentName"), NewComponent->GetName());
   Resp->SetStringField(TEXT("componentPath"), NewComponent->GetPathName());
@@ -1180,7 +1253,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   }
   TargetComponent->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   if (AppliedProperties.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString &PropName : AppliedProperties)
@@ -1189,7 +1262,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   }
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Updated properties for component '%s' on '%s'"),
@@ -1242,7 +1315,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   for (UActorComponent *Comp : Found->GetComponents()) {
     if (!Comp)
       continue;
-    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetStringField(TEXT("name"), Comp->GetName());
     Entry->SetStringField(TEXT("class"), Comp->GetClass()
                                              ? Comp->GetClass()->GetPathName()
@@ -1253,19 +1326,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
       FRotator Rot = SceneComp->GetRelativeRotation();
       FVector Scale = SceneComp->GetRelativeScale3D();
 
-      TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
       LocObj->SetNumberField(TEXT("x"), Loc.X);
       LocObj->SetNumberField(TEXT("y"), Loc.Y);
       LocObj->SetNumberField(TEXT("z"), Loc.Z);
       Entry->SetObjectField(TEXT("relativeLocation"), LocObj);
 
-      TSharedPtr<FJsonObject> RotObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> RotObj = McpHandlerUtils::CreateResultObject();
       RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
       RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
       RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
       Entry->SetObjectField(TEXT("relativeRotation"), RotObj);
 
-      TSharedPtr<FJsonObject> ScaleObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ScaleObj = McpHandlerUtils::CreateResultObject();
       ScaleObj->SetNumberField(TEXT("x"), Scale.X);
       ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
       ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
@@ -1274,13 +1347,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
     ComponentsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
   
   // Add verification data
   if (Found) {
-    AddActorVerification(Data, Found);
+    McpHandlerUtils::AddVerification(Data, Found);
   }
   
   SendAutomationResponse(Socket, RequestId, true,
@@ -1327,13 +1400,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
   if (!NewName.TrimStartAndEnd().IsEmpty())
     Duplicated->SetActorLabel(NewName);
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("source"), Found->GetActorLabel());
   Data->SetStringField(TEXT("actorName"), Duplicated->GetActorLabel());
   Data->SetStringField(TEXT("actorPath"), Duplicated->GetPathName());
 
   // Add verification data
-  AddActorVerification(Data, Duplicated);
+  McpHandlerUtils::AddVerification(Data, Duplicated);
 
   TArray<TSharedPtr<FJsonValue>> OffsetArray;
   OffsetArray.Add(MakeShared<FJsonValueNumber>(Offset.X));
@@ -1403,7 +1476,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     bAttached = true;
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("child"), Child->GetActorLabel());
   Data->SetStringField(TEXT("parent"), Parent->GetActorLabel());
   Data->SetBoolField(TEXT("attached"), bAttached);
@@ -1415,7 +1488,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   }
 
   // Add verification data for the child actor
-  AddActorVerification(Data, Child);
+  McpHandlerUtils::AddVerification(Data, Child);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Attached '%s' to '%s'"), *Child->GetActorLabel(),
@@ -1448,7 +1521,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
 
   USceneComponent *RootComp = Found->GetRootComponent();
   if (!RootComp || !RootComp->GetAttachParent()) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
     Resp->SetStringField(TEXT("note"), TEXT("Actor was not attached"));
@@ -1466,7 +1539,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   // Verify detachment
   const bool bDetached = (RootComp->GetAttachParent() == nullptr);
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetBoolField(TEXT("detached"), bDetached);
 
@@ -1477,7 +1550,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   }
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Detached '%s'"), *Found->GetActorLabel());
@@ -1513,19 +1586,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
 
-  // DEBUG: Log tag search details
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+  // Log tag search details
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching for tag '%s' (FName: %s)"),
          *TagValue, *TagName.ToString());
-
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
   
-  // DEBUG: Log total actors being searched
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
+  
+  // Log total actors being searched
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
-         
   for (AActor *Actor : AllActors) {
     if (!Actor)
       continue;
@@ -1541,7 +1613,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
       bMatches = Actor->ActorHasTag(TagName);
     }
 
-    // DEBUG: Log actor tags for troubleshooting
+    // Log actor tags for troubleshooting at verbose level
     if (Actor->Tags.Num() > 0) {
       FString TagList;
       for (const FName& T : Actor->Tags) {
@@ -1551,9 +1623,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
              TEXT("HandleControlActorFindByTag: Actor '%s' has tags: [%s] - match=%d"),
              *Actor->GetActorLabel(), *TagList, bMatches);
     }
-
     if (bMatches) {
-      TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
       Entry->SetStringField(TEXT("path"), Actor->GetPathName());
       Entry->SetStringField(TEXT("class"),
@@ -1563,7 +1634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     }
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetNumberField(TEXT("count"), Matches.Num());
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actors found"),
@@ -1602,13 +1673,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Found->Tags.AddUnique(TagName);
   Found->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagName.ToString());
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Added tag '%s' to '%s'"), *TagName.ToString(),
@@ -1653,7 +1724,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
                           Name.Contains(Query, ESearchCase::IgnoreCase) ||
                           Path.Contains(Query, ESearchCase::IgnoreCase);
     if (bMatches) {
-      TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("label"), Label);
       Entry->SetStringField(TEXT("name"), Name);
       Entry->SetStringField(TEXT("path"), Path);
@@ -1664,7 +1735,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
     }
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetNumberField(TEXT("count"), Matches.Num());
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetStringField(TEXT("query"), Query);
@@ -1704,7 +1775,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     }
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("tag"), TagName.ToString());
   Data->SetNumberField(TEXT("deletedCount"), Deleted.Num());
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
@@ -1774,7 +1845,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   if (Applied.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> AppliedArray;
     for (const FString &Name : Applied)
@@ -1821,7 +1892,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
       FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);
   CachedActorSnapshots.Add(SnapshotKey, Found->GetActorTransform());
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("snapshotName"), SnapshotName);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Snapshot created"),
@@ -1873,7 +1944,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("snapshotName"), SnapshotName);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   SendStandardSuccessResponse(this, Socket, RequestId,
@@ -1908,7 +1979,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
                                   TEXT("T3D"), 0, 0, false);
   FString OutputString = FString::Join(OutputCapture.Consume(), TEXT("\n"));
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("t3d"), OutputString);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"),
@@ -1941,7 +2012,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
   FVector Origin, BoxExtent;
   Found->GetActorBounds(false, Origin, BoxExtent);
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
   auto MakeArray = [](const FVector &Vec) {
     TArray<TSharedPtr<FJsonValue>> Arr;
@@ -1980,7 +2051,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
     return true;
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("name"), Found->GetName());
   Data->SetStringField(TEXT("label"), Found->GetActorLabel());
   Data->SetStringField(TEXT("path"), Found->GetPathName());
@@ -2036,7 +2107,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   const FName TagName(*TagValue);
   if (!Found->Tags.Contains(TagName)) {
     // Idempotent success
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("wasPresent"), false);
     Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
@@ -2051,13 +2122,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
   Found->Tags.Remove(TagName);
   Found->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("wasPresent"), true);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetStringField(TEXT("tag"), TagValue);
 
   // Add verification data
-  AddActorVerification(Data, Found);
+  McpHandlerUtils::AddVerification(Data, Found);
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Removed tag '%s' from '%s'"), *TagValue,
@@ -2110,7 +2181,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     }
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
 
   if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
@@ -2125,7 +2196,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     if (ClassToFind) {
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
         if (AActor* Actor = *It) {
-          TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
           ActorObj->SetStringField(TEXT("name"), Actor->GetActorLabel());
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
           ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
@@ -2186,7 +2257,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
   UActorComponent* Component = FindComponentByName(Actor, ComponentName);
   if (Component) {
     Component->DestroyComponent();
-    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("actorName"), ActorName);
     Data->SetStringField(TEXT("componentName"), ComponentName);
 
@@ -2246,7 +2317,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     return true;
   }
   
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetStringField(TEXT("componentName"), ComponentName);
   Data->SetStringField(TEXT("propertyName"), PropertyName);
@@ -2307,7 +2378,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     }
   }
   
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
@@ -2357,7 +2428,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
       Actor->ProcessEvent(Function, nullptr);
     }
     
-    TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("actorName"), ActorName);
     Data->SetStringField(TEXT("functionName"), FunctionName);
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
@@ -2506,7 +2577,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (GEditor->PlayWorld) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyPlaying"), true);
     SendAutomationResponse(Socket, RequestId, true,
@@ -2532,7 +2603,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
 #endif
 
   GEditor->RequestPlaySession(PlayParams);
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Play in Editor started"), Resp, FString());
@@ -2547,7 +2618,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor->PlayWorld) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyStopped"), true);
     SendAutomationResponse(Socket, RequestId, true,
@@ -2556,7 +2627,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
   }
 
   GEditor->RequestEndPlayMap();
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Play in Editor stopped"), Resp, FString());
@@ -2571,7 +2642,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
   if (!GEditor->PlayWorld) {
-    TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetBoolField(TEXT("notInPIE"), true);
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("Cannot eject: Play session not active"), ErrorDetails);
@@ -2582,7 +2653,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
   // This ejects the player from the possessed pawn without stopping PIE
   GEditor->Exec(GEditor->PlayWorld, TEXT("Eject"));
   
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("ejected"), true);
   SendAutomationResponse(Socket, RequestId, true,
@@ -2703,7 +2774,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
             GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
       LES->EditorInvalidateViewports();
 #endif
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
                            FString());
@@ -2718,7 +2789,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     ViewportClient->SetViewLocation(Location);
     ViewportClient->SetViewRotation(Rotation);
     ViewportClient->Invalidate();
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
                            FString());
@@ -2763,7 +2834,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
 
   const FString Cmd = FString::Printf(TEXT("viewmode %s"), *Chosen);
   if (GEditor->Exec(nullptr, *Cmd)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("viewMode"), Chosen);
     SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set"), Resp,
@@ -2924,7 +2995,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
 
   const bool bOpened = AssetEditorSS->OpenEditorForAsset(Asset);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
@@ -2994,7 +3065,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   FScreenshotRequest::RequestScreenshot(FullPath, false, false);
   
   // Since screenshot is async, we respond with the expected path
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("path"), FullPath);
@@ -3030,7 +3101,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
   // Pause PIE execution
   GEditor->PlayWorld->bDebugPauseExecution = true;
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("paused"));
   Resp->SetStringField(TEXT("message"), TEXT("PIE session paused"));
@@ -3065,7 +3136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
   // Resume PIE execution
   GEditor->PlayWorld->bDebugPauseExecution = false;
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("state"), TEXT("resumed"));
   Resp->SetStringField(TEXT("message"), TEXT("PIE session resumed"));
@@ -3107,7 +3178,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
   UWorld* World = GEditor->GetEditorWorldContext().World();
   GEditor->Exec(World, *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("command"), Command);
   Resp->SetStringField(TEXT("message"), TEXT("Console command executed"));
@@ -3143,7 +3214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
   GEditor->PlayWorld->bDebugFrameStepExecution = true;
   GEditor->PlayWorld->bDebugPauseExecution = false;
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("message"), TEXT("Stepped one frame"));
 
@@ -3187,7 +3258,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     GEditor->Exec(World, *Command);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("recordingName"), RecordingName);
   Resp->SetStringField(TEXT("message"), TEXT("Recording started"));
@@ -3219,7 +3290,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
     GEditor->Exec(World, TEXT("DemoStop"));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("message"), TEXT("Recording stopped"));
 
@@ -3254,7 +3325,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
   UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("index"), BookmarkIndex);
   Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Bookmark %d created"), BookmarkIndex));
@@ -3290,7 +3361,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
   UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("index"), BookmarkIndex);
   Resp->SetStringField(TEXT("message"), FString::Printf(TEXT("Jumped to bookmark %d"), BookmarkIndex));
@@ -3350,7 +3421,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), FailedSettings.Num() == 0);
   Resp->SetNumberField(TEXT("appliedCount"), AppliedSettings.Num());
 
@@ -3400,7 +3471,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
     ViewportClient.SetRealtime(bRealtime);
     
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("realtime"), bRealtime);
     Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
@@ -3416,7 +3487,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
   UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("realtime"), bRealtime);
   Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
@@ -3564,7 +3635,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     Message = FString::Printf(TEXT("Unknown input type: %s. Supported: key_down, key_up, mouse_click, mouse_move"), *InputType);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetStringField(TEXT("type"), InputType);
   Resp->SetStringField(TEXT("message"), Message);
@@ -3610,7 +3681,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
 
   AssetEditorSS->CloseAllEditorsForAsset(Asset);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset editor closed"), Resp, FString());
@@ -3656,7 +3727,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("savedCount"), SavedCount);
   Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
@@ -3692,7 +3763,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
   // Execute undo via console command
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("Undo"));
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), TEXT("undo"));
   Resp->SetStringField(TEXT("command"), TEXT("Undo"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Undo executed"), Resp, FString());
@@ -3715,7 +3786,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
   // Execute redo via console command
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("Redo"));
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), TEXT("redo"));
   Resp->SetStringField(TEXT("command"), TEXT("Redo"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Redo executed"), Resp, FString());
@@ -3741,7 +3812,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   FString Command = FString::Printf(TEXT("mode %s"), *Mode);
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("mode"), Mode);
   SendAutomationResponse(Socket, RequestId, true, 
@@ -3771,7 +3842,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
     StatsShown.Add(TEXT("Unit"));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), TEXT("showStats"));
   TArray<TSharedPtr<FJsonValue>> StatsArray;
   for (const FString& Stat : StatsShown) {
@@ -3800,7 +3871,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
     GEditor->Exec(World, TEXT("Stat None"));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), TEXT("hideStats"));
   Resp->SetStringField(TEXT("command"), TEXT("Stat None"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Stats hidden"), Resp, FString());
@@ -3826,7 +3897,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), 
                 bEnabled ? TEXT("ToggleGameView 1") : TEXT("ToggleGameView 0"));
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("gameViewEnabled"), bEnabled);
   SendAutomationResponse(Socket, RequestId, true, 
@@ -3853,7 +3924,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("immersiveModeEnabled"), bEnabled);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Immersive mode toggled"), Resp, FString());
@@ -3885,7 +3956,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
   FString Command = FString::Printf(TEXT("r.FixedDeltaTime %f"), DeltaTime);
   GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("fixedDeltaTime"), DeltaTime);
   SendAutomationResponse(Socket, RequestId, true, 
@@ -3976,7 +4047,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
            TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
   } else {
     // Neither path exists - return detailed error
-    TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
     ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
     ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
@@ -3990,7 +4061,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
   
   bool bOpened = McpSafeLoadMap(MapPathToLoad);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("levelPath"), LevelPath);
   Resp->SetStringField(TEXT("loadedPath"), MapPathToLoad);
@@ -4034,7 +4105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     if (!Filter.IsEmpty() && !Label.Contains(Filter) && !Name.Contains(Filter))
       continue;
 
-    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetStringField(TEXT("label"), Label);
     Entry->SetStringField(TEXT("name"), Name);
     Entry->SetStringField(TEXT("path"), Actor->GetPathName());
@@ -4044,7 +4115,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     ActorsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }
 
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetArrayField(TEXT("actors"), ActorsArray);
   Data->SetNumberField(TEXT("count"), ActorsArray.Num());
   if (!Filter.IsEmpty())
@@ -4077,7 +4148,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
   }
 
   const FTransform Current = Found->GetActorTransform();
-  TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("name"), Found->GetName());
   Data->SetStringField(TEXT("label"), Found->GetActorLabel());
   Data->SetStringField(TEXT("path"), Found->GetPathName());

@@ -1,30 +1,154 @@
+// =============================================================================
+// McpAutomationBridge_AssetWorkflowHandlers.cpp
+// =============================================================================
+// Asset workflow, material authoring, and source control handlers.
+//
+// HANDLERS:
+//   Asset Operations:
+//     - import, duplicate, rename, move, delete, exists, list, search_assets
+//     - create_folder, create_material, create_material_instance
+//     - get_dependencies, get_asset_graph, set_tags, set_metadata, get_metadata
+//     - validate, generate_report, generate_thumbnail, get_material_stats
+//
+//   Material Authoring:
+//     - add_material_node, connect_material_pins, remove_material_node
+//     - break_material_connections, get_material_node_details, rebuild_material
+//     - add_material_parameter, list_instances, reset_instance_parameters
+//
+//   Source Control:
+//     - source_control_checkout, source_control_submit, get_source_control_state
+//     - source_control_enable
+//
+//   Bulk Operations:
+//     - fixup_redirectors, bulk_rename, bulk_delete
+//     - generate_lods, nanite_rebuild_mesh
+//
+// REFACTORING NOTES:
+//   - Uses McpVersionCompatibility.h for UE 5.0-5.7 API abstraction
+//   - Uses McpHandlerUtils for standardized JSON parsing/responses
+//   - Material expression includes grouped by category
+//
+// VERSION COMPATIBILITY:
+//   - MaterialDomain.h: UE 5.1+ (EMaterialDomain in MaterialShared.h for 5.0)
+//   - ClassPaths vs ClassNames: UE 5.1+ uses FTopLevelAssetPath
+//   - AssetRegistry API varies between UE versions
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"
+
+// -----------------------------------------------------------------------------
+// Core Includes
+// -----------------------------------------------------------------------------
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
-#include "Editor.h"
-#include "EditorAssetLibrary.h"
-#include "EngineUtils.h"
+#include "HAL/PlatformFilemanager.h"
+#include "Misc/Paths.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
+
+// -----------------------------------------------------------------------------
+// MCP Handler Utilities (centralized JSON/Asset helpers)
+// -----------------------------------------------------------------------------
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/ScopeExit.h"
 #include "UObject/MetaData.h"
 
-#include "HAL/PlatformFilemanager.h"
-#include "Misc/Paths.h"
-
-// Material expression includes
+// -----------------------------------------------------------------------------
+// Material Expression Includes (Basic Operations)
+// -----------------------------------------------------------------------------
 #include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionMultiply.h"
+
+// -----------------------------------------------------------------------------
+// Material Expression Includes (Constants)
+// -----------------------------------------------------------------------------
 #include "Materials/MaterialExpressionConstant.h"
 #include "Materials/MaterialExpressionConstant2Vector.h"
 #include "Materials/MaterialExpressionConstant3Vector.h"
 #include "Materials/MaterialExpressionConstant4Vector.h"
+
+// -----------------------------------------------------------------------------
+// Material Expression Includes (Trigonometry)
+// -----------------------------------------------------------------------------
 #include "Materials/MaterialExpressionCosine.h"
-#include "Materials/MaterialExpressionMultiply.h"
 #include "Materials/MaterialExpressionSine.h"
+
+// -----------------------------------------------------------------------------
+// Material Expression Includes (Texture & Time)
+// -----------------------------------------------------------------------------
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionVertexColor.h"
+
+#if WITH_EDITOR
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Asset Management)
+// -----------------------------------------------------------------------------
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "AssetViewUtils.h"
+#include "EditorAssetLibrary.h"
+#include "Engine/StaticMesh.h"
+#include "Factories/MaterialFactoryNew.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "FileHelpers.h"
+#include "IAssetTools.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Source Control)
+// -----------------------------------------------------------------------------
+#include "ISourceControlModule.h"
+#include "ISourceControlProvider.h"
+#include "SourceControlHelpers.h"
+#include "SourceControlOperations.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Material Editing)
+// -----------------------------------------------------------------------------
+#include "ImageUtils.h"
+#include "MaterialEditingLibrary.h"
+#include "Materials/Material.h"
+
+// MaterialDomain.h was introduced in UE 5.1 - in UE 5.0 EMaterialDomain is in MaterialShared.h
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#include "MaterialDomain.h"
+#endif
+
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionStaticSwitchParameter.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "MaterialShared.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Utilities)
+// -----------------------------------------------------------------------------
+#include "Misc/FileHelper.h"
+#include "ObjectTools.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
+#include "UObject/ObjectRedirector.h"
+#include "UObject/Package.h"
+#include "UObject/SavePackage.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes (Graph/Blueprint)
+// -----------------------------------------------------------------------------
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
+#include "EdGraph/EdGraphPin.h"
+#include "Blueprint/BlueprintSupport.h"
+
+#endif // WITH_EDITOR
+
+// =============================================================================
+// ASSET ACTION DISPATCHER
+// =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString &RequestId, const FString &Action,
@@ -48,6 +172,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Dispatch to specific handlers
   // CRITICAL: These actions must match what TS sends as 'action' (not just 'subAction')
   // When TS calls executeAutomationRequest(tools, 'search_assets', {...}), Action='search_assets'
+  
+  // Asset Operations
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("duplicate"))
@@ -57,10 +183,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("move"))
     return HandleMoveAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") || Lower == TEXT("delete_assets"))
-    return HandleDeleteAssets(
-        RequestId, Payload,
-        RequestingSocket); // Single delete routed to bulk delete logic if
-                           // needed, or specific handler
+    return HandleDeleteAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_folder"))
     return HandleCreateFolder(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_material"))
@@ -84,8 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("generate_report"))
     return HandleGenerateReport(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail"))
-    return HandleGenerateThumbnail(RequestId, Action, Payload,
-                                   RequestingSocket);
+    return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("add_material_parameter"))
     return HandleAddMaterialParameter(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_instances"))
@@ -97,13 +219,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
   
-  // CRITICAL: search_assets must be dispatched - it was missing causing timeouts
-  // This handles the case where TS calls executeAutomationRequest(tools, 'search_assets', {...})
+  // Search (CRITICAL: search_assets must be dispatched - was missing causing timeouts)
   if (Lower == TEXT("search_assets"))
     return HandleSearchAssets(RequestId, Action, Payload, RequestingSocket);
 
-  // Workflow handlers are called directly from ProcessAutomationRequest, but we
-  // can fallback here too if needed
+  // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))
     return HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_rename"))
@@ -114,6 +234,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
     return HandleNaniteRebuildMesh(RequestId, Action, Payload, RequestingSocket);
+
+  // Source Control
   if (Lower == TEXT("source_control_checkout"))
     return HandleSourceControlCheckout(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_submit"))
@@ -122,12 +244,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGetSourceControlState(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
     return HandleSourceControlEnable(RequestId, Action, Payload, RequestingSocket);
+
+  // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))
     return HandleAnalyzeGraph(RequestId, Action, Payload, RequestingSocket);
-  if (Lower == TEXT("get_asset_graph"))
-    return HandleGetAssetGraph(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("find_by_tag"))
     return HandleFindByTag(RequestId, Action, Payload, RequestingSocket);
+
+  // Material Authoring
   if (Lower == TEXT("add_material_node"))
     return HandleAddMaterialNode(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("connect_material_pins"))
@@ -144,47 +268,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   return false;
 }
 
-#if WITH_EDITOR
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "AssetViewUtils.h"
-#include "EditorAssetLibrary.h"
-#include "Engine/StaticMesh.h"
-#include "Factories/MaterialFactoryNew.h"
-#include "Factories/MaterialInstanceConstantFactoryNew.h"
-#include "FileHelpers.h"
-#include "IAssetTools.h"
-#include "ISourceControlModule.h"
-#include "ISourceControlProvider.h"
-#include "ImageUtils.h"
-#include "MaterialEditingLibrary.h"
-#include "Materials/Material.h"
-// MaterialDomain.h was introduced in UE 5.1 - in UE 5.0 EMaterialDomain is in MaterialShared.h
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#include "MaterialDomain.h"
-#endif
-#include "Materials/MaterialExpressionScalarParameter.h"
-#include "Materials/MaterialExpressionStaticSwitchParameter.h"
-#include "Materials/MaterialExpressionTextureSample.h"
-#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
-#include "Materials/MaterialExpressionVectorParameter.h"
-#include "Materials/MaterialInstanceConstant.h"
-#include "MaterialShared.h"
-#include "Misc/FileHelper.h"
-#include "ObjectTools.h"
-#include "SourceControlHelpers.h"
-#include "SourceControlOperations.h"
-#include "ThumbnailRendering/ThumbnailManager.h"
-#include "UObject/MetaData.h"
-#include "UObject/ObjectRedirector.h"
-#include "UObject/Package.h"
-#include "UObject/SavePackage.h"
-#include "EdGraph/EdGraph.h"
-#include "EdGraph/EdGraphNode.h"
-#include "EdGraph/EdGraphPin.h"
-#include "Blueprint/BlueprintSupport.h"
-
-#endif
 
 // ============================================================================
 // 1. FIXUP REDIRECTORS
@@ -277,7 +360,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
     AssetRegistry.GetAssets(Filter, RedirectorAssets);
 
     if (RedirectorAssets.Num() == 0) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("success"), true);
       Result->SetNumberField(TEXT("redirectorsFound"), 0);
       Result->SetNumberField(TEXT("redirectorsFixed"), 0);
@@ -334,7 +417,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
       DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, false);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetNumberField(TEXT("redirectorsFound"), RedirectorAssets.Num());
     Result->SetNumberField(TEXT("redirectorsFixed"), DeletedCount);
@@ -401,7 +484,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("error"),
                            TEXT("Source control is not enabled"));
@@ -425,7 +508,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
   }
 
   if (PackageNames.Num() == 0) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -441,7 +524,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
     CheckedOutPaths.Add(MakeShared<FJsonValueString>(Path));
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bSuccess);
   Result->SetNumberField(TEXT("checkedOut"), PackageNames.Num());
   Result->SetArrayField(TEXT("assets"), CheckedOutPaths);
@@ -513,7 +596,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("error"),
                            TEXT("Source control is not enabled"));
@@ -535,7 +618,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
   }
 
   if (PackageNames.Num() == 0) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -561,7 +644,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
       SourceControlProvider.Execute(CheckInOperation, FilePaths);
   bool bSuccess = (Result == ECommandResult::Succeeded);
 
-  TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultObj = McpHandlerUtils::CreateResultObject();
   ResultObj->SetBoolField(TEXT("success"), bSuccess);
   ResultObj->SetNumberField(TEXT("submitted"),
                             bSuccess ? PackageNames.Num() : 0);
@@ -602,7 +685,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   
   // Check if already enabled
   if (SourceControlModule.IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
     Result->SetStringField(TEXT("message"), TEXT("Source control already enabled"));
@@ -617,7 +700,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   }
   
   bool bEnabled = SourceControlModule.IsEnabled();
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bEnabled);
   Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
   
@@ -710,7 +793,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       }
       
       if (AssetPaths.Num() == 0) {
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
         Result->SetNumberField(TEXT("renamed"), 0);
         Result->SetStringField(TEXT("message"), TEXT("No assets found in folder"));
@@ -768,7 +851,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   }
 
   if (RenameData.Num() == 0) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), true);
     Result->SetNumberField(TEXT("renamed"), 0);
     Result->SetStringField(TEXT("message"),
@@ -793,13 +876,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
 
   TArray<TSharedPtr<FJsonValue>> RenamedAssets;
   for (const FAssetRenameData &Data : RenameData) {
-    TSharedPtr<FJsonObject> AssetInfo = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> AssetInfo = McpHandlerUtils::CreateResultObject();
     AssetInfo->SetStringField(TEXT("oldPath"), Data.Asset->GetPathName());
     AssetInfo->SetStringField(TEXT("newName"), Data.NewName);
     RenamedAssets.Add(MakeShared<FJsonValueObject>(AssetInfo));
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), bSuccess);
   Result->SetNumberField(TEXT("renamed"), RenameData.Num());
   Result->SetArrayField(TEXT("assets"), RenamedAssets);
@@ -896,7 +979,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
       }
       
       if (AssetPaths.Num() == 0) {
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("success"), true);
         Result->SetNumberField(TEXT("deleted"), 0);
         Result->SetStringField(TEXT("message"), TEXT("No assets found matching criteria"));
@@ -924,7 +1007,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   }
 
   if (ObjectsToDelete.Num() == 0) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(TEXT("error"), TEXT("No valid assets found"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -977,7 +1060,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     DeletedArray.Add(MakeShared<FJsonValueString>(Path));
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), DeletedCount > 0);
   Result->SetArrayField(TEXT("deleted"), DeletedArray);
   Result->SetNumberField(TEXT("requested"), ObjectsToDelete.Num());
@@ -1127,7 +1210,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       Asset->GetOutermost()->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), bSuccess);
     Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Result->SetNumberField(TEXT("width"), Width);
@@ -1279,7 +1362,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
               FinalAssetPath = Asset->GetPathName();
             }
 
-            TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
             Resp->SetBoolField(TEXT("success"), true);
             Resp->SetStringField(TEXT("assetPath"), FinalAssetPath);
             if (!bRenameSucceeded) {
@@ -1288,7 +1371,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             // Add verification data
             UObject *ImportedAsset = UEditorAssetLibrary::LoadAsset(FinalAssetPath);
             if (ImportedAsset) {
-              AddAssetVerification(Resp, ImportedAsset);
+              McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
@@ -1354,7 +1437,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   if (!Payload->TryGetObjectField(TEXT("metadata"), MetadataObjPtr) ||
       !MetadataObjPtr) {
     // Treat missing/empty metadata as a no-op success; nothing to write.
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetNumberField(TEXT("updatedKeys"), 0);
@@ -1435,13 +1518,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     Package->SetDirtyFlag(true);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
   
   // Add verification data
-  AddAssetVerification(Resp, Asset);
+  McpHandlerUtils::AddVerification(Resp, Asset);
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset metadata updated"), Resp, FString());
@@ -1536,7 +1619,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
       }
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     const bool bSuccess = DuplicatedCount > 0;
     Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
@@ -1573,13 +1656,13 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
   }
 
   if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
     // Add verification data
     UObject *NewAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
     if (NewAsset) {
-      AddAssetVerification(Resp, NewAsset);
+      McpHandlerUtils::AddVerification(Resp, NewAsset);
     }
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
                            Resp, FString());
@@ -1650,14 +1733,14 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
 
   // Use the resolved path for the rename operation
   if (UEditorAssetLibrary::RenameAsset(ResolvedSourcePath, DestinationPath)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
     
     // Add verification data
     UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
     if (RenamedAsset) {
-      AddAssetVerification(Resp, RenamedAsset);
+      McpHandlerUtils::AddVerification(Resp, RenamedAsset);
     }
     
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
@@ -1761,7 +1844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   
   // Return success only if at least one asset was deleted
   bool bSuccess = DeletedCount > 0;
@@ -1853,7 +1936,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
 
   if (UEditorAssetLibrary::DoesDirectoryExist(SafePath) ||
       UEditorAssetLibrary::MakeDirectory(SafePath)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
     // Add verification data
@@ -1922,7 +2005,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     DepArray.Add(MakeShared<FJsonValueString>(Dep.ToString()));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("dependencies"), DepArray);
   SendAutomationResponse(Socket, RequestId, true,
@@ -1975,7 +2058,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
-  TSharedPtr<FJsonObject> GraphObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
 
   TArray<FString> Queue;
   Queue.Add(AssetPath);
@@ -2013,7 +2096,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     GraphObj->SetArrayField(Current, DepArray);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("graph"), GraphObj);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
@@ -2069,7 +2152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     // Edge-case: empty or missing tags array should be treated as a no-op
     // success.
     if (Tags.Num() == 0) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("assetPath"), AssetPath);
       Resp->SetNumberField(TEXT("appliedTags"), 0);
@@ -2102,7 +2185,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     // Mark dirty so the asset can be saved later
     Asset->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("markedDirty"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
@@ -2161,7 +2244,7 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     }
 
     bool bIsValid = true;
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bIsValid);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetBoolField(TEXT("isValid"), bIsValid);
@@ -2387,7 +2470,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 
   TArray<TSharedPtr<FJsonValue>> AssetsArray;
   for (const FAssetData &Asset : AssetList) {
-    TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
     AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     AssetObj->SetStringField(TEXT("path"), Asset.GetSoftObjectPath().ToString());
@@ -2413,7 +2496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     FoldersJson.Add(MakeShared<FJsonValueString>(SubPath));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("assets"), AssetsArray);
   Resp->SetArrayField(TEXT("folders"), FoldersJson);
@@ -2471,7 +2554,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
     return true;
   }
 
-  TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
   AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   AssetObj->SetStringField(TEXT("path"), AssetData.GetSoftObjectPath().ToString());
@@ -2483,7 +2566,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
   AssetObj->SetStringField(TEXT("packagePath"),
                            AssetData.PackagePath.ToString());
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("result"), AssetObj);
 
@@ -2551,7 +2634,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
 
     TArray<TSharedPtr<FJsonValue>> AssetsArray;
     for (const FAssetData &Asset : AssetList) {
-      TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
       AssetObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
       AssetObj->SetStringField(TEXT("path"),
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -2583,7 +2666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
           FFileHelper::SaveStringToFile(FileContents, *AbsoluteOutput);
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("directory"), Directory);
     Resp->SetStringField(TEXT("reportType"), ReportType);
@@ -2653,7 +2736,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterial(
       AssetTools.CreateAsset(Name, Path, UMaterial::StaticClass(), Factory);
 
   if (NewAsset) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
     SendAutomationResponse(Socket, RequestId, true, TEXT("Material created"),
@@ -2773,7 +2856,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
       }
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
     SendAutomationResponse(Socket, RequestId, true,
@@ -2902,7 +2985,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     UMaterialEditingLibrary::RecompileMaterial(Material);
     Material->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetStringField(TEXT("parameterName"), Name);
@@ -2983,7 +3066,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), Instances);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Instances listed"),
@@ -3027,7 +3110,7 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
   MIC->PostEditChange();
   MIC->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   SendAutomationResponse(Socket, RequestId, true,
@@ -3053,7 +3136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
 
   bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("exists"), bExists);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
@@ -3104,7 +3187,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   Material->GetMaterial();
 #endif
 
-  TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Stats = McpHandlerUtils::CreateResultObject();
 
   // Get actual shading model from the material
   FString ShadingModelStr = TEXT("Unknown");
@@ -3152,7 +3235,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   }
   Stats->SetNumberField(TEXT("samplerCount"), SamplerCount);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("stats"), Stats);
   SendAutomationResponse(Socket, RequestId, true,
@@ -3308,7 +3391,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       }
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     
     // CRITICAL FIX: Return proper success/failure based on actual results
     // Previously always returned success=true even when 0 meshes processed
@@ -3405,13 +3488,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
     return true;
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
   // 1. Asset Registry Tags
   FAssetData AssetData(Asset);
-  TSharedPtr<FJsonObject> TagsObj = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> TagsObj = McpHandlerUtils::CreateResultObject();
   for (const auto &Kvp : AssetData.TagsAndValues) {
     TagsObj->SetStringField(Kvp.Key.ToString(), Kvp.Value.AsString());
   }
@@ -3435,7 +3518,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
     const TMap<FName, FString> *ObjectMeta = Meta->GetMapForObject(Asset);
 #endif
     if (ObjectMeta) {
-      TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> MetaObj = McpHandlerUtils::CreateResultObject();
       for (const auto &Entry : *ObjectMeta) {
         MetaObj->SetStringField(Entry.Key.ToString(), Entry.Value);
       }
@@ -3553,7 +3636,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
   StaticMesh->MarkPackageDirty();
 
   // Build response
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("meshPath"), MeshPath);
   Resp->SetStringField(TEXT("meshName"), StaticMesh->GetName());
   Resp->SetBoolField(TEXT("naniteEnabled"), bEnableNanite);
@@ -3632,7 +3715,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
       for (TActorIterator<AActor> It(World); It && Results.Num() < MaxResults; ++It) {
         AActor *Actor = *It;
         if (Actor && Actor->ActorHasTag(TagName)) {
-          TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> ResultObj = McpHandlerUtils::CreateResultObject();
           ResultObj->SetStringField(TEXT("type"), TEXT("Actor"));
           ResultObj->SetStringField(TEXT("name"), Actor->GetName());
           ResultObj->SetStringField(TEXT("label"), Actor->GetActorLabel());
@@ -3640,7 +3723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
           ResultObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
           
           const FVector Location = Actor->GetActorLocation();
-          TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
           LocObj->SetNumberField(TEXT("x"), Location.X);
           LocObj->SetNumberField(TEXT("y"), Location.Y);
           LocObj->SetNumberField(TEXT("z"), Location.Z);
@@ -3663,7 +3746,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
           Actor->GetComponents(Components);
           for (UActorComponent *Component : Components) {
             if (Component && Component->ComponentHasTag(TagName)) {
-              TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+              TSharedPtr<FJsonObject> ResultObj = McpHandlerUtils::CreateResultObject();
               ResultObj->SetStringField(TEXT("type"), TEXT("Component"));
               ResultObj->SetStringField(TEXT("name"), Component->GetName());
               ResultObj->SetStringField(TEXT("class"), Component->GetClass()->GetName());
@@ -3677,7 +3760,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFindByTag(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("tag"), Tag);
   Resp->SetNumberField(TEXT("count"), Results.Num());
   Resp->SetArrayField(TEXT("results"), Results);
@@ -3840,7 +3923,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   ExpressionIndex = Material->Expressions.IndexOfByKey(NewExpression);
 #endif
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("materialPath"), MaterialPath);
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
@@ -4049,8 +4132,8 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
       Material->PostEditChange();
       Material->MarkPackageDirty();
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      AddAssetVerification(Resp, Material);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Resp, Material);
       Resp->SetStringField(TEXT("inputName"), InputName);
       Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
       SendAutomationResponse(Socket, RequestId, true,
@@ -4123,8 +4206,8 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   Material->PostEditChange();
   Material->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  AddAssetVerification(Resp, Material);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Resp, Material);
   Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
   Resp->SetStringField(TEXT("targetNodeId"), ToExpression->MaterialExpressionGuid.ToString());
   Resp->SetStringField(TEXT("inputName"), InputName);
@@ -4271,8 +4354,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   Material->PostEditChange();
   Material->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  AddAssetVerification(Resp, Material);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Resp, Material);
   Resp->SetStringField(TEXT("nodeId"), RemovedGuid);
   Resp->SetStringField(TEXT("removedName"), RemovedName);
   Resp->SetNumberField(TEXT("remainingExpressions"), Expressions.Num());
@@ -4434,8 +4517,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
       Material->PostEditChange();
       Material->MarkPackageDirty();
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      AddAssetVerification(Resp, Material);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Resp, Material);
       Resp->SetStringField(TEXT("pinName"), PinName);
       Resp->SetBoolField(TEXT("disconnected"), true);
       SendAutomationResponse(Socket, RequestId, true,
@@ -4501,8 +4584,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
   Material->PostEditChange();
   Material->MarkPackageDirty();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  AddAssetVerification(Resp, Material);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Resp, Material);
   Resp->SetStringField(TEXT("nodeId"), TargetExpression->MaterialExpressionGuid.ToString());
   Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
   if (bSpecificInput) {
@@ -4629,15 +4712,15 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
 
   // If no specific node requested or node not found, return list of all nodes
   if (!Expression) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    AddAssetVerification(Resp, Material);
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Resp, Material);
     
     TArray<TSharedPtr<FJsonValue>> NodeList;
     for (int32 i = 0; i < Expressions.Num(); ++i) {
       UMaterialExpression *Expr = Expressions[i];
       if (!Expr) continue;
       
-      TSharedPtr<FJsonObject> NodeInfo = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
       NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
       NodeInfo->SetNumberField(TEXT("index"), i);
@@ -4666,8 +4749,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   }
 
   // Build response for specific node
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-  AddAssetVerification(Resp, Material);
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Resp, Material);
   Resp->SetStringField(TEXT("nodeId"), Expression->MaterialExpressionGuid.ToString());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
@@ -4685,7 +4768,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
       if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
         FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expression);
-        TSharedPtr<FJsonObject> InputObj = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
         InputObj->SetStringField(TEXT("name"), Property->GetName());
         InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
         if (Input->Expression) {
@@ -4702,18 +4785,18 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   if (UMaterialExpressionConstant *Const = Cast<UMaterialExpressionConstant>(Expression)) {
     Resp->SetNumberField(TEXT("value"), Const->R);
   } else if (UMaterialExpressionConstant2Vector *Const2 = Cast<UMaterialExpressionConstant2Vector>(Expression)) {
-    TSharedPtr<FJsonObject> ValueObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ValueObj = McpHandlerUtils::CreateResultObject();
     ValueObj->SetNumberField(TEXT("r"), Const2->R);
     ValueObj->SetNumberField(TEXT("g"), Const2->G);
     Resp->SetObjectField(TEXT("value"), ValueObj);
   } else if (UMaterialExpressionConstant3Vector *Const3 = Cast<UMaterialExpressionConstant3Vector>(Expression)) {
-    TSharedPtr<FJsonObject> ValueObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ValueObj = McpHandlerUtils::CreateResultObject();
     ValueObj->SetNumberField(TEXT("r"), Const3->Constant.R);
     ValueObj->SetNumberField(TEXT("g"), Const3->Constant.G);
     ValueObj->SetNumberField(TEXT("b"), Const3->Constant.B);
     Resp->SetObjectField(TEXT("value"), ValueObj);
   } else if (UMaterialExpressionConstant4Vector *Const4 = Cast<UMaterialExpressionConstant4Vector>(Expression)) {
-    TSharedPtr<FJsonObject> ValueObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ValueObj = McpHandlerUtils::CreateResultObject();
     ValueObj->SetNumberField(TEXT("r"), Const4->Constant.R);
     ValueObj->SetNumberField(TEXT("g"), Const4->Constant.G);
     ValueObj->SetNumberField(TEXT("b"), Const4->Constant.B);
@@ -4729,7 +4812,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     Resp->SetNumberField(TEXT("defaultValue"), ScalarParam->DefaultValue);
   } else if (UMaterialExpressionVectorParameter *VectorParam = Cast<UMaterialExpressionVectorParameter>(Expression)) {
     Resp->SetStringField(TEXT("parameterName"), VectorParam->ParameterName.ToString());
-    TSharedPtr<FJsonObject> DefaultObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> DefaultObj = McpHandlerUtils::CreateResultObject();
     DefaultObj->SetNumberField(TEXT("r"), VectorParam->DefaultValue.R);
     DefaultObj->SetNumberField(TEXT("g"), VectorParam->DefaultValue.G);
     DefaultObj->SetNumberField(TEXT("b"), VectorParam->DefaultValue.B);
@@ -4794,7 +4877,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("sourceControlEnabled"), false);
     Result->SetStringField(TEXT("message"), TEXT("Source control is not enabled"));
     SendAutomationResponse(Socket, RequestId, true,
@@ -4808,7 +4891,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
   TArray<TSharedPtr<FJsonValue>> StatesArray;
 
   for (const FString &AssetPath : AssetPaths) {
-    TSharedPtr<FJsonObject> StateObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> StateObj = McpHandlerUtils::CreateResultObject();
     StateObj->SetStringField(TEXT("assetPath"), AssetPath);
 
     // Check if asset exists
@@ -4893,7 +4976,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("sourceControlEnabled"), true);
   Result->SetArrayField(TEXT("states"), StatesArray);
   Result->SetNumberField(TEXT("queriedCount"), AssetPaths.Num());
@@ -4955,8 +5038,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     return true;
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  AddAssetVerification(Result, Asset);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Result, Asset);
   Result->SetStringField(TEXT("assetPath"), AssetPath);
   Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
 
@@ -5049,7 +5132,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
 
     for (UEdGraph *Graph : AllGraphs) {
       if (!Graph) continue;
-      TSharedPtr<FJsonObject> GraphInfo = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> GraphInfo = McpHandlerUtils::CreateResultObject();
       GraphInfo->SetStringField(TEXT("name"), Graph->GetName());
       GraphInfo->SetNumberField(TEXT("nodeCount"), Graph->Nodes.Num());
       TotalNodes += Graph->Nodes.Num();
@@ -5130,8 +5213,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  AddAssetVerification(Result, Asset);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Result, Asset);
   Result->SetStringField(TEXT("assetPath"), AssetPath);
   Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
 
@@ -5157,7 +5240,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
       UMaterialExpression *Expr = Expressions[i];
       if (!Expr) continue;
 
-      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
       NodeObj->SetNumberField(TEXT("index"), i);
       NodeObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
       NodeObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
@@ -5172,7 +5255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
         if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
           if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
             FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-            TSharedPtr<FJsonObject> InputObj = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
             InputObj->SetStringField(TEXT("name"), Property->GetName());
             InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
             if (Input->Expression) {
@@ -5217,7 +5300,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     for (UEdGraph *Graph : AllGraphs) {
       if (!Graph) continue;
 
-      TSharedPtr<FJsonObject> GraphObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
       GraphObj->SetStringField(TEXT("name"), Graph->GetName());
       GraphObj->SetStringField(TEXT("graphType"), Graph->GetClass()->GetName());
 
@@ -5225,7 +5308,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
       for (UEdGraphNode *Node : Graph->Nodes) {
         if (!Node) continue;
 
-        TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
         NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
         NodeObj->SetStringField(TEXT("title"), Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
         NodeObj->SetNumberField(TEXT("x"), Node->NodePosX);
@@ -5236,7 +5319,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
         TArray<TSharedPtr<FJsonValue>> PinArray;
         for (UEdGraphPin *Pin : Node->Pins) {
           if (!Pin) continue;
-          TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
           PinObj->SetStringField(TEXT("name"), Pin->PinName.ToString());
           PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"));
           PinObj->SetStringField(TEXT("type"), Pin->PinType.PinCategory.ToString());
@@ -5334,8 +5417,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
     // Save the material
     McpSafeAssetSave(Material);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    AddAssetVerification(Result, Material);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Result, Material);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetBoolField(TEXT("rebuilt"), true);
 

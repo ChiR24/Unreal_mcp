@@ -1,25 +1,84 @@
+// =============================================================================
 // McpAutomationBridge_WidgetAuthoringHandlers.cpp
+// =============================================================================
 // Phase 19: Widget Authoring System Handlers
 //
-// Complete UMG widget authoring capabilities including:
-// - Widget Creation (blueprints, parent classes)
-// - Layout Panels (canvas, box, overlay, grid, scroll, etc.)
-// - Common Widgets (text, image, button, slider, progress, input, etc.)
-// - Layout & Styling (anchor, alignment, position, size, padding, style)
-// - Bindings & Events (property bindings, event handlers)
-// - Widget Animations (animation tracks, keyframes, playback)
-// - UI Templates (main menu, pause menu, HUD, inventory, etc.)
-// - Utility (info queries, preview)
+// Provides comprehensive UMG widget authoring capabilities for the MCP Automation Bridge.
+// This file implements the `manage_widget_authoring` tool with 80+ sub-actions.
+//
+// HANDLERS BY CATEGORY:
+// ---------------------
+// 19.1  Widget Creation     - create_widget_blueprint, set_widget_parent_class
+// 19.2  Layout Panels       - add_canvas_panel, add_horizontal_box, add_vertical_box,
+//                            add_overlay, add_grid_panel, add_uniform_grid, add_wrap_box,
+//                            add_scroll_box, add_size_box, add_scale_box, add_border
+// 19.3  Common Widgets      - add_text_block, add_rich_text, add_image, add_button,
+//                            add_checkbox, add_slider, add_progress_bar, add_editable_text,
+//                            add_combo_box, add_spin_box, add_list_view, add_tree_view,
+//                            add_tile_view, add_widget_switcher, add_spacer, add_safe_zone
+// 19.4  Layout & Styling    - set_widget_anchor, set_widget_alignment, set_widget_position,
+//                            set_widget_size, set_widget_padding, set_widget_visibility,
+//                            set_widget_style, apply_widget_style
+// 19.5  Bindings & Events   - bind_widget_property, bind_widget_event, unbind_widget_event
+// 19.6  Widget Animations   - create_widget_animation, add_animation_track, add_keyframe,
+//                            play_widget_animation, stop_widget_animation
+// 19.7  UI Templates        - create_main_menu, create_pause_menu, create_hud,
+//                            create_inventory_ui, create_dialogue_system, create_health_bar,
+//                            create_minimap, create_loading_screen
+// 19.8  Utility Actions     - get_widget_info, get_widget_tree, find_widget_by_name,
+//                            preview_widget, validate_widget
+// 19.9  Advanced Widgets    - add_retainer_box, add_circular_throbber, add_expandable_area,
+//                            add_menu_anchor, add_viewport_stats
+// 19.10 Text Operations     - set_text_content, bind_localized_text
+// 19.11 Template Actions    - create_credits_screen, create_shop_ui, add_quest_tracker
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// - UE 5.0: Uses ResolveClassByName for parent class lookup
+// - UE 5.1+: Uses FindFirstObject for parent class lookup
+// - WidgetTree API consistent across UE 5.0-5.7
+// - CanvasPanelSlot anchoring API stable across versions
+//
+// REFACTORING NOTES:
+// ------------------
+// - Uses WidgetAuthoringHelpers namespace for widget-specific utilities
+// - Color/visibility parsing standardized in helper namespace
+// - Asset path normalization via SanitizeProjectRelativePath()
+// - Widget blueprint loading has multiple fallback methods for robustness
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+// =============================================================================
+// Includes
+// =============================================================================
+
+// Version Compatibility (must be first)
+#include "McpVersionCompatibility.h"
+
+// MCP Core
 #include "McpAutomationBridgeSubsystem.h"
-#include "Dom/JsonObject.h"
 #include "McpBridgeWebSocket.h"
+#include "McpHandlerUtils.h"
+#include "McpAutomationBridgeHelpers.h"
 
+// JSON & Serialization
+#include "Dom/JsonObject.h"
+
+// Asset Registry
 #include "AssetRegistry/AssetRegistryModule.h"
+
+// UMG Core
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Blueprint/WidgetTree.h"
+#include "WidgetBlueprint.h"
+
+// Engine
 #include "Engine/Texture2D.h"
+#include "UObject/UObjectIterator.h"
+
+// UMG Layout Panels
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
@@ -35,6 +94,11 @@
 #include "Components/SizeBox.h"
 #include "Components/ScaleBox.h"
 #include "Components/Border.h"
+#include "Components/SafeZone.h"
+#include "Components/Spacer.h"
+#include "Components/WidgetSwitcher.h"
+
+// UMG Common Widgets
 #include "Components/TextBlock.h"
 #include "Components/RichTextBlock.h"
 #include "Components/Image.h"
@@ -50,23 +114,34 @@
 #include "Components/TreeView.h"
 #include "Components/EditableText.h"
 #include "Components/TileView.h"
-#include "WidgetBlueprint.h"
-#include "UObject/UObjectIterator.h"
+
+// Animation
 #include "Animation/WidgetAnimation.h"
 #include "MovieScene.h"
-#include "McpAutomationBridgeHelpers.h"
+
+// Blueprint Editor
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+
+// Editor Utilities
 #include "EditorAssetLibrary.h"
-#include "Components/SafeZone.h"
-#include "Components/Spacer.h"
-#include "Components/WidgetSwitcher.h"
+
+// Internationalization
 #include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
+// =============================================================================
+// Widget Authoring Helper Functions
+// =============================================================================
+//
+// These helpers provide widget-specific utilities:
+// - GetColorFromJsonWidget: Parse RGBA color from JSON object
+// - GetObjectField/GetArrayField: Optional field access (returns null on missing)
+// - CreateAssetPackage: Create package for new widget assets
+// - LoadWidgetBlueprint: Robust widget blueprint loading with multiple fallbacks
+// - GetVisibility: Convert visibility string to ESlateVisibility enum
+//
+// =============================================================================
 
 namespace WidgetAuthoringHelpers
 {
@@ -274,7 +349,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         SubAction = GetJsonStringField(Payload, TEXT("action"));
     }
 
-    TSharedPtr<FJsonObject> ResultJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResultJson = McpHandlerUtils::CreateResultObject();
 
     // =========================================================================
     // 19.1 Widget Creation
@@ -365,7 +440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Created widget blueprint: %s"), *Name));
         ResultJson->SetStringField(TEXT("widgetPath"), ObjectPath);
 
-        AddAssetVerification(ResultJson, WidgetBlueprint);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
         return true;
@@ -488,7 +563,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added canvas panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added canvas panel"), ResultJson);
         return true;
     }
@@ -546,7 +621,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added horizontal box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added horizontal box"), ResultJson);
         return true;
     }
@@ -603,7 +678,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added vertical box"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added vertical box"), ResultJson);
         return true;
     }
@@ -660,7 +735,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added overlay"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added overlay"), ResultJson);
         return true;
     }
@@ -744,7 +819,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added text block"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added text block"), ResultJson);
         return true;
     }
@@ -814,7 +889,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added image"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added image"), ResultJson);
         return true;
     }
@@ -879,7 +954,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added button"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added button"), ResultJson);
         return true;
     }
@@ -950,7 +1025,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added progress bar"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added progress bar"), ResultJson);
         return true;
     }
@@ -1023,7 +1098,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added slider"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added slider"), ResultJson);
         return true;
     }
@@ -1048,7 +1123,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> WidgetInfo = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> WidgetInfo = McpHandlerUtils::CreateResultObject();
 
         // Basic info
         WidgetInfo->SetStringField(TEXT("widgetClass"), WidgetBP->GetName());
@@ -1062,7 +1137,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (WidgetBP->WidgetTree)
         {
             WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
-                TSharedPtr<FJsonValue> SlotValue = MakeShareable(new FJsonValueString(Widget->GetName()));
+                TSharedPtr<FJsonValue> SlotValue = MakeShared<FJsonValueString>(Widget->GetName());
                 SlotsArray.Add(SlotValue);
             });
         }
@@ -1074,7 +1149,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         {
             if (Anim)
             {
-                TSharedPtr<FJsonValue> AnimValue = MakeShareable(new FJsonValueString(Anim->GetName()));
+                TSharedPtr<FJsonValue> AnimValue = MakeShared<FJsonValueString>(Anim->GetName());
                 AnimsArray.Add(AnimValue);
             }
         }
@@ -1083,7 +1158,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetObjectField(TEXT("widgetInfo"), WidgetInfo);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Retrieved widget info"), ResultJson);
         return true;
     }
@@ -1147,7 +1222,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("message"), TEXT("Added grid panel"));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
 
-        AddAssetVerification(ResultJson, WidgetBP);
+        McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Added grid panel"), ResultJson);
         return true;
     }
@@ -3644,51 +3719,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         return true;
     }
     
-    // Remaining UI Templates - return simple success with created structure info
-    if (SubAction.Equals(TEXT("create_settings_menu"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("create_loading_screen"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("add_minimap"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("add_compass"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("add_interaction_prompt"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("add_objective_tracker"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("add_damage_indicator"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("create_inventory_ui"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("create_dialog_widget"), ESearchCase::IgnoreCase) ||
-        SubAction.Equals(TEXT("create_radial_menu"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        
-        if (WidgetPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-        
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-        
-        // Create a basic structure with canvas panel
-        if (!WidgetBP->WidgetTree->RootWidget)
-        {
-            UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), FName(*SubAction));
-            WidgetBP->WidgetTree->RootWidget = RootCanvas;
-        }
-        
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-        McpSafeAssetSave(WidgetBP);
-        
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
-        ResultJson->SetStringField(TEXT("template"), SubAction);
-        ResultJson->SetStringField(TEXT("note"), FString::Printf(TEXT("Basic %s structure created. Use individual widget actions to customize."), *SubAction));
-        
-        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("%s created"), *SubAction), ResultJson);
-        return true;
-    }
+    // Note: Detailed implementations for create_settings_menu, create_loading_screen,
+    // add_minimap, add_compass, add_interaction_prompt, add_objective_tracker,
+    // add_damage_indicator, create_inventory_ui, create_dialog_widget, create_radial_menu
+    // are located in section 19.10 onwards.
+
 
     // =========================================================================
     // 19.8 Utility (continued)
@@ -4223,7 +4258,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
         for (const FString& VarName : CreatedVariables)
         {
-            VariablesArray.Add(MakeShareable(new FJsonValueString(VarName)));
+            VariablesArray.Add(MakeShared<FJsonValueString>(VarName));
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
@@ -5112,7 +5147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             
             if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot))
             {
-                TSharedPtr<FJsonObject> SlotInfo = MakeShareable(new FJsonObject());
+                TSharedPtr<FJsonObject> SlotInfo = McpHandlerUtils::CreateResultObject();
                 FAnchors Anchors = CanvasSlot->GetAnchors();
                 SlotInfo->SetNumberField(TEXT("anchorMinX"), Anchors.Minimum.X);
                 SlotInfo->SetNumberField(TEXT("anchorMinY"), Anchors.Minimum.Y);
@@ -5566,7 +5601,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             {
                 if (Anim)
                 {
-                    TSharedPtr<FJsonObject> AnimInfo = MakeShareable(new FJsonObject());
+                    TSharedPtr<FJsonObject> AnimInfo = McpHandlerUtils::CreateResultObject();
                     AnimInfo->SetStringField(TEXT("name"), Anim->GetName());
                     if (Anim->MovieScene)
                     {
@@ -5581,7 +5616,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                         AnimInfo->SetNumberField(TEXT("trackCount"), Anim->MovieScene->GetMasterTracks().Num());
 #endif
                     }
-                    AnimationsArray.Add(MakeShareable(new FJsonValueObject(AnimInfo)));
+                    AnimationsArray.Add(MakeShared<FJsonValueObject>(AnimInfo));
                 }
             }
             ResultJson->SetBoolField(TEXT("success"), true);
@@ -5636,7 +5671,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 {
                     if (Track)
                     {
-                        TSharedPtr<FJsonObject> TrackInfo = MakeShared<FJsonObject>();
+                        TSharedPtr<FJsonObject> TrackInfo = McpHandlerUtils::CreateResultObject();
                         TrackInfo->SetStringField(TEXT("name"), Track->GetTrackName().ToString());
                         TrackInfo->SetStringField(TEXT("type"), Track->GetClass()->GetName());
                         TracksArray.Add(MakeShared<FJsonValueObject>(TrackInfo));

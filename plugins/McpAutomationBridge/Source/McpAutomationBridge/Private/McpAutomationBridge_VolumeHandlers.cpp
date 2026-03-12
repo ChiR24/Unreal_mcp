@@ -1,47 +1,115 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_VolumeHandlers.cpp
+// =============================================================================
 // Phase 24: Volumes & Zones Handlers
 //
-// Complete volume and trigger system including:
-// - Trigger Volumes (trigger_volume, trigger_box, trigger_sphere, trigger_capsule)
-// - Gameplay Volumes (blocking, kill_z, pain_causing, physics)
-// - Audio Volumes (audio, reverb)
-// - Rendering Volumes (cull_distance, precomputed_visibility, lightmass_importance)
-// - Navigation Volumes (nav_mesh_bounds, nav_modifier, camera_blocking)
-// - Volume Configuration (set_volume_extent, set_volume_properties)
+// Implements volume creation, configuration, and management for all volume types.
+//
+// HANDLERS IMPLEMENTED (25+ subActions):
+// ================================
+//
+// TRIGGER VOLUMES:
+//   - create_trigger_volume    : Generic ATriggerVolume with brush
+//   - create_trigger_box       : ATriggerBox (box-shaped trigger)
+//   - create_trigger_sphere    : ATriggerSphere (sphere-shaped trigger)
+//   - create_trigger_capsule   : ATriggerCapsule (capsule-shaped trigger)
+//   - add_trigger_volume       : Alias for create_trigger_volume
+//
+// GAMEPLAY VOLUMES:
+//   - create_blocking_volume      : ABlockingVolume (block actors)
+//   - create_kill_z_volume        : AKillZVolume (kill actors below Z)
+//   - create_pain_causing_volume  : APainCausingVolume (damage over time)
+//   - create_physics_volume       : APhysicsVolume (gravity/friction/terminal velocity)
+//   - add_blocking_volume         : Alias for create_blocking_volume
+//   - add_kill_z_volume           : Alias for create_kill_z_volume
+//   - add_physics_volume          : Alias for create_physics_volume
+//
+// AUDIO VOLUMES:
+//   - create_audio_volume     : AAudioVolume (ambient sound zones)
+//   - create_reverb_volume    : AAudioVolume with reverb settings
+//
+// RENDERING VOLUMES:
+//   - create_post_process_volume         : APostProcessVolume (post-processing effects)
+//   - create_cull_distance_volume        : ACullDistanceVolume (per-object culling)
+//   - create_precomputed_visibility_volume: APrecomputedVisibilityVolume
+//   - create_lightmass_importance_volume : ALightmassImportanceVolume
+//   - add_cull_distance_volume           : Alias for create_cull_distance_volume
+//   - add_post_process_volume            : Alias for create_post_process_volume
+//
+// NAVIGATION VOLUMES:
+//   - create_nav_mesh_bounds_volume  : ANavMeshBoundsVolume (navigation mesh)
+//   - create_nav_modifier_volume     : ANavModifierVolume (navigation modifiers)
+//   - create_camera_blocking_volume  : ACameraBlockingVolume (camera collision)
+//
+// VOLUME OPERATIONS:
+//   - set_volume_extent     : Set volume size (X, Y, Z extent)
+//   - set_volume_properties : Configure volume-specific properties
+//   - set_volume_bounds     : Set volume bounds directly
+//   - remove_volume         : Delete a volume actor
+//   - get_volumes_info      : Query all volumes in level
+//
+// VERSION COMPATIBILITY:
+//   - UE 5.0-5.7: All handlers supported
+//   - PostProcessVolume: UE 5.1+ only (conditional compilation)
+//   - Uses McpSafeAssetSave() for UE 5.7+ safe asset saving
+//
+// Copyright (c) 2025 MCP Automation Bridge Contributors
+// SPDX-License-Identifier: MIT
+// =============================================================================
 
+// Include version compatibility FIRST
+#include "McpVersionCompatibility.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
+// Core Engine
 #include "Editor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Engine/Engine.h"
+
+// Trigger Volumes
 #include "Engine/TriggerVolume.h"
 #include "Engine/TriggerBox.h"
 #include "Engine/TriggerSphere.h"
 #include "Engine/TriggerCapsule.h"
+
+// Gameplay Volumes
 #include "Engine/BlockingVolume.h"
 #include "GameFramework/KillZVolume.h"
 #include "GameFramework/PainCausingVolume.h"
 #include "GameFramework/PhysicsVolume.h"
+
+// Audio Volumes
 #include "Sound/AudioVolume.h"
 #include "Sound/ReverbEffect.h"
+
+// Rendering Volumes
 #include "Engine/CullDistanceVolume.h"
 #include "Lightmass/PrecomputedVisibilityVolume.h"
 #include "Lightmass/LightmassImportanceVolume.h"
+
+// Navigation Volumes
 #include "NavMesh/NavMeshBoundsVolume.h"
 #include "NavModifierVolume.h"
 #include "GameFramework/CameraBlockingVolume.h"
+
+// Components
 #include "Components/BrushComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
+
+// Brush Building
 #include "Engine/Brush.h"
 #include "Engine/Polys.h"
 #include "Builders/CubeBuilder.h"
+
 // PostProcessVolume exists in UE 5.1+ (verified in 5.3, 5.6, 5.7)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "Engine/PostProcessVolume.h"
@@ -418,15 +486,15 @@ static bool HandleCreateTriggerVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
     
     // Add location for verification
-    TSharedPtr<FJsonObject> LocationObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> LocationObj = McpHandlerUtils::CreateResultObject();
     LocationObj->SetNumberField(TEXT("x"), Volume->GetActorLocation().X);
     LocationObj->SetNumberField(TEXT("y"), Volume->GetActorLocation().Y);
     LocationObj->SetNumberField(TEXT("z"), Volume->GetActorLocation().Z);
@@ -492,15 +560,15 @@ static bool HandleCreateTriggerBox(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerBox"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
     
     // Add box extent for verification
-    TSharedPtr<FJsonObject> ExtentObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ExtentObj = McpHandlerUtils::CreateResultObject();
     ExtentObj->SetNumberField(TEXT("x"), Extent.X);
     ExtentObj->SetNumberField(TEXT("y"), Extent.Y);
     ExtentObj->SetNumberField(TEXT("z"), Extent.Z);
@@ -570,13 +638,13 @@ static bool HandleCreateTriggerSphere(
         SphereComp->SetSphereRadius(Radius);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerSphere: %s"), *VolumeName), ResponseJson);
@@ -643,14 +711,14 @@ static bool HandleCreateTriggerCapsule(
         CapsuleComp->SetCapsuleSize(Radius, HalfHeight);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerCapsule"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created TriggerCapsule: %s"), *VolumeName), ResponseJson);
@@ -712,12 +780,12 @@ static bool HandleCreateBlockingVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created BlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -775,12 +843,12 @@ static bool HandleCreateKillZVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created KillZVolume: %s"), *VolumeName), ResponseJson);
@@ -845,14 +913,14 @@ static bool HandleCreatePainCausingVolume(
     Volume->bPainCausing = bPainCausing;
     Volume->DamagePerSec = DamagePerSec;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APainCausingVolume"));
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PainCausingVolume: %s"), *VolumeName), ResponseJson);
@@ -921,7 +989,7 @@ static bool HandleCreatePhysicsVolume(
     Volume->TerminalVelocity = TerminalVelocity;
     Volume->Priority = Priority;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
     ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
@@ -930,7 +998,7 @@ static bool HandleCreatePhysicsVolume(
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PhysicsVolume: %s"), *VolumeName), ResponseJson);
@@ -993,13 +1061,13 @@ static bool HandleCreateAudioVolume(
     // Configure audio volume properties
     Volume->SetEnabled(bEnabled);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created AudioVolume: %s"), *VolumeName), ResponseJson);
@@ -1072,7 +1140,7 @@ static bool HandleCreateReverbVolume(
     ReverbSettings.FadeTime = FadeTime;
     Volume->SetReverbSettings(ReverbSettings);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AAudioVolume (Reverb)"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
@@ -1080,7 +1148,7 @@ static bool HandleCreateReverbVolume(
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created ReverbVolume: %s"), *VolumeName), ResponseJson);
@@ -1212,7 +1280,7 @@ static bool HandleCreatePostProcessVolume(
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
@@ -1222,7 +1290,7 @@ static bool HandleCreatePostProcessVolume(
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
@@ -1305,12 +1373,12 @@ static bool HandleCreateCullDistanceVolume(
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CullDistanceVolume: %s"), *VolumeName), ResponseJson);
@@ -1368,12 +1436,12 @@ static bool HandleCreatePrecomputedVisibilityVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APrecomputedVisibilityVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PrecomputedVisibilityVolume: %s"), *VolumeName), ResponseJson);
@@ -1431,12 +1499,12 @@ static bool HandleCreateLightmassImportanceVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ALightmassImportanceVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created LightmassImportanceVolume: %s"), *VolumeName), ResponseJson);
@@ -1494,12 +1562,12 @@ static bool HandleCreateNavMeshBoundsVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavMeshBoundsVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavMeshBoundsVolume: %s"), *VolumeName), ResponseJson);
@@ -1557,12 +1625,12 @@ static bool HandleCreateNavModifierVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ANavModifierVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created NavModifierVolume: %s"), *VolumeName), ResponseJson);
@@ -1620,12 +1688,12 @@ static bool HandleCreateCameraBlockingVolume(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACameraBlockingVolume"));
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created CameraBlockingVolume: %s"), *VolumeName), ResponseJson);
@@ -1689,13 +1757,13 @@ static bool HandleSetVolumeExtent(
         VolumeActor->SetActorScale3D(FVector(NewExtent.X / 100.0f, NewExtent.Y / 100.0f, NewExtent.Z / 100.0f));
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     
     // Add verification data
-    AddActorVerification(ResponseJson, VolumeActor);
+    McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 
-    TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
     ExtentJson->SetNumberField(TEXT("x"), NewExtent.X);
     ExtentJson->SetNumberField(TEXT("y"), NewExtent.Y);
     ExtentJson->SetNumberField(TEXT("z"), NewExtent.Z);
@@ -1814,16 +1882,16 @@ static bool HandleSetVolumeProperties(
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     
     // Add verification data
-    AddActorVerification(ResponseJson, VolumeActor);
+    McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString& Prop : PropertiesSet)
     {
-        PropsArray.Add(MakeShareable(new FJsonValueString(Prop)));
+        PropsArray.Add(MakeShared<FJsonValueString>(Prop));
     }
     ResponseJson->SetArrayField(TEXT("propertiesSet"), PropsArray);
 
@@ -1896,12 +1964,12 @@ static bool HandleGetVolumesInfo(
             }
         }
 
-        TSharedPtr<FJsonObject> VolumeInfo = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> VolumeInfo = McpHandlerUtils::CreateResultObject();
         VolumeInfo->SetStringField(TEXT("name"), Volume->GetActorLabel());
         VolumeInfo->SetStringField(TEXT("class"), Volume->GetClass()->GetName());
 
         FVector Location = Volume->GetActorLocation();
-        TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
         LocationJson->SetNumberField(TEXT("x"), Location.X);
         LocationJson->SetNumberField(TEXT("y"), Location.Y);
         LocationJson->SetNumberField(TEXT("z"), Location.Z);
@@ -1910,13 +1978,13 @@ static bool HandleGetVolumesInfo(
         // Try to get bounds
         FVector Origin, BoxExtent;
         Volume->GetActorBounds(false, Origin, BoxExtent);
-        TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
         ExtentJson->SetNumberField(TEXT("x"), BoxExtent.X);
         ExtentJson->SetNumberField(TEXT("y"), BoxExtent.Y);
         ExtentJson->SetNumberField(TEXT("z"), BoxExtent.Z);
         VolumeInfo->SetObjectField(TEXT("extent"), ExtentJson);
 
-        VolumesArray.Add(MakeShareable(new FJsonValueObject(VolumeInfo)));
+        VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeInfo));
         TotalCount++;
     }
 
@@ -1946,12 +2014,12 @@ static bool HandleGetVolumesInfo(
             }
         }
 
-        TSharedPtr<FJsonObject> VolumeInfo = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> VolumeInfo = McpHandlerUtils::CreateResultObject();
         VolumeInfo->SetStringField(TEXT("name"), Trigger->GetActorLabel());
         VolumeInfo->SetStringField(TEXT("class"), Trigger->GetClass()->GetName());
 
         FVector Location = Trigger->GetActorLocation();
-        TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
         LocationJson->SetNumberField(TEXT("x"), Location.X);
         LocationJson->SetNumberField(TEXT("y"), Location.Y);
         LocationJson->SetNumberField(TEXT("z"), Location.Z);
@@ -1960,19 +2028,19 @@ static bool HandleGetVolumesInfo(
         // Get bounds
         FVector Origin, BoxExtent;
         Trigger->GetActorBounds(false, Origin, BoxExtent);
-        TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
         ExtentJson->SetNumberField(TEXT("x"), BoxExtent.X);
         ExtentJson->SetNumberField(TEXT("y"), BoxExtent.Y);
         ExtentJson->SetNumberField(TEXT("z"), BoxExtent.Z);
         VolumeInfo->SetObjectField(TEXT("extent"), ExtentJson);
 
-        VolumesArray.Add(MakeShareable(new FJsonValueObject(VolumeInfo)));
+        VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeInfo));
         TotalCount++;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     
-    TSharedPtr<FJsonObject> VolumesInfo = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> VolumesInfo = McpHandlerUtils::CreateResultObject();
     VolumesInfo->SetNumberField(TEXT("totalCount"), TotalCount);
     VolumesInfo->SetArrayField(TEXT("volumes"), VolumesArray);
     
@@ -2029,7 +2097,7 @@ static bool HandleRemoveVolume(
     // Destroy the volume actor
     World->DestroyActor(VolumeActor, true);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
     ResponseJson->SetBoolField(TEXT("existsAfter"), false);
@@ -2154,14 +2222,14 @@ static bool HandleAddTriggerVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ATriggerVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2243,14 +2311,14 @@ static bool HandleAddBlockingVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ABlockingVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2339,7 +2407,7 @@ static bool HandleAddKillZVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AKillZVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
@@ -2347,7 +2415,7 @@ static bool HandleAddKillZVolume(
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2439,7 +2507,7 @@ static bool HandleAddPhysicsVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APhysicsVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
@@ -2447,7 +2515,7 @@ static bool HandleAddPhysicsVolume(
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2553,14 +2621,14 @@ static bool HandleAddCullDistanceVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("ACullDistanceVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2656,7 +2724,7 @@ static bool HandleAddPostProcessVolume(
     bool bAttachmentSucceeded = true;  // Assume success in UE 5.0
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("APostProcessVolume"));
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
@@ -2664,7 +2732,7 @@ static bool HandleAddPostProcessVolume(
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
     
     // Add verification data
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     // If attachment failed, return success=false since user's intent (attach to actor) failed
     // Volume was still created, so include it in response for debugging
@@ -2775,25 +2843,25 @@ static bool HandleSetVolumeBounds(
         VolumeActor->SetActorScale3D(FVector(Extent.X / 100.0f, Extent.Y / 100.0f, Extent.Z / 100.0f));
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     
     // Add verification data
-    AddActorVerification(ResponseJson, VolumeActor);
+    McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
 
-    TSharedPtr<FJsonObject> BoundsJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> BoundsJson = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> MinArray, MaxArray;
-    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.X)));
-    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Y)));
-    MinArray.Add(MakeShareable(new FJsonValueNumber(MinBound.Z)));
-    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.X)));
-    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Y)));
-    MaxArray.Add(MakeShareable(new FJsonValueNumber(MaxBound.Z)));
+    MinArray.Add(MakeShared<FJsonValueNumber>(MinBound.X));
+    MinArray.Add(MakeShared<FJsonValueNumber>(MinBound.Y));
+    MinArray.Add(MakeShared<FJsonValueNumber>(MinBound.Z));
+    MaxArray.Add(MakeShared<FJsonValueNumber>(MaxBound.X));
+    MaxArray.Add(MakeShared<FJsonValueNumber>(MaxBound.Y));
+    MaxArray.Add(MakeShared<FJsonValueNumber>(MaxBound.Z));
     BoundsJson->SetArrayField(TEXT("min"), MinArray);
     BoundsJson->SetArrayField(TEXT("max"), MaxArray);
     ResponseJson->SetObjectField(TEXT("bounds"), BoundsJson);
 
-    TSharedPtr<FJsonObject> CenterJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> CenterJson = McpHandlerUtils::CreateResultObject();
     CenterJson->SetNumberField(TEXT("x"), Center.X);
     CenterJson->SetNumberField(TEXT("y"), Center.Y);
     CenterJson->SetNumberField(TEXT("z"), Center.Z);

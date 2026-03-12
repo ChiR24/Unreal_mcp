@@ -1,12 +1,81 @@
-#include "Dom/JsonObject.h"
-// Copyright Epic Games, Inc. All Rights Reserved.
-// Phase 25: Navigation System Handlers
+// =============================================================================
+// McpAutomationBridge_NavigationHandlers.cpp
+// =============================================================================
+// Navigation System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// --------------------
+// Section 1: NavMesh Configuration
+//   - HandleConfigureNavMeshSettings    : Configure NavMesh tile size, cell size/height
+//   - HandleSetNavAgentProperties       : Set agent radius, height, max slope, step height
+//   - HandleRebuildNavigation           : Trigger full navigation rebuild
+//
+// Section 2: Nav Modifiers
+//   - HandleCreateNavModifierComponent  : Add NavModifierComponent to Blueprint
+//   - HandleSetNavAreaClass             : Set nav area class on NavModifierComponent
+//   - HandleConfigureNavAreaCost        : Configure nav area default cost
+//
+// Section 3: Nav Links
+//   - HandleCreateNavLinkProxy          : Create NavLinkProxy actor with point links
+//   - HandleConfigureNavLink            : Configure nav link start/end points
+//   - HandleSetNavLinkType              : Set link type (simple/smart)
+//   - HandleCreateSmartLink             : Create NavLinkProxy with smart link enabled
+//   - HandleConfigureSmartLinkBehavior  : Configure smart link behavior
+//
+// Section 4: Utility Handlers
+//   - HandleGetNavigationInfo           : Get navigation system status and settings
+//   - HandleManageNavigationAction      : Main dispatcher for navigation actions
+//
+// PAYLOAD/RESPONSE FORMATS:
+// -------------------------
+// configure_nav_mesh_settings:
+//   Payload: { "blueprintPath"?: string, "tileSizeUU"?: number, "cellSize"?: number,
+//              "cellHeight"?: number, "minRegionArea"?: number, "mergeRegionSize"?: number,
+//              "maxSimplificationError"?: number, "agentStepHeight"?: number }
+//   Response: { "success": bool, "navMeshName": string, "tileSizeUU": number, "modified": bool }
+//
+// set_nav_agent_properties:
+//   Payload: { "blueprintPath"?: string, "agentRadius"?: number, "agentHeight"?: number,
+//              "agentMaxSlope"?: number, "agentStepHeight"?: number }
+//   Response: { "success": bool, "agentRadius": number, "agentHeight": number, "agentMaxSlope": number }
+//
+// create_nav_link_proxy:
+//   Payload: { "actorName"?: string, "location": {x,y,z}, "rotation"?: {pitch,yaw,roll},
+//              "startPoint": {x,y,z}, "endPoint": {x,y,z}, "direction"?: string }
+//   Response: { "success": bool, "actorName": string, "actorPath": string }
+//
+// get_navigation_info:
+//   Payload: { "blueprintPath"?: string }
+//   Response: { "success": bool, "navMeshInfo": { agentRadius, agentHeight, cellSize, ... } }
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.1: Uses deprecated direct NavMesh properties (CellSize, CellHeight, AgentMaxStepHeight)
+// UE 5.2: Uses NavMeshResolutionParams for CellSize/CellHeight, direct property for AgentMaxStepHeight
+// UE 5.3+: Uses NavMeshResolutionParams for all resolution params including AgentMaxStepHeight
+//
+// REFACTORING NOTES:
+// ------------------
+// - Use PRAGMA_DISABLE_DEPRECATION_WARNINGS for UE 5.0-5.1 compatibility
+// - NavMeshResolutionParams indexed by ENavigationDataResolution::Default
+// - NavLinkProxy uses NameMode::Requested for unique name generation
+// - Security validation via IsValidNavigationPath() and IsValidActorName()
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
@@ -16,7 +85,9 @@
 #include "Engine/SCS_Node.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-// Navigation System includes
+// =============================================================================
+// Navigation System Includes
+// =============================================================================
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavMesh/NavMeshBoundsVolume.h"
@@ -24,56 +95,87 @@
 #include "NavLinkCustomComponent.h"
 #include "Navigation/NavLinkProxy.h"
 #include "AI/NavigationSystemBase.h"
+
+// =============================================================================
+// Nav Area Includes
+// =============================================================================
 #include "NavAreas/NavArea.h"
 #include "NavAreas/NavArea_Default.h"
 #include "NavAreas/NavArea_Null.h"
 #include "NavAreas/NavArea_Obstacle.h"
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Logging Category
+// =============================================================================
 DEFINE_LOG_CATEGORY_STATIC(LogMcpNavigationHandlers, Log, All);
+
+// =============================================================================
+// Section 0: Helper Functions
+// =============================================================================
 
 #if WITH_EDITOR
 
-// Helper to get string field from JSON
+/**
+ * GetJsonStringFieldNav - Extract string field from JSON with default value
+ */
 static FString GetJsonStringFieldNav(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""))
 {
-    if (!Payload.IsValid()) return Default;
+    if (!Payload.IsValid())
+    {
+        return Default;
+    }
     FString Value;
     if (Payload->TryGetStringField(FieldName, Value))
     {
         return Value;
-    }
     return Default;
 }
 
-// Helper to get number field from JSON
+/**
+ * GetJsonNumberFieldNav - Extract number field from JSON with default value
+ */
 static double GetJsonNumberFieldNav(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default = 0.0)
 {
-    if (!Payload.IsValid()) return Default;
-    double Value;
-    if (Payload->TryGetNumberField(FieldName, Value))
+    if (!Payload.IsValid())
     {
-        return Value;
+        return Default;
+    }
+    double value;
+    if (Payload->TryGetNumberField(FieldName, value))
+    {
+        return value;
     }
     return Default;
 }
 
-// Helper to get bool field from JSON
+/**
+ * GetJsonBoolFieldNav - Extract bool field from JSON with default value
+ */
 static bool GetJsonBoolFieldNav(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default = false)
 {
-    if (!Payload.IsValid()) return Default;
-    bool Value;
-    if (Payload->TryGetBoolField(FieldName, Value))
+    if (!Payload.IsValid())
     {
-        return Value;
+        return Default;
+    }
+    bool value;
+    if (Payload->TryGetBoolField(FieldName, value))
+    {
+        return value;
     }
     return Default;
 }
 
-// Helper to get FVector from JSON object field
+/**
+ * GetJsonVectorFieldNav - Extract FVector from JSON object field
+ */
 static FVector GetJsonVectorFieldNav(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector)
 {
-    if (!Payload.IsValid()) return Default;
+    if (!Payload.IsValid())
+    {
+        return Default;
+    }
     const TSharedPtr<FJsonObject>* VecObj;
     if (Payload->TryGetObjectField(FieldName, VecObj) && VecObj->IsValid())
     {
@@ -86,10 +188,15 @@ static FVector GetJsonVectorFieldNav(const TSharedPtr<FJsonObject>& Payload, con
     return Default;
 }
 
-// Helper to get FRotator from JSON object field
+/**
+ * GetJsonRotatorFieldNav - Extract FRotator from JSON object field
+ */
 static FRotator GetJsonRotatorFieldNav(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default = FRotator::ZeroRotator)
 {
-    if (!Payload.IsValid()) return Default;
+    if (!Payload.IsValid())
+    {
+        return Default;
+    }
     const TSharedPtr<FJsonObject>* RotObj;
     if (Payload->TryGetObjectField(FieldName, RotObj) && RotObj->IsValid())
     {
@@ -102,50 +209,81 @@ static FRotator GetJsonRotatorFieldNav(const TSharedPtr<FJsonObject>& Payload, c
     return Default;
 }
 
-// Helper to validate actor name (reject path traversal and path separators)
+/**
+ * IsValidActorName - Validate actor name (reject path traversal and separators)
+ */
 static bool IsValidActorName(const FString& Name)
 {
-    if (Name.IsEmpty()) return false;
+    if (Name.IsEmpty())
+    {
+        return false;
+    }
     // Reject path traversal
-    if (Name.Contains(TEXT(".."))) return false;
-    // Reject path separators (actor names should not contain slashes)
-    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\"))) return false;
+    if (Name.Contains(TEXT("..")))
+    {
+        return false;
+    }
+    // Reject path separators
+    if (Name.Contains(TEXT("/")) || Name.Contains(TEXT("\\")))
+    {
+        return false;
+    }
     // Reject Windows drive letters
-    if (Name.Contains(TEXT(":"))) return false;
+    if (Name.Contains(TEXT(":")))
+    {
+        return false;
+    }
     return true;
 }
 
-// Helper to validate asset/class path (reject path traversal and ensure valid format)
+/**
+ * IsValidNavigationPath - Validate asset/class path (reject path traversal)
+ */
 static bool IsValidNavigationPath(const FString& Path)
 {
-    if (Path.IsEmpty()) return false;
+    if (Path.IsEmpty())
+    {
+        return false;
+    }
     // Use the existing validation helper
     return IsValidAssetPath(Path);
 }
 
-// ============================================================================
-// NavMesh Configuration Handlers
-// ============================================================================
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Section 1: NavMesh Configuration Handlers
+// =============================================================================
+
+#if WITH_EDITOR
+
+/**
+ * HandleConfigureNavMeshSettings
+ * -------------------------------
+ * Configure NavMesh settings like tile size, cell size/height, and region parameters.
+ * 
+ * Version Compatibility:
+ * - UE 5.0-5.1: Uses deprecated direct properties (CellSize, CellHeight)
+ * - UE 5.2+: Uses NavMeshResolutionParams for cell size/height
+ * - UE 5.3+: Uses NavMeshResolutionParams for AgentMaxStepHeight
+ */
 static bool HandleConfigureNavMeshSettings(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // Validate optional blueprintPath parameter if provided
+    // Validate optional blueprintPath parameter
     FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
-        // Validate path format - reject path traversal and invalid characters
         if (!IsValidNavigationPath(BlueprintPath))
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
                 TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        
-        // Check if blueprint exists
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -179,42 +317,50 @@ static bool HandleConfigureNavMeshSettings(
         return true;
     }
 
+    // -------------------------------------------------------------------------
     // Apply settings from payload
+    // -------------------------------------------------------------------------
     bool bModified = false;
 
+    // TileSizeUU - available in all UE 5.x versions
     if (Payload->HasField(TEXT("tileSizeUU")))
     {
         NavMesh->TileSizeUU = GetJsonNumberFieldNav(Payload, TEXT("tileSizeUU"), 1000.0f);
         bModified = true;
     }
 
+    // MinRegionArea - available in all UE 5.x versions
     if (Payload->HasField(TEXT("minRegionArea")))
     {
         NavMesh->MinRegionArea = GetJsonNumberFieldNav(Payload, TEXT("minRegionArea"), 0.0f);
         bModified = true;
     }
 
+    // MergeRegionSize - available in all UE 5.x versions
     if (Payload->HasField(TEXT("mergeRegionSize")))
     {
         NavMesh->MergeRegionSize = GetJsonNumberFieldNav(Payload, TEXT("mergeRegionSize"), 400.0f);
         bModified = true;
     }
 
+    // MaxSimplificationError - available in all UE 5.x versions
     if (Payload->HasField(TEXT("maxSimplificationError")))
     {
         NavMesh->MaxSimplificationError = GetJsonNumberFieldNav(Payload, TEXT("maxSimplificationError"), 1.3f);
         bModified = true;
     }
 
-    // UE 5.2+ uses NavMeshResolutionParams array for cellSize, cellHeight
-    // UE 5.3+ uses NavMeshResolutionParams for agentMaxStepHeight (UE 5.2 doesn't have it in struct)
-    // UE 5.0-5.1 use deprecated direct properties
+    // -------------------------------------------------------------------------
+    // Cell Size/Height - Version-specific handling
+    // UE 5.2+: Uses NavMeshResolutionParams array
+    // UE 5.0-5.1: Uses deprecated direct properties
+    // -------------------------------------------------------------------------
     if (Payload->HasField(TEXT("cellSize")) || Payload->HasField(TEXT("cellHeight")))
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-        // UE 5.2+: Use NavMeshResolutionParams array for cell size/height
+        // UE 5.2+: Use NavMeshResolutionParams array
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        
+
         if (Payload->HasField(TEXT("cellSize")))
         {
             DefaultParams.CellSize = GetJsonNumberFieldNav(Payload, TEXT("cellSize"), 19.0f);
@@ -242,7 +388,11 @@ static bool HandleConfigureNavMeshSettings(
 #endif
     }
 
-    // AgentMaxStepHeight: UE 5.3+ uses NavMeshResolutionParams, UE 5.0-5.2 use direct property
+    // -------------------------------------------------------------------------
+    // AgentMaxStepHeight - Version-specific handling
+    // UE 5.3+: Uses NavMeshResolutionParams
+    // UE 5.0-5.2: Uses direct property
+    // -------------------------------------------------------------------------
     if (Payload->HasField(TEXT("agentStepHeight")))
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -262,12 +412,15 @@ static bool HandleConfigureNavMeshSettings(
         NavMesh->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("navMeshName"), NavMesh->GetName());
     Result->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
     Result->SetBoolField(TEXT("modified"), bModified);
     Result->SetBoolField(TEXT("navMeshPresent"), true);
-    
+
     // Add verification data
     Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
     Result->SetStringField(TEXT("navMeshClass"), NavMesh->GetClass()->GetName());
@@ -278,25 +431,28 @@ static bool HandleConfigureNavMeshSettings(
     return true;
 }
 
+/**
+ * HandleSetNavAgentProperties
+ * ----------------------------
+ * Set navigation agent properties (radius, height, slope, step height).
+ */
 static bool HandleSetNavAgentProperties(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // Validate optional blueprintPath parameter if provided
+    // Validate optional blueprintPath parameter
     FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
-        // Validate path format - reject path traversal and invalid characters
         if (!IsValidNavigationPath(BlueprintPath))
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
                 TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        
-        // Check if blueprint exists
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -330,28 +486,33 @@ static bool HandleSetNavAgentProperties(
         return true;
     }
 
+    // -------------------------------------------------------------------------
     // Set agent properties
+    // -------------------------------------------------------------------------
     bool bModified = false;
 
+    // AgentRadius - available in all UE 5.x versions
     if (Payload->HasField(TEXT("agentRadius")))
     {
         NavMesh->AgentRadius = GetJsonNumberFieldNav(Payload, TEXT("agentRadius"), 35.0f);
         bModified = true;
     }
 
+    // AgentHeight - available in all UE 5.x versions
     if (Payload->HasField(TEXT("agentHeight")))
     {
         NavMesh->AgentHeight = GetJsonNumberFieldNav(Payload, TEXT("agentHeight"), 144.0f);
         bModified = true;
     }
 
+    // AgentMaxSlope - available in all UE 5.x versions
     if (Payload->HasField(TEXT("agentMaxSlope")))
     {
         NavMesh->AgentMaxSlope = GetJsonNumberFieldNav(Payload, TEXT("agentMaxSlope"), 44.0f);
         bModified = true;
     }
 
-    // AgentMaxStepHeight: UE 5.3+ uses NavMeshResolutionParams, UE 5.0-5.2 use direct property
+    // AgentMaxStepHeight - Version-specific handling
     if (Payload->HasField(TEXT("agentStepHeight")))
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -370,12 +531,15 @@ static bool HandleSetNavAgentProperties(
         NavMesh->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
     Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
     Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
     Result->SetBoolField(TEXT("navMeshPresent"), true);
-    
+
     // Add verification data
     Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
     Result->SetBoolField(TEXT("existsAfter"), true);
@@ -385,25 +549,28 @@ static bool HandleSetNavAgentProperties(
     return true;
 }
 
+/**
+ * HandleRebuildNavigation
+ * ------------------------
+ * Trigger a full navigation rebuild for the current level.
+ */
 static bool HandleRebuildNavigation(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // Validate optional blueprintPath parameter if provided
+    // Validate optional blueprintPath parameter
     FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
-        // Validate path format - reject path traversal and invalid characters
         if (!IsValidNavigationPath(BlueprintPath))
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
                 TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        
-        // Check if blueprint exists
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -430,19 +597,21 @@ static bool HandleRebuildNavigation(
     }
 
     // Check for RecastNavMesh - warn if missing but still allow rebuild attempt
-    // (rebuild may succeed if NavMeshBoundsVolume exists but NavMesh hasn't been built yet)
     ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
     bool bHasNavMesh = (NavMesh != nullptr);
 
     // Trigger full navigation rebuild
     NavSys->Build();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("rebuilding"), NavSys->IsNavigationBuildInProgress());
     Result->SetBoolField(TEXT("hasNavMesh"), bHasNavMesh);
     Result->SetBoolField(TEXT("navMeshPresent"), bHasNavMesh);
     Result->SetBoolField(TEXT("bHasNavMesh"), bHasNavMesh);
-    
+
     // Add verification data
     Result->SetStringField(TEXT("navigationSystemPath"), NavSys->GetPathName());
     Result->SetBoolField(TEXT("existsAfter"), true);
@@ -452,10 +621,21 @@ static bool HandleRebuildNavigation(
     return true;
 }
 
-// ============================================================================
-// Nav Modifier Handlers
-// ============================================================================
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Section 2: Nav Modifier Handlers
+// =============================================================================
+
+#if WITH_EDITOR
+
+/**
+ * HandleCreateNavModifierComponent
+ * ----------------------------------
+ * Create a NavModifierComponent on a Blueprint.
+ * 
+ * Uses SCS (Simple Construction Script) for proper component template ownership.
+ */
 static bool HandleCreateNavModifierComponent(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -467,6 +647,7 @@ static bool HandleCreateNavModifierComponent(
     FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("areaClass"));
     FVector FailsafeExtent = GetJsonVectorFieldNav(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
 
+    // Validate required parameters
     if (BlueprintPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -474,7 +655,7 @@ static bool HandleCreateNavModifierComponent(
         return true;
     }
 
-    // Validate blueprint path - reject path traversal and invalid format
+    // Validate blueprint path
     if (!IsValidNavigationPath(BlueprintPath))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -556,19 +737,27 @@ static bool HandleCreateNavModifierComponent(
         McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetBoolField(TEXT("existsAfter"), true);
-    
+
     // Add verification data for blueprint
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavModifierComponent '%s' added to Blueprint"), *ComponentName), Result);
     return true;
 }
 
+/**
+ * HandleSetNavAreaClass
+ * ----------------------
+ * Set the nav area class on a NavModifierComponent.
+ */
 static bool HandleSetNavAreaClass(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -579,6 +768,7 @@ static bool HandleSetNavAreaClass(
     FString ComponentName = GetJsonStringFieldNav(Payload, TEXT("componentName"));
     FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("areaClass"));
 
+    // Validate required parameters
     if (ActorName.IsEmpty() || AreaClassPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -586,7 +776,7 @@ static bool HandleSetNavAreaClass(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -594,7 +784,7 @@ static bool HandleSetNavAreaClass(
         return true;
     }
 
-    // Validate area class path - reject path traversal and invalid format
+    // Validate area class path
     if (!IsValidNavigationPath(AreaClassPath))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -632,7 +822,7 @@ static bool HandleSetNavAreaClass(
     UNavModifierComponent* ModComp = nullptr;
     TArray<UNavModifierComponent*> Components;
     TargetActor->GetComponents<UNavModifierComponent>(Components);
-    
+
     if (!ComponentName.IsEmpty())
     {
         // Find component by name
@@ -644,7 +834,7 @@ static bool HandleSetNavAreaClass(
                 break;
             }
         }
-        
+
         if (!ModComp)
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
@@ -679,16 +869,24 @@ static bool HandleSetNavAreaClass(
 
     ModComp->SetAreaClass(AreaClass);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Nav area class set"), Result);
     return true;
 }
 
+/**
+ * HandleConfigureNavAreaCost
+ * ----------------------------
+ * Configure the default cost for a nav area class.
+ */
 static bool HandleConfigureNavAreaCost(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -699,6 +897,7 @@ static bool HandleConfigureNavAreaCost(
     double AreaCost = GetJsonNumberFieldNav(Payload, TEXT("areaCost"), 1.0);
     double FixedCost = GetJsonNumberFieldNav(Payload, TEXT("fixedAreaEnteringCost"), 0.0);
 
+    // Validate required parameters
     if (AreaClassPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -706,8 +905,7 @@ static bool HandleConfigureNavAreaCost(
         return true;
     }
 
-    // Validate area class path - reject path traversal and invalid format
-    // Note: NavArea class paths use /Script/NavigationSystem.NavArea_Xxx format
+    // Validate area class path
     if (!IsValidNavigationPath(AreaClassPath))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -734,16 +932,18 @@ static bool HandleConfigureNavAreaCost(
     }
 
     AreaCDO->DefaultCost = AreaCost;
-    // Note: FixedAreaEnteringCost is protected in UE, can only read via GetFixedAreaEnteringCost()
-    // For automation, we only set DefaultCost which is publicly accessible
+    // Note: FixedAreaEnteringCost is protected, can only read via GetFixedAreaEnteringCost()
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
     Result->SetNumberField(TEXT("areaCost"), AreaCost);
     Result->SetNumberField(TEXT("fixedAreaEnteringCost"), AreaCDO->GetFixedAreaEnteringCost());
     Result->SetBoolField(TEXT("existsAfter"), true);
-    
-    // Warn if user tried to set fixedAreaEnteringCost (it's read-only via automation)
+
+    // Warn if user tried to set fixedAreaEnteringCost (it's read-only)
     FString Message = TEXT("Nav area cost configured");
     if (Payload->HasField(TEXT("fixedAreaEnteringCost")))
     {
@@ -755,10 +955,19 @@ static bool HandleConfigureNavAreaCost(
     return true;
 }
 
-// ============================================================================
-// Nav Link Handlers
-// ============================================================================
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Section 3: Nav Link Handlers
+// =============================================================================
+
+#if WITH_EDITOR
+
+/**
+ * HandleCreateNavLinkProxy
+ * -------------------------
+ * Create a NavLinkProxy actor with point links.
+ */
 static bool HandleCreateNavLinkProxy(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -771,15 +980,15 @@ static bool HandleCreateNavLinkProxy(
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
-    // Validate required parameters - NavLinkProxy needs location and link geometry
+    // Validate required parameters
     if (!Payload->HasField(TEXT("location")))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("location is required for create_nav_link_proxy"), nullptr, TEXT("MISSING_PARAM"));
         return true;
     }
-    
-    // Validate that at least startPoint and endPoint are provided (link geometry is essential)
+
+    // Validate that link geometry is provided
     if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -787,7 +996,7 @@ static bool HandleCreateNavLinkProxy(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -805,7 +1014,6 @@ static bool HandleCreateNavLinkProxy(
 
     // Spawn the NavLinkProxy actor
     // Use NameMode::Requested to auto-generate unique name if collision occurs
-    // This prevents the Fatal Error: "Cannot generate unique name for 'NavLinkProxy'"
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
     SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
@@ -825,7 +1033,7 @@ static bool HandleCreateNavLinkProxy(
     FNavigationLink NewLink;
     NewLink.Left = StartPoint;
     NewLink.Right = EndPoint;
-    
+
     // Parse direction
     FString DirectionStr = GetJsonStringFieldNav(Payload, TEXT("direction"), TEXT("BothWays"));
     if (DirectionStr == TEXT("LeftToRight"))
@@ -846,16 +1054,24 @@ static bool HandleCreateNavLinkProxy(
     // Mark level dirty
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), NavLink->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
-    AddActorVerification(Result, NavLink);
+    McpHandlerUtils::AddVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavLinkProxy '%s' created"), *ActorName), Result);
     return true;
 }
 
+/**
+ * HandleConfigureNavLink
+ * -----------------------
+ * Configure an existing NavLinkProxy's point links.
+ */
 static bool HandleConfigureNavLink(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -863,7 +1079,7 @@ static bool HandleConfigureNavLink(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"));
-    
+
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -871,7 +1087,7 @@ static bool HandleConfigureNavLink(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -956,16 +1172,24 @@ static bool HandleConfigureNavLink(
         World->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("modified"), bModified);
-    AddActorVerification(Result, NavLink);
+    McpHandlerUtils::AddVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("NavLink configured"), Result);
     return true;
 }
 
+/**
+ * HandleSetNavLinkType
+ * ---------------------
+ * Set the link type (simple or smart) on a NavLinkProxy.
+ */
 static bool HandleSetNavLinkType(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -982,7 +1206,7 @@ static bool HandleSetNavLinkType(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1032,17 +1256,25 @@ static bool HandleSetNavLinkType(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("linkType"), LinkType);
     Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), NavLink->bSmartLinkIsRelevant);
-    AddActorVerification(Result, NavLink);
+    McpHandlerUtils::AddVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavLink type set to %s"), *LinkType), Result);
     return true;
 }
 
+/**
+ * HandleCreateSmartLink
+ * ----------------------
+ * Create a NavLinkProxy with smart link enabled.
+ */
 static bool HandleCreateSmartLink(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -1055,15 +1287,15 @@ static bool HandleCreateSmartLink(
     FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
     FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
-    // Validate required parameters - SmartLink needs location and link geometry
+    // Validate required parameters
     if (!Payload->HasField(TEXT("location")))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("location is required for create_smart_link"), nullptr, TEXT("MISSING_PARAM"));
         return true;
     }
-    
-    // Validate that at least startPoint and endPoint are provided (link geometry is essential)
+
+    // Validate that link geometry is provided
     if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1071,7 +1303,7 @@ static bool HandleCreateSmartLink(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1088,7 +1320,6 @@ static bool HandleCreateSmartLink(
     }
 
     // Spawn NavLinkProxy with smart link enabled
-    // Use NameMode::Requested to auto-generate unique name if collision occurs
     FActorSpawnParameters SpawnParams;
     SpawnParams.Name = *ActorName;
     SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
@@ -1127,17 +1358,25 @@ static bool HandleCreateSmartLink(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), NavLink->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
     Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), true);
-    AddActorVerification(Result, NavLink);
+    McpHandlerUtils::AddVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Smart NavLink '%s' created"), *ActorName), Result);
     return true;
 }
 
+/**
+ * HandleConfigureSmartLinkBehavior
+ * ----------------------------------
+ * Configure smart link behavior settings.
+ */
 static bool HandleConfigureSmartLinkBehavior(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -1153,7 +1392,7 @@ static bool HandleConfigureSmartLinkBehavior(
         return true;
     }
 
-    // Validate actor name - reject path traversal and invalid characters
+    // Validate actor name
     if (!IsValidActorName(ActorName))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -1244,7 +1483,7 @@ static bool HandleConfigureSmartLinkBehavior(
         UClass* ObstacleArea = LoadClass<UNavArea>(nullptr, *ObstacleAreaPath);
         FVector Extent = GetJsonVectorFieldNav(Payload, TEXT("obstacleExtent"), FVector(100, 100, 100));
         FVector Offset = GetJsonVectorFieldNav(Payload, TEXT("obstacleOffset"));
-        
+
         if (ObstacleArea)
         {
             SmartComp->AddNavigationObstacle(ObstacleArea, Extent, Offset);
@@ -1257,42 +1496,52 @@ static bool HandleConfigureSmartLinkBehavior(
         World->MarkPackageDirty();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    // -------------------------------------------------------------------------
+    // Build response
+    // -------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("linkEnabled"), SmartComp->IsEnabled());
     Result->SetBoolField(TEXT("modified"), bModified);
-    
+
     // Add verification data
-    AddActorVerification(Result, NavLink);
+    McpHandlerUtils::AddVerification(Result, NavLink);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Smart link behavior configured"), Result);
     return true;
 }
 
-// ============================================================================
-// Utility Handlers
-// ============================================================================
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Section 4: Utility Handlers
+// =============================================================================
+
+#if WITH_EDITOR
+
+/**
+ * HandleGetNavigationInfo
+ * ------------------------
+ * Get navigation system status and settings.
+ */
 static bool HandleGetNavigationInfo(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // Validate optional blueprintPath parameter if provided
+    // Validate optional blueprintPath parameter
     FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
-        // Validate path format - reject path traversal and invalid characters
         if (!IsValidNavigationPath(BlueprintPath))
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
                 TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        
-        // Check if blueprint exists
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -1311,9 +1560,9 @@ static bool HandleGetNavigationInfo(
     }
 
     UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-    
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    TSharedPtr<FJsonObject> NavInfo = MakeShared<FJsonObject>();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> NavInfo = McpHandlerUtils::CreateResultObject();
 
     if (NavSys)
     {
@@ -1324,9 +1573,8 @@ static bool HandleGetNavigationInfo(
             NavInfo->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
             NavInfo->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
             NavInfo->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
-            
-            // Get resolution params - UE 5.2+ uses NavMeshResolutionParams for CellSize/CellHeight
-            // UE 5.3+ uses NavMeshResolutionParams for AgentMaxStepHeight
+
+            // Get resolution params - UE 5.2+ uses NavMeshResolutionParams
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
             const FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
             NavInfo->SetNumberField(TEXT("cellSize"), DefaultParams.CellSize);
@@ -1377,10 +1625,31 @@ static bool HandleGetNavigationInfo(
 
 #endif // WITH_EDITOR
 
-// ============================================================================
-// Main Dispatcher
-// ============================================================================
+// =============================================================================
+// Section 5: Main Dispatcher
+// =============================================================================
 
+/**
+ * HandleManageNavigationAction
+ * -----------------------------
+ * Main dispatcher for all navigation-related actions.
+ * 
+ * Dispatches to appropriate handlers based on subAction field.
+ * 
+ * Supported subActions:
+ *   - configure_nav_mesh_settings
+ *   - set_nav_agent_properties
+ *   - rebuild_navigation
+ *   - create_nav_modifier_component
+ *   - set_nav_area_class
+ *   - configure_nav_area_cost
+ *   - create_nav_link_proxy
+ *   - configure_nav_link
+ *   - set_nav_link_type
+ *   - create_smart_link
+ *   - configure_smart_link_behavior
+ *   - get_navigation_info
+ */
 bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     const FString& RequestId,
     const FString& Action,
@@ -1389,10 +1658,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
 {
 #if WITH_EDITOR
     FString SubAction = GetJsonStringFieldNav(Payload, TEXT("subAction"), TEXT(""));
-    
+
     UE_LOG(LogMcpNavigationHandlers, Verbose, TEXT("HandleManageNavigationAction: SubAction=%s"), *SubAction);
 
+    // =========================================================================
     // NavMesh Configuration
+    // =========================================================================
     if (SubAction == TEXT("configure_nav_mesh_settings"))
         return HandleConfigureNavMeshSettings(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("set_nav_agent_properties"))
@@ -1400,7 +1671,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     if (SubAction == TEXT("rebuild_navigation"))
         return HandleRebuildNavigation(this, RequestId, Payload, Socket);
 
+    // =========================================================================
     // Nav Modifiers
+    // =========================================================================
     if (SubAction == TEXT("create_nav_modifier_component"))
         return HandleCreateNavModifierComponent(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("set_nav_area_class"))
@@ -1408,7 +1681,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     if (SubAction == TEXT("configure_nav_area_cost"))
         return HandleConfigureNavAreaCost(this, RequestId, Payload, Socket);
 
+    // =========================================================================
     // Nav Links
+    // =========================================================================
     if (SubAction == TEXT("create_nav_link_proxy"))
         return HandleCreateNavLinkProxy(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("configure_nav_link"))
@@ -1420,7 +1695,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     if (SubAction == TEXT("configure_smart_link_behavior"))
         return HandleConfigureSmartLinkBehavior(this, RequestId, Payload, Socket);
 
+    // =========================================================================
     // Utility
+    // =========================================================================
     if (SubAction == TEXT("get_navigation_info"))
         return HandleGetNavigationInfo(this, RequestId, Payload, Socket);
 
@@ -1428,6 +1705,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown navigation subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
+
 #else
     SendAutomationResponse(Socket, RequestId, false,
         TEXT("Navigation operations require editor build"), nullptr, TEXT("EDITOR_ONLY"));

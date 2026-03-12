@@ -1,11 +1,66 @@
+// =============================================================================
+// McpAutomationBridge_SCSHandlers.cpp
+// =============================================================================
+// Handler implementations for Blueprint Simple Construction Script (SCS) operations.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// SCS Query:
+//   - GetBlueprintSCS: Query SCS component hierarchy from Blueprint
+//
+// SCS Modification:
+//   - AddSCSComponent: Add component to SCS with optional mesh/material
+//   - RemoveSCSComponent: Remove component from SCS
+//   - ReparentSCSComponent: Change parent of component in SCS
+//   - SetSCSComponentTransform: Set relative transform on component
+//   - SetSCSComponentProperty: Set property on component template
+//
+// Helper Functions:
+//   - FinalizeBlueprintSCSChange: Compile and save Blueprint after SCS change
+//   - IsPlayInEditorActive: Check if PIE session is active
+//   - PIEActiveError: Return error for SCS ops during PIE
+//   - UnsupportedSCSAction: Return error for non-editor builds
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.3: TArray::Pop(bool bAllowShrinking)
+// UE 5.4+: TArray::Pop(EAllowShrinking enum)
+//
+// UE 5.6+: ANY_PACKAGE deprecated, use nullptr for class lookups
+//
+// UE 5.7+: McpSafeAssetSave required (UEditorAssetLibrary::SaveLoadedAsset
+//          causes access violations due to thumbnail generation and
+//          recursive FlushRenderingCommands calls)
+//
+// SECURITY:
+// ---------
+// - SCS operations blocked during PIE (prevents Blueprint corruption)
+// - Component names validated for uniqueness before add
+// - Cycle detection prevents circular parent-child relationships
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "McpAutomationBridge_SCSHandlers.h"
 #include "Dom/JsonObject.h"
 #include "Async/Async.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
 
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
+
+// Component Types
 #include "Camera/CameraComponent.h"
 #include "Components/ActorComponent.h"
 #include "Components/PointLightComponent.h"
@@ -13,6 +68,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+
+// Asset & Editor Support
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -25,10 +82,23 @@
 #include "Materials/MaterialInterface.h"
 #include "UObject/UObjectIterator.h"
 
-#endif
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 #if WITH_EDITOR
+/**
+ * @brief Finalizes Blueprint changes after SCS modification.
+ *
+ * Marks Blueprint as structurally modified, compiles it, and saves.
+ * Uses McpSafeAssetSave for UE 5.7+ compatibility.
+ *
+ * @param Blueprint The Blueprint to finalize.
+ * @param bOutCompiled [out] True if compilation succeeded.
+ * @param bOutSaved [out] True if save succeeded.
+ */
 void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                               bool &bOutCompiled,
                                               bool &bOutSaved) {
@@ -57,7 +127,11 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
   }
 }
 
-// Check if Play In Editor (PIE) is currently active
+/**
+ * @brief Check if Play In Editor (PIE) is currently active.
+ *
+ * @return true if PIE or standalone game session is active.
+ */
 static bool IsPlayInEditorActive() {
   if (GEditor && GEditor->IsPlaySessionInProgress()) {
     return true;
@@ -74,9 +148,13 @@ static bool IsPlayInEditorActive() {
   return false;
 }
 
-// Return PIE error result for SCS operations
+/**
+ * @brief Return PIE error result for SCS operations.
+ *
+ * @return JSON object with PIE_ACTIVE error.
+ */
 static TSharedPtr<FJsonObject> PIEActiveError() {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), false);
   Result->SetStringField(
       TEXT("error"),
@@ -88,9 +166,13 @@ static TSharedPtr<FJsonObject> PIEActiveError() {
 #endif
 
 #if !WITH_EDITOR
-// Forward declaration for non-editor builds - must be before first call site
+/**
+ * @brief Return unsupported error for non-editor builds.
+ *
+ * Forward declaration for non-editor builds - must be before first call site.
+ */
 static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
-  TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), false);
   Result->SetStringField(TEXT("error"),
                          TEXT("SCS operations require editor build"));
@@ -98,13 +180,23 @@ static TSharedPtr<FJsonObject> UnsupportedSCSAction() {
 }
 #endif
 
-// Get Blueprint SCS structure
+// =============================================================================
+// Handler Implementations
+// =============================================================================
+
+/**
+ * @brief Get Blueprint SCS structure.
+ *
+ * Returns the component hierarchy from a Blueprint's SimpleConstructionScript.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @return JSON object with component hierarchy.
+ */
 TSharedPtr<FJsonObject>
 FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
-  // Load blueprint
   // Load blueprint
   FString NormalizedPath;
   FString ErrorMsg;
@@ -138,7 +230,7 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
 
   for (USCS_Node *Node : AllNodes) {
     if (Node && Node->GetVariableName().IsValid()) {
-      TSharedPtr<FJsonObject> ComponentObj = MakeShareable(new FJsonObject);
+      TSharedPtr<FJsonObject> ComponentObj = McpHandlerUtils::CreateResultObject();
       ComponentObj->SetStringField(TEXT("name"),
                                    Node->GetVariableName().ToString());
       ComponentObj->SetStringField(
@@ -157,7 +249,7 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
                 Cast<USceneComponent>(Node->ComponentTemplate)) {
           Transform = SceneComp->GetRelativeTransform();
         }
-        TSharedPtr<FJsonObject> TransformObj = MakeShareable(new FJsonObject);
+        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
 
         FVector Loc = Transform.GetLocation();
         FRotator Rot = Transform.GetRotation().Rotator();
@@ -180,7 +272,7 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
       ComponentObj->SetNumberField(TEXT("child_count"),
                                    Node->GetChildNodes().Num());
 
-      Components.Add(MakeShareable(new FJsonValueObject(ComponentObj)));
+      Components.Add(MakeShared<FJsonValueObject>(ComponentObj));
     }
   }
 
@@ -188,7 +280,7 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
   Result->SetArrayField(TEXT("components"), Components);
   Result->SetNumberField(TEXT("count"), Components.Num());
   Result->SetStringField(TEXT("blueprint_path"), BlueprintPath);
-  AddAssetVerification(Result, Blueprint);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   Result->SetBoolField(TEXT("success"), false);
   Result->SetStringField(TEXT("error"),
@@ -199,12 +291,25 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
   return Result;
 }
 
-// Add component to SCS
+/**
+ * @brief Add component to SCS.
+ *
+ * Creates a new SCS node with the specified component class and adds it to
+ * the Blueprint's component hierarchy. Optionally assigns mesh and material.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @param ComponentClass Component class to add (e.g., "StaticMeshComponent").
+ * @param ComponentName Variable name for the new component.
+ * @param ParentComponentName Parent component name (empty for root).
+ * @param MeshPath Optional mesh asset path for mesh components.
+ * @param MaterialPath Optional material asset path.
+ * @return JSON object with operation result.
+ */
 TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &BlueprintPath, const FString &ComponentClass,
     const FString &ComponentName, const FString &ParentComponentName,
     const FString &MeshPath, const FString &MaterialPath) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
   // Check for PIE - cannot modify Blueprints during play
@@ -386,7 +491,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   // Feature #1, #2: Report mesh/material assignment status
   Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
   Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
-  AddAssetVerification(Result, Blueprint);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
   if (NewNode && NewNode->ComponentTemplate) {
     if (USceneComponent* SceneComp = Cast<USceneComponent>(NewNode->ComponentTemplate)) {
       AddComponentVerification(Result, SceneComp);
@@ -399,11 +504,17 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   return Result;
 }
 
-// Remove component from SCS
+/**
+ * @brief Remove component from SCS.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @param ComponentName Variable name of component to remove.
+ * @return JSON object with operation result.
+ */
 TSharedPtr<FJsonObject>
 FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
                                  const FString &ComponentName) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
   FString NormalizedPath;
@@ -466,7 +577,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
       FString::Printf(TEXT("Component '%s' removed from SCS"), *ComponentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
-  AddAssetVerification(Result, Blueprint);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif
@@ -474,12 +585,19 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
   return Result;
 }
 
-// Reparent component within SCS
+/**
+ * @brief Reparent component within SCS.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @param ComponentName Variable name of component to reparent.
+ * @param NewParentName New parent component name (empty for root).
+ * @return JSON object with operation result.
+ */
 TSharedPtr<FJsonObject>
 FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                    const FString &ComponentName,
                                    const FString &NewParentName) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
   FString NormalizedPath;
@@ -569,7 +687,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       }
     }
 
-  if (!NewParentNode) {
+    if (!NewParentNode) {
       // If caller asked for RootComponent and we can't resolve it, treat as a
       // benign no-op
       if (bRootSynonym) {
@@ -578,7 +696,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
             TEXT("message"),
             TEXT("Requested RootComponent not found; component remains at "
                  "current hierarchy (treated as success)."));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         return Result;
       }
       Result->SetBoolField(TEXT("success"), false);
@@ -634,7 +752,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     Result->SetStringField(
         TEXT("message"),
         TEXT("Component already under requested parent; no changes made"));
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     return Result;
   }
 
@@ -680,7 +798,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                               : *NewParentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
-  AddAssetVerification(Result, Blueprint);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif
@@ -688,11 +806,18 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   return Result;
 }
 
-// Set component transform in SCS
+/**
+ * @brief Set component transform in SCS.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @param ComponentName Variable name of component.
+ * @param TransformData JSON with location, rotation, scale arrays.
+ * @return JSON object with operation result.
+ */
 TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     const FString &BlueprintPath, const FString &ComponentName,
     const TSharedPtr<FJsonObject> &TransformData) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
   FString NormalizedPath;
@@ -795,7 +920,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
                         *ComponentName));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
   } else {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
@@ -810,11 +935,19 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
   return Result;
 }
 
-// Set component property in SCS
+/**
+ * @brief Set component property in SCS.
+ *
+ * @param BlueprintPath Path to the Blueprint asset.
+ * @param ComponentName Variable name of component.
+ * @param PropertyName Property path (supports nested properties).
+ * @param PropertyValue JSON value to set.
+ * @return JSON object with operation result.
+ */
 TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     const FString &BlueprintPath, const FString &ComponentName,
     const FString &PropertyName, const TSharedPtr<FJsonValue> &PropertyValue) {
-  TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
 #if WITH_EDITOR
   FString NormalizedPath;
@@ -926,7 +1059,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
                       *PropertyName, *ComponentName));
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
-  AddAssetVerification(Result, Blueprint);
+  McpHandlerUtils::AddVerification(Result, Blueprint);
 #else
   return UnsupportedSCSAction();
 #endif

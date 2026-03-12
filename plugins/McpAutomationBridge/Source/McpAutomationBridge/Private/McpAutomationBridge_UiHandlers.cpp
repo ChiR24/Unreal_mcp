@@ -1,16 +1,69 @@
+// =============================================================================
+// McpAutomationBridge_UiHandlers.cpp
+// =============================================================================
+// Handler implementations for UI/Widget and Editor control operations.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// system_control / manage_ui:
+//   - create_widget: Create UMG widget blueprint
+//   - add_widget_child: Add child widget to widget tree
+//   - screenshot: Capture viewport screenshot with base64 encoding
+//   - play_in_editor: Start PIE session
+//   - stop_play: Stop PIE session
+//   - save_all: Save all assets
+//   - simulate_input: Simulate keyboard input events
+//   - create_hud: Create and add widget to viewport
+//   - set_widget_text: Set text on TextBlock widgets
+//   - set_widget_image: Set image on Image widgets
+//   - set_widget_visibility: Toggle widget visibility
+//   - remove_widget_from_viewport: Remove widgets from viewport
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: FImageUtils::CompressImageArray (no ThumbnailCompressImageArray)
+// UE 5.1+: FImageUtils::ThumbnailCompressImageArray available
+// WidgetBlueprintFactory: Header location varies by UE version
+//
+// SECURITY:
+// ---------
+// - Screenshot paths validated and sanitized
+// - No arbitrary code execution via widget operations
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
+
+// Asset Management
 #include "AssetToolsModule.h"
+#include "EditorAssetLibrary.h"
+
+// Widget Support
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
-#include "EditorAssetLibrary.h"
+#include "WidgetBlueprint.h"
+
+// Engine & Rendering
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
@@ -23,15 +76,33 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UnrealClient.h"
-#include "WidgetBlueprint.h"
+
+// Widget Factory (version-dependent header location)
 #if __has_include("Factories/WidgetBlueprintFactory.h")
 #include "Factories/WidgetBlueprintFactory.h"
 #define MCP_HAS_WIDGET_FACTORY 1
 #else
 #define MCP_HAS_WIDGET_FACTORY 0
 #endif
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Handler Implementation
+// =============================================================================
+
+/**
+ * @brief Handles UI widget operations and system control actions.
+ *
+ * Processes both "system_control" and "manage_ui" actions with various subActions
+ * for widget creation, manipulation, screenshots, and PIE control.
+ *
+ * @param RequestId Identifier for the incoming request.
+ * @param Action Action name ("system_control" or "manage_ui").
+ * @param Payload JSON object containing "subAction" and action-specific parameters.
+ * @param RequestingSocket WebSocket for response delivery.
+ * @return true if the action was handled, false otherwise.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -52,6 +123,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // Extract SubAction
+  // -------------------------------------------------------------------------
   FString SubAction;
   if (Payload->HasField(TEXT("subAction"))) {
     SubAction = GetJsonStringField(Payload, TEXT("subAction"));
@@ -60,7 +134,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), LowerSub);
 
   bool bSuccess = false;
@@ -68,6 +142,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   FString ErrorCode;
 
 #if WITH_EDITOR
+  // ===========================================================================
+  // SubAction: create_widget
+  // ===========================================================================
   if (LowerSub == TEXT("create_widget")) {
 #if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
     FString WidgetName;
@@ -143,7 +220,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     ErrorCode = TEXT("NOT_AVAILABLE");
     Resp->SetStringField(TEXT("error"), Message);
 #endif
-  } else if (LowerSub == TEXT("add_widget_child")) {
+  }
+  // ===========================================================================
+  // SubAction: add_widget_child
+  // ===========================================================================
+  else if (LowerSub == TEXT("add_widget_child")) {
 #if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
     FString WidgetPath;
     if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) ||
@@ -163,8 +244,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         FString ChildClassPath;
         if (!Payload->TryGetStringField(TEXT("childClass"), ChildClassPath) ||
             ChildClassPath.IsEmpty()) {
-          // Fallback to commonly used types if only short name provided?
-          // For now require full path or class name if it can be found.
           Message = TEXT("childClass required (e.g. /Script/UMG.Button)");
           ErrorCode = TEXT("INVALID_ARGUMENT");
           Resp->SetStringField(TEXT("error"), Message);
@@ -260,7 +339,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     ErrorCode = TEXT("NOT_AVAILABLE");
     Resp->SetStringField(TEXT("error"), Message);
 #endif
-  } else if (LowerSub == TEXT("screenshot")) {
+  }
+  // ===========================================================================
+  // SubAction: screenshot
+  // ===========================================================================
+  else if (LowerSub == TEXT("screenshot")) {
     // Take a screenshot of the viewport and return as base64
     FString ScreenshotPath;
     Payload->TryGetStringField(TEXT("path"), ScreenshotPath);
@@ -370,7 +453,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         }
       }
     }
-  } else if (LowerSub == TEXT("play_in_editor")) {
+  }
+  // ===========================================================================
+  // SubAction: play_in_editor
+  // ===========================================================================
+  else if (LowerSub == TEXT("play_in_editor")) {
     // Start play in editor
     if (GEditor && GEditor->PlayWorld) {
       Message = TEXT("Already playing in editor");
@@ -389,7 +476,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         Resp->SetStringField(TEXT("error"), Message);
       }
     }
-  } else if (LowerSub == TEXT("stop_play")) {
+  }
+  // ===========================================================================
+  // SubAction: stop_play
+  // ===========================================================================
+  else if (LowerSub == TEXT("stop_play")) {
     // Stop play in editor
     if (GEditor && GEditor->PlayWorld) {
       // Execute stop command
@@ -409,7 +500,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       ErrorCode = TEXT("NOT_PLAYING");
       Resp->SetStringField(TEXT("error"), Message);
     }
-  } else if (LowerSub == TEXT("save_all")) {
+  }
+  // ===========================================================================
+  // SubAction: save_all
+  // ===========================================================================
+  else if (LowerSub == TEXT("save_all")) {
     // Save all assets and levels
     bool bCommandSuccess = GEditor->Exec(nullptr, TEXT("Asset Save All"));
     if (bCommandSuccess) {
@@ -421,7 +516,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       ErrorCode = TEXT("SAVE_FAILED");
       Resp->SetStringField(TEXT("error"), Message);
     }
-  } else if (LowerSub == TEXT("simulate_input")) {
+  }
+  // ===========================================================================
+  // SubAction: simulate_input
+  // ===========================================================================
+  else if (LowerSub == TEXT("simulate_input")) {
     FString KeyName;
     Payload->TryGetStringField(TEXT("keyName"),
                                KeyName); // Changed to keyName to match schema
@@ -469,7 +568,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       ErrorCode = TEXT("INVALID_KEY");
       Resp->SetStringField(TEXT("error"), Message);
     }
-  } else if (LowerSub == TEXT("create_hud")) {
+  }
+  // ===========================================================================
+  // SubAction: create_hud
+  // ===========================================================================
+  else if (LowerSub == TEXT("create_hud")) {
     FString WidgetPath;
     Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
     UClass *WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
@@ -495,7 +598,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           FString::Printf(TEXT("Failed to load widget class: %s"), *WidgetPath);
       ErrorCode = TEXT("CLASS_NOT_FOUND");
     }
-  } else if (LowerSub == TEXT("set_widget_text")) {
+  }
+  // ===========================================================================
+  // SubAction: set_widget_text
+  // ===========================================================================
+  else if (LowerSub == TEXT("set_widget_text")) {
     FString Key, Value;
     Payload->TryGetStringField(TEXT("key"), Key);
     Payload->TryGetStringField(TEXT("value"), Value);
@@ -550,7 +657,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       Message = FString::Printf(TEXT("Widget/TextBlock '%s' not found"), *Key);
       ErrorCode = TEXT("WIDGET_NOT_FOUND");
     }
-  } else if (LowerSub == TEXT("set_widget_image")) {
+  }
+  // ===========================================================================
+  // SubAction: set_widget_image
+  // ===========================================================================
+  else if (LowerSub == TEXT("set_widget_image")) {
     FString Key, TexturePath;
     Payload->TryGetStringField(TEXT("key"), Key);
     Payload->TryGetStringField(TEXT("texturePath"), TexturePath);
@@ -574,7 +685,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       Message = TEXT("Failed to load texture");
       ErrorCode = TEXT("ASSET_NOT_FOUND");
     }
-  } else if (LowerSub == TEXT("set_widget_visibility")) {
+  }
+  // ===========================================================================
+  // SubAction: set_widget_visibility
+  // ===========================================================================
+  else if (LowerSub == TEXT("set_widget_visibility")) {
     FString Key;
     bool bVisible = true;
     Payload->TryGetStringField(TEXT("key"), Key);
@@ -611,7 +726,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
       ErrorCode = TEXT("WIDGET_NOT_FOUND");
     }
-  } else if (LowerSub == TEXT("remove_widget_from_viewport")) {
+  }
+  // ===========================================================================
+  // SubAction: remove_widget_from_viewport
+  // ===========================================================================
+  else if (LowerSub == TEXT("remove_widget_from_viewport")) {
     FString Key;
     Payload->TryGetStringField(TEXT("key"),
                                Key); // If empty, remove all? OR specific
@@ -652,12 +771,17 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         ErrorCode = TEXT("WIDGET_NOT_FOUND");
       }
     }
-  } else {
+  }
+  // ===========================================================================
+  // Unknown SubAction
+  // ===========================================================================
+  else {
     Message = FString::Printf(
         TEXT("System control action '%s' not implemented"), *LowerSub);
     ErrorCode = TEXT("NOT_IMPLEMENTED");
     Resp->SetStringField(TEXT("error"), Message);
   }
+
 #else
   Message = TEXT("System control actions require editor build.");
   ErrorCode = TEXT("NOT_IMPLEMENTED");
