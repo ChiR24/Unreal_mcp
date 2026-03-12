@@ -941,8 +941,10 @@ static void FMcpAutomationBridge_AnnotateVariableJson(
     return;
   }
 
-  Obj->SetBoolField(TEXT("inherited"), RequestedBlueprint && DeclaringBlueprint &&
-                                           RequestedBlueprint != DeclaringBlueprint);
+  // Mark as inherited if: RequestedBlueprint is valid AND
+  // (DeclaringBlueprint is null = native parent, OR different blueprint)
+  Obj->SetBoolField(TEXT("inherited"),
+      RequestedBlueprint && (DeclaringBlueprint ? RequestedBlueprint != DeclaringBlueprint : true));
   if (DeclaringBlueprint) {
     Obj->SetStringField(TEXT("declaredInBlueprintPath"),
                         DeclaringBlueprint->GetPathName());
@@ -4622,6 +4624,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       TSharedPtr<FJsonObject> RegistryEntry =
           FMcpAutomationBridge_EnsureBlueprintEntry(Key);
       if (RegistryEntry.IsValid()) {
+        // Build set of live variable names from the snapshot
+        TSet<FString> LiveVariableNames;
+        if (Entry->HasField(TEXT("variables"))) {
+          TArray<TSharedPtr<FJsonValue>> LiveVariables =
+              Entry->GetArrayField(TEXT("variables"));
+          for (const TSharedPtr<FJsonValue> &VarVal : LiveVariables) {
+            if (VarVal.IsValid() && VarVal->Type == EJson::Object) {
+              FString VarName;
+              if (VarVal->AsObject()->TryGetStringField(TEXT("name"), VarName)) {
+                LiveVariableNames.Add(VarName);
+              }
+            }
+          }
+        }
+
         if (RegistryEntry->HasField(TEXT("defaults"))) {
           TSharedPtr<FJsonObject> EntryDefaults =
               Entry->HasField(TEXT("defaults"))
@@ -4632,6 +4649,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           if (RegistryDefaults.IsValid()) {
             for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
                  RegistryDefaults->Values) {
+              // Only merge if this variable still exists in the live blueprint
+              if (!LiveVariableNames.Contains(Pair.Key)) {
+                continue;
+              }
               if (!EntryDefaults->HasField(Pair.Key)) {
                 // Key doesn't exist in entry - add it from registry
                 EntryDefaults->SetField(Pair.Key, Pair.Value);
@@ -4667,6 +4688,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           if (RegistryMetadata.IsValid()) {
             for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
                  RegistryMetadata->Values) {
+              // Only merge if this variable still exists in the live blueprint
+              if (!LiveVariableNames.Contains(Pair.Key)) {
+                continue;
+              }
               if (!EntryMetadata->HasField(Pair.Key)) {
                 // Key doesn't exist in entry - add it from registry
                 EntryMetadata->SetField(Pair.Key, Pair.Value);

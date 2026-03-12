@@ -180,7 +180,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         if (res && res.success === false) {
           const errorCode = String(res.error || '').toUpperCase();
           const msg = String(res.message || '');
-          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || msg.toLowerCase().includes('not found')) {
+          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || errorCode === 'NOT_FOUND' || msg.toLowerCase().includes('not found')) {
             return cleanObject({
               success: false,
               handled: true,
