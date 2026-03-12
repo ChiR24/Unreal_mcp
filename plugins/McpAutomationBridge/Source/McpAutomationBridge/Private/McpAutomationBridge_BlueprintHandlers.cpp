@@ -969,9 +969,17 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildPropertyVariableJson(
     TSharedPtr<FJsonObject> Obj = FMcpAutomationBridge_BuildVariableJson(
         DeclaringBlueprint, DeclaringBlueprint->NewVariables[NewVarIndex]);
     if (Property) {
+      // Get or create metadata object for compatibility path
+      TSharedPtr<FJsonObject> Metadata =
+          Obj->HasField(TEXT("metadata")) ? Obj->GetObjectField(TEXT("metadata"))
+                                          : MakeShared<FJsonObject>();
+      bool bMetadataChanged = false;
+
       const FText Tooltip = Property->GetToolTipText();
       if (!Tooltip.IsEmpty()) {
         Obj->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+        Metadata->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+        bMetadataChanged = true;
       }
       const FString DisplayName = Property->IsNative()
                                       ? Property->GetDisplayNameText().ToString()
@@ -979,6 +987,12 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildPropertyVariableJson(
       if (!DisplayName.IsEmpty() &&
           !DisplayName.Equals(VariableName.ToString(), ESearchCase::CaseSensitive)) {
         Obj->SetStringField(TEXT("displayName"), DisplayName);
+        Metadata->SetStringField(TEXT("displayName"), DisplayName);
+        bMetadataChanged = true;
+      }
+
+      if (bMetadataChanged) {
+        Obj->SetObjectField(TEXT("metadata"), Metadata);
       }
     }
     FMcpAutomationBridge_AnnotateVariableJson(Obj, Blueprint, DeclaringBlueprint,
@@ -1009,21 +1023,29 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildPropertyVariableJson(
       Obj->SetStringField(TEXT("category"), Category);
     }
 
+    TSharedPtr<FJsonObject> Metadata = MakeShared<FJsonObject>();
+    bool bHasMetadata = false;
+
+    // Add DisplayName to metadata if present and different from variable name
     const FString DisplayName = Property->IsNative()
                                     ? Property->GetDisplayNameText().ToString()
                                     : VariableName.ToString();
     if (!DisplayName.IsEmpty() &&
         !DisplayName.Equals(VariableName.ToString(), ESearchCase::CaseSensitive)) {
       Obj->SetStringField(TEXT("displayName"), DisplayName);
+      Metadata->SetStringField(TEXT("displayName"), DisplayName);
+      bHasMetadata = true;
     }
 
+    // Add Tooltip to metadata if present
     const FText Tooltip = Property->GetToolTipText();
     if (!Tooltip.IsEmpty()) {
       Obj->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+      Metadata->SetStringField(TEXT("tooltip"), Tooltip.ToString());
+      bHasMetadata = true;
     }
 
-    TSharedPtr<FJsonObject> Metadata = MakeShared<FJsonObject>();
-    bool bHasMetadata = false;
+    // Copy any additional metadata from the property
     if (const TMap<FName, FString> *MetaMap = Property->GetMetaDataMap()) {
       for (const TPair<FName, FString> &Pair : *MetaMap) {
         if (!Pair.Value.IsEmpty()) {
