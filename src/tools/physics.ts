@@ -1,7 +1,7 @@
 // Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
-import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
+import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay, sanitizeCommandArgument } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
 
@@ -243,28 +243,29 @@ export class PhysicsTools {
       await this.bridge.executeConsoleCommand(spawnCmd);
 
       // Configure constraint
+      const sanitizedName = sanitizeCommandArgument(params.name);
       const commands = [
-        `SetConstraintActors ${params.name} ${params.actor1} ${params.actor2}`,
-        `SetConstraintType ${params.name} ${params.constraintType}`
+        `SetConstraintActors ${sanitizedName} ${sanitizeCommandArgument(params.actor1)} ${sanitizeCommandArgument(params.actor2)}`,
+        `SetConstraintType ${sanitizedName} ${sanitizeCommandArgument(params.constraintType)}`
       ];
 
       if (params.breakThreshold) {
-        commands.push(`SetConstraintBreakThreshold ${params.name} ${params.breakThreshold}`);
+        commands.push(`SetConstraintBreakThreshold ${sanitizedName} ${params.breakThreshold}`);
       }
 
       if (params.limits) {
         const limits = params.limits;
         if (limits.swing1 !== undefined) {
-          commands.push(`SetConstraintSwing1 ${params.name} ${limits.swing1}`);
+          commands.push(`SetConstraintSwing1 ${sanitizedName} ${limits.swing1}`);
         }
         if (limits.swing2 !== undefined) {
-          commands.push(`SetConstraintSwing2 ${params.name} ${limits.swing2}`);
+          commands.push(`SetConstraintSwing2 ${sanitizedName} ${limits.swing2}`);
         }
         if (limits.twist !== undefined) {
-          commands.push(`SetConstraintTwist ${params.name} ${limits.twist}`);
+          commands.push(`SetConstraintTwist ${sanitizedName} ${limits.twist}`);
         }
         if (limits.linear !== undefined) {
-          commands.push(`SetConstraintLinear ${params.name} ${limits.linear}`);
+          commands.push(`SetConstraintLinear ${sanitizedName} ${limits.linear}`);
         }
       }
 
@@ -295,28 +296,29 @@ export class PhysicsTools {
     debrisLifetime?: number;
   }) {
     try {
-      const path = params.savePath || '/Game/Destruction';
+      const path = params.savePath ? sanitizeCommandArgument(params.savePath) : '/Game/Destruction';
 
+      const sanitizedName = sanitizeCommandArgument(params.destructionName);
       const commands = [
-        `CreateGeometryCollection ${params.destructionName} ${params.meshPath} ${path}`
+        `CreateGeometryCollection ${sanitizedName} ${sanitizeCommandArgument(params.meshPath)} ${path}`
       ];
 
       // Configure fracture
       if (params.fractureSettings) {
         const settings = params.fractureSettings;
         commands.push(
-          `FractureGeometry ${params.destructionName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
+          `FractureGeometry ${sanitizedName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
         );
       }
 
       // Set damage threshold
       if (params.damageThreshold) {
-        commands.push(`SetDamageThreshold ${params.destructionName} ${params.damageThreshold}`);
+        commands.push(`SetDamageThreshold ${sanitizedName} ${params.damageThreshold}`);
       }
 
       // Set debris lifetime
       if (params.debrisLifetime) {
-        commands.push(`SetDebrisLifetime ${params.destructionName} ${params.debrisLifetime}`);
+        commands.push(`SetDebrisLifetime ${sanitizedName} ${params.debrisLifetime}`);
       }
 
       await this.bridge.executeConsoleCommands(commands);
@@ -368,23 +370,25 @@ export class PhysicsTools {
       ? params.vehicleType
       : 'Car';
 
+    const sanitizedVehicleName = sanitizeCommandArgument(params.vehicleName || '');
     const commands = [
-      `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
+      `CreateVehicle ${sanitizedVehicleName} ${sanitizeCommandArgument(effectiveVehicleType)}`
     ];
 
     // Configure wheels when provided
     if (Array.isArray(params.wheels) && params.wheels.length > 0) {
       for (const wheelUnknown of params.wheels) {
         const wheel = wheelUnknown as Record<string, unknown>;
+        const sanitizedWheelName = sanitizeCommandArgument(String(wheel.name || ''));
         commands.push(
-          `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
+          `AddVehicleWheel ${sanitizedVehicleName} ${sanitizedWheelName} ${wheel.radius} ${wheel.width} ${wheel.mass}`
         );
 
         if (wheel.isSteering) {
-          commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
+          commands.push(`SetWheelSteering ${sanitizedVehicleName} ${sanitizedWheelName} true`);
         }
         if (wheel.isDriving) {
-          commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
+          commands.push(`SetWheelDriving ${sanitizedVehicleName} ${sanitizedWheelName} true`);
         }
       }
     }
@@ -401,7 +405,7 @@ export class PhysicsTools {
         maxRPM = 0;
         warnings.push('Engine maxRPM was negative and has been clamped to 0.');
       }
-      commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
+      commands.push(`SetEngineMaxRPM ${sanitizedVehicleName} ${maxRPM}`);
 
       const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
       for (const point of rawCurve) {
@@ -418,7 +422,7 @@ export class PhysicsTools {
         }
 
         if (typeof rpm === 'number' && typeof torque === 'number') {
-          commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
+          commands.push(`AddTorqueCurvePoint ${sanitizedVehicleName} ${rpm} ${torque}`);
         }
       }
     }
@@ -429,13 +433,13 @@ export class PhysicsTools {
       if (Array.isArray(trans.gears)) {
         for (let i = 0; i < trans.gears.length; i++) {
           commands.push(
-            `SetGearRatio ${params.vehicleName} ${i} ${trans.gears[i]}`
+            `SetGearRatio ${sanitizedVehicleName} ${i} ${trans.gears[i]}`
           );
         }
       }
       if (typeof trans.finalDriveRatio === 'number') {
         commands.push(
-          `SetFinalDriveRatio ${params.vehicleName} ${trans.finalDriveRatio}`
+          `SetFinalDriveRatio ${sanitizedVehicleName} ${trans.finalDriveRatio}`
         );
       }
     }
@@ -530,32 +534,33 @@ export class PhysicsTools {
     };
   }) {
     try {
+      const sanitizedMeshName = sanitizeCommandArgument(params.meshName);
       const commands = [
-        `EnableClothSimulation ${params.meshName}`,
-        `SetClothPreset ${params.meshName} ${params.clothPreset}`
+        `EnableClothSimulation ${sanitizedMeshName}`,
+        `SetClothPreset ${sanitizedMeshName} ${sanitizeCommandArgument(params.clothPreset)}`
       ];
 
       if (params.clothPreset === 'Custom' && params.customSettings) {
         const settings = params.customSettings;
 
         if (settings.stiffness !== undefined) {
-          commands.push(`SetClothStiffness ${params.meshName} ${settings.stiffness}`);
+          commands.push(`SetClothStiffness ${sanitizedMeshName} ${settings.stiffness}`);
         }
         if (settings.damping !== undefined) {
-          commands.push(`SetClothDamping ${params.meshName} ${settings.damping}`);
+          commands.push(`SetClothDamping ${sanitizedMeshName} ${settings.damping}`);
         }
         if (settings.friction !== undefined) {
-          commands.push(`SetClothFriction ${params.meshName} ${settings.friction}`);
+          commands.push(`SetClothFriction ${sanitizedMeshName} ${settings.friction}`);
         }
         if (settings.density !== undefined) {
-          commands.push(`SetClothDensity ${params.meshName} ${settings.density}`);
+          commands.push(`SetClothDensity ${sanitizedMeshName} ${settings.density}`);
         }
         if (settings.gravity !== undefined) {
-          commands.push(`SetClothGravity ${params.meshName} ${settings.gravity}`);
+          commands.push(`SetClothGravity ${sanitizedMeshName} ${settings.gravity}`);
         }
         if (settings.windVelocity) {
           const wind = settings.windVelocity;
-          commands.push(`SetClothWind ${params.meshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
+          commands.push(`SetClothWind ${sanitizedMeshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
         }
       }
 
@@ -590,29 +595,30 @@ export class PhysicsTools {
       const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       const volStr = `${params.volume[0]} ${params.volume[1]} ${params.volume[2]}`;
 
+      const sanitizedName = sanitizeCommandArgument(params.name);
       const commands = [
-        `CreateFluidSimulation ${params.name} ${params.fluidType} ${locStr} ${volStr}`
+        `CreateFluidSimulation ${sanitizedName} ${sanitizeCommandArgument(params.fluidType)} ${locStr} ${volStr}`
       ];
 
       if (params.customSettings) {
         const settings = params.customSettings;
 
         if (settings.viscosity !== undefined) {
-          commands.push(`SetFluidViscosity ${params.name} ${settings.viscosity}`);
+          commands.push(`SetFluidViscosity ${sanitizedName} ${settings.viscosity}`);
         }
         if (settings.density !== undefined) {
-          commands.push(`SetFluidDensity ${params.name} ${settings.density}`);
+          commands.push(`SetFluidDensity ${sanitizedName} ${settings.density}`);
         }
         if (settings.temperature !== undefined) {
-          commands.push(`SetFluidTemperature ${params.name} ${settings.temperature}`);
+          commands.push(`SetFluidTemperature ${sanitizedName} ${settings.temperature}`);
         }
         if (settings.turbulence !== undefined) {
-          commands.push(`SetFluidTurbulence ${params.name} ${settings.turbulence}`);
+          commands.push(`SetFluidTurbulence ${sanitizedName} ${settings.turbulence}`);
         }
         if (settings.color) {
           const color = settings.color;
           commands.push(
-            `SetFluidColor ${params.name} ${color[0]} ${color[1]} ${color[2]} ${color[3]}`
+            `SetFluidColor ${sanitizedName} ${color[0]} ${color[1]} ${color[2]} ${color[3]}`
           );
         }
       }
