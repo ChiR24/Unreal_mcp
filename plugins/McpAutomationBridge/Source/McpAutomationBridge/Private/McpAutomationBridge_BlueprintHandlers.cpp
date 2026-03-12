@@ -4633,7 +4633,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
             for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
                  RegistryDefaults->Values) {
               if (!EntryDefaults->HasField(Pair.Key)) {
+                // Key doesn't exist in entry - add it from registry
                 EntryDefaults->SetField(Pair.Key, Pair.Value);
+              } else {
+                // Key exists - deep merge if both are JSON objects
+                const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
+                if (Pair.Value->Type == EJson::Object) {
+                  ExistingObj = EntryDefaults->TryGetObjectField(Pair.Key);
+                }
+                if (ExistingObj && Pair.Value->AsObject().IsValid()) {
+                  // Both are objects - deep merge sub-keys from registry
+                  const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
+                  for (const TPair<FString, TSharedPtr<FJsonValue>> &SubPair :
+                       RegistryObj->Values) {
+                    if (!(*ExistingObj)->HasField(SubPair.Key)) {
+                      (*ExistingObj)->SetField(SubPair.Key, SubPair.Value);
+                    }
+                  }
+                }
+                // If not both objects, keep existing value (don't overwrite)
               }
             }
           }
@@ -4650,7 +4668,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
             for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair :
                  RegistryMetadata->Values) {
               if (!EntryMetadata->HasField(Pair.Key)) {
+                // Key doesn't exist in entry - add it from registry
                 EntryMetadata->SetField(Pair.Key, Pair.Value);
+              } else {
+                // Key exists - deep merge if both are JSON objects
+                const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
+                if (Pair.Value->Type == EJson::Object) {
+                  ExistingObj = EntryMetadata->TryGetObjectField(Pair.Key);
+                }
+                if (ExistingObj && Pair.Value->AsObject().IsValid()) {
+                  // Both are objects - deep merge sub-keys from registry
+                  const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
+                  for (const TPair<FString, TSharedPtr<FJsonValue>> &SubPair :
+                       RegistryObj->Values) {
+                    if (!(*ExistingObj)->HasField(SubPair.Key)) {
+                      (*ExistingObj)->SetField(SubPair.Key, SubPair.Value);
+                    }
+                  }
+                }
+                // If not both objects, keep existing value (don't overwrite)
               }
             }
           }
