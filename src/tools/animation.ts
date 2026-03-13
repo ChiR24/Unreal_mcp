@@ -307,7 +307,7 @@ export class AnimationTools {
 
             // Add states if provided - use Promise.all for parallel execution
             if (normalizedStates.length > 0) {
-              await Promise.all(normalizedStates.map(state =>
+              const stateResults = await Promise.all(normalizedStates.map(state =>
                 bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
                   subAction: 'add_state',
                   blueprintPath,
@@ -315,11 +315,21 @@ export class AnimationTools {
                   stateName: state.name
                 }), { timeoutMs: 30000 })
               ));
+              // Validate all state additions succeeded
+              const failedState = stateResults.find((r: { success?: boolean }) => r && r.success === false);
+              if (failedState) {
+                const failed = failedState as { error?: string; message?: string };
+                return {
+                  success: false,
+                  message: 'Failed to add one or more states',
+                  error: failed.error || failed.message || 'Unknown error'
+                };
+              }
             }
 
             // Add transitions if provided - use Promise.all for parallel execution
             if (normalizedTransitions.length > 0) {
-              await Promise.all(normalizedTransitions.map(transition =>
+              const transitionResults = await Promise.all(normalizedTransitions.map(transition =>
                 bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
                   subAction: 'add_transition',
                   blueprintPath,
@@ -329,6 +339,16 @@ export class AnimationTools {
                   crossfadeDuration: 0.2
                 }), { timeoutMs: 30000 })
               ));
+              // Validate all transition additions succeeded
+              const failedTransition = transitionResults.find((r: { success?: boolean }) => r && r.success === false);
+              if (failedTransition) {
+                const failed = failedTransition as { error?: string; message?: string };
+                return {
+                  success: false,
+                  message: 'Failed to add one or more transitions',
+                  error: failed.error || failed.message || 'Unknown error'
+                };
+              }
             }
 
             return {

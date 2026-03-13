@@ -269,12 +269,24 @@ export async function executeBatchConsoleCommands(
     totalCommands?: number;
     executedCount?: number;
     failedCount?: number;
+    message?: string;
+    error?: string;
   };
 
+  const failedCount = result.failedCount ?? 0;
+  
+  // Throw error on failure so callers can handle appropriately
+  if (result.success === false || failedCount > 0) {
+    throw new Error(
+      `Batch command execution failed: ${failedCount}/${validCommands.length} commands failed. ` +
+      (result.message || result.error || 'Unknown error')
+    );
+  }
+
   return {
-    success: result.success !== false,
+    success: true,
     totalCommands: result.totalCommands ?? validCommands.length,
-    executedCount: result.executedCount ?? 0,
-    failedCount: result.failedCount ?? 0
+    executedCount: result.executedCount ?? validCommands.length,
+    failedCount: 0
   };
 }

@@ -52,10 +52,13 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
   // Accept either the generic execute_editor_function action or the
   // more specific execute_console_command action. This allows the
   // server to use native console commands for health checks and diagnostics.
+  // Also accept batch_console_commands for batch command execution.
   if (!Lower.Equals(TEXT("execute_editor_function"), ESearchCase::IgnoreCase) &&
       !Lower.Contains(TEXT("execute_editor_function")) &&
       !Lower.Equals(TEXT("execute_console_command")) &&
-      !Lower.Contains(TEXT("execute_console_command")))
+      !Lower.Contains(TEXT("execute_console_command")) &&
+      !Lower.Equals(TEXT("batch_console_commands")) &&
+      !Lower.Contains(TEXT("batch_console_commands")))
     return false;
 
   if (!Payload.IsValid()) {

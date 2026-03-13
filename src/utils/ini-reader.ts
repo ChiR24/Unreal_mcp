@@ -82,9 +82,14 @@ export async function getProjectSetting(projectPath: string, category: string, s
             const section = iniData[sectionName];
             if (section) {
                 if (key) {
-                    return section[key];
+                    // Only return if the key actually exists (not undefined)
+                    if (key in section) {
+                        return section[key];
+                    }
+                    // Key not found in this section, continue to next candidate
+                } else {
+                    return section;
                 }
-                return section;
             }
             // If section not found in this file, continue to next candidate
         } else {
