@@ -1388,10 +1388,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         // Use the actual blueprint name (which may have been sanitized) in the response
         FString ActualName = Blueprint->GetName();
-        FString ActualPath = Path / ActualName;
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffect"));
         Result->SetStringField(TEXT("durationType"), DurationType);
@@ -1864,10 +1863,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         // Use the actual blueprint name (which may have been sanitized) in the response
         FString ActualName = Blueprint->GetName();
-        FString ActualPath = Path / ActualName;
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("cueType"), CueType);
         Result->SetStringField(TEXT("cueTag"), CueTag);

@@ -442,6 +442,25 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         {
             NewTrigger = NewObject<UInputTriggerPulse>(InAction);
         }
+        else if (TriggerType == TEXT("RepeatedTap") || TriggerType == TEXT("InputTriggerRepeatedTap") || TriggerType == TEXT("DoubleTap"))
+        {
+            // UInputTriggerRepeatedTap is the standard UE class for double-tap behavior
+            // Set NumberOfTapsWhichTriggerRepeat = 2 for double-tap effect
+            UInputTriggerRepeatedTap* RepeatedTapTrigger = NewObject<UInputTriggerRepeatedTap>(InAction);
+            if (TriggerType == TEXT("DoubleTap"))
+            {
+                RepeatedTapTrigger->NumberOfTapsWhichTriggerRepeat = 2;
+            }
+            NewTrigger = RepeatedTapTrigger;
+        }
+        
+        if (!NewTrigger)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, RepeatedTap, DoubleTap")), *TriggerType),
+                TEXT("INVALID_TRIGGER_TYPE"));
+            return true;
+        }
         else if (TriggerType == TEXT("DoubleTap") || TriggerType == TEXT("InputTriggerDoubleTap"))
         {
             NewTrigger = NewObject<UInputTriggerDoubleTap>(InAction);

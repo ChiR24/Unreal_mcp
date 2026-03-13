@@ -101,6 +101,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             return true;
         }
 
+        // Sanitize the path to prevent traversal attacks
+        FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
+        if (SanitizedAssetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Invalid assetPath: '%s' contains traversal or invalid characters."), *AssetPath),
+                TEXT("INVALID_PATH"));
+            return true;
+        }
+
         bool bRecursive = false;
         Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
 
@@ -129,7 +139,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         }
 
         AssetRegistryModule.Get().GetDependencies(
-            FName(*AssetPath), 
+            FName(*SanitizedAssetPath), 
             Dependencies,
             UE::AssetRegistry::EDependencyCategory::Package, 
             Query);

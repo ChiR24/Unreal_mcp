@@ -581,7 +581,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPathName());
+    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("actorLabel"), Landscape->GetActorLabel());
     Resp->SetNumberField(TEXT("componentsX"), CaptComponentsX);
     Resp->SetNumberField(TEXT("componentsY"), CaptComponentsY);

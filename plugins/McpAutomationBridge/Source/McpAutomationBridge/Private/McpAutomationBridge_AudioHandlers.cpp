@@ -927,7 +927,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     if (!GEditor)
+    {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
@@ -1036,7 +1040,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     if (!GEditor)
+    {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
@@ -1118,7 +1126,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     Payload->TryGetNumberField(TEXT("startTime"), StartTime);
 
     if (!GEditor)
+    {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
@@ -1380,7 +1392,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
 
     if (!GEditor)
+    {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
       return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
