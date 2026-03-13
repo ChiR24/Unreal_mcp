@@ -2589,10 +2589,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       // SECURITY: Sanitize and validate the output path to prevent path traversal
       FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
       if (SafeOutputPath.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
+        SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
                             TEXT("SECURITY_VIOLATION"));
-        return true;
+        return;
       }
       
       FString AbsoluteOutput = FPaths::ProjectDir() / SafeOutputPath;
@@ -2606,10 +2606,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
       }
       
       if (!AbsoluteOutput.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-        SendAutomationError(RequestingSocket, RequestId,
+        SendAutomationError(Socket, RequestId,
                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
                             TEXT("SECURITY_VIOLATION"));
-        return true;
+        return;
       }
 
       const FString DirPath = FPaths::GetPath(AbsoluteOutput);
