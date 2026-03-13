@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, PerformanceArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { executeAutomationRequest, executeBatchConsoleCommands } from './common-handlers.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
@@ -147,9 +147,8 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         `t.MaxFPS ${maxFPS}`,
       ];
       
-      for (const cmd of commands) {
-        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
-      }
+      // Use batch execution for all console commands - significantly faster than sequential
+      await executeBatchConsoleCommands(tools, commands);
       
       return { 
         success: true, 
@@ -190,8 +189,9 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         commands.push(`r.MeshDrawCommands.DynamicInstancing ${mergeParams.enableInstancing ? 1 : 0}`);
       }
       
-      for (const cmd of commands) {
-        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      // Use batch execution for all console commands - significantly faster than sequential
+      if (commands.length > 0) {
+        await executeBatchConsoleCommands(tools, commands);
       }
       
       return { success: true, message: 'Draw call optimization configured' };
@@ -205,9 +205,8 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         commands.push(`FreezeRendering ${argsRecord.freezeRendering ? 1 : 0}`);
       }
       
-      for (const cmd of commands) {
-        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
-      }
+      // Use batch execution for all console commands - significantly faster than sequential
+      await executeBatchConsoleCommands(tools, commands);
       
       return { success: true, message: 'Occlusion culling configured' };
     }
@@ -225,8 +224,9 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         commands.push('RecompileShaders changed');
       }
       
-      for (const cmd of commands) {
-        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+      // Use batch execution for all console commands - significantly faster than sequential
+      if (commands.length > 0) {
+        await executeBatchConsoleCommands(tools, commands);
       }
       
       return { success: true, message: 'Shader optimization configured' };
@@ -251,9 +251,8 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
         commands.push(`wp.Runtime.CellSize ${argsRecord.cellSize}`);
       }
       
-      for (const cmd of commands) {
-        await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
-      }
+      // Use batch execution for all console commands - significantly faster than sequential
+      await executeBatchConsoleCommands(tools, commands);
       
       return { success: true, message: 'World Partition configured' };
     }

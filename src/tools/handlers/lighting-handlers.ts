@@ -5,7 +5,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { LightingArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest, normalizeLocation } from './common-handlers.js';
+import { executeAutomationRequest, normalizeLocation, executeBatchConsoleCommands } from './common-handlers.js';
 import { toNumber, toBoolean, toString, toColor3, toLocationObj, toRotationObj, normalizeName } from '../../utils/type-coercion.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
@@ -398,8 +398,9 @@ async function setupGlobalIllumination(
       commands.push(`r.Lumen.MaxReflectionBounces ${args.bounces}`);
     }
 
-    for (const cmd of commands) {
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+    // Use batch execution for all console commands - significantly faster than sequential
+    if (commands.length > 0) {
+      await executeBatchConsoleCommands(tools, commands);
     }
 
     return { success: true, message: 'Global illumination configured (console)' };
@@ -453,8 +454,9 @@ async function configureShadows(
       commands.push(`r.RayTracing.Shadows ${args.rayTracedShadows ? 1 : 0}`);
     }
 
-    for (const cmd of commands) {
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+    // Use batch execution for all console commands - significantly faster than sequential
+    if (commands.length > 0) {
+      await executeBatchConsoleCommands(tools, commands);
     }
 
     return { success: true, message: 'Shadow settings configured (console)' };
@@ -550,8 +552,9 @@ async function setExposure(
       commands.push(`r.EyeAdaptation.MaxBrightness ${args.maxBrightness}`);
     }
 
-    for (const cmd of commands) {
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+    // Use batch execution for all console commands - significantly faster than sequential
+    if (commands.length > 0) {
+      await executeBatchConsoleCommands(tools, commands);
     }
 
     return { success: true, message: 'Exposure settings updated (console)' };
@@ -596,8 +599,9 @@ async function setAmbientOcclusion(
       commands.push(`r.AmbientOcclusion.Quality ${qualityMap[args.quality] ?? 1}`);
     }
 
-    for (const cmd of commands) {
-      await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: cmd });
+    // Use batch execution for all console commands - significantly faster than sequential
+    if (commands.length > 0) {
+      await executeBatchConsoleCommands(tools, commands);
     }
 
     return { success: true, message: 'Ambient occlusion configured (console)' };

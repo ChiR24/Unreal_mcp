@@ -279,6 +279,8 @@ export class AnimationTools {
 
       // Call C++ bridge to create state machine in the Animation Blueprint
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        // Capture bridge for use in closures - we know it's defined here
+        const bridge = this.automationBridge;
         try {
           const payload = cleanObject({
             subAction: 'add_state_machine',
@@ -286,7 +288,7 @@ export class AnimationTools {
             stateMachineName: machineName
           });
 
-          const resp = await this.automationBridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
+          const resp = await bridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
           const result = resp?.result ?? resp;
           const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
           const isSuccess = resp && resp.success !== false && !!resultObj;
@@ -303,26 +305,30 @@ export class AnimationTools {
               }
             });
 
-            // Add states if provided
-            for (const state of normalizedStates) {
-              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                subAction: 'add_state',
-                blueprintPath,
-                stateMachineName: machineName,
-                stateName: state.name
-              }), { timeoutMs: 30000 });
+            // Add states if provided - use Promise.all for parallel execution
+            if (normalizedStates.length > 0) {
+              await Promise.all(normalizedStates.map(state =>
+                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                  subAction: 'add_state',
+                  blueprintPath,
+                  stateMachineName: machineName,
+                  stateName: state.name
+                }), { timeoutMs: 30000 })
+              ));
             }
 
-            // Add transitions if provided
-            for (const transition of normalizedTransitions) {
-              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                subAction: 'add_transition',
-                blueprintPath,
-                stateMachineName: machineName,
-                fromState: transition.sourceState,
-                toState: transition.targetState,
-                crossfadeDuration: 0.2
-              }), { timeoutMs: 30000 });
+            // Add transitions if provided - use Promise.all for parallel execution
+            if (normalizedTransitions.length > 0) {
+              await Promise.all(normalizedTransitions.map(transition =>
+                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                  subAction: 'add_transition',
+                  blueprintPath,
+                  stateMachineName: machineName,
+                  fromState: transition.sourceState,
+                  toState: transition.targetState,
+                  crossfadeDuration: 0.2
+                }), { timeoutMs: 30000 })
+              ));
             }
 
             return {
