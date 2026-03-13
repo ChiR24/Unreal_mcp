@@ -354,9 +354,8 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 | [GraphQL API](docs/GraphQL-API.md) | Query and mutation reference |
 | [Plugin Extension](docs/editor-plugin-extension.md) | C++ plugin architecture |
 | [Testing Guide](docs/testing-guide.md) | How to run and write tests |
-| [Migration Guide v0.5.0](docs/Migration-Guide-v0.5.0.md) | Upgrade to v0.5.0 |
 | [Roadmap](docs/Roadmap.md) | Development phases |
-| [Automation Progress](docs/native-automation-progress.md) | Implementation status |
+
 
 ---
 

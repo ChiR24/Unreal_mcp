@@ -1,6 +1,6 @@
 area/plugin:
   - changed-files:
-    - any-glob-to-any-file: 'Plugins/**/*'
+    - any-glob-to-any-file: 'plugins/**/*'
 
 area/server:
   - changed-files:

@@ -4593,7 +4593,10 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                             UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
                                 Mesh, PrimOptions, SegmentTransform,
                                 ProfileRadius * 0.5, SegmentLength,
-                                2, 8, 0,
+                                2, 8,
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+                                0, // SegmentSteps parameter added in UE 5.5
+#endif
                                 EGeometryScriptPrimitiveOriginMode::Center, nullptr);
                         }
                     }

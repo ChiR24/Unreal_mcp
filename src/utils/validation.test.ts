@@ -7,7 +7,6 @@ import {
     sanitizePath,
     validatePathLength,
     validateAssetParams,
-    validateNumber,
     ensureVector3,
     ensureRotation
 } from './validation.js';
@@ -113,35 +112,6 @@ describe('validateAssetParams', () => {
     });
 });
 
-describe('validateNumber', () => {
-    it('accepts valid finite numbers', () => {
-        expect(() => validateNumber(42, 'test')).not.toThrow();
-    });
-
-    it('rejects NaN', () => {
-        expect(() => validateNumber(NaN, 'test')).toThrow('expected a finite number');
-    });
-
-    it('rejects Infinity', () => {
-        expect(() => validateNumber(Infinity, 'test')).toThrow();
-    });
-
-    it('respects minimum constraint', () => {
-        expect(() => validateNumber(5, 'test', { min: 10 })).toThrow('must be >=');
-    });
-
-    it('respects maximum constraint', () => {
-        expect(() => validateNumber(15, 'test', { max: 10 })).toThrow('must be <=');
-    });
-
-    it('allows zero by default', () => {
-        expect(() => validateNumber(0, 'test')).not.toThrow();
-    });
-
-    it('rejects zero when allowZero is false', () => {
-        expect(() => validateNumber(0, 'test', { allowZero: false })).toThrow('zero is not allowed');
-    });
-});
 
 describe('ensureVector3', () => {
     it('accepts object format with x, y, z', () => {

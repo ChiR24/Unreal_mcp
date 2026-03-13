@@ -1772,7 +1772,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 #if WITH_EDITOR
                   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
                       LocalBP);
-                  FKismetEditorUtilities::CompileBlueprint(LocalBP);
+                  McpSafeCompileBlueprint(LocalBP);
                   SaveLoadedAssetThrottled(LocalBP);
 #endif
                   bAddedViaSubsystem = true;
@@ -1979,7 +1979,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
     if (bCompile && LocalBP) {
 #if WITH_EDITOR
-      FKismetEditorUtilities::CompileBlueprint(LocalBP);
+      McpSafeCompileBlueprint(LocalBP);
 #endif
     }
 
@@ -2282,7 +2282,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     const TSharedPtr<FJsonObject> Snapshot =
@@ -2620,7 +2620,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     Blueprint->NewVariables.Add(NewVar);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     // Real test: Verify the variable actually exists in the compiled class or
@@ -2810,7 +2810,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         ExportPropertyToJsonValue(TargetContainer, Property);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -2896,7 +2896,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, TargetVarName);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
@@ -2987,7 +2987,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     FBlueprintEditorUtils::RenameMemberVariable(Blueprint, OldVarName,
                                                 FName(*NewName));
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
@@ -3247,7 +3247,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    McpSafeCompileBlueprint(BP);
     const bool bSaved = SaveLoadedAssetThrottled(BP);
 
     // Update Registry (Persistent list of events)
@@ -3416,7 +3416,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         if (NodesToRemove.Num() > 0) {
           FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
               RemoveBlueprint);
-          FKismetEditorUtilities::CompileBlueprint(RemoveBlueprint);
+          McpSafeCompileBlueprint(RemoveBlueprint);
           SaveLoadedAssetThrottled(RemoveBlueprint);
         }
       }
@@ -3658,7 +3658,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = UEditorAssetLibrary::SaveLoadedAsset(Blueprint);
 
     TSharedPtr<FJsonObject> Entry =
@@ -3895,7 +3895,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           }
 
           FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
-          FKismetEditorUtilities::CompileBlueprint(BP);
+          McpSafeCompileBlueprint(BP);
           bool bSaved = SaveLoadedAssetThrottled(BP);
 
           TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -3936,7 +3936,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     if (bSuccess) {
       FBlueprintEditorUtils::MarkBlueprintAsModified(BP);
-      FKismetEditorUtilities::CompileBlueprint(BP);
+      McpSafeCompileBlueprint(BP);
 
       // Save the blueprint to persist changes
       bool bSaved = SaveLoadedAssetThrottled(BP);
@@ -3998,7 +3998,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                              Err, TEXT("NOT_FOUND"));
       return true;
     }
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    McpSafeCompileBlueprint(BP);
     bool bSaved = false;
     if (bSaveAfterCompile) {
       bSaved = SaveLoadedAssetThrottled(BP);
@@ -4521,7 +4521,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
 
-    FKismetEditorUtilities::CompileBlueprint(BP);
+    McpSafeCompileBlueprint(BP);
     bSaved = SaveLoadedAssetThrottled(BP);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5163,8 +5163,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
       bool bCompiled = false;
       bool bSaved = false;
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-      FKismetEditorUtilities::CompileBlueprint(Blueprint);
-      bCompiled = true;
+      bCompiled = McpSafeCompileBlueprint(Blueprint);
+
       bSaved = SaveLoadedAssetThrottled(Blueprint);
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5271,8 +5271,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bSaved = false;
         if (bModified) {
           FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-          FKismetEditorUtilities::CompileBlueprint(Blueprint);
-          bCompiled = true;
+          bCompiled = McpSafeCompileBlueprint(Blueprint);
+
           bSaved = SaveLoadedAssetThrottled(Blueprint);
         }
 
@@ -5342,8 +5342,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bCompiled = false;
         bool bSaved = false;
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
-        bCompiled = true;
+        bCompiled = McpSafeCompileBlueprint(Blueprint);
+
         bSaved = SaveLoadedAssetThrottled(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5521,8 +5521,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
         bool bCompiled = false;
         bool bSaved = false;
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
-        bCompiled = true;
+        bCompiled = McpSafeCompileBlueprint(Blueprint);
+
         bSaved = SaveLoadedAssetThrottled(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -5788,8 +5788,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
       bool bCompiled = false;
       bool bSaved = false;
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-      FKismetEditorUtilities::CompileBlueprint(Blueprint);
-      bCompiled = true;
+      bCompiled = McpSafeCompileBlueprint(Blueprint);
+
       bSaved = SaveLoadedAssetThrottled(Blueprint);
 
       Result->SetBoolField(TEXT("compiled"), bCompiled);

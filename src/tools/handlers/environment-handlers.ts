@@ -23,7 +23,7 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
   
   switch (envAction) {
     case 'create_landscape':
-      return cleanObject(await tools.landscapeTools.createLandscape({
+      return cleanObject(await executeAutomationRequest(tools, 'create_landscape', {
         name: argsTyped.name ?? '',
         location: vec3ToArray(argsTyped.location),
         sizeX: argsRecord.sizeX as number | undefined,
@@ -36,9 +36,9 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         runtimeGrid: argsRecord.runtimeGrid as string | undefined,
         isSpatiallyLoaded: argsRecord.isSpatiallyLoaded as boolean | undefined,
         dataLayers: argsRecord.dataLayers as string[] | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'modify_heightmap':
-      return cleanObject(await tools.landscapeTools.modifyHeightmap({
+      return cleanObject(await executeAutomationRequest(tools, 'modify_heightmap', {
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         heightData: argsTyped.heightData ?? [],
         minX: (argsRecord.minX as number) ?? 0,
@@ -47,29 +47,29 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         maxY: (argsRecord.maxY as number) ?? 0,
         updateNormals: argsRecord.updateNormals as boolean | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'sculpt':
     case 'sculpt_landscape': {
       // Default to 'Raise' tool if not specified
       const tool = (argsRecord.tool as string) || 'Raise';
-      return cleanObject(await tools.landscapeTools.sculptLandscape({
+      return cleanObject(await executeAutomationRequest(tools, 'sculpt_landscape', {
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         tool,
         location: vec3ToArray(argsTyped.location),
         radius: argsTyped.radius || 500,
         strength: (argsRecord.strength as number) || 0.5
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     }
     case 'add_foliage': {
       // Check if this is adding a foliage TYPE (has meshPath) or INSTANCES (has locations/position)
       if (argsTyped.meshPath) {
         // Derive a better default name from mesh path if not provided
         const defaultName = argsTyped.meshPath.split('/').pop()?.split('.')[0] + '_Foliage_Type';
-        return cleanObject(await tools.foliageTools.addFoliageType({
+        return cleanObject(await executeAutomationRequest(tools, 'add_foliage_type', {
           name: argsTyped.foliageType || argsTyped.name || defaultName || 'NewFoliageType',
           meshPath: argsTyped.meshPath,
           density: argsTyped.density
-        })) as Record<string, unknown>;
+        }) as Record<string, unknown>);
       } else {
         // Validate foliageType is provided
         const foliageType = argsTyped.foliageType || argsTyped.foliageTypePath;
@@ -111,10 +111,10 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
           });
         }
 
-        return cleanObject(await tools.foliageTools.addFoliage({
+        return cleanObject(await executeAutomationRequest(tools, 'paint_foliage', {
           foliageType,
           locations
-        })) as Record<string, unknown>;
+        }) as Record<string, unknown>);
       }
     }
 
@@ -122,49 +122,49 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       const locationsRaw = argsTyped.locations as LocationItem[] | undefined;
       const transformsRaw = argsTyped.transforms || 
         (locationsRaw ? locationsRaw.map((l: LocationItem) => ({ location: [l.x ?? 0, l.y ?? 0, l.z ?? 0] as [number, number, number] })) : []);
-      return cleanObject(await tools.foliageTools.addFoliageInstances({
+      return cleanObject(await executeAutomationRequest(tools, 'add_foliage_instances', {
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || argsTyped.meshPath || '',
         transforms: transformsRaw as { location: [number, number, number]; rotation?: [number, number, number]; scale?: [number, number, number] }[]
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     }
     case 'paint_foliage':
-      return cleanObject(await tools.foliageTools.paintFoliage({
+      return cleanObject(await executeAutomationRequest(tools, 'paint_foliage', {
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || '',
         position: vec3ToArray(argsRecord.position as Vector3 | undefined) ?? vec3ToArray(argsTyped.location) ?? [0, 0, 0],
         brushSize: (argsRecord.brushSize as number) || argsTyped.radius,
         paintDensity: argsTyped.density || (argsRecord.strength as number),
         eraseMode: argsRecord.eraseMode as boolean | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'create_procedural_terrain':
-      return cleanObject(await tools.landscapeTools.createProceduralTerrain({
+      return cleanObject(await executeAutomationRequest(tools, 'create_procedural_terrain', {
         name: argsTyped.name || '',
         location: vec3ToArray(argsTyped.location),
         subdivisions: argsRecord.subdivisions as number | undefined,
         settings: argsRecord.settings as Record<string, unknown> | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'create_procedural_foliage':
-      return cleanObject(await tools.foliageTools.createProceduralFoliage({
+      return cleanObject(await executeAutomationRequest(tools, 'create_procedural_foliage', {
         name: argsTyped.name || '',
         foliageTypes: argsRecord.foliageTypes as { meshPath: string; density: number }[] | undefined,
         volumeName: argsRecord.volumeName as string | undefined,
         bounds: argsTyped.bounds ? { location: argsTyped.bounds.min, size: argsTyped.bounds.max } : undefined,
         seed: argsTyped.seed,
         tileSize: argsRecord.tileSize as number | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
 
     case 'bake_lightmap':
-      return cleanObject(await tools.lightingTools.buildLighting({
+      return cleanObject(await executeAutomationRequest(tools, 'bake_lightmap', {
         quality: (argsRecord.quality as string) || 'Preview',
         buildOnlySelected: false,
         buildReflectionCaptures: false
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'create_landscape_grass_type':
-      return cleanObject(await tools.landscapeTools.createLandscapeGrassType({
+      return cleanObject(await executeAutomationRequest(tools, 'create_landscape_grass_type', {
         name: argsTyped.name || '',
         meshPath: argsTyped.meshPath || (argsRecord.path as string) || (argsRecord.staticMesh as string),
         path: argsRecord.path as string | undefined,
         staticMesh: argsRecord.staticMesh as string | undefined
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'export_snapshot':
       return cleanObject(await tools.environmentTools.exportSnapshot({
         path: argsRecord.path as string | undefined,
@@ -176,10 +176,10 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
         filename: argsRecord.filename as string | undefined
       })) as Record<string, unknown>;
     case 'set_landscape_material':
-      return cleanObject(await tools.landscapeTools.setLandscapeMaterial({
+      return cleanObject(await executeAutomationRequest(tools, 'set_landscape_material', {
         landscapeName: argsTyped.landscapeName || argsTyped.name || '',
         materialPath: argsTyped.materialPath ?? ''
-      })) as Record<string, unknown>;
+      }) as Record<string, unknown>);
     case 'generate_lods':
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
         action: 'generate_lods',
@@ -193,8 +193,11 @@ export async function handleEnvironmentTools(action: string, args: HandlerArgs, 
       if (argsTyped.name) {
         names.push(argsTyped.name);
       }
-      const res = await tools.environmentTools.cleanup({ names });
-      return cleanObject(res) as Record<string, unknown>;
+      const res = await executeAutomationRequest(tools, 'build_environment', {
+        action: 'delete',
+        names
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     default: {
       const res = await executeAutomationRequest(tools, 'build_environment', args, 'Automation bridge not available for environment building operations');

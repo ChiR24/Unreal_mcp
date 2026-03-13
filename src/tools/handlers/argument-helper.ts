@@ -1,6 +1,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-
+import { executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 export interface ArgConfig {
   /** The primary key to store the normalized value in. */
   key: string;
@@ -287,6 +288,16 @@ export function extractOptionalArray<T>(params: Record<string, unknown>, key: st
   return val as T[];
 }
 
+/**
+ * Extract an optional object from normalized args.
+ */
+export function extractOptionalObject(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+  const val = params[key];
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === 'object' && !Array.isArray(val)) return val as Record<string, unknown>;
+  return undefined;
+}
+
 /** Response from actor findByName */
 interface FindByNameResult {
   success?: boolean;
@@ -337,22 +348,20 @@ export async function resolveObjectPath(
   }
 
   if (potentialName) {
-    // 3. Try smart resolution via actor tools
-    if (tools.actorTools && typeof tools.actorTools.findByName === 'function') {
-      try {
-        const res = await tools.actorTools.findByName(potentialName) as FindByNameResult;
-        const container = res && (res.result || res);
-        const actors = container && Array.isArray(container.actors) ? container.actors : [];
-        if (actors.length > 0) {
-          const first = actors[0];
-          const resolvedPath = first.path || first.objectPath || first.levelPath;
-          if (typeof resolvedPath === 'string' && resolvedPath.trim().length > 0) {
-            return resolvedPath.trim();
-          }
+    // 3. Try smart resolution via automation bridge
+    try {
+      const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, { action: 'find_by_name', name: potentialName }) as FindByNameResult;
+      const container = res && (res.result || res);
+      const actors = container && Array.isArray(container.actors) ? container.actors : [];
+      if (actors.length > 0) {
+        const first = actors[0];
+        const resolvedPath = first.path || first.objectPath || first.levelPath;
+        if (typeof resolvedPath === 'string' && resolvedPath.trim().length > 0) {
+          return resolvedPath.trim();
         }
-      } catch {
-        // Ignore lookup errors
       }
+    } catch {
+      // Ignore lookup errors
     }
     // Fallback to the name itself
     if (fallback) return potentialName;

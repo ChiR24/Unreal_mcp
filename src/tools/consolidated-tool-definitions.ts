@@ -1,5 +1,3 @@
-import { commonSchemas } from './tool-definition-utils.js';
-/** MCP Tool Definition type for explicit annotation to avoid TS7056 */
 export interface ToolDefinition {
   category?: 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
   name: string;
@@ -8,6 +6,7 @@ export interface ToolDefinition {
   outputSchema?: Record<string, unknown>;
   [key: string]: unknown;
 }
+import { commonSchemas } from './tool-definition-utils.js';
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',

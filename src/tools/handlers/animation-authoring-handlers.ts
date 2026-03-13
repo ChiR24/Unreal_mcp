@@ -8,6 +8,7 @@
 
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
+import type { AutomationResponse } from '../../types/automation-responses.js';
 import { executeAutomationRequest } from './common-handlers.js';
 import {
   normalizeArgs,
@@ -15,35 +16,12 @@ import {
   extractOptionalString,
   extractOptionalNumber,
   extractOptionalBoolean,
+  extractOptionalArray,
+  extractOptionalObject,
 } from './argument-helper.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 
-/** Helper to extract optional array from params */
-function extractOptionalArray(params: Record<string, unknown>, key: string): unknown[] | undefined {
-  const val = params[key];
-  if (val === undefined || val === null) return undefined;
-  if (Array.isArray(val)) return val;
-  return undefined;
-}
 
-/** Helper to extract optional object from params */
-function extractOptionalObject(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
-  const val = params[key];
-  if (val === undefined || val === null) return undefined;
-  if (typeof val === 'object' && !Array.isArray(val)) return val as Record<string, unknown>;
-  return undefined;
-}
-
-/** Animation authoring response */
-interface AnimationAuthoringResponse {
-  success?: boolean;
-  message?: string;
-  error?: string;
-  errorCode?: string;
-  result?: Record<string, unknown>;
-  assetPath?: string;
-  [key: string]: unknown;
-}
 
 /**
  * Handle animation authoring actions
@@ -81,7 +59,7 @@ export async function handleAnimationAuthoringTools(
           numFrames,
           frameRate,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create animation sequence', res.errorCode);
@@ -108,7 +86,7 @@ export async function handleAnimationAuthoringTools(
           numFrames,
           frameRate,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set sequence length', res.errorCode);
@@ -132,7 +110,7 @@ export async function handleAnimationAuthoringTools(
           assetPath,
           boneName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add bone track', res.errorCode);
@@ -168,7 +146,7 @@ export async function handleAnimationAuthoringTools(
           rotation,
           scale,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set bone key', res.errorCode);
@@ -201,7 +179,7 @@ export async function handleAnimationAuthoringTools(
           value,
           createIfMissing,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set curve key', res.errorCode);
@@ -234,7 +212,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add notify', res.errorCode);
@@ -270,7 +248,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add notify state', res.errorCode);
@@ -297,7 +275,7 @@ export async function handleAnimationAuthoringTools(
           markerName,
           frame,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add sync marker', res.errorCode);
@@ -327,7 +305,7 @@ export async function handleAnimationAuthoringTools(
           rootMotionRootLock,
           forceRootLock,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set root motion settings', res.errorCode);
@@ -360,7 +338,7 @@ export async function handleAnimationAuthoringTools(
           basePoseAnimation,
           basePoseFrame,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set additive settings', res.errorCode);
@@ -391,7 +369,7 @@ export async function handleAnimationAuthoringTools(
           skeletonPath,
           slotName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create montage', res.errorCode);
@@ -418,7 +396,7 @@ export async function handleAnimationAuthoringTools(
           sectionName,
           startTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage section', res.errorCode);
@@ -448,7 +426,7 @@ export async function handleAnimationAuthoringTools(
           slotName,
           startTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage slot', res.errorCode);
@@ -478,7 +456,7 @@ export async function handleAnimationAuthoringTools(
           startTime,
           length,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set section timing', res.errorCode);
@@ -511,7 +489,7 @@ export async function handleAnimationAuthoringTools(
           trackIndex,
           notifyName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add montage notify', res.errorCode);
@@ -538,7 +516,7 @@ export async function handleAnimationAuthoringTools(
           blendTime,
           blendOption,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set blend in', res.errorCode);
@@ -565,7 +543,7 @@ export async function handleAnimationAuthoringTools(
           blendTime,
           blendOption,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set blend out', res.errorCode);
@@ -592,7 +570,7 @@ export async function handleAnimationAuthoringTools(
           fromSection,
           toSection,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to link sections', res.errorCode);
@@ -629,7 +607,7 @@ export async function handleAnimationAuthoringTools(
           axisMin,
           axisMax,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create blend space 1D', res.errorCode);
@@ -674,7 +652,7 @@ export async function handleAnimationAuthoringTools(
           verticalMin,
           verticalMax,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create blend space 2D', res.errorCode);
@@ -701,7 +679,7 @@ export async function handleAnimationAuthoringTools(
           animationPath,
           sampleValue,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add blend sample', res.errorCode);
@@ -737,7 +715,7 @@ export async function handleAnimationAuthoringTools(
           maxValue,
           gridDivisions,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set axis settings', res.errorCode);
@@ -764,7 +742,7 @@ export async function handleAnimationAuthoringTools(
           interpolationType,
           targetWeightInterpolationSpeed,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set interpolation settings', res.errorCode);
@@ -791,7 +769,7 @@ export async function handleAnimationAuthoringTools(
           path,
           skeletonPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create aim offset', res.errorCode);
@@ -821,7 +799,7 @@ export async function handleAnimationAuthoringTools(
           yaw,
           pitch,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add aim offset sample', res.errorCode);
@@ -852,7 +830,7 @@ export async function handleAnimationAuthoringTools(
           skeletonPath,
           parentClass,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create anim blueprint', res.errorCode);
@@ -876,7 +854,7 @@ export async function handleAnimationAuthoringTools(
           blueprintPath,
           stateMachineName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add state machine', res.errorCode);
@@ -909,7 +887,7 @@ export async function handleAnimationAuthoringTools(
           animationPath,
           isEntryState,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add state', res.errorCode);
@@ -939,7 +917,7 @@ export async function handleAnimationAuthoringTools(
           fromState,
           toState,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add transition', res.errorCode);
@@ -981,7 +959,7 @@ export async function handleAnimationAuthoringTools(
           automaticTriggerRule,
           automaticTriggerTime,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set transition rules', res.errorCode);
@@ -1014,7 +992,7 @@ export async function handleAnimationAuthoringTools(
           x,
           y,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add blend node', res.errorCode);
@@ -1038,7 +1016,7 @@ export async function handleAnimationAuthoringTools(
           blueprintPath,
           cacheName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add cached pose', res.errorCode);
@@ -1062,7 +1040,7 @@ export async function handleAnimationAuthoringTools(
           blueprintPath,
           slotName,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add slot node', res.errorCode);
@@ -1086,7 +1064,7 @@ export async function handleAnimationAuthoringTools(
           blueprintPath,
           layerSetup,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add layered blend per bone', res.errorCode);
@@ -1116,7 +1094,7 @@ export async function handleAnimationAuthoringTools(
           propertyName,
           value,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set anim graph node value', res.errorCode);
@@ -1144,7 +1122,7 @@ export async function handleAnimationAuthoringTools(
           path,
           skeletalMeshPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create control rig', res.errorCode);
@@ -1177,7 +1155,7 @@ export async function handleAnimationAuthoringTools(
           parentBone,
           parentControl,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add control', res.errorCode);
@@ -1207,7 +1185,7 @@ export async function handleAnimationAuthoringTools(
           unitName,
           settings,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add rig unit', res.errorCode);
@@ -1240,7 +1218,7 @@ export async function handleAnimationAuthoringTools(
           targetElement,
           targetPin,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to connect rig elements', res.errorCode);
@@ -1267,7 +1245,7 @@ export async function handleAnimationAuthoringTools(
           path,
           skeletonPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create pose library', res.errorCode);
@@ -1295,7 +1273,7 @@ export async function handleAnimationAuthoringTools(
           path,
           skeletalMeshPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create IK rig', res.errorCode);
@@ -1328,7 +1306,7 @@ export async function handleAnimationAuthoringTools(
           endBone,
           goal,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add IK chain', res.errorCode);
@@ -1358,7 +1336,7 @@ export async function handleAnimationAuthoringTools(
           sourceIKRigPath,
           targetIKRigPath,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to create IK retargeter', res.errorCode);
@@ -1385,7 +1363,7 @@ export async function handleAnimationAuthoringTools(
           sourceChain,
           targetChain,
           save,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to set retarget chain mapping', res.errorCode);
@@ -1404,7 +1382,7 @@ export async function handleAnimationAuthoringTools(
         const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
           subAction: 'get_animation_info',
           assetPath,
-        })) as AnimationAuthoringResponse;
+        })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to get animation info', res.errorCode);

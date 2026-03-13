@@ -14,6 +14,7 @@ import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { sanitizeAssetName, sanitizePath } from '../../utils/validation.js';
 
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
@@ -132,8 +133,25 @@ export async function handleGASTools(
     // =========================================================================
 
     case 'create_gameplay_effect': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      return sendRequest('create_gameplay_effect');
+      const requestedName = requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+
+      const requestedPath = typeof argsRecord.path === 'string' && argsRecord.path.trim().length > 0
+        ? argsRecord.path
+        : '/Game';
+      const normalizedPath = sanitizePath(requestedPath);
+      const normalizedName = sanitizeAssetName(requestedName);
+
+      // Pass normalized values to C++ to ensure consistency
+      // C++ handles duplicate detection, type verification, and reusedExisting flag
+      const payload = { ...argsRecord, name: normalizedName, path: normalizedPath, subAction: 'create_gameplay_effect' };
+      const result = await executeAutomationRequest(
+        tools,
+        'manage_gas',
+        payload as HandlerArgs,
+        'Automation bridge not available for GAS action: create_gameplay_effect',
+        { timeoutMs }
+      );
+      return cleanObject(result) as Record<string, unknown>;
     }
 
     case 'set_effect_duration': {

@@ -948,7 +948,7 @@ static bool HandleCreateRPC(
 
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        FKismetEditorUtilities::CompileBlueprint(Blueprint);
+        McpSafeCompileBlueprint(Blueprint);
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

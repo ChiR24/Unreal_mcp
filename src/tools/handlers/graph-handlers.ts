@@ -1,18 +1,12 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { GraphArgs, HandlerArgs } from '../../types/handler-types.js';
+import type { GraphArgs, HandlerArgs, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
-/** Response from automation requests */
-interface AutomationResponse {
-    success?: boolean;
-    error?: string;
-    message?: string;
-    result?: Record<string, unknown>;
-    [key: string]: unknown;
-}
+// AutomationResponse imported from types/handler-types.js
 
-/** Extended GraphArgs for internal processing */
+
 interface ProcessedGraphArgs extends GraphArgs {
     subAction?: string;
     nodeCategory?: string;
@@ -86,7 +80,8 @@ export async function handleGraphTools(toolName: string, action: string, args: G
 
     // Dispatch based on tool name
     switch (toolName) {
-        case 'manage_blueprint_graph':
+        case TOOL_ACTIONS.MANAGE_BLUEPRINT:
+        case 'manage_blueprint_graph': // Backward compat - callers still pass this
             return handleBlueprintGraph(action, args, tools);
         case 'manage_niagara_graph':
             return handleNiagaraGraph(action, args, tools);

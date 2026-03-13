@@ -5,6 +5,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber } from './argument-helper.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 /** Actor handler function type */
 type ActorActionHandler = (args: ActorArgs, tools: ITools) => Promise<Record<string, unknown>>;
@@ -84,15 +85,19 @@ const handlers: Record<string, ActorActionHandler> = {
         const originalClass = args.classPath || args.class || args.type;
         const componentToAdd = typeof originalClass === 'string' ? getRequiredComponent(originalClass) : undefined;
 
-        const result = await tools.actorTools.spawn({
+        const payload: Record<string, unknown> = {
+            action: 'spawn',
             classPath,
             actorName,
             location: args.location,
             rotation: args.rotation,
-            meshPath: typeof args.meshPath === 'string' ? args.meshPath : undefined,
-            timeoutMs,
-            ...(componentToAdd ? { componentToAdd } : {})
-        });
+            meshPath: typeof args.meshPath === 'string' ? args.meshPath : undefined
+        };
+        if (componentToAdd) {
+            payload.componentToAdd = componentToAdd;
+        }
+
+        const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, payload) as Record<string, unknown>;
 
         // Ensure successful spawn returns the actual actor name
         if (result && result.success && result.actorName) {
@@ -107,13 +112,19 @@ const handlers: Record<string, ActorActionHandler> = {
     },
     delete: async (args, tools) => {
         if (args.actorNames && Array.isArray(args.actorNames)) {
-            return tools.actorTools.delete({ actorNames: args.actorNames as string[] });
+            return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+                action: 'delete',
+                actorNames: args.actorNames as string[]
+            }) as Record<string, unknown>;
         }
         const params = normalizeArgs(args, [
             { key: 'actorName', aliases: ['name'], required: true }
         ]);
         const actorName = extractString(params, 'actorName');
-        return tools.actorTools.delete({ actorName });
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'delete',
+            actorName
+        }) as Record<string, unknown>;
     },
     apply_force: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -123,11 +134,12 @@ const handlers: Record<string, ActorActionHandler> = {
         const force = args.force as Vector3;
 
         // Function to attempt applying force, returning the result or throwing
-        const tryApplyForce = async () => {
-            return await tools.actorTools.applyForce({
+        const tryApplyForce = async (): Promise<Record<string, unknown>> => {
+            return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+                action: 'apply_force',
                 actorName,
                 force
-            });
+            }) as Record<string, unknown>;
         };
 
         try {
@@ -140,7 +152,10 @@ const handlers: Record<string, ActorActionHandler> = {
             if (errorMsg.toUpperCase().includes('PHYSICS')) {
                 try {
                     // Auto-enable physics logic
-                    const compsResult = await tools.actorTools.getComponents(actorName) as ComponentsResult;
+                    const compsResult = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+                        action: 'get_components',
+                        actorName
+                    }) as ComponentsResult;
                     if (compsResult && compsResult.success && Array.isArray(compsResult.components)) {
                         const meshComp = compsResult.components.find((c: ComponentInfo) => {
                             const name = c.name || '';
@@ -154,11 +169,12 @@ const handlers: Record<string, ActorActionHandler> = {
 
                         if (meshComp) {
                             const compName = meshComp.name;
-                            await tools.actorTools.setComponentProperties({
+                            await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+                                action: 'set_component_properties',
                                 actorName,
                                 componentName: compName,
                                 properties: { SimulatePhysics: true, bSimulatePhysics: true, Mobility: 2 }
-                            });
+                            }) as Record<string, unknown>;
 
                             // Retry
                             return await tryApplyForce();
@@ -180,19 +196,23 @@ const handlers: Record<string, ActorActionHandler> = {
             { key: 'actorName', aliases: ['name'], required: true }
         ]);
         const actorName = extractString(params, 'actorName');
-        return tools.actorTools.setTransform({
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'set_transform',
             actorName,
             location: args.location,
             rotation: args.rotation,
             scale: args.scale
-        });
+        }) as Record<string, unknown>;
     },
     get_transform: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'actorName', aliases: ['name'], required: true }
         ]);
         const actorName = extractString(params, 'actorName');
-        return tools.actorTools.getTransform(actorName);
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'get_transform',
+            actorName
+        }) as Record<string, unknown>;
     },
     duplicate: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -201,11 +221,12 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const newName = extractOptionalString(params, 'newName');
-        return tools.actorTools.duplicate({
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'duplicate',
             actorName,
             newName,
             offset: args.offset
-        });
+        }) as Record<string, unknown>;
     },
     attach: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -214,14 +235,21 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const childActor = extractString(params, 'childActor');
         const parentActor = extractString(params, 'parentActor');
-        return tools.actorTools.attach({ childActor, parentActor });
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'attach',
+            childActor,
+            parentActor
+        }) as Record<string, unknown>;
     },
     detach: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'actorName', aliases: ['childActor', 'child'], required: true }
         ]);
         const actorName = extractString(params, 'actorName');
-        return tools.actorTools.detach(actorName);
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'detach',
+            actorName
+        }) as Record<string, unknown>;
     },
     add_tag: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -230,7 +258,11 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const tag = extractString(params, 'tag');
-        return tools.actorTools.addTag({ actorName, tag });
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'add_tag',
+            actorName,
+            tag
+        }) as Record<string, unknown>;
     },
     remove_tag: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -239,7 +271,11 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const tag = extractString(params, 'tag');
-        return tools.actorTools.removeTag({ actorName, tag });
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'remove_tag',
+            actorName,
+            tag
+        }) as Record<string, unknown>;
     },
     find_by_tag: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -247,14 +283,21 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const tag = extractOptionalString(params, 'tag') ?? '';
         const matchType = typeof args.matchType === 'string' ? args.matchType : undefined;
-        return tools.actorTools.findByTag({ tag, matchType });
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'find_by_tag',
+            tag,
+            matchType
+        }) as Record<string, unknown>;
     },
     delete_by_tag: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'tag', required: true }
         ]);
         const tag = extractString(params, 'tag');
-        return tools.actorTools.deleteByTag(tag);
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'delete_by_tag',
+            tag
+        }) as Record<string, unknown>;
     },
     spawn_blueprint: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -263,12 +306,13 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const blueprintPath = extractString(params, 'blueprintPath');
         const actorName = extractOptionalString(params, 'actorName');
-        const result = await tools.actorTools.spawnBlueprint({
+        const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'spawn_blueprint',
             blueprintPath,
             actorName,
             location: args.location,
             rotation: args.rotation
-        });
+        }) as Record<string, unknown>;
 
         if (result && result.success && result.actorName) {
             return {
@@ -282,7 +326,7 @@ const handlers: Record<string, ActorActionHandler> = {
     list: async (args, tools) => {
         const limit = typeof args.limit === 'number' ? args.limit : 50;
         // Pass limit to C++ handler - C++ may return totalCount for accurate remaining calculation
-        const result = await executeAutomationRequest(tools, 'control_actor', {
+        const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'list',
             limit
         }) as ListActorsResult & { totalCount?: number };
@@ -306,7 +350,10 @@ const handlers: Record<string, ActorActionHandler> = {
 
         // Use the plugin's fuzzy query endpoint (contains-match) instead of the
         // exact lookup endpoint. This improves "spawn then find" reliability.
-        return tools.actorTools.findByName(name);
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'find_by_name',
+            name
+        }) as Record<string, unknown>;
     },
     // Additional handlers for test compatibility
     set_component_property: async (args, tools) => {
@@ -329,12 +376,12 @@ const handlers: Record<string, ActorActionHandler> = {
             return ResponseFactory.error(new Error('Either "properties" object or "propertyName" and "value" must be provided'));
         }
 
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'set_component_properties',
             actorName,
             componentName,
             properties
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     remove_component: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -343,11 +390,11 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const componentName = extractString(params, 'componentName');
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'remove_component',
             actorName,
             componentName
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     get_component_property: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -358,12 +405,12 @@ const handlers: Record<string, ActorActionHandler> = {
         const actorName = extractString(params, 'actorName');
         const componentName = extractString(params, 'componentName');
         const propertyName = extractString(params, 'propertyName');
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'get_component_property',
             actorName,
             componentName,
             propertyName
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     set_collision: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -372,11 +419,11 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const collisionEnabled = params.collisionEnabled ?? true;
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'set_collision',
             actorName,
             collisionEnabled
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     call_function: async (args, tools) => {
         const params = normalizeArgs(args, [
@@ -386,29 +433,32 @@ const handlers: Record<string, ActorActionHandler> = {
         ]);
         const actorName = extractString(params, 'actorName');
         const functionName = extractString(params, 'functionName');
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'call_function',
             actorName,
             functionName,
             arguments: params.arguments
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     find_by_class: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'className', aliases: ['class_name', 'class'], required: true }
         ]);
         const className = extractString(params, 'className');
-        return executeAutomationRequest(tools, 'control_actor', {
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
             action: 'find_by_class',
             className
-        }) as Promise<Record<string, unknown>>;
+        }) as Record<string, unknown>;
     },
     get_bounding_box: async (args, tools) => {
         const params = normalizeArgs(args, [
             { key: 'actorName', aliases: ['name', 'actor_name'], required: true }
         ]);
         const actorName = extractString(params, 'actorName');
-        return tools.actorTools.getBoundingBox(actorName);
+        return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {
+            action: 'get_bounding_box',
+            actorName
+        }) as Record<string, unknown>;
     }
 };
 
@@ -424,7 +474,7 @@ export async function handleActorTools(action: string, args: HandlerArgs, tools:
             return cleanObject(res) as Record<string, unknown>;
         }
         // Fallback to direct bridge call or error
-        const res = await executeAutomationRequest(tools, 'control_actor', { ...args, action: normalizedAction });
+        const res = await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, { ...args, action: normalizedAction });
         return cleanObject(res) as Record<string, unknown>;
     } catch (error) {
         return ResponseFactory.error(error);

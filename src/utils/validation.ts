@@ -55,6 +55,10 @@ export function sanitizeCommandArgument(arg: string): string {
   // eslint-disable-next-line no-control-regex
   sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
 
+  // SECURITY: Replace semicolons with underscores to prevent command injection
+  // Semicolons can be used to chain commands (e.g., "MyLevel;Quit" would execute "Quit")
+  sanitized = sanitized.replace(/;/g, '_');
+
   // Escape backslashes and quotes for command safety
   sanitized = sanitized.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
@@ -63,6 +67,7 @@ export function sanitizeCommandArgument(arg: string): string {
 
   return sanitized;
 }
+
 
 /**
  * Sanitize an asset name for Unreal Engine
@@ -234,13 +239,58 @@ export function validateAssetParams(params: {
 }
 
 /**
- * Extract valid skeletal mesh path from various inputs
- * @param input The input path which might be a skeleton or mesh
- * @returns Corrected skeletal mesh path or null
+ * Validate an array (tuple) of finite numbers, preserving the original shape.
+ * @throws if the tuple has the wrong length or contains invalid values
+ */
+export function ensureVector3(value: unknown, label: string): [number, number, number] {
+  const tuple = toVec3Tuple(value);
+  if (!tuple) {
+    throw new Error(`Invalid ${label}: expected an object with x,y,z or an array of 3 numbers`);
+  }
+  return tuple;
+}
+
+/**
+ * Concurrency delay to prevent race conditions
+ * @param ms Milliseconds to delay
+ */
+export async function concurrencyDelay(ms: number = 20): Promise<void> {
+  // Reduce the default per-operation delay to speed up test runs while
+  // allowing a small pause for the editor to process changes. Tests
+  // previously used 100ms which accumulates across 100+ test cases.
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function ensureColorRGB(value: unknown, label: string): [number, number, number] {
+  return ensureVector3(value, label);
+}
+
+export function ensureRotation(value: unknown, label: string): [number, number, number] {
+  const tuple = toRotTuple(value);
+  if (!tuple) {
+    throw new Error(`Invalid ${label}: expected an object with pitch,yaw,roll or an array of 3 numbers`);
+  }
+  return tuple;
+}
+
+/**
+ * Resolve a skeletal mesh path from a skeleton path or mesh name.
+ * Maps common UE skeleton paths to their corresponding mesh paths.
  */
 export function resolveSkeletalMeshPath(input: string): string | null {
   if (!input || typeof input !== 'string') {
     return null;
+  }
+
+  // Sanitize path if it contains slashes (indicates it's a path, not just a name)
+  let normalizedInput = input;
+  if (input.includes('/')) {
+    try {
+      normalizedInput = sanitizePath(input);
+    } catch {
+      // If sanitization fails, return null (invalid path)
+      return null;
+    }
   }
 
   // Common skeleton to mesh mappings
@@ -256,14 +306,14 @@ export function resolveSkeletalMeshPath(input: string): string | null {
   };
 
   // Check if this is a known skeleton path
-  if (skeletonToMeshMap[input]) {
-    return skeletonToMeshMap[input];
+  if (skeletonToMeshMap[normalizedInput]) {
+    return skeletonToMeshMap[normalizedInput];
   }
 
   // If it contains _Skeleton, try to convert to mesh name
-  if (input.includes('_Skeleton')) {
+  if (normalizedInput.includes('_Skeleton')) {
     // Try common replacements
-    let meshPath = input.replace('_Skeleton', '');
+    let meshPath = normalizedInput.replace('_Skeleton', '');
     // Mapping for replacements
     const replacements: { [key: string]: string } = {
       '/SK_': '/SKM_',
@@ -280,93 +330,10 @@ export function resolveSkeletalMeshPath(input: string): string | null {
     return meshPath;
   }
 
-  // If it starts with SK_ (skeleton prefix), try SKM_ (skeletal mesh prefix)
-  if (input.includes('/SK_')) {
-    return input.replace('/SK_', '/SKM_');
+  // Generic fallback: convert any /SK_ prefix to /SKM_ for skeletal mesh paths
+  if (normalizedInput.includes('/SK_')) {
+    return normalizedInput.replace('/SK_', '/SKM_');
   }
 
-  // Return as-is if no conversion needed
-  return input;
-}
-
-/**
- * Concurrency delay to prevent race conditions
- * @param ms Milliseconds to delay
- */
-export async function concurrencyDelay(ms: number = 20): Promise<void> {
-  // Reduce the default per-operation delay to speed up test runs while
-  // allowing a small pause for the editor to process changes. Tests
-  // previously used 100ms which accumulates across 100+ test cases.
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Ensure the provided value is a finite number within optional bounds.
- * @throws if the value is not a finite number or violates bounds
- */
-export function validateNumber(
-  value: unknown,
-  label: string,
-  {
-    min,
-    max,
-    allowZero = true
-  }: { min?: number; max?: number; allowZero?: boolean } = {}
-): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`Invalid ${label}: expected a finite number`);
-  }
-
-  if (!allowZero && value === 0) {
-    throw new Error(`Invalid ${label}: zero is not allowed`);
-  }
-
-  if (typeof min === 'number' && value < min) {
-    throw new Error(`Invalid ${label}: must be >= ${min}`);
-  }
-
-  if (typeof max === 'number' && value > max) {
-    throw new Error(`Invalid ${label}: must be <= ${max}`);
-  }
-
-  return value;
-}
-
-/**
- * Validate an array (tuple) of finite numbers, preserving the original shape.
- * @throws if the tuple has the wrong length or contains invalid values
- */
-export function ensureVector3(value: unknown, label: string): [number, number, number] {
-  const tuple = toVec3Tuple(value);
-  if (!tuple) {
-    throw new Error(`Invalid ${label}: expected an object with x,y,z or an array of 3 numbers`);
-  }
-  return tuple;
-}
-
-/**
- * Sanitize a string for use in a console command argument.
- * Replaces double quotes with single quotes to prevent breaking out of string arguments.
- * Also removes newlines.
- * @param input The string to sanitize
- * @returns Sanitized string safe for console command insertion
- */
-export function sanitizeConsoleString(input: string): string {
-  if (!input) return '';
-  return input
-    .replace(/"/g, "'") // Replace double quotes with single quotes
-    .replace(/[\r\n]+/g, ' ') // Replace newlines with spaces
-    .trim();
-}
-
-export function ensureColorRGB(value: unknown, label: string): [number, number, number] {
-  return ensureVector3(value, label);
-}
-
-export function ensureRotation(value: unknown, label: string): [number, number, number] {
-  const tuple = toRotTuple(value);
-  if (!tuple) {
-    throw new Error(`Invalid ${label}: expected an object with pitch,yaw,roll or an array of 3 numbers`);
-  }
-  return tuple;
+  return normalizedInput;
 }
