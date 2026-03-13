@@ -73,13 +73,23 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
 
         // Execute trace start via console command
         // This is the standard way to control trace from editor
+        bool bCommandExecuted = false;
         if (bHasChannels)
         {
-            GEngine->Exec(nullptr, *FString::Printf(TEXT("Trace.Start %s"), *Channels));
+            bCommandExecuted = GEngine->Exec(nullptr, *FString::Printf(TEXT("Trace.Start %s"), *Channels));
         }
         else
         {
-            GEngine->Exec(nullptr, TEXT("Trace.Start"));
+            bCommandExecuted = GEngine->Exec(nullptr, TEXT("Trace.Start"));
+        }
+
+        // Check if command was executed successfully
+        if (!bCommandExecuted)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Failed to start trace session. Trace module may not be available."),
+                TEXT("COMMAND_FAILED"));
+            return true;
         }
 
         // Build response

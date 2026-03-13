@@ -393,34 +393,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
     // configure_weapon_mesh
     if (SubAction == TEXT("configure_weapon_mesh"))
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
-        return true;
-    }
-
-    // configure_weapon_mesh
-    if (SubAction == TEXT("configure_weapon_mesh"))
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
-        return true;
-    }
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetNumberField(TEXT("baseDamage"), BaseDamage);
-        Result->SetNumberField(TEXT("fireRate"), FireRate);
-        Result->SetNumberField(TEXT("range"), Range);
-        Result->SetNumberField(TEXT("spread"), Spread);
-        
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
-        return true;
-    }
-
-    // configure_weapon_mesh
-    if (SubAction == TEXT("configure_weapon_mesh"))
     {
         if (BlueprintPath.IsEmpty())
         {
@@ -2427,9 +2399,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
         
         // Check for components
-        bool bbHasWeaponMesh = false;
-        bool bbHasProjectileMovement = false;
-        bool bbHasCollision = false;
+        bool bHasWeaponMesh = false;
+        bool bHasProjectileMovement = false;
+        bool bHasCollision = false;
         TArray<TSharedPtr<FJsonValue>> ComponentList;
         
         if (Blueprint->SimpleConstructionScript)

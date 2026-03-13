@@ -94,20 +94,39 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         FString AssetPath;
         Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
 
+        if (AssetPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Missing assetPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
         bool bRecursive = false;
         Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+
+        bool bIncludeSoftDependencies = false;
+        Payload->TryGetBoolField(TEXT("includeSoftDependencies"), bIncludeSoftDependencies);
 
         FAssetRegistryModule& AssetRegistryModule = 
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
         TArray<FName> Dependencies;
 
-        // Note: bRecursive naming is confusing
-        // true = Hard dependencies (recursive), false = Soft dependencies
-        // Consider renaming to bIncludeSoftDependencies
-        UE::AssetRegistry::EDependencyQuery Query = bRecursive
-            ? UE::AssetRegistry::EDependencyQuery::Hard
-            : UE::AssetRegistry::EDependencyQuery::Soft;
+        // Build query based on dependency type and recursion
+        // EDependencyQuery values: Hard, Soft, HardRecursive, SoftRecursive
+        UE::AssetRegistry::EDependencyQuery Query;
+        if (bIncludeSoftDependencies)
+        {
+            Query = bRecursive 
+                ? UE::AssetRegistry::EDependencyQuery::SoftRecursive 
+                : UE::AssetRegistry::EDependencyQuery::Soft;
+        }
+        else
+        {
+            Query = bRecursive 
+                ? UE::AssetRegistry::EDependencyQuery::HardRecursive 
+                : UE::AssetRegistry::EDependencyQuery::Hard;
+        }
 
         AssetRegistryModule.Get().GetDependencies(
             FName(*AssetPath), 

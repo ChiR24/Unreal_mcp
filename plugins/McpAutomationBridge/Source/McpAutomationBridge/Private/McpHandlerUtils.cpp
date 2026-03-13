@@ -7,6 +7,9 @@
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 
+// Define log category declared in McpSafeOperations.h
+DEFINE_LOG_CATEGORY(LogMcpSafeOperations);
+
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"

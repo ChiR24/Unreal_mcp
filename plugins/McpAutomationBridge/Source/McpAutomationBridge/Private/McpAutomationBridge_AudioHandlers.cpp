@@ -813,7 +813,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     if (!GEditor)
-      return false;
+    {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
+      return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       SendAutomationError(RequestingSocket, RequestId,

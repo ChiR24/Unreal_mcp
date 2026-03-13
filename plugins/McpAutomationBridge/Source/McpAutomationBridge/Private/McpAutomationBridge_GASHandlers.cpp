@@ -447,6 +447,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("name"), ActualName);
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         McpHandlerUtils::AddVerification(Result, Blueprint);

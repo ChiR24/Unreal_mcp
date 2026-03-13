@@ -68,7 +68,13 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
     if (SubAction == TEXT("spawn_category"))
     {
         FString CategoryName;
-        Payload->TryGetStringField(TEXT("categoryName"), CategoryName);
+        if (!Payload->TryGetStringField(TEXT("categoryName"), CategoryName) ||
+            CategoryName.TrimStartAndEnd().IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Missing or empty categoryName."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         // Execute via console command for robustness
         // Alternative: IGameplayDebugger::Get().ToggleCategory(CategoryName)
@@ -76,12 +82,20 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
         const FString Cmd = FString::Printf(TEXT("GameplayDebuggerCategory %s"), *CategoryName);
         const bool bCommandExecuted = GEngine->Exec(nullptr, *Cmd);
 
+        // Check if command was executed successfully
+        if (!bCommandExecuted)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Failed to toggle gameplay debugger category: %s"), *CategoryName),
+                TEXT("COMMAND_EXECUTION_FAILED"));
+            return true;
+        }
+
         // Build response
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("categoryName"), CategoryName);
         Result->SetStringField(TEXT("consoleCommand"), Cmd);
-        Result->SetBoolField(TEXT("commandExecuted"), bCommandExecuted);
-        Result->SetBoolField(TEXT("existsAfter"), true);
+        Result->SetBoolField(TEXT("commandExecuted"), true);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Toggled gameplay debugger category: %s"), *CategoryName), 

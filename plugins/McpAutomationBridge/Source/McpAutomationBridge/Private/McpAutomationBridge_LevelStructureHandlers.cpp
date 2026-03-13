@@ -499,7 +499,7 @@ static bool HandleCreateSublevel(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(ResponseJson, World);
+    McpHandlerUtils::AddVerification(ResponseJson, StreamingLevel);
     ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
     ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
     ResponseJson->SetBoolField(TEXT("saved"), bSave);
@@ -568,7 +568,7 @@ static bool HandleConfigureLevelStreaming(
     FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming;
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(ResponseJson, World);
+    McpHandlerUtils::AddVerification(ResponseJson, FoundLevel);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("streamingMethod"), StreamingMethod);
     ResponseJson->SetBoolField(TEXT("shouldBeVisible"), bShouldBeVisible);

@@ -410,6 +410,57 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
             return true;
         }
 
+        // Create the appropriate trigger based on type
+        UInputTrigger* NewTrigger = nullptr;
+        
+        // Map common trigger type names to their classes
+        if (TriggerType == TEXT("Pressed") || TriggerType == TEXT("InputTriggerPressed"))
+        {
+            NewTrigger = NewObject<UInputTriggerPressed>(InAction);
+        }
+        else if (TriggerType == TEXT("Released") || TriggerType == TEXT("InputTriggerReleased"))
+        {
+            NewTrigger = NewObject<UInputTriggerReleased>(InAction);
+        }
+        else if (TriggerType == TEXT("Down") || TriggerType == TEXT("InputTriggerDown"))
+        {
+            NewTrigger = NewObject<UInputTriggerDown>(InAction);
+        }
+        else if (TriggerType == TEXT("Tap") || TriggerType == TEXT("InputTriggerTap"))
+        {
+            NewTrigger = NewObject<UInputTriggerTap>(InAction);
+        }
+        else if (TriggerType == TEXT("Hold") || TriggerType == TEXT("InputTriggerHold"))
+        {
+            NewTrigger = NewObject<UInputTriggerHold>(InAction);
+        }
+        else if (TriggerType == TEXT("HoldAndRelease") || TriggerType == TEXT("InputTriggerHoldAndRelease"))
+        {
+            NewTrigger = NewObject<UInputTriggerHoldAndRelease>(InAction);
+        }
+        else if (TriggerType == TEXT("Pulse") || TriggerType == TEXT("InputTriggerPulse"))
+        {
+            NewTrigger = NewObject<UInputTriggerPulse>(InAction);
+        }
+        else if (TriggerType == TEXT("DoubleTap") || TriggerType == TEXT("InputTriggerDoubleTap"))
+        {
+            NewTrigger = NewObject<UInputTriggerDoubleTap>(InAction);
+        }
+        
+        if (!NewTrigger)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, DoubleTap"), *TriggerType),
+                TEXT("INVALID_TRIGGER_TYPE"));
+            return true;
+        }
+
+        // Add the trigger to the action
+        InAction->Triggers.Add(NewTrigger);
+        
+        // Mark the package dirty to ensure changes are saved
+        InAction->MarkPackageDirty();
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
         Result->SetStringField(TEXT("triggerType"), TriggerType);
@@ -451,6 +502,57 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
                 TEXT("NOT_FOUND"));
             return true;
         }
+
+        // Create the appropriate modifier based on type
+        UInputModifier* NewModifier = nullptr;
+        
+        // Map common modifier type names to their classes
+        if (ModifierType == TEXT("DeadZone") || ModifierType == TEXT("InputModifierDeadZone"))
+        {
+            NewModifier = NewObject<UInputModifierDeadZone>(InAction);
+        }
+        else if (ModifierType == TEXT("SmoothDelta") || ModifierType == TEXT("InputModifierSmoothDelta"))
+        {
+            NewModifier = NewObject<UInputModifierSmoothDelta>(InAction);
+        }
+        else if (ModifierType == TEXT("SwizzleInputAxis") || ModifierType == TEXT("InputModifierSwizzleInputAxis"))
+        {
+            NewModifier = NewObject<UInputModifierSwizzleInputAxis>(InAction);
+        }
+        else if (ModifierType == TEXT("Negate") || ModifierType == TEXT("InputModifierNegate"))
+        {
+            NewModifier = NewObject<UInputModifierNegate>(InAction);
+        }
+        else if (ModifierType == TEXT("Scalar") || ModifierType == TEXT("InputModifierScalar"))
+        {
+            NewModifier = NewObject<UInputModifierScalar>(InAction);
+        }
+        else if (ModifierType == TEXT("ScaleByDeltaTime") || ModifierType == TEXT("InputModifierScaleByDeltaTime"))
+        {
+            NewModifier = NewObject<UInputModifierScaleByDeltaTime>(InAction);
+        }
+        else if (ModifierType == TEXT("Add") || ModifierType == TEXT("InputModifierAdd"))
+        {
+            NewModifier = NewObject<UInputModifierAdd>(InAction);
+        }
+        else if (ModifierType == TEXT("ToWorldSpace") || ModifierType == TEXT("InputModifierToWorldSpace"))
+        {
+            NewModifier = NewObject<UInputModifierToWorldSpace>(InAction);
+        }
+        
+        if (!NewModifier)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unknown modifier type: %s. Supported: DeadZone, SmoothDelta, SwizzleInputAxis, Negate, Scalar, ScaleByDeltaTime, Add, ToWorldSpace"), *ModifierType),
+                TEXT("INVALID_MODIFIER_TYPE"));
+            return true;
+        }
+
+        // Add the modifier to the action
+        InAction->Modifiers.Add(NewModifier);
+        
+        // Mark the package dirty to ensure changes are saved
+        InAction->MarkPackageDirty();
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);

@@ -412,6 +412,16 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
   if (SavePath.TrimStartAndEnd().IsEmpty())
     SavePath = TEXT("/Game");
+  
+  // Sanitize savePath to prevent traversal attacks
+  SavePath = SanitizeProjectRelativePath(SavePath);
+  if (SavePath.IsEmpty())
+  {
+    Self->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 TEXT("Invalid savePath."), nullptr,
+                                 TEXT("INVALID_PATH"));
+    return true;
+  }
 
   FString ParentClassSpec;
   LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClassSpec);
