@@ -90,7 +90,8 @@ export function validateSnapshotPath(inputPath: string): { isValid: false; error
 
     // Normalize and verify the final path is within the project
     const finalPath = path.normalize(mappedPath);
-    if (!finalPath.startsWith(cwd)) {
+    const cwdWithSep = cwd.endsWith(path.sep) ? cwd : cwd + path.sep;
+    if (finalPath !== cwd && !finalPath.startsWith(cwdWithSep)) {
       return { isValid: false, error: 'SECURITY_VIOLATION: Path must be within the project directory' };
     }
 
@@ -101,7 +102,8 @@ export function validateSnapshotPath(inputPath: string): { isValid: false; error
   const resolvedPath = path.resolve(cwd, trimmed);
   
   // Ensure the resolved path is within the project directory
-  if (!resolvedPath.startsWith(cwd)) {
+  const cwdWithSep = cwd.endsWith(path.sep) ? cwd : cwd + path.sep;
+  if (resolvedPath !== cwd && !resolvedPath.startsWith(cwdWithSep)) {
     return { isValid: false, error: 'SECURITY_VIOLATION: Path must be within the project directory' };
   }
 
