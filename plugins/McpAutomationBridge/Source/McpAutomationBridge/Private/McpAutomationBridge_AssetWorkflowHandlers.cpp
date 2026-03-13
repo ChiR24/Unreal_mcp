@@ -1105,10 +1105,30 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
           ColorData.Add(Color);
         }
 
-        FString AbsolutePath = OutputPath;
-        if (FPaths::IsRelative(OutputPath)) {
-          AbsolutePath =
-              FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+        // SECURITY: Sanitize and validate the output path to prevent path traversal
+        FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
+        if (SafeOutputPath.IsEmpty()) {
+          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                             FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
+                                             nullptr, TEXT("SECURITY_VIOLATION"));
+          return;
+        }
+        
+        FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
+        AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+        FPaths::NormalizeFilename(AbsolutePath);
+        
+        FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+        FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+        if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+          NormalizedProjectDir += TEXT("/");
+        }
+        
+        if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
+                                             nullptr, TEXT("SECURITY_VIOLATION"));
+          return;
         }
 
         TArray<uint8> CompressedData;
@@ -2566,10 +2586,30 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateReport(
 
     bool bFileWritten = false;
     if (!OutputPath.IsEmpty()) {
-      FString AbsoluteOutput = OutputPath;
-      if (FPaths::IsRelative(OutputPath)) {
-        AbsoluteOutput =
-            FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), OutputPath);
+      // SECURITY: Sanitize and validate the output path to prevent path traversal
+      FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
+      if (SafeOutputPath.IsEmpty()) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
+                            TEXT("SECURITY_VIOLATION"));
+        return;
+      }
+      
+      FString AbsoluteOutput = FPaths::ProjectDir() / SafeOutputPath;
+      AbsoluteOutput = FPaths::ConvertRelativePathToFull(AbsoluteOutput);
+      FPaths::NormalizeFilename(AbsoluteOutput);
+      
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+      
+      if (!AbsoluteOutput.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
+                            TEXT("SECURITY_VIOLATION"));
+        return;
       }
 
       const FString DirPath = FPaths::GetPath(AbsoluteOutput);
