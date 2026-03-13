@@ -27,3 +27,8 @@
 **Vulnerability:** `UITools` methods (e.g., `createMenu`, `createTooltip`) constructed console commands using string interpolation with user-provided text (like button labels). This allowed attackers to break out of quoted strings and potentially inject additional commands or arguments (e.g., `"; Quit; "`).
 **Learning:** Relying on basic string quoting for console commands is unsafe if the input itself can contain quotes. `CommandValidator` only checks for known dangerous commands but doesn't prevent argument injection or syntax breaking within valid commands.
 **Prevention:** Implement and use a dedicated `sanitizeConsoleString` utility that escapes or replaces quotes (`"`) and removes newlines before interpolating user input into command strings. Always treat user-facing text as untrusted when building command lines.
+
+## 2025-03-07 - Path Traversal Bypass via `startsWith()`
+**Vulnerability:** A directory traversal check in `validateSnapshotPath` used `resolvedPath.startsWith(cwd)` to enforce that user paths stayed inside the project root. This allows an attacker to access sibling directories that share the same prefix (e.g., if `cwd` is `/projects/app`, accessing `/projects/app-secrets` bypasses the check).
+**Learning:** Checking string prefixes for directory boundaries is insecure if the string lacks a trailing path separator, because string matching does not respect directory boundaries.
+**Prevention:** Always append a trailing path separator (e.g., `cwd + path.sep`) before using `startsWith()` for path boundary enforcement, or use strict directory checks using `path.relative` ensuring it doesn't start with `..`.
