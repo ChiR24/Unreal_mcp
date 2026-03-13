@@ -442,12 +442,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Attribute set already exists") : TEXT("Attribute set created"), Result);
         return true;
     }
@@ -1382,13 +1385,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+        FString ActualPath = Path / ActualName;
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffect"));
         Result->SetStringField(TEXT("durationType"), DurationType);
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Effect already exists") : TEXT("Effect created"), Result);
         return true;
     }
@@ -1854,13 +1861,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+        FString ActualPath = Path / ActualName;
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        Result->SetStringField(TEXT("assetPath"), ActualPath);
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("cueType"), CueType);
         Result->SetStringField(TEXT("cueTag"), CueTag);
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Cue notify already exists") : TEXT("Cue notify created"), Result);
         return true;
     }
@@ -2752,4 +2763,3 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 #undef GetStringFieldGAS
 #undef GetNumberFieldGAS
 #undef GetBoolFieldGAS
-
