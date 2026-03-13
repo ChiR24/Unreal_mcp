@@ -344,6 +344,35 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
+
+    FString SafeExportPath = SanitizeProjectFilePath(ExportPath);
+    if (SafeExportPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Invalid or unsafe export path: %s"), *ExportPath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
+    FString AbsoluteExportPath = FPaths::ProjectDir() / SafeExportPath;
+    FPaths::MakeStandardFilename(AbsoluteExportPath);
+    
+    // CRITICAL: Convert to absolute path for proper comparison
+    AbsoluteExportPath = FPaths::ConvertRelativePathToFull(AbsoluteExportPath);
+    FPaths::NormalizeFilename(AbsoluteExportPath);
+
+    FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+    FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+    if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+      NormalizedProjectDir += TEXT("/");
+    }
+
+    // SECURITY: Verify the resolved absolute path is within project bounds
+    if (!AbsoluteExportPath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Export path escapes project directory: %s"), *ExportPath),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
     
     // Check if asset exists
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
@@ -354,7 +383,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     }
     
     // Ensure export directory exists
-    FString ExportDir = FPaths::GetPath(ExportPath);
+    FString ExportDir = FPaths::GetPath(AbsoluteExportPath);
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
     if (!PlatformFile.DirectoryExists(*ExportDir)) {
       PlatformFile.CreateDirectoryTree(*ExportDir);
@@ -370,7 +399,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     }
     
     // Determine export format from file extension
-    FString Extension = FPaths::GetExtension(ExportPath).ToLower();
+    FString Extension = FPaths::GetExtension(AbsoluteExportPath).ToLower();
     
     // Try generic asset export via AssetTools
     bool bExportSuccess = false;
@@ -400,7 +429,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     else
     {
       // Try with the actual requested filename
-      bExportSuccess = FPaths::FileExists(ExportPath);
+      bExportSuccess = FPaths::FileExists(AbsoluteExportPath);
     }
     
     if (!bExportSuccess)
@@ -433,7 +462,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       if (Exporter) {
         // ExportToFile signature: (Object, Exporter, Filename, InSelectedOnly, NoReplaceIdentical, Prompt)
         // The last parameter (Prompt=false) should suppress dialogs for most exporters
-        int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *ExportPath, false, false, false);
+        int32 ExportResult = UExporter::ExportToFile(Asset, Exporter, *AbsoluteExportPath, false, false, false);
         bExportSuccess = (ExportResult != 0);
       }
       
@@ -447,17 +476,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       AddAssetVerification(Result, Asset);
       Result->SetStringField(TEXT("assetPath"), AssetPath);
-      Result->SetStringField(TEXT("exportPath"), ExportPath);
+      Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetBoolField(TEXT("success"), true);
       
       SendAutomationResponse(RequestingSocket, RequestId, true,
-                             FString::Printf(TEXT("Asset exported to: %s"), *ExportPath),
+                             FString::Printf(TEXT("Asset exported to: %s"), *AbsoluteExportPath),
                              Result);
     } else {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("assetPath"), AssetPath);
-      Result->SetStringField(TEXT("exportPath"), ExportPath);
+      Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetStringField(TEXT("error"), ExportError);
       
