@@ -142,6 +142,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
+  const originalAction = action;
   
   // Normalize action name for test compatibility
   const normalizedAction = normalizeInspectAction(action);
@@ -158,6 +159,42 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
   
   switch (normalizedAction) {
     case 'inspect_object': {
+      if (originalAction === 'get_blueprint_details') {
+        const requestedPath = await resolveObjectPath(normalizedArgs, tools) ?? '';
+
+        if (!requestedPath) {
+          throw new Error('inspect:get_blueprint_details - invalid objectPath: must be a non-empty string');
+        }
+
+        const res = await executeAutomationRequest(
+          tools,
+          'blueprint_get',
+          {
+            requestedPath,
+            blueprintCandidates: [requestedPath]
+          },
+          'inspect:get_blueprint_details -> blueprint_get: automation bridge not available'
+        ) as InspectResponse;
+
+        // Handle not-found envelope for consistency with other inspect paths
+        if (res && res.success === false) {
+          const errorCode = String(res.error || '').toUpperCase();
+          const msg = String(res.message || '');
+          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || errorCode === 'NOT_FOUND' || msg.toLowerCase().includes('not found')) {
+            return cleanObject({
+              success: false,
+              handled: true,
+              notFound: true,
+              error: res.error,
+              message: res.message || 'Blueprint not found',
+              requestedPath
+            });
+          }
+        }
+
+        return cleanObject(res);
+      }
+
       // Check if this is a component path (dot notation like "Actor.Component")
       // Must NOT be a file path (contains slashes or backslashes)
       // and componentName must be provided OR objectPath looks like "ActorName.ComponentName"
