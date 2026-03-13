@@ -21,6 +21,19 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+// EdGraphSchema_K2 for ConvertPropertyToPinType
+#if __has_include("EdGraphSchema_K2.h")
+#include "EdGraphSchema_K2.h"
+#define MCP_HAS_EDGRAPH_SCHEMA_K2 1
+#elif __has_include("BlueprintGraph/EdGraphSchema_K2.h")
+#include "BlueprintGraph/EdGraphSchema_K2.h"
+#define MCP_HAS_EDGRAPH_SCHEMA_K2 1
+#elif __has_include("BlueprintGraph/Classes/EdGraphSchema_K2.h")
+#include "BlueprintGraph/Classes/EdGraphSchema_K2.h"
+#define MCP_HAS_EDGRAPH_SCHEMA_K2 1
+#else
+#define MCP_HAS_EDGRAPH_SCHEMA_K2 0
+#endif
 #if __has_include("ScopedTransaction.h")
 #include "ScopedTransaction.h"
 #define MCP_HAS_SCOPED_TRANSACTION 1
@@ -929,6 +942,17 @@ FMcpAutomationBridge_DescribePropertyType(const FProperty *Property) {
     return FString();
   }
 
+#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
+  // Convert property to pin type for Blueprint-style type string
+  FEdGraphPinType PinType;
+  if (const UEdGraphSchema_K2 *Schema = GetDefault<UEdGraphSchema_K2>()) {
+    if (Schema->ConvertPropertyToPinType(Property, PinType)) {
+      return FMcpAutomationBridge_DescribePinType(PinType);
+    }
+  }
+#endif
+
+  // Fallback to C++ style if conversion fails
   FString ExtendedType;
   const FString BaseType = Property->GetCPPType(&ExtendedType);
   return ExtendedType.IsEmpty() ? BaseType : BaseType + ExtendedType;
@@ -4675,10 +4699,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               if (!LiveVariableNames.Contains(Pair.Key)) {
                 continue;
               }
-              if (!EntryDefaults->HasField(Pair.Key)) {
-                // Key doesn't exist in entry - add it from registry
-                EntryDefaults->SetField(Pair.Key, Pair.Value);
-              } else {
+              if (EntryDefaults->HasField(Pair.Key)) {
                 // Key exists - deep merge if both are JSON objects
                 const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
                 if (Pair.Value->Type == EJson::Object) {
@@ -4696,6 +4717,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
                 }
                 // If not both objects, keep existing value (don't overwrite)
               }
+              // Do NOT add missing keys - only merge into existing fields
             }
           }
           Entry->SetObjectField(TEXT("defaults"), EntryDefaults);
@@ -4714,10 +4736,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               if (!LiveVariableNames.Contains(Pair.Key)) {
                 continue;
               }
-              if (!EntryMetadata->HasField(Pair.Key)) {
-                // Key doesn't exist in entry - add it from registry
-                EntryMetadata->SetField(Pair.Key, Pair.Value);
-              } else {
+              if (EntryMetadata->HasField(Pair.Key)) {
                 // Key exists - deep merge if both are JSON objects
                 const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
                 if (Pair.Value->Type == EJson::Object) {
