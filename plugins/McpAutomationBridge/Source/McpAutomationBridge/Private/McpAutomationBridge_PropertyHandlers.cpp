@@ -1,7 +1,102 @@
+// =============================================================================
+// McpAutomationBridge_PropertyHandlers.cpp
+// =============================================================================
+// Property and Container Manipulation Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Property Access
+//   - set_object_property            : Set property value on any UObject
+//   - get_object_property            : Get property value from UObject
+//   - set_property_by_path           : Set nested property via path
+//   - get_property_by_path           : Get nested property via path
+//
+// Section 2: Array Operations
+//   - array_append                   : Append element to array
+//   - array_insert                   : Insert element at index
+//   - array_remove                   : Remove element at index
+//   - array_clear                    : Clear all elements
+//   - array_get                      : Get element at index
+//   - array_set                      : Set element at index
+//   - array_length                   : Get array length
+//
+// Section 3: Map Operations
+//   - map_set                        : Set key-value pair
+//   - map_get                        : Get value by key
+//   - map_remove                     : Remove by key
+//   - map_has                        : Check key existence
+//   - map_keys                       : Get all keys
+//   - map_clear                      : Clear all entries
+//
+// Section 4: Set Operations
+//   - set_add                        : Add element to set
+//   - set_remove                     : Remove element from set
+//   - set_contains                   : Check element existence
+//   - set_clear                      : Clear all elements
+//
+// PAYLOAD/RESPONSE FORMATS:
+// -------------------------
+// set_object_property:
+//   Payload: { "objectPath": string, "propertyName": string, "value": any }
+//   Response: { "success": bool, "propertyName": string, "value": any }
+//
+// array_append:
+//   Payload: { "objectPath": string, "propertyName": string, "value": any }
+//   Response: { "success": bool, "arrayLength": int }
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - FProperty reflection APIs stable across versions
+// - Container manipulation via standard UE reflection
+//
+// REFACTORING NOTES:
+// ------------------
+// - Uses McpHandlerUtils for standardized error responses
+// - Uses McpPropertyReflection for property conversion
+// - Consistent parameter validation patterns
+// - Shared object resolution logic extracted to helpers
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first
+
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpHandlerUtils.h"
+#include "McpPropertyReflection.h"
+
+#if WITH_EDITOR
+#include "Editor.h"
+#include "GameFramework/Actor.h"
+#include "Components/ActorComponent.h"
+#endif
+
+// =============================================================================
+// Local Helper Functions
+// =============================================================================
+namespace
+{
+    /**
+     * Add verification data to result based on object type.
+     */
+    void AddObjectVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
+    {
+#if WITH_EDITOR
+        if (AActor* AsActor = Cast<AActor>(Object))
+        {
+            McpHandlerUtils::AddVerification(Result, AsActor);
+        }
+        else
+        {
+            McpHandlerUtils::AddVerification(Result, Object);
+        }
+#endif
+    }
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
@@ -12,310 +107,210 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       !LowerAction.Contains(TEXT("set_object_property")))
     return false;
 
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("set_object_property payload missing."),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
+  // --- Parameter Validation (using McpHandlerUtils patterns) ---
   FString ObjectPath;
-  if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) ||
-      ObjectPath.TrimStartAndEnd().IsEmpty()) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("set_object_property requires a non-empty objectPath."),
-        TEXT("INVALID_OBJECT"));
-    return true;
+  FString ParamError;
+  if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("objectPath"), ObjectPath, ParamError))
+  {
+      SendAutomationError(RequestingSocket, RequestId, ParamError, TEXT("INVALID_OBJECT"));
+      return true;
   }
 
   FString PropertyName;
-  if (!Payload->TryGetStringField(TEXT("propertyName"), PropertyName) ||
-      PropertyName.TrimStartAndEnd().IsEmpty()) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("set_object_property requires a non-empty propertyName."),
-        TEXT("INVALID_PROPERTY"));
-    return true;
+  if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("propertyName"), PropertyName, ParamError))
+  {
+      SendAutomationError(RequestingSocket, RequestId, ParamError, TEXT("INVALID_PROPERTY"));
+      return true;
   }
 
   const TSharedPtr<FJsonValue> ValueField = Payload->TryGetField(TEXT("value"));
   if (!ValueField.IsValid()) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("set_object_property payload missing value field."),
-        TEXT("INVALID_VALUE"));
-    return true;
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("set_object_property payload missing value field."),
+          TEXT("INVALID_VALUE"));
+      return true;
   }
 
-  UObject *RootObject = nullptr;
-#if WITH_EDITOR
-  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
-  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
-  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  // --- Object Resolution (using helper) ---
+  FString ResolvedPath;
+  UObject* RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
+  if (!RootObject)
   {
-    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
-    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
-    
-    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
-    {
-      // Try to find the actor first
-      if (AActor *Actor = FindActorByName(ActorName))
-      {
-        // Find the component on the actor using fuzzy name matching
-        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
-        {
-          RootObject = Comp;
-          // Normalize the path for downstream error messages
-          ObjectPath = Comp->GetPathName();
-        }
-      }
-    }
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
+          TEXT("OBJECT_NOT_FOUND"));
+      return true;
   }
   
-  if (!RootObject) {
-    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
-      RootObject = FoundActor;
-      // Normalize for downstream error messages / responses
-      ObjectPath = FoundActor->GetPathName();
-    }
-  }
-  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
-    FString PackagePath = ObjectPath;
-    if (PackagePath.Contains(TEXT("."))) {
-      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
-    }
-    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
-    if (LoadedPackage) {
-      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
-      if (!RootObject) {
-        RootObject = LoadedPackage;
-      }
-    }
-  }
-#else
-  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
-#endif
-  if (!RootObject) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
-        TEXT("OBJECT_NOT_FOUND"));
-    return true;
+  // Use resolved path for error messages
+  if (!ResolvedPath.IsEmpty())
+  {
+      ObjectPath = ResolvedPath;
   }
 
-  // Special handling for common AActor properties that are actually functions
-  // or require setters
+  // --- Special Actor Property Handling ---
+  // Handle properties that require setter methods instead of direct property access
   if (AActor *Actor = Cast<AActor>(RootObject)) {
+      // ActorLocation
     if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
-      FVector NewLoc = FVector::ZeroVector;
-      // Parse value as vector
-      if (ValueField->Type == EJson::Object) {
-        const TSharedPtr<FJsonObject> &Obj = ValueField->AsObject();
-        double X = 0, Y = 0, Z = 0;
-        Obj->TryGetNumberField(TEXT("x"), X);
-        Obj->TryGetNumberField(TEXT("y"), Y);
-        Obj->TryGetNumberField(TEXT("z"), Z);
-        NewLoc = FVector(X, Y, Z);
-      } else if (ValueField->Type == EJson::Array) {
-        const TArray<TSharedPtr<FJsonValue>> &Arr = ValueField->AsArray();
-        if (Arr.Num() >= 3) {
-          NewLoc = FVector(Arr[0]->AsNumber(), Arr[1]->AsNumber(),
-                           Arr[2]->AsNumber());
-        }
+          FVector NewLoc = FVector::ZeroVector;
+          if (ValueField->Type == EJson::Object)
+          {
+              McpPropertyReflection::JsonToVector(ValueField->AsObject(), NewLoc);
+          }
+          else if (ValueField->Type == EJson::Array)
+          {
+              McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewLoc);
+          }
+          
+          Actor->SetActorLocation(NewLoc);
+          
+          TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
+          ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+          ResultPayload->SetBoolField(TEXT("saved"), true);
+          ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewLoc));
+          AddObjectVerification(ResultPayload, Actor);
+          SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location updated."), ResultPayload);
+          return true;
       }
-
-      Actor->SetActorLocation(NewLoc);
-
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      ResultPayload->SetBoolField(TEXT("saved"), true);
-      AddActorVerification(ResultPayload, Actor);
-
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
-      ValObj->SetNumberField(TEXT("x"), NewLoc.X);
-      ValObj->SetNumberField(TEXT("y"), NewLoc.Y);
-      ValObj->SetNumberField(TEXT("z"), NewLoc.Z);
-      ResultPayload->SetField(TEXT("value"),
-                              MakeShared<FJsonValueObject>(ValObj));
-
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Actor location updated."), ResultPayload,
-                             FString());
-      return true;
-    } else if (PropertyName.Equals(TEXT("ActorRotation"),
-                                   ESearchCase::IgnoreCase)) {
-      FRotator NewRot = FRotator::ZeroRotator;
-      if (ValueField->Type == EJson::Object) {
-        const TSharedPtr<FJsonObject> &Obj = ValueField->AsObject();
-        double P = 0, Y = 0, R = 0;
-        Obj->TryGetNumberField(TEXT("pitch"), P);
-        Obj->TryGetNumberField(TEXT("yaw"), Y);
-        Obj->TryGetNumberField(TEXT("roll"), R);
-        NewRot = FRotator(P, Y, R);
-      } else if (ValueField->Type == EJson::Array) {
-        const TArray<TSharedPtr<FJsonValue>> &Arr = ValueField->AsArray();
-        if (Arr.Num() >= 3) {
-          NewRot = FRotator(Arr[0]->AsNumber(), Arr[1]->AsNumber(),
-                            Arr[2]->AsNumber());
-        }
+      
+      // ActorRotation
+      if (PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase))
+      {
+          FRotator NewRot = FRotator::ZeroRotator;
+          if (ValueField->Type == EJson::Object)
+          {
+              McpPropertyReflection::JsonToRotator(ValueField->AsObject(), NewRot);
+          }
+          else if (ValueField->Type == EJson::Array)
+          {
+              McpPropertyReflection::JsonArrayToRotator(ValueField->AsArray(), NewRot);
+          }
+          
+          Actor->SetActorRotation(NewRot);
+          
+          TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
+          ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+          ResultPayload->SetBoolField(TEXT("saved"), true);
+          ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::RotatorToJson(NewRot));
+          AddObjectVerification(ResultPayload, Actor);
+          SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation updated."), ResultPayload);
+          return true;
       }
-
-      Actor->SetActorRotation(NewRot);
-
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      ResultPayload->SetBoolField(TEXT("saved"), true);
-      AddActorVerification(ResultPayload, Actor);
-
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
-      ValObj->SetNumberField(TEXT("pitch"), NewRot.Pitch);
-      ValObj->SetNumberField(TEXT("yaw"), NewRot.Yaw);
-      ValObj->SetNumberField(TEXT("roll"), NewRot.Roll);
-      ResultPayload->SetField(TEXT("value"),
-                              MakeShared<FJsonValueObject>(ValObj));
-
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Actor rotation updated."), ResultPayload,
-                             FString());
-      return true;
-    } else if (PropertyName.Equals(TEXT("ActorScale"),
-                                   ESearchCase::IgnoreCase) ||
-               PropertyName.Equals(TEXT("ActorScale3D"),
-                                   ESearchCase::IgnoreCase)) {
-      FVector NewScale = FVector::OneVector;
-      if (ValueField->Type == EJson::Object) {
-        const TSharedPtr<FJsonObject> &Obj = ValueField->AsObject();
-        double X = 1, Y = 1, Z = 1;
-        Obj->TryGetNumberField(TEXT("x"), X);
-        Obj->TryGetNumberField(TEXT("y"), Y);
-        Obj->TryGetNumberField(TEXT("z"), Z);
-        NewScale = FVector(X, Y, Z);
-      } else if (ValueField->Type == EJson::Array) {
-        const TArray<TSharedPtr<FJsonValue>> &Arr = ValueField->AsArray();
-        if (Arr.Num() >= 3) {
-          NewScale = FVector(Arr[0]->AsNumber(), Arr[1]->AsNumber(),
-                             Arr[2]->AsNumber());
-        }
+      
+      // ActorScale / ActorScale3D
+      if (PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+          PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))
+      {
+          FVector NewScale = FVector::OneVector;
+          if (ValueField->Type == EJson::Object)
+          {
+              McpPropertyReflection::JsonToVector(ValueField->AsObject(), NewScale);
+          }
+          else if (ValueField->Type == EJson::Array)
+          {
+              McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewScale);
+          }
+          
+          Actor->SetActorScale3D(NewScale);
+          
+          TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
+          ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+          ResultPayload->SetBoolField(TEXT("saved"), true);
+          ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewScale));
+          AddObjectVerification(ResultPayload, Actor);
+          SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale updated."), ResultPayload);
+          return true;
       }
-
-      Actor->SetActorScale3D(NewScale);
-
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      ResultPayload->SetBoolField(TEXT("saved"), true);
-      AddActorVerification(ResultPayload, Actor);
-
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
-      ValObj->SetNumberField(TEXT("x"), NewScale.X);
-      ValObj->SetNumberField(TEXT("y"), NewScale.Y);
-      ValObj->SetNumberField(TEXT("z"), NewScale.Z);
-      ResultPayload->SetField(TEXT("value"),
-                              MakeShared<FJsonValueObject>(ValObj));
-
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Actor scale updated."), ResultPayload,
-                             FString());
-      return true;
-    } else if (PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase)) {
-      bool bHidden = false;
-      if (ValueField->Type == EJson::Boolean)
-        bHidden = ValueField->AsBool();
-      else if (ValueField->Type == EJson::Number)
-        bHidden = ValueField->AsNumber() != 0;
-
-      Actor->SetActorHiddenInGame(bHidden);
-
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
-      ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      ResultPayload->SetBoolField(TEXT("saved"), true);
-      ResultPayload->SetBoolField(TEXT("value"), bHidden);
-      AddActorVerification(ResultPayload, Actor);
-
-      SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Actor visibility updated."), ResultPayload,
-                             FString());
-      return true;
-    }
+      
+      // bHidden (visibility)
+      if (PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
+      {
+          bool bHidden = McpHandlerUtils::GetOptionalBool(Payload, TEXT("value"), false);
+          if (ValueField->Type == EJson::Boolean)
+              bHidden = ValueField->AsBool();
+          else if (ValueField->Type == EJson::Number)
+              bHidden = ValueField->AsNumber() != 0;
+          
+          Actor->SetActorHiddenInGame(bHidden);
+          
+          TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
+          ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+          ResultPayload->SetBoolField(TEXT("saved"), true);
+          ResultPayload->SetBoolField(TEXT("value"), bHidden);
+          AddObjectVerification(ResultPayload, Actor);
+          SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor visibility updated."), ResultPayload);
+          return true;
+      }
   }
 
-  // Support nested property paths (e.g., "MyComponent.PropertyName")
-  void *TargetContainer = nullptr;
-  FProperty *Property = nullptr;
+
+  void* TargetContainer = nullptr;
+  FProperty* Property = nullptr;
 
   if (PropertyName.Contains(TEXT("."))) {
-    FString ResolveError;
-    Property = ResolveNestedPropertyPath(RootObject, PropertyName,
-                                         TargetContainer, ResolveError);
-    if (!Property || !TargetContainer) {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(
-              TEXT("Failed to resolve nested property path '%s': %s"),
-              *PropertyName, *ResolveError),
-          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
-  } else {
-    // Simple property name - look it up directly
-    TargetContainer = RootObject;
-    Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
-    if (!Property) {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Property %s not found on object %s."),
-                          *PropertyName, *ObjectPath),
-          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
+      // Nested property path (e.g., "MyComponent.PropertyName")
+      FString ResolveError;
+      Property = ResolveNestedPropertyPath(RootObject, PropertyName, TargetContainer, ResolveError);
+      if (!Property || !TargetContainer) {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Failed to resolve nested property path '%s': %s"), *PropertyName, *ResolveError),
+              TEXT("PROPERTY_NOT_FOUND"));
+          return true;
+      }
+  }
+  else
+  {
+      // Simple property name - look it up directly
+      TargetContainer = RootObject;
+      Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
+      if (!Property) {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Property '%s' not found on object '%s'."), *PropertyName, *ObjectPath),
+              TEXT("PROPERTY_NOT_FOUND"));
+          return true;
+      }
   }
 
-  FString ConversionError;
+  // --- Apply Value ---
 #if WITH_EDITOR
   RootObject->Modify();
 #endif
 
-  if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField,
-                                ConversionError)) {
-    SendAutomationError(RequestingSocket, RequestId, ConversionError,
-                        TEXT("PROPERTY_CONVERSION_FAILED"));
-    return true;
+  FString ConversionError;
+  if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField, ConversionError))
+  {
+      SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
+      return true;
   }
 
-  bool bMarkDirty = true;
-  if (Payload->HasField(TEXT("markDirty"))) {
-    if (!Payload->TryGetBoolField(
-            TEXT("markDirty"),
-            bMarkDirty)) { /* ignore parse failure, default true */
-    }
-  }
+  // --- Mark Dirty (optional) ---
+  const bool bMarkDirty = McpHandlerUtils::GetOptionalBool(Payload, TEXT("markDirty"), true);
   if (bMarkDirty)
-    RootObject->MarkPackageDirty();
+  {
+      RootObject->MarkPackageDirty();
+  }
+
 #if WITH_EDITOR
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  // --- Build Response ---
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetBoolField(TEXT("saved"), true);
-  
-  // Add verification based on object type
-  if (AActor* AsActor = Cast<AActor>(RootObject)) {
-    AddActorVerification(ResultPayload, AsActor);
-  } else {
-    AddAssetVerification(ResultPayload, RootObject);
+  AddObjectVerification(ResultPayload, RootObject);
+
+  // Include the updated value in response
+  if (TSharedPtr<FJsonValue> CurrentValue = ExportPropertyToJsonValue(TargetContainer, Property))
+  {
+      ResultPayload->SetField(TEXT("value"), CurrentValue);
   }
 
-  if (TSharedPtr<FJsonValue> CurrentValue =
-          ExportPropertyToJsonValue(TargetContainer, Property)) {
-    ResultPayload->SetField(TEXT("value"), CurrentValue);
-  }
-
-  SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Property value updated."), ResultPayload,
-                         FString());
+  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property value updated."), ResultPayload);
   return true;
 }
+
 
 bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     const FString &RequestId, const FString &Action,
@@ -353,72 +348,35 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  UObject *RootObject = nullptr;
-#if WITH_EDITOR
-  // CRITICAL FIX: Handle component paths in "ActorName.ComponentName" format
-  // This resolves paths like "TestActor.StaticMeshComponent0" to the actual component object
-  if (ObjectPath.Contains(TEXT(".")) && !ObjectPath.StartsWith(TEXT("/")))
+  // --- Object Resolution (using centralized helper) ---
+  FString ResolvedPath;
+  UObject* RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
+  if (!RootObject)
   {
-    FString ActorName = ObjectPath.Left(ObjectPath.Find(TEXT(".")));
-    FString ComponentName = ObjectPath.Right(ObjectPath.Len() - ActorName.Len() - 1);
-    
-    if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
-    {
-      // Try to find the actor first
-      if (AActor *Actor = FindActorByName(ActorName))
-      {
-        // Find the component on the actor using fuzzy name matching
-        if (UActorComponent *Comp = FindComponentByName(Actor, ComponentName))
-        {
-          RootObject = Comp;
-          // Normalize the path for downstream error messages
-          ObjectPath = Comp->GetPathName();
-        }
-      }
-    }
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
+          TEXT("OBJECT_NOT_FOUND"));
+      return true;
   }
   
-  if (!RootObject) {
-    if (AActor *FoundActor = FindActorByName(ObjectPath)) {
-      RootObject = FoundActor;
-      // Normalize for downstream error messages / responses
-      ObjectPath = FoundActor->GetPathName();
-    }
-  }
-  if (!RootObject && ObjectPath.StartsWith(TEXT("/Game/"))) {
-    FString PackagePath = ObjectPath;
-    if (PackagePath.Contains(TEXT("."))) {
-      PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
-    }
-    UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
-    if (LoadedPackage) {
-      RootObject = FindObject<UObject>(LoadedPackage, *ObjectPath);
-      if (!RootObject) {
-        RootObject = LoadedPackage;
-      }
-    }
-  }
-#else
-  RootObject = FindObject<UObject>(nullptr, *ObjectPath);
-#endif
-  if (!RootObject) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
-        TEXT("OBJECT_NOT_FOUND"));
-    return true;
+  // Use resolved path for error messages
+  if (!ResolvedPath.IsEmpty())
+  {
+      ObjectPath = ResolvedPath;
   }
 
   // Special handling for common AActor properties that are actually functions
   // or require setters
+  // or require setters
   if (AActor *Actor = Cast<AActor>(RootObject)) {
  if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      AddActorVerification(ResultPayload, Actor);
+      McpHandlerUtils::AddVerification(ResultPayload, Actor);
 
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ValObj = McpHandlerUtils::CreateResultObject();
       ValObj->SetNumberField(TEXT("x"), Loc.X);
       ValObj->SetNumberField(TEXT("y"), Loc.Y);
       ValObj->SetNumberField(TEXT("z"), Loc.Z);
@@ -432,11 +390,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     } else if (PropertyName.Equals(TEXT("ActorRotation"),
                                    ESearchCase::IgnoreCase)) {
       FRotator Rot = Actor->GetActorRotation();
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      AddActorVerification(ResultPayload, Actor);
+      McpHandlerUtils::AddVerification(ResultPayload, Actor);
 
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ValObj = McpHandlerUtils::CreateResultObject();
       ValObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
       ValObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
       ValObj->SetNumberField(TEXT("roll"), Rot.Roll);
@@ -452,11 +410,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
                PropertyName.Equals(TEXT("ActorScale3D"),
                                    ESearchCase::IgnoreCase)) {
       FVector Scale = Actor->GetActorScale3D();
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-      AddActorVerification(ResultPayload, Actor);
+      McpHandlerUtils::AddVerification(ResultPayload, Actor);
 
-      TSharedPtr<FJsonObject> ValObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ValObj = McpHandlerUtils::CreateResultObject();
       ValObj->SetNumberField(TEXT("x"), Scale.X);
       ValObj->SetNumberField(TEXT("y"), Scale.Y);
       ValObj->SetNumberField(TEXT("z"), Scale.Z);
@@ -471,38 +429,18 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   }
 
   // Support nested property paths (e.g., "MyComponent.PropertyName")
-  void *TargetContainer = nullptr;
-  FProperty *Property = nullptr;
-
-  if (PropertyName.Contains(TEXT("."))) {
-    FString ResolveError;
-    Property = ResolveNestedPropertyPath(RootObject, PropertyName,
-                                         TargetContainer, ResolveError);
-    if (!Property || !TargetContainer) {
+  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, PropertyName);
+  if (!PropResult.IsValid())
+  {
       SendAutomationError(
           RequestingSocket, RequestId,
-          FString::Printf(
-              TEXT("Failed to resolve nested property path '%s': %s"),
-              *PropertyName, *ResolveError),
+          PropResult.Error,
           TEXT("PROPERTY_NOT_FOUND"));
       return true;
-    }
-  } else {
-    // Simple property name - look it up directly
-    TargetContainer = RootObject;
-    Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
-    if (!Property) {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Property %s not found on object %s."),
-                          *PropertyName, *ObjectPath),
-          TEXT("PROPERTY_NOT_FOUND"));
-      return true;
-    }
   }
 
   const TSharedPtr<FJsonValue> CurrentValue =
-      ExportPropertyToJsonValue(TargetContainer, Property);
+      ExportPropertyToJsonValue(PropResult.Container, PropResult.Property);
   if (!CurrentValue.IsValid()) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -511,15 +449,15 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetField(TEXT("value"), CurrentValue);
   
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
-    AddActorVerification(ResultPayload, AsActor);
+    McpHandlerUtils::AddVerification(ResultPayload, AsActor);
   } else {
-    AddAssetVerification(ResultPayload, RootObject);
+    McpHandlerUtils::AddVerification(ResultPayload, RootObject);
   }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -668,16 +606,16 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayAppend(
   RootObject->PostEditChange();
 #endif
 
-TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("newIndex"), NewIndex);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
   
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
-    AddActorVerification(ResultPayload, AsActor);
+    McpHandlerUtils::AddVerification(ResultPayload, AsActor);
   } else {
-    AddAssetVerification(ResultPayload, RootObject);
+    McpHandlerUtils::AddVerification(ResultPayload, RootObject);
   }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -783,16 +721,16 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayRemove(
   RootObject->PostEditChange();
 #endif
 
-TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("removedIndex"), Index);
   ResultPayload->SetNumberField(TEXT("newSize"), Helper.Num());
   
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
-    AddActorVerification(ResultPayload, AsActor);
+    McpHandlerUtils::AddVerification(ResultPayload, AsActor);
   } else {
-    AddAssetVerification(ResultPayload, RootObject);
+    McpHandlerUtils::AddVerification(ResultPayload, RootObject);
   }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -882,16 +820,16 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayClear(
   RootObject->PostEditChange();
 #endif
 
-TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("previousSize"), PrevSize);
   ResultPayload->SetNumberField(TEXT("newSize"), 0);
   
   // Add verification based on object type
   if (AActor* AsActor = Cast<AActor>(RootObject)) {
-    AddActorVerification(ResultPayload, AsActor);
+    McpHandlerUtils::AddVerification(ResultPayload, AsActor);
   } else {
-    AddAssetVerification(ResultPayload, RootObject);
+    McpHandlerUtils::AddVerification(ResultPayload, RootObject);
   }
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1041,7 +979,7 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayInsert(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("insertedAt"), Index);
@@ -1164,7 +1102,7 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayGetElement(
     return true;
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("index"), Index);
@@ -1317,7 +1255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleArraySetElement(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("index"), Index);
@@ -1502,7 +1440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapSetValue(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetStringField(TEXT("key"), Key);
@@ -1631,7 +1569,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapGetValue(
         return true;
       }
 
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetStringField(TEXT("key"), Key);
@@ -1754,7 +1692,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapRemoveKey(
       RootObject->PostEditChange();
 #endif
 
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetStringField(TEXT("key"), Key);
@@ -1872,7 +1810,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapHasKey(
     }
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetStringField(TEXT("key"), Key);
@@ -1976,7 +1914,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapGetKeys(
     }
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetArrayField(TEXT("keys"), KeysArray);
@@ -2067,7 +2005,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMapClear(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("previousSize"), PrevSize);
@@ -2211,7 +2149,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetAdd(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("setSize"), Helper.Num());
@@ -2343,7 +2281,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetRemove(
       RootObject->PostEditChange();
 #endif
 
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
       ResultPayload->SetNumberField(TEXT("setSize"), Helper.Num());
@@ -2481,7 +2419,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetContains(
     }
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetBoolField(TEXT("contains"), bContains);
@@ -2573,7 +2511,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetClear(
   RootObject->PostEditChange();
 #endif
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("objectPath"), ObjectPath);
   ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
   ResultPayload->SetNumberField(TEXT("previousSize"), PrevSize);
@@ -2639,7 +2577,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetReferences(
   // Convert to JSON array
   TArray<TSharedPtr<FJsonValue>> ReferencesArray;
   for (const FAssetIdentifier &Dep : Dependencies) {
-    TSharedPtr<FJsonObject> RefObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> RefObj = McpHandlerUtils::CreateResultObject();
     RefObj->SetStringField(TEXT("packageName"), Dep.PackageName.ToString());
     if (!Dep.ObjectName.IsNone()) {
       RefObj->SetStringField(TEXT("objectName"), Dep.ObjectName.ToString());
@@ -2647,7 +2585,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetReferences(
     ReferencesArray.Add(MakeShared<FJsonValueObject>(RefObj));
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("assetPath"), AssetPath);
   ResultPayload->SetStringField(TEXT("packageName"),
                                 AssetData.PackageName.ToString());
@@ -2720,7 +2658,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
   // Convert to JSON array
   TArray<TSharedPtr<FJsonValue>> DependenciesArray;
   for (const FAssetIdentifier &Ref : Referencers) {
-    TSharedPtr<FJsonObject> DepObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> DepObj = McpHandlerUtils::CreateResultObject();
     DepObj->SetStringField(TEXT("packageName"), Ref.PackageName.ToString());
     if (!Ref.ObjectName.IsNone()) {
       DepObj->SetStringField(TEXT("objectName"), Ref.ObjectName.ToString());
@@ -2728,7 +2666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
     DependenciesArray.Add(MakeShared<FJsonValueObject>(DepObj));
   }
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("assetPath"), AssetPath);
   ResultPayload->SetStringField(TEXT("packageName"),
                                 AssetData.PackageName.ToString());

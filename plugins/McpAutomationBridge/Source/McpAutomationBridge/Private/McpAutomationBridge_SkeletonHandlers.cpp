@@ -1,53 +1,124 @@
 /**
- * Skeleton and Rigging Handlers for Phase 7
+ * McpAutomationBridge_SkeletonHandlers.cpp
+ * =============================================================================
+ * Phase 7: Skeleton and Rigging System Handlers
  *
- * Implements skeleton creation, socket management, physics assets, skin weights, and morph targets.
- * Uses USkeletalMesh, USkeleton, UPhysicsAsset, and related UE APIs.
+ * Provides comprehensive skeleton, rigging, physics asset, and skin weight management
+ * capabilities for the MCP Automation Bridge. This file implements the `manage_skeleton` tool.
+ *
+ * HANDLERS BY CATEGORY:
+ * ---------------------
+ * 7.1  Skeleton Operations   - get_skeleton_info, list_skeleton_bones, add_skeleton_bone,
+ *                              rename_bone, remove_bone, set_bone_parent, get_bone_hierarchy
+ * 7.2  Socket Management     - add_socket, remove_socket, list_sockets, set_socket_transform,
+ *                              get_socket_info, attach_to_socket
+ * 7.3  Physics Assets        - create_physics_asset, get_physics_asset_info, add_physics_body,
+ *                              add_physics_constraint, configure_constraint_limits,
+ *                              set_constraint_angular_limits, set_constraint_linear_limits,
+ *                              remove_physics_body, remove_physics_constraint
+ * 7.4  Skin Weights          - paint_weights, copy_weights, mirror_weights,
+ *                              create_skin_weight_profile
+ * 7.5  Morph Targets         - list_morph_targets, get_morph_target_info, set_morph_target
+ * 7.6  Cloth Binding         - bind_cloth_asset, unbind_cloth_asset, list_cloth_assets
+ * 7.7  Utility Actions       - preview_physics, validate_skeleton, compare_skeletons
+ *
+ * VERSION COMPATIBILITY:
+ * ----------------------
+ * - UE 5.0-5.4: Standard physics asset APIs
+ * - UE 5.5+: SkeletalBodySetup.h available for extended physics operations
+ * - SkeletonModifier.h: Optional include with __has_include guard
+ * - Chaos Cloth: Conditional compilation via __has_include guards
+ * - FReferenceSkeletonModifier: Add/UpdateRefPoseTransform (5.0), Remove/SetParent (5.1+)
+ *
+ * REFACTORING NOTES:
+ * ------------------
+ * - Helper macros (GetStringFieldSkel, etc.) for JSON field access
+ * - Anonymous namespace for file-local helper functions
+ * - LoadSkeletonFromPathSkel/LoadSkeletalMeshFromPathSkel: Secure asset loading
+ * - Uses McpSafeAssetSave for UE 5.7+ safe asset saving
+ * - Path validation via SanitizeProjectRelativePath()
+ *
+ * Copyright (c) 2024 MCP Automation Bridge Contributors
  */
 
-#include "Dom/JsonObject.h"
-#include "McpAutomationBridgeGlobals.h"
-#include "McpAutomationBridgeHelpers.h"
+// =============================================================================
+// Includes
+// =============================================================================
+
+// Version Compatibility (must be first)
+#include "McpVersionCompatibility.h"
+
+// MCP Core
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeGlobals.h"
+#include "McpHandlerUtils.h"
+#include "McpAutomationBridgeHelpers.h"
+
+// JSON & Serialization
+#include "Dom/JsonObject.h"
 
 #if WITH_EDITOR
 
+// Skeleton & Animation
 #include "Animation/Skeleton.h"
+#include "Animation/MorphTarget.h"
+#include "Animation/SkinWeightProfile.h"
+#include "ReferenceSkeleton.h"
+
+// Skeletal Mesh
 #include "Engine/SkeletalMesh.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Rendering/SkeletalMeshLODModel.h"
+#include "Rendering/SkeletalMeshModel.h"
+
+// Physics
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/BodySetup.h"
-// Note: SkeletalBodySetup.h was introduced in UE 5.5
+#include "PhysicsEngine/PhysicsConstraintTemplate.h"
+
+// UE 5.5+ SkeletalBodySetup
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #include "PhysicsEngine/SkeletalBodySetup.h"
 #endif
-#include "PhysicsEngine/PhysicsConstraintTemplate.h"
-#include "Animation/MorphTarget.h"
-#include "Rendering/SkeletalMeshLODModel.h"  // For FSkelMeshSection used by PopulateDeltas
-#include "Rendering/SkeletalMeshModel.h"     // For FSkeletalMeshModel
-#include "Animation/SkinWeightProfile.h"     // For FSkinWeightProfileInfo, FImportedSkinWeightProfileData
+
+// Asset Registry & Tools
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
-#include "EngineUtils.h"  // For TActorIterator
-#include "EditorAssetLibrary.h"
 #include "Factories/PhysicsAssetFactory.h"
-#include "ReferenceSkeleton.h"
+
+// Editor Utilities
+#include "EditorAssetLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "EngineUtils.h"
+
+// Core & Misc
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 
-// Helper macros for JSON field access
+// =============================================================================
+// Helper Macros
+// =============================================================================
+
+/* DEPRECATED: JSON field macros are deprecated. Use McpHandlerUtils helpers instead:
+ * - McpHandlerUtils::TryGetRequiredString() / GetOptionalString()
+ * - McpHandlerUtils::JsonToVector() / JsonToRotator()
+ * - McpHandlerUtils::VectorToJson() / RotatorToJson()
+ */
 #define GetStringFieldSkel GetJsonStringField
 #define GetNumberFieldSkel GetJsonNumberField
 #define GetBoolFieldSkel GetJsonBoolField
-// Helper to get int field with default value
-#define GetIntFieldSkel(JsonObj, FieldName, DefaultValue) (JsonObj.IsValid() && JsonObj->HasField(FieldName) ? static_cast<int32>(JsonObj->GetNumberField(FieldName)) : DefaultValue)
+#define GetIntFieldSkel(JsonObj, FieldName, DefaultValue) \
+    (JsonObj.IsValid() && JsonObj->HasField(FieldName) ? static_cast<int32>(JsonObj->GetNumberField(FieldName)) : DefaultValue)
 
-// For skeleton modification
+// =============================================================================
+// Conditional Includes (version-dependent)
+// =============================================================================
+
+// SkeletonModifier (optional)
 #if __has_include("Animation/SkeletonModifier.h")
 #include "Animation/SkeletonModifier.h"
 #define MCP_HAS_SKELETON_MODIFIER 1
@@ -55,7 +126,7 @@
 #define MCP_HAS_SKELETON_MODIFIER 0
 #endif
 
-// Cloth support (Chaos Cloth)
+// Chaos Cloth Support
 #if __has_include("ClothingAsset/ClothingAssetBase.h")
 #include "ClothingAsset/ClothingAssetBase.h"
 #elif __has_include("ClothingAssetBase.h")
@@ -76,6 +147,7 @@
 #define MCP_HAS_CLOTH_FACTORY 0
 #endif
 
+// Editor Actor Subsystem
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -285,8 +357,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
         return true;
     }
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    AddAssetVerification(Result, Skeleton);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Result, Skeleton);
 
     // Bone count
     const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
@@ -340,7 +412,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
 
     for (int32 i = 0; i < RefSkeleton.GetRawBoneNum(); ++i)
     {
-        TSharedPtr<FJsonObject> BoneObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> BoneObj = McpHandlerUtils::CreateResultObject();
         BoneObj->SetStringField(TEXT("name"), RefSkeleton.GetBoneName(i).ToString());
         BoneObj->SetNumberField(TEXT("index"), i);
         
@@ -351,21 +423,24 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
             BoneObj->SetStringField(TEXT("parentName"), RefSkeleton.GetBoneName(ParentIndex).ToString());
         }
 
-        // Reference pose transform
+        // Use McpHandlerUtils helper for transform JSON
         const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
-        TSharedPtr<FJsonObject> TransformObj = MakeShareable(new FJsonObject());
+        BoneObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(RefPose.GetLocation()));
+        const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
+        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
         TransformObj->SetNumberField(TEXT("x"), RefPose.GetLocation().X);
         TransformObj->SetNumberField(TEXT("y"), RefPose.GetLocation().Y);
         TransformObj->SetNumberField(TEXT("z"), RefPose.GetLocation().Z);
         BoneObj->SetObjectField(TEXT("location"), TransformObj);
 
-        BoneArray.Add(MakeShareable(new FJsonValueObject(BoneObj)));
+        BoneArray.Add(MakeShared<FJsonValueObject>(BoneObj));
     }
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Result, Skeleton);
     Result->SetArrayField(TEXT("bones"), BoneArray);
     Result->SetNumberField(TEXT("count"), BoneArray.Num());
-    AddAssetVerification(Result, Skeleton);
+    McpHandlerUtils::AddVerification(Result, Skeleton);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bones listed"), Result);
     return true;
@@ -409,32 +484,19 @@ bool UMcpAutomationBridgeSubsystem::HandleListSockets(
     {
         if (!Socket) continue;
 
-        TSharedPtr<FJsonObject> SocketObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> SocketObj = McpHandlerUtils::CreateResultObject();
         SocketObj->SetStringField(TEXT("name"), Socket->SocketName.ToString());
         SocketObj->SetStringField(TEXT("boneName"), Socket->BoneName.ToString());
 
-        TSharedPtr<FJsonObject> LocObj = MakeShareable(new FJsonObject());
-        LocObj->SetNumberField(TEXT("x"), Socket->RelativeLocation.X);
-        LocObj->SetNumberField(TEXT("y"), Socket->RelativeLocation.Y);
-        LocObj->SetNumberField(TEXT("z"), Socket->RelativeLocation.Z);
-        SocketObj->SetObjectField(TEXT("relativeLocation"), LocObj);
+        // Use McpHandlerUtils helpers for transform JSON
+        SocketObj->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(Socket->RelativeLocation));
+        SocketObj->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Socket->RelativeRotation));
+        SocketObj->SetObjectField(TEXT("relativeScale"), McpHandlerUtils::VectorToJson(Socket->RelativeScale));
 
-        TSharedPtr<FJsonObject> RotObj = MakeShareable(new FJsonObject());
-        RotObj->SetNumberField(TEXT("pitch"), Socket->RelativeRotation.Pitch);
-        RotObj->SetNumberField(TEXT("yaw"), Socket->RelativeRotation.Yaw);
-        RotObj->SetNumberField(TEXT("roll"), Socket->RelativeRotation.Roll);
-        SocketObj->SetObjectField(TEXT("relativeRotation"), RotObj);
-
-        TSharedPtr<FJsonObject> ScaleObj = MakeShareable(new FJsonObject());
-        ScaleObj->SetNumberField(TEXT("x"), Socket->RelativeScale.X);
-        ScaleObj->SetNumberField(TEXT("y"), Socket->RelativeScale.Y);
-        ScaleObj->SetNumberField(TEXT("z"), Socket->RelativeScale.Z);
-        SocketObj->SetObjectField(TEXT("relativeScale"), ScaleObj);
-
-        SocketArray.Add(MakeShareable(new FJsonValueObject(SocketObj)));
+        SocketArray.Add(MakeShared<FJsonValueObject>(SocketObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("sockets"), SocketArray);
     Result->SetNumberField(TEXT("count"), SocketArray.Num());
 
@@ -513,11 +575,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create socket object"), TEXT("CREATION_FAILED"));
         return true;
     }
-    NewSocket->SocketName = FName(*SocketName);
-    NewSocket->BoneName = FName(*BoneName);
+    // Parse socket transform using ParseVectorFromJson helpers
     NewSocket->RelativeLocation = ParseVectorFromJson(Payload, TEXT("relativeLocation"));
     NewSocket->RelativeRotation = ParseRotatorFromJson(Payload, TEXT("relativeRotation"));
     NewSocket->RelativeScale = ParseVectorFromJson(Payload, TEXT("relativeScale"), FVector::OneVector);
+    NewSocket->BoneName = FName(*BoneName);
 
     Skeleton->Sockets.Add(NewSocket);
     McpSafeAssetSave(Skeleton);
@@ -529,7 +591,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
@@ -629,7 +691,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
 
@@ -706,7 +768,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("virtualBoneName"), NewVirtualBoneName.ToString());
     Result->SetStringField(TEXT("sourceBone"), SourceBone);
     Result->SetStringField(TEXT("targetBone"), TargetBone);
@@ -808,7 +870,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAsset->GetPathName());
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMesh->GetPathName());
     Result->SetNumberField(TEXT("bodyCount"), PhysicsAsset->SkeletalBodySetups.Num());
@@ -862,7 +924,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
     {
         if (!BodySetup) continue;
 
-        TSharedPtr<FJsonObject> BodyObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
         BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
         BodyObj->SetBoolField(TEXT("considerForBounds"), BodySetup->bConsiderForBounds);
 
@@ -883,10 +945,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
         BodyObj->SetNumberField(TEXT("capsuleCount"), BodySetup->AggGeom.SphylElems.Num());
         BodyObj->SetNumberField(TEXT("convexCount"), BodySetup->AggGeom.ConvexElems.Num());
 
-        BodyArray.Add(MakeShareable(new FJsonValueObject(BodyObj)));
+        BodyArray.Add(MakeShared<FJsonValueObject>(BodyObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("physicsBodies"), BodyArray);
     Result->SetNumberField(TEXT("count"), BodyArray.Num());
     Result->SetNumberField(TEXT("constraintCount"), PhysicsAsset->ConstraintSetup.Num());
@@ -1052,7 +1114,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("bodyType"), BodyType);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
@@ -1162,7 +1224,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("bodyIndex"), BodyIndex);
 
@@ -1283,7 +1345,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
     Result->SetNumberField(TEXT("constraintIndex"), PhysicsAsset->ConstraintSetup.Num() - 1);
@@ -1417,7 +1479,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
 
@@ -1481,7 +1543,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
         {
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("oldName"), BoneName);
         Result->SetStringField(TEXT("newName"), NewBoneName);
         Result->SetBoolField(TEXT("isVirtualBone"), true);
@@ -1562,7 +1624,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("boneIndex"), BoneIndex);
 
@@ -1607,7 +1669,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     UMorphTarget* ExistingMorph = Mesh->FindMorphTarget(FName(*MorphTargetName));
     if (ExistingMorph)
     {
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
         Result->SetBoolField(TEXT("alreadyExists"), true);
 
@@ -1737,7 +1799,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("morphTargetCount"), Mesh->GetMorphTargets().Num());
     Result->SetNumberField(TEXT("deltaCount"), Deltas.Num());
@@ -1860,7 +1922,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("deltaCount"), Deltas.Num());
 
@@ -1916,12 +1978,12 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
     {
         if (!MT) continue;
         
-        TSharedPtr<FJsonObject> MTObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> MTObj = McpHandlerUtils::CreateResultObject();
         MTObj->SetStringField(TEXT("name"), MT->GetName());
-        MorphTargetArray.Add(MakeShareable(new FJsonValueObject(MTObj)));
+        MorphTargetArray.Add(MakeShared<FJsonValueObject>(MTObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("morphTargets"), MorphTargetArray);
     Result->SetNumberField(TEXT("count"), MorphTargetArray.Num());
 
@@ -1974,7 +2036,7 @@ bool UMcpAutomationBridgeSubsystem::HandleNormalizeWeights(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Skin weights normalized"), Result);
@@ -2022,7 +2084,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePruneWeights(
     {
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetNumberField(TEXT("threshold"), Threshold);
 
@@ -2070,7 +2132,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
     }
 
 #if WITH_EDITOR
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     
     // Find the cloth asset by name if provided
@@ -2140,14 +2202,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
 #endif
             if (!ClothAsset) continue;
             
-            TSharedPtr<FJsonObject> ClothObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> ClothObj = McpHandlerUtils::CreateResultObject();
             ClothObj->SetStringField(TEXT("name"), ClothAsset->GetName());
             // Use UClothingAssetCommon::GetNumLods() for UE 5.7+ compatibility
             if (UClothingAssetCommon* ClothAssetCommon = Cast<UClothingAssetCommon>(ClothAsset))
             {
                 ClothObj->SetNumberField(TEXT("numLods"), ClothAssetCommon->GetNumLods());
             }
-            ClothingArray.Add(MakeShareable(new FJsonValueObject(ClothObj)));
+            ClothingArray.Add(MakeShared<FJsonValueObject>(ClothObj));
         }
         
         Result->SetArrayField(TEXT("availableClothAssets"), ClothingArray);
@@ -2202,12 +2264,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
         #endif
         if (!ClothAsset) continue;
         
-        TSharedPtr<FJsonObject> ClothObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ClothObj = McpHandlerUtils::CreateResultObject();
         ClothObj->SetStringField(TEXT("name"), ClothAsset->GetName());
-        ClothingArray.Add(MakeShareable(new FJsonValueObject(ClothObj)));
+        ClothingArray.Add(MakeShared<FJsonValueObject>(ClothObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetArrayField(TEXT("clothingAssets"), ClothingArray);
     Result->SetNumberField(TEXT("count"), ClothingArray.Num());
@@ -2267,7 +2329,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
     Mesh->MarkPackageDirty();
     McpSafeAssetSave(Mesh);
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("physicsAssetName"), PhysAsset->GetName());
@@ -2358,7 +2420,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
     PhysAsset->MarkPackageDirty();
     McpSafeAssetSave(PhysAsset);
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath);
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("remainingBodies"), PhysAsset->SkeletalBodySetups.Num());
@@ -2463,7 +2525,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     // Set the morph target value
     SkelMeshComp->SetMorphTarget(FName(*MorphTargetName), static_cast<float>(Value));
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("value"), Value);
@@ -2475,10 +2537,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     {
         if (Pair.Value > 0.0f)
         {
-            TSharedPtr<FJsonObject> MorphObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> MorphObj = McpHandlerUtils::CreateResultObject();
             MorphObj->SetStringField(TEXT("name"), Pair.Key.ToString());
             MorphObj->SetNumberField(TEXT("weight"), Pair.Value);
-            ActiveMorphs.Add(MakeShareable(new FJsonValueObject(MorphObj)));
+            ActiveMorphs.Add(MakeShared<FJsonValueObject>(MorphObj));
         }
     }
     Result->SetArrayField(TEXT("activeMorphTargets"), ActiveMorphs);
@@ -2536,7 +2598,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteSocket(
                 Skeleton->Sockets.RemoveAt(SocketIndex);
                 McpSafeAssetSave(Skeleton);
                 
-                TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+                TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
                 Result->SetStringField(TEXT("socketName"), SocketName);
                 Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
                 Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
@@ -2570,7 +2632,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteSocket(
             Skeleton->Sockets.RemoveAt(SocketIndex);
             McpSafeAssetSave(Skeleton);
             
-            TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("socketName"), SocketName);
             Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
             Result->SetNumberField(TEXT("remainingSockets"), Skeleton->Sockets.Num());
@@ -2630,15 +2692,15 @@ bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
     {
         if (MT)
         {
-            TSharedPtr<FJsonObject> MTObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> MTObj = McpHandlerUtils::CreateResultObject();
             MTObj->SetStringField(TEXT("name"), MT->GetName());
             MTObj->SetNumberField(TEXT("numDeltas"), MT->GetMorphLODModels().Num() > 0 ? 
                 MT->GetMorphLODModels()[0].Vertices.Num() : 0);
-            MorphTargetArray.Add(MakeShareable(new FJsonValueObject(MTObj)));
+            MorphTargetArray.Add(MakeShared<FJsonValueObject>(MTObj));
         }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetArrayField(TEXT("morphTargets"), MorphTargetArray);
     Result->SetNumberField(TEXT("count"), MorphTargetArray.Num());
@@ -2707,7 +2769,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
     Mesh->MarkPackageDirty();
     McpSafeAssetSave(Mesh);
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("remainingMorphTargets"), Mesh->GetMorphTargets().Num());
@@ -2795,25 +2857,25 @@ bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
     FString ParentName = ParentIndex != INDEX_NONE ? 
         RefSkeleton->GetBoneName(ParentIndex).ToString() : TEXT("");
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetNumberField(TEXT("boneIndex"), BoneIndex);
     Result->SetStringField(TEXT("parentBone"), ParentName);
     Result->SetNumberField(TEXT("parentIndex"), ParentIndex);
     
-    TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> LocationObj = McpHandlerUtils::CreateResultObject();
     LocationObj->SetNumberField(TEXT("x"), Location.X);
     LocationObj->SetNumberField(TEXT("y"), Location.Y);
     LocationObj->SetNumberField(TEXT("z"), Location.Z);
     Result->SetObjectField(TEXT("location"), LocationObj);
     
-    TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> RotationObj = McpHandlerUtils::CreateResultObject();
     RotationObj->SetNumberField(TEXT("pitch"), Rotation.Pitch);
     RotationObj->SetNumberField(TEXT("yaw"), Rotation.Yaw);
     RotationObj->SetNumberField(TEXT("roll"), Rotation.Roll);
     Result->SetObjectField(TEXT("rotation"), RotationObj);
     
-    TSharedPtr<FJsonObject> ScaleObj = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ScaleObj = McpHandlerUtils::CreateResultObject();
     ScaleObj->SetNumberField(TEXT("x"), Scale.X);
     ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
     ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
@@ -2876,14 +2938,14 @@ bool UMcpAutomationBridgeSubsystem::HandleListVirtualBones(
     TArray<TSharedPtr<FJsonValue>> VirtualBoneArray;
     for (const FVirtualBone& VB : Skeleton->GetVirtualBones())
     {
-        TSharedPtr<FJsonObject> VBObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> VBObj = McpHandlerUtils::CreateResultObject();
         VBObj->SetStringField(TEXT("name"), VB.VirtualBoneName.ToString());
         VBObj->SetStringField(TEXT("sourceBone"), VB.SourceBoneName.ToString());
         VBObj->SetStringField(TEXT("targetBone"), VB.TargetBoneName.ToString());
-        VirtualBoneArray.Add(MakeShareable(new FJsonValueObject(VBObj)));
+        VirtualBoneArray.Add(MakeShared<FJsonValueObject>(VBObj));
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletonPath"), Skeleton->GetPathName());
     Result->SetArrayField(TEXT("virtualBones"), VirtualBoneArray);
     Result->SetNumberField(TEXT("count"), VirtualBoneArray.Num());
@@ -2951,7 +3013,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
     Skeleton->RemoveVirtualBones(BonesToRemove);
     McpSafeAssetSave(Skeleton);
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletonPath"), SkeletonPath);
     Result->SetStringField(TEXT("virtualBoneName"), VirtualBoneName);
     Result->SetNumberField(TEXT("remainingVirtualBones"), Skeleton->GetVirtualBones().Num());
@@ -3009,7 +3071,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     {
         if (BodySetup)
         {
-            TSharedPtr<FJsonObject> BodyObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
             BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
             BodyObj->SetStringField(TEXT("physicsType"), 
                 BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic ? TEXT("Kinematic") :
@@ -3018,7 +3080,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
             BodyObj->SetNumberField(TEXT("numBoxes"), BodySetup->AggGeom.BoxElems.Num());
             BodyObj->SetNumberField(TEXT("numCapsules"), BodySetup->AggGeom.SphylElems.Num());
             BodyObj->SetNumberField(TEXT("numConvex"), BodySetup->AggGeom.ConvexElems.Num());
-            BodiesArray.Add(MakeShareable(new FJsonValueObject(BodyObj)));
+            BodiesArray.Add(MakeShared<FJsonValueObject>(BodyObj));
         }
     }
     
@@ -3028,16 +3090,16 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     {
         if (Constraint)
         {
-            TSharedPtr<FJsonObject> ConObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> ConObj = McpHandlerUtils::CreateResultObject();
             const FConstraintInstance& CI = Constraint->DefaultInstance;
             ConObj->SetStringField(TEXT("name"), Constraint->GetName());
             ConObj->SetStringField(TEXT("bone1"), CI.ConstraintBone1.ToString());
             ConObj->SetStringField(TEXT("bone2"), CI.ConstraintBone2.ToString());
-            ConstraintsArray.Add(MakeShareable(new FJsonValueObject(ConObj)));
+            ConstraintsArray.Add(MakeShared<FJsonValueObject>(ConObj));
         }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysAsset->GetPathName());
     Result->SetStringField(TEXT("name"), PhysAsset->GetName());
     Result->SetNumberField(TEXT("numBodies"), BodiesArray.Num());
@@ -3297,7 +3359,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         McpSafeAssetSave(NewSkeleton);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletonPath"), NewSkeleton->GetPathName());
         Result->SetStringField(TEXT("rootBoneName"), RootBoneName);
         Result->SetNumberField(TEXT("boneCount"), 1);
@@ -3386,7 +3448,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         McpSafeAssetSave(Skeleton);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("parentBone"), ParentName);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());
@@ -3440,7 +3502,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         Modifier.Remove(FName(*BoneName), bRemoveChildren);
         McpSafeAssetSave(Skeleton);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("removedBone"), BoneName);
         Result->SetBoolField(TEXT("childrenRemoved"), bRemoveChildren);
         Result->SetNumberField(TEXT("boneCount"), Skeleton->GetReferenceSkeleton().GetRawBoneNum());
@@ -3507,7 +3569,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         
         McpSafeAssetSave(Skeleton);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
         Result->SetStringField(TEXT("newParent"), NewParentName.IsEmpty() ? TEXT("(none - root)") : NewParentName);
         Result->SetNumberField(TEXT("newBoneIndex"), NewBoneIndex);
@@ -3651,7 +3713,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         Mesh->Build();
         McpSafeAssetSave(Mesh);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
         Result->SetStringField(TEXT("profileName"), ProfileName);
         Result->SetNumberField(TEXT("verticesModified"), WeightsSet);
@@ -3689,7 +3751,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         Mesh->Build();
         McpSafeAssetSave(Mesh);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
         Result->SetBoolField(TEXT("rebuilt"), true);
         
@@ -3794,7 +3856,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         TargetMesh->Build();
         McpSafeAssetSave(TargetMesh);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sourceMeshPath"), SourceMeshPath);
         Result->SetStringField(TEXT("targetMeshPath"), TargetMeshPath);
         Result->SetStringField(TEXT("profileName"), ProfileName);
@@ -3868,7 +3930,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         Mesh->Build();
         McpSafeAssetSave(Mesh);
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
         Result->SetStringField(TEXT("profileName"), ProfileName);
         Result->SetStringField(TEXT("axis"), Axis);
@@ -3907,7 +3969,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         }
         
         // Preview physics is a runtime feature - return success with note
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
         Result->SetBoolField(TEXT("previewEnabled"), bEnable);
         Result->SetStringField(TEXT("note"), TEXT("Physics preview requires PIE or runtime simulation."));

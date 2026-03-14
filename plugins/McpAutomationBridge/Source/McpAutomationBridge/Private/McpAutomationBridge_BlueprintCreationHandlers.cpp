@@ -1,18 +1,65 @@
+// =============================================================================
+// McpAutomationBridge_BlueprintCreationHandlers.cpp
+// =============================================================================
+// Handler implementations for Blueprint asset creation and configuration.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// blueprint_probe_subobject_handle:
+//   - Probes subobject handles for a temporary blueprint
+//   - Uses SubobjectDataSubsystem when available (UE 5.1+)
+//   - Falls back to SCS enumeration for earlier versions
+//
+// blueprint_create:
+//   - Creates new Blueprint assets with optional parent class
+//   - Supports actor, pawn, character blueprint types
+//   - Applies CDO properties via JSON configuration
+//   - Request coalescing for concurrent creation requests
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: ImportText has different signature than UE 5.1+
+// UE 5.1+: ImportText_Direct available for property import
+// UE 5.1+: SubobjectDataSubsystem available for subobject probing
+//
+// SECURITY:
+// ---------
+// - Asset paths validated to prevent traversal attacks
+// - Mutex-protected request coalescing prevents race conditions
+// - Safe asset saving via McpSafeAssetSave
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "McpAutomationBridge_BlueprintCreationHandlers.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
+
+// Asset Management
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#include "EditorAssetLibrary.h"
+
+// Blueprint Support
 #include "Components/ActorComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Factories/BlueprintFactory.h"
@@ -26,6 +73,7 @@
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
 
+// SubobjectDataSubsystem (UE 5.1+)
 // Respect build-rule's PublicDefinitions: if the build rule set
 // MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1 then include the subsystem headers.
 #if defined(MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM) &&                               \
@@ -66,170 +114,9 @@
 
 #endif // WITH_EDITOR
 
-/**
- * @brief Probes subobject handles for a temporary blueprint and returns gathered handles to the requester.
- *
- * Creates a temporary probe Blueprint, attempts to gather subobject handles via the SubobjectDataSubsystem when available, and falls back to enumerating SimpleConstructionScript nodes when the subsystem is not available. In non-editor builds, sends a NOT_IMPLEMENTED response.
- *
- * @param Self Pointer to the MCP Automation Bridge subsystem handling the request.
- * @param RequestId Identifier for the incoming request; used when sending the response.
- * @param LocalPayload JSON payload for the probe request (may include "componentClass").
- * @param RequestingSocket WebSocket of the requesting client; may be null for non-socket invocations.
- * @return true if the request was handled (a response was sent). 
- */
-bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
-    UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
-    const TSharedPtr<FJsonObject> &LocalPayload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  check(Self);
-  // Local extraction
-  FString ComponentClass;
-  LocalPayload->TryGetStringField(TEXT("componentClass"), ComponentClass);
-  if (ComponentClass.IsEmpty())
-    ComponentClass = TEXT("StaticMeshComponent");
-
-#if WITH_EDITOR
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-         TEXT("HandleBlueprintAction: blueprint_probe_subobject_handle start "
-              "RequestId=%s componentClass=%s"),
-         *RequestId, *ComponentClass);
-
-  auto CleanupProbeAsset = [](UBlueprint *ProbeBP) {
-#if WITH_EDITOR
-    if (ProbeBP) {
-      const FString AssetPath = ProbeBP->GetPathName();
-      if (!UEditorAssetLibrary::DeleteLoadedAsset(ProbeBP)) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-               TEXT("Failed to delete loaded probe asset: %s"), *AssetPath);
-      }
-
-      if (!AssetPath.IsEmpty() &&
-          UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
-        if (!UEditorAssetLibrary::DeleteAsset(AssetPath)) {
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-                 TEXT("Failed to delete probe asset file: %s"), *AssetPath);
-        }
-      }
-    }
-#endif
-  };
-
-  const FString ProbeFolder = TEXT("/Game/Temp/MCPProbe");
-  const FString ProbeName = FString::Printf(
-      TEXT("MCP_Probe_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Digits));
-  UBlueprint *CreatedBP = nullptr;
-  {
-    UBlueprintFactory *Factory = NewObject<UBlueprintFactory>();
-    FAssetToolsModule &AssetToolsModule =
-        FModuleManager::LoadModuleChecked<FAssetToolsModule>(
-            TEXT("AssetTools"));
-    UObject *NewObj = AssetToolsModule.Get().CreateAsset(
-        ProbeName, ProbeFolder, UBlueprint::StaticClass(), Factory);
-    if (!NewObj) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
-      Err->SetStringField(TEXT("componentClass"), ComponentClass);
-      Err->SetStringField(TEXT("error"),
-                          TEXT("Failed to create probe blueprint asset"));
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-             TEXT("blueprint_probe_subobject_handle: asset creation failed"));
-      Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                   TEXT("Failed to create probe blueprint"),
-                                   Err, TEXT("PROBE_CREATE_FAILED"));
-      return true;
-    }
-    CreatedBP = Cast<UBlueprint>(NewObj);
-    if (!CreatedBP) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
-      Err->SetStringField(TEXT("componentClass"), ComponentClass);
-      Err->SetStringField(TEXT("error"),
-                          TEXT("Probe asset was not a Blueprint"));
-      UE_LOG(
-          LogMcpAutomationBridgeSubsystem, Warning,
-          TEXT(
-              "blueprint_probe_subobject_handle: created asset not blueprint"));
-      Self->SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("Probe asset created was not a Blueprint"), Err,
-          TEXT("PROBE_CREATE_FAILED"));
-      CleanupProbeAsset(CreatedBP);
-      return true;
-    }
-    FAssetRegistryModule &Arm =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
-            TEXT("AssetRegistry"));
-    Arm.Get().AssetCreated(CreatedBP);
-  }
-
-  TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
-  ResultObj->SetStringField(TEXT("componentClass"), ComponentClass);
-  ResultObj->SetBoolField(TEXT("success"), false);
-  ResultObj->SetBoolField(TEXT("subsystemAvailable"), false);
-
-#if MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
-  if (USubobjectDataSubsystem *Subsystem =
-          (GEngine ? GEngine->GetEngineSubsystem<USubobjectDataSubsystem>()
-                   : nullptr)) {
-    ResultObj->SetBoolField(TEXT("subsystemAvailable"), true);
-
-    TArray<FSubobjectDataHandle> GatheredHandles;
-    Subsystem->K2_GatherSubobjectDataForBlueprint(CreatedBP, GatheredHandles);
-
-    TArray<TSharedPtr<FJsonValue>> HandleJsonArr;
-    const UScriptStruct *HandleStruct = FSubobjectDataHandle::StaticStruct();
-    for (int32 Index = 0; Index < GatheredHandles.Num(); ++Index) {
-      const FSubobjectDataHandle &Handle = GatheredHandles[Index];
-      FString Repr;
-      if (HandleStruct) {
-        Repr = FString::Printf(TEXT("%s@%p"), *HandleStruct->GetName(),
-                               (void *)&Handle);
-      } else {
-        Repr = FString::Printf(TEXT("<subobject_handle_%d>"), Index);
-      }
-      HandleJsonArr.Add(MakeShared<FJsonValueString>(Repr));
-    }
-    ResultObj->SetArrayField(TEXT("gatheredHandles"), HandleJsonArr);
-    ResultObj->SetBoolField(TEXT("success"), true);
-
-    CleanupProbeAsset(CreatedBP);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-                                 TEXT("Native probe completed"), ResultObj,
-                                 FString());
-    return true;
-  }
-#endif
-
-  // Subsystem unavailable – fallback to simple SCS enumeration
-  ResultObj->SetBoolField(TEXT("subsystemAvailable"), false);
-  TArray<TSharedPtr<FJsonValue>> HandleJsonArr;
-  if (CreatedBP && CreatedBP->SimpleConstructionScript) {
-    const TArray<USCS_Node *> &Nodes =
-        CreatedBP->SimpleConstructionScript->GetAllNodes();
-    for (USCS_Node *Node : Nodes) {
-      if (!Node || !Node->GetVariableName().IsValid())
-        continue;
-      HandleJsonArr.Add(MakeShared<FJsonValueString>(FString::Printf(
-          TEXT("scs://%s"), *Node->GetVariableName().ToString())));
-    }
-  }
-  if (HandleJsonArr.Num() == 0) {
-    HandleJsonArr.Add(
-        MakeShared<FJsonValueString>(TEXT("<probe_handle_stub>")));
-  }
-  ResultObj->SetArrayField(TEXT("gatheredHandles"), HandleJsonArr);
-  ResultObj->SetBoolField(TEXT("success"), true);
-
-  CleanupProbeAsset(CreatedBP);
-  Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Fallback probe completed"), ResultObj,
-                               FString());
-  return true;
-#else
-  Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Blueprint probe requires editor build."),
-                               nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif // WITH_EDITOR
-}
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 /**
  * @brief Applies JSON-defined property values to a UObject, recursively handling nested object properties.
@@ -301,6 +188,184 @@ static void ApplyPropertiesToObject(UObject *TargetObj,
   }
 }
 
+// =============================================================================
+// Handler Implementations
+// =============================================================================
+
+/**
+ * @brief Probes subobject handles for a temporary blueprint and returns gathered handles to the requester.
+ *
+ * Creates a temporary probe Blueprint, attempts to gather subobject handles via the SubobjectDataSubsystem when available, and falls back to enumerating SimpleConstructionScript nodes when the subsystem is not available. In non-editor builds, sends a NOT_IMPLEMENTED response.
+ *
+ * @param Self Pointer to the MCP Automation Bridge subsystem handling the request.
+ * @param RequestId Identifier for the incoming request; used when sending the response.
+ * @param LocalPayload JSON payload for the probe request (may include "componentClass").
+ * @param RequestingSocket WebSocket of the requesting client; may be null for non-socket invocations.
+ * @return true if the request was handled (a response was sent). 
+ */
+bool FBlueprintCreationHandlers::HandleBlueprintProbeSubobjectHandle(
+    UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &LocalPayload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  check(Self);
+  // Local extraction
+  FString ComponentClass;
+  LocalPayload->TryGetStringField(TEXT("componentClass"), ComponentClass);
+  if (ComponentClass.IsEmpty())
+    ComponentClass = TEXT("StaticMeshComponent");
+
+#if WITH_EDITOR
+  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+         TEXT("HandleBlueprintAction: blueprint_probe_subobject_handle start "
+              "RequestId=%s componentClass=%s"),
+         *RequestId, *ComponentClass);
+
+  // ---------------------------------------------------------------------------
+  // Cleanup Lambda for probe asset
+  // ---------------------------------------------------------------------------
+  auto CleanupProbeAsset = [](UBlueprint *ProbeBP) {
+#if WITH_EDITOR
+    if (ProbeBP) {
+      const FString AssetPath = ProbeBP->GetPathName();
+      if (!UEditorAssetLibrary::DeleteLoadedAsset(ProbeBP)) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("Failed to delete loaded probe asset: %s"), *AssetPath);
+      }
+
+      if (!AssetPath.IsEmpty() &&
+          UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+        if (!UEditorAssetLibrary::DeleteAsset(AssetPath)) {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+                 TEXT("Failed to delete probe asset file: %s"), *AssetPath);
+        }
+      }
+    }
+#endif
+  };
+
+  // ---------------------------------------------------------------------------
+  // Create Probe Blueprint
+  // ---------------------------------------------------------------------------
+  const FString ProbeFolder = TEXT("/Game/Temp/MCPProbe");
+  const FString ProbeName = FString::Printf(
+      TEXT("MCP_Probe_%s"), *FGuid::NewGuid().ToString(EGuidFormats::Digits));
+  UBlueprint *CreatedBP = nullptr;
+  {
+    UBlueprintFactory *Factory = NewObject<UBlueprintFactory>();
+    FAssetToolsModule &AssetToolsModule =
+        FModuleManager::LoadModuleChecked<FAssetToolsModule>(
+            TEXT("AssetTools"));
+    UObject *NewObj = AssetToolsModule.Get().CreateAsset(
+        ProbeName, ProbeFolder, UBlueprint::StaticClass(), Factory);
+    if (!NewObj) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("componentClass"), ComponentClass);
+      Err->SetStringField(TEXT("error"),
+                          TEXT("Failed to create probe blueprint asset"));
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+             TEXT("blueprint_probe_subobject_handle: asset creation failed"));
+      Self->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                   TEXT("Failed to create probe blueprint"),
+                                   Err, TEXT("PROBE_CREATE_FAILED"));
+      return true;
+    }
+    CreatedBP = Cast<UBlueprint>(NewObj);
+    if (!CreatedBP) {
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+      Err->SetStringField(TEXT("componentClass"), ComponentClass);
+      Err->SetStringField(TEXT("error"),
+                          TEXT("Probe asset was not a Blueprint"));
+      UE_LOG(
+          LogMcpAutomationBridgeSubsystem, Warning,
+          TEXT(
+              "blueprint_probe_subobject_handle: created asset not blueprint"));
+      Self->SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("Probe asset created was not a Blueprint"), Err,
+          TEXT("PROBE_CREATE_FAILED"));
+      CleanupProbeAsset(CreatedBP);
+      return true;
+    }
+    FAssetRegistryModule &Arm =
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
+            TEXT("AssetRegistry"));
+    Arm.Get().AssetCreated(CreatedBP);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Gather Subobject Handles
+  // ---------------------------------------------------------------------------
+  TSharedPtr<FJsonObject> ResultObj = McpHandlerUtils::CreateResultObject();
+  ResultObj->SetStringField(TEXT("componentClass"), ComponentClass);
+  ResultObj->SetBoolField(TEXT("success"), false);
+  ResultObj->SetBoolField(TEXT("subsystemAvailable"), false);
+
+#if MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
+  if (USubobjectDataSubsystem *Subsystem =
+          (GEngine ? GEngine->GetEngineSubsystem<USubobjectDataSubsystem>()
+                   : nullptr)) {
+    ResultObj->SetBoolField(TEXT("subsystemAvailable"), true);
+
+    TArray<FSubobjectDataHandle> GatheredHandles;
+    Subsystem->K2_GatherSubobjectDataForBlueprint(CreatedBP, GatheredHandles);
+
+    TArray<TSharedPtr<FJsonValue>> HandleJsonArr;
+    const UScriptStruct *HandleStruct = FSubobjectDataHandle::StaticStruct();
+    for (int32 Index = 0; Index < GatheredHandles.Num(); ++Index) {
+      const FSubobjectDataHandle &Handle = GatheredHandles[Index];
+      FString Repr;
+      if (HandleStruct) {
+        Repr = FString::Printf(TEXT("%s@%p"), *HandleStruct->GetName(),
+                               (void *)&Handle);
+      } else {
+        Repr = FString::Printf(TEXT("<subobject_handle_%d>"), Index);
+      }
+      HandleJsonArr.Add(MakeShared<FJsonValueString>(Repr));
+    }
+    ResultObj->SetArrayField(TEXT("gatheredHandles"), HandleJsonArr);
+    ResultObj->SetBoolField(TEXT("success"), true);
+
+    CleanupProbeAsset(CreatedBP);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+                                 TEXT("Native probe completed"), ResultObj,
+                                 FString());
+    return true;
+  }
+#endif
+
+  // Fallback: SCS enumeration when subsystem unavailable
+  ResultObj->SetBoolField(TEXT("subsystemAvailable"), false);
+  TArray<TSharedPtr<FJsonValue>> HandleJsonArr;
+  if (CreatedBP && CreatedBP->SimpleConstructionScript) {
+    const TArray<USCS_Node *> &Nodes =
+        CreatedBP->SimpleConstructionScript->GetAllNodes();
+    for (USCS_Node *Node : Nodes) {
+      if (!Node || !Node->GetVariableName().IsValid())
+        continue;
+      HandleJsonArr.Add(MakeShared<FJsonValueString>(FString::Printf(
+          TEXT("scs://%s"), *Node->GetVariableName().ToString())));
+    }
+  }
+  if (HandleJsonArr.Num() == 0) {
+    HandleJsonArr.Add(
+        MakeShared<FJsonValueString>(TEXT("<probe_handle_stub>")));
+  }
+  ResultObj->SetArrayField(TEXT("gatheredHandles"), HandleJsonArr);
+  ResultObj->SetBoolField(TEXT("success"), true);
+
+  CleanupProbeAsset(CreatedBP);
+  Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("Fallback probe completed"), ResultObj,
+                               FString());
+  return true;
+#else
+  Self->SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Blueprint probe requires editor build."),
+                               nullptr, TEXT("NOT_IMPLEMENTED"));
+  return true;
+#endif // WITH_EDITOR
+}
+
 /**
  * @brief Create a new Blueprint asset from the provided payload and send a completion response to the requester (coalesces concurrent requests for the same path).
  *
@@ -331,6 +396,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("HandleBlueprintCreate ENTRY: RequestId=%s"), *RequestId);
 
+  // -------------------------------------------------------------------------
+  // Validate Required Fields
+  // -------------------------------------------------------------------------
   FString Name;
   LocalPayload->TryGetStringField(TEXT("name"), Name);
   if (Name.TrimStartAndEnd().IsEmpty()) {
@@ -339,14 +407,28 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
                                  nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
+
   FString SavePath;
   LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
   if (SavePath.TrimStartAndEnd().IsEmpty())
     SavePath = TEXT("/Game");
+  
+  // Sanitize savePath to prevent traversal attacks
+  SavePath = SanitizeProjectRelativePath(SavePath);
+  if (SavePath.IsEmpty())
+  {
+    Self->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 TEXT("Invalid savePath."), nullptr,
+                                 TEXT("INVALID_PATH"));
+    return true;
+  }
+
   FString ParentClassSpec;
   LocalPayload->TryGetStringField(TEXT("parentClass"), ParentClassSpec);
+
   FString BlueprintTypeSpec;
   LocalPayload->TryGetStringField(TEXT("blueprintType"), BlueprintTypeSpec);
+
   const double Now = FPlatformTime::Seconds();
   const FString CreateKey = FString::Printf(TEXT("%s/%s"), *SavePath, *Name);
 
@@ -358,7 +440,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
       TEXT("HandleBlueprintCreate: name=%s, savePath=%s, waitForCompletion=%s"),
       *Name, *SavePath, bWaitForCompletion ? TEXT("true") : TEXT("false"));
 
-  // Track in-flight requests regardless so all waiters receive completion
+  // -------------------------------------------------------------------------
+  // Request Coalescing (Track In-Flight Requests)
+  // -------------------------------------------------------------------------
   {
     FScopeLock Lock(&GBlueprintCreateMutex);
     if (GBlueprintCreateInflight.Contains(CreateKey)) {
@@ -380,7 +464,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   }
 
 #if WITH_EDITOR
-  // Perform real creation (editor only)
+  // -------------------------------------------------------------------------
+  // Editor: Perform Real Creation
+  // -------------------------------------------------------------------------
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("HandleBlueprintCreate: Starting blueprint creation "
               "(WITH_EDITOR=1)"));
@@ -403,12 +489,12 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
           CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
     }
 
-    TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
     ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
     ResultPayload->SetStringField(TEXT("assetPath"),
                                   PreExistingBP->GetPathName());
     ResultPayload->SetBoolField(TEXT("saved"), true);
-    AddAssetVerification(ResultPayload, PreExistingBP);
+    McpHandlerUtils::AddVerification(ResultPayload, PreExistingBP);
 
     FScopeLock Lock(&GBlueprintCreateMutex);
     if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
@@ -434,6 +520,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // Resolve Parent Class
+  // -------------------------------------------------------------------------
   const FString NormalizedParentClassSpec =
       ParentClassSpec.ToLower().Replace(TEXT(" "), TEXT(""));
   const bool bRequestedFunctionLibraryByParentSpec =
@@ -515,6 +604,10 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     Factory = BlueprintFactory;
   }
 
+
+  // -------------------------------------------------------------------------
+  // Create Blueprint Asset
+  // -------------------------------------------------------------------------
   FAssetToolsModule &AssetToolsModule =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
   UObject *NewObj = AssetToolsModule.Get().CreateAsset(
@@ -528,7 +621,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
 
   CreatedBlueprint = Cast<UBlueprint>(NewObj);
 
-  // Apply optional CDO properties immediately if provided
+  // -------------------------------------------------------------------------
+  // Apply CDO Properties
+  // -------------------------------------------------------------------------
   if (CreatedBlueprint && CreatedBlueprint->GeneratedClass) {
     const TSharedPtr<FJsonObject> *PropertiesPtr;
     if (LocalPayload->TryGetObjectField(TEXT("properties"), PropertiesPtr)) {
@@ -541,6 +636,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Handle Creation Failure (check for existing asset)
+  // -------------------------------------------------------------------------
   if (!CreatedBlueprint) {
     // If creation failed, check whether a Blueprint already exists at the
     // target path. AssetTools will return nullptr when an asset with the
@@ -560,12 +658,12 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
             CreatedNormalizedPath.Left(CreatedNormalizedPath.Find(TEXT(".")));
       }
 
-      TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
       ResultPayload->SetStringField(TEXT("assetPath"),
                                     ExistingBP->GetPathName());
       ResultPayload->SetBoolField(TEXT("saved"), true);
-      AddAssetVerification(ResultPayload, ExistingBP);
+      McpHandlerUtils::AddVerification(ResultPayload, ExistingBP);
 
       FScopeLock Lock(&GBlueprintCreateMutex);
       if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
@@ -616,6 +714,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // Success: Register and Respond
+  // -------------------------------------------------------------------------
   CreatedNormalizedPath = CreatedBlueprint->GetPathName();
   if (CreatedNormalizedPath.Contains(TEXT(".")))
     CreatedNormalizedPath =
@@ -625,12 +726,13 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
           TEXT("AssetRegistry"));
   AssetRegistryModule.AssetCreated(CreatedBlueprint);
 
-  TSharedPtr<FJsonObject> ResultPayload = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("path"), CreatedNormalizedPath);
   ResultPayload->SetStringField(TEXT("assetPath"),
                                 CreatedBlueprint->GetPathName());
   ResultPayload->SetBoolField(TEXT("saved"), true);
-  AddAssetVerification(ResultPayload, CreatedBlueprint);
+  McpHandlerUtils::AddVerification(ResultPayload, CreatedBlueprint);
+
   FScopeLock Lock(&GBlueprintCreateMutex);
   if (TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subs =
           GBlueprintCreateInflight.Find(CreateKey)) {
@@ -650,6 +752,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
                                  FString());
   }
 
+  // -------------------------------------------------------------------------
+  // Force Save and Scan for Availability
+  // -------------------------------------------------------------------------
   TWeakObjectPtr<UBlueprint> WeakCreatedBp = CreatedBlueprint;
   if (WeakCreatedBp.IsValid()) {
     UBlueprint *BP = WeakCreatedBp.Get();

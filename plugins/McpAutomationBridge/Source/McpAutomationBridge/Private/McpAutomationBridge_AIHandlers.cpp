@@ -1,15 +1,62 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_AIHandlers.cpp
-// Phase 16: AI System
-// Implements 35 actions for AI controllers, blackboards, behavior trees, EQS, perception,
-// state trees, smart objects, and mass AI.
+// =============================================================================
+// Phase 16: AI System Handlers
+//
+// Provides comprehensive AI, behavior tree, EQS, perception, state tree, smart objects,
+// and mass AI capabilities for the MCP Automation Bridge.
+//
+// HANDLERS BY CATEGORY:
+// ---------------------
+// 16.1  AI Controllers      - create_ai_controller, get_ai_controller_info, possess_pawn,
+//                              set_focus, clear_focus, run_behavior_tree
+// 16.2  Blackboard          - create_blackboard, get_blackboard_info, set_blackboard_value,
+//                              get_blackboard_value, clear_blackboard_value, add_blackboard_key
+// 16.3  Behavior Tree       - create_behavior_tree, get_behavior_tree_info, add_bt_node,
+//                              remove_bt_node, set_bt_node_property
+// 16.4  Environment Query   - create_env_query, run_env_query, add_eqs_generator, add_eqs_test
+// 16.5  AI Perception       - configure_perception, add_sight_config, add_hearing_config,
+//                              add_damage_config, get_perception_info
+// 16.6  State Tree (5.3+)   - create_state_tree, add_state_tree_state, compile_state_tree
+// 16.7  Smart Objects (5+)  - create_smart_object_definition, register_smart_object
+// 16.8  Mass AI (5+)        - create_mass_entity, spawn_mass_entities
+// 16.9  Navigation AI       - move_to_location, move_to_actor, get_nav_path, add_nav_modifier
+// 16.10 Utility Actions     - get_ai_info, validate_ai_setup, debug_ai_state
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// - UE 5.0: Basic AI, EQS, Perception, Smart Objects, Mass AI
+// - UE 5.1+: EnvQueryTest headers available (EnvQueryTest_Distance, EnvQueryTest_Trace)
+// - UE 5.3+: State Tree module available
+// - UE 5.7+: StateTreeComponentSchema moved to GameplayStateTreeModule
+//
+// REFACTORING NOTES:
+// ------------------
+// - Conditional includes for State Tree, Smart Objects, Mass AI via __has_include
+// - Helper macros (GetStringFieldAI, etc.) for JSON field access
+// - SavePackageHelperAI for safe asset saving (avoids FullyLoad on new packages)
+// - Uses MCP_HAS_* macros for feature detection
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
+
+// MCP Core
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
+#include "McpHandlerUtils.h"
+
+// JSON
+#include "Dom/JsonObject.h"
+
+// Engine Version
 #include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
+
+// Blueprint & Asset Tools
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Factories/BlueprintFactory.h"
@@ -20,7 +67,11 @@
 #include "UObject/SavePackage.h"
 #include "Misc/PackageName.h"
 #include "HAL/FileManager.h"
+
+// AI Controller
 #include "AIController.h"
+
+// Behavior Tree
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
@@ -44,13 +95,15 @@
 #include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
 #include "BehaviorTree/Decorators/BTDecorator_Cooldown.h"
 #include "BehaviorTree/Decorators/BTDecorator_Loop.h"
+
+// Environment Query
 #include "EnvironmentQuery/EnvQuery.h"
 #include "EnvironmentQuery/EnvQueryManager.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_ActorsOfClass.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_OnCircle.h"
 #include "EnvironmentQuery/Generators/EnvQueryGenerator_SimpleGrid.h"
 
-// EnvQueryTest headers are in EnvironmentQueryEditor module which may not be available in UE 5.0
+// EQS Tests (UE 5.1+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "EnvironmentQuery/Tests/EnvQueryTest_Distance.h"
 #include "EnvironmentQuery/Tests/EnvQueryTest_Trace.h"
@@ -58,6 +111,8 @@
 #else
 #define MCP_HAS_ENVQUERY_TESTS 0
 #endif
+
+// AI Perception
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Hearing.h"
@@ -65,9 +120,13 @@
 #include "Perception/AISense_Sight.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
+
+// Engine Components
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SCS_Node.h"
 #include "GameFramework/CharacterMovementComponent.h"
+
+// Navigation
 #include "NavModifierComponent.h"
 #include "NavAreas/NavArea.h"
 #include "NavAreas/NavArea_Default.h"
@@ -75,7 +134,11 @@
 #include "NavAreas/NavArea_Obstacle.h"
 #endif
 
-// Attempt to include State Tree (UE 5.3+)
+// =============================================================================
+// Conditional Includes (version-dependent)
+// =============================================================================
+
+// State Tree (UE 5.3+)
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
 #define MCP_HAS_STATE_TREE 1
 #if __has_include("StateTree.h")
@@ -84,6 +147,7 @@
 #include "StateTreeState.h"
 #include "StateTreeCompiler.h"
 #include "StateTreeCompilerLog.h"
+
 // UE 5.7+ moved StateTreeComponentSchema to GameplayStateTreeModule
 #if __has_include("Components/StateTreeComponentSchema.h")
 #include "Components/StateTreeComponentSchema.h"
@@ -102,7 +166,7 @@
 #define MCP_STATE_TREE_COMPONENT_SCHEMA_AVAILABLE 0
 #endif
 
-// Attempt to include Smart Objects (UE 5.0+)
+// Smart Objects (UE 5.0+)
 #if ENGINE_MAJOR_VERSION >= 5
 #define MCP_HAS_SMART_OBJECTS 1
 #if __has_include("SmartObjectDefinition.h")
@@ -119,7 +183,7 @@
 #define MCP_SMART_OBJECTS_HEADERS_AVAILABLE 0
 #endif
 
-// Attempt to include Mass AI (UE 5.0+)
+// Mass AI (UE 5.0+)
 #if ENGINE_MAJOR_VERSION >= 5
 #define MCP_HAS_MASS_AI 1
 #if __has_include("MassEntityConfigAsset.h")
@@ -431,7 +495,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     // =========================================================================
     // 16.1 AI Controller (3 actions)
@@ -460,7 +524,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("controllerPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created AI Controller: %s"), *Name));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI Controller created"), Result);
         return true;
     }
@@ -544,7 +608,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         McpSafeAssetSave(Controller);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
-        AddAssetVerification(Result, Controller);
+        McpHandlerUtils::AddVerification(Result, Controller);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree reference set"), Result);
         return true;
     }
@@ -629,7 +693,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetBoolField(TEXT("saved"), bSaved);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("blackboardPath"), BlackboardPath);
-        AddAssetVerification(Result, Controller);
+        McpHandlerUtils::AddVerification(Result, Controller);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard reference set"), Result);
         return true;
     }
@@ -661,7 +725,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Blackboard: %s"), *Name));
-        AddAssetVerification(Result, Blackboard);
+        McpHandlerUtils::AddVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), Result);
         return true;
     }
@@ -743,7 +807,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("keyIndex"), Blackboard->Keys.Num() - 1);
         Result->SetStringField(TEXT("keyName"), KeyName);
         Result->SetStringField(TEXT("keyType"), KeyType);
-        AddAssetVerification(Result, Blackboard);
+        McpHandlerUtils::AddVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard key added"), Result);
         return true;
     }
@@ -787,7 +851,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("keyName"), KeyName);
         Result->SetBoolField(TEXT("isInstanceSynced"), bInstanceSynced);
-        AddAssetVerification(Result, Blackboard);
+        McpHandlerUtils::AddVerification(Result, Blackboard);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Key instance sync updated"), Result);
         return true;
     }
@@ -819,7 +883,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("behaviorTreePath"), BT->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Behavior Tree: %s"), *Name));
-        AddAssetVerification(Result, BT);
+        McpHandlerUtils::AddVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree created"), Result);
         return true;
     }
@@ -862,7 +926,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
             Result->SetStringField(TEXT("compositeType"), CompositeType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s node"), *CompositeType));
-            AddAssetVerification(Result, BT);
+            McpHandlerUtils::AddVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Composite node added"), Result);
         }
         else
@@ -905,7 +969,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             BT->MarkPackageDirty();
             Result->SetStringField(TEXT("taskType"), TaskType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s task"), *TaskType));
-            AddAssetVerification(Result, BT);
+            McpHandlerUtils::AddVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Task node added"), Result);
         }
         else
@@ -952,7 +1016,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             BT->MarkPackageDirty();
             Result->SetStringField(TEXT("decoratorType"), DecoratorType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s decorator"), *DecoratorType));
-            AddAssetVerification(Result, BT);
+            McpHandlerUtils::AddVerification(Result, BT);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Decorator added"), Result);
         }
         else
@@ -985,7 +1049,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("serviceType"), ServiceType);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s reference created"), *ServiceType));
 
-        AddAssetVerification(Result, BT);
+        McpHandlerUtils::AddVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
         return true;
     }
@@ -1009,7 +1073,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("nodeId"), NodeId);
         Result->SetStringField(TEXT("message"), TEXT("Node configuration updated"));
 
-        AddAssetVerification(Result, BT);
+        McpHandlerUtils::AddVerification(Result, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Node configured"), Result);
         return true;
     }
@@ -1041,7 +1105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Result->SetStringField(TEXT("queryPath"), Query->GetPathName());
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created EQS Query: %s"), *Name));
-        AddAssetVerification(Result, Query);
+        McpHandlerUtils::AddVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("EQS Query created"), Result);
         return true;
     }
@@ -1080,7 +1144,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             Query->MarkPackageDirty();
             Result->SetStringField(TEXT("generatorType"), GeneratorType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s generator"), *GeneratorType));
-            AddAssetVerification(Result, Query);
+            McpHandlerUtils::AddVerification(Result, Query);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Generator added"), Result);
         }
         else
@@ -1111,7 +1175,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("contextType"), ContextType);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Context %s configured"), *ContextType));
 
-        AddAssetVerification(Result, Query);
+        McpHandlerUtils::AddVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Context added"), Result);
         return true;
     }
@@ -1166,7 +1230,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             Query->MarkPackageDirty();
             Result->SetStringField(TEXT("testType"), TestType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s test"), *TestType));
-            AddAssetVerification(Result, Query);
+            McpHandlerUtils::AddVerification(Result, Query);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Test added"), Result);
         }
         else
@@ -1198,7 +1262,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetNumberField(TEXT("testIndex"), TestIndex);
         Result->SetStringField(TEXT("message"), TEXT("Test scoring configured"));
 
-        AddAssetVerification(Result, Query);
+        McpHandlerUtils::AddVerification(Result, Query);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Scoring configured"), Result);
         return true;
     }
@@ -1238,7 +1302,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
             Result->SetStringField(TEXT("componentName"), TEXT("AIPerception"));
             Result->SetStringField(TEXT("message"), TEXT("AI Perception component added"));
-            AddAssetVerification(Result, Blueprint);
+            McpHandlerUtils::AddVerification(Result, Blueprint);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Perception component added"), Result);
         }
         else
@@ -1279,7 +1343,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Sight sense configured"));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Sight config set"), Result);
         return true;
     }
@@ -1306,7 +1370,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Hearing sense configured"));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hearing config set"), Result);
         return true;
     }
@@ -1326,7 +1390,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         Blueprint->MarkPackageDirty();
         Result->SetStringField(TEXT("message"), TEXT("Damage sense configured"));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage config set"), Result);
         return true;
     }
@@ -1348,7 +1412,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Blueprint->MarkPackageDirty();
         Result->SetNumberField(TEXT("teamId"), TeamId);
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Team ID set to %d"), TeamId));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
         return true;
     }
@@ -1417,7 +1481,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("stateTreePath"), FullPath);
         Result->SetStringField(TEXT("rootStateName"), TEXT("Root"));
         Result->SetStringField(TEXT("message"), TEXT("State Tree created with root state"));
-        AddAssetVerification(Result, StateTree);
+        McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
 #elif MCP_HAS_STATE_TREE
         // Headers not available but version supports it
@@ -1526,7 +1590,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         Result->SetStringField(TEXT("parentState"), ParentStateName);
         Result->SetStringField(TEXT("stateType"), StateType);
         Result->SetStringField(TEXT("message"), TEXT("State added to StateTree"));
-        AddAssetVerification(Result, StateTree);
+        McpHandlerUtils::AddVerification(Result, StateTree);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
 #elif MCP_HAS_STATE_TREE
         FString StateTreePath = GetStringFieldAI(Payload, TEXT("stateTreePath"));
@@ -2263,7 +2327,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
     if (SubAction == TEXT("get_ai_info"))
     {
-        TSharedPtr<FJsonObject> AIInfo = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> AIInfo = McpHandlerUtils::CreateResultObject();
 
         // Check for controller
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
@@ -2299,11 +2363,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                 TArray<TSharedPtr<FJsonValue>> KeysArray;
                 for (const FBlackboardEntry& Entry : BB->Keys)
                 {
-                    TSharedPtr<FJsonObject> KeyObj = MakeShareable(new FJsonObject());
+                    TSharedPtr<FJsonObject> KeyObj = McpHandlerUtils::CreateResultObject();
                     KeyObj->SetStringField(TEXT("name"), Entry.EntryName.ToString());
                     KeyObj->SetStringField(TEXT("type"), Entry.KeyType ? Entry.KeyType->GetClass()->GetName() : TEXT("Unknown"));
                     KeyObj->SetBoolField(TEXT("instanceSynced"), Entry.bInstanceSynced);
-                    KeysArray.Add(MakeShareable(new FJsonValueObject(KeyObj)));
+                    KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
                 }
                 AIInfo->SetArrayField(TEXT("keys"), KeysArray);
             }
@@ -2469,14 +2533,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> PerceptionResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> PerceptionResult = McpHandlerUtils::CreateResultObject();
         PerceptionResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         PerceptionResult->SetBoolField(TEXT("createdNew"), bCreatedNew);
         
         TArray<TSharedPtr<FJsonValue>> SensesArray;
         for (const FString& Sense : SensesConfigured)
         {
-            SensesArray.Add(MakeShareable(new FJsonValueString(Sense)));
+            SensesArray.Add(MakeShared<FJsonValueString>(Sense));
         }
         PerceptionResult->SetArrayField(TEXT("sensesConfigured"), SensesArray);
         
@@ -2572,7 +2636,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> NavModResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
         NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         NavModResult->SetStringField(TEXT("componentName"), ComponentName);
         // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
@@ -2728,19 +2792,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> MovementResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> MovementResult = McpHandlerUtils::CreateResultObject();
         MovementResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         
         TArray<TSharedPtr<FJsonValue>> PropsArray;
         for (const FString& Prop : PropertiesSet)
         {
-            PropsArray.Add(MakeShareable(new FJsonValueString(Prop)));
+            PropsArray.Add(MakeShared<FJsonValueString>(Prop));
         }
         MovementResult->SetArrayField(TEXT("propertiesSet"), PropsArray);
         MovementResult->SetNumberField(TEXT("propertyCount"), PropertiesSet.Num());
 
         // Include current values
-        TSharedPtr<FJsonObject> CurrentValues = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> CurrentValues = McpHandlerUtils::CreateResultObject();
         CurrentValues->SetNumberField(TEXT("maxWalkSpeed"), MovementComp->MaxWalkSpeed);
         CurrentValues->SetNumberField(TEXT("maxAcceleration"), MovementComp->MaxAcceleration);
         CurrentValues->SetNumberField(TEXT("rotationRateYaw"), MovementComp->RotationRate.Yaw);
@@ -2783,7 +2847,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
         {
-            TSharedPtr<FJsonObject> ExistResult = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
             ExistResult->SetStringField(TEXT("blackboardPath"), SanitizedPath);
             ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard already exists"), ExistResult);
@@ -2799,7 +2863,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         McpSafeAssetSave(NewBB);
 
-        TSharedPtr<FJsonObject> BBResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> BBResult = McpHandlerUtils::CreateResultObject();
         BBResult->SetStringField(TEXT("blackboardPath"), SanitizedPath);
         BBResult->SetBoolField(TEXT("alreadyExisted"), false);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), BBResult);
@@ -2918,14 +2982,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> PerceptionResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> PerceptionResult = McpHandlerUtils::CreateResultObject();
         PerceptionResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         PerceptionResult->SetBoolField(TEXT("createdNew"), bCreatedNew);
 
         TArray<TSharedPtr<FJsonValue>> SensesArray;
         for (const FString& Sense : SensesConfigured)
         {
-            SensesArray.Add(MakeShareable(new FJsonValueString(Sense)));
+            SensesArray.Add(MakeShared<FJsonValueString>(Sense));
         }
         PerceptionResult->SetArrayField(TEXT("sensesConfigured"), SensesArray);
 
@@ -2962,7 +3026,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
         {
-            TSharedPtr<FJsonObject> ExistResult = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
             ExistResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
             ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint already exists"), ExistResult);
@@ -2992,7 +3056,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NavLinkBP);
         McpSafeAssetSave(NavLinkBP);
 
-        TSharedPtr<FJsonObject> NavResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> NavResult = McpHandlerUtils::CreateResultObject();
         NavResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
         NavResult->SetBoolField(TEXT("alreadyExisted"), false);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint created"), NavResult);
@@ -3032,7 +3096,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> FocusResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> FocusResult = McpHandlerUtils::CreateResultObject();
         FocusResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         FocusResult->SetStringField(TEXT("focusActorName"), FocusActorName);
         FocusResult->SetBoolField(TEXT("focusSet"), true);
@@ -3064,7 +3128,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> ClearResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ClearResult = McpHandlerUtils::CreateResultObject();
         ClearResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         ClearResult->SetBoolField(TEXT("focusCleared"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Focus cleared on controller"), ClearResult);
@@ -3173,7 +3237,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
 
         McpSafeAssetSave(BBData);
 
-        TSharedPtr<FJsonObject> SetResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> SetResult = McpHandlerUtils::CreateResultObject();
         SetResult->SetStringField(TEXT("blackboardPath"), BBPath);
         SetResult->SetStringField(TEXT("keyName"), KeyName);
         SetResult->SetStringField(TEXT("value"), ValueStr);
@@ -3240,7 +3304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> GetResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> GetResult = McpHandlerUtils::CreateResultObject();
         GetResult->SetStringField(TEXT("blackboardPath"), BBPath);
         GetResult->SetStringField(TEXT("keyName"), KeyName);
         GetResult->SetStringField(TEXT("keyType"), KeyType);
@@ -3291,7 +3355,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> RunResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> RunResult = McpHandlerUtils::CreateResultObject();
         RunResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         RunResult->SetStringField(TEXT("behaviorTreePath"), BTPath);
         RunResult->SetBoolField(TEXT("assigned"), true);
@@ -3323,7 +3387,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(ControllerBP);
         McpSafeAssetSave(ControllerBP);
 
-        TSharedPtr<FJsonObject> StopResult = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> StopResult = McpHandlerUtils::CreateResultObject();
         StopResult->SetStringField(TEXT("controllerPath"), ControllerPath);
         StopResult->SetBoolField(TEXT("stopped"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior tree stopped"), StopResult);

@@ -1,25 +1,82 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_GASHandlers.cpp
-// Phase 13: Gameplay Ability System (GAS)
-// Implements 31 actions for abilities, effects, attributes, and gameplay cues.
-// 
-// Actions:
-// 13.1 Components & Attributes: add_ability_system_component, configure_asc, create_attribute_set,
-//      add_attribute, set_attribute_base_value, set_attribute_clamping
-// 13.2 Abilities: create_gameplay_ability, set_ability_tags, set_ability_costs, set_ability_cooldown,
-//      set_ability_targeting, add_ability_task, set_activation_policy, set_instancing_policy
-// 13.3 Effects: create_gameplay_effect, set_effect_duration, add_effect_modifier, set_modifier_magnitude,
-//      add_effect_execution_calculation, add_effect_cue, set_effect_stacking, set_effect_tags
-// 13.4 Cues: create_gameplay_cue_notify, configure_cue_trigger, set_cue_effects
-// 13.5 Tags/Utility: add_tag_to_asset, get_gas_info
-// 13.6 Ability Sets: create_ability_set, add_ability, grant_ability
-// 13.7 Execution Calculations: create_execution_calculation
+// =============================================================================
+// Gameplay Ability System (GAS) Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED (31+ actions):
+// -----------------------------------
+// Section 1: Components & Attributes
+//   - add_ability_system_component   : Add UAbilitySystemComponent to Blueprint
+//   - configure_asc                   : Configure ASC replication mode
+//   - create_attribute_set            : Create UAttributeSet derived class
+//   - add_attribute                   : Add attribute to attribute set
+//   - set_attribute_base_value        : Set base value of attribute
+//   - set_attribute_clamping          : Configure attribute min/max
+//
+// Section 2: Abilities
+//   - create_gameplay_ability        : Create UGameplayAbility Blueprint
+//   - set_ability_tags                : Configure ability tags
+//   - set_ability_costs               : Set cost gameplay effect
+//   - set_ability_cooldown            : Set cooldown gameplay effect
+//   - set_ability_targeting           : Configure targeting requirements
+//   - add_ability_task                : Add ability task node
+//   - set_activation_policy           : Set activation policy
+//   - set_instancing_policy           : Set instancing policy
+//
+// Section 3: Effects
+//   - create_gameplay_effect          : Create UGameplayEffect class
+//   - set_effect_duration             : Configure duration/magnitude
+//   - add_effect_modifier             : Add attribute modifier
+//   - set_modifier_magnitude          : Set magnitude calculation
+//   - add_effect_execution_calculation: Add execution calculation
+//   - add_effect_cue                  : Add gameplay cue
+//   - set_effect_stacking             : Configure stacking behavior
+//   - set_effect_tags                 : Set granted/required tags
+//
+// Section 4: Cues
+//   - create_gameplay_cue_notify      : Create gameplay cue notify
+//   - configure_cue_trigger           : Set cue trigger conditions
+//   - set_cue_effects                 : Configure visual/audio effects
+//
+// Section 5: Tags & Utility
+//   - add_tag_to_asset                : Add gameplay tag to asset
+//   - get_gas_info                    : Query GAS component info
+//
+// Section 6: Ability Sets
+//   - create_ability_set              : Create UGameplayAbilitySet
+//   - add_ability                     : Add ability to set
+//   - grant_ability                   : Grant ability to ASC
+//
+// Section 7: Execution Calculations
+//   - create_execution_calculation    : Create calculation class
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: GAS APIs stable across versions
+// - AbilitySystemComponent requires proper replication mode in 5.3+
+// - GameplayEffect execution calculations unchanged
+// - GameplayAbility instancing policies stable
+//
+// MODULE REQUIREMENTS:
+// --------------------
+// - GameplayAbilities module must be available
+// - Conditional compilation via MCP_HAS_GAS macro
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Misc/EngineVersionComparison.h"
 
+// =============================================================================
+// Logging Category
+// =============================================================================
 DEFINE_LOG_CATEGORY_STATIC(LogMcpGASHandlers, Log, All);
 
 #if WITH_EDITOR
@@ -288,10 +345,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Blueprint->SimpleConstructionScript->AddNode(NewNode);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetStringField(TEXT("componentClass"), TEXT("AbilitySystemComponent"));
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ASC added"), Result);
         return true;
     }
@@ -354,10 +411,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetStringField(TEXT("replicationMode"), ReplicationMode);
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("ASC configured"), Result);
         return true;
     }
@@ -385,12 +442,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("name"), Name);
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("name"), ActualName);
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        AddAssetVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        McpHandlerUtils::AddVerification(Result, Blueprint);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Attribute set already exists") : TEXT("Attribute set created"), Result);
         return true;
     }
@@ -435,7 +496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("attributeName"), AttributeName);
         Result->SetNumberField(TEXT("defaultValue"), DefaultValue);
@@ -511,7 +572,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         AttrSetCDO->MarkPackageDirty();
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("attributeName"), AttributeName);
         Result->SetNumberField(TEXT("baseValue"), BaseValue);
@@ -610,7 +671,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("attributeName"), AttributeName);
         Result->SetNumberField(TEXT("minValue"), MinValue);
@@ -654,7 +715,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FString ActualName = Blueprint->GetName();
         FString ActualPath = Path / ActualName;
         
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), ActualPath);
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayAbility"));
@@ -751,12 +812,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         TArray<TSharedPtr<FJsonValue>> TagsJsonArray;
         for (const FString& Tag : TagsAdded)
         {
-            TagsJsonArray.Add(MakeShareable(new FJsonValueString(Tag)));
+            TagsJsonArray.Add(MakeShared<FJsonValueString>(Tag));
         }
         Result->SetArrayField(TEXT("tagsAdded"), TagsJsonArray);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability tags set"), Result);
@@ -802,7 +863,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("costEffectPath"), CostEffectPath);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability cost set"), Result);
@@ -848,7 +909,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("cooldownEffectPath"), CooldownEffectPath);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability cooldown set"), Result);
@@ -964,7 +1025,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("targetingType"), TargetingType);
         Result->SetNumberField(TEXT("targetingRange"), TargetingRange);
@@ -972,12 +1033,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         Result->SetNumberField(TEXT("targetingAngle"), TargetingAngle);
         
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("TargetingType"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("TargetingRange"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("bRequiresLineOfSight"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("TargetingAngle"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("TargetActor"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("TargetLocation"))));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("TargetingType")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("TargetingRange")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("bRequiresLineOfSight")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("TargetingAngle")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("TargetActor")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("TargetLocation")));
         Result->SetArrayField(TEXT("variablesAdded"), VariablesArray);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Targeting configuration complete"), Result);
@@ -1136,7 +1197,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("taskType"), TaskType);
         if (!TaskClassName.IsEmpty())
@@ -1147,7 +1208,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         TArray<TSharedPtr<FJsonValue>> VarsArray;
         for (const FString& VarName : VariablesAdded)
         {
-            VarsArray.Add(MakeShareable(new FJsonValueString(VarName)));
+            VarsArray.Add(MakeShared<FJsonValueString>(VarName));
         }
         Result->SetArrayField(TEXT("variablesAdded"), VarsArray);
         Result->SetNumberField(TEXT("variableCount"), VariablesAdded.Num());
@@ -1209,7 +1270,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("policy"), Policy);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Activation policy set"), Result);
@@ -1267,7 +1328,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("policy"), Policy);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instancing policy set"), Result);
@@ -1325,13 +1386,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffect"));
         Result->SetStringField(TEXT("durationType"), DurationType);
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Effect already exists") : TEXT("Effect created"), Result);
         return true;
     }
@@ -1386,7 +1450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("durationType"), DurationType);
         Result->SetNumberField(TEXT("duration"), Duration);
@@ -1446,7 +1510,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("operation"), Operation);
         Result->SetNumberField(TEXT("magnitude"), Magnitude);
@@ -1494,7 +1558,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetNumberField(TEXT("modifierIndex"), ModifierIndex);
         Result->SetStringField(TEXT("magnitudeType"), MagnitudeType);
@@ -1550,7 +1614,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("calculationClass"), CalculationClassPath);
         Result->SetNumberField(TEXT("executionCount"), EffectCDO->Executions.Num());
@@ -1599,7 +1663,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("cueTag"), CueTag);
         Result->SetNumberField(TEXT("cueCount"), EffectCDO->GameplayCues.Num());
@@ -1670,7 +1734,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("stackingType"), StackingType);
         Result->SetNumberField(TEXT("stackLimit"), StackLimit);
@@ -1726,12 +1790,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         TArray<TSharedPtr<FJsonValue>> TagsJsonArray;
         for (const FString& Tag : TagsAdded)
         {
-            TagsJsonArray.Add(MakeShareable(new FJsonValueString(Tag)));
+            TagsJsonArray.Add(MakeShared<FJsonValueString>(Tag));
         }
         Result->SetArrayField(TEXT("tagsAdded"), TagsJsonArray);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Effect tags set"), Result);
@@ -1797,13 +1861,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             McpSafeAssetSave(Blueprint);
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-        Result->SetStringField(TEXT("assetPath"), Path / Name);
-        Result->SetStringField(TEXT("name"), Name);
+        // Use the actual blueprint name (which may have been sanitized) in the response
+        FString ActualName = Blueprint->GetName();
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
+        Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("cueType"), CueType);
         Result->SetStringField(TEXT("cueTag"), CueTag);
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        SendAutomationResponse(RequestingSocket, RequestId, true, 
+        SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Cue notify already exists") : TEXT("Cue notify created"), Result);
         return true;
     }
@@ -1841,7 +1908,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("triggerType"), TriggerType);
         Result->SetBoolField(TEXT("onExecuteConfigured"), TriggerType == TEXT("on_execute"));
@@ -1967,7 +2034,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         if (!ParticleSystem.IsEmpty()) Result->SetStringField(TEXT("particleSystem"), ParticleSystem);
         if (!Sound.IsEmpty()) Result->SetStringField(TEXT("sound"), Sound);
@@ -1976,7 +2043,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         TArray<TSharedPtr<FJsonValue>> VarsArray;
         for (const FString& VarName : VariablesAdded)
         {
-            VarsArray.Add(MakeShareable(new FJsonValueString(VarName)));
+            VarsArray.Add(MakeShared<FJsonValueString>(VarName));
         }
         Result->SetArrayField(TEXT("variablesAdded"), VarsArray);
         Result->SetNumberField(TEXT("variableCount"), VariablesAdded.Num());
@@ -2123,7 +2190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), AssetPath);
         Result->SetStringField(TEXT("tag"), TagString);
         Result->SetStringField(TEXT("assetType"), AssetType);
@@ -2154,7 +2221,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), AssetPath);
         Result->SetStringField(TEXT("assetName"), Asset->GetName());
         Result->SetStringField(TEXT("class"), Asset->GetClass()->GetName());
@@ -2288,7 +2355,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         // Check if asset already exists
         if (UObject* ExistingAsset = LoadObject<UObject>(nullptr, *SetPath))
         {
-            TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("setPath"), SetPath);
             Result->SetStringField(TEXT("status"), TEXT("already_exists"));
             SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability set already exists"), Result);
@@ -2373,16 +2440,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FAssetRegistryModule::AssetCreated(SetBlueprint);
         McpSafeAssetSave(SetBlueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("setPath"), SetBlueprint->GetPathName());
         Result->SetStringField(TEXT("setName"), SetName);
         Result->SetStringField(TEXT("assetName"), AssetName);
         
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("GrantedAbilities"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("GrantedEffects"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("GrantedTags"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("SetDisplayName"))));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedAbilities")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedEffects")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedTags")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("SetDisplayName")));
         Result->SetArrayField(TEXT("variables"), VariablesArray);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability set created"), Result);
@@ -2447,7 +2514,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(SetBlueprint);
         McpSafeAssetSave(SetBlueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("setPath"), SetPath);
         Result->SetStringField(TEXT("abilityPath"), AbilityPath);
         Result->SetStringField(TEXT("abilityClass"), AbilityClass->GetName());
@@ -2582,7 +2649,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FBlueprintEditorUtils::MarkBlueprintAsModified(ActorBlueprint);
         McpSafeAssetSave(ActorBlueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("actorPath"), ActorPath);
         Result->SetStringField(TEXT("abilityClass"), AbilityClass->GetName());
         Result->SetNumberField(TEXT("abilityLevel"), AbilityLevel);
@@ -2663,18 +2730,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
         FString ActualName = Blueprint->GetName();
         FString ActualPath = Path / ActualName;
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), ActualPath);
         Result->SetStringField(TEXT("name"), ActualName);
         Result->SetStringField(TEXT("parentClass"), TEXT("GameplayEffectExecutionCalculation"));
         Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         
         TArray<TSharedPtr<FJsonValue>> VariablesArray;
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CapturedSourceAttributes"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CapturedTargetAttributes"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("bRequiresPassedInTags"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("CalculationDescription"))));
-        VariablesArray.Add(MakeShareable(new FJsonValueString(TEXT("OutputModifierAttributes"))));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("CapturedSourceAttributes")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("CapturedTargetAttributes")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("bRequiresPassedInTags")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("CalculationDescription")));
+        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("OutputModifierAttributes")));
         Result->SetArrayField(TEXT("variablesAdded"), VariablesArray);
         
         Result->SetStringField(TEXT("note"), TEXT("Override Execute_Implementation in Blueprint to implement custom calculation logic. Use CapturedSourceAttributes and CapturedTargetAttributes to define which attributes to capture."));
@@ -2695,4 +2762,3 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 #undef GetStringFieldGAS
 #undef GetNumberFieldGAS
 #undef GetBoolFieldGAS
-

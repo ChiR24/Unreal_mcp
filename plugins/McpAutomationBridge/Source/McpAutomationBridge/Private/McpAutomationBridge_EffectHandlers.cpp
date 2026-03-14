@@ -1,3 +1,45 @@
+// =============================================================================
+// McpAutomationBridge_EffectHandlers.cpp
+// =============================================================================
+// Visual Effects & Niagara System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Niagara Effects
+//   - spawn_niagara_system         : Spawn Niagara system at location
+//   - configure_niagara_emitter    : Configure emitter parameters
+//   - set_niagara_variable         : Set Niagara system variable
+//   - attach_niagara_component     : Attach Niagara to actor
+//
+// Section 2: Cascade Effects
+//   - spawn_particle_system        : Spawn Cascade particle system
+//   - attach_particle_component    : Attach particle to actor
+//   - set_particle_parameter       : Set particle system parameter
+//
+// Section 3: Light Effects
+//   - create_point_light           : Create APointLight actor
+//   - create_spot_light            : Create ASpotLight actor
+//   - create_rect_light            : Create ARectLight actor
+//   - configure_light_properties    : Set light color/intensity/attenuation
+//
+// Section 4: Debug Visualization
+//   - draw_debug_line              : Draw debug line
+//   - draw_debug_sphere            : Draw debug sphere
+//   - draw_debug_box               : Draw debug box
+//   - draw_debug_arrow             : Draw debug arrow
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - Niagara system conditional includes via __has_include
+// - Debug drawing APIs stable
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
 #include "Dom/JsonObject.h"
 #include "DrawDebugHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -86,7 +128,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     return false;
 
   TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : MakeShared<FJsonObject>();
+      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
 
   auto SendResponse = [&](bool bOk, const FString &Msg,
                           const TSharedPtr<FJsonObject> &ResObj,
@@ -110,7 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     Shapes.Add(MakeShared<FJsonValueString>(TEXT("arrow")));
     Shapes.Add(MakeShared<FJsonValueString>(TEXT("plane")));
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetArrayField(TEXT("shapes"), Shapes);
     Resp->SetNumberField(TEXT("count"), Shapes.Num());
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -123,7 +165,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 #if WITH_EDITOR
     if (GEditor && GEditor->GetEditorWorldContext().World()) {
       FlushPersistentDebugLines(GEditor->GetEditorWorldContext().World());
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Debug shapes cleared"), Resp);
@@ -165,7 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       FString Preset;
       LocalPayload->TryGetStringField(TEXT("preset"), Preset);
       if (Preset.IsEmpty()) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(
             TEXT("error"),
@@ -264,7 +306,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
 #if WITH_EDITOR
       if (!GEditor) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"),
                              TEXT("Editor not available for debug drawing"));
@@ -277,7 +319,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       // Get the current world for debug drawing
       UWorld *World = GEditor->GetEditorWorldContext().World();
       if (!World) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"),
                              TEXT("No world available for debug drawing"));
@@ -496,7 +538,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         DrawDebugBox(World, Loc, BoxSize, Rot, DebugColor, false, Duration, 0,
                      Thickness);
       } else {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(
             TEXT("error"),
@@ -511,7 +553,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         return true;
       }
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("shapeType"), ShapeType);
       Resp->SetStringField(
@@ -522,7 +564,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              TEXT("Debug shape drawn"), Resp, FString());
       return true;
 #else
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), false);
       Resp->SetStringField(TEXT("error"),
                            TEXT("Debug shape drawing requires editor build"));
@@ -636,10 +678,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           const TSharedPtr<FJsonValue> Val =
               LocalPayload->TryGetField(TEXT("value"));
           UE_LOG(
-              LogMcpAutomationBridgeSubsystem, Display,
-              TEXT("SetNiagaraParameter: DEBUG - Processing Vector for '%s'"),
+              LogMcpAutomationBridgeSubsystem, Verbose,
+              TEXT("SetNiagaraParameter: Processing Vector for '%s'"),
               *ParamName.ToString());
-
           const TArray<TSharedPtr<FJsonValue>> *ArrValue = nullptr;
           const TSharedPtr<FJsonObject> *ObjValue = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) &&
@@ -649,12 +690,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
             NiComp->SetVariableVec3(ParamName, FVector(X, Y, Z));
             bApplied = true;
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-                   TEXT("SetNiagaraParameter: DEBUG - Applied Vector from "
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+                   TEXT("SetNiagaraParameter: Applied Vector from "
                         "Array: %f, %f, %f"),
                    X, Y, Z);
-          } else if (LocalPayload->TryGetObjectField(TEXT("value"), ObjValue) &&
-                     ObjValue) {
+        } else if (LocalPayload->TryGetObjectField(TEXT("value"), ObjValue) &&
+                   ObjValue && (*ObjValue).IsValid()) {
             double VX = 0, VY = 0, VZ = 0;
             (*ObjValue)->TryGetNumberField(TEXT("x"), VX);
             (*ObjValue)->TryGetNumberField(TEXT("y"), VY);
@@ -662,17 +703,16 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             NiComp->SetVariableVec3(ParamName,
                                     FVector((float)VX, (float)VY, (float)VZ));
             bApplied = true;
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
-                   TEXT("SetNiagaraParameter: DEBUG - Applied Vector from "
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+                   TEXT("SetNiagaraParameter: Applied Vector from "
                         "Object: %f, %f, %f"),
                    VX, VY, VZ);
-          } else {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-                   TEXT("SetNiagaraParameter: DEBUG - Failed to parse Vector "
-                        "value."));
-          }
-        } else if (ParameterType.Equals(TEXT("Color"),
-                                        ESearchCase::IgnoreCase)) {
+        } else {
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                 TEXT("SetNiagaraParameter: Failed to parse Vector value."));
+        }
+      } else if (ParameterType.Equals(TEXT("Color"),
+                                      ESearchCase::IgnoreCase)) {
           const TArray<TSharedPtr<FJsonValue>> *ArrValue = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) &&
               ArrValue && ArrValue->Num() >= 3) {
@@ -702,7 +742,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         break;
       }
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), bApplied);
       Resp->SetBoolField(TEXT("applied"), bApplied);
       Resp->SetStringField(TEXT("actorName"), SystemName);
@@ -780,11 +820,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         break;
       }
       if (bFound) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("active"), true);
         for (AActor *FoundActor : AllActors) {
           if (FoundActor && FoundActor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) {
-            AddActorVerification(Resp, FoundActor);
+            McpHandlerUtils::AddVerification(Resp, FoundActor);
             break;
           }
         }
@@ -830,7 +870,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         break;
       }
       if (bFound) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetBoolField(TEXT("active"), false);
@@ -883,7 +923,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         break;
       }
       if (bFound) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetNumberField(TEXT("steps"), Steps);
@@ -978,7 +1018,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
 
 #if WITH_EDITOR
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       if (!GEditor) {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
@@ -1037,7 +1077,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
             FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
       }
 
-      AddActorVerification(Resp, Spawned);
+      McpHandlerUtils::AddVerification(Resp, Spawned);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Dynamic light created"), Resp, FString());
       return true;
@@ -1052,7 +1092,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       FString Filter;
       LocalPayload->TryGetStringField(TEXT("filter"), Filter);
       if (Filter.IsEmpty()) {
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetNumberField(TEXT("removed"), 0);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Cleanup skipped (empty filter)"), Resp,
@@ -1091,7 +1131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       TArray<TSharedPtr<FJsonValue>> Arr;
       for (const FString &S : Removed)
         Arr.Add(MakeShared<FJsonValueString>(S));
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetArrayField(TEXT("removedActors"), Arr);
       Resp->SetNumberField(TEXT("removed"), Removed.Num());
       SendAutomationResponse(
@@ -1213,7 +1253,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     UObject *NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
     if (!NiagObj) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), false);
       Resp->SetStringField(TEXT("error"),
                            TEXT("Niagara system asset not found"));
@@ -1276,8 +1316,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
            TEXT("spawn_niagara: Spawned actor '%s' (ID: %u)"),
            *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    AddActorVerification(Resp, Spawned);
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Resp, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Niagara spawned"), Resp, FString());
     return true;
@@ -1304,7 +1344,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     LocalPayload->TryGetStringField(TEXT("filter"), Filter);
     // Allow empty filter as a no-op success
     if (Filter.IsEmpty()) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetNumberField(TEXT("removed"), 0);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Cleanup skipped (empty filter)"), Resp,
@@ -1348,7 +1388,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     for (const FString &S : Removed) {
       Arr.Add(MakeShared<FJsonValueString>(S));
     }
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetArrayField(TEXT("removedActors"), Arr);
     Resp->SetNumberField(TEXT("removed"), Removed.Num());
     SendAutomationResponse(
@@ -1435,7 +1475,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                                        const FString& EmitterName,
                                        const FString& Message,
                                        const FString& ErrorCode = FString()) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetStringField(TEXT("moduleAdded"), ModuleName);
     Resp->SetStringField(TEXT("systemPath"), SystemPath);
@@ -2404,7 +2444,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
     const FString &DefaultSystemPath) {
 #if WITH_EDITOR
   if (!GEditor) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Editor not available"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -2415,7 +2455,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   if (!ActorSS) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"),
                          TEXT("EditorActorSubsystem not available"));
@@ -2430,7 +2470,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
 
   if (SystemPath.IsEmpty()) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(
         TEXT("error"),
@@ -2480,7 +2520,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
 
   UObject *NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
   if (!NiagObj) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
     Resp->SetStringField(TEXT("systemPath"), SystemPath);
@@ -2494,7 +2534,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   AActor *Spawned = SpawnActorInActiveWorld<AActor>(
       ANiagaraActor::StaticClass(), Loc, FRotator::ZeroRotator);
   if (!Spawned) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Failed to spawn Niagara actor"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -2529,7 +2569,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
          TEXT("CreateNiagaraEffect: Spawned actor '%s' (ID: %u)"),
          *Spawned->GetActorLabel(), Spawned->GetUniqueID());
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("effectType"), EffectName);
   Resp->SetStringField(TEXT("systemPath"), SystemPath);
@@ -2541,7 +2581,7 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
       FString());
   return true;
 #else
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), false);
   Resp->SetStringField(TEXT("error"),
                        TEXT("Effect creation requires editor build"));

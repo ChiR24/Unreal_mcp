@@ -1,18 +1,53 @@
-/**
- * McpAutomationBridge_GeometryHandlers.cpp
- *
- * Phase 6: Geometry Script handlers
- * Implements procedural mesh creation and manipulation using UE Geometry Script APIs
- */
+// =============================================================================
+// McpAutomationBridge_GeometryHandlers.cpp
+// =============================================================================
+// Procedural mesh creation and manipulation using UE Geometry Script APIs.
+//
+// HANDLERS:
+//   Primitive Creation:
+//     - create_box, create_sphere, create_cylinder, create_capsule
+//     - create_cone, create_torus, create_plane
+//
+//   Mesh Operations:
+//     - mesh_boolean (union, subtract, intersect)
+//     - mesh_transform (translate, rotate, scale)
+//     - mesh_deform (bend, twist, taper, noise)
+//     - mesh_simplify, mesh_subdivide, mesh_repair
+//
+//   Mesh Editing:
+//     - mesh_add_vertices, mesh_add_triangles
+//     - mesh_set_normals, mesh_set_uvs
+//     - mesh_remesh, mesh_smooth
+//
+//   Asset Generation:
+//     - create_static_mesh_from_dynamic
+//     - generate_collision, simplify_collision
+//
+// REFACTORING NOTES:
+//   - Uses McpVersionCompatibility.h for UE 5.0-5.7 API abstraction
+//   - Uses McpHandlerUtils for standardized JSON parsing/responses
+//   - Geometry Script requires UE 5.1+ for full functionality
+//   - Header paths vary significantly between UE versions
+//
+// VERSION COMPATIBILITY:
+//   - GeometryScript: UE 5.0 (experimental) / UE 5.1+ (full support)
+//   - MeshRemeshFunctions: UE 5.1+
+//   - MeshTransformFunctions: UE 5.1+
+//   - CollisionFunctions: UE 5.4+
+//   - MeshBoundaryLoops/EdgeLoop: UE 5.5+
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/EngineVersionComparison.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpGeometryHandlers, Log, All);
-
 #if WITH_EDITOR
 
 #include "Components/DynamicMeshComponent.h"
@@ -179,6 +214,44 @@ static UDynamicMesh* GetOrCreateDynamicMesh(UObject* Outer)
     return NewObject<UDynamicMesh>(Outer);
 }
 
+// Helper to spawn DynamicMeshActor and assign mesh - REDUCES CODE DUPLICATION
+static AActor* SpawnDynamicMeshActorWithMesh(
+    UEditorActorSubsystem* ActorSS,
+    const FTransform& Transform,
+    const FString& Name,
+    UDynamicMesh* DynMesh,
+    FString& OutError)
+{
+    if (!ActorSS)
+    {
+        OutError = TEXT("EditorActorSubsystem unavailable");
+        return nullptr;
+    }
+    
+    AActor* NewActor = ActorSS->SpawnActorFromClass(
+        ADynamicMeshActor::StaticClass(),
+        Transform.GetLocation(),
+        Transform.Rotator());
+    
+    if (!NewActor)
+    {
+        OutError = TEXT("Failed to spawn DynamicMeshActor");
+        return nullptr;
+    }
+    
+    NewActor->SetActorLabel(Name);
+    
+    if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))
+    {
+        if (UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent())
+        {
+            DMComp->SetDynamicMesh(DynMesh);
+        }
+    }
+    
+    return NewActor;
+}
+
 // Safety limits for geometry operations to prevent OOM
 static constexpr int32 MAX_SEGMENTS = 256;
 static constexpr double MAX_DIMENSION = 100000.0;
@@ -297,7 +370,7 @@ static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& 
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("width"), Width);
@@ -305,7 +378,7 @@ static bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetNumberField(TEXT("depth"), Depth);
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Box mesh created"), Result);
     return true;
@@ -360,13 +433,13 @@ static bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FStrin
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("radius"), Radius);
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Sphere mesh created"), Result);
     return true;
@@ -422,12 +495,12 @@ static bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FStr
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cylinder mesh created"), Result);
     return true;
@@ -480,11 +553,11 @@ double BaseRadius = GetNumberFieldGeom(Payload, TEXT("baseRadius"), 50.0);
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cone mesh created"), Result);
     return true;
@@ -539,11 +612,11 @@ double Length = GetNumberFieldGeom(Payload, TEXT("length"), 100.0);
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), Name);
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Capsule mesh created"), Result);
     return true;
@@ -598,7 +671,7 @@ double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 50.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Torus mesh created"), Result);
@@ -652,12 +725,12 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
 
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Plane mesh created"), Result);
     return true;
@@ -713,12 +786,12 @@ static bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString&
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
 
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Disc mesh created"), Result);
     return true;
@@ -871,7 +944,7 @@ static bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FS
         ToolActor->Destroy();
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("targetActor"), TargetActorName);
     Result->SetStringField(TEXT("operation"), OpName);
     Result->SetBoolField(TEXT("success"), bBooleanSucceeded);
@@ -961,7 +1034,7 @@ static bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString
     bool bHasVertexColors = UGeometryScriptLibrary_MeshQueryFunctions::GetHasVertexColors(Mesh);
     bool bHasMaterialIDs = UGeometryScriptLibrary_MeshQueryFunctions::GetHasMaterialIDs(Mesh);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexCount"), VertexCount);
     Result->SetNumberField(TEXT("triangleCount"), TriangleCount);
@@ -1043,7 +1116,7 @@ static bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const 
     // Force refresh
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("areaWeighted"), bAreaWeighted);
 
@@ -1091,7 +1164,7 @@ static bool HandleFlipNormals(UMcpAutomationBridgeSubsystem* Self, const FString
     UGeometryScriptLibrary_MeshNormalsFunctions::FlipNormals(Mesh, nullptr);
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Normals flipped"), Result);
@@ -1160,7 +1233,7 @@ static bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
     Result->SetNumberField(TEXT("simplifiedTriangles"), TriCountAfter);
@@ -1267,7 +1340,7 @@ static bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("iterations"), Iterations);
     Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
@@ -1325,7 +1398,7 @@ static bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Auto UV generated"), Result);
@@ -1408,7 +1481,7 @@ static bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
 
@@ -1462,12 +1535,12 @@ float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
 
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Linear stairs created"), Result);
     return true;
@@ -1516,7 +1589,7 @@ float StepWidth = GetNumberFieldGeom(Payload, TEXT("stepWidth"), 100.0f);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
     Result->SetNumberField(TEXT("curveAngle"), CurveAngle);
@@ -1566,7 +1639,7 @@ double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("outerRadius"), OuterRadius);
     Result->SetNumberField(TEXT("innerRadius"), InnerRadius);
@@ -1631,7 +1704,7 @@ static bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), Distance);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Extrude applied"), Result);
@@ -1689,7 +1762,7 @@ static bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("operation"), bIsInset ? TEXT("inset") : TEXT("outset"));
     Result->SetNumberField(TEXT("distance"), Distance);
@@ -1748,7 +1821,7 @@ double BevelDistance = GetNumberFieldGeom(Payload, TEXT("distance"), 5.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), BevelDistance);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bevel applied"), Result);
@@ -1805,7 +1878,7 @@ static bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), Distance);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Offset faces applied"), Result);
@@ -1859,7 +1932,7 @@ static bool HandleShell(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("thickness"), Thickness);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Shell/solidify applied"), Result);
@@ -1919,7 +1992,7 @@ double BendAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("angle"), BendAngle);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bend deformer applied"), Result);
@@ -1975,7 +2048,7 @@ double TwistAngle = GetNumberFieldGeom(Payload, TEXT("angle"), 45.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("angle"), TwistAngle);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Twist deformer applied"), Result);
@@ -2031,7 +2104,7 @@ double FlarePercentX = GetNumberFieldGeom(Payload, TEXT("flareX"), 50.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Taper/flare deformer applied"), Result);
     return true;
@@ -2096,7 +2169,7 @@ double Magnitude = GetNumberFieldGeom(Payload, TEXT("magnitude"), 5.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("magnitude"), Magnitude);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Noise deformer applied"), Result);
@@ -2154,7 +2227,7 @@ int32 Iterations = GetIntFieldGeom(Payload, TEXT("iterations"), 10);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("iterations"), Iterations);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Smooth applied"), Result);
@@ -2213,7 +2286,7 @@ static bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertices welded"), Result);
     return true;
@@ -2269,7 +2342,7 @@ static bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("filledHoles"), NumFilledHoles);
     Result->SetNumberField(TEXT("failedHoles"), NumFailedHoleFills);
@@ -2323,7 +2396,7 @@ static bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const F
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Degenerate geometry removed"), Result);
     return true;
@@ -2381,7 +2454,7 @@ static bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FStri
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("targetTriangleCount"), TargetTriangleCount);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Uniform remesh applied"), Result);
@@ -2474,7 +2547,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     UGeometryScriptLibrary_CollisionFunctions::SetSimpleCollisionOfDynamicMeshComponent(
         Collision, DMC, SetOptions, nullptr);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("collisionType"), CollisionType);
     Result->SetNumberField(TEXT("shapeCount"), UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision));
@@ -2516,7 +2589,7 @@ static bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const F
     UGeometryScriptLibrary_CollisionFunctions::SetDynamicMeshCollisionFromMesh(
         Mesh, DMC, CollisionOptions, nullptr);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("collisionType"), CollisionType);
     Result->SetNumberField(TEXT("shapeCount"), 1); // Approximate count for UE 5.4
@@ -2614,7 +2687,7 @@ static bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("axis"), Axis);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mirror applied"), Result);
@@ -2704,7 +2777,7 @@ static bool HandleArrayLinear(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("count"), Count);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Linear array applied"), Result);
@@ -2811,7 +2884,7 @@ static bool HandleArrayRadial(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("count"), Count);
     Result->SetNumberField(TEXT("angle"), TotalAngle);
@@ -2870,7 +2943,7 @@ double MajorRadius = GetNumberFieldGeom(Payload, TEXT("majorRadius"), 100.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("majorRadius"), MajorRadius);
     Result->SetNumberField(TEXT("angle"), ArchAngle);
@@ -2934,7 +3007,7 @@ double OuterRadius = GetNumberFieldGeom(Payload, TEXT("outerRadius"), 50.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("outerRadius"), OuterRadius);
     Result->SetNumberField(TEXT("innerRadius"), InnerRadius);
@@ -2990,7 +3063,7 @@ double Width = GetNumberFieldGeom(Payload, TEXT("width"), 100.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("width"), Width);
     Result->SetNumberField(TEXT("length"), Length);
@@ -3068,7 +3141,7 @@ static bool HandleTriangulate(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh triangulated"), Result);
@@ -3161,7 +3234,7 @@ static bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("offset"), PokeOffset);
     Result->SetNumberField(TEXT("triangleCount"), TriCountAfter);
@@ -3222,7 +3295,7 @@ static bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("iterations"), Iterations);
     Result->SetNumberField(TEXT("strength"), Strength);
@@ -3306,7 +3379,7 @@ FString ProjectionType = GetStringFieldGeom(Payload, TEXT("projectionType"), TEX
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("projectionType"), ProjectionType);
     Result->SetNumberField(TEXT("scale"), Scale);
@@ -3363,7 +3436,7 @@ static bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const F
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Tangents recomputed"), Result);
     return true;
@@ -3448,7 +3521,7 @@ double X = GetNumberFieldGeom(PointObj, TEXT("x"), 0.0);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("angle"), Angle);
     Result->SetNumberField(TEXT("steps"), Steps);
@@ -3528,7 +3601,7 @@ static bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("axis"), Axis);
     Result->SetNumberField(TEXT("factor"), Factor);
@@ -3635,7 +3708,7 @@ static bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& R
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("factor"), Factor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Spherify applied"), Result);
@@ -3787,7 +3860,7 @@ static bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString&
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("axis"), Axis);
     Result->SetNumberField(TEXT("factor"), Factor);
@@ -3851,7 +3924,7 @@ static bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), Distance);
     Result->SetNumberField(TEXT("steps"), Steps);
@@ -3922,7 +3995,7 @@ static bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FStri
     int32 VertsAfter = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("tolerance"), Tolerance);
     Result->SetNumberField(TEXT("verticesBefore"), VertsBefore);
@@ -4008,7 +4081,7 @@ double TranslateU = GetNumberFieldGeom(Payload, TEXT("translateU"), 0.0);
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
     Result->SetNumberField(TEXT("translateU"), TranslateU);
@@ -4085,7 +4158,7 @@ static bool HandleBooleanTrim(UMcpAutomationBridgeSubsystem* Self, const FString
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("trimActorName"), TrimActorName);
     Result->SetBoolField(TEXT("keepInside"), bKeepInside);
@@ -4146,7 +4219,7 @@ static bool HandleSelfUnion(UMcpAutomationBridgeSubsystem* Self, const FString& 
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
@@ -4320,7 +4393,7 @@ int32 EdgeGroupA = GetIntFieldGeom(Payload, TEXT("edgeGroupA"), 0);
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("edgeGroupA"), EdgeGroupA);
     Result->SetNumberField(TEXT("edgeGroupB"), EdgeGroupB);
@@ -4589,7 +4662,7 @@ static bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("subdivisions"), Subdivisions);
     Result->SetBoolField(TEXT("smooth"), bSmooth);
@@ -4769,7 +4842,7 @@ FString SplineActorName = GetStringFieldGeom(Payload, TEXT("splineActorName"), T
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     if (!SplineActorName.IsEmpty())
     {
@@ -4887,7 +4960,7 @@ int32 Count = GetIntFieldGeom(Payload, TEXT("count"), 10);
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("sourceActor"), ActorName);
     Result->SetStringField(TEXT("splineActor"), SplineActorName);
     Result->SetNumberField(TEXT("count"), Count);
@@ -5037,7 +5110,7 @@ static bool HandleLoopCut(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("numCuts"), NumCuts);
     Result->SetNumberField(TEXT("cutsApplied"), CutsApplied);
@@ -5107,7 +5180,7 @@ static bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("splitAngle"), SplitAngle);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Split normals applied"), Result);
@@ -5155,7 +5228,7 @@ static bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, cons
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
@@ -5229,7 +5302,7 @@ static bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
     
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("triangleIndex"), TriIdx);
     Result->SetNumberField(TEXT("vertexIndex0"), Idx0);
@@ -5326,7 +5399,7 @@ static bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FStr
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("verticesModified"), VerticesModified);
     Result->SetNumberField(TEXT("r"), R);
@@ -5447,7 +5520,7 @@ static bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
     Result->SetNumberField(TEXT("u"), U);
@@ -5512,7 +5585,7 @@ static bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
     
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
     Result->SetNumberField(TEXT("vertexCount"), UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh));
@@ -5582,7 +5655,7 @@ static bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FStrin
     
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
     Result->SetBoolField(TEXT("success"), bSuccess);
@@ -5652,7 +5725,7 @@ static bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FStr
     
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("triangleIndex"), TriangleIndex);
     Result->SetBoolField(TEXT("success"), bSuccess);
@@ -5714,11 +5787,11 @@ static bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
     
-    TSharedPtr<FJsonObject> PosObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> PosObj = McpHandlerUtils::CreateResultObject();
     PosObj->SetNumberField(TEXT("x"), Position.X);
     PosObj->SetNumberField(TEXT("y"), Position.Y);
     PosObj->SetNumberField(TEXT("z"), Position.Z);
@@ -5783,11 +5856,11 @@ static bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const F
     EditMesh.SetVertex(VertexIndex, Position);
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexIndex"), VertexIndex);
     
-    TSharedPtr<FJsonObject> PosObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> PosObj = McpHandlerUtils::CreateResultObject();
     PosObj->SetNumberField(TEXT("x"), Position.X);
     PosObj->SetNumberField(TEXT("y"), Position.Y);
     PosObj->SetNumberField(TEXT("z"), Position.Z);
@@ -5846,10 +5919,10 @@ static bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     UGeometryScriptLibrary_MeshTransformFunctions::TranslateMesh(Mesh, Translation, nullptr);
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     
-    TSharedPtr<FJsonObject> TransObj = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> TransObj = McpHandlerUtils::CreateResultObject();
     TransObj->SetNumberField(TEXT("x"), Translation.X);
     TransObj->SetNumberField(TEXT("y"), Translation.Y);
     TransObj->SetNumberField(TEXT("z"), Translation.Z);
@@ -5915,7 +5988,7 @@ static bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& R
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
 
@@ -5976,7 +6049,7 @@ static bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FStri
 
     DMC->NotifyMeshUpdated();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
     Result->SetNumberField(TEXT("textureResolution"), TextureResolution);
@@ -6054,7 +6127,7 @@ static bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FSt
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetBoolField(TEXT("naniteEnabled"), true);
@@ -6232,7 +6305,7 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
 
     int32 TrisAfter = Mesh->GetTriangleCount();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("splineActorName"), SplineActorName);
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
@@ -6243,7 +6316,7 @@ static bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const 
     // Add verification data for the target actor
     if (TargetActor)
     {
-        AddActorVerification(Result, TargetActor);
+        McpHandlerUtils::AddVerification(Result, TargetActor);
     }
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Extruded profile along spline"), Result);
@@ -6389,14 +6462,14 @@ static bool HandleEdgeSplit(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     int32 TrisAfter = Mesh->GetTriangleCount();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("edgesSplit"), EdgesSplit);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     
     // Add verification data
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Edge split applied"), Result);
     return true;
@@ -6473,14 +6546,14 @@ static bool HandleQuadrangulate(UMcpAutomationBridgeSubsystem* Self, const FStri
 
     int32 TrisAfter = Mesh->GetTriangleCount();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     Result->SetStringField(TEXT("note"), TEXT("Partial quadrangulation applied - full quad remesh requires external library"));
     
     // Add verification data
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Quadrangulation applied"), Result);
     return true;
@@ -6560,14 +6633,14 @@ static bool HandleRemeshVoxel(UMcpAutomationBridgeSubsystem* Self, const FString
 
     int32 TrisAfter = Mesh->GetTriangleCount();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("voxelSize"), VoxelSize);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
     
     // Add verification data
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Voxel remesh applied"), Result);
     return true;
@@ -6635,14 +6708,14 @@ static bool HandleGenerateComplexCollision(UMcpAutomationBridgeSubsystem* Self, 
 
     int32 ShapeCount = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("hullCount"), MaxHullCount);
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     Result->SetStringField(TEXT("collisionType"), TEXT("convex_decomposition"));
     
     // Add verification data
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Complex collision generated"), Result);
 #else
@@ -6726,14 +6799,14 @@ static bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const F
     
     int32 ShapeCount = UGeometryScriptLibrary_CollisionFunctions::GetSimpleCollisionShapeCount(Collision);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("trianglesBefore"), CurrentTris);
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     
     // Add verification data
-    AddActorVerification(Result, TargetActor);
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision simplified"), Result);
 #else
@@ -6859,13 +6932,13 @@ static bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, cons
     StaticMesh->PostEditChange();
     McpSafeAssetSave(StaticMesh);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), TargetPath);
     Result->SetNumberField(TEXT("lodCount"), LODCount);
     Result->SetNumberField(TEXT("triangles"), StaticMesh->GetNumTriangles(0));
     
     // Add verification data
-    AddAssetVerification(Result, StaticMesh);
+    McpHandlerUtils::AddVerification(Result, StaticMesh);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LODs generated for geometry"), Result);
 #else
@@ -6931,13 +7004,13 @@ static bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FStr
     StaticMesh->PostEditChange();
     McpSafeAssetSave(StaticMesh);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
     
     // Add verification data
-    AddAssetVerification(Result, StaticMesh);
+    McpHandlerUtils::AddVerification(Result, StaticMesh);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD settings updated"), Result);
 #else
@@ -7021,13 +7094,13 @@ static bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const F
     StaticMesh->PostEditChange();
     McpSafeAssetSave(StaticMesh);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
     Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
     
     // Add verification data
-    AddAssetVerification(Result, StaticMesh);
+    McpHandlerUtils::AddVerification(Result, StaticMesh);
     
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("LOD screen sizes updated"), Result);
 #else

@@ -1,16 +1,75 @@
+// =============================================================================
+// McpAutomationBridge_BlueprintGraphHandlers.cpp
+// =============================================================================
+// Blueprint Graph Manipulation Handlers
+//
+// Implements node creation, connection, and graph inspection for Blueprint graphs.
+//
+// HANDLERS IMPLEMENTED (13 subActions):
+// ================================
+//
+// NODE OPERATIONS:
+//   - create_node         : Create K2Node of specified type at position
+//   - delete_node         : Remove a node from the graph
+//   - create_reroute_node : Create K2Node_Knot (reroute node)
+//
+// PIN OPERATIONS:
+//   - connect_pins        : Link two pins together
+//   - break_pin_links     : Disconnect all links from a pin
+//   - set_pin_default_value : Set default value for an input pin
+//
+// INSPECTION:
+//   - get_nodes          : List all nodes in a graph
+//   - get_node_details   : Get detailed info about a specific node
+//   - get_graph_details  : Get graph metadata (name, node count, etc.)
+//   - get_pin_details    : Get pin information (type, connections, value)
+//   - list_node_types    : List all available K2Node subclasses (global)
+//
+// PROPERTY:
+//   - set_node_property  : Set a property on a node (comment text, etc.)
+//
+// SUPPORTED NODE TYPES (partial list):
+//   - K2Node_CallFunction, K2Node_VariableGet, K2Node_VariableSet
+//   - K2Node_IfThenElse, K2Node_ExecutionSequence, K2Node_Knot
+//   - K2Node_CustomEvent, K2Node_Event, K2Node_Literal
+//   - K2Node_MakeArray, K2Node_MakeStruct, K2Node_BreakStruct
+//   - K2Node_DynamicCast, K2Node_Select, K2Node_Timeline
+//   - And all other registered UK2Node subclasses
+//
+// VERSION COMPATIBILITY:
+//   - UE 5.0-5.7: All handlers supported
+//   - K2Node header locations vary by version (handled via __has_include)
+//   - Uses ScopedTransaction for undo/redo support
+//
+// Copyright (c) 2025 MCP Automation Bridge Contributors
+// SPDX-License-Identifier: MIT
+// =============================================================================
+
+// Include version compatibility FIRST
+#include "McpVersionCompatibility.h"
+
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
+// Graph Framework
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraph/EdGraphSchema.h"
 #include "EdGraphNode_Comment.h"
+
+// Blueprint Core
 #include "Engine/Blueprint.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+// K2Node Types
 #include "K2Node_BreakStruct.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_CommutativeAssociativeBinaryOperator.h"
@@ -32,9 +91,8 @@
 #include "K2Node_Timeline.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
+
+// Blueprint Editor
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "ScopedTransaction.h"
@@ -119,14 +177,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (It->HasAnyClassFlags(CLASS_Abstract))
         continue;
 
-      TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> TypeObj = McpHandlerUtils::CreateResultObject();
       TypeObj->SetStringField(TEXT("className"), It->GetName());
       TypeObj->SetStringField(TEXT("displayName"),
                               It->GetDisplayNameText().ToString());
       NodeTypes.Add(MakeShared<FJsonValueObject>(TypeObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
     Result->SetNumberField(TEXT("count"), NodeTypes.Num());
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -277,10 +335,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node created."), Result);
       } else {
@@ -702,7 +760,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
         Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
@@ -769,8 +827,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      AddAssetVerification(Result, Blueprint);
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Pins connected."), Result);
     } else {
@@ -786,7 +844,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (!Node)
         continue;
 
-      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
       NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
       NodeObj->SetStringField(TEXT("nodeName"), Node->GetName());
       NodeObj->SetStringField(TEXT("nodeType"), Node->GetClass()->GetName());
@@ -802,7 +860,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         if (!Pin)
           continue;
 
-        TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
         PinObj->SetStringField(TEXT("pinName"), Pin->PinName.ToString());
         PinObj->SetStringField(TEXT("pinType"),
                                Pin->PinType.PinCategory.ToString());
@@ -824,7 +882,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         TArray<TSharedPtr<FJsonValue>> LinkedToFileArray;
         for (UEdGraphPin *LinkedPin : Pin->LinkedTo) {
           if (LinkedPin && LinkedPin->GetOwningNode()) {
-            TSharedPtr<FJsonObject> LinkObj = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> LinkObj = McpHandlerUtils::CreateResultObject();
             LinkObj->SetStringField(
                 TEXT("nodeId"),
                 LinkedPin->GetOwningNode()->NodeGuid.ToString());
@@ -841,10 +899,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       NodesArray.Add(MakeShared<FJsonValueObject>(NodeObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("nodes"), NodesArray);
     Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Nodes retrieved."), Result);
@@ -877,8 +935,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     TargetNode->Modify();
     TargetGraph->GetSchema()->BreakPinLinks(*Pin, true);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    AddAssetVerification(Result, Blueprint);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin links broken."), Result);
     return true;
@@ -897,8 +955,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     if (TargetNode) {
       FBlueprintEditorUtils::RemoveNode(Blueprint, TargetNode, true);
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      AddAssetVerification(Result, Blueprint);
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node deleted."), Result);
     } else {
@@ -927,10 +985,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), RerouteNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeName"), RerouteNode->GetName());
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Reroute node created."), Result);
     return true;
@@ -989,10 +1047,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (bHandled) {
         TargetGraph->NotifyGraphChanged();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node property updated."), Result);
       } else {
@@ -1014,7 +1072,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
 
     if (TargetNode) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
       Result->SetStringField(
           TEXT("nodeTitle"),
@@ -1025,7 +1083,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
       TArray<TSharedPtr<FJsonValue>> Pins;
       for (UEdGraphPin *Pin : TargetNode->Pins) {
-        TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
         PinObj->SetStringField(TEXT("pinName"), Pin->PinName.ToString());
         PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input
                                                       ? TEXT("Input")
@@ -1035,7 +1093,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         Pins.Add(MakeShared<FJsonValueObject>(PinObj));
       }
       Result->SetArrayField(TEXT("pins"), Pins);
-      AddAssetVerification(Result, Blueprint);
+      McpHandlerUtils::AddVerification(Result, Blueprint);
 
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node details retrieved."), Result);
@@ -1045,13 +1103,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     }
     return true;
   } else if (SubAction == TEXT("get_graph_details")) {
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
     Result->SetNumberField(TEXT("nodeCount"), TargetGraph->Nodes.Num());
 
     TArray<TSharedPtr<FJsonValue>> Nodes;
     for (UEdGraphNode *Node : TargetGraph->Nodes) {
-      TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
       NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
       NodeObj->SetStringField(TEXT("nodeName"), Node->GetName());
       NodeObj->SetStringField(
@@ -1060,7 +1118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       Nodes.Add(MakeShared<FJsonValueObject>(NodeObj));
     }
     Result->SetArrayField(TEXT("nodes"), Nodes);
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Graph details retrieved."), Result);
@@ -1092,7 +1150,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       PinsToReport = TargetNode->Pins;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NodeId);
 
     TArray<TSharedPtr<FJsonValue>> PinsJson;
@@ -1101,7 +1159,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         continue;
       }
 
-      TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
       PinObj->SetStringField(TEXT("pinName"), Pin->PinName.ToString());
       PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input
                                                     ? TEXT("Input")
@@ -1143,7 +1201,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     }
 
     Result->SetArrayField(TEXT("pins"), PinsJson);
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin details retrieved."), Result);
@@ -1157,17 +1215,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       if (It->HasAnyClassFlags(CLASS_Abstract))
         continue;
 
-      TSharedPtr<FJsonObject> TypeObj = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> TypeObj = McpHandlerUtils::CreateResultObject();
       TypeObj->SetStringField(TEXT("className"), It->GetName());
       TypeObj->SetStringField(TEXT("displayName"),
                               It->GetDisplayNameText().ToString());
       NodeTypes.Add(MakeShared<FJsonValueObject>(TypeObj));
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("nodeTypes"), NodeTypes);
     Result->SetNumberField(TEXT("count"), NodeTypes.Num());
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Node types listed."), Result);
     return true;
@@ -1211,12 +1269,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NodeId);
     Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
     Result->SetStringField(TEXT("pinName"), PinName);
     Result->SetStringField(TEXT("value"), Value);
-    AddAssetVerification(Result, Blueprint);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin default value set."), Result);
     return true;

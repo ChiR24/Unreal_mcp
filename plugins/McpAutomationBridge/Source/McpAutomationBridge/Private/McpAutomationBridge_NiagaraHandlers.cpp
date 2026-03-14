@@ -1,33 +1,110 @@
+// =============================================================================
+// McpAutomationBridge_NiagaraHandlers.cpp
+// =============================================================================
+// Handler implementations for Niagara particle system creation and manipulation.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// create_niagara_system:
+//   - Create new Niagara System asset with default emitter
+//   - Initialize system spawn/update scripts with graph sources
+//   - Create NiagaraGraph for visual editing
+//
+// create_niagara_emitter:
+//   - Create standalone Niagara Emitter asset
+//   - Initialize with GraphSource for editor compatibility
+//
+// spawn_niagara_actor:
+//   - Spawn NiagaraActor in world with specified system
+//   - Set asset reference on NiagaraComponent
+//
+// modify_niagara_parameter:
+//   - Set Float/Vector/Color/Bool parameters on NiagaraComponent
+//   - Find actor by name in editor world
+//
+// create_niagara_ribbon:
+//   - Spawn NiagaraActor configured for ribbon/beam effects
+//   - Set ribbon start/end/width/color parameters
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: GraphSource directly on UNiagaraEmitter
+//         AddEmitterHandle takes 2 parameters
+// UE 5.1+: GraphSource on FVersionedNiagaraEmitterData via GetLatestEmitterData()
+//          AddEmitterHandle takes 3 parameters (with FGuid)
+//
+// SECURITY:
+// ---------
+// - Niagara plugin module availability checked before operations
+// - Asset paths validated through standard UE loading
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "McpAutomationBridgeGlobals.h"
-#include "Dom/JsonObject.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
+
+// Asset Management
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Async/Async.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/World.h"
 #include "Modules/ModuleManager.h"
+
+// Niagara Core
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraEmitter.h"
 #include "NiagaraParameterCollection.h"
 #include "NiagaraSystem.h"
+
+// Niagara Graph
 #include "NiagaraScriptSource.h"
 #include "NiagaraGraph.h"
 #include "UObject/Package.h"
+
+// Editor Subsystems (version-dependent header location)
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
 #include "EditorActorSubsystem.h"
 #endif
+
+// Niagara Stack Utilities (optional)
 #if __has_include("ViewModels/Stack/NiagaraStackGraphUtilities.h")
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #endif
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Handler Implementations
+// =============================================================================
+
+/**
+ * @brief Creates a new Niagara System asset.
+ *
+ * @param RequestId Request identifier.
+ * @param Action Action name ("create_niagara_system").
+ * @param Payload JSON payload with name, savePath.
+ * @param RequestingSocket WebSocket for response.
+ * @return true if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -188,11 +265,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   }
 
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
   Resp->SetStringField(TEXT("systemName"), SystemName);
-  AddAssetVerification(Resp, NiagaraSystem);
+  McpHandlerUtils::AddVerification(Resp, NiagaraSystem);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara system created successfully"), Resp,
@@ -206,6 +283,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
 #endif
 }
 
+/**
+ * @brief Creates a new Niagara Emitter asset.
+ *
+ * @param RequestId Request identifier.
+ * @param Action Action name ("create_niagara_emitter").
+ * @param Payload JSON payload with name, savePath.
+ * @param RequestingSocket WebSocket for response.
+ * @return true if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -335,11 +421,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
   }
 
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("emitterPath"), NiagaraEmitter->GetPathName());
   Resp->SetStringField(TEXT("emitterName"), EmitterName);
-  AddAssetVerification(Resp, NiagaraEmitter);
+  McpHandlerUtils::AddVerification(Resp, NiagaraEmitter);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara emitter created successfully"), Resp,
@@ -353,6 +439,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraEmitter(
 #endif
 }
 
+/**
+ * @brief Spawns a NiagaraActor with specified system.
+ *
+ * @param RequestId Request identifier.
+ * @param Action Action name ("spawn_niagara_actor").
+ * @param Payload JSON payload with systemPath, location, name.
+ * @param RequestingSocket WebSocket for response.
+ * @return true if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -440,12 +535,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
                         *FGuid::NewGuid().ToString(EGuidFormats::Short)));
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
   Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
   Resp->SetStringField(TEXT("systemPath"), SystemPath);
-  AddActorVerification(Resp, NiagaraActor);
+  McpHandlerUtils::AddVerification(Resp, NiagaraActor);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara actor spawned successfully"), Resp,
@@ -459,6 +554,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
 #endif
 }
 
+/**
+ * @brief Modifies a parameter on a Niagara component.
+ *
+ * @param RequestId Request identifier.
+ * @param Action Action name ("modify_niagara_parameter").
+ * @param Payload JSON payload with actorName, parameterName, parameterType, value.
+ * @param RequestingSocket WebSocket for response.
+ * @return true if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -598,13 +702,13 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("parameterName"), ParameterName);
   Resp->SetStringField(TEXT("parameterType"), ParameterType);
   if (bSuccess && NiagaraActor) {
-    AddActorVerification(Resp, NiagaraActor);
+    McpHandlerUtils::AddVerification(Resp, NiagaraActor);
   }
 
   SendAutomationResponse(
@@ -621,6 +725,15 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyNiagaraParameter(
 #endif
 }
 
+/**
+ * @brief Creates a Niagara ribbon/beam effect.
+ *
+ * @param RequestId Request identifier.
+ * @param Action Action name ("create_niagara_ribbon").
+ * @param Payload JSON payload with systemPath, name, start, end, width, color.
+ * @param RequestingSocket WebSocket for response.
+ * @return true if handled.
+ */
 bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraRibbon(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -747,11 +860,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraRibbon(
     NiagaraComp->SetColorParameter(FName("User.Color"), ColorVal);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
   Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
-  AddActorVerification(Resp, NiagaraActor);
+  McpHandlerUtils::AddVerification(Resp, NiagaraActor);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Niagara ribbon created successfully"), Resp,

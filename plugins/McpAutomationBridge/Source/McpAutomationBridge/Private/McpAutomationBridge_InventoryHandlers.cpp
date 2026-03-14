@@ -1,6 +1,46 @@
+// =============================================================================
+// McpAutomationBridge_InventoryHandlers.cpp
+// =============================================================================
+// Inventory & Items System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Item Creation
+//   - create_item_blueprint        : Create AItem base blueprint
+//   - create_pickup_actor          : Create APickup actor
+//   - configure_item_mesh          : Set item mesh component
+//   - set_item_properties          : Configure item stats
+//
+// Section 2: Inventory Component
+//   - create_inventory_component   : Create UInventoryComponent
+//   - add_inventory_slot           : Add inventory slot
+//   - configure_inventory_capacity  : Set max slots
+//   - add_item_to_inventory        : Add item to inventory
+//   - remove_item_from_inventory   : Remove item from inventory
+//
+// Section 3: Item Data
+//   - create_item_data_asset       : Create UItemDataAsset
+//   - create_item_data_table       : Create FDataTable for items
+//   - populate_item_data           : Fill item data
+//
+// Section 4: Pickup System
+//   - configure_pickup_collision   : Setup pickup collision
+//   - add_pickup_effects           : Add pickup VFX/SFX
+//   - set_respawn_behavior         : Configure item respawn
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - Inventory component pattern stable across versions
+// - DataAsset/DataTable APIs unchanged
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
 #include "Dom/JsonObject.h"
-// Copyright Epic Games, Inc. All Rights Reserved.
-// Phase 17: Inventory & Items System Handlers
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -112,9 +152,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
         McpSafeAssetSave(ItemAsset);
       }
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("assetName"), SanitizedName);
-      AddAssetVerification(Result, ItemAsset);
+      McpHandlerUtils::AddVerification(Result, ItemAsset);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item data asset created"), Result);
     } else {
@@ -179,21 +219,21 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(ItemAsset);
     }
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("modified"), ModifiedProperties.Num() > 0);
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
-    AddAssetVerification(Result, ItemAsset);
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
 
     TArray<TSharedPtr<FJsonValue>> ModifiedArr;
     for (const FString& Name : ModifiedProperties) {
-      ModifiedArr.Add(MakeShareable(new FJsonValueString(Name)));
+      ModifiedArr.Add(MakeShared<FJsonValueString>(Name));
     }
     Result->SetArrayField(TEXT("modifiedProperties"), ModifiedArr);
 
     if (FailedProperties.Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> FailedArr;
       for (const FString& Err : FailedProperties) {
-        FailedArr.Add(MakeShareable(new FJsonValueString(Err)));
+        FailedArr.Add(MakeShared<FJsonValueString>(Err));
       }
       Result->SetArrayField(TEXT("failedProperties"), FailedArr);
     }
@@ -235,7 +275,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         McpSafeAssetSave(CategoryAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item category created"), Result);
@@ -282,7 +322,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     if (CategoryProp) {
       // Create a JSON value for the category path
-      TSharedPtr<FJsonValue> CategoryValue = MakeShareable(new FJsonValueString(CategoryPath));
+      TSharedPtr<FJsonValue> CategoryValue = MakeShared<FJsonValueString>(CategoryPath);
       if (ApplyJsonValueToProperty(ItemObj, CategoryProp, CategoryValue, AssignError)) {
         bCategoryAssigned = true;
       }
@@ -291,7 +331,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       for (TFieldIterator<FProperty> It(ItemObj->GetClass()); It; ++It) {
         FProperty* Prop = *It;
         if (Prop->GetName().Contains(TEXT("Category"), ESearchCase::IgnoreCase)) {
-          TSharedPtr<FJsonValue> CategoryValue = MakeShareable(new FJsonValueString(CategoryPath));
+          TSharedPtr<FJsonValue> CategoryValue = MakeShared<FJsonValueString>(CategoryPath);
           if (ApplyJsonValueToProperty(ItemObj, Prop, CategoryValue, AssignError)) {
             bCategoryAssigned = true;
             break;
@@ -306,7 +346,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(ItemObj);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("categoryPath"), CategoryPath);
     Result->SetBoolField(TEXT("assigned"), bCategoryAssigned);
@@ -388,7 +428,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           McpSafeAssetSave(Blueprint);
         }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("componentName"), ComponentName);
       Result->SetBoolField(TEXT("componentAdded"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -431,7 +471,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* MaxSlotsProp = CDO->GetClass()->FindPropertyByName(TEXT("MaxSlots"));
         if (MaxSlotsProp) {
-          TSharedPtr<FJsonValue> SlotValue = MakeShareable(new FJsonValueNumber(static_cast<double>(SlotCount)));
+          TSharedPtr<FJsonValue> SlotValue = MakeShared<FJsonValueNumber>(static_cast<double>(SlotCount));
           FString ApplyError;
           if (ApplyJsonValueToProperty(CDO, MaxSlotsProp, SlotValue, ApplyError)) {
             bConfigured = true;
@@ -466,7 +506,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("slotCount"), SlotCount);
     Result->SetBoolField(TEXT("configured"), bConfigured);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -532,7 +572,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        VariablesAdded.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        VariablesAdded.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -556,7 +596,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, EventName, DelegateType);
-        FunctionsAdded.Add(MakeShareable(new FJsonValueString(EventName.ToString())));
+        FunctionsAdded.Add(MakeShared<FJsonValueString>(EventName.ToString()));
       }
     }
 
@@ -570,7 +610,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     };
 
     for (const FString& FuncName : FunctionStubs) {
-      FunctionsAdded.Add(MakeShareable(new FJsonValueString(FuncName + TEXT(" (implement in Blueprint)"))));
+      FunctionsAdded.Add(MakeShared<FJsonValueString>(FuncName + TEXT(" (implement in Blueprint)")));
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -579,7 +619,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("functionsAdded"), FunctionsAdded);
     Result->SetArrayField(TEXT("variablesAdded"), VariablesAdded);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -637,9 +677,9 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*EventName), DelegateType);
-        EventsAdded.Add(MakeShareable(new FJsonValueString(EventName)));
+        EventsAdded.Add(MakeShared<FJsonValueString>(EventName));
       } else {
-        EventsAdded.Add(MakeShareable(new FJsonValueString(EventName + TEXT(" (exists)"))));
+        EventsAdded.Add(MakeShared<FJsonValueString>(EventName + TEXT(" (exists)")));
       }
     }
 
@@ -649,7 +689,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("eventsAdded"), EventsAdded);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
@@ -660,7 +700,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
   if (SubAction == TEXT("set_inventory_replication")) {
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
-    bool Replicated = GetPayloadBool(Payload, TEXT("replicated"), false);
+    bool bReplicated = GetPayloadBool(Payload, TEXT("replicated"), false);
     FString ReplicationCondition = GetPayloadString(Payload, TEXT("replicationCondition"), TEXT("None"));
 
     if (BlueprintPath.IsEmpty()) {
@@ -701,7 +741,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
 
       if (bIsInventoryVar) {
-        if (Replicated) {
+        if (bReplicated) {
           Var.PropertyFlags |= CPF_Net;
           Var.RepNotifyFunc = NAME_None; // Can be set to a custom function name
 
@@ -737,14 +777,14 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
-    Result->SetBoolField(TEXT("replicated"), Replicated);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("replicated"), bReplicated);
     Result->SetStringField(TEXT("replicationCondition"), ReplicationCondition);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
     TArray<TSharedPtr<FJsonValue>> VarsArr;
     for (const FString& VarName : ReplicatedVariables) {
-      VarsArr.Add(MakeShareable(new FJsonValueString(VarName)));
+      VarsArr.Add(MakeShared<FJsonValueString>(VarName));
     }
     Result->SetArrayField(TEXT("modifiedVariables"), VarsArr);
 
@@ -813,7 +853,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         McpSafeAssetSave(NewBlueprint);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("pickupPath"), Package->GetName());
       Result->SetStringField(TEXT("blueprintName"), Name);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -908,7 +948,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("pickupPath"), PickupPath);
     Result->SetStringField(TEXT("interactionType"), InteractionType);
     Result->SetStringField(TEXT("prompt"), Prompt);
@@ -979,14 +1019,14 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* RespawnableProp = CDO->GetClass()->FindPropertyByName(TEXT("bRespawnable"));
         if (RespawnableProp) {
-          TSharedPtr<FJsonValue> BoolValue = MakeShareable(new FJsonValueBoolean(Respawnable));
+          TSharedPtr<FJsonValue> BoolValue = MakeShared<FJsonValueBoolean>(Respawnable);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, RespawnableProp, BoolValue, ApplyError);
         }
 
         FProperty* RespawnTimeProp = CDO->GetClass()->FindPropertyByName(TEXT("RespawnTime"));
         if (RespawnTimeProp) {
-          TSharedPtr<FJsonValue> FloatValue = MakeShareable(new FJsonValueNumber(RespawnTime));
+          TSharedPtr<FJsonValue> FloatValue = MakeShared<FJsonValueNumber>(RespawnTime);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, RespawnTimeProp, FloatValue, ApplyError);
         }
@@ -999,7 +1039,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("pickupPath"), PickupPath);
     Result->SetBoolField(TEXT("respawnable"), Respawnable);
     Result->SetNumberField(TEXT("respawnTime"), RespawnTime);
@@ -1011,9 +1051,9 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
   if (SubAction == TEXT("configure_pickup_effects")) {
     FString PickupPath = GetPayloadString(Payload, TEXT("pickupPath"));
-    bool Bobbing = GetPayloadBool(Payload, TEXT("bobbing"), true);
-    bool Rotation = GetPayloadBool(Payload, TEXT("rotation"), true);
-    bool GlowEffect = GetPayloadBool(Payload, TEXT("glowEffect"), false);
+    bool bBobbing = GetPayloadBool(Payload, TEXT("bobbing"), true);
+    bool bRotation = GetPayloadBool(Payload, TEXT("rotation"), true);
+    bool bGlowEffect = GetPayloadBool(Payload, TEXT("glowEffect"), false);
 
     if (PickupPath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -1043,9 +1083,9 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     // Add effect control variables
     TArray<TPair<FName, bool>> EffectVars = {
-      TPair<FName, bool>(TEXT("bEnableBobbing"), Bobbing),
-      TPair<FName, bool>(TEXT("bEnableRotation"), Rotation),
-      TPair<FName, bool>(TEXT("bEnableGlowEffect"), GlowEffect)
+      TPair<FName, bool>(TEXT("bEnableBobbing"), bBobbing),
+      TPair<FName, bool>(TEXT("bEnableRotation"), bRotation),
+      TPair<FName, bool>(TEXT("bEnableGlowEffect"), bGlowEffect)
     };
 
     for (const auto& VarPair : EffectVars) {
@@ -1088,7 +1128,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         for (const auto& VarPair : EffectVars) {
           FProperty* Prop = CDO->GetClass()->FindPropertyByName(VarPair.Key);
           if (Prop) {
-            TSharedPtr<FJsonValue> BoolValue = MakeShareable(new FJsonValueBoolean(VarPair.Value));
+            TSharedPtr<FJsonValue> BoolValue = MakeShared<FJsonValueBoolean>(VarPair.Value);
             FString ApplyError;
             ApplyJsonValueToProperty(CDO, Prop, BoolValue, ApplyError);
           }
@@ -1102,11 +1142,11 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("pickupPath"), PickupPath);
-    Result->SetBoolField(TEXT("bobbing"), Bobbing);
-    Result->SetBoolField(TEXT("rotation"), Rotation);
-    Result->SetBoolField(TEXT("glowEffect"), GlowEffect);
+    Result->SetBoolField(TEXT("bobbing"), bBobbing);
+    Result->SetBoolField(TEXT("rotation"), bRotation);
+    Result->SetBoolField(TEXT("glowEffect"), bGlowEffect);
     Result->SetBoolField(TEXT("configured"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pickup effects configured"), Result);
@@ -1197,15 +1237,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           McpSafeAssetSave(Blueprint);
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetBoolField(TEXT("componentAdded"), true);
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
         TArray<TSharedPtr<FJsonValue>> AddedVars;
-        AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("EquipmentSlots"))));
-        AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("EquippedItems"))));
-        AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("SlotNames"))));
+        AddedVars.Add(MakeShared<FJsonValueString>(TEXT("EquipmentSlots")));
+        AddedVars.Add(MakeShared<FJsonValueString>(TEXT("EquippedItems")));
+        AddedVars.Add(MakeShared<FJsonValueString>(TEXT("SlotNames")));
         Result->SetArrayField(TEXT("variablesAdded"), AddedVars);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1301,12 +1341,12 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
     TArray<TSharedPtr<FJsonValue>> ConfiguredSlots;
     for (const FString& SlotName : SlotNames) {
-      ConfiguredSlots.Add(MakeShareable(new FJsonValueString(SlotName)));
+      ConfiguredSlots.Add(MakeShared<FJsonValueString>(SlotName));
     }
     Result->SetArrayField(TEXT("slotsConfigured"), ConfiguredSlots);
     Result->SetNumberField(TEXT("slotCount"), SlotNames.Num());
@@ -1376,7 +1416,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -1386,21 +1426,21 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* StatModProp = CDO->GetClass()->FindPropertyByName(TEXT("bApplyStatModifiers"));
         if (StatModProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(GetPayloadBool(Payload, TEXT("statModifiers"), true)));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(GetPayloadBool(Payload, TEXT("statModifiers"), true));
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, StatModProp, BoolVal, ApplyError);
         }
 
         FProperty* AbilityProp = CDO->GetClass()->FindPropertyByName(TEXT("bGrantAbilitiesOnEquip"));
         if (AbilityProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(GetPayloadBool(Payload, TEXT("abilityGrants"), true)));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(GetPayloadBool(Payload, TEXT("abilityGrants"), true));
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, AbilityProp, BoolVal, ApplyError);
         }
 
         FProperty* PassiveProp = CDO->GetClass()->FindPropertyByName(TEXT("bApplyPassiveEffects"));
         if (PassiveProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(GetPayloadBool(Payload, TEXT("passiveEffects"), true)));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(GetPayloadBool(Payload, TEXT("passiveEffects"), true));
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, PassiveProp, BoolVal, ApplyError);
         }
@@ -1413,7 +1453,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("statModifiersConfigured"), GetPayloadBool(Payload, TEXT("statModifiers"), true));
     Result->SetBoolField(TEXT("abilityGrantsConfigured"), GetPayloadBool(Payload, TEXT("abilityGrants"), true));
     Result->SetBoolField(TEXT("passiveEffectsConfigured"), GetPayloadBool(Payload, TEXT("passiveEffects"), true));
@@ -1481,7 +1521,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        VariablesAdded.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        VariablesAdded.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -1506,7 +1546,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, EventName, DelegateType);
-        FunctionsAdded.Add(MakeShareable(new FJsonValueString(EventName.ToString())));
+        FunctionsAdded.Add(MakeShared<FJsonValueString>(EventName.ToString()));
       }
     }
 
@@ -1520,7 +1560,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     };
 
     for (const FString& FuncName : FunctionStubs) {
-      FunctionsAdded.Add(MakeShareable(new FJsonValueString(FuncName + TEXT(" (implement in Blueprint)"))));
+      FunctionsAdded.Add(MakeShared<FJsonValueString>(FuncName + TEXT(" (implement in Blueprint)")));
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -1529,7 +1569,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("functionsAdded"), FunctionsAdded);
     Result->SetArrayField(TEXT("variablesAdded"), VariablesAdded);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -1605,7 +1645,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -1615,14 +1655,14 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* AttachProp = CDO->GetClass()->FindPropertyByName(TEXT("bAttachToSocket"));
         if (AttachProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bAttachToSocket));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bAttachToSocket);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, AttachProp, BoolVal, ApplyError);
         }
 
         FProperty* SocketProp = CDO->GetClass()->FindPropertyByName(TEXT("DefaultAttachSocket"));
         if (SocketProp) {
-          TSharedPtr<FJsonValue> NameVal = MakeShareable(new FJsonValueString(DefaultSocket));
+          TSharedPtr<FJsonValue> NameVal = MakeShared<FJsonValueString>(DefaultSocket);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, SocketProp, NameVal, ApplyError);
         }
@@ -1635,7 +1675,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("attachToSocket"), bAttachToSocket);
     Result->SetStringField(TEXT("defaultSocket"), DefaultSocket);
     Result->SetBoolField(TEXT("visualsConfigured"), true);
@@ -1682,7 +1722,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         McpSafeAssetSave(LootTableAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Loot table created"), Result);
@@ -1754,7 +1794,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(LootTable);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetNumberField(TEXT("weight"), Weight);
@@ -1839,7 +1879,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -1856,7 +1896,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     }
     if (!bEventExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OnLootDropped"), DelegateType);
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("OnLootDropped"))));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnLootDropped")));
     }
 
     // Set default values on CDO if available
@@ -1865,21 +1905,21 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* DropCountProp = CDO->GetClass()->FindPropertyByName(TEXT("LootDropCount"));
         if (DropCountProp) {
-          TSharedPtr<FJsonValue> IntVal = MakeShareable(new FJsonValueNumber(static_cast<double>(DropCount)));
+          TSharedPtr<FJsonValue> IntVal = MakeShared<FJsonValueNumber>(static_cast<double>(DropCount));
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, DropCountProp, IntVal, ApplyError);
         }
 
         FProperty* DropRadiusProp = CDO->GetClass()->FindPropertyByName(TEXT("LootDropRadius"));
         if (DropRadiusProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShareable(new FJsonValueNumber(DropRadius));
+          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(DropRadius);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, DropRadiusProp, FloatVal, ApplyError);
         }
 
         FProperty* DropOnDeathProp = CDO->GetClass()->FindPropertyByName(TEXT("bDropLootOnDeath"));
         if (DropOnDeathProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bDropOnDeath));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bDropOnDeath);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, DropOnDeathProp, BoolVal, ApplyError);
         }
@@ -1892,7 +1932,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorPath"), ActorPath);
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     Result->SetNumberField(TEXT("dropCount"), DropCount);
@@ -1971,15 +2011,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(LootTable);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
 
     TArray<TSharedPtr<FJsonValue>> ConfiguredTiers;
     for (const auto& TierPair : Tiers) {
-      TSharedPtr<FJsonObject> TierObj = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> TierObj = McpHandlerUtils::CreateResultObject();
       TierObj->SetStringField(TEXT("name"), TierPair.Key);
       TierObj->SetNumberField(TEXT("dropWeight"), TierPair.Value);
-      ConfiguredTiers.Add(MakeShareable(new FJsonValueObject(TierObj)));
+      ConfiguredTiers.Add(MakeShared<FJsonValueObject>(TierObj));
     }
     Result->SetArrayField(TEXT("tiersConfigured"), ConfiguredTiers);
     Result->SetNumberField(TEXT("tierCount"), Tiers.Num());
@@ -2031,7 +2071,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
         McpSafeAssetSave(RecipeAsset);
       }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("recipePath"), Package->GetName());
       Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
       Result->SetNumberField(TEXT("outputQuantity"),
@@ -2058,7 +2098,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("recipePath"), RecipePath);
     Result->SetNumberField(TEXT("requiredLevel"),
                            GetPayloadNumber(Payload, TEXT("requiredLevel"), 0));
@@ -2121,7 +2161,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           McpSafeAssetSave(StationBlueprint);
         }
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("stationPath"), Package->GetName());
       Result->SetStringField(TEXT("stationType"), StationType);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -2200,7 +2240,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           }
           if (!bExists) {
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-            AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+            AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
           }
         }
 
@@ -2225,7 +2265,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           }
           if (!bExists) {
             FBlueprintEditorUtils::AddMemberVariable(Blueprint, EventName, DelegateType);
-            AddedVars.Add(MakeShareable(new FJsonValueString(EventName.ToString())));
+            AddedVars.Add(MakeShared<FJsonValueString>(EventName.ToString()));
           }
         }
 
@@ -2235,7 +2275,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           McpSafeAssetSave(Blueprint);
         }
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("componentName"), ComponentName);
         Result->SetBoolField(TEXT("componentAdded"), true);
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -2288,7 +2328,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       StackableProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("Stackable"));
     }
     if (StackableProp) {
-      TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bStackable));
+      TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bStackable);
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, StackableProp, BoolVal, ApplyError)) {
         ModifiedProps.Add(TEXT("Stackable"));
@@ -2300,7 +2340,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       MaxStackProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("StackLimit"));
     }
     if (MaxStackProp) {
-      TSharedPtr<FJsonValue> IntVal = MakeShareable(new FJsonValueNumber(static_cast<double>(MaxStackSize)));
+      TSharedPtr<FJsonValue> IntVal = MakeShared<FJsonValueNumber>(static_cast<double>(MaxStackSize));
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, MaxStackProp, IntVal, ApplyError)) {
         ModifiedProps.Add(TEXT("MaxStackSize"));
@@ -2309,7 +2349,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     FProperty* UniqueProp = ItemAsset->GetClass()->FindPropertyByName(TEXT("bUniqueItem"));
     if (UniqueProp) {
-      TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bUniqueItems));
+      TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bUniqueItems);
       FString ApplyError;
       if (ApplyJsonValueToProperty(ItemAsset, UniqueProp, BoolVal, ApplyError)) {
         ModifiedProps.Add(TEXT("UniqueItem"));
@@ -2322,7 +2362,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(ItemAsset);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetBoolField(TEXT("stackable"), bStackable);
     Result->SetNumberField(TEXT("maxStackSize"), MaxStackSize);
@@ -2330,7 +2370,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     TArray<TSharedPtr<FJsonValue>> ModArr;
     for (const FString& Prop : ModifiedProps) {
-      ModArr.Add(MakeShareable(new FJsonValueString(Prop)));
+      ModArr.Add(MakeShared<FJsonValueString>(Prop));
     }
     Result->SetArrayField(TEXT("modifiedProperties"), ModArr);
     Result->SetBoolField(TEXT("configured"), true);
@@ -2380,7 +2420,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     for (const FString& PropName : IconPropNames) {
       FProperty* IconProp = ItemAsset->GetClass()->FindPropertyByName(*PropName);
       if (IconProp) {
-        TSharedPtr<FJsonValue> PathVal = MakeShareable(new FJsonValueString(IconPath));
+        TSharedPtr<FJsonValue> PathVal = MakeShared<FJsonValueString>(IconPath);
         FString ApplyError;
         if (ApplyJsonValueToProperty(ItemAsset, IconProp, PathVal, ApplyError)) {
           bIconSet = true;
@@ -2396,7 +2436,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(ItemAsset);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("iconPath"), IconPath);
     Result->SetBoolField(TEXT("iconSet"), bIconSet);
@@ -2469,7 +2509,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(RecipeAsset);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("recipePath"), RecipePath);
     Result->SetStringField(TEXT("ingredientItemPath"), IngredientItemPath);
     Result->SetNumberField(TEXT("quantity"), Quantity);
@@ -2541,7 +2581,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(LootTable);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     Result->SetNumberField(TEXT("removedIndex"), RemovedIndex);
     Result->SetBoolField(TEXT("removed"), bEntryRemoved);
@@ -2609,7 +2649,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -2626,7 +2666,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     }
     if (!bEventExists) {
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OnEncumberanceChanged"), DelegateType);
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("OnEncumberanceChanged"))));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnEncumberanceChanged")));
     }
 
     // Set default values on CDO if available
@@ -2635,28 +2675,28 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* MaxWeightProp = CDO->GetClass()->FindPropertyByName(TEXT("MaxCarryWeight"));
         if (MaxWeightProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShareable(new FJsonValueNumber(MaxWeight));
+          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(MaxWeight);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, MaxWeightProp, FloatVal, ApplyError);
         }
 
         FProperty* EnableProp = CDO->GetClass()->FindPropertyByName(TEXT("bWeightEnabled"));
         if (EnableProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bEnableWeight));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bEnableWeight);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, EnableProp, BoolVal, ApplyError);
         }
 
         FProperty* EncumProp = CDO->GetClass()->FindPropertyByName(TEXT("bUseEncumberance"));
         if (EncumProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShareable(new FJsonValueBoolean(bEncumberanceSystem));
+          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bEncumberanceSystem);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, EncumProp, BoolVal, ApplyError);
         }
 
         FProperty* ThreshProp = CDO->GetClass()->FindPropertyByName(TEXT("EncumberanceThreshold"));
         if (ThreshProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShareable(new FJsonValueNumber(EncumberanceThreshold));
+          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(EncumberanceThreshold);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, ThreshProp, FloatVal, ApplyError);
         }
@@ -2669,7 +2709,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("maxWeight"), MaxWeight);
     Result->SetBoolField(TEXT("enableWeight"), bEnableWeight);
@@ -2752,7 +2792,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShareable(new FJsonValueString(VarPair.Key.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
       }
     }
 
@@ -2777,7 +2817,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       }
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, EventName, DelegateType);
-        AddedVars.Add(MakeShareable(new FJsonValueString(EventName.ToString())));
+        AddedVars.Add(MakeShared<FJsonValueString>(EventName.ToString()));
       }
     }
 
@@ -2787,7 +2827,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("stationPath"), StationPath);
     Result->SetStringField(TEXT("stationType"), StationType);
     Result->SetNumberField(TEXT("recipeCount"), RecipePaths.Num());
@@ -2796,7 +2836,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     TArray<TSharedPtr<FJsonValue>> RecipePathsArr;
     for (const FString& Path : RecipePaths) {
-      RecipePathsArr.Add(MakeShareable(new FJsonValueString(Path)));
+      RecipePathsArr.Add(MakeShared<FJsonValueString>(Path));
     }
     Result->SetArrayField(TEXT("recipePaths"), RecipePathsArr);
 
@@ -2810,7 +2850,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   // ===========================================================================
 
   if (SubAction == TEXT("get_inventory_info")) {
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
     FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
@@ -2832,11 +2872,11 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
           TArray<TSharedPtr<FJsonValue>> Components;
           for (USCS_Node* Node : SCS->GetAllNodes()) {
             if (Node) {
-              TSharedPtr<FJsonObject> CompInfo = MakeShareable(new FJsonObject());
+              TSharedPtr<FJsonObject> CompInfo = McpHandlerUtils::CreateResultObject();
               CompInfo->SetStringField(TEXT("name"), Node->GetVariableName().ToString());
               CompInfo->SetStringField(TEXT("class"),
                                        Node->ComponentClass ? Node->ComponentClass->GetName() : TEXT("Unknown"));
-              Components.Add(MakeShareable(new FJsonValueObject(CompInfo)));
+              Components.Add(MakeShared<FJsonValueObject>(CompInfo));
             }
           }
           Result->SetArrayField(TEXT("components"), Components);

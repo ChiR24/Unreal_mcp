@@ -1,13 +1,65 @@
+// =============================================================================
+// McpAutomationBridge_FoliageHandlers.cpp
+// =============================================================================
+// Foliage and Procedural Foliage automation handlers for MCP Automation Bridge.
+//
+// HANDLERS IMPLEMENTED (6 total):
+// -----------------------------------------------------------------------------
+// Section A - Foliage Instance Management (4 handlers):
+//   - paint_foliage       : Paint foliage instances at specified world locations
+//   - remove_foliage      : Remove foliage instances (all or by type)
+//   - get_foliage_instances: Query existing foliage instance data
+//   - add_foliage_instances: Add instances with full transform support
+//
+// Section B - Foliage Type Management (1 handler):
+//   - add_foliage_type    : Create new foliage type asset from static mesh
+//
+// Section C - Procedural Foliage (1 handler):
+//   - create_procedural_foliage: Create procedural foliage volume with spawner
+//
+// =============================================================================
+// UE VERSION COMPATIBILITY (5.0 - 5.7):
+// -----------------------------------------------------------------------------
+// - World Partition: UE 5.0-5.3 uses ActorPartitionSubsystem differently
+//   than UE 5.4+; helper function handles both paths
+// - InstancedFoliageActor: API stable across all versions
+// - FoliageType_InstancedStaticMesh: API stable across all versions
+// - ProceduralFoliageSpawner: API stable, uses reflection for FoliageTypes
+// - McpSafeAssetSave: Required for UE 5.7+ (avoid UPackage::SavePackage crash)
+//
+// =============================================================================
+// SECURITY NOTES:
+// -----------------------------------------------------------------------------
+// - All asset paths sanitized via SanitizeProjectRelativePath()
+// - Path traversal attacks blocked at validation layer
+// - Auto-resolve of simple names limited to /Game/Foliage/ prefix
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first include
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpHandlerUtils.h"
 
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
-#include "EditorAssetLibrary.h"
+
+// -----------------------------------------------------------------------------
+// Core Engine
+// -----------------------------------------------------------------------------
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "UObject/SavePackage.h"
+
+// -----------------------------------------------------------------------------
+// Foliage System
+// -----------------------------------------------------------------------------
 #include "FoliageType.h"
 #include "FoliageTypeObject.h"
 #include "FoliageType_InstancedStaticMesh.h"
@@ -15,46 +67,79 @@
 #include "ProceduralFoliageComponent.h"
 #include "ProceduralFoliageSpawner.h"
 #include "ProceduralFoliageVolume.h"
-#include "UObject/SavePackage.h"
-#include "WorldPartition/WorldPartition.h"
 
+// -----------------------------------------------------------------------------
+// Editor Subsystems
+// -----------------------------------------------------------------------------
+#include "EditorAssetLibrary.h"
+
+// Version-specific subsystem includes
 #if __has_include("Subsystems/EditorActorSubsystem.h")
-#include "Subsystems/EditorActorSubsystem.h"
+  #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
+  #include "EditorActorSubsystem.h"
 #endif
 
-// Add these includes unconditionally for Editor builds
+// World Partition support
 #include "ActorPartition/ActorPartitionSubsystem.h"
 #include "EditorBuildUtils.h"
-#endif
+#include "WorldPartition/WorldPartition.h"
+
+// Asset Registry for procedural foliage
+#include "AssetRegistryModule.h"
+
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Section A: Internal Helper Functions
+// =============================================================================
 
 #if WITH_EDITOR
-static AInstancedFoliageActor *
-GetOrCreateFoliageActorForWorldSafe(UWorld *World, bool bCreateIfNone) {
+
+/**
+ * Get or create an InstancedFoliageActor for the given world.
+ *
+ * Handles differences between World Partition and non-partitioned levels:
+ * - World Partition levels: Uses ActorPartitionSubsystem to get the correct
+ *   foliage actor for the current level partition
+ * - Standard levels: Finds existing foliage actor or spawns a new one
+ *
+ * @param World          The world to get/create foliage actor for
+ * @param bCreateIfNone  If true, spawn a new actor if none exists
+ * @return Pointer to the InstancedFoliageActor, or nullptr on failure
+ *
+ * UE Version Notes:
+ * - UE 5.0-5.3: ActorPartitionSubsystem::IsLevelPartition() check required
+ * - UE 5.4+: Same API, but internal behavior differs slightly
+ */
+static AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World, bool bCreateIfNone)
+{
   if (!World) {
     return nullptr;
   }
 
+  // Check for World Partition - requires special handling
   if (UWorldPartition *WorldPartition = World->GetWorldPartition()) {
-    // Check if the world is actually using the Actor Partition Subsystem to
-    // avoid crashes in non-partitioned levels that happen to have a WP object.
-    if (UActorPartitionSubsystem *ActorPartitionSubsystem =
+    // Verify this is actually a partitioned level (not just having WP object)
+    // to avoid crashes in non-partitioned levels
+    if (UActorPartitionSubsystem* ActorPartitionSubsystem =
             World->GetSubsystem<UActorPartitionSubsystem>()) {
       if (ActorPartitionSubsystem->IsLevelPartition()) {
+        // World Partition path - use the subsystem's method
         return AInstancedFoliageActor::GetInstancedFoliageActorForCurrentLevel(
             World, bCreateIfNone);
       }
     }
   }
 
-  // Non-partitioned worlds: avoid ActorPartitionSubsystem ensures by finding or
-  // spawning a foliage actor manually.
+  // Non-partitioned world: Find existing or spawn manually
+  // Avoid ActorPartitionSubsystem ensures which can fail in this case
   TActorIterator<AInstancedFoliageActor> It(World);
   if (It) {
     return *It;
   }
 
+  // No existing actor - spawn if requested
   if (!bCreateIfNone) {
     return nullptr;
   }
@@ -64,8 +149,31 @@ GetOrCreateFoliageActorForWorldSafe(UWorld *World, bool bCreateIfNone) {
   SpawnParams.OverrideLevel = World->PersistentLevel;
   return World->SpawnActor<AInstancedFoliageActor>(SpawnParams);
 }
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Section B: Foliage Instance Management Handlers
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Handler: paint_foliage
+// -----------------------------------------------------------------------------
+// Paints foliage instances at specified world locations.
+//
+// Payload:
+//   - foliageTypePath (string): Path to FoliageType or StaticMesh asset
+//   - foliageType (string): Alternate key for foliageTypePath
+//   - locations (array): Array of {x, y, z} location objects
+//   - location (object): Single position object (alternative to array)
+//   - position (object): Alias for location
+//
+// Response:
+//   - success (bool): true if successful
+//   - foliageTypePath (string): Resolved foliage type path
+//   - instancesPlaced (int): Number of instances created
+//   - foliageActorPath (string): Path to the foliage actor
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -251,7 +359,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
 
   IFA->Modify();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
@@ -272,6 +380,20 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
 #endif
 }
 
+// -----------------------------------------------------------------------------
+// Handler: remove_foliage
+// -----------------------------------------------------------------------------
+// Removes foliage instances from the level.
+//
+// Payload:
+//   - foliageTypePath (string, optional): Path to specific foliage type
+//   - removeAll (bool): If true, remove all foliage instances
+//
+// Response:
+//   - success (bool): true if successful
+//   - instancesRemoved (int): Number of instances removed
+//   - foliageActorPath (string): Path to the foliage actor
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -355,7 +477,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     }
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
   
@@ -374,6 +496,21 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
 #endif
 }
 
+// -----------------------------------------------------------------------------
+// Handler: get_foliage_instances
+// -----------------------------------------------------------------------------
+// Retrieves foliage instance data from the level.
+//
+// Payload:
+//   - foliageTypePath (string, optional): Path to specific foliage type
+//     If not provided, returns all instances from all foliage types
+//
+// Response:
+//   - success (bool): true if successful
+//   - instances (array): Array of instance data objects
+//   - count (int): Total number of instances
+//   - foliageActorPath (string): Path to the foliage actor
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -424,7 +561,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   AInstancedFoliageActor *IFA =
       GetOrCreateFoliageActorForWorldSafe(World, false);
   if (!IFA) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("instances"), TArray<TSharedPtr<FJsonValue>>());
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -438,7 +575,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
     if (!UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
       // If asked for a specific type that doesn't exist, return empty list
       // gracefully (or could error, but empty list seems safer for 'get')
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetArrayField(TEXT("instances"), TArray<TSharedPtr<FJsonValue>>());
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -453,7 +590,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
       FFoliageInfo *Info = IFA->FindInfo(FoliageType);
       if (Info) {
         for (const FFoliageInstance &Inst : Info->Instances) {
-          TSharedPtr<FJsonObject> InstObj = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> InstObj = McpHandlerUtils::CreateResultObject();
           InstObj->SetNumberField(TEXT("x"), Inst.Location.X);
           InstObj->SetNumberField(TEXT("y"), Inst.Location.Y);
           InstObj->SetNumberField(TEXT("z"), Inst.Location.Z);
@@ -467,7 +604,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   } else {
     IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
       for (const FFoliageInstance &Inst : Info.Instances) {
-        TSharedPtr<FJsonObject> InstObj = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> InstObj = McpHandlerUtils::CreateResultObject();
         InstObj->SetStringField(TEXT("foliageType"), Type->GetPathName());
         InstObj->SetNumberField(TEXT("x"), Inst.Location.X);
         InstObj->SetNumberField(TEXT("y"), Inst.Location.Y);
@@ -478,7 +615,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
     });
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), InstancesArray);
   Resp->SetNumberField(TEXT("count"), InstancesArray.Num());
@@ -498,6 +635,30 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
 #endif
 }
 
+// =============================================================================
+// Section C: Foliage Type Management Handlers
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Handler: add_foliage_type
+// -----------------------------------------------------------------------------
+// Creates a new foliage type asset from a static mesh.
+//
+// Payload:
+//   - name (string): Name for the new foliage type
+//   - meshPath (string): Path to the source static mesh
+//   - density (float, optional): Paint density (default: 100.0)
+//   - minScale (float, optional): Minimum scale (default: 1.0)
+//   - maxScale (float, optional): Maximum scale (default: 1.0)
+//   - alignToNormal (bool, optional): Align to surface normal (default: true)
+//   - randomYaw (bool, optional): Apply random yaw rotation (default: true)
+//
+// Response:
+//   - success (bool): true if successful
+//   - created (bool): true if new asset was created
+//   - asset_path (string): Path to the created foliage type
+//   - used_mesh (string): Path to the source mesh
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -650,7 +811,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
 
   McpSafeAssetSave(FoliageType);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("created"), true);
   Resp->SetBoolField(TEXT("exists_after"), true);
@@ -659,7 +820,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   Resp->SetStringField(TEXT("method"), TEXT("native_asset_creation"));
   
   // Add verification data
-  AddAssetVerification(Resp, FoliageType);
+  McpHandlerUtils::AddVerification(Resp, FoliageType);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage type created successfully"), Resp,
@@ -674,6 +835,26 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
 #endif
 }
 
+// -----------------------------------------------------------------------------
+// Handler: add_foliage_instances
+// -----------------------------------------------------------------------------
+// Adds foliage instances with full transform support (location, rotation, scale).
+//
+// Payload:
+//   - foliageTypePath (string): Path to FoliageType or StaticMesh asset
+//   - foliageType (string): Alternate key for foliageTypePath
+//   - transforms (array): Array of transform objects with:
+//       - location: {x, y, z} or [x, y, z]
+//       - rotation (optional): {pitch, yaw, roll} or [pitch, yaw, roll]
+//       - scale (optional): {x, y, z}, [x, y, z], or uniformScale scalar
+//   - locations (array, legacy): Array of {x, y, z} objects
+//
+// Response:
+//   - success (bool): true if successful
+//   - instances_count (int): Number of instances added
+//   - foliageActorPath (string): Path to the foliage actor
+//   - foliageTypePath (string): Resolved foliage type path
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -896,7 +1077,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   }
   IFA->Modify();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instances_count"), Added);
   
@@ -916,6 +1097,32 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
 #endif
 }
 
+// =============================================================================
+// Section D: Procedural Foliage Handlers
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Handler: create_procedural_foliage
+// -----------------------------------------------------------------------------
+// Creates a procedural foliage volume with spawner and automatically populates.
+//
+// Payload:
+//   - name (string): Name for the procedural foliage system
+//   - bounds (object): Bounds configuration:
+//       - location (object, optional): {x, y, z} world position
+//       - size (object/array): {x, y, z} or [x, y, z] dimensions
+//   - foliageTypes (array): Array of foliage type configs:
+//       - meshPath (string): Path to static mesh
+//       - density (float, optional): Paint density
+//   - seed (int, optional): Random seed for procedural generation
+//
+// Response:
+//   - success (bool): true if successful
+//   - volume_actor (string): Name of the spawned volume
+//   - spawner_path (string): Path to the created spawner asset
+//   - foliage_types_count (int): Number of foliage types configured
+//   - resimulated (bool): true if resimulation was triggered
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -1101,7 +1308,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
         [](const TArray<FDesiredFoliageInstance> &) {});
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("volume_actor"), Volume->GetActorLabel());
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
@@ -1109,8 +1316,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Resp->SetBoolField(TEXT("resimulated"), true);
   
   // Add verification data
-  AddActorVerification(Resp, Volume);
-  AddAssetVerification(Resp, Spawner);
+  McpHandlerUtils::AddVerification(Resp, Volume);
+  McpHandlerUtils::AddVerification(Resp, Spawner);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Procedural foliage created"), Resp, FString());

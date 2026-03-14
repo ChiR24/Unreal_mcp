@@ -1,25 +1,73 @@
+// =============================================================================
+// McpAutomationBridge_BehaviorTreeHandlers.cpp
+// =============================================================================
+// Handler implementations for Behavior Tree asset creation and graph editing.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// manage_behavior_tree:
+//   - create: Create new Behavior Tree asset with optional graph initialization
+//   - add_node: Add composite/task/decorator/service nodes to BT graph
+//   - connect_nodes: Connect parent->child nodes in BT graph
+//   - remove_node: Remove node from BT graph
+//   - break_connections: Break all connections on a node
+//   - set_node_properties: Set properties on BT node instances
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.2: BehaviorTreeGraph classes not exported (BEHAVIORTREEEDITOR_API)
+//             Graph editing NOT supported - nodes created at runtime only
+// UE 5.3+:    BehaviorTreeGraph classes exported, full graph editing support
+//
+// NODE TYPES SUPPORTED:
+// ---------------------
+// Composites: Sequence, Selector, SimpleParallel
+// Tasks: Wait, MoveTo, RotateTo, RunBehavior, FinishWithResult (Fail/Succeed)
+// Decorators: Blackboard (default), custom via class path
+// Services: DefaultFocus (default), custom via class path
+//
+// SECURITY:
+// ---------
+// - Asset paths validated via IsValidAssetPath() to prevent traversal attacks
+// - No raw pointer operations without null checks
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "McpAutomationBridgeGlobals.h"
-#include "Dom/JsonObject.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
-#include "BehaviorTree/BTDecorator.h"
-#include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
-#include "BehaviorTree/BTService.h"
-#include "BehaviorTree/Services/BTService_DefaultFocus.h"
+
+// Behavior Tree Core
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BTDecorator.h"
+#include "BehaviorTree/BTService.h"
 #include "BehaviorTree/Composites/BTComposite_Selector.h"
 #include "BehaviorTree/Composites/BTComposite_Sequence.h"
 #include "BehaviorTree/Composites/BTComposite_SimpleParallel.h"
+#include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
+#include "BehaviorTree/Services/BTService_DefaultFocus.h"
 #include "BehaviorTree/Tasks/BTTask_FinishWithResult.h"
 #include "BehaviorTree/Tasks/BTTask_MoveTo.h"
 #include "BehaviorTree/Tasks/BTTask_RotateToFaceBBEntry.h"
 #include "BehaviorTree/Tasks/BTTask_RunBehavior.h"
 #include "BehaviorTree/Tasks/BTTask_Wait.h"
 
-// BehaviorTreeGraph classes are in BehaviorTreeEditor module
-// UBehaviorTreeGraph is only exported (BEHAVIORTREEEDITOR_API) starting from UE 5.3
+// Behavior Tree Graph (UE 5.3+)
+// BehaviorTreeGraph classes are only exported (BEHAVIORTREEEDITOR_API) starting from UE 5.3
 // UE 5.0-5.2: Class is not exported, cannot use NewObject<UBehaviorTreeGraph>() from outside module
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "BehaviorTreeGraph.h"
@@ -30,16 +78,20 @@
 #include "BehaviorTreeGraphNode_Service.h"
 #include "BehaviorTreeGraphNode_Task.h"
 #include "EdGraphSchema_BehaviorTree.h"
-#include "EdGraph/EdGraph.h"  // For FGraphNodeCreator
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 1
 #else
 #define MCP_HAS_BEHAVIOR_TREE_GRAPH 0
 #endif
+
+// Graph Support
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
 
+#endif // WITH_EDITOR
 
-#endif
+// =============================================================================
+// Handler Implementation
+// =============================================================================
 
 /**
  * @brief Handles requests to create and manipulate Behavior Tree assets and their graphs.
@@ -80,7 +132,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
   }
 
-  // Handle 'create' subAction first - this doesn't need an existing asset
+  // ===========================================================================
+  // SubAction: create - Create new Behavior Tree asset
+  // ===========================================================================
   if (SubAction == TEXT("create")) {
     FString Name;
     if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
@@ -96,7 +150,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       SavePath = TEXT("/Game");
     }
 
-    // Ensure path starts with /Game
+    // Ensure path starts with /Game (security: normalized path)
     if (!SavePath.StartsWith(TEXT("/"))) {
       SavePath = TEXT("/Game/") + SavePath;
     }
@@ -151,7 +205,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     // Create default nodes (Root)
     NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
 #else
-    // UE 5.0: BehaviorTreeGraph classes not available in BehaviorTreeEditor module
+    // UE 5.0-5.2: BehaviorTreeGraph classes not available in BehaviorTreeEditor module
     // The graph will be initialized when the asset is first opened in the editor
     NewBT->BTGraph = nullptr;
 #endif
@@ -161,17 +215,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     Package->MarkPackageDirty();
     bool bSaved = McpSafeAssetSave(NewBT);
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), NewBT->GetPathName());
     Result->SetStringField(TEXT("name"), Name);
     Result->SetBoolField(TEXT("saved"), bSaved);
-    AddAssetVerification(Result, NewBT);
+    McpHandlerUtils::AddVerification(Result, NewBT);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Behavior Tree created."), Result);
     return true;
   }
 
+  // ===========================================================================
+  // Load existing Behavior Tree for remaining subActions
+  // ===========================================================================
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
       AssetPath.IsEmpty()) {
@@ -210,6 +267,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // Helper: Find graph node by GUID or Name
+  // ---------------------------------------------------------------------------
   auto FindGraphNodeByIdOrName =
       [&](const FString &IdOrName) -> UEdGraphNode * {
     if (IdOrName.IsEmpty()) {
@@ -241,10 +301,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return nullptr;
   };
 
+  // ===========================================================================
+  // SubAction: add_node - Add node to Behavior Tree graph
+  // ===========================================================================
   if (SubAction == TEXT("add_node")) {
 #if !MCP_HAS_BEHAVIOR_TREE_GRAPH
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("Behavior Tree graph editing requires UE 5.3+"),
                         TEXT("NOT_SUPPORTED"));
     return true;
 #else
@@ -266,6 +329,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     UClass *NodeClass = nullptr;
     UClass *NodeInstanceClass = nullptr;
 
+    // Composite types
     if (NodeType == TEXT("Sequence")) {
       NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_Sequence::StaticClass();
@@ -275,7 +339,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     } else if (NodeType == TEXT("SimpleParallel")) {
       NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Composite"));
       NodeInstanceClass = UBTComposite_SimpleParallel::StaticClass();
-    } else if (NodeType == TEXT("Wait")) {
+    }
+    // Task types
+    else if (NodeType == TEXT("Wait")) {
       NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_Wait::StaticClass();
     } else if (NodeType == TEXT("MoveTo")) {
@@ -294,7 +360,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       // Succeed is a FinishWithResult task configured to success
       NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Task"));
       NodeInstanceClass = UBTTask_FinishWithResult::StaticClass();
-    } else if (NodeType == TEXT("Root")) {
+    }
+    // Special node types
+    else if (NodeType == TEXT("Root")) {
       NodeClass = FindObject<UClass>(nullptr, TEXT("/Script/BehaviorTreeEditor.BehaviorTreeGraphNode_Root"));
       // Root doesn't have an instance class in the same way
     } else if (NodeType == TEXT("Task")) {
@@ -363,9 +431,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
         BTGraph->NotifyGraphChanged();
         BT->MarkPackageDirty();
 
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
-        AddAssetVerification(Result, BT);
+        McpHandlerUtils::AddVerification(Result, BT);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node added."), Result);
@@ -382,10 +450,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     }
     return true;
 #endif
-  } else if (SubAction == TEXT("connect_nodes")) {
+  }
+  // ===========================================================================
+  // SubAction: connect_nodes - Connect parent to child node
+  // ===========================================================================
+  else if (SubAction == TEXT("connect_nodes")) {
 #if !MCP_HAS_BEHAVIOR_TREE_GRAPH
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("Behavior Tree graph editing requires UE 5.3+"),
                         TEXT("NOT_SUPPORTED"));
     return true;
 #endif
@@ -425,8 +497,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
       if (BTGraph->GetSchema()->TryCreateConnection(OutputPin, InputPin)) {
         BTGraph->NotifyGraphChanged();
         BT->MarkPackageDirty();
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-        AddAssetVerification(Resp, BT);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(Resp, BT);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Nodes connected."), Resp);
       } else {
@@ -440,10 +512,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                           TEXT("PIN_NOT_FOUND"));
     }
     return true;
-  } else if (SubAction == TEXT("remove_node")) {
+  }
+  // ===========================================================================
+  // SubAction: remove_node - Remove node from graph
+  // ===========================================================================
+  else if (SubAction == TEXT("remove_node")) {
 #if !MCP_HAS_BEHAVIOR_TREE_GRAPH
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("Behavior Tree graph editing requires UE 5.3+"),
                         TEXT("NOT_SUPPORTED"));
     return true;
 #endif
@@ -454,8 +530,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     if (TargetNode) {
       BTGraph->RemoveNode(TargetNode);
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      AddAssetVerification(Resp, BT);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node removed."), Resp);
     } else {
@@ -463,10 +539,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                           TEXT("NODE_NOT_FOUND"));
     }
     return true;
-  } else if (SubAction == TEXT("break_connections")) {
+  }
+  // ===========================================================================
+  // SubAction: break_connections - Break all connections on a node
+  // ===========================================================================
+  else if (SubAction == TEXT("break_connections")) {
 #if !MCP_HAS_BEHAVIOR_TREE_GRAPH
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("Behavior Tree graph editing requires UE 5.3+"),
                         TEXT("NOT_SUPPORTED"));
     return true;
 #endif
@@ -477,8 +557,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 
     if (TargetNode) {
       TargetNode->BreakAllNodeLinks();
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      AddAssetVerification(Resp, BT);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Connections broken."), Resp);
     } else {
@@ -486,10 +566,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                           TEXT("NODE_NOT_FOUND"));
     }
     return true;
-  } else if (SubAction == TEXT("set_node_properties")) {
+  }
+  // ===========================================================================
+  // SubAction: set_node_properties - Set properties on node instance
+  // ===========================================================================
+  else if (SubAction == TEXT("set_node_properties")) {
 #if !MCP_HAS_BEHAVIOR_TREE_GRAPH
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Behavior Tree graph editing requires UE 5.1+"),
+                        TEXT("Behavior Tree graph editing requires UE 5.3+"),
                         TEXT("NOT_SUPPORTED"));
     return true;
 #else
@@ -570,8 +654,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
         BT->MarkPackageDirty();
       }
 
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-      AddAssetVerification(Resp, BT);
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      McpHandlerUtils::AddVerification(Resp, BT);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Node properties updated."), Resp);
     } else {
@@ -582,6 +666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
 #endif
   }
 
+  // Unknown subAction
   SendAutomationError(
       RequestingSocket, RequestId,
       FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),

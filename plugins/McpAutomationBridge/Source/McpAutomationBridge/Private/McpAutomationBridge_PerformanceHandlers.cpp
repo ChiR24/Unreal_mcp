@@ -1,23 +1,100 @@
+// =============================================================================
+// McpAutomationBridge_PerformanceHandlers.cpp
+// =============================================================================
+// Handler implementations for performance profiling and optimization operations.
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Performance Profiling:
+//   - generate_memory_report: Generate memory report via memreport command
+//   - start_profiling: Start stats capture (stat startfile)
+//   - stop_profiling: Stop stats capture (stat stopfile)
+//   - show_fps: Toggle FPS display
+//   - show_stats: Toggle stat category display
+//   - run_benchmark: Start performance benchmark
+//   - enable_gpu_timing: Enable/disable GPU timing stats
+//
+// Rendering Optimization:
+//   - set_scalability: Set overall scalability level (0-3)
+//   - set_resolution_scale: Set resolution scale (r.ScreenPercentage)
+//   - set_vsync: Enable/disable VSync
+//   - set_frame_rate_limit: Set max FPS
+//   - configure_nanite: Enable/disable Nanite
+//   - configure_lod: Set LOD bias and forced LOD
+//   - configure_texture_streaming: Configure texture streaming settings
+//
+// Advanced Optimization:
+//   - apply_baseline_settings: Apply performance/quality/balanced profiles
+//   - optimize_draw_calls: Configure draw call optimizations
+//   - configure_occlusion_culling: Configure occlusion settings
+//   - optimize_shaders: Recompile shaders (changed/material/global/all)
+//   - configure_world_partition: Configure World Partition streaming
+//   - merge_actors: Merge selected actors using MergeActors module
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: IStreamingManager::AddViewLocation not available
+// UE 5.1+: IStreamingManager::AddViewLocation available for texture streaming boost
+//
+// SECURITY:
+// ---------
+// - Stat category names sanitized to prevent console command injection
+// - Only alphanumeric characters and underscores allowed in categories
+// =============================================================================
+
+// =============================================================================
+// Version Compatibility Header (MUST BE FIRST)
+// =============================================================================
+#include "McpVersionCompatibility.h"
+
+// =============================================================================
+// Core Headers
+// =============================================================================
 #include "McpAutomationBridgeGlobals.h"
-#include "Dom/JsonObject.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Dom/JsonObject.h"
 
-
+// =============================================================================
+// Editor-Only Headers
+// =============================================================================
 #if WITH_EDITOR
+
+// Content & Streaming
 #include "ContentStreaming.h"
 #include "Editor/UnrealEd/Public/Editor.h"
 #include "EngineUtils.h"
 #include "HAL/FileManager.h"
+
+// Merge Actors Module
 #include "IMergeActorsModule.h"
 #include "IMergeActorsTool.h"
+
+// Gameplay & Level
 #include "Kismet/GameplayStatics.h"
 #include "LevelEditor.h"
 #include "ProfilingDebugging/ScopedTimers.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
-#endif
+#endif // WITH_EDITOR
 
+// =============================================================================
+// Handler Implementation
+// =============================================================================
+
+/**
+ * @brief Handles performance profiling and optimization actions.
+ *
+ * Processes performance-related actions for memory reporting, profiling,
+ * scalability settings, and various optimization configurations.
+ *
+ * @param RequestId Identifier for the incoming request.
+ * @param Action Action name to handle.
+ * @param Payload JSON object containing action-specific parameters.
+ * @param RequestingSocket WebSocket for response delivery.
+ * @return true if the action was handled, false otherwise.
+ */
 bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -54,6 +131,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     return true;
   }
 
+  // ===========================================================================
+  // generate_memory_report - Generate memory report
+  // ===========================================================================
   if (Lower == TEXT("generate_memory_report")) {
     bool bDetailed = false;
     Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
@@ -78,8 +158,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Memory report generated"), nullptr);
     return true;
-  } else if (Lower == TEXT("start_profiling")) {
-    // "stat startfile"
+  }
+  // ===========================================================================
+  // start_profiling - Start stats capture
+  // ===========================================================================
+  else if (Lower == TEXT("start_profiling")) {
     if (!GEditor)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
@@ -91,8 +174,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Profiling started"), nullptr);
     return true;
-  } else if (Lower == TEXT("stop_profiling")) {
-    // "stat stopfile"
+  }
+  // ===========================================================================
+  // stop_profiling - Stop stats capture
+  // ===========================================================================
+  else if (Lower == TEXT("stop_profiling")) {
     if (!GEditor)
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
@@ -104,10 +190,13 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Profiling stopped"), nullptr);
     return true;
-  } else if (Lower == TEXT("show_fps")) {
+  }
+  // ===========================================================================
+  // show_fps - Toggle FPS display
+  // ===========================================================================
+  else if (Lower == TEXT("show_fps")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-    FString Cmd = bEnabled ? TEXT("stat fps") : TEXT("stat none");
     // Note: "stat fps" toggles, so we might need check, but mostly users just
     // want to run the command. For explicit set, we can use "stat fps 1" or
     // "stat fps 0" if supported, but typically it's a toggle. Better: use
@@ -122,7 +211,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("FPS stat toggled"), nullptr);
     return true;
-  } else if (Lower == TEXT("show_stats")) {
+  }
+  // ===========================================================================
+  // show_stats - Toggle stat category display
+  // ===========================================================================
+  else if (Lower == TEXT("show_stats")) {
     FString Category;
     if (Payload->TryGetStringField(TEXT("category"), Category) &&
         !Category.IsEmpty()) {
@@ -161,11 +254,15 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                              TEXT("INVALID_ARGUMENT"));
     }
     return true;
-  } else if (Lower == TEXT("set_scalability")) {
+  }
+  // ===========================================================================
+  // set_scalability - Set overall scalability level
+  // ===========================================================================
+  else if (Lower == TEXT("set_scalability")) {
     int32 Level = 3; // Epic
     Payload->TryGetNumberField(TEXT("level"), Level);
 
-    // simple batch scalability
+    // Simple batch scalability
     Scalability::FQualityLevels Quals;
     Quals.SetFromSingleQualityLevel(Level);
     Scalability::SetQualityLevels(Quals);
@@ -174,7 +271,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Scalability set"), nullptr);
     return true;
-  } else if (Lower == TEXT("set_resolution_scale")) {
+  }
+  // ===========================================================================
+  // set_resolution_scale - Set resolution scale
+  // ===========================================================================
+  else if (Lower == TEXT("set_resolution_scale")) {
     double Scale = 100.0;
     if (Payload->TryGetNumberField(TEXT("scale"), Scale)) {
       IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(
@@ -189,7 +290,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                              TEXT("INVALID_ARGUMENT"));
     }
     return true;
-  } else if (Lower == TEXT("set_vsync")) {
+  }
+  // ===========================================================================
+  // set_vsync - Enable/disable VSync
+  // ===========================================================================
+  else if (Lower == TEXT("set_vsync")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
     IConsoleVariable *CVar =
@@ -199,7 +304,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("VSync configured"), nullptr);
     return true;
-  } else if (Lower == TEXT("set_frame_rate_limit")) {
+  }
+  // ===========================================================================
+  // set_frame_rate_limit - Set max FPS
+  // ===========================================================================
+  else if (Lower == TEXT("set_frame_rate_limit")) {
     double Limit = 0.0;
     if (Payload->TryGetNumberField(TEXT("maxFPS"), Limit)) {
       GEngine->SetMaxFPS((float)Limit);
@@ -211,7 +320,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                              TEXT("INVALID_ARGUMENT"));
     }
     return true;
-  } else if (Lower == TEXT("configure_nanite")) {
+  }
+  // ===========================================================================
+  // configure_nanite - Enable/disable Nanite
+  // ===========================================================================
+  else if (Lower == TEXT("configure_nanite")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
     IConsoleVariable *CVar =
@@ -221,7 +334,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Nanite configured"), nullptr);
     return true;
-  } else if (Lower == TEXT("configure_lod")) {
+  }
+  // ===========================================================================
+  // configure_lod - Set LOD settings
+  // ===========================================================================
+  else if (Lower == TEXT("configure_lod")) {
     double LODBias = 0.0;
     if (Payload->TryGetNumberField(TEXT("lodBias"), LODBias)) {
       IConsoleVariable *CVar =
@@ -241,7 +358,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("LOD settings configured"), nullptr);
     return true;
-  } else if (Lower == TEXT("configure_texture_streaming")) {
+  }
+  // ===========================================================================
+  // configure_texture_streaming - Configure texture streaming
+  // ===========================================================================
+  else if (Lower == TEXT("configure_texture_streaming")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
@@ -279,7 +400,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Texture streaming configured"), nullptr);
     return true;
-  } else if (Lower == TEXT("merge_actors")) {
+  }
+  // ===========================================================================
+  // merge_actors - Merge selected actors
+  // ===========================================================================
+  else if (Lower == TEXT("merge_actors")) {
     // merge_actors: drive the editor's Merge Actors tools by selecting the
     // requested actors in the current editor world and invoking
     // IMergeActorsTool::RunMergeFromSelection(). This relies on the
@@ -439,7 +564,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       return true;
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetNumberField(TEXT("mergedActorCount"), ActorsToMerge.Num());
     Resp->SetBoolField(TEXT("replaceSourceActors"),
                        ChosenTool->GetReplaceSourceActors());
@@ -449,15 +574,18 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
 
     // Add verification for the first source actor (merge tool operates on selection)
     if (ActorsToMerge.Num() > 0 && ActorsToMerge[0]) {
-      AddActorVerification(Resp, ActorsToMerge[0]);
+      McpHandlerUtils::AddVerification(Resp, ActorsToMerge[0]);
     }
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actors merged using Merge Actors tool"), Resp,
                            FString());
     return true;
-  } else if (Lower == TEXT("run_benchmark")) {
-    // Run performance benchmark
+  }
+  // ===========================================================================
+  // run_benchmark - Start performance benchmark
+  // ===========================================================================
+  else if (Lower == TEXT("run_benchmark")) {
     double Duration = 60.0;
     Payload->TryGetNumberField(TEXT("duration"), Duration);
 
@@ -474,7 +602,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     GEngine->Exec(GEditor->GetEditorWorldContext().World(),
                   TEXT("stat startfile"));
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetNumberField(TEXT("duration"), Duration);
     Resp->SetStringField(TEXT("type"), BenchmarkType);
     Resp->SetStringField(TEXT("status"), TEXT("started"));
@@ -485,7 +613,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                         *BenchmarkType, Duration),
         Resp);
     return true;
-  } else if (Lower == TEXT("enable_gpu_timing")) {
+  }
+  // ===========================================================================
+  // enable_gpu_timing - Enable/disable GPU timing
+  // ===========================================================================
+  else if (Lower == TEXT("enable_gpu_timing")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
@@ -507,7 +639,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                     TEXT("stat gpu"));
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("enabled"), bEnabled);
 
     SendAutomationResponse(
@@ -516,8 +648,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                         bEnabled ? TEXT("enabled") : TEXT("disabled")),
         Resp);
     return true;
-  } else if (Lower == TEXT("apply_baseline_settings")) {
-    // Apply common baseline optimization settings
+  }
+  // ===========================================================================
+  // apply_baseline_settings - Apply optimization profile
+  // ===========================================================================
+  else if (Lower == TEXT("apply_baseline_settings")) {
     FString Profile = TEXT("balanced");
     Payload->TryGetStringField(TEXT("profile"), Profile);
 
@@ -556,14 +691,18 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
       SetCVar(TEXT("r.MaxAnisotropy"), 8);
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("profile"), Profile);
 
     SendAutomationResponse(
         RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Baseline settings applied: %s"), *Profile), Resp);
     return true;
-  } else if (Lower == TEXT("optimize_draw_calls")) {
+  }
+  // ===========================================================================
+  // optimize_draw_calls - Configure draw call optimizations
+  // ===========================================================================
+  else if (Lower == TEXT("optimize_draw_calls")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
@@ -581,14 +720,18 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SetCVar(TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? 1 : 0);
     SetCVar(TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? 1 : 0);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("optimized"), bEnabled);
     Resp->SetBoolField(TEXT("instancing"), bInstancing);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Draw call optimizations configured"), Resp);
     return true;
-  } else if (Lower == TEXT("configure_occlusion_culling")) {
+  }
+  // ===========================================================================
+  // configure_occlusion_culling - Configure occlusion settings
+  // ===========================================================================
+  else if (Lower == TEXT("configure_occlusion_culling")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
@@ -624,7 +767,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                    (float)MinScreenRadiusForOcclusion);
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("enabled"), bEnabled);
     if (bHasSlop) {
       Resp->SetNumberField(TEXT("slop"), OcclusionSlop);
@@ -636,7 +779,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Occlusion culling configured"), Resp);
     return true;
-  } else if (Lower == TEXT("optimize_shaders")) {
+  }
+  // ===========================================================================
+  // optimize_shaders - Recompile shaders
+  // ===========================================================================
+  else if (Lower == TEXT("optimize_shaders")) {
     FString Mode = TEXT("changed");
     Payload->TryGetStringField(TEXT("mode"), Mode);
 
@@ -662,7 +809,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
 
     GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Cmd);
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("mode"), Mode);
     Resp->SetBoolField(TEXT("forceRecompile"), bForceRecompile);
     Resp->SetStringField(TEXT("command"), Cmd);
@@ -672,7 +819,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
         FString::Printf(TEXT("Shader optimization initiated: %s"), *Cmd),
         Resp);
     return true;
-  } else if (Lower == TEXT("configure_world_partition")) {
+  }
+  // ===========================================================================
+  // configure_world_partition - Configure World Partition streaming
+  // ===========================================================================
+  else if (Lower == TEXT("configure_world_partition")) {
     bool bEnabled = true;
     Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
@@ -708,7 +859,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
                    (float)LoadingRange);
     }
 
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("streamingEnabled"), bEnabled);
     if (bHasCellSize) {
       Resp->SetNumberField(TEXT("cellSize"), CellSize);

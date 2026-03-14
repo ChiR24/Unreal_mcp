@@ -1,5 +1,32 @@
+// =============================================================================
 // McpAutomationBridge_MiscHandlers.cpp
-// Miscellaneous handlers for editor control, cameras, viewports, and bookmarks
+// =============================================================================
+// Miscellaneous Handlers for MCP Automation Bridge.
+//
+// This file implements the following handlers:
+// - Post Process Volume: create_post_process_volume
+// - Camera: create_camera, set_camera_fov
+// - Viewport: set_viewport_resolution
+// - Game Speed: set_game_speed
+// - Bookmarks: create_bookmark
+// - Spline Component: create_spline_component (Blueprint SCS)
+// - Networking (alternative entry points):
+//   - set_replication
+//   - create_replicated_variable
+//   - set_net_update_frequency
+//   - create_rpc
+//   - configure_net_cull_distance
+//
+// UE VERSION COMPATIBILITY:
+// - UE 5.0-5.4: Direct access to NetUpdateFrequency, MinNetUpdateFrequency
+// - UE 5.5+: Use SetNetUpdateFrequency(), SetMinNetUpdateFrequency()
+// - UE 5.5+: Use SetNetCullDistanceSquared() instead of direct property access
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
+#include "McpHandlerUtils.h"          // Utility functions for JSON parsing
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -7,6 +34,10 @@
 #include "Dom/JsonObject.h"
 
 #if WITH_EDITOR
+
+// =============================================================================
+// Engine Includes - Core
+// =============================================================================
 #include "Editor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -29,6 +60,9 @@
 #include "EdGraphSchema_K2.h"
 #include "K2Node_FunctionEntry.h"
 
+// =============================================================================
+// Engine Includes - Editor (Conditional)
+// =============================================================================
 #if __has_include("LevelEditor.h")
 #include "LevelEditor.h"
 #define MCP_HAS_LEVEL_EDITOR 1
@@ -48,16 +82,23 @@
 
 #endif // WITH_EDITOR
 
+// =============================================================================
+// Logging
+// =============================================================================
+
 DEFINE_LOG_CATEGORY_STATIC(LogMcpMiscHandlers, Log, All);
 
 #if WITH_EDITOR
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
+// =============================================================================
+// Helper Namespace
+// =============================================================================
 
 namespace MiscHelpers
 {
+    // -------------------------------------------------------------------------
+    // Get Editor World
+    // -------------------------------------------------------------------------
     UWorld* GetEditorWorld()
     {
         if (GEditor)
@@ -67,6 +108,9 @@ namespace MiscHelpers
         return nullptr;
     }
 
+    // -------------------------------------------------------------------------
+    // JSON Field Helpers
+    // -------------------------------------------------------------------------
     FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""))
     {
         FString Value = Default;
@@ -108,9 +152,13 @@ namespace MiscHelpers
     }
 }
 
-// ============================================================================
-// Post Process Volume Handler
-// ============================================================================
+// =============================================================================
+// Handler: create_post_process_volume
+// =============================================================================
+// Creates a PostProcessVolume actor with configurable settings
+// Parameters: volumeName, location, extent, unbound, blendRadius, blendWeight,
+//             priority, settings (bloomIntensity, exposureCompensation, etc.)
+// -----------------------------------------------------------------------------
 
 static bool HandleCreatePostProcessVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -160,35 +208,35 @@ static bool HandleCreatePostProcessVolume(
         if (Payload->TryGetObjectField(TEXT("settings"), SettingsPtr) && SettingsPtr)
         {
             FPostProcessSettings& Settings = Volume->Settings;
-            
+
             double Bloom;
             if ((*SettingsPtr)->TryGetNumberField(TEXT("bloomIntensity"), Bloom))
             {
                 Settings.bOverride_BloomIntensity = true;
                 Settings.BloomIntensity = static_cast<float>(Bloom);
             }
-            
+
             double Exposure;
             if ((*SettingsPtr)->TryGetNumberField(TEXT("exposureCompensation"), Exposure))
             {
                 Settings.bOverride_AutoExposureBias = true;
                 Settings.AutoExposureBias = static_cast<float>(Exposure);
             }
-            
+
             double Saturation;
             if ((*SettingsPtr)->TryGetNumberField(TEXT("saturation"), Saturation))
             {
                 Settings.bOverride_ColorSaturation = true;
                 Settings.ColorSaturation = FVector4(Saturation, Saturation, Saturation, 1.0f);
             }
-            
+
             double Contrast;
             if ((*SettingsPtr)->TryGetNumberField(TEXT("contrast"), Contrast))
             {
                 Settings.bOverride_ColorContrast = true;
                 Settings.ColorContrast = FVector4(Contrast, Contrast, Contrast, 1.0f);
             }
-            
+
             double VignetteIntensity;
             if ((*SettingsPtr)->TryGetNumberField(TEXT("vignetteIntensity"), VignetteIntensity))
             {
@@ -200,22 +248,25 @@ static bool HandleCreatePostProcessVolume(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), Volume->GetActorLabel());
     ResponseJson->SetStringField(TEXT("volumePath"), Volume->GetPathName());
     ResponseJson->SetBoolField(TEXT("unbound"), bUnbound);
     ResponseJson->SetNumberField(TEXT("blendRadius"), BlendRadius);
     ResponseJson->SetNumberField(TEXT("priority"), Priority);
-    AddActorVerification(ResponseJson, Volume);
+    McpHandlerUtils::AddVerification(ResponseJson, Volume);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *VolumeName), ResponseJson);
     return true;
 }
 
-// ============================================================================
-// Camera Handlers
-// ============================================================================
+// =============================================================================
+// Handler: create_camera
+// =============================================================================
+// Creates a CameraActor with configurable FOV
+// Parameters: cameraName, location, rotation, fov
+// -----------------------------------------------------------------------------
 
 static bool HandleCreateCamera(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -250,7 +301,7 @@ static bool HandleCreateCamera(
     }
 
     Camera->SetActorLabel(CameraName);
-    
+
     if (UCameraComponent* CamComp = Camera->GetCameraComponent())
     {
         CamComp->SetFieldOfView(static_cast<float>(FOV));
@@ -258,16 +309,23 @@ static bool HandleCreateCamera(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("cameraName"), Camera->GetActorLabel());
     ResponseJson->SetStringField(TEXT("cameraPath"), Camera->GetPathName());
     ResponseJson->SetNumberField(TEXT("fov"), FOV);
-    AddActorVerification(ResponseJson, Camera);
+    McpHandlerUtils::AddVerification(ResponseJson, Camera);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Created camera: %s"), *CameraName), ResponseJson);
     return true;
 }
+
+// =============================================================================
+// Handler: set_camera_fov
+// =============================================================================
+// Sets the FOV on an existing camera by name
+// Parameters: cameraName, fov
+// -----------------------------------------------------------------------------
 
 static bool HandleSetCameraFOV(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -321,7 +379,7 @@ static bool HandleSetCameraFOV(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("cameraName"), Camera->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("fov"), FOV);
 
@@ -330,9 +388,12 @@ static bool HandleSetCameraFOV(
     return true;
 }
 
-// ============================================================================
-// Viewport Resolution Handler
-// ============================================================================
+// =============================================================================
+// Handler: set_viewport_resolution
+// =============================================================================
+// Sets viewport resolution preference
+// Parameters: width, height
+// -----------------------------------------------------------------------------
 
 static bool HandleSetViewportResolution(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -355,28 +416,30 @@ static bool HandleSetViewportResolution(
 #if MCP_HAS_LEVEL_EDITOR
     FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
     TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
-    
+
     if (ActiveViewport.IsValid())
     {
-        // Note: Direct viewport resize isn't always possible in editor
-        // This is primarily for reference/documentation
         UE_LOG(LogMcpMiscHandlers, Log, TEXT("Viewport resolution request: %dx%d"), Width, Height);
     }
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("width"), Width);
     ResponseJson->SetNumberField(TEXT("height"), Height);
-    ResponseJson->SetStringField(TEXT("note"), TEXT("Viewport resolution preferences set. Actual resolution depends on editor window size."));
+    ResponseJson->SetStringField(TEXT("note"),
+        TEXT("Viewport resolution preferences set. Actual resolution depends on editor window size."));
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Viewport resolution preference set to %dx%d"), Width, Height), ResponseJson);
     return true;
 }
 
-// ============================================================================
-// Game Speed Handler
-// ============================================================================
+// =============================================================================
+// Handler: set_game_speed
+// =============================================================================
+// Sets game speed via WorldSettings time dilation
+// Parameters: speed (0.0 - 100.0)
+// -----------------------------------------------------------------------------
 
 static bool HandleSetGameSpeed(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -387,7 +450,7 @@ static bool HandleSetGameSpeed(
     using namespace MiscHelpers;
 
     double Speed = GetNumberField(Payload, TEXT("speed"), 1.0);
-    
+
     if (Speed < 0.0 || Speed > 100.0)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -396,7 +459,7 @@ static bool HandleSetGameSpeed(
     }
 
     UWorld* World = nullptr;
-    
+
     // Prefer PIE world if available
     if (GEditor && GEditor->PlayWorld)
     {
@@ -425,7 +488,7 @@ static bool HandleSetGameSpeed(
     // Set the time dilation
     WorldSettings->SetTimeDilation(static_cast<float>(Speed));
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("speed"), Speed);
     ResponseJson->SetNumberField(TEXT("actualTimeDilation"), WorldSettings->TimeDilation);
 
@@ -434,9 +497,12 @@ static bool HandleSetGameSpeed(
     return true;
 }
 
-// ============================================================================
-// Editor Bookmark Handler
-// ============================================================================
+// =============================================================================
+// Handler: create_bookmark
+// =============================================================================
+// Creates an editor bookmark at a location
+// Parameters: index (0-9), name, location, rotation
+// -----------------------------------------------------------------------------
 
 static bool HandleCreateBookmark(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -458,9 +524,6 @@ static bool HandleCreateBookmark(
         return true;
     }
 
-    // Editor bookmarks are typically accessed via Ctrl+0-9
-    // We can store the location in world settings or use editor preferences
-
     UWorld* World = GetEditorWorld();
     if (!World)
     {
@@ -470,24 +533,23 @@ static bool HandleCreateBookmark(
     }
 
     // Note: Editor bookmarks are handled through FEditorViewportClient
-    // This provides a simplified interface that logs the bookmark location
     UE_LOG(LogMcpMiscHandlers, Log, TEXT("Bookmark %d set at Location=(%.1f, %.1f, %.1f)"),
         BookmarkIndex, Location.X, Location.Y, Location.Z);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("index"), BookmarkIndex);
     if (!BookmarkName.IsEmpty())
     {
         ResponseJson->SetStringField(TEXT("name"), BookmarkName);
     }
-    
-    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+
+    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
     LocationJson->SetNumberField(TEXT("x"), Location.X);
     LocationJson->SetNumberField(TEXT("y"), Location.Y);
     LocationJson->SetNumberField(TEXT("z"), Location.Z);
     ResponseJson->SetObjectField(TEXT("location"), LocationJson);
 
-    TSharedPtr<FJsonObject> RotationJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> RotationJson = McpHandlerUtils::CreateResultObject();
     RotationJson->SetNumberField(TEXT("pitch"), Rotation.Pitch);
     RotationJson->SetNumberField(TEXT("yaw"), Rotation.Yaw);
     RotationJson->SetNumberField(TEXT("roll"), Rotation.Roll);
@@ -498,9 +560,12 @@ static bool HandleCreateBookmark(
     return true;
 }
 
-// ============================================================================
-// Spline Component Creation Handler (adds to Blueprint SCS)
-// ============================================================================
+// =============================================================================
+// Handler: create_spline_component
+// =============================================================================
+// Adds a SplineComponent to a Blueprint's Simple Construction Script
+// Parameters: blueprintPath, componentName, closedLoop, save
+// -----------------------------------------------------------------------------
 
 static bool HandleCreateSplineComponent(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -572,20 +637,23 @@ static bool HandleCreateSplineComponent(
         McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("componentName"), ComponentName);
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetBoolField(TEXT("closedLoop"), bClosedLoop);
-    AddAssetVerification(ResponseJson, Blueprint);
+    McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineComponent '%s' added to Blueprint"), *ComponentName), ResponseJson);
     return true;
 }
 
-// ============================================================================
-// Additional Networking Handlers
-// ============================================================================
+// =============================================================================
+// Handler: set_replication
+// =============================================================================
+// Configures replication settings on a Blueprint's CDO
+// Parameters: blueprintPath, replicates, replicateMovement
+// -----------------------------------------------------------------------------
 
 static bool HandleSetReplication(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -614,7 +682,7 @@ static bool HandleSetReplication(
         return true;
     }
 
-        if (!Blueprint->GeneratedClass)
+    if (!Blueprint->GeneratedClass)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
@@ -631,16 +699,23 @@ static bool HandleSetReplication(
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetBoolField(TEXT("replicates"), bReplicates);
     ResponseJson->SetBoolField(TEXT("replicateMovement"), bReplicateMovement);
-    AddAssetVerification(ResponseJson, Blueprint);
+    McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Replication settings configured for %s"), *BlueprintPath), ResponseJson);
     return true;
 }
+
+// =============================================================================
+// Handler: create_replicated_variable
+// =============================================================================
+// Creates a replicated variable in a Blueprint
+// Parameters: blueprintPath, variableName, variableType
+// -----------------------------------------------------------------------------
 
 static bool HandleCreateReplicatedVariable(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -669,10 +744,10 @@ static bool HandleCreateReplicatedVariable(
         return true;
     }
 
-    // Add variable with replication flag
+    // Determine pin type
     FEdGraphPinType PinType;
     PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-    
+
     if (VariableType.Equals(TEXT("Integer"), ESearchCase::IgnoreCase))
     {
         PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
@@ -693,7 +768,7 @@ static bool HandleCreateReplicatedVariable(
     }
 
     bool bCreated = FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*VariableName), PinType);
-    
+
     if (bCreated)
     {
         // Set replication flag
@@ -705,19 +780,19 @@ static bool HandleCreateReplicatedVariable(
                 break;
             }
         }
-        
+
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetStringField(TEXT("variableName"), VariableName);
     ResponseJson->SetStringField(TEXT("variableType"), VariableType);
     ResponseJson->SetBoolField(TEXT("replicated"), true);
     if (bCreated)
     {
-        AddAssetVerification(ResponseJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
     }
 
     Subsystem->SendAutomationResponse(Socket, RequestId, bCreated,
@@ -725,6 +800,13 @@ static bool HandleCreateReplicatedVariable(
         ResponseJson);
     return true;
 }
+
+// =============================================================================
+// Handler: set_net_update_frequency
+// =============================================================================
+// Sets the net update frequency on a Blueprint's CDO
+// Parameters: blueprintPath, frequency, minFrequency
+// -----------------------------------------------------------------------------
 
 static bool HandleSetNetUpdateFrequency(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -753,7 +835,7 @@ static bool HandleSetNetUpdateFrequency(
         return true;
     }
 
-        if (!Blueprint->GeneratedClass)
+    if (!Blueprint->GeneratedClass)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
@@ -775,16 +857,23 @@ static bool HandleSetNetUpdateFrequency(
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetNumberField(TEXT("frequency"), Frequency);
     ResponseJson->SetNumberField(TEXT("minFrequency"), MinFrequency);
-    AddAssetVerification(ResponseJson, Blueprint);
+    McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Net update frequency set to %.1f (min: %.1f)"), Frequency, MinFrequency), ResponseJson);
     return true;
 }
+
+// =============================================================================
+// Handler: create_rpc
+// =============================================================================
+// Creates an RPC function in a Blueprint
+// Parameters: blueprintPath, functionName, rpcType (Server/Client/Multicast), reliable
+// -----------------------------------------------------------------------------
 
 static bool HandleCreateRPC(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -832,12 +921,12 @@ static bool HandleCreateRPC(
             if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
             {
                 int32 NetFlags = FUNC_Net;
-                
+
                 if (bReliable)
                 {
                     NetFlags |= FUNC_NetReliable;
                 }
-                
+
                 if (RPCType.Equals(TEXT("Server"), ESearchCase::IgnoreCase))
                 {
                     NetFlags |= FUNC_NetServer;
@@ -846,12 +935,12 @@ static bool HandleCreateRPC(
                 {
                     NetFlags |= FUNC_NetClient;
                 }
-                else if (RPCType.Equals(TEXT("Multicast"), ESearchCase::IgnoreCase) || 
+                else if (RPCType.Equals(TEXT("Multicast"), ESearchCase::IgnoreCase) ||
                          RPCType.Equals(TEXT("NetMulticast"), ESearchCase::IgnoreCase))
                 {
                     NetFlags |= FUNC_NetMulticast;
                 }
-                
+
                 EntryNode->AddExtraFlags(NetFlags);
                 break;
             }
@@ -862,14 +951,14 @@ static bool HandleCreateRPC(
         McpSafeCompileBlueprint(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetStringField(TEXT("functionName"), FunctionName);
     ResponseJson->SetStringField(TEXT("rpcType"), RPCType);
     ResponseJson->SetBoolField(TEXT("reliable"), bReliable);
     if (NewGraph)
     {
-        AddAssetVerification(ResponseJson, Blueprint);
+        McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
     }
 
     Subsystem->SendAutomationResponse(Socket, RequestId, NewGraph != nullptr,
@@ -877,6 +966,13 @@ static bool HandleCreateRPC(
         ResponseJson);
     return true;
 }
+
+// =============================================================================
+// Handler: configure_net_cull_distance
+// =============================================================================
+// Configures net cull distance on a Blueprint's CDO
+// Parameters: blueprintPath, cullDistance
+// -----------------------------------------------------------------------------
 
 static bool HandleConfigureNetCullDistance(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -904,7 +1000,7 @@ static bool HandleConfigureNetCullDistance(
         return true;
     }
 
-        if (!Blueprint->GeneratedClass)
+    if (!Blueprint->GeneratedClass)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Blueprint has no generated class"), nullptr, TEXT("INVALID_BLUEPRINT"));
@@ -925,11 +1021,11 @@ static bool HandleConfigureNetCullDistance(
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     ResponseJson->SetNumberField(TEXT("cullDistance"), CullDistance);
     ResponseJson->SetNumberField(TEXT("cullDistanceSquared"), CullDistance * CullDistance);
-    AddAssetVerification(ResponseJson, Blueprint);
+    McpHandlerUtils::AddVerification(ResponseJson, Blueprint);
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Net cull distance set to %.0f"), CullDistance), ResponseJson);
@@ -938,9 +1034,11 @@ static bool HandleConfigureNetCullDistance(
 
 #endif // WITH_EDITOR
 
-// ============================================================================
-// Main Dispatcher
-// ============================================================================
+// =============================================================================
+// Main Handler: HandleMiscAction
+// =============================================================================
+// Dispatcher for miscellaneous actions
+// -----------------------------------------------------------------------------
 
 bool UMcpAutomationBridgeSubsystem::HandleMiscAction(
     const FString& RequestId,
@@ -950,7 +1048,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMiscAction(
 {
 #if WITH_EDITOR
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
-    
+
     // Also check action field for direct calls
     if (SubAction.IsEmpty())
     {
@@ -959,13 +1057,17 @@ bool UMcpAutomationBridgeSubsystem::HandleMiscAction(
 
     UE_LOG(LogMcpMiscHandlers, Verbose, TEXT("HandleMiscAction: %s"), *SubAction);
 
+    // -------------------------------------------------------------------------
     // Post Process Volume
+    // -------------------------------------------------------------------------
     if (SubAction == TEXT("create_post_process_volume"))
     {
         return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket);
     }
 
-    // Camera actions
+    // -------------------------------------------------------------------------
+    // Camera Actions
+    // -------------------------------------------------------------------------
     if (SubAction == TEXT("create_camera"))
     {
         return HandleCreateCamera(this, RequestId, Payload, Socket);
@@ -975,7 +1077,9 @@ bool UMcpAutomationBridgeSubsystem::HandleMiscAction(
         return HandleSetCameraFOV(this, RequestId, Payload, Socket);
     }
 
-    // Viewport/Editor actions
+    // -------------------------------------------------------------------------
+    // Viewport/Editor Actions
+    // -------------------------------------------------------------------------
     if (SubAction == TEXT("set_viewport_resolution"))
     {
         return HandleSetViewportResolution(this, RequestId, Payload, Socket);
@@ -989,13 +1093,17 @@ bool UMcpAutomationBridgeSubsystem::HandleMiscAction(
         return HandleCreateBookmark(this, RequestId, Payload, Socket);
     }
 
-    // Spline component (Blueprint SCS)
+    // -------------------------------------------------------------------------
+    // Spline Component (Blueprint SCS)
+    // -------------------------------------------------------------------------
     if (SubAction == TEXT("create_spline_component"))
     {
         return HandleCreateSplineComponent(this, RequestId, Payload, Socket);
     }
 
-    // Networking actions (alternative entry points)
+    // -------------------------------------------------------------------------
+    // Networking Actions (Alternative Entry Points)
+    // -------------------------------------------------------------------------
     if (SubAction == TEXT("set_replication"))
     {
         return HandleSetReplication(this, RequestId, Payload, Socket);
