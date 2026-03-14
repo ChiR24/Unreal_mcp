@@ -1,7 +1,7 @@
 // Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
-import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
+import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay, sanitizeCommandArgument } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
 
@@ -238,33 +238,41 @@ export class PhysicsTools {
     };
   }) {
     try {
+      const safeName = sanitizeCommandArgument(params.name);
+      const safeActor1 = sanitizeCommandArgument(params.actor1);
+      const safeActor2 = sanitizeCommandArgument(params.actor2);
+
+      if (!safeName || !safeActor1 || !safeActor2) {
+        return { success: false, error: 'Constraint name and actor names must be valid and non-empty.' };
+      }
+
       // Spawn constraint actor
       const spawnCmd = `spawnactor /Script/Engine.PhysicsConstraintActor ${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       await this.bridge.executeConsoleCommand(spawnCmd);
 
       // Configure constraint
       const commands = [
-        `SetConstraintActors ${params.name} ${params.actor1} ${params.actor2}`,
-        `SetConstraintType ${params.name} ${params.constraintType}`
+        `SetConstraintActors ${safeName} ${safeActor1} ${safeActor2}`,
+        `SetConstraintType ${safeName} ${params.constraintType}`
       ];
 
       if (params.breakThreshold) {
-        commands.push(`SetConstraintBreakThreshold ${params.name} ${params.breakThreshold}`);
+        commands.push(`SetConstraintBreakThreshold ${safeName} ${params.breakThreshold}`);
       }
 
       if (params.limits) {
         const limits = params.limits;
         if (limits.swing1 !== undefined) {
-          commands.push(`SetConstraintSwing1 ${params.name} ${limits.swing1}`);
+          commands.push(`SetConstraintSwing1 ${safeName} ${limits.swing1}`);
         }
         if (limits.swing2 !== undefined) {
-          commands.push(`SetConstraintSwing2 ${params.name} ${limits.swing2}`);
+          commands.push(`SetConstraintSwing2 ${safeName} ${limits.swing2}`);
         }
         if (limits.twist !== undefined) {
-          commands.push(`SetConstraintTwist ${params.name} ${limits.twist}`);
+          commands.push(`SetConstraintTwist ${safeName} ${limits.twist}`);
         }
         if (limits.linear !== undefined) {
-          commands.push(`SetConstraintLinear ${params.name} ${limits.linear}`);
+          commands.push(`SetConstraintLinear ${safeName} ${limits.linear}`);
         }
       }
 
@@ -272,7 +280,7 @@ export class PhysicsTools {
 
       return {
         success: true,
-        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}`
+        message: `Physics constraint ${safeName} created between ${safeActor1} and ${safeActor2}`
       };
     } catch (err) {
       return { success: false, error: `Failed to create constraint: ${err}` };
