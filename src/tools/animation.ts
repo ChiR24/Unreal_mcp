@@ -279,6 +279,8 @@ export class AnimationTools {
 
       // Call C++ bridge to create state machine in the Animation Blueprint
       if (this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function') {
+        // Capture bridge for use in closures - we know it's defined here
+        const bridge = this.automationBridge;
         try {
           const payload = cleanObject({
             subAction: 'add_state_machine',
@@ -286,7 +288,7 @@ export class AnimationTools {
             stateMachineName: machineName
           });
 
-          const resp = await this.automationBridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
+          const resp = await bridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
           const result = resp?.result ?? resp;
           const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
           const isSuccess = resp && resp.success !== false && !!resultObj;
@@ -303,26 +305,71 @@ export class AnimationTools {
               }
             });
 
-            // Add states if provided
-            for (const state of normalizedStates) {
-              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                subAction: 'add_state',
-                blueprintPath,
-                stateMachineName: machineName,
-                stateName: state.name
-              }), { timeoutMs: 30000 });
+            // Add states if provided - use Promise.all for parallel execution
+            // Track successfully added states for potential rollback
+            const addedStateNames: string[] = [];
+            if (normalizedStates.length > 0) {
+              const stateResults = await Promise.all(normalizedStates.map(state =>
+                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                  subAction: 'add_state',
+                  blueprintPath,
+                  stateMachineName: machineName,
+                  stateName: state.name
+                }), { timeoutMs: 30000 })
+              ));
+              // Validate all state additions succeeded
+              const failedState = stateResults.find((r: { success?: boolean }) => r && r.success === false);
+              if (failedState) {
+                const failed = failedState as { error?: string; message?: string };
+                return {
+                  success: false,
+                  message: 'Failed to add one or more states',
+                  error: failed.error || failed.message || 'Unknown error'
+                };
+              }
+              // Track successfully added states
+              for (const state of normalizedStates) {
+                addedStateNames.push(state.name);
+              }
             }
 
-            // Add transitions if provided
-            for (const transition of normalizedTransitions) {
-              await this.automationBridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                subAction: 'add_transition',
-                blueprintPath,
-                stateMachineName: machineName,
-                fromState: transition.sourceState,
-                toState: transition.targetState,
-                crossfadeDuration: 0.2
-              }), { timeoutMs: 30000 });
+            // Add transitions if provided - use Promise.all for parallel execution
+            if (normalizedTransitions.length > 0) {
+              const transitionResults = await Promise.all(normalizedTransitions.map(transition =>
+                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                  subAction: 'add_transition',
+                  blueprintPath,
+                  stateMachineName: machineName,
+                  fromState: transition.sourceState,
+                  toState: transition.targetState,
+                  crossfadeDuration: 0.2
+                }), { timeoutMs: 30000 })
+              ));
+              // Validate all transition additions succeeded
+              const failedTransition = transitionResults.find((r: { success?: boolean }) => r && r.success === false);
+              if (failedTransition) {
+                const failed = failedTransition as { error?: string; message?: string };
+                
+                // Rollback: Delete any states that were added
+                if (addedStateNames.length > 0) {
+                  await Promise.all(addedStateNames.map(stateName =>
+                    bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                      subAction: 'delete_state',
+                      blueprintPath,
+                      stateMachineName: machineName,
+                      stateName
+                    }), { timeoutMs: 10000 }).catch(() => {
+                      // Ignore rollback failures - best effort cleanup
+                    })
+                  ));
+                }
+                
+                return {
+                  success: false,
+                  message: 'Failed to add one or more transitions (rolled back added states)',
+                  error: failed.error || failed.message || 'Unknown error'
+                };
+              }
             }
 
             return {

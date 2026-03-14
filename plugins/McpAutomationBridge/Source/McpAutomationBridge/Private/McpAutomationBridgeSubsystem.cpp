@@ -743,6 +743,12 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                          TSharedPtr<FMcpBridgeWebSocket> S) {
                     return HandleConsoleCommandAction(R, A, P, S);
                   });
+  RegisterHandler(TEXT("batch_console_commands"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleExecuteEditorFunction(R, A, P, S);
+                  });
   RegisterHandler(TEXT("inspect"), [this](const FString &R, const FString &A,
                                           const TSharedPtr<FJsonObject> &P,
                                           TSharedPtr<FMcpBridgeWebSocket> S) {

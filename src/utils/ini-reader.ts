@@ -59,33 +59,43 @@ export async function getProjectSetting(projectPath: string, category: string, s
         path.join(dirPath, 'Saved', 'Config', 'Linux', `${cleanCategory}.ini`)
     ];
 
-    for (const configPath of candidates) {
+    // Use Promise.all for parallel file reads - significantly faster than sequential
+    // We read all candidates in parallel, then pick the highest-priority one that succeeds
+    const readPromises = candidates.map(async (configPath, index) => {
         try {
             const iniData = await readIniFile(configPath);
-            // If we successfully read the file, check for the section
-            if (sectionName) {
-                const section = iniData[sectionName];
-                if (section) {
-                    if (key) {
+            return { index, configPath, iniData, success: true };
+        } catch {
+            return { index, configPath, iniData: null, success: false };
+        }
+    });
+
+    const results = await Promise.all(readPromises);
+
+    // Process results in priority order (candidates array order)
+    for (const result of results.sort((a, b) => a.index - b.index)) {
+        if (!result.success || !result.iniData) continue;
+
+        const iniData = result.iniData;
+        // If we successfully read the file, check for the section
+        if (sectionName) {
+            const section = iniData[sectionName];
+            if (section) {
+                if (key) {
+                    // Only return if the key actually exists (not undefined)
+                    if (key in section) {
                         return section[key];
                     }
+                    // Key not found in this section, continue to next candidate
+                } else {
                     return section;
                 }
-                // If section not found in this file, continue to next candidate? 
-                // Usually we want the most authoritative, but if it's missing the section, maybe it's in another?
-                // For now, if we find the file, we return the data from it or null if section missing.
-                // Merging is complex without a proper config hierarchy implementation.
-                // We will assume if the file exists, it's the one we want, or if section is missing, we fail for this file.
-                // But 'Default' might lack user overrides.
-                // Given this is a simple reader, we'll return the first match that contains the section, 
-                // or if sectionName is empty, the first file found.
-            } else {
-                if (Object.keys(iniData).length > 0) {
-                    return iniData;
-                }
             }
-        } catch (_e) {
-            // Continue to next candidate
+            // If section not found in this file, continue to next candidate
+        } else {
+            if (Object.keys(iniData).length > 0) {
+                return iniData;
+            }
         }
     }
 

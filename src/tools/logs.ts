@@ -145,15 +145,24 @@ export class LogTools {
     if (!dir) return undefined;
     try {
       const entries = await fs.readdir(dir);
-      const candidates: { p: string; m: number }[] = [];
-      for (const name of entries) {
-        if (!name.toLowerCase().endsWith('.log')) continue;
+      const logFiles = entries.filter(name => name.toLowerCase().endsWith('.log'));
+      
+      if (logFiles.length === 0) return undefined;
+      
+      // Use Promise.all for parallel stat operations - significantly faster than sequential
+      const statPromises = logFiles.map(async name => {
         const fp = path.join(dir, name);
         try {
           const st = await fs.stat(fp);
-          candidates.push({ p: fp, m: st.mtimeMs });
-        } catch { }
-      }
+          return { p: fp, m: st.mtimeMs };
+        } catch {
+          return null;
+        }
+      });
+      
+      const stats = await Promise.all(statPromises);
+      const candidates = stats.filter((s): s is { p: string; m: number } => s !== null);
+      
       if (candidates.length) {
         candidates.sort((a, b) => b.m - a.m);
         return this.cacheLogPath(candidates[0].p);

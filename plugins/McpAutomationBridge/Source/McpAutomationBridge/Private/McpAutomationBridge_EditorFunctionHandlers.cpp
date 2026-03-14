@@ -52,10 +52,13 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
   // Accept either the generic execute_editor_function action or the
   // more specific execute_console_command action. This allows the
   // server to use native console commands for health checks and diagnostics.
+  // Also accept batch_console_commands for batch command execution.
   if (!Lower.Equals(TEXT("execute_editor_function"), ESearchCase::IgnoreCase) &&
       !Lower.Contains(TEXT("execute_editor_function")) &&
       !Lower.Equals(TEXT("execute_console_command")) &&
-      !Lower.Contains(TEXT("execute_console_command")))
+      !Lower.Contains(TEXT("execute_console_command")) &&
+      !Lower.Equals(TEXT("batch_console_commands")) &&
+      !Lower.Contains(TEXT("batch_console_commands")))
     return false;
 
   if (!Payload.IsValid()) {
@@ -153,6 +156,125 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
                            bOk ? TEXT("Command executed")
                                : TEXT("Command not executed"),
                            Out, bOk ? FString() : TEXT("EXEC_FAILED"));
+    return true;
+  }
+
+  // Handle batch_console_commands - execute multiple commands in a single request
+  // This eliminates the WebSocket round-trip overhead for each command
+  if (Lower.Equals(TEXT("batch_console_commands")) ||
+      Lower.Contains(TEXT("batch_console_commands"))) {
+    const TArray<TSharedPtr<FJsonValue>>* CmdArray = nullptr;
+    if (!Payload->TryGetArrayField(TEXT("commands"), CmdArray) || !CmdArray) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("commands array required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    if (CmdArray->Num() == 0) {
+      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+      Out->SetNumberField(TEXT("executedCount"), 0);
+      Out->SetArrayField(TEXT("results"), TArray<TSharedPtr<FJsonValue>>());
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("No commands to execute"), Out);
+      return true;
+    }
+
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not available"), nullptr,
+                             TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
+    }
+
+    // Get target world for execution
+    UWorld* TargetWorld = nullptr;
+#if WITH_EDITOR
+    if (GEditor) {
+      if (UUnrealEditorSubsystem* UES =
+              GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>()) {
+        TargetWorld = UES->GetEditorWorld();
+      }
+      if (!TargetWorld) {
+        TargetWorld = GEditor->GetEditorWorldContext().World();
+      }
+    }
+#endif
+
+    if (!TargetWorld && !GEngine) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No valid world context for command execution"),
+                             nullptr, TEXT("NO_WORLD_CONTEXT"));
+      return true;
+    }
+
+    int32 ExecutedCount = 0;
+    int32 FailedCount = 0;
+    TArray<TSharedPtr<FJsonValue>> Results;
+    Results.Reserve(CmdArray->Num());
+
+    for (const TSharedPtr<FJsonValue>& CmdValue : *CmdArray) {
+      FString Cmd;
+      if (CmdValue->Type == EJson::String) {
+        Cmd = CmdValue->AsString();
+      } else if (CmdValue->Type == EJson::Object) {
+        const TSharedPtr<FJsonObject> CmdObj = CmdValue->AsObject();
+        if (CmdObj.IsValid()) {
+          CmdObj->TryGetStringField(TEXT("command"), Cmd);
+          if (Cmd.IsEmpty()) {
+            CmdObj->TryGetStringField(TEXT("cmd"), Cmd);
+          }
+        }
+      }
+
+      if (Cmd.IsEmpty()) {
+        TSharedPtr<FJsonObject> ResultEntry = MakeShared<FJsonObject>();
+        ResultEntry->SetBoolField(TEXT("success"), false);
+        ResultEntry->SetStringField(TEXT("error"), TEXT("Empty command"));
+        Results.Add(MakeShared<FJsonValueObject>(ResultEntry));
+        FailedCount++;
+        continue;
+      }
+
+      bool bCmdOk = false;
+
+      // Execute command
+      if (TargetWorld && GEditor) {
+        bCmdOk = GEditor->Exec(TargetWorld, *Cmd);
+      } else if (GEngine) {
+        for (const FWorldContext& Ctx : GEngine->GetWorldContexts()) {
+          UWorld* World = Ctx.World();
+          if (!World) continue;
+          if (GEngine->Exec(World, *Cmd)) {
+            bCmdOk = true;
+            break;
+          }
+        }
+      }
+
+      TSharedPtr<FJsonObject> ResultEntry = MakeShared<FJsonObject>();
+      ResultEntry->SetStringField(TEXT("command"), Cmd);
+      ResultEntry->SetBoolField(TEXT("success"), bCmdOk);
+      Results.Add(MakeShared<FJsonValueObject>(ResultEntry));
+
+      if (bCmdOk) {
+        ExecutedCount++;
+      } else {
+        FailedCount++;
+      }
+    }
+
+    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    Out->SetNumberField(TEXT("totalCommands"), CmdArray->Num());
+    Out->SetNumberField(TEXT("executedCount"), ExecutedCount);
+    Out->SetNumberField(TEXT("failedCount"), FailedCount);
+    Out->SetArrayField(TEXT("results"), Results);
+    Out->SetBoolField(TEXT("success"), FailedCount == 0);
+
+    SendAutomationResponse(RequestingSocket, RequestId, FailedCount == 0,
+                           FString::Printf(TEXT("Executed %d/%d commands"),
+                                          ExecutedCount, CmdArray->Num()),
+                           Out, FailedCount > 0 ? TEXT("PARTIAL_FAILURE") : FString());
     return true;
   }
 

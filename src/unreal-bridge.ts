@@ -573,6 +573,85 @@ export class UnrealBridge {
     return results;
   }
 
+  /**
+   * Execute multiple console commands in a single batch request.
+   * This is significantly faster than sequential execution as it eliminates
+   * the WebSocket round-trip overhead for each command.
+   * 
+   * @param commands Array of console commands to execute
+   * @param options Optional configuration
+   * @returns Object with execution results
+   */
+  async executeBatchConsoleCommands(
+    commands: string[],
+    options: { timeoutMs?: number } = {}
+  ): Promise<{
+    success: boolean;
+    totalCommands: number;
+    executedCount: number;
+    failedCount: number;
+    results: Array<{ command: string; success: boolean; error?: string }>;
+  }> {
+    // Filter out empty commands
+    const validCommands = commands
+      .map(cmd => cmd?.trim())
+      .filter(cmd => cmd && cmd.length > 0);
+
+    if (validCommands.length === 0) {
+      return {
+        success: true,
+        totalCommands: 0,
+        executedCount: 0,
+        failedCount: 0,
+        results: []
+      };
+    }
+
+    if (process.env.MOCK_UNREAL_CONNECTION === 'true') {
+      this.log.info(`[MOCK] Batch executing ${validCommands.length} console commands`);
+      return {
+        success: true,
+        totalCommands: validCommands.length,
+        executedCount: validCommands.length,
+        failedCount: 0,
+        results: validCommands.map(cmd => ({ command: cmd, success: true }))
+      };
+    }
+
+    if (!this.automationBridge || !this.automationBridge.isConnected()) {
+      throw new Error('Automation bridge not connected');
+    }
+
+    // Validate all commands before sending
+    for (const cmd of validCommands) {
+      CommandValidator.validate(cmd);
+    }
+
+    const timeoutMs = options.timeoutMs ?? CONSOLE_COMMAND_TIMEOUT_MS * Math.max(1, Math.ceil(validCommands.length / 10));
+
+    const response = await this.automationBridge.sendAutomationRequest(
+      'batch_console_commands',
+      { commands: validCommands },
+      { timeoutMs }
+    );
+
+    const result = response as {
+      success?: boolean;
+      totalCommands?: number;
+      executedCount?: number;
+      failedCount?: number;
+      results?: Array<{ command: string; success: boolean; error?: string }>;
+    };
+
+    return {
+      success: result.success !== false,
+      totalCommands: result.totalCommands ?? validCommands.length,
+      executedCount: result.executedCount ?? 0,
+      failedCount: result.failedCount ?? 0,
+      results: result.results ?? validCommands.map(cmd => ({ command: cmd, success: true }))
+    };
+  }
+
   async executeEditorFunction(
     functionName: string,
     params?: Record<string, unknown>,

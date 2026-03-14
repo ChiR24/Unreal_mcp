@@ -223,3 +223,70 @@ export function validateRequiredParams(
     );
   }
 }
+
+/**
+ * Execute multiple console commands in a single batch request.
+ * This is significantly faster than sequential execution as it eliminates
+ * the WebSocket round-trip overhead for each command.
+ * 
+ * @param tools - The tools interface
+ * @param commands - Array of console commands to execute
+ * @param options - Optional configuration
+ * @returns Object with execution results
+ */
+export async function executeBatchConsoleCommands(
+  tools: ITools,
+  commands: string[],
+  options: { timeoutMs?: number } = {}
+): Promise<{
+  success: boolean;
+  totalCommands: number;
+  executedCount: number;
+  failedCount: number;
+}> {
+  // Filter out empty commands
+  const validCommands = commands
+    .map(cmd => cmd?.trim())
+    .filter(cmd => cmd && cmd.length > 0);
+
+  if (validCommands.length === 0) {
+    return {
+      success: true,
+      totalCommands: 0,
+      executedCount: 0,
+      failedCount: 0
+    };
+  }
+
+  const result = await executeAutomationRequest(
+    tools,
+    'batch_console_commands',
+    { commands: validCommands },
+    'Automation bridge not available for batch commands',
+    options
+  ) as {
+    success?: boolean;
+    totalCommands?: number;
+    executedCount?: number;
+    failedCount?: number;
+    message?: string;
+    error?: string;
+  };
+
+  const failedCount = result.failedCount ?? 0;
+  
+  // Throw error on failure so callers can handle appropriately
+  if (result.success === false || failedCount > 0) {
+    throw new Error(
+      `Batch command execution failed: ${failedCount}/${validCommands.length} commands failed. ` +
+      (result.message || result.error || 'Unknown error')
+    );
+  }
+
+  return {
+    success: true,
+    totalCommands: result.totalCommands ?? validCommands.length,
+    executedCount: result.executedCount ?? validCommands.length,
+    failedCount: 0
+  };
+}
