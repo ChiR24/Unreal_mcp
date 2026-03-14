@@ -32,3 +32,13 @@
 **Vulnerability:** A directory traversal check in `validateSnapshotPath` used `resolvedPath.startsWith(cwd)` to enforce that user paths stayed inside the project root. This allows an attacker to access sibling directories that share the same prefix (e.g., if `cwd` is `/projects/app`, accessing `/projects/app-secrets` bypasses the check).
 **Learning:** Checking string prefixes for directory boundaries is insecure if the string lacks a trailing path separator, because string matching does not respect directory boundaries.
 **Prevention:** Always append a trailing path separator (e.g., `cwd + path.sep`) before using `startsWith()` for path boundary enforcement, or use strict directory checks using `path.relative` ensuring it doesn't start with `..`.
+
+## 2025-03-13 - Path Traversal in Export Asset Command
+**Vulnerability:** The `exportPath` argument in `McpAutomationBridge_SystemControlHandlers.cpp` was used directly to create export directories and save assets without sanitization, leading to an arbitrary file write/path traversal vulnerability.
+**Learning:** Native Unreal Engine functions like `FPaths::GetPath` and `UExporter::ExportToFile` do not perform bounding checks. Passing user-controlled paths directly to them allows escaping the project directory.
+**Prevention:** Always use `SanitizeProjectFilePath` for user-provided paths that interact with the host filesystem. Then, concatenate it safely using `FPaths::ProjectDir() / SafePath`, and always check that the resulting absolute path resides within the project directory using `StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)`.
+
+## 2025-03-14 - Absolute Path Bypass in File Output Handlers
+**Vulnerability:** Several handlers (`generate_thumbnail`, `generate_report`) used `FPaths::IsRelative()` to check paths before converting to absolute. However, providing an absolute path like `C:/Windows/System32/exploit.dll` would bypass this check entirely, allowing arbitrary file writes.
+**Learning:** Checking `IsRelative()` alone is insufficient for security - it only handles relative paths. Absolute paths bypass the check and are used directly without bounds validation.
+**Prevention:** Always use `SanitizeProjectFilePath` to reject absolute paths (it checks for `:` character), then construct the absolute path from `FPaths::ProjectDir() / SafePath` and verify bounds. Never trust user-provided paths directly, regardless of whether they appear relative or absolute.

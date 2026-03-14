@@ -461,18 +461,6 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
                 TEXT("INVALID_TRIGGER_TYPE"));
             return true;
         }
-        else if (TriggerType == TEXT("DoubleTap") || TriggerType == TEXT("InputTriggerDoubleTap"))
-        {
-            NewTrigger = NewObject<UInputTriggerDoubleTap>(InAction);
-        }
-        
-        if (!NewTrigger)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, DoubleTap"), *TriggerType),
-                TEXT("INVALID_TRIGGER_TYPE"));
-            return true;
-        }
 
         // Add the trigger to the action
         InAction->Triggers.Add(NewTrigger);
