@@ -306,6 +306,8 @@ export class AnimationTools {
             });
 
             // Add states if provided - use Promise.all for parallel execution
+            // Track successfully added states for potential rollback
+            const addedStateNames: string[] = [];
             if (normalizedStates.length > 0) {
               const stateResults = await Promise.all(normalizedStates.map(state =>
                 bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
@@ -325,6 +327,10 @@ export class AnimationTools {
                   error: failed.error || failed.message || 'Unknown error'
                 };
               }
+              // Track successfully added states
+              for (const state of normalizedStates) {
+                addedStateNames.push(state.name);
+              }
             }
 
             // Add transitions if provided - use Promise.all for parallel execution
@@ -343,9 +349,24 @@ export class AnimationTools {
               const failedTransition = transitionResults.find((r: { success?: boolean }) => r && r.success === false);
               if (failedTransition) {
                 const failed = failedTransition as { error?: string; message?: string };
+                
+                // Rollback: Delete any states that were added
+                if (addedStateNames.length > 0) {
+                  await Promise.all(addedStateNames.map(stateName =>
+                    bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
+                      subAction: 'delete_state',
+                      blueprintPath,
+                      stateMachineName: machineName,
+                      stateName
+                    }), { timeoutMs: 10000 }).catch(() => {
+                      // Ignore rollback failures - best effort cleanup
+                    })
+                  ));
+                }
+                
                 return {
                   success: false,
-                  message: 'Failed to add one or more transitions',
+                  message: 'Failed to add one or more transitions (rolled back added states)',
                   error: failed.error || failed.message || 'Unknown error'
                 };
               }
