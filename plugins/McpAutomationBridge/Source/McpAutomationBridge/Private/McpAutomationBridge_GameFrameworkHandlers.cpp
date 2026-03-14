@@ -11,24 +11,29 @@
 //   - create_player_controller      : Create APlayerController Blueprint
 //   - create_player_state          : Create APlayerState Blueprint
 //   - create_game_instance         : Create UGameInstance Blueprint
-//   - create_hud                   : Create AHUD Blueprint
+//   - create_hud_class             : Create AHUD Blueprint
 //
 // Section 2: Game Mode Configuration
 //   - set_default_pawn_class       : Set default pawn class
 //   - set_player_controller_class  : Set player controller class
 //   - set_game_state_class         : Set game state class
+//   - set_player_state_class       : Set player state class
 //   - configure_game_rules         : Set game rules
 //
 // Section 3: Match Flow
-//   - set_match_state              : Set current match state
+//   - setup_match_states           : Set current match state
 //   - configure_round_system       : Setup round-based gameplay
 //   - configure_team_system        : Setup team-based gameplay
-//   - set_score_system             : Configure scoring
+//   - configure_scoring_system     : Configure scoring
 //
 // Section 4: Player Management
-//   - create_player_start          : Create APlayerStart actor
-//   - configure_respawn_rules      : Set respawn parameters
+//   - configure_spawn_system       : Configure spawn system
+//   - configure_player_start       : Create APlayerStart actor
+//   - set_respawn_rules            : Set respawn parameters
 //   - configure_spectating         : Setup spectator system
+//
+// Section 5: Utility
+//   - get_game_framework_info      : Get game framework info
 //
 // VERSION COMPATIBILITY:
 // ----------------------

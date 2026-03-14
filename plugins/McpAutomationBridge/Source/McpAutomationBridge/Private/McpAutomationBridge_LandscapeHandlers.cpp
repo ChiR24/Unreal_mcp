@@ -1097,7 +1097,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
 
     // Convert Brush Radius to Vertex Units (assuming uniform scale for
     // simplicity, or use X)
-    float ScaleX = Landscape->GetActorScale3D().X;
+    const FVector LandscapeScale = Landscape->GetActorScale3D();
+    const float ScaleX = LandscapeScale.X;
+    const float ScaleZ = LandscapeScale.Z;
+    
+    // Guard against zero scale which would cause division by zero
+    if (FMath::IsNearlyZero(ScaleX) || FMath::IsNearlyZero(ScaleZ))
+    {
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     TEXT("Landscape has zero scale. Cannot perform brush operation."),
+                                     TEXT("INVALID_SCALE"));
+      return;
+    }
+    
     int32 RadiusVerts = FMath::Max(1, FMath::RoundToInt(BrushRadius / ScaleX));
     int32 FalloffVerts = FMath::RoundToInt(RadiusVerts * BrushFalloff);
 
@@ -1153,7 +1165,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
 
         uint16 CurrentHeight = HeightData[Index];
 
-        float ScaleZ = Landscape->GetActorScale3D().Z;
         float HeightScale =
             128.0f / ScaleZ; // Conversion factor from World Z to uint16
 
@@ -1430,9 +1441,24 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     int32 PaintMinY = MinY;
     int32 PaintMaxX = MaxX;
     int32 PaintMaxY = MaxY;
-    if (PaintMinX < 0 || PaintMaxX < 0) {
-      LandscapeInfo->GetLandscapeExtent(PaintMinX, PaintMinY, PaintMaxX,
-                                        PaintMaxY);
+    
+    // Clamp paint region to landscape extents
+    int32 LMinX, LMinY, LMaxX, LMaxY;
+    if (LandscapeInfo->GetLandscapeExtent(LMinX, LMinY, LMaxX, LMaxY))
+    {
+      PaintMinX = FMath::Clamp(PaintMinX, LMinX, LMaxX);
+      PaintMinY = FMath::Clamp(PaintMinY, LMinY, LMaxY);
+      PaintMaxX = FMath::Clamp(PaintMaxX, LMinX, LMaxX);
+      PaintMaxY = FMath::Clamp(PaintMaxY, LMinY, LMaxY);
+    }
+    
+    // Validate region is valid
+    if (PaintMinX > PaintMaxX || PaintMinY > PaintMaxY)
+    {
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     TEXT("Invalid paint region: min > max after clamping"),
+                                     TEXT("INVALID_REGION"));
+      return;
     }
 
     // Pass false for bInUploadTextureChangesToGPU to prevent GPU sync hang on Intel GPUs
@@ -1440,6 +1466,17 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintLandscapeLayer(
     const uint8 PaintValue = static_cast<uint8>(Strength * 255.0);
     const int32 RegionSizeX = (PaintMaxX - PaintMinX + 1);
     const int32 RegionSizeY = (PaintMaxY - PaintMinY + 1);
+    
+    // Validate region size to prevent huge allocations
+    constexpr int32 MaxRegionPixels = 16777216; // 16M pixels = ~16MB for uint8
+    if (RegionSizeX * RegionSizeY > MaxRegionPixels)
+    {
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     FString::Printf(TEXT("Paint region too large: %dx%d (%d pixels). Maximum: %d"),
+                                                     RegionSizeX, RegionSizeY, RegionSizeX * RegionSizeY, MaxRegionPixels),
+                                     TEXT("REGION_TOO_LARGE"));
+      return;
+    }
 
     TArray<uint8> AlphaData;
     AlphaData.Init(PaintValue, RegionSizeX * RegionSizeY);

@@ -71,6 +71,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
         const bool bHasChannels = Payload->TryGetStringField(TEXT("channels"), Channels) 
             && !Channels.IsEmpty();
 
+        // Guard GEngine before Exec call
+        if (!GEngine)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Engine is not available."), TEXT("ENGINE_UNAVAILABLE"));
+            return true;
+        }
+
         // Execute trace start via console command
         // This is the standard way to control trace from editor
         bool bCommandExecuted = false;

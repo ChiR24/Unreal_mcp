@@ -76,6 +76,36 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
             return true;
         }
 
+        // Sanitize categoryName to prevent command injection
+        // Only allow alphanumeric characters and underscores
+        CategoryName = CategoryName.TrimStartAndEnd();
+        bool bHasInvalidChars = false;
+        for (int32 i = 0; i < CategoryName.Len(); i++)
+        {
+            TCHAR Ch = CategoryName[i];
+            if (!FChar::IsAlnum(Ch) && Ch != TEXT('_') && Ch != TEXT('-'))
+            {
+                bHasInvalidChars = true;
+                break;
+            }
+        }
+        
+        if (bHasInvalidChars)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Invalid categoryName. Only alphanumeric characters, underscores, and hyphens are allowed."),
+                TEXT("INVALID_CATEGORY_NAME"));
+            return true;
+        }
+
+        // Guard GEngine before Exec call
+        if (!GEngine)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Engine is not available."), TEXT("ENGINE_UNAVAILABLE"));
+            return true;
+        }
+
         // Execute via console command for robustness
         // Alternative: IGameplayDebugger::Get().ToggleCategory(CategoryName)
         // requires "GameplayDebugger" module dependency
