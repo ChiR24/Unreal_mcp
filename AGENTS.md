@@ -16,7 +16,7 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 │   │   └── handlers/       # Domain handlers (40 files)
 │   ├── automation/         # Bridge Client & Handshake (9 files)
 │   ├── utils/              # Normalization & Security
-├── Plugins/                # UE Plugin (C++) — note: "Plugins" not "plugins"
+├── plugins/               # UE Plugin (C++)
 │       ├── Source/         # Native Handlers (56 files) & Subsystem
 │       └── Config/         # Plugin Settings
 ├── tests/                  # Integration + Unit Tests
@@ -31,7 +31,7 @@ MCP server for Unreal Engine 5 (5.0-5.7). Dual-process: TypeScript MCP server + 
 | Add MCP Tool | `src/tools/consolidated-tool-definitions.ts` | Add action enum + schema |
 | Route Tool | `src/tools/consolidated-tool-handlers.ts` | Register in `registerDefaultHandlers()` |
 | Implement Handler | `src/tools/handlers/*-handlers.ts` | Call `executeAutomationRequest()` |
-| Add UE Action | `Plugins/.../Private/*Handlers.cpp` | Register in `Subsystem::InitializeHandlers()` |
+| Add UE Action | `plugins/.../Private/*Handlers.cpp` | Register in `Subsystem::InitializeHandlers()` |
 | Fix UE Crashes | `McpAutomationBridgeHelpers.h` | Use `McpSafeAssetSave` for 5.7+ |
 | Path Handling | `src/utils/normalize.ts` | Force `/Game/` prefix |
 | CI Workflows | `.github/workflows/` | All actions use commit SHAs (secure) |
