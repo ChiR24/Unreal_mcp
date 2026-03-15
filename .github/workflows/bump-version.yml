@@ -22,11 +22,6 @@ on:
         required: false
         type: boolean
         default: false
-      update_wasm_crate:
-        description: 'Update Rust crate version (for WASM API breaking changes only)'
-        required: false
-        type: boolean
-        default: false
       branch:
         description: 'Target branch'
         required: false
@@ -114,31 +109,6 @@ jobs:
           NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New npm version: $NEW_VERSION"
-      - name: Get current WASM crate version
-        id: current_wasm_version
-        if: inputs.update_wasm_crate == 'true'
-        run: |
-          WASM_VERSION=$(grep '^version = ' wasm/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-          echo "version=$WASM_VERSION" >> $GITHUB_OUTPUT
-          echo "Current WASM crate version: $WASM_VERSION"
-
-      - name: Calculate new WASM crate version
-        id: calc_wasm_version
-        if: inputs.update_wasm_crate == 'true'
-        run: |
-          CURRENT="${{ steps.current_wasm_version.outputs.version }}"
-          
-          # Parse version
-          MAJOR=$(echo $CURRENT | cut -d. -f1)
-          MINOR=$(echo $CURRENT | cut -d. -f2)
-          PATCH=$(echo $CURRENT | cut -d. -f3)
-          
-          # Increment patch for WASM
-          PATCH=$((PATCH + 1))
-          NEW_WASM_VERSION="$MAJOR.$MINOR.$PATCH"
-          
-          echo "wasm_version=$NEW_WASM_VERSION" >> $GITHUB_OUTPUT
-          echo "New WASM crate version: $NEW_WASM_VERSION"
 
       - name: Set final npm version
         id: final_version
@@ -175,34 +145,19 @@ jobs:
           
           echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
 
-      - name: Update WASM crate version (optional)
-        if: inputs.update_wasm_crate == 'true'
-        run: |
-          VERSION="${{ steps.calc_wasm_version.outputs.wasm_version }}"
-          OLD_VERSION="${{ steps.current_wasm_version.outputs.version }}"
-          
-          # Escape dots for sed regex
-          OLD_VERSION_ESCAPED=$(echo "$OLD_VERSION" | sed 's/\./\\./g')
-          
-          # Update version in Cargo.toml (only the package version line)
-          sed -i "s/^version = \"$OLD_VERSION_ESCAPED\"/version = \"$VERSION\"/" wasm/Cargo.toml
-          
-          echo "✅ Updated wasm/Cargo.toml from $OLD_VERSION to $VERSION"
-          echo "⚠️  Remember: WASM crate version should only change for API-breaking changes"
-
       - name: Verify no hardcoded npm versions remain
         run: |
           OLD_VERSION="${{ steps.current_version.outputs.version }}"
           
           # Search for remaining occurrences (excluding expected files)
-          FOUND=$(grep -r "$OLD_VERSION" --include="*.json" --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "CHANGELOG.md" | grep -v "package-lock.json" | grep -v "wasm" || true)
+          FOUND=$(grep -r "$OLD_VERSION" --include="*.json" --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "CHANGELOG.md" | grep -v "package-lock.json" || true)
           
           if [ -n "$FOUND" ]; then
             echo "⚠️ Warning: Found remaining instances of $OLD_VERSION in code:"
             echo "$FOUND"
             echo "This might be intentional (e.g., CHANGELOG.md, docs)"
           else
-            echo "✅ No hardcoded npm versions found (excluding CHANGELOG.md, package-lock.json, wasm/)"
+            echo "✅ No hardcoded npm versions found (excluding CHANGELOG.md, package-lock.json)"
           fi
 
       - name: Create CHANGELOG entry
@@ -299,10 +254,6 @@ jobs:
             git add CHANGELOG.md
           fi
           
-          if [ "${{ inputs.update_wasm_crate }}" == "true" ]; then
-            git add wasm/Cargo.toml
-          fi
-          
           git commit -m "$COMMIT_MESSAGE"
           echo "✅ Committed changes"
 
@@ -329,10 +280,6 @@ jobs:
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
           echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ inputs.update_wasm_crate }}" == "true" ]; then
-            echo "- \`wasm/Cargo.toml\`" >> $GITHUB_STEP_SUMMARY
-          fi
           
           if [ "${{ inputs.create_changelog }}" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY

@@ -1,4 +1,4 @@
-name: '📏 Gemini PR Size Labeler'
+name: '📏 PR Size Labeler'
 
 on:
   pull_request_target:
