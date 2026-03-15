@@ -1,7 +1,8 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { cleanObject } from '../utils/safe-json.js';
-import { validateAssetParams, sanitizeCommandArgument } from '../utils/validation.js';
+import { sanitizeCommandArgument } from '../utils/validation.js';
+import { validateAssetParams } from '../utils/validation.js';
 
 type CreateAnimationBlueprintSuccess = {
   success: true;
@@ -173,12 +174,11 @@ export class AnimationTools {
         return { success: false, error: 'blueprintPath and machineName are required' };
       }
 
-      // SECURITY: Sanitize all user inputs to prevent command injection
       const safeBlueprintPath = sanitizeCommandArgument(params.blueprintPath);
       const safeMachineName = sanitizeCommandArgument(params.machineName);
 
       if (!safeBlueprintPath || !safeMachineName) {
-        return { success: false, error: 'Blueprint path and machine name must be valid and non-empty.' };
+        return { success: false, error: 'blueprintPath and machineName must be valid and non-empty after sanitization' };
       }
 
       const commands: string[] = [
@@ -186,13 +186,10 @@ export class AnimationTools {
       ];
 
       for (const state of params.states) {
-        // SECURITY: Sanitize state name and animation name
         const safeStateName = sanitizeCommandArgument(state.name);
         const safeAnimationName = state.animation ? sanitizeCommandArgument(state.animation) : '';
-        
-        if (!safeStateName) {
-          continue; // Skip invalid state names
-        }
+
+        if (!safeStateName) continue;
 
         commands.push(
           `AddAnimState ${safeBlueprintPath} ${safeMachineName} ${safeStateName} ${safeAnimationName}`
@@ -207,21 +204,18 @@ export class AnimationTools {
 
       if (params.transitions) {
         for (const transition of params.transitions) {
-          // SECURITY: Sanitize transition state names and condition
-          const safeSourceState = sanitizeCommandArgument(transition.sourceState);
-          const safeTargetState = sanitizeCommandArgument(transition.targetState);
-          
-          if (!safeSourceState || !safeTargetState) {
-            continue; // Skip invalid transitions
-          }
+          const safeSource = sanitizeCommandArgument(transition.sourceState);
+          const safeTarget = sanitizeCommandArgument(transition.targetState);
+          const safeCondition = transition.condition ? sanitizeCommandArgument(transition.condition) : '';
+
+          if (!safeSource || !safeTarget) continue;
 
           commands.push(
-            `AddAnimTransition ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState}`
+            `AddAnimTransition ${safeBlueprintPath} ${safeMachineName} ${safeSource} ${safeTarget}`
           );
-          if (transition.condition) {
-            const safeCondition = sanitizeCommandArgument(transition.condition);
+          if (safeCondition) {
             commands.push(
-              `SetAnimTransitionRule ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState} ${safeCondition}`
+              `SetAnimTransitionRule ${safeBlueprintPath} ${safeMachineName} ${safeSource} ${safeTarget} ${safeCondition}`
             );
           }
         }

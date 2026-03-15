@@ -303,44 +303,43 @@ export class PhysicsTools {
     debrisLifetime?: number;
   }) {
     try {
-      // SECURITY: Sanitize user inputs to prevent command injection
-      const safeName = sanitizeCommandArgument(params.destructionName);
+      const safeDestructionName = sanitizeCommandArgument(params.destructionName);
       const safeMeshPath = sanitizeCommandArgument(params.meshPath);
 
-      if (!safeName || !safeMeshPath) {
+      if (!safeDestructionName || !safeMeshPath) {
         return { success: false, error: 'Destruction name and mesh path must be valid and non-empty.' };
       }
 
       const path = params.savePath || '/Game/Destruction';
 
       const commands = [
-        `CreateGeometryCollection ${safeName} ${safeMeshPath} ${path}`
+        `CreateGeometryCollection ${safeDestructionName} ${safeMeshPath} ${path}`
       ];
 
       // Configure fracture
       if (params.fractureSettings) {
         const settings = params.fractureSettings;
         commands.push(
-          `FractureGeometry ${safeName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
+          `FractureGeometry ${safeDestructionName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
         );
       }
 
       // Set damage threshold
       if (params.damageThreshold) {
-        commands.push(`SetDamageThreshold ${safeName} ${params.damageThreshold}`);
+        commands.push(`SetDamageThreshold ${safeDestructionName} ${params.damageThreshold}`);
       }
 
       // Set debris lifetime
       if (params.debrisLifetime) {
-        commands.push(`SetDebrisLifetime ${safeName} ${params.debrisLifetime}`);
+        commands.push(`SetDebrisLifetime ${safeDestructionName} ${params.debrisLifetime}`);
       }
 
       await this.bridge.executeConsoleCommands(commands);
 
       return {
         success: true,
-        message: `Chaos destruction ${safeName} created`,
-        path: `${path}/${safeName}`
+        message: `Chaos destruction ${safeDestructionName} created`,
+        path: `${path}/${safeDestructionName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup destruction: ${err}` };
@@ -376,15 +375,14 @@ export class PhysicsTools {
       };
     }
 
-    // SECURITY: Sanitize vehicle name to prevent command injection
-    const safeVehicleName = sanitizeCommandArgument(params.vehicleName ?? '');
-    if (!safeVehicleName) {
-      return { success: false, error: 'Vehicle name must be valid and non-empty.' };
-    }
-
     const warnings: string[] = [];
 
     const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
+
+    const safeVehicleName = sanitizeCommandArgument(params.vehicleName || '');
+    if (!safeVehicleName) {
+      return { success: false, error: 'Vehicle name must be valid and non-empty.' };
+    }
 
     const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
       ? params.vehicleType
@@ -398,12 +396,8 @@ export class PhysicsTools {
     if (Array.isArray(params.wheels) && params.wheels.length > 0) {
       for (const wheelUnknown of params.wheels) {
         const wheel = wheelUnknown as Record<string, unknown>;
-        // SECURITY: Sanitize wheel name to prevent command injection
-        const safeWheelName = sanitizeCommandArgument(String(wheel.name ?? ''));
-        if (!safeWheelName) {
-          warnings.push('Skipped wheel with invalid name.');
-          continue;
-        }
+        const safeWheelName = sanitizeCommandArgument(String(wheel.name || ''));
+        if (!safeWheelName) continue;
         commands.push(
           `AddVehicleWheel ${safeVehicleName} ${safeWheelName} ${wheel.radius} ${wheel.width} ${wheel.mass}`
         );
@@ -558,7 +552,6 @@ export class PhysicsTools {
     };
   }) {
     try {
-      // SECURITY: Sanitize mesh name to prevent command injection
       const safeMeshName = sanitizeCommandArgument(params.meshName);
       if (!safeMeshName) {
         return { success: false, error: 'Mesh name must be valid and non-empty.' };
@@ -621,10 +614,9 @@ export class PhysicsTools {
     };
   }) {
     try {
-      // SECURITY: Sanitize simulation name to prevent command injection
       const safeName = sanitizeCommandArgument(params.name);
       if (!safeName) {
-        return { success: false, error: 'Simulation name must be valid and non-empty.' };
+        return { success: false, error: 'Fluid simulation name must be valid and non-empty.' };
       }
 
       const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
@@ -661,7 +653,7 @@ export class PhysicsTools {
 
       return {
         success: true,
-        message: `Fluid simulation ${safeName} created`
+        message: `Fluid simulation ${safeName} created at ${locStr}`
       };
     } catch (err) {
       return { success: false, error: `Failed to create fluid simulation: ${err}` };
