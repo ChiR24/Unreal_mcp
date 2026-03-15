@@ -1,7 +1,7 @@
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
 import { cleanObject } from '../utils/safe-json.js';
-import { validateAssetParams } from '../utils/validation.js';
+import { validateAssetParams, sanitizeCommandArgument } from '../utils/validation.js';
 
 type CreateAnimationBlueprintSuccess = {
   success: true;
@@ -173,32 +173,59 @@ export class AnimationTools {
         return { success: false, error: 'blueprintPath and machineName are required' };
       }
 
+      // SECURITY: Sanitize all user inputs to prevent command injection
+      const safeBlueprintPath = sanitizeCommandArgument(params.blueprintPath);
+      const safeMachineName = sanitizeCommandArgument(params.machineName);
+
+      if (!safeBlueprintPath || !safeMachineName) {
+        return { success: false, error: 'Blueprint path and machine name must be valid and non-empty.' };
+      }
+
       const commands: string[] = [
-        `AddAnimStateMachine ${params.blueprintPath} ${params.machineName}`
+        `AddAnimStateMachine ${safeBlueprintPath} ${safeMachineName}`
       ];
 
       for (const state of params.states) {
-        const animationName = state.animation ?? '';
+        // SECURITY: Sanitize state name and animation name
+        const safeStateName = sanitizeCommandArgument(state.name);
+        const safeAnimationName = state.animation ? sanitizeCommandArgument(state.animation) : '';
+
+        if (!safeStateName) {
+          continue; // Skip invalid state names
+        }
+
         commands.push(
-          `AddAnimState ${params.blueprintPath} ${params.machineName} ${state.name} ${animationName}`
+          `AddAnimState ${safeBlueprintPath} ${safeMachineName} ${safeStateName} ${safeAnimationName}`
         );
         if (state.isEntry) {
-          commands.push(`SetAnimStateEntry ${params.blueprintPath} ${params.machineName} ${state.name}`);
+          commands.push(`SetAnimStateEntry ${safeBlueprintPath} ${safeMachineName} ${safeStateName}`);
         }
         if (state.isExit) {
-          commands.push(`SetAnimStateExit ${params.blueprintPath} ${params.machineName} ${state.name}`);
+          commands.push(`SetAnimStateExit ${safeBlueprintPath} ${safeMachineName} ${safeStateName}`);
         }
       }
 
       if (params.transitions) {
         for (const transition of params.transitions) {
+          // SECURITY: Sanitize transition state names and condition
+          const safeSourceState = sanitizeCommandArgument(transition.sourceState);
+          const safeTargetState = sanitizeCommandArgument(transition.targetState);
+
+          if (!safeSourceState || !safeTargetState) {
+            continue; // Skip invalid transitions
+          }
+
           commands.push(
-            `AddAnimTransition ${params.blueprintPath} ${params.machineName} ${transition.sourceState} ${transition.targetState}`
+            `AddAnimTransition ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState}`
           );
           if (transition.condition) {
-            commands.push(
-              `SetAnimTransitionRule ${params.blueprintPath} ${params.machineName} ${transition.sourceState} ${transition.targetState} ${transition.condition}`
-            );
+            const safeCondition = sanitizeCommandArgument(transition.condition);
+            // SECURITY: Only push command if condition is non-empty after sanitization
+            if (safeCondition) {
+              commands.push(
+                `SetAnimTransitionRule ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState} ${safeCondition}`
+              );
+            }
           }
         }
       }
@@ -206,7 +233,7 @@ export class AnimationTools {
       await this.bridge.executeConsoleCommands(commands);
       return {
         success: true,
-        message: `State machine ${params.machineName} added to ${params.blueprintPath}`
+        message: `State machine ${safeMachineName} added to ${safeBlueprintPath}`
       };
     } catch (err) {
       return { success: false, error: `Failed to add state machine: ${err}` };

@@ -1,7 +1,7 @@
 // Physics tools for Unreal Engine using Automation Bridge
 import { UnrealBridge } from '../unreal-bridge.js';
 import { AutomationBridge } from '../automation/index.js';
-import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay } from '../utils/validation.js';
+import { validateAssetParams, resolveSkeletalMeshPath, concurrencyDelay, sanitizeCommandArgument } from '../utils/validation.js';
 import { coerceString, coerceStringArray } from '../utils/result-helpers.js';
 import { Logger } from '../utils/logger.js';
 
@@ -238,33 +238,42 @@ export class PhysicsTools {
     };
   }) {
     try {
+      // SECURITY: Sanitize user inputs to prevent command injection
+      const safeName = sanitizeCommandArgument(params.name);
+      const safeActor1 = sanitizeCommandArgument(params.actor1);
+      const safeActor2 = sanitizeCommandArgument(params.actor2);
+
+      if (!safeName || !safeActor1 || !safeActor2) {
+        return { success: false, error: 'Constraint name and actor names must be valid and non-empty.' };
+      }
+
       // Spawn constraint actor
       const spawnCmd = `spawnactor /Script/Engine.PhysicsConstraintActor ${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       await this.bridge.executeConsoleCommand(spawnCmd);
 
       // Configure constraint
       const commands = [
-        `SetConstraintActors ${params.name} ${params.actor1} ${params.actor2}`,
-        `SetConstraintType ${params.name} ${params.constraintType}`
+        `SetConstraintActors ${safeName} ${safeActor1} ${safeActor2}`,
+        `SetConstraintType ${safeName} ${params.constraintType}`
       ];
 
       if (params.breakThreshold) {
-        commands.push(`SetConstraintBreakThreshold ${params.name} ${params.breakThreshold}`);
+        commands.push(`SetConstraintBreakThreshold ${safeName} ${params.breakThreshold}`);
       }
 
       if (params.limits) {
         const limits = params.limits;
         if (limits.swing1 !== undefined) {
-          commands.push(`SetConstraintSwing1 ${params.name} ${limits.swing1}`);
+          commands.push(`SetConstraintSwing1 ${safeName} ${limits.swing1}`);
         }
         if (limits.swing2 !== undefined) {
-          commands.push(`SetConstraintSwing2 ${params.name} ${limits.swing2}`);
+          commands.push(`SetConstraintSwing2 ${safeName} ${limits.swing2}`);
         }
         if (limits.twist !== undefined) {
-          commands.push(`SetConstraintTwist ${params.name} ${limits.twist}`);
+          commands.push(`SetConstraintTwist ${safeName} ${limits.twist}`);
         }
         if (limits.linear !== undefined) {
-          commands.push(`SetConstraintLinear ${params.name} ${limits.linear}`);
+          commands.push(`SetConstraintLinear ${safeName} ${limits.linear}`);
         }
       }
 
@@ -272,7 +281,7 @@ export class PhysicsTools {
 
       return {
         success: true,
-        message: `Physics constraint ${params.name} created between ${params.actor1} and ${params.actor2}`
+        message: `Physics constraint ${safeName} created between ${safeActor1} and ${safeActor2}`
       };
     } catch (err) {
       return { success: false, error: `Failed to create constraint: ${err}` };
@@ -295,36 +304,43 @@ export class PhysicsTools {
     debrisLifetime?: number;
   }) {
     try {
-      const path = params.savePath || '/Game/Destruction';
+      // SECURITY: Sanitize user inputs to prevent command injection
+      const safeName = sanitizeCommandArgument(params.destructionName);
+      const safeMeshPath = sanitizeCommandArgument(params.meshPath);
+      const safeSavePath = sanitizeCommandArgument(params.savePath || '/Game/Destruction');
+
+      if (!safeName || !safeMeshPath || !safeSavePath) {
+        return { success: false, error: 'Destruction name, mesh path, and save path must be valid and non-empty.' };
+      }
 
       const commands = [
-        `CreateGeometryCollection ${params.destructionName} ${params.meshPath} ${path}`
+        `CreateGeometryCollection ${safeName} ${safeMeshPath} ${safeSavePath}`
       ];
 
       // Configure fracture
       if (params.fractureSettings) {
         const settings = params.fractureSettings;
         commands.push(
-          `FractureGeometry ${params.destructionName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
+          `FractureGeometry ${safeName} ${settings.cellCount} ${settings.minimumVolumeSize} ${settings.seed}`
         );
       }
 
       // Set damage threshold
       if (params.damageThreshold) {
-        commands.push(`SetDamageThreshold ${params.destructionName} ${params.damageThreshold}`);
+        commands.push(`SetDamageThreshold ${safeName} ${params.damageThreshold}`);
       }
 
       // Set debris lifetime
       if (params.debrisLifetime) {
-        commands.push(`SetDebrisLifetime ${params.destructionName} ${params.debrisLifetime}`);
+        commands.push(`SetDebrisLifetime ${safeName} ${params.debrisLifetime}`);
       }
 
       await this.bridge.executeConsoleCommands(commands);
 
       return {
         success: true,
-        message: `Chaos destruction ${params.destructionName} created`,
-        path: `${path}/${params.destructionName}`
+        message: `Chaos destruction ${safeName} created`,
+        path: `${safeSavePath}/${safeName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup destruction: ${err}` };
@@ -360,31 +376,56 @@ export class PhysicsTools {
       };
     }
 
+    // SECURITY: Sanitize vehicle name to prevent command injection
+    const safeVehicleName = sanitizeCommandArgument(params.vehicleName ?? '');
+    if (!safeVehicleName) {
+      return { success: false, error: 'Vehicle name must be valid and non-empty.' };
+    }
+
     const warnings: string[] = [];
 
     const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
 
-    const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
+    // SECURITY: Sanitize vehicle type to prevent command injection
+    const rawVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
       ? params.vehicleType
       : 'Car';
+    const safeVehicleType = sanitizeCommandArgument(rawVehicleType);
+    if (!safeVehicleType) {
+      return { success: false, error: 'Vehicle type must be valid and non-empty.' };
+    }
 
     const commands = [
-      `CreateVehicle ${params.vehicleName} ${effectiveVehicleType}`
+      `CreateVehicle ${safeVehicleName} ${safeVehicleType}`
     ];
 
     // Configure wheels when provided
     if (Array.isArray(params.wheels) && params.wheels.length > 0) {
       for (const wheelUnknown of params.wheels) {
         const wheel = wheelUnknown as Record<string, unknown>;
+        // SECURITY: Sanitize wheel name to prevent command injection
+        const safeWheelName = sanitizeCommandArgument(String(wheel.name ?? ''));
+        if (!safeWheelName) {
+          warnings.push('Skipped wheel with invalid name.');
+          continue;
+        }
+        // SECURITY: Validate numeric wheel parameters
+        const radius = typeof wheel.radius === 'number' && isFinite(wheel.radius) ? wheel.radius : NaN;
+        const width = typeof wheel.width === 'number' && isFinite(wheel.width) ? wheel.width : NaN;
+        const mass = typeof wheel.mass === 'number' && isFinite(wheel.mass) ? wheel.mass : NaN;
+        if (!isFinite(radius) || !isFinite(width) || !isFinite(mass)) {
+          warnings.push(`Skipped wheel '${safeWheelName}' with invalid numeric parameters.`);
+          continue;
+        }
         commands.push(
-          `AddVehicleWheel ${params.vehicleName} ${wheel.name} ${wheel.radius} ${wheel.width} ${wheel.mass}`
+          `AddVehicleWheel ${safeVehicleName} ${safeWheelName} ${radius} ${width} ${mass}`
         );
 
         if (wheel.isSteering) {
-          commands.push(`SetWheelSteering ${params.vehicleName} ${wheel.name} true`);
+          commands.push(`SetWheelSteering ${safeVehicleName} ${safeWheelName} true`);
         }
         if (wheel.isDriving) {
-          commands.push(`SetWheelDriving ${params.vehicleName} ${wheel.name} true`);
+          commands.push(`SetWheelDriving ${safeVehicleName} ${safeWheelName} true`);
         }
       }
     }
@@ -401,7 +442,7 @@ export class PhysicsTools {
         maxRPM = 0;
         warnings.push('Engine maxRPM was negative and has been clamped to 0.');
       }
-      commands.push(`SetEngineMaxRPM ${params.vehicleName} ${maxRPM}`);
+      commands.push(`SetEngineMaxRPM ${safeVehicleName} ${maxRPM}`);
 
       const rawCurve = Array.isArray(effectiveEngine.torqueCurve) ? effectiveEngine.torqueCurve : [];
       for (const point of rawCurve) {
@@ -418,7 +459,7 @@ export class PhysicsTools {
         }
 
         if (typeof rpm === 'number' && typeof torque === 'number') {
-          commands.push(`AddTorqueCurvePoint ${params.vehicleName} ${rpm} ${torque}`);
+          commands.push(`AddTorqueCurvePoint ${safeVehicleName} ${rpm} ${torque}`);
         }
       }
     }
@@ -429,13 +470,13 @@ export class PhysicsTools {
       if (Array.isArray(trans.gears)) {
         for (let i = 0; i < trans.gears.length; i++) {
           commands.push(
-            `SetGearRatio ${params.vehicleName} ${i} ${trans.gears[i]}`
+            `SetGearRatio ${safeVehicleName} ${i} ${trans.gears[i]}`
           );
         }
       }
       if (typeof trans.finalDriveRatio === 'number') {
         commands.push(
-          `SetFinalDriveRatio ${params.vehicleName} ${trans.finalDriveRatio}`
+          `SetFinalDriveRatio ${safeVehicleName} ${trans.finalDriveRatio}`
         );
       }
     }
@@ -460,7 +501,7 @@ export class PhysicsTools {
 
     return {
       success: true,
-      message: `Vehicle ${params.vehicleName} configured`,
+      message: `Vehicle ${safeVehicleName} configured`,
       warnings
     };
   }
@@ -530,32 +571,38 @@ export class PhysicsTools {
     };
   }) {
     try {
+      // SECURITY: Sanitize mesh name to prevent command injection
+      const safeMeshName = sanitizeCommandArgument(params.meshName);
+      if (!safeMeshName) {
+        return { success: false, error: 'Mesh name must be valid and non-empty.' };
+      }
+
       const commands = [
-        `EnableClothSimulation ${params.meshName}`,
-        `SetClothPreset ${params.meshName} ${params.clothPreset}`
+        `EnableClothSimulation ${safeMeshName}`,
+        `SetClothPreset ${safeMeshName} ${params.clothPreset}`
       ];
 
       if (params.clothPreset === 'Custom' && params.customSettings) {
         const settings = params.customSettings;
 
         if (settings.stiffness !== undefined) {
-          commands.push(`SetClothStiffness ${params.meshName} ${settings.stiffness}`);
+          commands.push(`SetClothStiffness ${safeMeshName} ${settings.stiffness}`);
         }
         if (settings.damping !== undefined) {
-          commands.push(`SetClothDamping ${params.meshName} ${settings.damping}`);
+          commands.push(`SetClothDamping ${safeMeshName} ${settings.damping}`);
         }
         if (settings.friction !== undefined) {
-          commands.push(`SetClothFriction ${params.meshName} ${settings.friction}`);
+          commands.push(`SetClothFriction ${safeMeshName} ${settings.friction}`);
         }
         if (settings.density !== undefined) {
-          commands.push(`SetClothDensity ${params.meshName} ${settings.density}`);
+          commands.push(`SetClothDensity ${safeMeshName} ${settings.density}`);
         }
         if (settings.gravity !== undefined) {
-          commands.push(`SetClothGravity ${params.meshName} ${settings.gravity}`);
+          commands.push(`SetClothGravity ${safeMeshName} ${settings.gravity}`);
         }
         if (settings.windVelocity) {
           const wind = settings.windVelocity;
-          commands.push(`SetClothWind ${params.meshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
+          commands.push(`SetClothWind ${safeMeshName} ${wind[0]} ${wind[1]} ${wind[2]}`);
         }
       }
 
@@ -563,7 +610,7 @@ export class PhysicsTools {
 
       return {
         success: true,
-        message: `Cloth simulation enabled for ${params.meshName}`
+        message: `Cloth simulation enabled for ${safeMeshName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup cloth: ${err}` };
@@ -587,32 +634,38 @@ export class PhysicsTools {
     };
   }) {
     try {
+      // SECURITY: Sanitize simulation name to prevent command injection
+      const safeName = sanitizeCommandArgument(params.name);
+      if (!safeName) {
+        return { success: false, error: 'Simulation name must be valid and non-empty.' };
+      }
+
       const locStr = `${params.location[0]} ${params.location[1]} ${params.location[2]}`;
       const volStr = `${params.volume[0]} ${params.volume[1]} ${params.volume[2]}`;
 
       const commands = [
-        `CreateFluidSimulation ${params.name} ${params.fluidType} ${locStr} ${volStr}`
+        `CreateFluidSimulation ${safeName} ${params.fluidType} ${locStr} ${volStr}`
       ];
 
       if (params.customSettings) {
         const settings = params.customSettings;
 
         if (settings.viscosity !== undefined) {
-          commands.push(`SetFluidViscosity ${params.name} ${settings.viscosity}`);
+          commands.push(`SetFluidViscosity ${safeName} ${settings.viscosity}`);
         }
         if (settings.density !== undefined) {
-          commands.push(`SetFluidDensity ${params.name} ${settings.density}`);
+          commands.push(`SetFluidDensity ${safeName} ${settings.density}`);
         }
         if (settings.temperature !== undefined) {
-          commands.push(`SetFluidTemperature ${params.name} ${settings.temperature}`);
+          commands.push(`SetFluidTemperature ${safeName} ${settings.temperature}`);
         }
         if (settings.turbulence !== undefined) {
-          commands.push(`SetFluidTurbulence ${params.name} ${settings.turbulence}`);
+          commands.push(`SetFluidTurbulence ${safeName} ${settings.turbulence}`);
         }
         if (settings.color) {
           const color = settings.color;
           commands.push(
-            `SetFluidColor ${params.name} ${color[0]} ${color[1]} ${color[2]} ${color[3]}`
+            `SetFluidColor ${safeName} ${color[0]} ${color[1]} ${color[2]} ${color[3]}`
           );
         }
       }
@@ -621,7 +674,7 @@ export class PhysicsTools {
 
       return {
         success: true,
-        message: `Fluid simulation ${params.name} created`
+        message: `Fluid simulation ${safeName} created`
       };
     } catch (err) {
       return { success: false, error: `Failed to create fluid simulation: ${err}` };
