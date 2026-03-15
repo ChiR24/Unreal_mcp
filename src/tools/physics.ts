@@ -307,15 +307,14 @@ export class PhysicsTools {
       // SECURITY: Sanitize user inputs to prevent command injection
       const safeName = sanitizeCommandArgument(params.destructionName);
       const safeMeshPath = sanitizeCommandArgument(params.meshPath);
+      const safeSavePath = sanitizeCommandArgument(params.savePath || '/Game/Destruction');
 
-      if (!safeName || !safeMeshPath) {
-        return { success: false, error: 'Destruction name and mesh path must be valid and non-empty.' };
+      if (!safeName || !safeMeshPath || !safeSavePath) {
+        return { success: false, error: 'Destruction name, mesh path, and save path must be valid and non-empty.' };
       }
 
-      const path = params.savePath || '/Game/Destruction';
-
       const commands = [
-        `CreateGeometryCollection ${safeName} ${safeMeshPath} ${path}`
+        `CreateGeometryCollection ${safeName} ${safeMeshPath} ${safeSavePath}`
       ];
 
       // Configure fracture
@@ -341,7 +340,7 @@ export class PhysicsTools {
       return {
         success: true,
         message: `Chaos destruction ${safeName} created`,
-        path: `${path}/${safeName}`
+        path: `${safeSavePath}/${safeName}`
       };
     } catch (err) {
       return { success: false, error: `Failed to setup destruction: ${err}` };
@@ -387,12 +386,17 @@ export class PhysicsTools {
 
     const hasExplicitEmptyWheels = Array.isArray(params.wheels) && params.wheels.length === 0;
 
-    const effectiveVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
+    // SECURITY: Sanitize vehicle type to prevent command injection
+    const rawVehicleType = typeof params.vehicleType === 'string' && params.vehicleType.trim().length > 0
       ? params.vehicleType
       : 'Car';
+    const safeVehicleType = sanitizeCommandArgument(rawVehicleType);
+    if (!safeVehicleType) {
+      return { success: false, error: 'Vehicle type must be valid and non-empty.' };
+    }
 
     const commands = [
-      `CreateVehicle ${safeVehicleName} ${effectiveVehicleType}`
+      `CreateVehicle ${safeVehicleName} ${safeVehicleType}`
     ];
 
     // Configure wheels when provided
@@ -405,8 +409,16 @@ export class PhysicsTools {
           warnings.push('Skipped wheel with invalid name.');
           continue;
         }
+        // SECURITY: Validate numeric wheel parameters
+        const radius = typeof wheel.radius === 'number' && isFinite(wheel.radius) ? wheel.radius : NaN;
+        const width = typeof wheel.width === 'number' && isFinite(wheel.width) ? wheel.width : NaN;
+        const mass = typeof wheel.mass === 'number' && isFinite(wheel.mass) ? wheel.mass : NaN;
+        if (!isFinite(radius) || !isFinite(width) || !isFinite(mass)) {
+          warnings.push(`Skipped wheel '${safeWheelName}' with invalid numeric parameters.`);
+          continue;
+        }
         commands.push(
-          `AddVehicleWheel ${safeVehicleName} ${safeWheelName} ${wheel.radius} ${wheel.width} ${wheel.mass}`
+          `AddVehicleWheel ${safeVehicleName} ${safeWheelName} ${radius} ${width} ${mass}`
         );
 
         if (wheel.isSteering) {

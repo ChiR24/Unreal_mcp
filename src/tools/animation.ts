@@ -220,9 +220,12 @@ export class AnimationTools {
           );
           if (transition.condition) {
             const safeCondition = sanitizeCommandArgument(transition.condition);
-            commands.push(
-              `SetAnimTransitionRule ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState} ${safeCondition}`
-            );
+            // SECURITY: Only push command if condition is non-empty after sanitization
+            if (safeCondition) {
+              commands.push(
+                `SetAnimTransitionRule ${safeBlueprintPath} ${safeMachineName} ${safeSourceState} ${safeTargetState} ${safeCondition}`
+              );
+            }
           }
         }
       }
