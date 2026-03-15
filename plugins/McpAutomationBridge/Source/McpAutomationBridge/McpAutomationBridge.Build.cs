@@ -225,6 +225,20 @@ PublicDependencyModuleNames.AddRange(new string[]
             PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0");
             PublicDefinitions.Add("MCP_HAS_WP_FOR_EACH_DATALAYER=0");
         }
+
+        // ============================================================================
+        // COMPILER WARNING SETTINGS (UE 5.6+ Compatibility)
+        // ============================================================================
+        // UE 5.6+ treats variable shadowing (C4456, C4458, C4459) as errors by default.
+        // Use ShadowVariableWarningLevel directly on ModuleRules - works in all UE versions.
+        // UE 5.0-5.5: Direct property on ModuleRules
+        // UE 5.6-5.7: Forwarding property to CppCompileWarningSettings.ShadowVariableWarningLevel
+        // This allows compilation while we systematically fix shadowing issues.
+        // TODO: Fix variable shadowing in handler files, then remove this override
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 6)
+        {
+            ShadowVariableWarningLevel = WarningLevel.Warning;
+        }
     }
 
     /// <summary>

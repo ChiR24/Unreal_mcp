@@ -1,18 +1,58 @@
+// =============================================================================
 // McpAutomationBridge_SessionsHandlers.cpp
-// Phase 22: Sessions & Local Multiplayer System Handlers
+// =============================================================================
+// Session Management and Multiplayer Handlers for MCP Automation Bridge.
 //
-// Complete session management including:
-// - Session Management (local session settings, session interface)
-// - Local Multiplayer (split-screen, local players)
-// - LAN (LAN play configuration, hosting, joining)
-// - Voice Chat (voice settings, channels, muting, attenuation, push-to-talk)
+// This file implements the following handlers:
+// - manage_sessions (main dispatcher)
+//
+// Session Management:
+//   - configure_local_session_settings
+//   - configure_session_interface
+//
+// Local Multiplayer:
+//   - configure_split_screen
+//   - set_split_screen_type
+//   - add_local_player
+//   - remove_local_player
+//
+// LAN:
+//   - configure_lan_play
+//   - host_lan_server
+//   - join_lan_server
+//
+// Voice Chat:
+//   - enable_voice_chat
+//   - configure_voice_settings
+//   - set_voice_channel
+//   - mute_player
+//   - set_voice_attenuation
+//   - configure_push_to_talk
+//
+// Utility:
+//   - get_sessions_info
+//
+// UE VERSION COMPATIBILITY:
+// - UE 5.0-5.6: CreateUniquePlayerId available on some platforms
+// - UE 5.7: CreateUniquePlayerId removed, use session-based lookup
+// - VoiceChat: IVoiceChat modular feature interface
+// - OnlineSubsystem: IOnlineVoice for fallback voice operations
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST BE FIRST - Version compatibility macros
+#include "McpHandlerUtils.h"          // Utility functions for JSON parsing
 
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 
-// Helper macros for JSON field access
+// =============================================================================
+// Helper Macros
+// =============================================================================
+
 #define GetStringFieldSess GetJsonStringField
 #define GetNumberFieldSess GetJsonNumberField
 #define GetBoolFieldSess GetJsonBoolField
@@ -132,7 +172,7 @@ static bool HandleConfigureLocalSessionSettings(
     bool bShouldAdvertise = GetBoolFieldSess(Payload, TEXT("bShouldAdvertise"), true);
 
     // Build response with session configuration
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("sessionName"), SessionName);
     ResponseJson->SetNumberField(TEXT("maxPlayers"), MaxPlayers);
     ResponseJson->SetBoolField(TEXT("bIsLANMatch"), bIsLANMatch);
@@ -168,7 +208,7 @@ static bool HandleConfigureSessionInterface(
         return false;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("interfaceType"), InterfaceType);
     ResponseJson->SetStringField(TEXT("status"), TEXT("configured"));
 
@@ -234,7 +274,7 @@ static bool HandleConfigureSplitScreen(
             bEnabled ? TEXT("configured") : TEXT("disabled"), CurrentPlayers);
     }
     
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
     ResponseJson->SetBoolField(TEXT("verticalSplit"), bVerticalSplit);
@@ -276,7 +316,7 @@ static bool HandleSetSplitScreenType(
         return true;  // Return true: request was handled (error response sent)
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
 
     FString Message = FString::Printf(TEXT("Split-screen type set to: %s"), *SplitScreenType);
@@ -315,7 +355,7 @@ static bool HandleAddLocalPlayer(
 
     int32 PlayerIndex = GI->GetLocalPlayers().Find(NewPlayer);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("playerIndex"), PlayerIndex);
     ResponseJson->SetNumberField(TEXT("controllerId"), ControllerId);
     ResponseJson->SetNumberField(TEXT("totalLocalPlayers"), GI->GetLocalPlayers().Num());
@@ -363,7 +403,7 @@ static bool HandleRemoveLocalPlayer(
 
     GI->RemoveLocalPlayer(Player);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("removedPlayerIndex"), PlayerIndex);
     ResponseJson->SetNumberField(TEXT("remainingPlayers"), GI->GetLocalPlayers().Num());
 
@@ -390,7 +430,7 @@ static bool HandleConfigureLanPlay(
     int32 ServerPort = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("serverPort"), 7777));
     FString ServerPassword = GetStringFieldSess(Payload, TEXT("serverPassword"), TEXT(""));
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetNumberField(TEXT("serverPort"), ServerPort);
     ResponseJson->SetBoolField(TEXT("hasPassword"), !ServerPassword.IsEmpty());
@@ -472,7 +512,7 @@ static bool HandleHostLanServer(
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("serverName"), ServerName);
     ResponseJson->SetStringField(TEXT("mapName"), MapName);
     ResponseJson->SetStringField(TEXT("mapPath"), FullMapPath);
@@ -516,7 +556,7 @@ static bool HandleJoinLanServer(
     }
     FString FullURL = ConnectionString + TravelOptions;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("serverAddress"), ConnectionString);
     ResponseJson->SetStringField(TEXT("connectionURL"), FullURL);
     ResponseJson->SetStringField(TEXT("status"), TEXT("configured"));
@@ -618,7 +658,7 @@ static bool HandleEnableVoiceChat(
     bSuccess = true; // Return success but note the limitation
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("voiceEnabled"), bEnabled);
     ResponseJson->SetBoolField(TEXT("success"), bSuccess);
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);
@@ -659,9 +699,9 @@ static bool HandleConfigureVoiceSettings(
         SampleRate = static_cast<int32>(GetNumberFieldSess(VoiceSettings, TEXT("sampleRate"), 16000));
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     
-    TSharedPtr<FJsonObject> ConfiguredSettings = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ConfiguredSettings = McpHandlerUtils::CreateResultObject();
     ConfiguredSettings->SetNumberField(TEXT("volume"), Volume);
     ConfiguredSettings->SetNumberField(TEXT("noiseGateThreshold"), NoiseGateThreshold);
     ConfiguredSettings->SetBoolField(TEXT("noiseSuppression"), bNoiseSuppression);
@@ -694,7 +734,7 @@ static bool HandleSetVoiceChannel(
         return true;  // Return true: request was handled (error response sent)
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("channelName"), ChannelName);
     ResponseJson->SetStringField(TEXT("channelType"), ChannelType);
 
@@ -807,7 +847,7 @@ static bool HandleMutePlayer(
     }
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("target"), TargetIdentifier);
     ResponseJson->SetBoolField(TEXT("muted"), bMuted);
     ResponseJson->SetBoolField(TEXT("success"), bSuccess);
@@ -834,7 +874,7 @@ static bool HandleSetVoiceAttenuation(
     AttenuationRadius = FMath::Max(AttenuationRadius, 0.0);
     AttenuationFalloff = FMath::Clamp(AttenuationFalloff, 0.1, 10.0);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("attenuationRadius"), AttenuationRadius);
     ResponseJson->SetNumberField(TEXT("attenuationFalloff"), AttenuationFalloff);
 
@@ -856,7 +896,7 @@ static bool HandleConfigurePushToTalk(
     bool bPushToTalkEnabled = GetBoolFieldSess(Payload, TEXT("pushToTalkEnabled"), false);
     FString PushToTalkKey = GetStringFieldSess(Payload, TEXT("pushToTalkKey"), TEXT("V"));
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("pushToTalkEnabled"), bPushToTalkEnabled);
     ResponseJson->SetStringField(TEXT("pushToTalkKey"), PushToTalkKey);
 
@@ -880,8 +920,8 @@ static bool HandleGetSessionsInfo(
 {
     using namespace SessionsHelpers;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    TSharedPtr<FJsonObject> SessionsInfo = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> SessionsInfo = McpHandlerUtils::CreateResultObject();
 
     // Get local player count
     int32 LocalPlayerCount = GetLocalPlayerCount();

@@ -1,13 +1,52 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_GameFrameworkHandlers.cpp
-// Phase 21: Game Framework System Handlers
+// =============================================================================
+// Game Framework System Handlers for MCP Automation Bridge
 //
-// Complete game mode and session management including:
-// - Core Classes (GameMode, GameState, PlayerController, PlayerState, GameInstance, HUD)
-// - Game Mode Configuration (default pawn, player controller, game state classes, game rules)
-// - Match Flow (match states, round system, team system, scoring, spawn system)
-// - Player Management (player start, respawn rules, spectating)
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Core Classes
+//   - create_game_mode             : Create AGameMode Blueprint
+//   - create_game_state            : Create AGameState Blueprint
+//   - create_player_controller      : Create APlayerController Blueprint
+//   - create_player_state          : Create APlayerState Blueprint
+//   - create_game_instance         : Create UGameInstance Blueprint
+//   - create_hud_class             : Create AHUD Blueprint
+//
+// Section 2: Game Mode Configuration
+//   - set_default_pawn_class       : Set default pawn class
+//   - set_player_controller_class  : Set player controller class
+//   - set_game_state_class         : Set game state class
+//   - set_player_state_class       : Set player state class
+//   - configure_game_rules         : Set game rules
+//
+// Section 3: Match Flow
+//   - setup_match_states           : Set current match state
+//   - configure_round_system       : Setup round-based gameplay
+//   - configure_team_system        : Setup team-based gameplay
+//   - configure_scoring_system     : Configure scoring
+//
+// Section 4: Player Management
+//   - configure_spawn_system       : Configure spawn system
+//   - configure_player_start       : Create APlayerStart actor
+//   - set_respawn_rules            : Set respawn parameters
+//   - configure_spectating         : Setup spectator system
+//
+// Section 5: Utility
+//   - get_game_framework_info      : Get game framework info
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - GameMode/GameState/PlayerController APIs stable
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
@@ -79,6 +118,10 @@ static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const F
 #endif
 }
 
+// ============================================================================
+// Legacy Helper Functions
+// NOTE: These helpers are retained for backward compatibility.
+// New code should prefer McpHandlerUtils:: functions instead.
 // ============================================================================
 // Helper Functions
 // NOTE: These helpers follow the existing pattern in other *Handlers.cpp files.
@@ -508,11 +551,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameMode blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -546,11 +589,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameState blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -584,11 +627,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created PlayerController blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -622,11 +665,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created PlayerState blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -660,11 +703,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created GameInstance blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -698,11 +741,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Created HUD blueprint: %s"), *Name));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
-        AddAssetVerification(Response, BP);
+        McpHandlerUtils::AddVerification(Response, BP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Success"), Response);
         return true;
     }
@@ -759,7 +802,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set DefaultPawnClass to %s"), *PawnClassPath));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -809,7 +852,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set PlayerControllerClass to %s"), *PCClassPath));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -859,7 +902,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set GameStateClass to %s"), *GSClassPath));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -909,7 +952,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set PlayerStateClass to %s"), *PSClassPath));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -971,7 +1014,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Configured game rules"));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -1064,7 +1107,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d match state variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -1075,7 +1118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         TArray<TSharedPtr<FJsonValue>> StatesJsonArray;
         for (const FString& StateName : StateNames)
         {
-            StatesJsonArray.Add(MakeShareable(new FJsonValueString(StateName)));
+            StatesJsonArray.Add(MakeShared<FJsonValueString>(StateName));
         }
         Response->SetArrayField(TEXT("configuredStates"), StatesJsonArray);
         
@@ -1163,13 +1206,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d round system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
         Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
-        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ConfigObj = McpHandlerUtils::CreateResultObject();
         ConfigObj->SetNumberField(TEXT("numRounds"), NumRounds);
         ConfigObj->SetNumberField(TEXT("roundTime"), RoundTime);
         ConfigObj->SetNumberField(TEXT("intermissionTime"), IntermissionTime);
@@ -1254,13 +1297,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d team system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
         Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
-        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ConfigObj = McpHandlerUtils::CreateResultObject();
         ConfigObj->SetNumberField(TEXT("numTeams"), NumTeams);
         ConfigObj->SetNumberField(TEXT("teamSize"), TeamSize);
         ConfigObj->SetBoolField(TEXT("autoBalance"), bAutoBalance);
@@ -1340,13 +1383,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d scoring system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
         Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
-        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ConfigObj = McpHandlerUtils::CreateResultObject();
         ConfigObj->SetNumberField(TEXT("scorePerKill"), ScorePerKill);
         ConfigObj->SetNumberField(TEXT("scorePerObjective"), ScorePerObjective);
         ConfigObj->SetNumberField(TEXT("scorePerAssist"), ScorePerAssist);
@@ -1444,13 +1487,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %d spawn system variables to Blueprint"), VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
         Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
-        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ConfigObj = McpHandlerUtils::CreateResultObject();
         ConfigObj->SetStringField(TEXT("spawnSelectionMethod"), SpawnMethod);
         ConfigObj->SetNumberField(TEXT("respawnDelay"), RespawnDelay);
         ConfigObj->SetBoolField(TEXT("usePlayerStarts"), bUsePlayerStarts);
@@ -1548,7 +1591,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured %d PlayerStart actor(s)"), ConfiguredCount));
         Response->SetNumberField(TEXT("configuredCount"), ConfiguredCount);
@@ -1638,13 +1681,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set respawn rules (MinRespawnDelay=%.1f, added %d variables)"), RespawnDelay, VarsAdded));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
         Response->SetNumberField(TEXT("variablesAdded"), VarsAdded);
         
-        TSharedPtr<FJsonObject> ConfigObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ConfigObj = McpHandlerUtils::CreateResultObject();
         ConfigObj->SetNumberField(TEXT("respawnDelay"), RespawnDelay);
         ConfigObj->SetStringField(TEXT("respawnLocation"), RespawnLocation);
         ConfigObj->SetBoolField(TEXT("forceRespawn"), bForceRespawn);
@@ -1692,7 +1735,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
             McpSafeAssetSave(BP);
         }
 
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Spectating configured."));
         Response->SetStringField(TEXT("blueprintPath"), BP->GetPathName());
@@ -1706,10 +1749,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
 
     else if (SubAction == TEXT("get_game_framework_info"))
     {
-        TSharedPtr<FJsonObject> Response = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
         Response->SetBoolField(TEXT("success"), true);
         
-        TSharedPtr<FJsonObject> InfoObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> InfoObj = McpHandlerUtils::CreateResultObject();
 
         // If a specific GameMode blueprint is provided, query it
         if (!GameModeBlueprint.IsEmpty())

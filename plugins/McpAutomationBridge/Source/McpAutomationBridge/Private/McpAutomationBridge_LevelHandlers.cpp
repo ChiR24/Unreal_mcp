@@ -1,3 +1,43 @@
+// =============================================================================
+// McpAutomationBridge_LevelHandlers.cpp
+// =============================================================================
+// Level Management Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Level Creation & Loading
+//   - create_new_level             : Create new empty level
+//   - load_level                   : Load existing level asset
+//   - save_current_level           : Save current level to disk
+//   - close_level                  : Close current level
+//
+// Section 2: Level Streaming
+//   - add_streaming_level          : Add streaming level to world
+//   - remove_streaming_level       : Remove streaming level
+//   - load_streaming_level         : Load streaming level
+//   - unload_streaming_level       : Unload streaming level
+//
+// Section 3: Level Operations
+//   - get_current_level_name       : Get current level path
+//   - get_all_levels               : List all levels in world
+//   - set_current_level            : Set active editing level
+//
+// Section 4: World Settings
+//   - get_world_settings           : Get world settings object
+//   - set_world_settings           : Configure world settings
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - Level streaming APIs stable across versions
+// - World Partition conditional via __has_include
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -421,7 +461,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       
       // Also check if it's a valid package path (for levels in memory but not on disk yet)
       if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
-        TSharedPtr<FJsonObject> ErrorDetails = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
         ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
         if (!FullFolderMapPath.IsEmpty()) {
           ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
@@ -463,7 +503,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
           }
         }
         
-TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         VerifyAssetExists(Resp, LevelPath);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level loaded"), Resp, FString());
@@ -590,7 +630,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
                         PackageName.Contains(TEXT("Untitled"));
     
     if (bIsTransient) {
-      TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
       ErrorDetail->SetStringField(TEXT("reason"), 
           TEXT("Level is unsaved/temporary. Use save_level_as with a valid path first."));
@@ -608,14 +648,14 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
     bool bSaved = McpSafeLevelSave(World->PersistentLevel, PackageName);
     if (bSaved) {
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       FString LevelPath = World->GetOutermost()->GetName();
       VerifyAssetExists(Resp, LevelPath);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {
       // Provide detailed error information
-      TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), PackageName);
 
       FString Filename;
@@ -679,7 +719,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         const int32 SafePathLength = 240;
         if (AbsoluteFilePath.Len() > SafePathLength)
         {
-          TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
           ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
           ErrorDetail->SetStringField(TEXT("absolutePath"), AbsoluteFilePath);
           ErrorDetail->SetNumberField(TEXT("pathLength"), AbsoluteFilePath.Len());
@@ -715,7 +755,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
           AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
         }
 
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         SendAutomationResponse(
             RequestingSocket, RequestId, true,
@@ -723,7 +763,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
             FString());
       } else {
         // CRITICAL FIX: Send error response when save fails (was missing before, causing silent hangs)
-        TSharedPtr<FJsonObject> ErrorDetail = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
         ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
         ErrorDetail->SetStringField(TEXT("reason"), TEXT("Save operation failed - check Output Log for details"));
         SendAutomationResponse(
@@ -741,7 +781,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
   }
   if (EffectiveAction == TEXT("build_lighting") ||
       EffectiveAction == TEXT("bake_lightmap")) {
-    TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> P = McpHandlerUtils::CreateResultObject();
     P->SetStringField(TEXT("functionName"), TEXT("BUILD_LIGHTING"));
     if (Payload.IsValid()) {
       FString Q;
@@ -841,7 +881,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (FPackageName::DoesPackageExist(SavePath)) {
       // Level already exists - return success with info instead of trying to open
       // Opening an existing level can trigger dialogs about unsaved changes, causing hangs
-      TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("levelPath"), SavePath);
       Resp->SetStringField(TEXT("packagePath"), SavePath);
       Resp->SetBoolField(TEXT("alreadyExists"), true);
@@ -991,7 +1031,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         FlushRenderingCommands();
         FPlatformProcess::Sleep(0.05f);
         
-        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         Resp->SetStringField(TEXT("packagePath"), SavePath);
         Resp->SetStringField(TEXT("objectPath"),
@@ -1045,7 +1085,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
 #else
     // Fallback for missing headers (shouldn't happen given build.cs)
     const FString Cmd = FString::Printf(TEXT("Open %s"), *SavePath);
-    TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> P = McpHandlerUtils::CreateResultObject();
     P->SetStringField(TEXT("command"), Cmd);
     return HandleExecuteEditorFunction(
         RequestId, TEXT("execute_console_command"), P, RequestingSocket);
@@ -1109,7 +1149,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelName"), NormalizedLevelName);
     Result->SetBoolField(TEXT("shouldBeLoaded"), bLoad);
     Result->SetBoolField(TEXT("shouldBeVisible"), bVis);
@@ -1173,7 +1213,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       ClassName = TEXT("RectLight");
     else
       ClassName = TEXT("PointLight");
-    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Params = McpHandlerUtils::CreateResultObject();
     if (Payload.IsValid()) {
       const TSharedPtr<FJsonObject> *L = nullptr;
       if (Payload->TryGetObjectField(TEXT("location"), L) && L &&
@@ -1184,7 +1224,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
           (*R).IsValid())
         Params->SetObjectField(TEXT("rotation"), *R);
     }
-    TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> P = McpHandlerUtils::CreateResultObject();
     P->SetStringField(TEXT("functionName"), TEXT("SPAWN_ACTOR_AT_LOCATION"));
     P->SetStringField(TEXT("class_path"), ClassName);
     P->SetObjectField(TEXT("params"), Params.ToSharedRef());
@@ -1192,7 +1232,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
   }
   if (EffectiveAction == TEXT("list_levels")) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> LevelsArray;
 
     UWorld *World =
@@ -1200,7 +1240,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
 
     // Add current persistent level
     if (World) {
-      TSharedPtr<FJsonObject> CurrentLevel = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> CurrentLevel = McpHandlerUtils::CreateResultObject();
       CurrentLevel->SetStringField(TEXT("name"), World->GetMapName());
       CurrentLevel->SetStringField(TEXT("path"),
                                    World->GetOutermost()->GetName());
@@ -1215,7 +1255,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         if (!StreamingLevel)
           continue;
 
-        TSharedPtr<FJsonObject> LevelEntry = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> LevelEntry = McpHandlerUtils::CreateResultObject();
         LevelEntry->SetStringField(TEXT("name"),
                                    StreamingLevel->GetWorldAssetPackageName());
         LevelEntry->SetStringField(
@@ -1253,7 +1293,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
 
     TArray<TSharedPtr<FJsonValue>> AllMapsArray;
     for (const FAssetData &MapAsset : MapAssets) {
-      TSharedPtr<FJsonObject> MapEntry = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> MapEntry = McpHandlerUtils::CreateResultObject();
       MapEntry->SetStringField(TEXT("name"), MapAsset.AssetName.ToString());
       MapEntry->SetStringField(TEXT("path"), MapAsset.PackageName.ToString());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -1381,7 +1421,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       // This prevents "An asset already exists at this location" errors and makes
       // the operation idempotent
       if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sourcePath"), SourcePath);
         Result->SetStringField(TEXT("destinationPath"), DestinationPath);
         Result->SetBoolField(TEXT("alreadyExists"), true);
@@ -1530,7 +1570,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
           
           if (bIsValidStreaming) {
             // Sublevel already exists and is valid - return success with info
-            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
             Result->SetStringField(TEXT("world"), World->GetName());
             Result->SetBoolField(TEXT("alreadyExists"), true);
@@ -1572,7 +1612,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       
       // If level is loaded or pending, it's a valid streaming level
       if (LoadedLevel || bIsPendingLoad) {
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
         Result->SetStringField(TEXT("world"), World->GetName());
         Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
@@ -1624,7 +1664,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Use UEditorAssetLibrary to delete the level asset
     bool bDeleted = UEditorAssetLibrary::DeleteAsset(LevelPath);
     if (bDeleted) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("levelPath"), LevelPath);
       Result->SetBoolField(TEXT("deleted"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1681,7 +1721,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Use UEditorAssetLibrary to rename the level asset
     bool bRenamed = UEditorAssetLibrary::RenameAsset(SourcePath, DestinationPath);
     if (bRenamed) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("sourcePath"), SourcePath);
       Result->SetStringField(TEXT("destinationPath"), DestinationPath);
       Result->SetBoolField(TEXT("renamed"), true);
@@ -1739,7 +1779,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     // Use UEditorAssetLibrary to duplicate the level asset
     UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);
     if (DuplicatedAsset != nullptr) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("sourcePath"), SourcePath);
       Result->SetStringField(TEXT("destinationPath"), DestinationPath);
       Result->SetBoolField(TEXT("duplicated"), true);
@@ -1786,7 +1826,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       return true;
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetStringField(TEXT("levelName"), TargetLevel->GetName());
     Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
@@ -1829,7 +1869,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("settingsApplied"), true);
     
@@ -1871,7 +1911,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), CurrentLevelPath);
     Result->SetBoolField(TEXT("lightingSet"), true);
     
@@ -1915,7 +1955,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     
     ULevelStreaming* StreamingLevel = UEditorLevelUtils::AddLevelToWorld(World, *LevelPath, ULevelStreamingDynamic::StaticClass());
     if (StreamingLevel) {
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("levelPath"), LevelPath);
       Result->SetBoolField(TEXT("added"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level added to world"), Result);
@@ -1952,7 +1992,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     if (TargetLevel) {
       bool bRemoved = UEditorLevelUtils::RemoveLevelFromWorld(TargetLevel);
       if (bRemoved) {
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("levelPath"), LevelPath);
         Result->SetBoolField(TEXT("removed"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level removed from world"), Result);
@@ -1994,7 +2034,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     
     if (TargetLevel) {
       UEditorLevelUtils::SetLevelVisibility(TargetLevel, bVisible, true);
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("levelPath"), LevelPath);
       Result->SetBoolField(TEXT("visible"), bVisible);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level visibility set"), Result);
@@ -2034,7 +2074,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       if (bLocked != FLevelUtils::IsLevelLocked(TargetLevel)) {
         FLevelUtils::ToggleLevelLock(TargetLevel);
       }
-      TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("levelPath"), LevelPath);
       Result->SetBoolField(TEXT("locked"), FLevelUtils::IsLevelLocked(TargetLevel));
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level lock set"), Result);
@@ -2086,7 +2126,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetNumberField(TEXT("count"), ActorsArray.Num());
     Result->SetArrayField(TEXT("actors"), ActorsArray);
@@ -2133,7 +2173,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
       LevelBounds = TargetLevel->LevelBoundsActor->GetComponentsBoundingBox();
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetStringField(TEXT("min"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Min.X, LevelBounds.Min.Y, LevelBounds.Min.Z));
     Result->SetStringField(TEXT("max"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Max.X, LevelBounds.Max.Y, LevelBounds.Max.Z));
@@ -2153,14 +2193,14 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     TArray<ULevel*> Levels = GetAllLevelsFromWorld(World);
     for (ULevel* Level : Levels) {
       if (Level && Level->bIsLightingScenario) {
-        TSharedPtr<FJsonObject> ScenarioInfo = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> ScenarioInfo = McpHandlerUtils::CreateResultObject();
         ScenarioInfo->SetStringField(TEXT("levelPath"), Level->GetOutermost() ? Level->GetOutermost()->GetName() : TEXT(""));
         ScenarioInfo->SetStringField(TEXT("levelName"), Level->GetName());
         Scenarios.Add(MakeShared<FJsonValueObject>(ScenarioInfo));
       }
     }
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("scenarios"), Scenarios);
     Result->SetNumberField(TEXT("count"), Scenarios.Num());
     
@@ -2177,7 +2217,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildLighting);
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lighting build started"), Result);
@@ -2193,7 +2233,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAIPaths);
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Navigation build started"), Result);
@@ -2209,7 +2249,7 @@ TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
     
     FEditorBuildUtils::EditorBuild(World, FBuildOptions::BuildAll);
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("buildStarted"), true);
     
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Full build started"), Result);

@@ -1,12 +1,67 @@
-#include "Dom/JsonObject.h"
-// Copyright Epic Games, Inc. All Rights Reserved.
-// Phase 26: Spline System Handlers
+// =============================================================================
+// McpAutomationBridge_SplineHandlers.cpp
+// =============================================================================
+// Spline System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Spline Component Operations
+//   - HandleSplineAction             : Main dispatcher for spline_* actions
+//   - create_spline_component         : Add USplineComponent to Blueprint via SCS
+//   - add_spline_point                : Add point to existing spline
+//   - add_spline_points               : Batch add multiple points
+//   - clear_spline_points             : Remove all points from spline
+//   - set_spline_point_position       : Set position of specific point
+//   - set_spline_point_tangent        : Set tangent of specific point
+//
+// Section 2: Spline Mesh Operations
+//   - create_spline_mesh_component    : Add USplineMeshComponent to Blueprint
+//   - add_spline_mesh                 : Create spline mesh along spline path
+//   - configure_spline_mesh           : Configure spline mesh properties
+//
+// Section 3: Utility Functions
+//   - get_spline_info                 : Get spline component details
+//   - get_spline_length               : Get total spline length
+//   - get_spline_point_count          : Get number of points
+//
+// PAYLOAD/RESPONSE FORMATS:
+// -------------------------
+// create_spline_component:
+//   Payload: { "blueprintPath": string, "componentName"?: string }
+//   Response: { "success": bool, "componentName": string, "blueprintPath": string }
+//
+// add_spline_point:
+//   Payload: { "actorName": string, "componentName"?: string,
+//              "location": {x,y,z}, "tangent"?: {x,y,z},
+//              "pointType"?: "Curve"|"Linear"|"Constant }
+//   Response: { "success": bool, "pointIndex": int }
+//
+// create_spline_mesh:
+//   Payload: { "blueprintPath": string, "splineComponentName": string,
+//              "staticMesh": string, "material"?: string }
+//   Response: { "success": bool, "meshCount": int }
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - USplineComponent and USplineMeshComponent APIs stable across versions
+// - SCS (Simple Construction Script) required for component templates
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
@@ -16,7 +71,9 @@
 #include "Engine/SCS_Node.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-// Spline System includes
+// -----------------------------------------------------------------------------
+// Spline System Includes
+// -----------------------------------------------------------------------------
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -24,6 +81,9 @@
 #include "GameFramework/Actor.h"
 #endif
 
+// =============================================================================
+// Logging Category
+// =============================================================================
 DEFINE_LOG_CATEGORY_STATIC(LogMcpSplineHandlers, Log, All);
 
 #if WITH_EDITOR
@@ -266,7 +326,7 @@ static bool HandleCreateSplineActor(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
@@ -274,7 +334,7 @@ static bool HandleCreateSplineActor(
     Result->SetBoolField(TEXT("closedLoop"), SplineComp->IsClosedLoop());
 
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline actor '%s' created with %d points"), *ActorName, SplineComp->GetNumberOfSplinePoints()), Result);
@@ -339,12 +399,12 @@ static bool HandleAddSplinePoint(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), Index);
     Result->SetNumberField(TEXT("totalPoints"), SplineComp->GetNumberOfSplinePoints());
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added spline point at index %d"), Index), Result);
@@ -403,12 +463,12 @@ static bool HandleRemoveSplinePoint(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("removedIndex"), PointIndex);
     Result->SetNumberField(TEXT("remainingPoints"), SplineComp->GetNumberOfSplinePoints());
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Removed spline point at index %d"), PointIndex), Result);
@@ -468,11 +528,11 @@ static bool HandleSetSplinePointPosition(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set position for spline point %d"), PointIndex), Result);
@@ -542,11 +602,11 @@ static bool HandleSetSplinePointTangents(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set tangents for spline point %d"), PointIndex), Result);
@@ -606,11 +666,11 @@ static bool HandleSetSplinePointRotation(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set rotation for spline point %d"), PointIndex), Result);
@@ -670,11 +730,11 @@ static bool HandleSetSplinePointScale(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set scale for spline point %d"), PointIndex), Result);
@@ -747,12 +807,12 @@ static bool HandleSetSplineType(
     SplineComp->UpdateSpline();
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("splineType"), SplineType);
     Result->SetNumberField(TEXT("pointsAffected"), PointIndex >= 0 ? 1 : SplineComp->GetNumberOfSplinePoints());
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set spline type to %s"), *SplineType), Result);
@@ -886,7 +946,7 @@ static bool HandleCreateSplineMeshComponent(
         McpSafeAssetSave(Blueprint);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     
@@ -982,12 +1042,12 @@ static bool HandleSetSplineMeshAsset(
     TargetComp->SetStaticMesh(Mesh);
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("meshPath"), SafeMeshPath);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Spline mesh asset set"), Result);
@@ -1061,11 +1121,11 @@ static bool HandleConfigureSplineMeshAxis(
     TargetComp->SetForwardAxis(Axis);
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Spline mesh forward axis set to %s"), *ForwardAxis), Result);
@@ -1154,12 +1214,12 @@ static bool HandleSetSplineMeshMaterial(
     TargetComp->SetMaterial(MaterialIndex, Material);
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("materialPath"), SafeMaterialPath);
     Result->SetNumberField(TEXT("materialIndex"), MaterialIndex);
     
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
     AddComponentVerification(Result, TargetComp);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
@@ -1270,13 +1330,13 @@ static bool HandleCreateSplineMeshActor(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetStringField(TEXT("componentName"), ComponentName);
     
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
     AddComponentVerification(Result, SplineMeshComp);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
@@ -1377,13 +1437,13 @@ static bool HandleScatterMeshesAlongSpline(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("meshesCreated"), CreatedMeshes.Num());
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetNumberField(TEXT("spacing"), Spacing);
 
     // Add verification data
-    AddActorVerification(Result, Actor);
+    McpHandlerUtils::AddVerification(Result, Actor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Scattered %d meshes along spline"), CreatedMeshes.Num()), Result);
@@ -1400,7 +1460,7 @@ static bool HandleConfigureMeshSpacing(
     // Storage is not implemented - spacing must be passed directly to scatter_meshes_along_spline.
     // Future enhancement: Store in actor metadata via UMetaData component.
     
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("spacing"), GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0));
     Result->SetBoolField(TEXT("useRandomOffset"), GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false));
     Result->SetNumberField(TEXT("randomOffsetRange"), GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0));
@@ -1419,7 +1479,7 @@ static bool HandleConfigureMeshRandomization(
     // VALIDATION-ONLY: This action validates randomization parameters and echoes them back.
     // Storage is not implemented - pass randomization params to scatter_meshes_along_spline.
     // Future enhancement: Store in actor metadata via UMetaData component.
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("randomizeScale"), GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false));
     Result->SetNumberField(TEXT("minScale"), GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8));
     Result->SetNumberField(TEXT("maxScale"), GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2));
@@ -1497,14 +1557,14 @@ static bool HandleCreateTemplateSpline(
 
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
     Result->SetStringField(TEXT("templateType"), TemplateName);
     Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
 
     // Add verification data
-    AddActorVerification(Result, NewActor);
+    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("%s spline '%s' created"), *TemplateName, *ActorName), Result);
@@ -1585,7 +1645,7 @@ static bool HandleGetSplinesInfo(
         return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (!ActorName.IsEmpty())
     {
@@ -1615,13 +1675,13 @@ static bool HandleGetSplinesInfo(
         TArray<TSharedPtr<FJsonValue>> PointsArray;
         for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
         {
-            TSharedPtr<FJsonObject> PointObj = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> PointObj = McpHandlerUtils::CreateResultObject();
             FVector Loc = SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::Local);
             FRotator Rot = SplineComp->GetRotationAtSplinePoint(i, ESplineCoordinateSpace::Local);
             
             PointObj->SetNumberField(TEXT("index"), i);
             
-            TSharedPtr<FJsonObject> LocObj = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
             LocObj->SetNumberField(TEXT("x"), Loc.X);
             LocObj->SetNumberField(TEXT("y"), Loc.Y);
             LocObj->SetNumberField(TEXT("z"), Loc.Z);
@@ -1645,7 +1705,7 @@ static bool HandleGetSplinesInfo(
             
             if (SplineComponents.Num() > 0)
             {
-                TSharedPtr<FJsonObject> ActorObj = MakeShared<FJsonObject>();
+                TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                 ActorObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
                 ActorObj->SetNumberField(TEXT("splineComponentCount"), SplineComponents.Num());
                 

@@ -1,49 +1,159 @@
+// =============================================================================
+// McpAutomationBridge_EditorFunctionHandlers.cpp
+// =============================================================================
+// Generic editor function execution handler for MCP Automation Bridge.
+//
+// HANDLERS IMPLEMENTED (1 main handler with 19+ function dispatches):
+// -----------------------------------------------------------------------------
+// Main Handler:
+//   - execute_editor_function: Generic function dispatcher
+//   - execute_console_command: Console command execution
+//
+// Dispatched Functions (via functionName in payload):
+// -----------------------------------------------------------------------------
+// Actor Management:
+//   - GET_ALL_ACTORS           : List all actors in level
+//   - SPAWN_ACTOR              : Spawn actor at location
+//   - DELETE_ACTOR             : Delete actor from level
+//   - POSSESS                  : Possess pawn during PIE
+//   - LIST_ACTOR_COMPONENTS    : List actor components
+//
+// Asset Management:
+//   - ASSET_EXISTS             : Check asset existence
+//   - RESOLVE_OBJECT           : Resolve object/asset info
+//   - CREATE_ASSET             : Create new asset via factory
+//   - GET_BLUEPRINT_CDO        : Get Blueprint CDO info
+//
+// Editor Control:
+//   - SET_VIEWPORT_CAMERA      : Set viewport camera position/rotation
+//   - BUILD_LIGHTING           : Build level lighting
+//   - SAVE_CURRENT_LEVEL       : Save current level
+//
+// Runtime:
+//   - PLAY_SOUND_AT_LOCATION   : Play 3D sound
+//   - PLAY_SOUND_2D            : Play 2D sound
+//   - ADD_WIDGET_TO_VIEWPORT   : Add UMG widget to viewport
+//
+// System:
+//   - GENERATE_MEMORY_REPORT   : Generate memory profiling report
+//   - CALL_SUBSYSTEM           : Call subsystem function via reflection
+//   - CONFIGURE_TEXTURE_STREAMING: Configure texture streaming CVars
+//   - BLUEPRINT_ADD_COMPONENT  : Add component to Blueprint SCS
+//
+// =============================================================================
+// UE VERSION COMPATIBILITY (5.0 - 5.7):
+// -----------------------------------------------------------------------------
+// - BuildLightMaps: UE 5.1+ (UE 5.0 returns NOT_AVAILABLE)
+// - EditorLoadingAndSavingUtils: UE 5.1+, falls back to FileHelpers
+// - Subsystem APIs: Stable across all versions
+// - McpSafeAssetSave: Required for UE 5.7+ asset creation
+//
+// =============================================================================
+// SECURITY NOTES:
+// -----------------------------------------------------------------------------
+// - Console commands are NOT validated here (handled at higher level)
+// - Asset paths should be validated by calling handlers
+// - Subsystem calls use reflection - ensure target is safe
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"  // MUST be first include
 #include "McpAutomationBridgeGlobals.h"
+#include "McpHandlerUtils.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
 #if WITH_EDITOR
+
+// -----------------------------------------------------------------------------
+// Core Editor
+// -----------------------------------------------------------------------------
 #include "Editor.h"
 #include "GameFramework/Pawn.h"
+
+// -----------------------------------------------------------------------------
+// Editor Subsystems (version-specific headers)
+// -----------------------------------------------------------------------------
 #if __has_include("Subsystems/EditorActorSubsystem.h")
-#include "Subsystems/EditorActorSubsystem.h"
+  #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
+  #include "EditorActorSubsystem.h"
 #endif
+
 #if __has_include("Subsystems/UnrealEditorSubsystem.h")
-#include "Subsystems/UnrealEditorSubsystem.h"
+  #include "Subsystems/UnrealEditorSubsystem.h"
 #elif __has_include("UnrealEditorSubsystem.h")
-#include "UnrealEditorSubsystem.h"
+  #include "UnrealEditorSubsystem.h"
 #endif
+
 #if __has_include("Subsystems/LevelEditorSubsystem.h")
-#include "Subsystems/LevelEditorSubsystem.h"
+  #include "Subsystems/LevelEditorSubsystem.h"
 #elif __has_include("LevelEditorSubsystem.h")
-#include "LevelEditorSubsystem.h"
+  #include "LevelEditorSubsystem.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// Asset Tools
+// -----------------------------------------------------------------------------
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
+
+// -----------------------------------------------------------------------------
+// Level Loading/Saving
+// -----------------------------------------------------------------------------
 #if __has_include("EditorLoadingAndSavingUtils.h")
-#include "EditorLoadingAndSavingUtils.h"
+  #include "EditorLoadingAndSavingUtils.h"
 #elif __has_include("FileHelpers.h")
-#include "FileHelpers.h"
+  #include "FileHelpers.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// Factories and Gameplay
+// -----------------------------------------------------------------------------
 #include "Factories/Factory.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/Base64.h"
 #include "Sound/SoundBase.h"
 #include "Sound/SoundCue.h"
 #include "UObject/SoftObjectPath.h"
+
+// -----------------------------------------------------------------------------
+// Widget Support
+// -----------------------------------------------------------------------------
 #if __has_include("Blueprint/UserWidget.h")
-#include "Blueprint/UserWidget.h"
+  #include "Blueprint/UserWidget.h"
 #endif
+
 #if __has_include("GameFramework/PlayerController.h")
-#include "GameFramework/PlayerController.h"
+  #include "GameFramework/PlayerController.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// World and Utils
+// -----------------------------------------------------------------------------
 #include "EngineUtils.h"
 #include "GameFramework/WorldSettings.h"
 #include "Misc/OutputDeviceNull.h"
-#endif
 
+#endif // WITH_EDITOR
+
+// =============================================================================
+// Main Handler: execute_editor_function
+// =============================================================================
+// Generic editor function dispatcher that routes to specific internal handlers
+// based on the 'functionName' field in the payload.
+//
+// This handler supports two modes:
+// 1. execute_console_command - Direct console command execution
+// 2. execute_editor_function - Dispatch to named function via functionName
+//
+// The functionName dispatch supports 19+ different editor operations.
+// -----------------------------------------------------------------------------
 bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -140,7 +250,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // invoking the engine command path entirely and return a structured
     // error instead of risking an assertion.
     if (!bExecCalled && !TargetWorld) {
-      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
       Out->SetStringField(TEXT("command"), Cmd);
       Out->SetBoolField(TEXT("success"), false);
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -149,7 +259,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       return true;
     }
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetStringField(TEXT("command"), Cmd);
     Out->SetBoolField(TEXT("success"), bOk);
     SendAutomationResponse(RequestingSocket, RequestId, bOk,
@@ -301,7 +411,13 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
   // (Console handling moved earlier)
 
 #if WITH_EDITOR
-  // Dispatch a handful of well-known functions to native handlers
+
+  // =========================================================================
+  // Actor Management Functions
+  // =========================================================================
+  // GET_ALL_ACTORS, SPAWN_ACTOR, DELETE_ACTOR, POSSESS, LIST_ACTOR_COMPONENTS
+  // =========================================================================
+
   if (FN == TEXT("GET_ALL_ACTORS") || FN == TEXT("GET_ALL_ACTORS_SIMPLE")) {
     if (!GEditor) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -323,7 +439,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     for (AActor *A : Actors) {
       if (!A)
         continue;
-      TSharedPtr<FJsonObject> E = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> E = McpHandlerUtils::CreateResultObject();
       E->SetStringField(TEXT("name"), A->GetName());
       E->SetStringField(TEXT("label"), A->GetActorLabel());
       E->SetStringField(TEXT("path"), A->GetPathName());
@@ -332,7 +448,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
                                            : TEXT(""));
       Arr.Add(MakeShared<FJsonValueObject>(E));
     }
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("actors"), Arr);
     Result->SetNumberField(TEXT("count"), Arr.Num());
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -388,7 +504,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       Resolved = ResolveClassByName(ClassPath);
     }
     if (!Resolved) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Class not found"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Class not found"), Err,
@@ -397,17 +513,17 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     }
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(Resolved, Loc, Rot);
     if (!Spawned) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Spawn failed"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Spawn failed"), Err, TEXT("SPAWN_FAILED"));
       return true;
     }
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Out->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     Out->SetBoolField(TEXT("success"), true);
-    AddActorVerification(Out, Spawned);
+    McpHandlerUtils::AddVerification(Out, Spawned);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Actor spawned"), Out, FString());
     return true;
@@ -451,18 +567,20 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       }
     }
     if (!Found) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Actor not found"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Actor not found"), Err,
                              TEXT("ACTOR_NOT_FOUND"));
       return true;
     }
+    // Store actor label BEFORE destruction to avoid use-after-free
+    const FString DeletedActorLabel = Found->GetActorLabel();
     const bool bDeleted = ActorSS->DestroyActor(Found);
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), bDeleted);
     if (bDeleted) {
-      Out->SetStringField(TEXT("deleted"), Found->GetActorLabel());
+      Out->SetStringField(TEXT("deleted"), DeletedActorLabel);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Actor deleted"), Out, FString());
     } else {
@@ -528,14 +646,20 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
     PC->Possess(FoundPawn);
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), true);
     Out->SetStringField(TEXT("possessed"), FoundPawn->GetActorLabel());
-    AddActorVerification(Out, FoundPawn);
+    McpHandlerUtils::AddVerification(Out, FoundPawn);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Possessed pawn"), Out, FString());
     return true;
   }
+
+  // =========================================================================
+  // Asset Management Functions
+  // =========================================================================
+  // ASSET_EXISTS, RESOLVE_OBJECT, CREATE_ASSET, GET_BLUEPRINT_CDO
+  // =========================================================================
 
   if (FN == TEXT("ASSET_EXISTS") || FN == TEXT("ASSET_EXISTS_SIMPLE")) {
     FString PathToCheck;
@@ -554,7 +678,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     }
 
     // Perform check on game thread
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     const bool bExists = UEditorAssetLibrary::DoesAssetExist(PathToCheck);
     Out->SetBoolField(TEXT("exists"), bExists);
     Out->SetStringField(TEXT("path"), PathToCheck);
@@ -565,6 +689,12 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
                            Out, bExists ? FString() : TEXT("NOT_FOUND"));
     return true;
   }
+
+  // =========================================================================
+  // Editor Control Functions
+  // =========================================================================
+  // SET_VIEWPORT_CAMERA, BUILD_LIGHTING, SAVE_CURRENT_LEVEL
+  // =========================================================================
 
   if (FN == TEXT("SET_VIEWPORT_CAMERA") ||
       FN == TEXT("SET_VIEWPORT_CAMERA_INFO") ||
@@ -594,7 +724,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
               GEditor->GetEditorSubsystem<ULevelEditorSubsystem>()) {
         LES->EditorInvalidateViewports();
       }
-      TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> R = McpHandlerUtils::CreateResultObject();
       R->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Camera set"), R, FString());
@@ -646,7 +776,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
         } else if (LowerQuality == TEXT("production")) {
           QualityEnum = ELightingBuildQuality::Quality_Production;
         } else {
-          TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
           Err->SetBoolField(TEXT("success"), false);
           Err->SetStringField(TEXT("error"), TEXT("unknown_quality"));
           Err->SetStringField(TEXT("quality"), Quality);
@@ -659,7 +789,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       }
       if (AWorldSettings *WS = CurrentWorld->GetWorldSettings()) {
         if (WS->bForceNoPrecomputedLighting) {
-          TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> R = McpHandlerUtils::CreateResultObject();
           R->SetBoolField(TEXT("skipped"), true);
           R->SetStringField(TEXT("reason"),
                             TEXT("bForceNoPrecomputedLighting is true"));
@@ -673,13 +803,13 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       LES->BuildLightMaps(QualityEnum, /*bWithReflectionCaptures*/ false);
-      TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> R = McpHandlerUtils::CreateResultObject();
       R->SetBoolField(TEXT("requested"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Build lighting requested"), R, FString());
 #else
       // UE 5.0 fallback - BuildLightMaps not available
-      TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> R = McpHandlerUtils::CreateResultObject();
       R->SetBoolField(TEXT("requested"), false);
       R->SetStringField(TEXT("error"), TEXT("BuildLightMaps not available in UE 5.0"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -708,7 +838,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     bSaved = FEditorFileUtils::SaveCurrentLevel();
 #endif
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), bSaved);
     SendAutomationResponse(RequestingSocket, RequestId, bSaved,
                            bSaved ? TEXT("Level saved")
@@ -726,7 +856,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     bool bExists = false;
     FString ClassName;
     if (UEditorAssetLibrary::DoesAssetExist(Path)) {
@@ -789,7 +919,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       }
     }
     if (!Found) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Actor not found"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Actor not found"), Err,
@@ -802,7 +932,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     for (UActorComponent *C : Comps) {
       if (!C)
         continue;
-      TSharedPtr<FJsonObject> R = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> R = McpHandlerUtils::CreateResultObject();
       R->SetStringField(TEXT("name"), C->GetName());
       R->SetStringField(TEXT("class"), C->GetClass()
                                            ? C->GetClass()->GetPathName()
@@ -810,7 +940,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       R->SetStringField(TEXT("path"), C->GetPathName());
       Arr.Add(MakeShared<FJsonValueObject>(R));
     }
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetArrayField(TEXT("components"), Arr);
     Out->SetNumberField(TEXT("count"), Arr.Num());
     SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -836,7 +966,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       return true;
     }
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     UObject *Obj = UEditorAssetLibrary::LoadAsset(BlueprintPath);
     if (!Obj) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -877,7 +1007,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
 
   if (FN == TEXT("BLUEPRINT_ADD_COMPONENT")) {
     const TSharedPtr<FJsonObject> *Params = nullptr;
-    TSharedPtr<FJsonObject> LocalParams = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> LocalParams = McpHandlerUtils::CreateResultObject();
     if (Payload->TryGetObjectField(TEXT("params"), Params) && Params &&
         (*Params).IsValid()) {
       LocalParams = *Params;
@@ -891,7 +1021,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
           const ANSICHAR *Utf8 =
               reinterpret_cast<const ANSICHAR *>(DecodedBytes.GetData());
           FString Decoded = FString(UTF8_TO_TCHAR(Utf8));
-          TSharedPtr<FJsonObject> Parsed = MakeShared<FJsonObject>();
+          TSharedPtr<FJsonObject> Parsed = McpHandlerUtils::CreateResultObject();
           TSharedRef<TJsonReader<>> Reader =
               TJsonReaderFactory<>::Create(Decoded);
           if (FJsonSerializer::Deserialize(Reader, Parsed) &&
@@ -911,11 +1041,11 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       return true;
     }
 
-    TSharedPtr<FJsonObject> SCSPayload = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> SCSPayload = McpHandlerUtils::CreateResultObject();
     SCSPayload->SetStringField(TEXT("blueprintPath"), TargetBP);
 
     TArray<TSharedPtr<FJsonValue>> Ops;
-    TSharedPtr<FJsonObject> Op = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Op = McpHandlerUtils::CreateResultObject();
     Op->SetStringField(TEXT("type"), TEXT("add_component"));
     FString Name;
     LocalParams->TryGetStringField(TEXT("componentName"), Name);
@@ -1022,7 +1152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       // Use McpSafeAssetSave instead of modal PromptForCheckoutAndSave to avoid D3D12 crashes
       McpSafeAssetSave(NewAsset);
 
-      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
       Out->SetStringField(TEXT("name"), NewAsset->GetName());
       Out->SetStringField(TEXT("path"), NewAsset->GetPathName());
       Out->SetBoolField(TEXT("success"), true);
@@ -1037,7 +1167,12 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     return true;
   }
 
-  // PLAY_SOUND helpers
+  // =========================================================================
+  // Runtime Functions
+  // =========================================================================
+  // PLAY_SOUND_AT_LOCATION, PLAY_SOUND_2D, ADD_WIDGET_TO_VIEWPORT
+  // =========================================================================
+
   if (FN == TEXT("PLAY_SOUND_AT_LOCATION") || FN == TEXT("PLAY_SOUND_2D")) {
     const TSharedPtr<FJsonObject> *Params = nullptr;
     if (!Payload->TryGetObjectField(TEXT("params"), Params) ||
@@ -1071,7 +1206,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     }
 
     if (!UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Sound asset not found"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Sound not found"), Err, TEXT("NOT_FOUND"));
@@ -1081,7 +1216,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     USoundBase *Snd =
         Cast<USoundBase>(UEditorAssetLibrary::LoadAsset(SoundPath));
     if (!Snd) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Sound asset not found"));
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Sound not found"), Err, TEXT("NOT_FOUND"));
@@ -1103,7 +1238,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       UGameplayStatics::SpawnSoundAtLocation(World, Snd, FVector::ZeroVector);
     }
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played"), Out, FString());
@@ -1137,7 +1272,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // Load the widget blueprint class
     UClass *WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
     if (!WidgetClass) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Widget class not found"));
       Err->SetStringField(TEXT("widget_path"), WidgetPath);
       SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -1162,7 +1297,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
       // doesn't exist
       PlayerController = UGameplayStatics::GetPlayerController(World, 0);
       if (!PlayerController) {
-        TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
         Err->SetStringField(TEXT("error"),
                             TEXT("Player controller not available"));
         Err->SetNumberField(TEXT("player_index"), playerIndex);
@@ -1188,7 +1323,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // Verify widget is in viewport
     const bool bIsInViewport = Widget->IsInViewport();
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), bIsInViewport);
     Out->SetStringField(TEXT("widget_path"), WidgetPath);
     Out->SetStringField(TEXT("widget_class"), WidgetClass->GetPathName());
@@ -1208,6 +1343,12 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     return true;
   }
 
+  // =========================================================================
+  // System Functions
+  // =========================================================================
+  // GENERATE_MEMORY_REPORT, CALL_SUBSYSTEM, CONFIGURE_TEXTURE_STREAMING
+  // =========================================================================
+
   if (FN == TEXT("GENERATE_MEMORY_REPORT")) {
     FString OutputPath;
     Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
@@ -1225,7 +1366,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
         bDetailed ? TEXT("memreport -full") : TEXT("memreport");
     GEditor->Exec(nullptr, *MemReportCmd);
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), true);
     // Note: OutputPath is not fully supported by the native memreport command
     // (it auto-generates filenames), but we acknowledge the request.
@@ -1282,7 +1423,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // subsystem collections if we really need to, but resolving class is best.
 
     if (!TargetSubsystem) {
-      TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(
           TEXT("error"),
           FString::Printf(TEXT("Subsystem '%s' not found or not initialized"),
@@ -1324,7 +1465,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     bool bResult = TargetSubsystem->CallFunctionByNameWithArguments(
         *CmdString, Ar, nullptr, true);
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), bResult);
     Out->SetStringField(TEXT("subsystem"), SubsystemName);
     Out->SetStringField(TEXT("function"), TargetFuncName);
@@ -1364,7 +1505,7 @@ bool UMcpAutomationBridgeSubsystem::HandleExecuteEditorFunction(
     // Boost logic would go here (e.g. forcing stream in for player view),
     // but basic CVar setting is the core requirement.
 
-    TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("success"), true);
     Out->SetBoolField(TEXT("enabled"), bEnabled);
     SendAutomationResponse(RequestingSocket, RequestId, true,

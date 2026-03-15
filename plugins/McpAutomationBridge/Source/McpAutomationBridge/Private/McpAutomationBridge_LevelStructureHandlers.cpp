@@ -1,13 +1,46 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_LevelStructureHandlers.cpp
-// Phase 23: Level Structure Handlers
+// =============================================================================
+// Level Structure & World Partition Handlers for MCP Automation Bridge
 //
-// Complete level and world structure management including:
-// - Levels (create levels, sublevels, streaming, bounds)
-// - World Partition (grid configuration, data layers, HLOD)
-// - Level Blueprint (open, add nodes, connect nodes)
-// - Level Instances (packed level actors, level instances)
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Level Management
+//   - create_sublevel              : Add sublevel to world
+//   - remove_sublevel              : Remove sublevel
+//   - set_level_bounds             : Configure level bounds
+//
+// Section 2: World Partition
+//   - configure_world_partition    : Enable/configure world partition
+//   - create_data_layer            : Create UDataLayer
+//   - set_data_layer_state         : Load/unload data layer
+//
+// Section 3: HLOD
+//   - create_hlod_layer             : Create UHLODLayer
+//   - generate_hlod                 : Build HLOD meshes
+//   - set_hlod_settings             : Configure HLOD parameters
+//
+// Section 4: Level Instances
+//   - create_packed_level_actor    : Create packed level actor
+//   - create_level_instance         : Create level instance
+//
+// Section 5: Level Blueprint
+//   - open_level_blueprint         : Open level blueprint editor
+//   - add_level_event              : Add event node
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: UDataLayer (direct class)
+// UE 5.1+: UDataLayerInstance, UDataLayerAsset
+// UE 5.4+: World Partition LoaderAdapter
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpBridgeWebSocket.h"
@@ -230,7 +263,7 @@ static bool HandleCreateLevel(
         if (ExistingWorld)
         {
             // IDEMPOTENT: Level exists in memory - return success with exists flag
-            TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("levelPath"), FullPath);
             Result->SetBoolField(TEXT("exists"), true);
             Result->SetBoolField(TEXT("alreadyExisted"), true);
@@ -245,7 +278,7 @@ static bool HandleCreateLevel(
     if (FPackageName::DoesPackageExist(FullPath))
     {
         // IDEMPOTENT: Level exists on disk - return success with exists flag
-        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("levelPath"), FullPath);
         Result->SetBoolField(TEXT("exists"), true);
         Result->SetBoolField(TEXT("alreadyExisted"), true);
@@ -330,8 +363,8 @@ static bool HandleCreateLevel(
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, NewWorld);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, NewWorld);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("levelPath"), FullPath);
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
@@ -465,8 +498,8 @@ static bool HandleCreateSublevel(
         McpSafeAssetSave(World);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, World);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, StreamingLevel);
     ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
     ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
     ResponseJson->SetBoolField(TEXT("saved"), bSave);
@@ -534,8 +567,8 @@ static bool HandleConfigureLevelStreaming(
     FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad;
     FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming;
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, World);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, FoundLevel);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("streamingMethod"), StreamingMethod);
     ResponseJson->SetBoolField(TEXT("shouldBeVisible"), bShouldBeVisible);
@@ -610,15 +643,15 @@ static bool HandleSetStreamingDistance(
         {
             if (Volume)
             {
-                TSharedPtr<FJsonObject> VolumeObj = MakeShareable(new FJsonObject());
+                TSharedPtr<FJsonObject> VolumeObj = McpHandlerUtils::CreateResultObject();
                 VolumeObj->SetStringField(TEXT("name"), Volume->GetActorLabel());
                 VolumeObj->SetNumberField(TEXT("usage"), static_cast<int32>(Volume->StreamingUsage));
-                VolumesArray.Add(MakeShareable(new FJsonValueObject(VolumeObj)));
+                VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeObj));
             }
         }
         
-        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-        AddAssetVerification(ResponseJson, World);
+        TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(ResponseJson, World);
         ResponseJson->SetStringField(TEXT("levelName"), LevelName);
         ResponseJson->SetArrayField(TEXT("streamingVolumes"), VolumesArray);
         ResponseJson->SetNumberField(TEXT("volumeCount"), VolumesArray.Num());
@@ -690,14 +723,14 @@ static bool HandleSetStreamingDistance(
     FoundLevel->MarkPackageDirty();
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddActorVerification(ResponseJson, NewVolume);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, NewVolume);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("volumeName"), NewVolume->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
     ResponseJson->SetStringField(TEXT("streamingUsage"), StreamingUsage);
     
-    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
     LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
     LocationJson->SetNumberField(TEXT("y"), VolumeLocation.Y);
     LocationJson->SetNumberField(TEXT("z"), VolumeLocation.Z);
@@ -772,16 +805,16 @@ static bool HandleConfigureLevelBounds(
         WorldBounds = FBox(BoundsOrigin - BoundsExtent, BoundsOrigin + BoundsExtent);
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, World);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, World);
     
-    TSharedPtr<FJsonObject> OriginJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> OriginJson = McpHandlerUtils::CreateResultObject();
     OriginJson->SetNumberField(TEXT("x"), WorldBounds.GetCenter().X);
     OriginJson->SetNumberField(TEXT("y"), WorldBounds.GetCenter().Y);
     OriginJson->SetNumberField(TEXT("z"), WorldBounds.GetCenter().Z);
     ResponseJson->SetObjectField(TEXT("boundsOrigin"), OriginJson);
     
-    TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
     ExtentJson->SetNumberField(TEXT("x"), WorldBounds.GetExtent().X);
     ExtentJson->SetNumberField(TEXT("y"), WorldBounds.GetExtent().Y);
     ExtentJson->SetNumberField(TEXT("z"), WorldBounds.GetExtent().Z);
@@ -817,7 +850,7 @@ static bool HandleEnableWorldPartition(
     // Check if World Partition is available
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);
     ResponseJson->SetBoolField(TEXT("requested"), bEnable);
 
@@ -895,7 +928,7 @@ static bool HandleConfigureGridSize(
 #endif
     {
         // Neither supported hash type
-        TSharedPtr<FJsonObject> ErrorJson = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> ErrorJson = McpHandlerUtils::CreateResultObject();
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash, WorldPartitionRuntimeHashSet"));
@@ -1034,8 +1067,8 @@ static bool HandleConfigureGridSize(
         // Mark package dirty
         HashSet->MarkPackageDirty();
 
-        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-        AddAssetVerification(ResponseJson, World);
+        TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(ResponseJson, World);
         ResponseJson->SetBoolField(TEXT("success"), true);
         ResponseJson->SetStringField(TEXT("hashType"), TEXT("RuntimeHashSet"));
         ResponseJson->SetStringField(TEXT("partitionName"), TargetPartitionName.ToString());
@@ -1161,19 +1194,19 @@ static bool HandleConfigureGridSize(
         FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
         if (Grid)
         {
-            TSharedPtr<FJsonObject> GridObj = MakeShareable(new FJsonObject());
+            TSharedPtr<FJsonObject> GridObj = McpHandlerUtils::CreateResultObject();
             GridObj->SetStringField(TEXT("gridName"), Grid->GridName.ToString());
             GridObj->SetNumberField(TEXT("cellSize"), Grid->CellSize);
             GridObj->SetNumberField(TEXT("loadingRange"), Grid->LoadingRange);
             GridObj->SetBoolField(TEXT("blockOnSlowStreaming"), Grid->bBlockOnSlowStreaming);
             GridObj->SetNumberField(TEXT("priority"), Grid->Priority);
             GridObj->SetBoolField(TEXT("modified"), i == ModifiedIndex);
-            GridsArray.Add(MakeShareable(new FJsonValueObject(GridObj)));
+            GridsArray.Add(MakeShared<FJsonValueObject>(GridObj));
         }
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, World);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, World);
     ResponseJson->SetStringField(TEXT("gridName"), GridName.IsEmpty() ? TEXT("(default)") : GridName);
     ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
     ResponseJson->SetNumberField(TEXT("loadingRange"), LoadingRange);
@@ -1197,18 +1230,18 @@ static bool HandleConfigureGridSize(
     // UE 5.7+: ForEachStreamingGrid is available as public API
     SpatialHash->ForEachStreamingGrid([&GridsArray](const FSpatialHashStreamingGrid& Grid)
     {
-        TSharedPtr<FJsonObject> GridObj = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> GridObj = McpHandlerUtils::CreateResultObject();
         GridObj->SetStringField(TEXT("gridName"), Grid.GridName.ToString());
         GridObj->SetNumberField(TEXT("cellSize"), Grid.CellSize);
         GridObj->SetNumberField(TEXT("loadingRange"), Grid.LoadingRange);
-        GridsArray.Add(MakeShareable(new FJsonValueObject(GridObj)));
+        GridsArray.Add(MakeShared<FJsonValueObject>(GridObj));
     });
 #else
     // UE 5.0-5.6: ForEachStreamingGrid not available - return empty grid info
     UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("ForEachStreamingGrid not available in UE versions < 5.7"));
 #endif
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetArrayField(TEXT("currentGrids"), GridsArray);
     ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration requires editor build to modify."));
     
@@ -1350,8 +1383,8 @@ static bool HandleCreateDataLayer(
     // Mark world dirty
     World->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, NewDataLayerAsset);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, NewDataLayerAsset);
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetStringField(TEXT("dataLayerAssetPath"), FullAssetPath);
     ResponseJson->SetStringField(TEXT("dataLayerType"), DataLayerType);
@@ -1502,8 +1535,8 @@ static bool HandleAssignActorToDataLayer(
     if (bAlreadyInLayer)
     {
         // Already assigned - return success (idempotent behavior)
-        TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-        AddActorVerification(ResponseJson, FoundActor);
+        TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(ResponseJson, FoundActor);
         ResponseJson->SetStringField(TEXT("actorName"), ActorName);
         ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
         ResponseJson->SetBoolField(TEXT("assigned"), true);
@@ -1518,8 +1551,8 @@ static bool HandleAssignActorToDataLayer(
     // Use the real API to add the actor to the data layer
     bool bSuccess = DataLayerEditorSubsystem->AddActorToDataLayer(FoundActor, DataLayerInstance);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddActorVerification(ResponseJson, FoundActor);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, FoundActor);
     ResponseJson->SetStringField(TEXT("actorName"), ActorName);
     ResponseJson->SetStringField(TEXT("dataLayerName"), DataLayerName);
     ResponseJson->SetBoolField(TEXT("assigned"), bSuccess);
@@ -1642,7 +1675,7 @@ static bool HandleConfigureHlodLayer(
     // Save the asset
     McpSafeAssetSave(NewHLODLayer);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("hlodLayerName"), HlodLayerName);
     ResponseJson->SetStringField(TEXT("hlodLayerPath"), FullPath);
     ResponseJson->SetBoolField(TEXT("isSpatiallyLoaded"), bIsSpatiallyLoaded);
@@ -1717,18 +1750,18 @@ static bool HandleCreateMinimapVolume(
     FVector DesiredScale = VolumeExtent / 100.0; // Brush is 200 units, so divide by half
     MiniMapVolume->SetActorScale3D(DesiredScale);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddActorVerification(ResponseJson, MiniMapVolume);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, MiniMapVolume);
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AWorldPartitionMiniMapVolume"));
     
-    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
     LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
     LocationJson->SetNumberField(TEXT("y"), VolumeLocation.Y);
     LocationJson->SetNumberField(TEXT("z"), VolumeLocation.Z);
     ResponseJson->SetObjectField(TEXT("volumeLocation"), LocationJson);
     
-    TSharedPtr<FJsonObject> ExtentJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
     ExtentJson->SetNumberField(TEXT("x"), VolumeExtent.X);
     ExtentJson->SetNumberField(TEXT("y"), VolumeExtent.Y);
     ExtentJson->SetNumberField(TEXT("z"), VolumeExtent.Z);
@@ -1797,8 +1830,8 @@ static bool HandleOpenLevelBlueprint(
     // Open the blueprint editor
     GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(LevelBP);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, LevelBP);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("levelName"), World->GetMapName());
 
     FString Message = FString::Printf(TEXT("Opened Level Blueprint for: %s"), *World->GetMapName());
@@ -1929,8 +1962,8 @@ static bool HandleAddLevelBlueprintNode(
     // Mark blueprint as modified
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, LevelBP);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("nodeClass"), NodeClass);
     ResponseJson->SetStringField(TEXT("nodeName"), CreatedNodeName);
     ResponseJson->SetNumberField(TEXT("posX"), PosX);
@@ -2043,8 +2076,8 @@ static bool HandleConnectLevelBlueprintNodes(
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddAssetVerification(ResponseJson, LevelBP);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("sourceNode"), SourceNodeName);
     ResponseJson->SetStringField(TEXT("sourcePin"), SourcePinName);
     ResponseJson->SetStringField(TEXT("targetNode"), TargetNodeName);
@@ -2141,12 +2174,12 @@ static bool HandleCreateLevelInstance(
     // Set actor label to the requested name (may differ from internal name if collision occurred)
     LevelInstanceActor->SetActorLabel(*LevelInstanceName);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddActorVerification(ResponseJson, LevelInstanceActor);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, LevelInstanceActor);
     ResponseJson->SetStringField(TEXT("levelInstanceName"), LevelInstanceName);
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     
-    TSharedPtr<FJsonObject> LocationJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
     LocationJson->SetNumberField(TEXT("x"), InstanceLocation.X);
     LocationJson->SetNumberField(TEXT("y"), InstanceLocation.Y);
     LocationJson->SetNumberField(TEXT("z"), InstanceLocation.Z);
@@ -2223,8 +2256,8 @@ static bool HandleCreatePackedLevelActor(
     // Set actor label to the requested name (may differ from internal name if collision occurred)
     PackedActor->SetActorLabel(*PackedLevelName);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
-    AddActorVerification(ResponseJson, PackedActor);
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, PackedActor);
     ResponseJson->SetStringField(TEXT("packedLevelName"), PackedLevelName);
     ResponseJson->SetStringField(TEXT("levelAssetPath"), LevelAssetPath);
     ResponseJson->SetBoolField(TEXT("packBlueprints"), bPackBlueprints);
@@ -2255,7 +2288,7 @@ static bool HandleGetLevelStructureInfo(
         return true;
     }
 
-    TSharedPtr<FJsonObject> InfoJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> InfoJson = McpHandlerUtils::CreateResultObject();
     InfoJson->SetStringField(TEXT("currentLevel"), World->GetMapName());
 
     // Get streaming levels
@@ -2267,7 +2300,7 @@ static bool HandleGetLevelStructureInfo(
     {
         if (StreamingLevel)
         {
-            SublevelsArray.Add(MakeShareable(new FJsonValueString(StreamingLevel->GetWorldAssetPackageFName().ToString())));
+            SublevelsArray.Add(MakeShared<FJsonValueString>(StreamingLevel->GetWorldAssetPackageFName().ToString()));
         }
     }
     InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
@@ -2293,7 +2326,7 @@ static bool HandleGetLevelStructureInfo(
     for (TActorIterator<ALevelInstance> It(World); It; ++It)
     {
         FString ActorLabel = It->GetActorLabel();
-        LevelInstancesArray.Add(MakeShareable(new FJsonValueString(ActorLabel)));
+        LevelInstancesArray.Add(MakeShared<FJsonValueString>(ActorLabel));
     }
     InfoJson->SetArrayField(TEXT("levelInstances"), LevelInstancesArray);
 
@@ -2309,7 +2342,7 @@ static bool HandleGetLevelStructureInfo(
             UHLODLayer* Layer = *It;
             if (Layer && Layer->GetOuter() && Layer->GetOuter()->GetWorld() == World)
             {
-                TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+                TSharedPtr<FJsonObject> LayerJson = McpHandlerUtils::CreateResultObject();
                 LayerJson->SetStringField(TEXT("name"), Layer->GetName());
                 LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
                 // UE 5.7+: GetCellSize, GetLoadingRange, IsSpatiallyLoaded are deprecated
@@ -2344,7 +2377,7 @@ static bool HandleGetLevelStructureInfo(
                     LayerJson->SetStringField(TEXT("parentLayer"), ParentLayerSoft->GetName());
                 }
                 
-                HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+                HlodLayersArray.Add(MakeShared<FJsonValueObject>(LayerJson));
             }
         }
     }
@@ -2362,11 +2395,11 @@ static bool HandleGetLevelStructureInfo(
                 if (!FoundLayers.Contains(LayerName))
                 {
                     FoundLayers.Add(LayerName);
-                    TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+                    TSharedPtr<FJsonObject> LayerJson = McpHandlerUtils::CreateResultObject();
                     LayerJson->SetStringField(TEXT("name"), LayerName);
                     LayerJson->SetStringField(TEXT("type"), TEXT("world_partition_hlod_actor"));
                     LayerJson->SetNumberField(TEXT("lodLevel"), HLODActor->GetLODLevel());
-                    HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+                    HlodLayersArray.Add(MakeShared<FJsonValueObject>(LayerJson));
                 }
             }
         }
@@ -2389,18 +2422,18 @@ static bool HandleGetLevelStructureInfo(
         // Create layer entries for each LOD level found
         for (const auto& Pair : LodLevelCounts)
         {
-            TSharedPtr<FJsonObject> LayerJson = MakeShared<FJsonObject>();
+            TSharedPtr<FJsonObject> LayerJson = McpHandlerUtils::CreateResultObject();
             LayerJson->SetStringField(TEXT("name"), FString::Printf(TEXT("LOD_Level_%d"), Pair.Key));
             LayerJson->SetStringField(TEXT("type"), TEXT("legacy_hlod"));
             LayerJson->SetNumberField(TEXT("lodLevel"), Pair.Key);
             LayerJson->SetNumberField(TEXT("actorCount"), Pair.Value);
-            HlodLayersArray.Add(MakeShareable(new FJsonValueObject(LayerJson)));
+            HlodLayersArray.Add(MakeShared<FJsonValueObject>(LayerJson));
         }
     }
 
     InfoJson->SetArrayField(TEXT("hlodLayers"), HlodLayersArray);
 
-    TSharedPtr<FJsonObject> ResponseJson = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetObjectField(TEXT("levelStructureInfo"), InfoJson);
 
     FString Message = TEXT("Retrieved level structure information");

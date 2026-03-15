@@ -1,9 +1,176 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-// Phase 18: Interaction System Handlers
+// =============================================================================
+// McpAutomationBridge_InteractionHandlers.cpp
+// =============================================================================
+// Phase 18: Interaction System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED:
+// --------------------
+// Section 1: Interaction Component (18.1)
+//   - create_interaction_component       : Add sphere collision interaction component to BP
+//   - configure_interaction_trace        : Configure trace type/distance on BP components
+//   - configure_interaction_widget       : Set up widget display variables on BP
+//   - add_interaction_events             : Add event dispatcher variables to BP
+//
+// Section 2: Interactables (18.2)
+//   - create_interactable_interface      : Create Blueprint Interface for interactables
+//   - create_door_actor                  : Create door BP with pivot, mesh, collision nodes
+//   - configure_door_properties          : Add/configure door variables (angle, time, lock)
+//   - create_switch_actor                : Create switch BP with mesh and trigger nodes
+//   - configure_switch_properties        : Add/configure switch variables (type, toggle, reset)
+//   - create_chest_actor                 : Create chest BP with base, lid, trigger nodes
+//   - configure_chest_properties         : Add/configure chest variables (lock, angle, loot)
+//   - create_lever_actor                 : Create lever BP with base, pivot, handle, trigger
+//
+// Section 3: Destructibles (18.3)
+//   - setup_destructible_mesh            : Configure destructible mesh on existing actor
+//   - add_destruction_component          : Add destruction SceneComponent with health vars
+//
+// Section 4: Trigger System (18.4)
+//   - create_trigger_actor               : Create trigger BP with shape (box/sphere/capsule)
+//   - configure_trigger_events           : Configure trigger event setup
+//
+// Section 5: Utility
+//   - get_interaction_info               : Query interaction info for BP or actor
+//
+// Section 6: Runtime Handlers (actor-based)
+//   - HandleCreateInteractionComponent   : Create interaction component on spawned actor
+//   - HandleConfigureInteractionTrace    : Configure trace settings on actor
+//   - HandleConfigureInteractionWidget   : Configure widget settings on actor
+//   - HandleCreateDoorActor              : Spawn door actor in world
+//   - HandleCreateSwitchActor            : Spawn switch actor in world
+//   - HandleCreateChestActor             : Spawn chest actor in world
+//
+// PAYLOAD/RESPONSE FORMATS:
+// -------------------------
+// create_interaction_component (Blueprint):
+//   Payload: { "blueprintPath": string, "componentName"?: string, "traceDistance"?: number }
+//   Response: { "componentAdded": bool, "componentName": string, assetVerification... }
+//
+// configure_interaction_trace:
+//   Payload: { "blueprintPath": string, "traceType"?: string, "traceDistance"?: number,
+//              "traceRadius"?: number }
+//   Response: { "traceType": string, "traceDistance": number, "traceRadius": number,
+//              "configured": bool, assetVerification... }
+//
+// configure_interaction_widget:
+//   Payload: { "blueprintPath": string, "widgetClass"?: string, "showOnHover"?: bool,
+//              "showPromptText"?: bool, "promptTextFormat"?: string }
+//   Response: { "widgetClass": string, "showOnHover": bool, "showPromptText": bool,
+//              "promptTextFormat": string, "configured": bool, "blueprintPath": string }
+//
+// add_interaction_events:
+//   Payload: { "blueprintPath": string }
+//   Response: { "eventsAdded": string[], "blueprintPath": string, "eventCount": number }
+//
+// create_interactable_interface:
+//   Payload: { "name": string, "folder"?: string }
+//   Response: { "interfacePath": string, "interfaceName": string, "created": bool,
+//              "recommendedFunctions": string[], "note": string }
+//
+// create_door_actor (Blueprint):
+//   Payload: { "name": string, "folder"?: string, "openAngle"?: number, "openTime"?: number,
+//              "autoClose"?: bool, "autoCloseDelay"?: number, "requiresKey"?: bool }
+//   Response: { "openAngle": number, "openTime": number, "autoClose": bool,
+//              "autoCloseDelay": number, "requiresKey": bool, assetVerification... }
+//
+// configure_door_properties:
+//   Payload: { "doorPath": string, "openAngle"?: number, "openTime"?: number, "locked"?: bool }
+//   Response: { "openAngle": number, "openTime": number, "locked": bool, "configured": bool }
+//
+// create_switch_actor:
+//   Payload: { "name": string, "folder"?: string, "switchType"?: string }
+//   Response: { "switchPath": string, "blueprintPath": string, "switchType": string }
+//
+// configure_switch_properties:
+//   Payload: { "switchPath": string, "switchType"?: string, "canToggle"?: bool, "resetTime"?: number }
+//   Response: { "switchType": string, "canToggle": bool, "resetTime": number, "configured": bool }
+//
+// create_chest_actor:
+//   Payload: { "name": string, "folder"?: string, "locked"?: bool }
+//   Response: { "chestPath": string, "blueprintPath": string, "locked": bool }
+//
+// configure_chest_properties:
+//   Payload: { "chestPath": string, "locked"?: bool, "openAngle"?: number, "openTime"?: number,
+//              "lootTablePath"?: string }
+//   Response: { "locked": bool, "openAngle": number, "openTime": number, "configured": bool }
+//
+// create_lever_actor:
+//   Payload: { "name": string, "folder"?: string }
+//   Response: { "leverPath": string, "blueprintPath": string }
+//
+// setup_destructible_mesh:
+//   Payload: { "actorName": string }
+//   Response: { "actorName": string, "configured": bool }
+//
+// add_destruction_component:
+//   Payload: { "blueprintPath": string, "componentName"?: string }
+//   Response: { "componentAdded": bool, "componentName": string, "blueprintPath": string,
+//              "variablesAdded": string[] }
+//
+// create_trigger_actor:
+//   Payload: { "name": string, "folder"?: string, "triggerShape"?: string }
+//   Response: { "triggerPath": string, "blueprintPath": string, "triggerShape": string }
+//
+// configure_trigger_events:
+//   Payload: { "triggerPath": string }
+//   Response: { "configured": bool }
+//
+// get_interaction_info:
+//   Payload: { "blueprintPath"?: string, "actorName"?: string }
+//   Response: { "blueprintPath"?: string, "blueprintName"?: string,
+//              "actorName"?: string, "actorClass"?: string }
+//
+// HandleCreateInteractionComponent (runtime):
+//   Payload: { "actorName": string, "interactionDistance"?: number, "requiresLineOfSight"?: bool }
+//   Response: { "actorName": string, "componentName": string, "interactionDistance": number,
+//              "requiresLineOfSight": bool }
+//
+// HandleCreateDoorActor (runtime):
+//   Payload: { "doorName"?: string, "location"?: [x,y,z], "doorType"?: string,
+//              "isLocked"?: bool, "requiredKey"?: string }
+//   Response: { "doorName": string, "doorType": string, "isLocked": bool, "actorPath": string }
+//
+// HandleCreateSwitchActor (runtime):
+//   Payload: { "switchName"?: string, "location"?: [x,y,z], "switchType"?: string, "isToggle"?: bool }
+//   Response: { "switchName": string, "switchType": string, "isToggle": bool, "actorPath": string }
+//
+// HandleCreateChestActor (runtime):
+//   Payload: { "chestName"?: string, "location"?: [x,y,z], "isLocked"?: bool,
+//              "requiredKey"?: string, "maxItems"?: number }
+//   Response: { "chestName": string, "isLocked": bool, "maxItems": number, "actorPath": string }
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: BPTYPE_Interface may not be available on BlueprintFactory
+// UE 5.1+: BlueprintFactory->BlueprintType = BPTYPE_Interface supported
+// UE 5.7+: Use McpSafeAssetSave() instead of UPackage::SavePackage()
+// UE 5.7+: SCS component templates owned by SCS_Node (CreateNode + AddNode pattern)
+//
+// REFACTORING NOTES:
+// ------------------
+// - All asset saves use McpSafeAssetSave() for UE 5.7+ safety
+// - Blueprint SCS operations follow CreateNode -> Configure -> AddNode -> SetParent pattern
+// - Path validation uses ValidateAssetCreationPath() and SanitizeAssetName()
+// - Security: All paths validated before CreatePackage()
+// - Editor-only operations guarded by #if WITH_EDITOR
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"
+#include "McpHandlerUtils.h"
+
+// =============================================================================
+// Core Includes
+// =============================================================================
 #include "McpAutomationBridgeHelpers.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
+
+// =============================================================================
+// Editor-Only Includes
+// =============================================================================
+#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "EngineUtils.h"
@@ -14,6 +181,10 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SCS_Node.h"
+
+// =============================================================================
+// Component Includes
+// =============================================================================
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
@@ -22,15 +193,35 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/TimelineComponent.h"
+
+// =============================================================================
+// Actor & Asset Includes
+// =============================================================================
 #include "GameFramework/Actor.h"
 #include "Misc/PackageName.h"
 #include "Factories/BlueprintFactory.h"
 #include "UObject/Interface.h"
 #include "EditorAssetLibrary.h"
+#endif // WITH_EDITOR
 
-// ============================================================================
-// Main Interaction Handler Dispatcher
-// ============================================================================
+// =============================================================================
+// Logging Category
+// =============================================================================
+DEFINE_LOG_CATEGORY_STATIC(LogMcpInteractionHandlers, Log, All);
+
+// =============================================================================
+// Section 1: Main Interaction Handler Dispatcher
+// =============================================================================
+
+/**
+ * HandleManageInteractionAction
+ * -----------------------------
+ * Main dispatcher for all interaction system sub-actions.
+ * Routes to appropriate handler based on the "subAction" field in payload.
+ *
+ * Payload: { "subAction": string, ...sub-action-specific fields }
+ * Response: Varies by sub-action (see individual handler docs)
+ */
 bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
     const FString& RequestId, const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
@@ -46,6 +237,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
   // 18.1 Interaction Component
   // ===========================================================================
 
+  /**
+   * create_interaction_component
+   * ----------------------------
+   * Adds a sphere collision component to a Blueprint via SCS for interaction detection.
+   *
+   * Payload: { "blueprintPath": string, "componentName"?: string, "traceDistance"?: number }
+   * Response: { "componentAdded": bool, "componentName": string, assetVerification... }
+   */
   if (SubAction == TEXT("create_interaction_component")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("InteractionComponent"));
@@ -76,10 +275,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
       McpSafeAssetSave(Blueprint);
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("componentAdded"), true);
       Result->SetStringField(TEXT("componentName"), ComponentName);
-      AddAssetVerification(Result, Blueprint);
+      McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction component added"), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create interaction component"), TEXT("COMPONENT_CREATE_FAILED"));
@@ -90,6 +289,17 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_interaction_trace
+   * ---------------------------
+   * Configures interaction trace parameters on Blueprint components and adds
+   * TraceDistance/TraceType variables to the Blueprint.
+   *
+   * Payload: { "blueprintPath": string, "traceType"?: string, "traceDistance"?: number,
+   *            "traceRadius"?: number }
+   * Response: { "traceType": string, "traceDistance": number, "traceRadius": number,
+   *            "configured": bool, assetVerification... }
+   */
   if (SubAction == TEXT("configure_interaction_trace")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString TraceType = GetJsonStringField(Payload, TEXT("traceType"), TEXT("sphere"));
@@ -167,7 +377,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("TraceType"), NameType);
     }
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("traceType"), TraceType);
     Result->SetNumberField(TEXT("traceDistance"), TraceDistance);
     Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
@@ -175,7 +385,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeAssetSave(Blueprint);
-    AddAssetVerification(Result, Blueprint);
+      McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interaction trace configured"), Result);
 #else
     SendAutomationError(RequestingSocket, RequestId, TEXT("configure_interaction_trace is editor-only"), TEXT("EDITOR_ONLY"));
@@ -183,6 +393,17 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_interaction_widget
+   * ----------------------------
+   * Configures interaction widget display variables on a Blueprint including
+   * hover behavior, prompt text, and widget class references.
+   *
+   * Payload: { "blueprintPath": string, "widgetClass"?: string, "showOnHover"?: bool,
+   *            "showPromptText"?: bool, "promptTextFormat"?: string }
+   * Response: { "widgetClass": string, "showOnHover": bool, "showPromptText": bool,
+   *            "promptTextFormat": string, "configured": bool, "blueprintPath": string }
+   */
   if (SubAction == TEXT("configure_interaction_widget")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString WidgetClass = GetJsonStringField(Payload, TEXT("widgetClass"));
@@ -259,7 +480,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("InteractionWidgetClass"), SoftClassType);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("widgetClass"), WidgetClass);
     Result->SetBoolField(TEXT("showOnHover"), ShowOnHover);
     Result->SetBoolField(TEXT("showPromptText"), ShowPromptText);
@@ -276,6 +497,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * add_interaction_events
+   * -----------------------
+   * Adds standard interaction event dispatcher variables to a Blueprint:
+   * OnInteractionStart, OnInteractionEnd, OnInteractableFound, OnInteractableLost.
+   *
+   * Payload: { "blueprintPath": string }
+   * Response: { "eventsAdded": string[], "blueprintPath": string, "eventCount": number }
+   */
   if (SubAction == TEXT("add_interaction_events")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
@@ -295,7 +525,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       TEXT("OnInteractableLost") 
     };
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> AddedEvents;
 
     // Add event dispatcher variables for each event
@@ -314,9 +544,9 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
 
       if (!bExists) {
         FBlueprintEditorUtils::AddMemberVariable(Blueprint, FName(*EventName), DelegateType);
-        AddedEvents.Add(MakeShareable(new FJsonValueString(EventName)));
+        AddedEvents.Add(MakeShared<FJsonValueString>(EventName));
       } else {
-        AddedEvents.Add(MakeShareable(new FJsonValueString(EventName + TEXT(" (exists)"))));
+        AddedEvents.Add(MakeShared<FJsonValueString>(EventName + TEXT(" (exists)")));
       }
     }
 
@@ -337,6 +567,19 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   // 18.2 Interactables
   // ===========================================================================
 
+  /**
+   * create_interactable_interface
+   * -----------------------------
+   * Creates a Blueprint Interface asset with recommended interaction functions.
+   * The interface is created as BPTYPE_Interface with UInterface parent class.
+   *
+   * NOTE: UE 5.0 may not support BlueprintFactory->BlueprintType = BPTYPE_Interface.
+   *       Guarded with ENGINE_MINOR_VERSION >= 1 check.
+   *
+   * Payload: { "name": string, "folder"?: string }
+   * Response: { "interfacePath": string, "interfaceName": string, "created": bool,
+   *            "recommendedFunctions": string[], "note": string }
+   */
   if (SubAction == TEXT("create_interactable_interface")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interfaces"));
@@ -384,15 +627,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FAssetRegistryModule::AssetCreated(InterfaceBP);
       McpSafeAssetSave(InterfaceBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("interfacePath"), InterfaceBP->GetPathName());
       Result->SetStringField(TEXT("interfaceName"), Name);
       Result->SetBoolField(TEXT("created"), true);
 
       TArray<TSharedPtr<FJsonValue>> FunctionsToAdd;
-      FunctionsToAdd.Add(MakeShareable(new FJsonValueString(TEXT("Interact"))));
-      FunctionsToAdd.Add(MakeShareable(new FJsonValueString(TEXT("CanInteract"))));
-      FunctionsToAdd.Add(MakeShareable(new FJsonValueString(TEXT("GetInteractionPrompt"))));
+      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("Interact")));
+      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("CanInteract")));
+      FunctionsToAdd.Add(MakeShared<FJsonValueString>(TEXT("GetInteractionPrompt")));
       Result->SetArrayField(TEXT("recommendedFunctions"), FunctionsToAdd);
       Result->SetStringField(TEXT("note"), TEXT("Interface created. Add Interact, CanInteract, and GetInteractionPrompt functions in the Blueprint Editor."));
 
@@ -406,6 +649,23 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * create_door_actor
+   * ------------------
+   * Creates a door Blueprint actor with SCS component hierarchy:
+   *   Root (SceneComponent)
+   *     ├── DoorPivot (SceneComponent)
+   *     │   └── DoorMesh (StaticMeshComponent)
+   *     └── InteractionTrigger (BoxComponent, OverlapAll)
+   *
+   * Uses ValidateAssetCreationPath() for path security validation.
+   *
+   * Payload: { "name": string, "folder"?: string, "openAngle"?: number,
+   *            "openTime"?: number, "autoClose"?: bool, "autoCloseDelay"?: number,
+   *            "requiresKey"?: bool }
+   * Response: { "openAngle": number, "openTime": number, "autoClose": bool,
+   *            "autoCloseDelay": number, "requiresKey": bool, assetVerification... }
+   */
   if (SubAction == TEXT("create_door_actor")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables"));
@@ -471,13 +731,13 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsModified(DoorBP);
       McpSafeAssetSave(DoorBP);
 
-TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetNumberField(TEXT("openAngle"), OpenAngle);
       Result->SetNumberField(TEXT("openTime"), OpenTime);
       Result->SetBoolField(TEXT("autoClose"), AutoClose);
       Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
       Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
-      AddAssetVerification(Result, DoorBP);
+      McpHandlerUtils::AddVerification(Result, DoorBP);
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Door actor created"), Result);
     } else {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create door blueprint"), TEXT("BLUEPRINT_CREATE_FAILED"));
@@ -488,6 +748,16 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_door_properties
+   * --------------------------
+   * Adds door property variables (OpenAngle, OpenTime, bIsLocked, bIsOpen) to a
+   * Blueprint and optionally sets default values on the CDO.
+   *
+   * Payload: { "doorPath": string, "openAngle"?: number, "openTime"?: number, "locked"?: bool }
+   * Response: { "openAngle": number, "openTime": number, "locked": bool,
+   *            "configured": bool, "doorPath": string }
+   */
   if (SubAction == TEXT("configure_door_properties")) {
     FString DoorPath = GetJsonStringField(Payload, TEXT("doorPath"));
     double OpenAngle = GetJsonNumberField(Payload, TEXT("openAngle"), 90.0);
@@ -564,28 +834,28 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       if (CDO) {
         FProperty* OpenAngleProp = CDO->GetClass()->FindPropertyByName(TEXT("OpenAngle"));
         if (OpenAngleProp) {
-          TSharedPtr<FJsonValue> FloatValue = MakeShareable(new FJsonValueNumber(OpenAngle));
+          TSharedPtr<FJsonValue> FloatValue = MakeShared<FJsonValueNumber>(OpenAngle);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, OpenAngleProp, FloatValue, ApplyError);
         }
 
         FProperty* OpenTimeProp = CDO->GetClass()->FindPropertyByName(TEXT("OpenTime"));
         if (OpenTimeProp) {
-          TSharedPtr<FJsonValue> FloatValue = MakeShareable(new FJsonValueNumber(OpenTime));
+          TSharedPtr<FJsonValue> FloatValue = MakeShared<FJsonValueNumber>(OpenTime);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, OpenTimeProp, FloatValue, ApplyError);
         }
 
         FProperty* LockedProp = CDO->GetClass()->FindPropertyByName(TEXT("bIsLocked"));
         if (LockedProp) {
-          TSharedPtr<FJsonValue> BoolValue = MakeShareable(new FJsonValueBoolean(Locked));
+          TSharedPtr<FJsonValue> BoolValue = MakeShared<FJsonValueBoolean>(Locked);
           FString ApplyError;
           ApplyJsonValueToProperty(CDO, LockedProp, BoolValue, ApplyError);
         }
       }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("openAngle"), OpenAngle);
     Result->SetNumberField(TEXT("openTime"), OpenTime);
     Result->SetBoolField(TEXT("locked"), Locked);
@@ -601,6 +871,19 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * create_switch_actor
+   * --------------------
+   * Creates a switch Blueprint actor with SCS component hierarchy:
+   *   Root (SceneComponent)
+   *     ├── SwitchMesh (StaticMeshComponent)
+   *     └── InteractionTrigger (SphereComponent, radius=100, OverlapAll)
+   *
+   * Uses ValidateAssetCreationPath() for path security validation.
+   *
+   * Payload: { "name": string, "folder"?: string, "switchType"?: string }
+   * Response: { "switchPath": string, "blueprintPath": string, "switchType": string }
+   */
   if (SubAction == TEXT("create_switch_actor")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables"));
@@ -658,7 +941,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsModified(SwitchBP);
       McpSafeAssetSave(SwitchBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("switchPath"), SwitchBP->GetPathName());
       Result->SetStringField(TEXT("blueprintPath"), SwitchBP->GetPathName());
       Result->SetStringField(TEXT("switchType"), SwitchType);
@@ -672,6 +955,17 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_switch_properties
+   * ----------------------------
+   * Adds switch property variables (SwitchType, bCanToggle, bIsActivated, ResetTime)
+   * to a Blueprint for switch behavior configuration.
+   *
+   * Payload: { "switchPath": string, "switchType"?: string, "canToggle"?: bool,
+   *            "resetTime"?: number }
+   * Response: { "switchType": string, "canToggle": bool, "resetTime": number,
+   *            "configured": bool, "switchPath": string }
+   */
   if (SubAction == TEXT("configure_switch_properties")) {
     FString SwitchPath = GetJsonStringField(Payload, TEXT("switchPath"));
     FString SwitchType = GetJsonStringField(Payload, TEXT("switchType"), TEXT("button"));
@@ -745,7 +1039,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("ResetTime"), FloatType);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("switchType"), SwitchType);
     Result->SetBoolField(TEXT("canToggle"), CanToggle);
     Result->SetNumberField(TEXT("resetTime"), ResetTime);
@@ -761,6 +1055,19 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * create_chest_actor
+   * -------------------
+   * Creates a chest Blueprint actor with SCS component hierarchy:
+   *   Root (SceneComponent)
+   *     ├── ChestBase (StaticMeshComponent)
+   *     ├── LidPivot (SceneComponent)
+   *     │   └── LidMesh (StaticMeshComponent)
+   *     └── InteractionTrigger (SphereComponent, radius=150, OverlapAll)
+   *
+   * Payload: { "name": string, "folder"?: string, "locked"?: bool }
+   * Response: { "chestPath": string, "blueprintPath": string, "locked": bool }
+   */
   if (SubAction == TEXT("create_chest_actor")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables"));
@@ -820,7 +1127,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsModified(ChestBP);
       McpSafeAssetSave(ChestBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("chestPath"), ChestBP->GetPathName());
       Result->SetStringField(TEXT("blueprintPath"), ChestBP->GetPathName());
       Result->SetBoolField(TEXT("locked"), Locked);
@@ -834,6 +1141,17 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_chest_properties
+   * ---------------------------
+   * Adds chest property variables (bIsLocked, bIsOpen, LidOpenAngle, OpenTime, LootTable)
+   * to a Blueprint for chest behavior configuration.
+   *
+   * Payload: { "chestPath": string, "locked"?: bool, "openAngle"?: number,
+   *            "openTime"?: number, "lootTablePath"?: string }
+   * Response: { "locked": bool, "openAngle": number, "openTime": number,
+   *            "configured": bool, "chestPath": string }
+   */
   if (SubAction == TEXT("configure_chest_properties")) {
     FString ChestPath = GetJsonStringField(Payload, TEXT("chestPath"));
     bool Locked = GetJsonBoolField(Payload, TEXT("locked"), false);
@@ -920,7 +1238,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("LootTable"), SoftObjectType);
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("locked"), Locked);
     Result->SetNumberField(TEXT("openAngle"), OpenAngle);
     Result->SetNumberField(TEXT("openTime"), OpenTime);
@@ -939,6 +1257,19 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * create_lever_actor
+   * -------------------
+   * Creates a lever Blueprint actor with SCS component hierarchy:
+   *   Root (SceneComponent)
+   *     ├── LeverBase (StaticMeshComponent)
+   *     ├── LeverPivot (SceneComponent)
+   *     │   └── LeverHandle (StaticMeshComponent)
+   *     └── InteractionTrigger (SphereComponent, radius=100, OverlapAll)
+   *
+   * Payload: { "name": string, "folder"?: string }
+   * Response: { "leverPath": string, "blueprintPath": string }
+   */
   if (SubAction == TEXT("create_lever_actor")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables"));
@@ -996,7 +1327,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsModified(LeverBP);
       McpSafeAssetSave(LeverBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("leverPath"), LeverBP->GetPathName());
       Result->SetStringField(TEXT("blueprintPath"), LeverBP->GetPathName());
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lever actor created"), Result);
@@ -1013,6 +1344,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   // 18.3 Destructibles
   // ===========================================================================
 
+  /**
+   * setup_destructible_mesh
+   * ------------------------
+   * Configures destructible mesh settings on an existing actor in the editor world.
+   * Finds the actor by name/label and sets up destruction parameters.
+   *
+   * Payload: { "actorName": string }
+   * Response: { "actorName": string, "configured": bool }
+   */
   if (SubAction == TEXT("setup_destructible_mesh")) {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty()) {
@@ -1040,7 +1380,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetBoolField(TEXT("configured"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destructible mesh setup configured"), Result);
@@ -1050,6 +1390,16 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * add_destruction_component
+   * --------------------------
+   * Adds a destruction SceneComponent to a Blueprint via SCS and creates
+   * health/destruction-related variables: Health, MaxHealth, bIsDestroyed, DestructionStage.
+   *
+   * Payload: { "blueprintPath": string, "componentName"?: string }
+   * Response: { "componentAdded": bool, "componentName": string,
+   *            "blueprintPath": string, "variablesAdded": string[] }
+   */
   if (SubAction == TEXT("add_destruction_component")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("DestructionComponent"));
@@ -1135,16 +1485,16 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
       McpSafeAssetSave(Blueprint);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("componentAdded"), true);
       Result->SetStringField(TEXT("componentName"), ComponentName);
       Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
 
       TArray<TSharedPtr<FJsonValue>> AddedVars;
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("Health"))));
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("MaxHealth"))));
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("bIsDestroyed"))));
-      AddedVars.Add(MakeShareable(new FJsonValueString(TEXT("DestructionStage"))));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("Health")));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("MaxHealth")));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("bIsDestroyed")));
+      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("DestructionStage")));
       Result->SetArrayField(TEXT("variablesAdded"), AddedVars);
 
       SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Destruction component added"), Result);
@@ -1161,6 +1511,20 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   // 18.4 Trigger System
   // ===========================================================================
 
+  /**
+   * create_trigger_actor
+   * ---------------------
+   * Creates a trigger Blueprint actor with a configurable shape component
+   * (box, sphere, or capsule) as the root trigger volume.
+   *
+   * Supported shapes:
+   *   - "sphere": USphereComponent (radius=200)
+   *   - "capsule": UCapsuleComponent (radius=50, halfHeight=100)
+   *   - "box" (default): UBoxComponent (extent=100x100x100)
+   *
+   * Payload: { "name": string, "folder"?: string, "triggerShape"?: string }
+   * Response: { "triggerPath": string, "blueprintPath": string, "triggerShape": string }
+   */
   if (SubAction == TEXT("create_trigger_actor")) {
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Triggers"));
@@ -1224,7 +1588,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       FBlueprintEditorUtils::MarkBlueprintAsModified(TriggerBP);
       McpSafeAssetSave(TriggerBP);
 
-      TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("triggerPath"), TriggerBP->GetPathName());
       Result->SetStringField(TEXT("blueprintPath"), TriggerBP->GetPathName());
       Result->SetStringField(TEXT("triggerShape"), TriggerShape);
@@ -1238,6 +1602,15 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  /**
+   * configure_trigger_events
+   * -------------------------
+   * Configures trigger event setup on a Blueprint. Marks the Blueprint as modified
+   * and saves it.
+   *
+   * Payload: { "triggerPath": string }
+   * Response: { "configured": bool }
+   */
   if (SubAction == TEXT("configure_trigger_events")) {
     FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
 #if WITH_EDITOR
@@ -1248,7 +1621,7 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
       return true;
     }
 
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("configured"), true);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeAssetSave(Blueprint);
@@ -1260,13 +1633,23 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   }
 
   // ===========================================================================
-  // Utility
+  // Section 5: Utility Handlers
   // ===========================================================================
 
+  /**
+   * get_interaction_info
+   * ---------------------
+   * Retrieves interaction information for a Blueprint or actor.
+   * Can query by blueprintPath, actorName, or both.
+   *
+   * Payload: { "blueprintPath"?: string, "actorName"?: string }
+   * Response: { "blueprintPath"?: string, "blueprintName"?: string,
+   *            "actorName"?: string, "actorClass"?: string }
+   */
   if (SubAction == TEXT("get_interaction_info")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (!BlueprintPath.IsEmpty()) {
 #if WITH_EDITOR
@@ -1299,6 +1682,10 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
     return true;
   }
 
+  // ===========================================================================
+  // Section 6: Runtime Handler Dispatch (actor-based)
+  // ===========================================================================
+
   if (SubAction == TEXT("create_interaction_component")) {
     return HandleCreateInteractionComponent(RequestId, Payload, RequestingSocket);
   }
@@ -1326,6 +1713,20 @@ TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
   return false;
 }
 
+// =============================================================================
+// Section 7: Runtime Handler Implementations (actor-based)
+// =============================================================================
+
+/**
+ * HandleCreateInteractionComponent
+ * ---------------------------------
+ * Creates a SceneComponent-based interaction component on a spawned actor.
+ * Actor is found by name/label in the editor world.
+ *
+ * Payload: { "actorName": string, "interactionDistance"?: number, "requiresLineOfSight"?: bool }
+ * Response: { "actorName": string, "componentName": string,
+ *            "interactionDistance": number, "requiresLineOfSight": bool }
+ */
 // Create Interaction Component handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleCreateInteractionComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1378,7 +1779,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateInteractionComponent(
   bool RequiresLineOfSight = true;
   Payload->TryGetBoolField(TEXT("requiresLineOfSight"), RequiresLineOfSight);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("componentName"), InteractionComp->GetName());
   Resp->SetNumberField(TEXT("interactionDistance"), InteractionDistance);
@@ -1393,6 +1794,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateInteractionComponent(
 #endif
 }
 
+/**
+ * HandleConfigureInteractionTrace
+ * ---------------------------------
+ * Configures interaction trace settings (distance, channel, collision) on an actor.
+ *
+ * Payload: { "actorName": string, "traceDistance"?: number,
+ *            "traceChannel"?: string, "useComplexCollision"?: bool }
+ * Response: { "actorName": string, "traceDistance": number,
+ *            "traceChannel": string, "useComplexCollision": bool }
+ */
 // Configure Interaction Trace handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionTrace(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1415,7 +1826,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionTrace(
   bool UseComplexCollision = false;
   Payload->TryGetBoolField(TEXT("useComplexCollision"), UseComplexCollision);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetNumberField(TEXT("traceDistance"), TraceDistance);
   Resp->SetStringField(TEXT("traceChannel"), TraceChannel);
@@ -1430,6 +1841,16 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionTrace(
 #endif
 }
 
+/**
+ * HandleConfigureInteractionWidget
+ * ----------------------------------
+ * Configures interaction widget display settings on an actor.
+ *
+ * Payload: { "actorName": string, "widgetClass"?: string, "widgetText"?: string,
+ *            "showOnHover"?: bool, "offsetZ"?: number }
+ * Response: { "actorName": string, "widgetClass": string, "widgetText": string,
+ *            "showOnHover": bool, "offsetZ": number }
+ */
 // Configure Interaction Widget handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionWidget(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1457,7 +1878,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionWidget(
   double OffsetZ = 100.0;
   Payload->TryGetNumberField(TEXT("offsetZ"), OffsetZ);
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("widgetClass"), WidgetClass);
   Resp->SetStringField(TEXT("widgetText"), WidgetText);
@@ -1473,6 +1894,16 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureInteractionWidget(
 #endif
 }
 
+/**
+ * HandleCreateDoorActor
+ * ----------------------
+ * Spawns a door actor in the editor world with mesh and interaction components.
+ *
+ * Payload: { "doorName"?: string, "location"?: [x,y,z], "doorType"?: string,
+ *            "isLocked"?: bool, "requiredKey"?: string }
+ * Response: { "doorName": string, "doorType": string, "isLocked": bool,
+ *            "requiredKey": string, "actorPath": string }
+ */
 // Create Door Actor handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleCreateDoorActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1531,7 +1962,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDoorActor(
       DoorActor, FName(TEXT("InteractionComponent")));
   InteractionComp->RegisterComponent();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("doorName"), DoorActor->GetName());
   Resp->SetStringField(TEXT("doorType"), DoorType);
   Resp->SetBoolField(TEXT("isLocked"), IsLocked);
@@ -1547,6 +1978,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDoorActor(
 #endif
 }
 
+/**
+ * HandleCreateSwitchActor
+ * ------------------------
+ * Spawns a switch actor in the editor world with mesh and interaction components.
+ *
+ * Payload: { "switchName"?: string, "location"?: [x,y,z],
+ *            "switchType"?: string, "isToggle"?: bool }
+ * Response: { "switchName": string, "switchType": string,
+ *            "isToggle": bool, "actorPath": string }
+ */
 // Create Switch Actor handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleCreateSwitchActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1602,7 +2043,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSwitchActor(
       SwitchActor, FName(TEXT("InteractionComponent")));
   InteractionComp->RegisterComponent();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("switchName"), SwitchActor->GetName());
   Resp->SetStringField(TEXT("switchType"), SwitchType);
   Resp->SetBoolField(TEXT("isToggle"), IsToggle);
@@ -1617,6 +2058,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSwitchActor(
 #endif
 }
 
+/**
+ * HandleCreateChestActor
+ * -----------------------
+ * Spawns a chest actor in the editor world with mesh and interaction components.
+ *
+ * Payload: { "chestName"?: string, "location"?: [x,y,z], "isLocked"?: bool,
+ *            "requiredKey"?: string, "maxItems"?: number }
+ * Response: { "chestName": string, "isLocked": bool, "requiredKey": string,
+ *            "maxItems": number, "actorPath": string }
+ */
 // Create Chest Actor handler implementation
 bool UMcpAutomationBridgeSubsystem::HandleCreateChestActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -1675,7 +2126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateChestActor(
       ChestActor, FName(TEXT("InteractionComponent")));
   InteractionComp->RegisterComponent();
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chestName"), ChestActor->GetName());
   Resp->SetBoolField(TEXT("isLocked"), IsLocked);
   Resp->SetStringField(TEXT("requiredKey"), RequiredKey);

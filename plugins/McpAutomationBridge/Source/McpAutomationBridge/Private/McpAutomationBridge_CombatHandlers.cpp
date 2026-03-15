@@ -1,8 +1,49 @@
-#include "Dom/JsonObject.h"
+// =============================================================================
 // McpAutomationBridge_CombatHandlers.cpp
-// Phase 15: Combat & Weapons System
-// Implements 31 actions for weapon creation, firing modes, projectiles, damage, and melee combat.
+// =============================================================================
+// Combat & Weapons System Handlers for MCP Automation Bridge
+//
+// HANDLERS IMPLEMENTED (31+ actions):
+// -----------------------------------
+// Section 1: Weapon Creation
+//   - create_weapon_blueprint       : Create AWeapon base blueprint
+//   - add_weapon_mesh               : Add skeletal/static mesh to weapon
+//   - configure_weapon_stats        : Set damage, fire rate, range, etc.
+//
+// Section 2: Firing Modes
+//   - set_fire_mode                 : Configure fire mode (Auto/Semi/Burst)
+//   - add_muzzle_flash              : Add muzzle flash particle/light
+//   - add_firing_sound              : Add fire sound cue
+//   - configure_ammo_system         : Setup ammo/reload mechanics
+//
+// Section 3: Projectiles
+//   - create_projectile_blueprint   : Create AProjectile blueprint
+//   - add_projectile_movement       : Add UProjectileMovementComponent
+//   - configure_projectile_damage   : Set damage type and values
+//   - add_projectile_collision      : Configure collision response
+//
+// Section 4: Damage System
+//   - create_damage_type            : Create UDamageType class
+//   - configure_damage_response     : Set damage response behavior
+//   - add_damage_indicator          : Add visual/audio feedback
+//
+// Section 5: Melee Combat
+//   - create_melee_weapon           : Create melee weapon blueprint
+//   - configure_melee_collision     : Setup attack trace/hitbox
+//   - add_combo_system              : Configure combo attacks
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0-5.7: All handlers supported
+// - Weapon/projectile APIs stable across versions
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -338,14 +379,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        // Build response using standardized helper
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("baseDamage"), BaseDamage);
         Result->SetNumberField(TEXT("fireRate"), FireRate);
         Result->SetNumberField(TEXT("range"), Range);
         Result->SetNumberField(TEXT("spread"), Spread);
         
-        AddAssetVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon blueprint created successfully."), Result);
         return true;
     }
@@ -383,11 +424,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("meshPath"), MeshPath);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon mesh configured."), Result);
         return true;
     }
@@ -436,12 +477,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("muzzleSocket"), MuzzleSocket);
         Result->SetStringField(TEXT("ejectionSocket"), EjectionSocket);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon sockets configured."), Result);
         return true;
     }
@@ -502,14 +543,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("baseDamage"), BaseDamage);
         Result->SetNumberField(TEXT("fireRate"), FireRate);
         Result->SetNumberField(TEXT("range"), Range);
         Result->SetNumberField(TEXT("spread"), Spread);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon stats configured."), Result);
         return true;
     }
@@ -534,7 +575,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        bool HitscanEnabled = GetBoolFieldCombat(Payload, TEXT("hitscanEnabled"), true);
+        bool bHitscanEnabled = GetBoolFieldCombat(Payload, TEXT("hitscanEnabled"), true);
         FString TraceChannel = GetStringFieldCombat(Payload, TEXT("traceChannel"), TEXT("Visibility"));
         double Range = GetNumberFieldCombat(Payload, TEXT("range"), 10000.0);
 
@@ -553,7 +594,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             {
                 if (FBoolProperty* HitscanProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsHitscan")))
                 {
-                    HitscanProp->SetPropertyValue_InContainer(CDO, HitscanEnabled);
+                    HitscanProp->SetPropertyValue_InContainer(CDO, bHitscanEnabled);
                 }
                 if (FNameProperty* ChannelProp = FindFProperty<FNameProperty>(BPGC, TEXT("TraceChannel")))
                 {
@@ -568,13 +609,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetBoolField(TEXT("hitscanEnabled"), HitscanEnabled);
+        Result->SetBoolField(TEXT("hitscanEnabled"), bHitscanEnabled);
         Result->SetStringField(TEXT("traceChannel"), TraceChannel);
         Result->SetNumberField(TEXT("range"), Range);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hitscan configured."), Result);
         return true;
     }
@@ -623,12 +664,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("projectileClass"), ProjectileClass);
         Result->SetNumberField(TEXT("projectileSpeed"), ProjectileSpeed);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile firing configured."), Result);
         return true;
     }
@@ -688,13 +729,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("patternType"), PatternType);
         Result->SetNumberField(TEXT("spreadIncrease"), SpreadIncrease);
         Result->SetNumberField(TEXT("spreadRecovery"), SpreadRecovery);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spread pattern configured."), Result);
         return true;
     }
@@ -749,13 +790,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("recoilPitch"), RecoilPitch);
         Result->SetNumberField(TEXT("recoilYaw"), RecoilYaw);
         Result->SetNumberField(TEXT("recoilRecovery"), RecoilRecovery);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Recoil pattern configured."), Result);
         return true;
     }
@@ -776,7 +817,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        bool AdsEnabled = GetBoolFieldCombat(Payload, TEXT("adsEnabled"), true);
+        bool bAdsEnabled = GetBoolFieldCombat(Payload, TEXT("adsEnabled"), true);
         double AdsFov = GetNumberFieldCombat(Payload, TEXT("adsFov"), 60.0);
         double AdsSpeed = GetNumberFieldCombat(Payload, TEXT("adsSpeed"), 0.2);
         double AdsSpreadMultiplier = GetNumberFieldCombat(Payload, TEXT("adsSpreadMultiplier"), 0.5);
@@ -798,7 +839,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             {
                 if (FBoolProperty* EnabledProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bADSEnabled")))
                 {
-                    EnabledProp->SetPropertyValue_InContainer(CDO, AdsEnabled);
+                    EnabledProp->SetPropertyValue_InContainer(CDO, bAdsEnabled);
                 }
                 if (FDoubleProperty* FovProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("ADSFieldOfView")))
                 {
@@ -821,14 +862,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetBoolField(TEXT("adsEnabled"), AdsEnabled);
+        Result->SetBoolField(TEXT("adsEnabled"), bAdsEnabled);
         Result->SetNumberField(TEXT("adsFov"), AdsFov);
         Result->SetNumberField(TEXT("adsSpeed"), AdsSpeed);
         Result->SetNumberField(TEXT("adsSpreadMultiplier"), AdsSpreadMultiplier);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Aim down sights configured."), Result);
         return true;
     }
@@ -893,10 +934,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile blueprint created successfully."), Result);
         return true;
     }
@@ -932,10 +973,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile movement configured."), Result);
         return true;
     }
@@ -962,13 +1003,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             double CollisionRadius = GetNumberFieldCombat(Payload, TEXT("collisionRadius"), 5.0);
             CollisionComp->SetSphereRadius(static_cast<float>(CollisionRadius));
             
-            bool BounceEnabled = GetBoolFieldCombat(Payload, TEXT("bounceEnabled"), false);
+            bool bBounceEnabled = GetBoolFieldCombat(Payload, TEXT("bounceEnabled"), false);
             // Bounce settings would be on the movement component
             UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
             if (MovementComp)
             {
-                MovementComp->bShouldBounce = BounceEnabled;
-                if (BounceEnabled)
+                MovementComp->bShouldBounce = bBounceEnabled;
+                if (bBounceEnabled)
                 {
                     double BounceRatio = GetNumberFieldCombat(Payload, TEXT("bounceVelocityRatio"), 0.6);
                     MovementComp->Bounciness = static_cast<float>(BounceRatio);
@@ -979,7 +1020,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile collision configured."), Result);
@@ -1005,17 +1046,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
-            bool HomingEnabled = GetBoolFieldCombat(Payload, TEXT("homingEnabled"), true);
+            bool bHomingEnabled = GetBoolFieldCombat(Payload, TEXT("homingEnabled"), true);
             double HomingAcceleration = GetNumberFieldCombat(Payload, TEXT("homingAcceleration"), 20000.0);
             
-            MovementComp->bIsHomingProjectile = HomingEnabled;
+            MovementComp->bIsHomingProjectile = bHomingEnabled;
             MovementComp->HomingAccelerationMagnitude = static_cast<float>(HomingAcceleration);
         }
 
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile homing configured."), Result);
@@ -1087,10 +1128,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
         return true;
     }
@@ -1145,13 +1186,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("damageImpulse"), DamageImpulse);
         Result->SetNumberField(TEXT("criticalMultiplier"), CriticalMultiplier);
         Result->SetNumberField(TEXT("headshotMultiplier"), HeadshotMultiplier);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage execution configured."), Result);
         return true;
     }
@@ -1174,7 +1215,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         FString HitboxType = GetStringFieldCombat(Payload, TEXT("hitboxType"), TEXT("Capsule"));
         FString BoneName = GetStringFieldCombat(Payload, TEXT("hitboxBoneName"), TEXT(""));
-        bool IsDamageZoneHead = GetBoolFieldCombat(Payload, TEXT("isDamageZoneHead"), false);
+        bool bIsDamageZoneHead = GetBoolFieldCombat(Payload, TEXT("isDamageZoneHead"), false);
         double DamageMultiplier = GetNumberFieldCombat(Payload, TEXT("damageMultiplier"), 1.0);
 
         // Create appropriate collision component based on type
@@ -1238,7 +1279,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             {
                 if (FBoolProperty* HeadProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsHeadshotZone")))
                 {
-                    HeadProp->SetPropertyValue_InContainer(CDO, IsDamageZoneHead);
+                    HeadProp->SetPropertyValue_InContainer(CDO, bIsDamageZoneHead);
                 }
                 if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitboxDamageMultiplier")))
                 {
@@ -1249,13 +1290,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitboxType"), HitboxType);
-        Result->SetBoolField(TEXT("isDamageZoneHead"), IsDamageZoneHead);
+        Result->SetBoolField(TEXT("isDamageZoneHead"), bIsDamageZoneHead);
         Result->SetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hitbox component configured."), Result);
         return true;
     }
@@ -1335,7 +1376,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("magazineSize"), MagazineSize);
         Result->SetNumberField(TEXT("currentAmmo"), MagazineSize);
@@ -1343,14 +1384,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetBoolField(TEXT("reloadAnimationLoaded"), bReloadAnimLoaded);
         
         TArray<TSharedPtr<FJsonValue>> VarsAdded;
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("MagazineSize"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("CurrentAmmo"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ReloadTime"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsReloading"))));
-        if (bReloadAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ReloadAnimation"))));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("MagazineSize")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("CurrentAmmo")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("ReloadTime")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsReloading")));
+        if (bReloadAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("ReloadAnimation")));
         Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
-        AddAssetVerification(Result, Blueprint);
+        McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reload system configured with Blueprint variables."), Result);
         return true;
     }
@@ -1417,7 +1458,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("ammoType"), AmmoType);
         Result->SetNumberField(TEXT("maxAmmo"), MaxAmmo);
@@ -1426,11 +1467,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetBoolField(TEXT("infiniteAmmo"), bInfiniteAmmo);
         
         TArray<TSharedPtr<FJsonValue>> VarsAdded;
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("MaxAmmo"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("CurrentTotalAmmo"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("AmmoPerShot"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("AmmoType"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bInfiniteAmmo"))));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("MaxAmmo")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("CurrentTotalAmmo")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("AmmoPerShot")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("AmmoType")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bInfiniteAmmo")));
         Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo system configured with Blueprint variables."), Result);
@@ -1508,20 +1549,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         
         TArray<TSharedPtr<FJsonValue>> SlotsJsonArray;
         for (const FString& Slot : SlotNames)
         {
-            SlotsJsonArray.Add(MakeShareable(new FJsonValueString(Slot)));
+            SlotsJsonArray.Add(MakeShared<FJsonValueString>(Slot));
         }
         Result->SetArrayField(TEXT("attachmentSlots"), SlotsJsonArray);
         
         TArray<TSharedPtr<FJsonValue>> ComponentsJsonArray;
         for (const FString& Comp : CreatedComponents)
         {
-            ComponentsJsonArray.Add(MakeShareable(new FJsonValueString(Comp)));
+            ComponentsJsonArray.Add(MakeShared<FJsonValueString>(Comp));
         }
         Result->SetArrayField(TEXT("componentsCreated"), ComponentsJsonArray);
         
@@ -1607,7 +1648,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("switchInTime"), SwitchInTime);
         Result->SetNumberField(TEXT("switchOutTime"), SwitchOutTime);
@@ -1615,12 +1656,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetBoolField(TEXT("unequipAnimationLoaded"), bUnequipAnimLoaded);
         
         TArray<TSharedPtr<FJsonValue>> VarsAdded;
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("SwitchInTime"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("SwitchOutTime"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsSwitching"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsEquipped"))));
-        if (bEquipAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("EquipAnimation"))));
-        if (bUnequipAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("UnequipAnimation"))));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("SwitchInTime")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("SwitchOutTime")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsSwitching")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsEquipped")));
+        if (bEquipAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("EquipAnimation")));
+        if (bUnequipAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("UnequipAnimation")));
         Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon switching configured with Blueprint variables."), Result);
@@ -1712,7 +1753,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("particlePath"), ParticlePath);
         Result->SetNumberField(TEXT("scale"), Scale);
@@ -1772,7 +1813,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("tracerPath"), TracerPath);
         Result->SetNumberField(TEXT("tracerSpeed"), TracerSpeed);
@@ -1831,7 +1872,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("particlePath"), ParticlePath);
         Result->SetStringField(TEXT("soundPath"), SoundPath);
@@ -1896,7 +1937,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("shellMeshPath"), ShellMeshPath);
         Result->SetNumberField(TEXT("ejectionForce"), EjectionForce);
@@ -1965,7 +2006,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("traceStartSocket"), TraceStartSocket);
         Result->SetStringField(TEXT("traceEndSocket"), TraceEndSocket);
@@ -2029,7 +2070,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("comboWindowTime"), ComboWindowTime);
         Result->SetNumberField(TEXT("maxComboCount"), MaxComboCount);
@@ -2087,7 +2128,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("hitPauseDuration"), HitPauseDuration);
         Result->SetNumberField(TEXT("timeDilation"), TimeDilation);
@@ -2157,7 +2198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitReactionMontage"), HitReactionMontage);
         Result->SetNumberField(TEXT("stunTime"), StunTime);
@@ -2246,7 +2287,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("parryWindowStart"), ParryWindowStart);
         Result->SetNumberField(TEXT("parryWindowEnd"), ParryWindowEnd);
@@ -2255,13 +2296,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         Result->SetBoolField(TEXT("parryAnimationLoaded"), bAnimLoaded);
         
         TArray<TSharedPtr<FJsonValue>> VarsAdded;
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryWindowStart"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryWindowEnd"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("BlockDamageReduction"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("BlockStaminaCost"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsBlocking"))));
-        VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("bIsInParryWindow"))));
-        if (bAnimLoaded) VarsAdded.Add(MakeShareable(new FJsonValueString(TEXT("ParryAnimation"))));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("ParryWindowStart")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("ParryWindowEnd")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("BlockDamageReduction")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("BlockStaminaCost")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsBlocking")));
+        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsInParryWindow")));
+        if (bAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("ParryAnimation")));
         Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Parry and block system configured."), Result);
@@ -2323,7 +2364,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("trailParticlePath"), TrailParticlePath);
         Result->SetStringField(TEXT("trailStartSocket"), TrailStartSocket);
@@ -2353,14 +2394,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> Info = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Info = McpHandlerUtils::CreateResultObject();
         Info->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
         
         // Check for components
-        bool HasWeaponMesh = false;
-        bool HasProjectileMovement = false;
-        bool HasCollision = false;
+        bool bHasWeaponMesh = false;
+        bool bHasProjectileMovement = false;
+        bool bHasCollision = false;
         TArray<TSharedPtr<FJsonValue>> ComponentList;
         
         if (Blueprint->SimpleConstructionScript)
@@ -2369,41 +2410,41 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             {
                 if (Node && Node->ComponentTemplate)
                 {
-                    ComponentList.Add(MakeShareable(new FJsonValueString(Node->GetVariableName().ToString())));
+                    ComponentList.Add(MakeShared<FJsonValueString>(Node->GetVariableName().ToString()));
                     
                     if (Node->ComponentTemplate->IsA<UStaticMeshComponent>() ||
                         Node->ComponentTemplate->IsA<USkeletalMeshComponent>())
                     {
-                        HasWeaponMesh = true;
+                        bHasWeaponMesh = true;
                     }
                     if (Node->ComponentTemplate->IsA<UProjectileMovementComponent>())
                     {
-                        HasProjectileMovement = true;
+                        bHasProjectileMovement = true;
                     }
                     if (Node->ComponentTemplate->IsA<USphereComponent>() ||
                         Node->ComponentTemplate->IsA<UCapsuleComponent>() ||
                         Node->ComponentTemplate->IsA<UBoxComponent>())
                     {
-                        HasCollision = true;
+                        bHasCollision = true;
                     }
                 }
             }
         }
 
-        Info->SetBoolField(TEXT("hasWeaponMesh"), HasWeaponMesh);
-        Info->SetBoolField(TEXT("hasProjectileMovement"), HasProjectileMovement);
-        Info->SetBoolField(TEXT("hasCollision"), HasCollision);
+        Info->SetBoolField(TEXT("hasWeaponMesh"), bHasWeaponMesh);
+        Info->SetBoolField(TEXT("hasProjectileMovement"), bHasProjectileMovement);
+        Info->SetBoolField(TEXT("hasCollision"), bHasCollision);
         Info->SetArrayField(TEXT("components"), ComponentList);
         
         // List Blueprint variables
         TArray<TSharedPtr<FJsonValue>> VariableList;
         for (const FBPVariableDescription& Var : Blueprint->NewVariables)
         {
-            VariableList.Add(MakeShareable(new FJsonValueString(Var.VarName.ToString())));
+            VariableList.Add(MakeShared<FJsonValueString>(Var.VarName.ToString()));
         }
         Info->SetArrayField(TEXT("variables"), VariableList);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetObjectField(TEXT("combatInfo"), Info);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat info retrieved."), Result);
@@ -2434,7 +2475,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
         return true;
@@ -2478,7 +2519,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         McpSafeCompileBlueprint(Blueprint);
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitboxType"), HitboxType);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit detection configured."), Result);
@@ -2501,18 +2542,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
             return true;
         }
 
-        TSharedPtr<FJsonObject> Info = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Info = McpHandlerUtils::CreateResultObject();
         Info->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
 
         TArray<TSharedPtr<FJsonValue>> VariableList;
         for (const FBPVariableDescription& Var : Blueprint->NewVariables)
         {
-            VariableList.Add(MakeShareable(new FJsonValueString(Var.VarName.ToString())));
+            VariableList.Add(MakeShared<FJsonValueString>(Var.VarName.ToString()));
         }
         Info->SetArrayField(TEXT("variables"), VariableList);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetObjectField(TEXT("combatInfo"), Info);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat stats retrieved."), Result);
         return true;
@@ -2566,7 +2607,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("duration"), Duration);
         Result->SetNumberField(TEXT("damagePerSecond"), DamagePerSecond);
@@ -2613,7 +2654,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("damageAmount"), DamageAmount);
         Result->SetStringField(TEXT("damageType"), DamageTypeName);
@@ -2662,7 +2703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("healAmount"), HealAmount);
         Result->SetNumberField(TEXT("maxHealth"), MaxHealth);
@@ -2719,7 +2760,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("shieldAmount"), ShieldAmount);
         Result->SetNumberField(TEXT("maxShield"), MaxShield);
@@ -2766,7 +2807,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
 
         McpSafeAssetSave(Blueprint);
 
-        TSharedPtr<FJsonObject> Result = MakeShareable(new FJsonObject());
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetNumberField(TEXT("armorValue"), ArmorValue);
         Result->SetNumberField(TEXT("damageReduction"), DamageReduction);

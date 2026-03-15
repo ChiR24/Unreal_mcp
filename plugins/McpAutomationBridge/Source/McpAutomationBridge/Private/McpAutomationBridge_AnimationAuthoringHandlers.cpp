@@ -1,13 +1,46 @@
-#include "Dom/JsonObject.h"
-// Copyright (c) 2025 MCP Automation Bridge Contributors
-// SPDX-License-Identifier: MIT
-//
+// =============================================================================
 // McpAutomationBridge_AnimationAuthoringHandlers.cpp
-// Phase 10: Complete Animation System Authoring
+// =============================================================================
+// Animation System Authoring Handlers for MCP Automation Bridge
 //
-// Implements animation sequence, montage, blend space, animation blueprint,
-// control rig, and IK retargeting authoring capabilities.
+// HANDLERS IMPLEMENTED:
+// ---------------------
+// Section 1: Animation Sequences
+//   - create_animation_sequence    : Create UAnimSequence asset
+//   - add_animation_curve          : Add curve to animation
+//   - set_animation_rate           : Set animation frame rate
+//
+// Section 2: Animation Montages
+//   - create_animation_montage     : Create UAnimMontage from sequence
+//   - add_montage_section          : Add section to montage
+//   - set_montage_blend_time       : Configure blend settings
+//
+// Section 3: Blend Spaces
+//   - create_blend_space           : Create UBlendSpace asset
+//   - create_blend_space_1d        : Create UBlendSpace1D asset
+//   - add_blend_space_sample       : Add sample to blend space
+//
+// Section 4: Animation Blueprints
+//   - create_animation_blueprint   : Create UAnimBlueprint
+//   - add_anim_graph_node          : Add node to anim graph
+//   - link_anim_state              : Connect state machine states
+//
+// Section 5: Control Rig (5.1+)
+//   - create_control_rig           : Create Control Rig blueprint
+//   - add_control_rig_input        : Add rig input
+//
+// VERSION COMPATIBILITY:
+// ----------------------
+// UE 5.0: BlendSpaceBase.h deprecated warning suppression
+// UE 5.1+: Full control rig support
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
 
+#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -396,7 +429,7 @@ static UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const
 // Main handler function that processes animation authoring requests
 static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
-    TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     
     FString SubAction = GetStringFieldAnimAuth(Params, TEXT("subAction"), TEXT(""));
     
@@ -460,7 +493,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' created"), *Name));
-        AddAssetVerification(Response, NewSequence);
+        McpHandlerUtils::AddVerification(Response, NewSequence);
         return Response;
     }
 
@@ -497,7 +530,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Sequence length updated"));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -560,7 +593,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone track '%s' added"), *BoneName));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -633,7 +666,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Bone key set at frame %d"), Frame));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -685,7 +718,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Curve key set at frame %d"), Frame));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -752,7 +785,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(AnimAsset, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Notify added"));
-        AddAssetVerification(Response, AnimAsset);
+        McpHandlerUtils::AddVerification(Response, AnimAsset);
         return Response;
     }
 
@@ -823,7 +856,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(AnimAsset, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Notify state added"));
-        AddAssetVerification(Response, AnimAsset);
+        McpHandlerUtils::AddVerification(Response, AnimAsset);
         return Response;
     }
 
@@ -863,7 +896,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Sync marker '%s' added"), *MarkerName));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -901,7 +934,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Root motion settings updated"));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -962,7 +995,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Sequence, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Additive settings updated"));
-        AddAssetVerification(Response, Sequence);
+        McpHandlerUtils::AddVerification(Response, Sequence);
         return Response;
     }
 
@@ -1018,7 +1051,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Montage '%s' created"), *Name));
-        AddAssetVerification(Response, NewMontage);
+        McpHandlerUtils::AddVerification(Response, NewMontage);
         return Response;
     }
 
@@ -1046,7 +1079,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Section '%s' added at index %d"), *SectionName, SectionIndex));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1104,7 +1137,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Animation added to montage slot"));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1142,7 +1175,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Section timing updated"));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1200,7 +1233,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Montage notify added"));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1236,7 +1269,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend in settings updated"));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1272,7 +1305,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Blend out settings updated"));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1305,7 +1338,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(Montage, bSave);
 
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Linked '%s' to '%s'"), *FromSection, *ToSection));
-        AddAssetVerification(Response, Montage);
+        McpHandlerUtils::AddVerification(Response, Montage);
         return Response;
     }
 
@@ -1379,7 +1412,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' created"), *Name));
-        AddAssetVerification(Response, NewBlendSpace);
+        McpHandlerUtils::AddVerification(Response, NewBlendSpace);
 #else
         ANIM_ERROR_RESPONSE(TEXT("Blend space factory not available"), TEXT("NOT_SUPPORTED"));
 #endif
@@ -2727,7 +2760,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
         }
         
-        TSharedPtr<FJsonObject> AnimInfo = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> AnimInfo = McpHandlerUtils::CreateResultObject();
         
         if (UAnimSequence* Sequence = Cast<UAnimSequence>(Asset))
         {

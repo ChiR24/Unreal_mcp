@@ -674,28 +674,10 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   return FString();
 }
 
-/**
- * Safe asset saving helper - marks package dirty and notifies asset registry.
- * DO NOT use UEditorAssetLibrary::SaveAsset() - it triggers modal dialogs that
- * crash D3D12RHI during automation. Assets will be saved when editor is closed
- * or user explicitly saves.
- *
- * @param Asset The UObject asset to mark dirty.
- * @returns true if the asset was marked dirty successfully, false otherwise.
- */
-static inline bool McpSafeAssetSave(UObject* Asset)
-{
-    if (!Asset)
-        return false;
-    
-    // UE 5.7+ Fix: Do not immediately save newly created assets to disk.
-    // Saving immediately causes bulkdata corruption and crashes.
-    // Instead, mark the package dirty and notify the asset registry.
-    Asset->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Asset);
-    
-    return true;
-}
+// McpSafeAssetSave is defined in McpSafeOperations.h namespace
+// Provide using-declaration for backward compatibility with code that calls McpSafeAssetSave() unqualified
+#include "McpSafeOperations.h"
+using McpSafeOperations::McpSafeAssetSave;
 
 // McpSafeLevelSave uses FlushRenderingCommands for thread-safe level saving
 // UE 5.0+ has FlushRenderingCommands in RenderingThread.h

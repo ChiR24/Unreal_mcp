@@ -1,9 +1,57 @@
+// =============================================================================
+// McpAutomationBridge_AnimationHandlers.cpp
+// =============================================================================
+// Animation, skeleton, blend space, and control rig handlers.
+//
+// HANDLERS:
+//   Animation Assets:
+//     - create_anim_blueprint, create_anim_sequence, create_anim_montage
+//     - create_blend_space, create_blend_space_1d, create_aim_offset
+//     - get_anim_blueprint_info, get_anim_sequence_info
+//     - get_skeleton_info, get_blend_space_info
+//
+//   Animation Editing:
+//     - add_anim_curve, remove_anim_curve, get_anim_curves
+//     - set_anim_curve_keys, add_anim_notify
+//     - modify_anim_sequence, retarget_anim_sequence
+//
+//   Skeleton Operations:
+//     - get_skeleton_bones, add_skeleton_socket
+//     - set_bone_transform, get_bone_transform
+//
+//   Physics Assets:
+//     - create_physics_asset, get_physics_asset_info
+//     - modify_physics_body, set_physics_constraint
+//
+//   Control Rig:
+//     - get_control_rig_info, modify_control_rig
+//
+// REFACTORING NOTES:
+//   - Uses McpVersionCompatibility.h for UE 5.0-5.7 API abstraction
+//   - Uses McpHandlerUtils for standardized JSON parsing/responses
+//   - BlendSpaceBase.h deprecated in UE 5.3+, uses BlendSpace.h
+//   - IAnimationDataController requires specific header paths by UE version
+//
+// VERSION COMPATIBILITY:
+//   - BlendSpaceFactory: UE 5.0+ (conditional include)
+//   - AnimationBlueprintLibrary: Header path varies by UE version
+//   - AssetEditorSubsystem: Optional, header path varies
+//   - AnimationDataController: UE 5.1+ with specific paths
+//
+// Copyright (c) 2024 MCP Automation Bridge Contributors
+// =============================================================================
+
+#include "McpVersionCompatibility.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
-
 #if WITH_EDITOR
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Animation Core
+// -----------------------------------------------------------------------------
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/AnimMontage.h"
@@ -13,6 +61,9 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Animation Blueprint Library (path varies by UE version)
+// -----------------------------------------------------------------------------
 #if __has_include("Animation/AnimationBlueprintLibrary.h")
 #include "Animation/AnimationBlueprintLibrary.h"
 #elif __has_include("AnimationBlueprintLibrary.h")
@@ -21,10 +72,15 @@
 #if __has_include("Animation/AnimBlueprintLibrary.h")
 #include "Animation/AnimBlueprintLibrary.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Blend Spaces
+// -----------------------------------------------------------------------------
 #include "Animation/BlendSpace.h"
 #include "Animation/BlendSpace1D.h"
 #include "Animation/AimOffsetBlendSpace.h"
 #include "Animation/AimOffsetBlendSpace1D.h"
+
 // BlendSpaceBase.h is deprecated in favor of BlendSpace.h, but we need UBlendSpaceBase class
 // Suppress the deprecation warning for this include
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -38,6 +94,10 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #define MCP_HAS_BLENDSPACE_BASE 0
 #endif
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Animation Data Controller (UE 5.1+)
+// -----------------------------------------------------------------------------
 #if __has_include("AnimData/IAnimationDataController.h")
 #include "AnimData/IAnimationDataController.h"
 #endif
@@ -47,36 +107,64 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #if __has_include("Animation/AnimData/CurveIdentifier.h")
 #include "Animation/AnimData/CurveIdentifier.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Editor Framework
+// -----------------------------------------------------------------------------
 #include "Editor.h"
 #include "Editor/EditorEngine.h"
 #include "EngineUtils.h"
 #include "RenderingThread.h"
 
-#if __has_include("Factories/BlendSpaceFactoryNew.h") &&                       \
-                  __has_include("Factories/BlendSpaceFactory1D.h")
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Blend Space Factories
+// -----------------------------------------------------------------------------
+#if __has_include("Factories/BlendSpaceFactoryNew.h") && __has_include("Factories/BlendSpaceFactory1D.h")
 #include "Factories/BlendSpaceFactory1D.h"
 #include "Factories/BlendSpaceFactoryNew.h"
-
 #define MCP_HAS_BLENDSPACE_FACTORY 1
 #else
 #define MCP_HAS_BLENDSPACE_FACTORY 0
 #endif
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Control Rig
+// -----------------------------------------------------------------------------
 #include "ControlRig.h"
 // ControlRig headers removed for dynamic loading compatibility
 // #include "ControlRigBlueprint.h" etc.
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Asset Management
+// -----------------------------------------------------------------------------
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Animation Factories
+// -----------------------------------------------------------------------------
 #include "Factories/AnimBlueprintFactory.h"
 #include "Factories/AnimMontageFactory.h"
 #include "Factories/AnimSequenceFactory.h"
 #include "Factories/PhysicsAssetFactory.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Blueprint Utilities
+// -----------------------------------------------------------------------------
 #include "Kismet2/BlueprintEditorUtils.h"
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Misc Utilities
+// -----------------------------------------------------------------------------
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 
+// -----------------------------------------------------------------------------
+// Editor-only Includes: Editor Subsystems (path varies by UE version)
+// -----------------------------------------------------------------------------
 #if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
 #elif __has_include("EditorActorSubsystem.h")
@@ -91,6 +179,10 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #else
 #define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 0
 #endif
+
+// -----------------------------------------------------------------------------
+// Editor-only Includes: UObject Reflection
+// -----------------------------------------------------------------------------
 #include "UObject/Script.h"
 #include "UObject/UnrealType.h"
 
@@ -331,7 +423,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
          TEXT("HandleAnimationPhysicsAction: subaction='%s'"), *LowerSub);
 
 #if WITH_EDITOR
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), LowerSub);
   bool bSuccess = false;
   FString Message;
@@ -495,7 +587,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           Resp->SetStringField(TEXT("blueprintPath"), NewAsset->GetPathName());
           Resp->SetStringField(TEXT("skeletonPath"),
                                TargetSkeleton->GetPathName());
-          AddAssetVerification(Resp, NewAsset);
+          McpHandlerUtils::AddVerification(Resp, NewAsset);
         } else {
           Message = TEXT("Failed to create Animation Blueprint asset");
           ErrorCode = TEXT("ASSET_CREATION_FAILED");
@@ -597,7 +689,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                                      BlendSpace->GetPathName());
                 Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
                 Resp->SetBoolField(TEXT("twoDimensional"), bTwoDimensional);
-                AddAssetVerification(Resp, BlendSpace);
+                McpHandlerUtils::AddVerification(Resp, BlendSpace);
               } else {
                 Message =
                     TEXT("Created asset is not a BlendSpaceBase instance");
@@ -616,7 +708,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               Resp->SetStringField(TEXT("warning"),
                                    TEXT("BlendSpaceBase headers unavailable; "
                                         "axis configuration skipped."));
-              AddAssetVerification(Resp, CreatedBlendAsset);
+              McpHandlerUtils::AddVerification(Resp, CreatedBlendAsset);
 #endif // MCP_HAS_BLENDSPACE_BASE
             } else {
               Message = FactoryError.IsEmpty()
@@ -793,7 +885,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Resp->SetStringField(TEXT("ikPath"), ControlRigPath);
             Resp->SetStringField(TEXT("controlRigPath"), ControlRigPath);
             Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
-            AddAssetVerification(Resp, ControlRigBlueprint);
+            McpHandlerUtils::AddVerification(Resp, ControlRigBlueprint);
           }
         }
       }
@@ -1186,7 +1278,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           }
           UPhysicsAsset* ExistingPhysicsAsset = LoadObject<UPhysicsAsset>(nullptr, *PhysicsAssetObjectPath);
           if (ExistingPhysicsAsset) {
-            AddAssetVerification(Resp, ExistingPhysicsAsset);
+            McpHandlerUtils::AddVerification(Resp, ExistingPhysicsAsset);
           }
         } else {
           UPhysicsAssetFactory *PhysicsFactory =
@@ -1231,7 +1323,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
                 Resp->SetStringField(TEXT("skeletonPath"),
                                      TargetSkeleton->GetPathName());
               }
-              AddAssetVerification(Resp, PhysicsAsset);
+              McpHandlerUtils::AddVerification(Resp, PhysicsAsset);
 
               bSuccess = true;
               Message = TEXT("Physics simulation setup completed");
@@ -1341,7 +1433,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
             Resp->SetBoolField(TEXT("existingAsset"), true);
             UObject* ExistingAsset = LoadObject<UObject>(nullptr, *ObjectPath);
             if (ExistingAsset) {
-              AddAssetVerification(Resp, ExistingAsset);
+              McpHandlerUtils::AddVerification(Resp, ExistingAsset);
             }
           } else {
             FAssetToolsModule &AssetToolsModule =
@@ -1358,7 +1450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
               Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
               Resp->SetStringField(TEXT("assetType"), AssetTypeString);
               Resp->SetBoolField(TEXT("existingAsset"), false);
-              AddAssetVerification(Resp, NewAsset);
+              McpHandlerUtils::AddVerification(Resp, NewAsset);
               bSuccess = true;
               Message = FString::Printf(TEXT("Animation %s created"),
                                         *AssetTypeString);
@@ -1522,7 +1614,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         if (RetargetedAssets.Num() > 0) {
           UAnimSequence* FirstRetargeted = LoadObject<UAnimSequence>(nullptr, *RetargetedAssets[0]);
           if (FirstRetargeted) {
-            AddAssetVerification(Resp, FirstRetargeted);
+            McpHandlerUtils::AddVerification(Resp, FirstRetargeted);
           }
         }
       }
@@ -3694,7 +3786,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
   }
 
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), AnimBlueprint->GetPathName());
   Resp->SetStringField(TEXT("blueprintName"), BlueprintName);
@@ -3772,7 +3864,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   if (MontagePath.IsEmpty()) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("error"), TEXT("montagePath required"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("montagePath required"), Resp,
@@ -3830,7 +3922,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   if (!TargetActor) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
         TEXT("error"),
         FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -3854,7 +3946,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   if (!UEditorAssetLibrary::DoesAssetExist(MontagePath)) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
         TEXT("error"),
         FString::Printf(TEXT("Montage asset not found: %s"), *MontagePath));
@@ -3866,7 +3958,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
 
   UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
   if (!Montage) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
         TEXT("error"),
         FString::Printf(TEXT("Failed to load montage: %s"), *MontagePath));
@@ -3889,7 +3981,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     SkelMeshComp->PlayAnimation(Montage, false);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("montagePath"), MontagePath);
@@ -4014,7 +4106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
   }
 
   if (!TargetActor) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
         TEXT("error"),
         FString::Printf(TEXT("Actor not found: %s"), *ActorName));
@@ -4044,7 +4136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     SkelMeshComp->SetUpdateAnimationInEditor(BlendWeight < 1.0);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetNumberField(TEXT("blendWeight"), BlendWeight);
@@ -4132,7 +4224,7 @@ bool UMcpAutomationBridgeSubsystem::HandleActivateRagdoll(
   }
 
   if (!TargetActor) {
-    TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("error"),
                          FString::Printf(TEXT("Actor not found: %s"), *ActorName));
     Resp->SetStringField(TEXT("actorName"), ActorName);
@@ -4166,7 +4258,7 @@ bool UMcpAutomationBridgeSubsystem::HandleActivateRagdoll(
     SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
   }
 
-  TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetBoolField(TEXT("activate"), bActivate);

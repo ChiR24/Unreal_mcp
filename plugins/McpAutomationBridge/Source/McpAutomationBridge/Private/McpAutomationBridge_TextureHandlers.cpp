@@ -1,41 +1,131 @@
-// Copyright (c) 2025 MCP Automation Bridge Contributors
-// SPDX-License-Identifier: MIT
-//
+// =============================================================================
 // McpAutomationBridge_TextureHandlers.cpp
+// =============================================================================
 // Phase 9: Texture Generation & Processing
 //
 // Implements procedural texture creation, processing, and settings management.
+//
+// HANDLERS IMPLEMENTED (28 subActions):
+// ================================
+//
+// PROCEDURAL GENERATION:
+//   - create_noise_texture     : Perlin/FBM noise with seamless tiling
+//   - create_gradient_texture  : Linear/Radial/Angular gradients
+//   - create_pattern_texture   : Checker/Grid/Brick/Stripes/Dots patterns
+//   - create_normal_from_height: Sobel/Finite-difference normal map generation
+//   - create_ao_from_mesh      : Ambient occlusion from mesh UV density
+//
+// TEXTURE SETTINGS:
+//   - set_compression_settings : Texture compression format (TC_Default, TC_Normalmap, etc.)
+//   - set_texture_group        : LOD group assignment (World, Character, UI, etc.)
+//   - set_lod_bias             : Mip LOD bias control
+//   - configure_virtual_texture: Virtual texture streaming toggle
+//   - set_streaming_priority   : NeverStream flag control
+//   - get_texture_info         : Query texture dimensions, format, compression
+//   - set_texture_filter       : Filter mode (Default/Nearest/Bilinear/Trilinear)
+//   - set_texture_wrap         : Address mode (Wrap/Clamp/Mirror)
+//
+// TEXTURE PROCESSING:
+//   - resize_texture           : Bilinear resize with source sampling
+//   - invert                   : Channel inversion (R/G/B/A or All)
+//   - desaturate               : Rec.709 luminance grayscale conversion
+//   - adjust_levels            : Input/Output black/white point with gamma
+//   - blur                     : Box blur with configurable radius
+//   - sharpen                  : Unsharp mask convolution
+//   - adjust_curves            : RGB curve adjustment via control points
+//
+// CHANNEL OPERATIONS:
+//   - channel_pack             : Combine separate textures into RGBA channels
+//   - channel_extract          : Extract single channel to grayscale texture
+//   - combine_textures         : Blend two textures (Normal/Multiply/Screen/Overlay/Add)
+//
+// TEXTURE CREATION:
+//   - create_render_target     : UTextureRenderTarget2D creation
+//   - create_cube_texture      : Placeholder for cubemap (requires HDR import)
+//   - create_volume_texture    : Placeholder for 3D volume texture
+//   - create_texture_array     : Placeholder for texture array
+//   - import_texture           : File/asset import wrapper
+//
+// VERSION COMPATIBILITY:
+//   - UE 5.0-5.7: All handlers supported
+//   - Uses McpSafeAssetSave() for UE 5.7+ safe asset saving
+//   - Source.LockMip/UnlockMip for proper streaming texture handling
+//
+// Copyright (c) 2025 MCP Automation Bridge Contributors
+// SPDX-License-Identifier: MIT
+// =============================================================================
 
+// Include version compatibility FIRST
+#include "McpVersionCompatibility.h"
+
+// Core Unreal Engine
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpHandlerUtils.h"
 #include "Dom/JsonObject.h"
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
+#include "Misc/PackageName.h"
+#include "HAL/PlatformFileManager.h"
+
+// Editor/Asset
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Factories/Texture2DFactoryNew.h"
-// UObject/SavePackage.h is not needed - using McpSafeAssetSave() from helpers instead
-#include "Misc/PackageName.h"
-#include "HAL/PlatformFileManager.h"
 #include "EditorAssetLibrary.h"
-// TextureCompressorModule removed in UE 5.7
+
+// Rendering
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "StaticMeshResources.h"
 
-// Helper macro for error responses
+// =============================================================================
+// Local Helper Macros
+// =============================================================================
+
+// Error response macro - creates standardized error JSON
 #define TEXTURE_ERROR_RESPONSE(Msg) \
     Response->SetBoolField(TEXT("success"), false); \
     Response->SetStringField(TEXT("error"), Msg); \
     return Response;
 
-// Use consolidated JSON helpers from McpAutomationBridgeHelpers.h
-// Aliases for backward compatibility with existing code in this file
-#define GetNumberFieldTextAuth GetJsonNumberField
-#define GetBoolFieldTextAuth GetJsonBoolField
-#define GetStringFieldTextAuth GetJsonStringField
+// JSON field extraction aliases - delegate to McpHandlerUtils
+namespace TextureHandlerHelpers
+{
+    // Use McpHandlerUtils functions with defaults
+    inline FString GetStringField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, const FString& Default = TEXT(""))
+    {
+        return McpHandlerUtils::GetOptionalString(Obj, FieldName, Default);
+    }
+    
+    inline double GetNumberField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, double Default = 0.0)
+    {
+        double Value = Default;
+        if (Obj.IsValid())
+        {
+            Obj->TryGetNumberField(FieldName, Value);
+        }
+        return Value;
+    }
+    
+    inline bool GetBoolField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, bool Default = false)
+    {
+        return McpHandlerUtils::GetOptionalBool(Obj, FieldName, Default);
+    }
+}
 
-// Helper to normalize asset path
+// Legacy aliases for backward compatibility with existing code
+#define GetStringFieldTextAuth TextureHandlerHelpers::GetStringField
+#define GetNumberFieldTextAuth TextureHandlerHelpers::GetNumberField
+#define GetBoolFieldTextAuth TextureHandlerHelpers::GetBoolField
+
+// =============================================================================
+// Local Helper Functions
+// =============================================================================
+
+/**
+ * Normalize a texture path by converting /Content to /Game and fixing slashes.
+ */
 static FString NormalizeTexturePath(const FString& Path)
 {
     FString Normalized = Path;
@@ -52,10 +142,12 @@ static FString NormalizeTexturePath(const FString& Path)
 }
 
 // NOTE: Use McpSafeAssetSave(Asset) from McpAutomationBridgeHelpers.h for saving textures.
-// This comment replaces a duplicate SaveTextureAsset helper that was removed.
 // McpSafeAssetSave marks the package dirty and notifies the asset registry safely for UE 5.7+.
 
-// Helper to create a texture with given dimensions
+// =============================================================================
+// Texture Creation Helper
+// =============================================================================
+
 static UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& TextureName, int32 Width, int32 Height, bool bHDR)
 {
     FString FullPath = PackagePath / TextureName;
@@ -88,13 +180,16 @@ static UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString&
     NewTexture->GetPlatformData()->SizeY = Height;
     NewTexture->GetPlatformData()->PixelFormat = Format;
     
-    // Add mip 0
+    // Add mip 0 - TIndirectArray requires allocating with new and adding pointer
     int32 NumBlocksX = Width / GPixelFormats[Format].BlockSizeX;
     int32 NumBlocksY = Height / GPixelFormats[Format].BlockSizeY;
+    // UE 5.0-5.3: No parameterized constructor, use default + manual assignment
+    // UE 5.4+: Has FTexture2DMipMap(uint32, uint32, uint32) constructor
     FTexture2DMipMap* Mip = new FTexture2DMipMap();
-    NewTexture->GetPlatformData()->Mips.Add(Mip);
     Mip->SizeX = Width;
     Mip->SizeY = Height;
+    Mip->SizeZ = 0;
+    NewTexture->GetPlatformData()->Mips.Add(Mip);
     
     // Allocate and initialize pixel data
     int32 BytesPerPixel = bHDR ? 16 : 4; // FloatRGBA = 16, BGRA8 = 4
@@ -174,7 +269,7 @@ static float FBMNoise(float X, float Y, int32 Octaves, float Persistence, float 
 
 TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction(const TSharedPtr<FJsonObject>& Params)
 {
-    TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     
     FString SubAction = GetStringFieldTextAuth(Params, TEXT("subAction"), TEXT(""));
     
@@ -296,7 +391,7 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Noise texture '%s' created"), *Name));
-        AddAssetVerification(Response, NewTexture);
+        McpHandlerUtils::AddVerification(Response, NewTexture);
         return Response;
     }
     
@@ -449,7 +544,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Gradient texture '%s' created"), *Name));
-        AddAssetVerification(Response, NewTexture);
+        McpHandlerUtils::AddVerification(Response, NewTexture);
         return Response;
     }
     
@@ -618,7 +713,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Pattern texture '%s' created"), *Name));
-        AddAssetVerification(Response, NewTexture);
+        McpHandlerUtils::AddVerification(Response, NewTexture);
         return Response;
     }
     
@@ -843,7 +938,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), TEXT("Normal map created from height map"));
-        AddAssetVerification(Response, NormalMap);
+        McpHandlerUtils::AddVerification(Response, NormalMap);
         return Response;
     }
     
@@ -915,7 +1010,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Compression set to %s"), *CompressionSettingsStr));
-        AddAssetVerification(Response, Texture);
+        McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }
     
@@ -982,7 +1077,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture group set to %s"), *TextureGroup));
-        AddAssetVerification(Response, Texture);
+        McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }
     
@@ -1035,7 +1130,7 @@ Response->SetBoolField(TEXT("success"), true);
         
 Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("LOD bias set to %d"), LODBias));
-        AddAssetVerification(Response, Texture);
+        McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }
     
@@ -1178,7 +1273,7 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
-        TSharedPtr<FJsonObject> TextureInfo = MakeShared<FJsonObject>();
+        TSharedPtr<FJsonObject> TextureInfo = McpHandlerUtils::CreateResultObject();
         TextureInfo->SetNumberField(TEXT("width"), Texture->GetSizeX());
         TextureInfo->SetNumberField(TEXT("height"), Texture->GetSizeY());
         TextureInfo->SetStringField(TEXT("format"), GPixelFormats[Texture->GetPixelFormat()].Name);
