@@ -425,8 +425,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
 
         // Use McpHandlerUtils helper for transform JSON
         const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
-        BoneObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(RefPose.GetLocation()));
-        const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
         TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
         TransformObj->SetNumberField(TEXT("x"), RefPose.GetLocation().X);
         TransformObj->SetNumberField(TEXT("y"), RefPose.GetLocation().Y);

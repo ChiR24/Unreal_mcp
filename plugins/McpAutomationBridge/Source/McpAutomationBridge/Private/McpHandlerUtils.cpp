@@ -6,6 +6,7 @@
 
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpSafeOperations.h"
 
 // Define log category declared in McpSafeOperations.h
 DEFINE_LOG_CATEGORY(LogMcpSafeOperations);
@@ -23,6 +24,14 @@ DEFINE_LOG_CATEGORY(LogMcpSafeOperations);
 #else
 #include "Editor/EditorAssetLibrary.h"
 #endif
+
+// K2Node includes for blueprint graph operations
+#include "K2Node_CustomEvent.h"
+#include "K2Node_Event.h"
+#include "K2Node_VariableGet.h"
+#include "K2Node_FunctionEntry.h"
+#include "K2Node_FunctionResult.h"
+#include "EdGraphSchema_K2.h"
 #endif
 
 // =============================================================================

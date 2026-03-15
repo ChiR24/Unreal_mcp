@@ -130,6 +130,7 @@ static FString GetJsonStringFieldNav(const TSharedPtr<FJsonObject>& Payload, con
     if (Payload->TryGetStringField(FieldName, Value))
     {
         return Value;
+    }
     return Default;
 }
 

@@ -180,20 +180,24 @@ static UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString&
     NewTexture->GetPlatformData()->SizeY = Height;
     NewTexture->GetPlatformData()->PixelFormat = Format;
     
-    // Add mip 0
+    // Add mip 0 - TIndirectArray requires allocating with new and adding pointer
     int32 NumBlocksX = Width / GPixelFormats[Format].BlockSizeX;
     int32 NumBlocksY = Height / GPixelFormats[Format].BlockSizeY;
-    FTexture2DMipMap& Mip = NewTexture->GetPlatformData()->Mips.AddDefaulted_GetRef();
-    Mip.SizeX = Width;
-    Mip.SizeY = Height;
+    // UE 5.0-5.3: No parameterized constructor, use default + manual assignment
+    // UE 5.4+: Has FTexture2DMipMap(uint32, uint32, uint32) constructor
+    FTexture2DMipMap* Mip = new FTexture2DMipMap();
+    Mip->SizeX = Width;
+    Mip->SizeY = Height;
+    Mip->SizeZ = 0;
+    NewTexture->GetPlatformData()->Mips.Add(Mip);
     
     // Allocate and initialize pixel data
     int32 BytesPerPixel = bHDR ? 16 : 4; // FloatRGBA = 16, BGRA8 = 4
     int32 DataSize = Width * Height * BytesPerPixel;
-    Mip.BulkData.Lock(LOCK_READ_WRITE);
-    void* TextureData = Mip.BulkData.Realloc(DataSize);
+    Mip->BulkData.Lock(LOCK_READ_WRITE);
+    void* TextureData = Mip->BulkData.Realloc(DataSize);
     FMemory::Memzero(TextureData, DataSize);
-    Mip.BulkData.Unlock();
+    Mip->BulkData.Unlock();
     
     NewTexture->Source.Init(Width, Height, 1, 1, bHDR ? TSF_RGBA16F : TSF_BGRA8);
     

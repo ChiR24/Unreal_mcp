@@ -372,7 +372,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewCue->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundCue '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
+        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundCue '%s' created"), *Name));
         McpHandlerUtils::AddVerification(Response, NewCue);
         return Response;
     }
@@ -474,7 +474,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(Cue, bSave);
         
         Response->SetStringField(TEXT("nodeId"), NewNode->GetName());
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("Node '%s' added to SoundCue"), *NodeType)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Cue);
         return Response;
     }
@@ -528,7 +527,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         Cue->LinkGraphNodesFromSoundNodes();
         SaveAudioAsset(Cue, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Nodes connected")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Cue);
         return Response;
     }
@@ -560,7 +558,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Cue, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Attenuation settings updated")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Cue);
         return Response;
     }
@@ -594,7 +591,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Cue, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Concurrency settings updated")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Cue);
         return Response;
     }
@@ -1173,7 +1169,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewClass->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundClass '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewClass);
         return Response;
     }
@@ -1213,7 +1208,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(SoundClass, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Sound class properties updated")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, SoundClass);
         return Response;
     }
@@ -1245,7 +1239,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(SoundClass, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Sound class parent updated")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, SoundClass);
         return Response;
     }
@@ -1283,7 +1276,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewMix->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundMix '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewMix);
         return Response;
     }
@@ -1323,7 +1315,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Mix, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Mix modifier added")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Mix);
         return Response;
     }
@@ -1484,7 +1475,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         EQInfo->SetNumberField(TEXT("gain3"), Mix->EQSettings.Gain3);
         Response->SetObjectField(TEXT("eqSettings"), EQInfo);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Mix EQ configured")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Mix);
         return Response;
     }
@@ -1534,7 +1524,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewAtten->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundAttenuation '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewAtten);
         return Response;
     }
@@ -1580,7 +1569,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Atten, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Distance attenuation configured")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Atten);
         return Response;
     }
@@ -1614,7 +1602,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Atten, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Spatialization configured")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Atten);
         return Response;
     }
@@ -1648,7 +1635,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Atten, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Occlusion configured")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Atten);
         return Response;
     }
@@ -1686,7 +1672,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         SaveAudioAsset(Atten, bSave);
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Reverb send configured")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Atten);
         return Response;
     }
@@ -1753,7 +1738,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewVoice->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("DialogueVoice '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewVoice);
         return Response;
 #else
@@ -1798,7 +1782,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewWave->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("DialogueWave '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewWave);
         return Response;
 #else
@@ -1900,7 +1883,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(Wave, bSave);
         
         Response->SetNumberField(TEXT("contextCount"), Wave->ContextMappings.Num());
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Dialogue context mapping added")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, Wave);
         return Response;
 #else
@@ -1967,7 +1949,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         FString FullPath = NewEffect->GetPathName();
         Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("ReverbEffect '%s' created"), *Name)); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         McpHandlerUtils::AddVerification(Response, NewEffect);
         return Response;
 #else
@@ -2214,7 +2195,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             Response->SetStringField(TEXT("type"), TEXT("Unknown"));
         }
         
-        Response = McpHandlerUtils::BuildSuccessResponse(TEXT("Audio info retrieved")); McpHandlerUtils::AddVerification(Response, NewAsset); return Response;
         return Response;
     }
     

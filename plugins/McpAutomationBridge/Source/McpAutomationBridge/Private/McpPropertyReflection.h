@@ -256,6 +256,39 @@ namespace McpPropertyReflection
     }
 
     /**
+     * Convert a JSON object to a Vector.
+     * @param JsonObject The JSON object {x, y, z}
+     * @param OutVector The output vector
+     * @return true if conversion succeeded
+     */
+    inline bool JsonToVector(const TSharedPtr<FJsonObject>& JsonObject, FVector& OutVector)
+    {
+        if (!JsonObject.IsValid())
+        {
+            return false;
+        }
+        
+        double X = 0.0, Y = 0.0, Z = 0.0;
+        JsonObject->TryGetNumberField(TEXT("x"), X);
+        JsonObject->TryGetNumberField(TEXT("y"), Y);
+        JsonObject->TryGetNumberField(TEXT("z"), Z);
+        OutVector = FVector(X, Y, Z);
+        return true;
+    }
+
+    /**
+     * Convert a Vector to a JSON object {x, y, z}.
+     */
+    inline TSharedPtr<FJsonObject> VectorToJson(const FVector& Vector)
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+        Obj->SetNumberField(TEXT("x"), Vector.X);
+        Obj->SetNumberField(TEXT("y"), Vector.Y);
+        Obj->SetNumberField(TEXT("z"), Vector.Z);
+        return Obj;
+    }
+
+    /**
      * Convert a Rotator to a JSON array [pitch, yaw, roll].
      */
     inline TSharedPtr<FJsonValue> RotatorToJsonValue(const FRotator& Rotator)
@@ -281,6 +314,39 @@ namespace McpPropertyReflection
         OutRotator.Yaw = JsonArray[1]->AsNumber();
         OutRotator.Roll = JsonArray[2]->AsNumber();
         return true;
+    }
+
+    /**
+     * Convert a JSON object to a Rotator.
+     * @param JsonObject The JSON object {pitch, yaw, roll}
+     * @param OutRotator The output rotator
+     * @return true if conversion succeeded
+     */
+    inline bool JsonToRotator(const TSharedPtr<FJsonObject>& JsonObject, FRotator& OutRotator)
+    {
+        if (!JsonObject.IsValid())
+        {
+            return false;
+        }
+        
+        double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
+        JsonObject->TryGetNumberField(TEXT("pitch"), Pitch);
+        JsonObject->TryGetNumberField(TEXT("yaw"), Yaw);
+        JsonObject->TryGetNumberField(TEXT("roll"), Roll);
+        OutRotator = FRotator(Pitch, Yaw, Roll);
+        return true;
+    }
+
+    /**
+     * Convert a Rotator to a JSON object {pitch, yaw, roll}.
+     */
+    inline TSharedPtr<FJsonObject> RotatorToJson(const FRotator& Rotator)
+    {
+        TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+        Obj->SetNumberField(TEXT("pitch"), Rotator.Pitch);
+        Obj->SetNumberField(TEXT("yaw"), Rotator.Yaw);
+        Obj->SetNumberField(TEXT("roll"), Rotator.Roll);
+        return Obj;
     }
 
     /**
@@ -313,10 +379,10 @@ namespace McpPropertyReflection
         Obj->TryGetNumberField(TEXT("a"), A);
         
         OutColor = FColor(
-            FMath::Clamp(static_cast<uint8>(R), 0, 255),
-            FMath::Clamp(static_cast<uint8>(G), 0, 255),
-            FMath::Clamp(static_cast<uint8>(B), 0, 255),
-            FMath::Clamp(static_cast<uint8>(A), 0, 255)
+            static_cast<uint8>(FMath::Clamp(static_cast<int>(R), 0, 255)),
+            static_cast<uint8>(FMath::Clamp(static_cast<int>(G), 0, 255)),
+            static_cast<uint8>(FMath::Clamp(static_cast<int>(B), 0, 255)),
+            static_cast<uint8>(FMath::Clamp(static_cast<int>(A), 0, 255))
         );
         return true;
     }

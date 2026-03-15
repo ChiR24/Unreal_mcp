@@ -86,7 +86,7 @@
 #include "WorldPartition/WorldPartition.h"
 
 // Asset Registry for procedural foliage
-#include "AssetRegistryModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 
 #endif // WITH_EDITOR
 

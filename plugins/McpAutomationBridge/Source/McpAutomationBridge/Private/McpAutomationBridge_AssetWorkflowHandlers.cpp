@@ -94,6 +94,7 @@
 #include "AssetViewUtils.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/StaticMesh.h"
+#include "EngineUtils.h"  // TActorIterator
 #include "Factories/MaterialFactoryNew.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "FileHelpers.h"

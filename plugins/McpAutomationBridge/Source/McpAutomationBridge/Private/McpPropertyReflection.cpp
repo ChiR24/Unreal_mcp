@@ -311,7 +311,7 @@ TSharedPtr<FJsonObject> ExportObjectToJson(UObject* Object, bool bIncludeTransie
             continue;
         }
 
-        TSharedPtr<FJsonValue> Value = ExportPropertyToJsonValue(Object, Property);
+        TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(Object, Property);
         if (Value.IsValid())
         {
             Result->SetField(Property->GetName(), Value);
@@ -339,7 +339,7 @@ TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* Object, const TArray<FNa
             continue;
         }
 
-        TSharedPtr<FJsonValue> Value = ExportPropertyToJsonValue(Object, Property);
+        TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(Object, Property);
         if (Value.IsValid())
         {
             Result->SetField(Property->GetName(), Value);
@@ -376,7 +376,7 @@ int32 ApplyJsonValuesToObject(UObject* Object, const TMap<FName, TSharedPtr<FJso
         }
 
         FString Error;
-        if (ApplyJsonValueToProperty(Object, Property, Pair.Value, Error))
+        if (McpPropertyReflection::ApplyJsonValueToProperty(Object, Property, Pair.Value, Error))
         {
             SuccessCount++;
         }
@@ -498,7 +498,14 @@ bool SetPropertyValueFromString(UObject* Object, FProperty* Property, const FStr
         return false;
     }
 
-    const TCHAR* Result = Property->ImportText(*ValueString, Container, nullptr, PPF_None, nullptr, Property->GetName(), true);
+    // UE 5.1+ uses ImportText_Direct instead of ImportText
+    const TCHAR* Result = nullptr;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    Result = Property->ImportText_Direct(*ValueString, Container, nullptr, PPF_None, nullptr);
+#else
+    // UE 5.0: ImportText takes (Buffer, Data, PortFlags, OwnerObject, ErrorText)
+    Result = Property->ImportText(*ValueString, Container, PPF_None, nullptr);
+#endif
     if (!Result)
     {
         if (OutError) *OutError = FString::Printf(TEXT("Failed to import value '%s' for property '%s'"), *ValueString, *Property->GetName());
@@ -641,7 +648,7 @@ bool ImportJsonToArray(void* Container, FArrayProperty* ArrayProp, const TArray<
         Inner->InitializeValue(ElemPtr);
 
         FString PropError;
-        if (!ApplyJsonValueToProperty(ElemPtr, Inner, JsonVal, PropError))
+        if (!McpPropertyReflection::ApplyJsonValueToProperty(ElemPtr, Inner, JsonVal, PropError))
         {
             OutError = FString::Printf(TEXT("Failed to set array element %d: %s"), i, *PropError);
             return false;

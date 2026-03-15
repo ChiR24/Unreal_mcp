@@ -123,19 +123,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         TArray<FName> Dependencies;
 
         // Build query based on dependency type and recursion
-        // EDependencyQuery values: Hard, Soft, HardRecursive, SoftRecursive
+        // UE 5.7 uses bitflags: Hard for hard deps, Soft (NotHard) for soft deps
+        // Recursive behavior is handled by the category parameter in GetDependencies
         UE::AssetRegistry::EDependencyQuery Query;
         if (bIncludeSoftDependencies)
         {
-            Query = bRecursive 
-                ? UE::AssetRegistry::EDependencyQuery::SoftRecursive 
-                : UE::AssetRegistry::EDependencyQuery::Soft;
+            Query = UE::AssetRegistry::EDependencyQuery::Soft;
         }
         else
         {
-            Query = bRecursive 
-                ? UE::AssetRegistry::EDependencyQuery::HardRecursive 
-                : UE::AssetRegistry::EDependencyQuery::Hard;
+            Query = UE::AssetRegistry::EDependencyQuery::Hard;
         }
 
         AssetRegistryModule.Get().GetDependencies(

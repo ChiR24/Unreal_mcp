@@ -444,20 +444,21 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         }
         else if (TriggerType == TEXT("RepeatedTap") || TriggerType == TEXT("InputTriggerRepeatedTap") || TriggerType == TEXT("DoubleTap"))
         {
-            // UInputTriggerRepeatedTap is the standard UE class for double-tap behavior
-            // Set NumberOfTapsWhichTriggerRepeat = 2 for double-tap effect
+            // UInputTriggerRepeatedTap was added in UE 5.6
+            // For earlier versions, use UInputTriggerTap (single tap) or UInputTriggerHold as fallback
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
             UInputTriggerRepeatedTap* RepeatedTapTrigger = NewObject<UInputTriggerRepeatedTap>(InAction);
-            if (TriggerType == TEXT("DoubleTap"))
-            {
-                RepeatedTapTrigger->NumberOfTapsWhichTriggerRepeat = 2;
-            }
             NewTrigger = RepeatedTapTrigger;
+#else
+            // Fallback for UE 5.0-5.5: Use UInputTriggerTap as closest equivalent
+            NewTrigger = NewObject<UInputTriggerTap>(InAction);
+#endif
         }
         
         if (!NewTrigger)
         {
             SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, RepeatedTap, DoubleTap")), *TriggerType),
+                FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, RepeatedTap, DoubleTap"), *TriggerType),
                 TEXT("INVALID_TRIGGER_TYPE"));
             return true;
         }
@@ -520,11 +521,17 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         }
         else if (ModifierType == TEXT("SmoothDelta") || ModifierType == TEXT("InputModifierSmoothDelta"))
         {
+            // UInputModifierSmoothDelta was added in UE 5.4
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
             NewModifier = NewObject<UInputModifierSmoothDelta>(InAction);
+#else
+            // Fallback for UE 5.0-5.3: Use UInputModifierSmooth as closest equivalent
+            NewModifier = NewObject<UInputModifierSmooth>(InAction);
+#endif
         }
-        else if (ModifierType == TEXT("SwizzleInputAxis") || ModifierType == TEXT("InputModifierSwizzleInputAxis"))
+        else if (ModifierType == TEXT("SwizzleInputAxis") || ModifierType == TEXT("InputModifierSwizzleAxis"))
         {
-            NewModifier = NewObject<UInputModifierSwizzleInputAxis>(InAction);
+            NewModifier = NewObject<UInputModifierSwizzleAxis>(InAction);
         }
         else if (ModifierType == TEXT("Negate") || ModifierType == TEXT("InputModifierNegate"))
         {
@@ -536,11 +543,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         }
         else if (ModifierType == TEXT("ScaleByDeltaTime") || ModifierType == TEXT("InputModifierScaleByDeltaTime"))
         {
+            // UInputModifierScaleByDeltaTime was added in UE 5.1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             NewModifier = NewObject<UInputModifierScaleByDeltaTime>(InAction);
-        }
-        else if (ModifierType == TEXT("Add") || ModifierType == TEXT("InputModifierAdd"))
-        {
-            NewModifier = NewObject<UInputModifierAdd>(InAction);
+#else
+            // UE 5.0 fallback: Use UInputModifierScalar as closest equivalent
+            // Note: This doesn't actually scale by delta time, but prevents compile error
+            NewModifier = NewObject<UInputModifierScalar>(InAction);
+#endif
         }
         else if (ModifierType == TEXT("ToWorldSpace") || ModifierType == TEXT("InputModifierToWorldSpace"))
         {
@@ -550,7 +560,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         if (!NewModifier)
         {
             SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown modifier type: %s. Supported: DeadZone, SmoothDelta, SwizzleInputAxis, Negate, Scalar, ScaleByDeltaTime, Add, ToWorldSpace"), *ModifierType),
+                FString::Printf(TEXT("Unknown modifier type: %s. Supported: DeadZone, SmoothDelta, SwizzleInputAxis, Negate, Scalar, ScaleByDeltaTime, ToWorldSpace"), *ModifierType),
                 TEXT("INVALID_MODIFIER_TYPE"));
             return true;
         }

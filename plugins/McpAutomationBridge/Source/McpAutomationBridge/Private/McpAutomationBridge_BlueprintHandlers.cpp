@@ -952,9 +952,16 @@ static TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
       if (void *PropertyAddress =
               Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
         FString ExportedDefault;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         Property->ExportTextItem_Direct(ExportedDefault, PropertyAddress,
                                         nullptr, GeneratedCDO,
                                         PPF_SerializedAsImportText);
+#else
+        // UE 5.0: ExportTextItem is the virtual function
+        Property->ExportTextItem(ExportedDefault, PropertyAddress,
+                                        nullptr, GeneratedCDO,
+                                        PPF_SerializedAsImportText);
+#endif
         Defaults->SetStringField(VariableName, ExportedDefault);
         continue;
       }
@@ -4415,11 +4422,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               }
               if (EntryDefaults->HasField(Pair.Key)) {
                 // Key exists - deep merge if both are JSON objects
-                const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
-                if (Pair.Value->Type == EJson::Object) {
-                  ExistingObj = EntryDefaults->TryGetObjectField(Pair.Key);
-                }
-                if (ExistingObj && Pair.Value->AsObject().IsValid()) {
+                const TSharedPtr<FJsonObject>* ExistingObj = nullptr;
+                if (Pair.Value->Type == EJson::Object && 
+                    EntryDefaults->TryGetObjectField(Pair.Key, ExistingObj) && 
+                    ExistingObj && (*ExistingObj).IsValid() &&
+                    Pair.Value->AsObject().IsValid()) {
                   // Both are objects - deep merge sub-keys from registry
                   const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
                   for (const TPair<FString, TSharedPtr<FJsonValue>> &SubPair :
@@ -4452,11 +4459,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               }
               if (EntryMetadata->HasField(Pair.Key)) {
                 // Key exists - deep merge if both are JSON objects
-                const TSharedPtr<FJsonObject> *ExistingObj = nullptr;
-                if (Pair.Value->Type == EJson::Object) {
-                  ExistingObj = EntryMetadata->TryGetObjectField(Pair.Key);
-                }
-                if (ExistingObj && Pair.Value->AsObject().IsValid()) {
+                const TSharedPtr<FJsonObject>* ExistingObj = nullptr;
+                if (Pair.Value->Type == EJson::Object && 
+                    EntryMetadata->TryGetObjectField(Pair.Key, ExistingObj) && 
+                    ExistingObj && (*ExistingObj).IsValid() &&
+                    Pair.Value->AsObject().IsValid()) {
                   // Both are objects - deep merge sub-keys from registry
                   const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
                   for (const TPair<FString, TSharedPtr<FJsonValue>> &SubPair :
