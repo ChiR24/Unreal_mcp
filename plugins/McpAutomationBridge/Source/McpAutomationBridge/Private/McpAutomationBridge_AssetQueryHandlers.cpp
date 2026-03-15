@@ -111,8 +111,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             return true;
         }
 
-        bool bRecursive = false;
-        Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
+        // Note: UE AssetRegistry GetDependencies API does not support recursive traversal.
+        // All dependencies returned are direct dependencies only.
+        // The 'recursive' parameter is accepted for API consistency but currently ignored.
 
         bool bIncludeSoftDependencies = false;
         Payload->TryGetBoolField(TEXT("includeSoftDependencies"), bIncludeSoftDependencies);
@@ -346,9 +347,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 #endif
                         else
                         {
-                            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-                                TEXT("HandleAssetQueryAction: Could not resolve short class name '%s'. Use full path (e.g. /Script/Engine.Blueprint)."),
-                                *ClassName);
+                            // Unknown short class name - return error instead of widening query
+                            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Unknown short class name '%s'. Use full path (e.g. /Script/Engine.Blueprint) or one of: Blueprint, StaticMesh, SkeletalMesh, Material, MaterialInstance, Texture2D, Level, World, SoundCue, SoundWave."),
+                                    *ClassName),
+                                TEXT("UNKNOWN_CLASS_NAME"));
+                            return true;
                         }
                     }
                 }
