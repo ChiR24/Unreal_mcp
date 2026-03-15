@@ -208,6 +208,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         FString AbsolutePath = FPaths::ProjectDir() / SafePath;
         FPaths::MakeStandardFilename(AbsolutePath);
         
+        // CRITICAL: Convert to absolute path for proper comparison
+        AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+        FPaths::NormalizeFilename(AbsolutePath);
+
+        FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+        FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+        if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+          NormalizedProjectDir += TEXT("/");
+        }
+
+        if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+          bSuccess = false;
+          Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path escapes project directory."), *Path);
+          ErrorCode = TEXT("SECURITY_VIOLATION");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
         TSharedPtr<FJsonObject> Snapshot = MakeShared<FJsonObject>();
         Snapshot->SetStringField(TEXT("timestamp"),
                                  FDateTime::UtcNow().ToString());
@@ -231,6 +247,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
           Message = TEXT("Failed to serialize snapshot");
           ErrorCode = TEXT("SERIALIZE_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
+        }
         }
       }
     }
@@ -256,6 +273,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         FString AbsolutePath = FPaths::ProjectDir() / SafePath;
         FPaths::MakeStandardFilename(AbsolutePath);
         
+        // CRITICAL: Convert to absolute path for proper comparison
+        AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+        FPaths::NormalizeFilename(AbsolutePath);
+
+        FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+        FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+        if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+          NormalizedProjectDir += TEXT("/");
+        }
+
+        if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+          bSuccess = false;
+          Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path escapes project directory."), *Path);
+          ErrorCode = TEXT("SECURITY_VIOLATION");
+          Resp->SetStringField(TEXT("error"), Message);
+        } else {
         FString JsonString;
         if (!FFileHelper::LoadFileToString(JsonString, *AbsolutePath)) {
           bSuccess = false;
@@ -276,6 +309,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
             Resp->SetObjectField(TEXT("snapshot"), SnapshotObj.ToSharedRef());
             Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
           }
+        }
         }
       }
     }
