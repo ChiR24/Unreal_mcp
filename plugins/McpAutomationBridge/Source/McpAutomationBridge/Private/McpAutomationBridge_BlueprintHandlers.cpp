@@ -1882,26 +1882,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         Op->TryGetStringField(TEXT("componentClass"), ComponentClassPath);
         FString AttachToName;
         Op->TryGetStringField(TEXT("attachTo"), AttachToName);
-        FSoftClassPath ComponentClassSoftPath(ComponentClassPath);
-        UClass *ComponentClass =
-            ComponentClassSoftPath.TryLoadClass<UActorComponent>();
-        if (!ComponentClass)
-          ComponentClass = FindObject<UClass>(nullptr, *ComponentClassPath);
-        if (!ComponentClass) {
-          const TArray<FString> Prefixes = {TEXT("/Script/Engine."),
-                                            TEXT("/Script/UMG."),
-                                            TEXT("/Script/Paper2D.")};
-          for (const FString &Prefix : Prefixes) {
-            const FString Guess = Prefix + ComponentClassPath;
-            UClass *TryClass = FindObject<UClass>(nullptr, *Guess);
-            if (!TryClass)
-              TryClass = StaticLoadClass(UActorComponent::StaticClass(),
-                                         nullptr, *Guess);
-            if (TryClass) {
-              ComponentClass = TryClass;
-              break;
-            }
-          }
+        
+        // UE 5.7 FIX: Use ResolveClassByName to handle short class names like "StaticMeshComponent"
+        // FSoftClassPath triggers ensure failure when given short package names in UE 5.7+
+        // ResolveClassByName handles short name resolution via prefix guessing and TObjectIterator
+        UClass *ComponentClass = ResolveClassByName(ComponentClassPath);
+        
+        // Fallback: Only use FSoftClassPath if it looks like a full path (contains /)
+        if (!ComponentClass && ComponentClassPath.Contains(TEXT("/"))) {
+          FSoftClassPath ComponentClassSoftPath(ComponentClassPath);
+          ComponentClass = ComponentClassSoftPath.TryLoadClass<UActorComponent>();
         }
         if (!ComponentClass) {
           OpSummary->SetBoolField(TEXT("success"), false);

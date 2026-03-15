@@ -131,10 +131,8 @@ function normalizeToolCall(
     normalizedName = 'system_control';
     action = 'console_command';
   }
-  if (normalizedName === 'manage_pipeline') {
-    normalizedName = 'system_control';
-    action = 'run_ubt';
-  }
+  // manage_pipeline has its own handler registered - don't normalize to system_control
+  // handlePipelineTools handles: run_ubt (local), list_categories/get_status (via system_control)
   if (normalizedName === 'manage_tests') {
     normalizedName = 'system_control';
     action = 'run_tests';
@@ -315,6 +313,18 @@ function registerDefaultHandlers() {
 
   // 12. DYNAMIC TOOLS MANAGEMENT
   toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getAction(args), args, tools));
+
+  // 13. MANAGE_PIPELINE - Routes to handlePipelineTools with action dispatch
+  // Actions: run_ubt (local spawn), list_categories, get_status (via system_control)
+  toolRegistry.register('manage_pipeline', async (args, tools) => {
+    const action = getAction(args);
+    // list_categories and get_status route through system_control
+    if (action === 'list_categories' || action === 'get_status') {
+      return cleanObject(await executeAutomationRequest(tools, 'manage_tools', { ...args, subAction: action }, 'Automation bridge not available'));
+    }
+    // run_ubt handled locally in pipeline-handlers.ts
+    return await handlePipelineTools(action, args, tools);
+  });
 
   // 13. AUDIO (merged with manage_audio_authoring - Phase 53)
   const AUDIO_AUTHORING_ACTIONS = new Set([

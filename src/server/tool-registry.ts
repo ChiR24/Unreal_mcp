@@ -78,7 +78,7 @@ export class ToolRegistry {
         private ensureConnected: () => Promise<boolean>
     ) { }
     
-    private async handlePipelineCall(args: Record<string, unknown>) {
+    private async handlePipelineCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
         const action = args.action as string;
         if (action === 'set_categories') {
             const newCats = Array.isArray(args.categories) ? args.categories as string[] : [];
@@ -116,7 +116,9 @@ export class ToolRegistry {
                 filteredCount: dynamicToolManager.getEnabledToolDefinitions().length
             };
         }
-        return { success: false, error: `Unknown pipeline action: ${action}` };
+        // Delegate unknown actions (like run_ubt) to the registered handler in consolidated-tool-handlers
+        // This allows handlePipelineTools to process run_ubt etc.
+        return { _delegateToHandler: true, action, args };
     }
 
     private async handleManageToolsCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -174,7 +176,10 @@ export class ToolRegistry {
             }
 
             case 'enable_tools': {
-                const toolNames = getStringArray('tools');
+                // Accept both 'tools' and 'toolNames' for flexibility
+                const toolNames = getStringArray('tools').length > 0 
+                    ? getStringArray('tools') 
+                    : getStringArray('toolNames');
                 if (toolNames.length === 0) {
                     return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
                 }
@@ -190,7 +195,10 @@ export class ToolRegistry {
             }
 
             case 'disable_tools': {
-                const toolNames = getStringArray('tools');
+                // Accept both 'tools' and 'toolNames' for flexibility
+                const toolNames = getStringArray('tools').length > 0 
+                    ? getStringArray('tools') 
+                    : getStringArray('toolNames');
                 if (toolNames.length === 0) {
                     return { success: false, error: 'No tools specified. Provide tools array.', errorCode: 'MISSING_TOOLS' };
                 }
@@ -493,7 +501,13 @@ export class ToolRegistry {
             let args: Record<string, unknown> = request.params.arguments || {};
 
             if (name === 'manage_pipeline') {
-                return { content: [{ type: 'text', text: JSON.stringify(await this.handlePipelineCall(args)) }] };
+                const result = await this.handlePipelineCall(args);
+                // If handler indicates delegation, fall through to consolidated handler
+                if (result._delegateToHandler) {
+                    // Fall through to the consolidated handler below
+                } else {
+                    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+                }
             }
 
             // Handle manage_tools for dynamic tool management

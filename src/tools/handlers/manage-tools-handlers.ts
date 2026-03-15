@@ -70,7 +70,10 @@ export async function handleManageToolsTools(
 
       // ===== Enable Specific Tools =====
       case 'enable_tools': {
-        const toolNames = getStringArray('tools');
+        // Accept both 'tools' and 'toolNames' for flexibility
+        const toolNames = getStringArray('tools').length > 0 
+          ? getStringArray('tools') 
+          : getStringArray('toolNames');
         
         if (toolNames.length === 0) {
           return ResponseFactory.error('No tools specified. Provide tools array.', 'MISSING_TOOLS');
@@ -92,7 +95,10 @@ export async function handleManageToolsTools(
 
       // ===== Disable Specific Tools =====
       case 'disable_tools': {
-        const toolNames = getStringArray('tools');
+        // Accept both 'tools' and 'toolNames' for flexibility
+        const toolNames = getStringArray('tools').length > 0 
+          ? getStringArray('tools') 
+          : getStringArray('toolNames');
         
         if (toolNames.length === 0) {
           return ResponseFactory.error('No tools specified. Provide tools array.', 'MISSING_TOOLS');

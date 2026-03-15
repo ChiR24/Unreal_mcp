@@ -2272,8 +2272,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     Result->SetArrayField(TEXT("clothingAssets"), ClothingArray);
     Result->SetNumberField(TEXT("count"), ClothingArray.Num());
 
-    SendAutomationResponse(RequestingSocket, RequestId, true, 
-        TEXT("Cloth asset assignment requires using the Cloth Paint tool in Unreal Editor"), Result);
+    // CRITICAL FIX: Return error instead of success when operation requires manual intervention
+    // This prevents false positives where tests pass even though no cloth assignment occurred
+    SendAutomationError(RequestingSocket, RequestId, 
+        TEXT("Cloth asset assignment requires using the Cloth Paint tool in Unreal Editor. ")
+        TEXT("Use the Skeletal Mesh Editor's Paint Cloth tool to assign cloth assets to mesh sections."), 
+        TEXT("MANUAL_INTERVENTION_REQUIRED"));
     return true;
 }
 

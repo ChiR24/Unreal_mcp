@@ -307,6 +307,21 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           paths: normalizedPaths,
           subAction: 'delete'
         }) as AssetOperationResponse;
+        
+        // CRITICAL FIX: Check if C++ returned success=false and pass it through
+        // This prevents false positives where TS wraps a failed C++ response as success
+        if (res && typeof res.success === 'boolean' && res.success === false) {
+          const errorCode = typeof res.error === 'string' ? res.error.toUpperCase() : 'OPERATION_FAILED';
+          const message = typeof res.message === 'string' ? res.message : 'Asset deletion failed';
+          return cleanObject({
+            success: false,
+            error: errorCode,
+            message: message,
+            paths: normalizedPaths,
+            data: res
+          });
+        }
+        
         return ResponseFactory.success(res, 'Assets deleted successfully');
       }
 
