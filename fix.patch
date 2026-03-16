@@ -1,0 +1,64 @@
+--- plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_EnvironmentHandlers.cpp
++++ plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/McpAutomationBridge_EnvironmentHandlers.cpp
+@@ -398,6 +398,22 @@
+                 // Convert project-relative path to absolute file path
+                 FString AbsolutePath = FPaths::ProjectDir() / SafePath;
+                 FPaths::MakeStandardFilename(AbsolutePath);
++
++                AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
++                FPaths::NormalizeFilename(AbsolutePath);
++
++                FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
++                FPaths::NormalizeDirectoryName(NormalizedProjectDir);
++                if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
++                    NormalizedProjectDir += TEXT("/");
++                }
++
++                if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
++                    bSuccess = false;
++                    Message = FString::Printf(TEXT("Path escapes project directory: %s"), *Path);
++                    ErrorCode = TEXT("SECURITY_VIOLATION");
++                    Resp->SetStringField(TEXT("error"), Message);
++                } else {
+
+                 TSharedPtr<FJsonObject> Snapshot = McpHandlerUtils::CreateResultObject();
+                 Snapshot->SetStringField(TEXT("timestamp"), FDateTime::UtcNow().ToString());
+@@ -421,6 +437,7 @@
+                         ErrorCode = TEXT("WRITE_FAILED");
+                         Resp->SetStringField(TEXT("error"), Message);
+                     }
+                 }
++                }
+                 else
+                 {
+@@ -462,6 +479,22 @@
+                 FString AbsolutePath = FPaths::ProjectDir() / SafePath;
+                 FPaths::MakeStandardFilename(AbsolutePath);
+
++                AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
++                FPaths::NormalizeFilename(AbsolutePath);
++
++                FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
++                FPaths::NormalizeDirectoryName(NormalizedProjectDir);
++                if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
++                    NormalizedProjectDir += TEXT("/");
++                }
++
++                if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
++                    bSuccess = false;
++                    Message = FString::Printf(TEXT("Path escapes project directory: %s"), *Path);
++                    ErrorCode = TEXT("SECURITY_VIOLATION");
++                    Resp->SetStringField(TEXT("error"), Message);
++                } else {
++
+                 FString JsonString;
+                 if (!FFileHelper::LoadFileToString(JsonString, *AbsolutePath))
+                 {
+@@ -497,6 +530,7 @@
+                         Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
+                     }
+                 }
++                }
+             }
+         }
+     }
