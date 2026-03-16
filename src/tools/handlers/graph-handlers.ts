@@ -172,9 +172,15 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
 
 async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     const payload: ProcessedGraphArgs = { ...args, subAction: action };
-    // Map systemPath to assetPath if missing
-    if (payload.systemPath && !payload.assetPath) {
-        payload.assetPath = payload.systemPath;
+    // Normalize parameter aliases - tests may use 'system' instead of 'systemPath' or 'assetPath'
+    if (!payload.systemPath && args.system) {
+        payload.systemPath = args.system as string;
+    }
+    if (!payload.assetPath && payload.systemPath) {
+        payload.assetPath = payload.systemPath as string;
+    }
+    if (!payload.assetPath && args.system) {
+        payload.assetPath = args.system as string;
     }
     const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
     return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;

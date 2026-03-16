@@ -433,8 +433,8 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         }
     }
     
-    // Try to load as asset
-    if (Path.StartsWith(TEXT("/Game/")))
+    // Try to load as asset (supports both /Game/ and /Engine/ paths)
+    if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")))
     {
         FString PackagePath = Path;
         if (PackagePath.Contains(TEXT(".")))
@@ -457,6 +457,16 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
                 *OutResolvedPath = LoadedPackage->GetPathName();
             }
             return LoadedPackage;
+        }
+        
+        // Try StaticFindObject for engine assets that may not need package loading
+        if (UObject* Found = FindObject<UObject>(nullptr, *Path))
+        {
+            if (OutResolvedPath)
+            {
+                *OutResolvedPath = Found->GetPathName();
+            }
+            return Found;
         }
     }
     

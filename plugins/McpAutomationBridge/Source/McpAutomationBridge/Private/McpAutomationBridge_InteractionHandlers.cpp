@@ -1640,41 +1640,108 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
    * get_interaction_info
    * ---------------------
    * Retrieves interaction information for a Blueprint or actor.
-   * Can query by blueprintPath, actorName, or both.
+   * Can query by blueprintPath, actorName, doorPath, switchPath, chestPath, or triggerPath.
    *
-   * Payload: { "blueprintPath"?: string, "actorName"?: string }
+   * Payload: { "blueprintPath"?: string, "actorName"?: string, "doorPath"?: string,
+   *            "switchPath"?: string, "chestPath"?: string, "triggerPath"?: string }
    * Response: { "blueprintPath"?: string, "blueprintName"?: string,
-   *            "actorName"?: string, "actorClass"?: string }
+   *            "actorName"?: string, "actorClass"?: string, ... }
    */
   if (SubAction == TEXT("get_interaction_info")) {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString DoorPath = GetJsonStringField(Payload, TEXT("doorPath"));
+    FString SwitchPath = GetJsonStringField(Payload, TEXT("switchPath"));
+    FString ChestPath = GetJsonStringField(Payload, TEXT("chestPath"));
+    FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
+
+    // Validate that at least one path is provided
+    if (BlueprintPath.IsEmpty() && ActorName.IsEmpty() && DoorPath.IsEmpty() &&
+        SwitchPath.IsEmpty() && ChestPath.IsEmpty() && TriggerPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("At least one path parameter is required (blueprintPath, actorName, doorPath, switchPath, chestPath, or triggerPath)"),
+                          TEXT("MISSING_PARAMETER"));
+      return true;
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
     if (!BlueprintPath.IsEmpty()) {
 #if WITH_EDITOR
       FString ResolvedPath, LoadError;
       UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, ResolvedPath, LoadError);
-      if (Blueprint) {
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("blueprintName"), Blueprint->GetName());
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
       }
+      Result->SetStringField(TEXT("assetType"), TEXT("Blueprint"));
+      Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Result->SetStringField(TEXT("blueprintName"), Blueprint->GetName());
 #endif
-    }
-
-    if (!ActorName.IsEmpty()) {
+    } else if (!ActorName.IsEmpty()) {
 #if WITH_EDITOR
       UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-      if (World) {
-        AActor* FoundActor = nullptr;
-        for (TActorIterator<AActor> It(World); It; ++It) {
-          if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) { FoundActor = *It; break; }
-        }
-        if (FoundActor) {
-          Result->SetStringField(TEXT("actorName"), FoundActor->GetName());
-          Result->SetStringField(TEXT("actorClass"), FoundActor->GetClass()->GetName());
-        }
+      if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
       }
+      AActor* FoundActor = nullptr;
+      for (TActorIterator<AActor> It(World); It; ++It) {
+        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName) { FoundActor = *It; break; }
+      }
+      if (!FoundActor) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Actor not found: %s"), *ActorName),
+                            TEXT("ACTOR_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Actor"));
+      Result->SetStringField(TEXT("actorName"), FoundActor->GetName());
+      Result->SetStringField(TEXT("actorClass"), FoundActor->GetClass()->GetName());
+#endif
+    } else if (!DoorPath.IsEmpty()) {
+#if WITH_EDITOR
+      FString ResolvedPath, LoadError;
+      UBlueprint* Blueprint = LoadBlueprintAsset(DoorPath, ResolvedPath, LoadError);
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Door"));
+      Result->SetStringField(TEXT("doorPath"), DoorPath);
+#endif
+    } else if (!SwitchPath.IsEmpty()) {
+#if WITH_EDITOR
+      FString ResolvedPath, LoadError;
+      UBlueprint* Blueprint = LoadBlueprintAsset(SwitchPath, ResolvedPath, LoadError);
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Switch"));
+      Result->SetStringField(TEXT("switchPath"), SwitchPath);
+#endif
+    } else if (!ChestPath.IsEmpty()) {
+#if WITH_EDITOR
+      FString ResolvedPath, LoadError;
+      UBlueprint* Blueprint = LoadBlueprintAsset(ChestPath, ResolvedPath, LoadError);
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Chest"));
+      Result->SetStringField(TEXT("chestPath"), ChestPath);
+#endif
+    } else if (!TriggerPath.IsEmpty()) {
+#if WITH_EDITOR
+      FString ResolvedPath, LoadError;
+      UBlueprint* Blueprint = LoadBlueprintAsset(TriggerPath, ResolvedPath, LoadError);
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Trigger"));
+      Result->SetStringField(TEXT("triggerPath"), TriggerPath);
 #endif
     }
 

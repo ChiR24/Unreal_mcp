@@ -2545,7 +2545,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
                                             RequestingSocket);
   if (LowerSub == TEXT("get_metadata"))
     return HandleControlActorGetMetadata(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("list") || LowerSub == TEXT("list_actors"))
+  if (LowerSub == TEXT("list") || LowerSub == TEXT("list_actors") || LowerSub == TEXT("list_objects"))
     return HandleControlActorList(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("get") || LowerSub == TEXT("get_actor") ||
       LowerSub == TEXT("get_actor_by_name"))
@@ -2556,6 +2556,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorRemoveComponent(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_component_property"))
     return HandleControlActorGetComponentProperty(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_property"))
+    return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
+  if (LowerSub == TEXT("get_property"))
+    return HandleGetObjectProperty(RequestId, TEXT("get_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("set_collision") || LowerSub == TEXT("set_actor_collision"))
     return HandleControlActorSetCollision(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("call_function") || LowerSub == TEXT("call_actor_function"))

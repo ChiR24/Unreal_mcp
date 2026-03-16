@@ -133,14 +133,25 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   ];
   if (createActions.includes(action)) {
     mutableArgs.action = action;
+    // Map various path parameters to systemPath for Niagara-based effects
+    // Test data uses: emitter, ribbonPath, system, assetPath
+    const mappedSystemPath = (mutableArgs.systemPath as string | undefined) ||
+                             (mutableArgs.emitter as string | undefined) ||
+                             (mutableArgs.ribbonPath as string | undefined) ||
+                             (mutableArgs.system as string | undefined) ||
+                             (mutableArgs.assetPath as string | undefined);
+    if (mappedSystemPath) {
+      mutableArgs.systemPath = mappedSystemPath;
+    }
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
 
   // Map simulation control actions
   if (action === 'activate' || action === 'activate_effect') {
     mutableArgs.action = 'activate_niagara';
-    // Accept effectHandle, niagaraHandle, actorName, or systemName as the identifier
-    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+    // Accept effect, effectHandle, niagaraHandle, actorName, or systemName as the identifier
+    mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
+                             (mutableArgs.effectHandle as string | undefined) || 
                              (mutableArgs.niagaraHandle as string | undefined) ||
                              (mutableArgs.actorName as string | undefined) || 
                              (mutableArgs.systemName as string | undefined);
@@ -153,8 +164,9 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   }
   if (action === 'deactivate') {
     mutableArgs.action = 'deactivate_niagara';
-    // Accept effectHandle, niagaraHandle, actorName, or systemName as the identifier
-    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+    // Accept effect, effectHandle, niagaraHandle, actorName, or systemName as the identifier
+    mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
+                             (mutableArgs.effectHandle as string | undefined) || 
                              (mutableArgs.niagaraHandle as string | undefined) ||
                              (mutableArgs.actorName as string | undefined) || 
                              (mutableArgs.systemName as string | undefined);
@@ -163,7 +175,8 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   }
   if (action === 'reset') {
     mutableArgs.action = 'activate_niagara';
-    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+    mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
+                             (mutableArgs.effectHandle as string | undefined) || 
                              (mutableArgs.niagaraHandle as string | undefined) ||
                              (mutableArgs.actorName as string | undefined) || 
                              (mutableArgs.systemName as string | undefined);
@@ -176,7 +189,8 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   }
   if (action === 'advance_simulation') {
     mutableArgs.action = 'advance_simulation';
-    mutableArgs.systemName = (mutableArgs.effectHandle as string | undefined) || 
+    mutableArgs.systemName = (mutableArgs.effect as string | undefined) ||
+                             (mutableArgs.effectHandle as string | undefined) || 
                              (mutableArgs.niagaraHandle as string | undefined) ||
                              (mutableArgs.actorName as string | undefined) || 
                              (mutableArgs.systemName as string | undefined);

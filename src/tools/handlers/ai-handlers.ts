@@ -160,7 +160,7 @@ export async function handleAITools(
 
     case 'configure_test_scoring': {
       requireNonEmptyString(argsRecord.queryPath, 'queryPath', 'Missing required parameter: queryPath');
-      requireNonEmptyString(argsRecord.testIndex, 'testIndex', 'Missing required parameter: testIndex');
+      // testIndex is optional - defaults to 0 in C++ handler
       return sendRequest('configure_test_scoring');
     }
 
@@ -237,7 +237,7 @@ export async function handleAITools(
 
     case 'configure_slot_behavior': {
       requireNonEmptyString(argsRecord.definitionPath, 'definitionPath', 'Missing required parameter: definitionPath');
-      requireNonEmptyString(argsRecord.slotIndex, 'slotIndex', 'Missing required parameter: slotIndex');
+      // slotIndex is optional - defaults to 0 in C++ handler
       return sendRequest('configure_slot_behavior');
     }
 

@@ -32,6 +32,34 @@ export async function handleNiagaraAuthoringTools(
   const argsRecord = args as Record<string, unknown>;
   const timeoutMs = getTimeoutMs();
 
+  // Normalize parameter aliases - tests may use 'system', 'assetPath' instead of 'systemPath'
+  if (!argsRecord.systemPath && argsRecord.system) {
+    argsRecord.systemPath = argsRecord.system;
+  }
+  if (!argsRecord.systemPath && argsRecord.assetPath) {
+    argsRecord.systemPath = argsRecord.assetPath;
+  }
+  // For get_niagara_info which specifically uses assetPath
+  if (!argsRecord.assetPath && argsRecord.systemPath) {
+    argsRecord.assetPath = argsRecord.systemPath;
+  }
+  if (!argsRecord.assetPath && argsRecord.system) {
+    argsRecord.assetPath = argsRecord.system;
+  }
+
+  // Map emitterName to name for create_niagara_emitter
+  if (!argsRecord.name && argsRecord.emitterName) {
+    argsRecord.name = argsRecord.emitterName;
+  }
+  // Derive name from assetPath if not provided (e.g., /Game/FX/NS_CustomEffect -> NS_CustomEffect)
+  if (!argsRecord.name && argsRecord.assetPath) {
+    const pathParts = (argsRecord.assetPath as string).split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    if (lastPart) {
+      argsRecord.name = lastPart;
+    }
+  }
+
   // All actions are dispatched to C++ via automation bridge
   const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
     const payload = { ...argsRecord, subAction };

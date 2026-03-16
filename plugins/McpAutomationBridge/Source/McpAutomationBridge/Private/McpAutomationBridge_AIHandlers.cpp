@@ -285,17 +285,29 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
     
     FString FullPath = SanitizedPath / Name;
     
-    // Check if asset already exists to prevent Kismet2.cpp assertion failure
-    if (FindObject<UBlueprint>(nullptr, *FullPath) != nullptr)
+    // CRITICAL: Use UEditorAssetLibrary for reliable existence check
+    // This prevents the Kismet2.cpp assertion failure when blueprint already exists
+    // The FindObject check alone is insufficient because:
+    // 1. It checks for exact object path format
+    // 2. The package may exist even if the blueprint object doesn't
+    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
         return nullptr;
     }
     
-    // Also check if the package exists
+    // Also check with .AssetName suffix (blueprint object path format)
+    FString ObjectPath = FullPath + TEXT(".") + Name;
+    if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+    {
+        OutError = FString::Printf(TEXT("Blueprint already exists: %s"), *ObjectPath);
+        return nullptr;
+    }
+    
+    // Check if package exists on disk (for assets that haven't been loaded yet)
     if (FPackageName::DoesPackageExist(FullPath))
     {
-        OutError = FString::Printf(TEXT("Package already exists: %s"), *FullPath);
+        OutError = FString::Printf(TEXT("Package already exists on disk: %s"), *FullPath);
         return nullptr;
     }
     
@@ -534,6 +546,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
         FString BehaviorTreePath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
 
+        // CRITICAL: Explicitly check if assets exist before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!UEditorAssetLibrary::DoesAssetExist(BehaviorTreePath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Behavior Tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!Controller)
         {
@@ -617,6 +644,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
         FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+
+        // CRITICAL: Explicitly check if assets exist before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!Controller)
@@ -735,6 +777,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
         FString KeyName = GetStringFieldAI(Payload, TEXT("keyName"));
         FString KeyType = GetStringFieldAI(Payload, TEXT("keyType"));
+
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         UBlackboardData* Blackboard = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
         if (!Blackboard)
@@ -1275,6 +1325,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -1319,6 +1378,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -1352,6 +1420,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -1379,6 +1456,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
         {
@@ -1399,6 +1485,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
         int32 TeamId = static_cast<int32>(GetNumberFieldAI(Payload, TEXT("teamId"), 0));
+
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+            return true;
+        }
 
         UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
         if (!Blueprint)
@@ -2210,6 +2305,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
         
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(ConfigPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("MassEntityConfigAsset not found: %s"), *ConfigPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         // Load the MassEntityConfigAsset
         UMassEntityConfigAsset* ConfigAsset = LoadObject<UMassEntityConfigAsset>(nullptr, *ConfigPath);
         if (!ConfigAsset)
@@ -2884,6 +2988,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
@@ -3079,6 +3192,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             FocusActorName = GetStringFieldAI(Payload, TEXT("targetActor"));
         }
 
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
@@ -3111,6 +3233,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         if (ControllerPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -3330,6 +3460,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // CRITICAL: Explicitly check if assets exist before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        if (!UEditorAssetLibrary::DoesAssetExist(BTPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Behavior tree not found: %s"), *BTPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
@@ -3370,6 +3515,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         if (ControllerPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing controllerPath"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // CRITICAL: Explicitly check if asset exists before LoadObject
+        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
             return true;
         }
 

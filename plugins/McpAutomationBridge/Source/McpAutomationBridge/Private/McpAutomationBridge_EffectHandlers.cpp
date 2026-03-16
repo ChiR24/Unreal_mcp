@@ -105,6 +105,23 @@
 #if __has_include("Components/DirectionalLightComponent.h")
 #include "Components/DirectionalLightComponent.h"
 #endif
+// Volumetric Fog
+#if __has_include("Engine/ExponentialHeightFog.h")
+#include "Engine/ExponentialHeightFog.h"
+#endif
+#if __has_include("Components/ExponentialHeightFogComponent.h")
+#include "Components/ExponentialHeightFogComponent.h"
+#endif
+// Cascade Particle Systems
+#if __has_include("Particles/ParticleSystem.h")
+#include "Particles/ParticleSystem.h"
+#endif
+#if __has_include("Particles/ParticleSystemComponent.h")
+#include "Particles/ParticleSystemComponent.h"
+#endif
+#if __has_include("Particles/Emitter.h")
+#include "Particles/Emitter.h"
+#endif
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
@@ -201,6 +218,160 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     const FString LowerSub = SubAction.ToLower();
+
+    // Handle debug_shape sub-action - draws debug visualization shapes
+    if (LowerSub == TEXT("debug_shape")) {
+      // shapeType is required
+      FString ShapeType = TEXT("sphere");
+      LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
+      // Also accept 'shape' as alias
+      if (ShapeType.Equals(TEXT("sphere"), ESearchCase::IgnoreCase) && LocalPayload->HasField(TEXT("shape"))) {
+        LocalPayload->TryGetStringField(TEXT("shape"), ShapeType);
+      }
+
+      // Location is required for debug shapes
+      if (!LocalPayload->HasField(TEXT("location"))) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("location parameter is required for debug_shape"));
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Missing required parameter: location"), Resp,
+                               TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+
+      // Parse location
+      FVector Loc(0, 0, 0);
+      const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+      if (LocVal.IsValid()) {
+        if (LocVal->Type == EJson::Array) {
+          const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
+          if (Arr.Num() >= 3)
+            Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+        } else if (LocVal->Type == EJson::Object) {
+          const TSharedPtr<FJsonObject> O = LocVal->AsObject();
+          if (O.IsValid())
+            Loc = FVector(
+                (float)(O->HasField(TEXT("x")) ? GetJsonNumberField(O, TEXT("x")) : 0.0),
+                (float)(O->HasField(TEXT("y")) ? GetJsonNumberField(O, TEXT("y")) : 0.0),
+                (float)(O->HasField(TEXT("z")) ? GetJsonNumberField(O, TEXT("z")) : 0.0));
+        }
+      }
+
+      // Duration (default: 5.0 seconds)
+      const float Duration = LocalPayload->HasField(TEXT("duration"))
+                                 ? (float)GetJsonNumberField(LocalPayload, TEXT("duration"))
+                                 : 5.0f;
+
+      // Size/Radius (default: 100.0)
+      const float Size = LocalPayload->HasField(TEXT("radius"))
+                             ? (float)GetJsonNumberField(LocalPayload, TEXT("radius"))
+                             : (LocalPayload->HasField(TEXT("size"))
+                                    ? (float)GetJsonNumberField(LocalPayload, TEXT("size"))
+                                    : 100.0f);
+
+      // Thickness for lines (default: 2.0)
+      const float Thickness = LocalPayload->HasField(TEXT("thickness"))
+                                  ? (float)GetJsonNumberField(LocalPayload, TEXT("thickness"))
+                                  : 2.0f;
+
+      // Color (default: white)
+      TArray<double> ColorArr = {255, 255, 255, 255};
+      const TArray<TSharedPtr<FJsonValue>> *ColorJsonArr = nullptr;
+      if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) && ColorJsonArr && ColorJsonArr->Num() >= 3) {
+        ColorArr[0] = (*ColorJsonArr)[0]->AsNumber();
+        ColorArr[1] = (*ColorJsonArr)[1]->AsNumber();
+        ColorArr[2] = (*ColorJsonArr)[2]->AsNumber();
+        if (ColorJsonArr->Num() >= 4) {
+          ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
+        }
+      }
+
+#if WITH_EDITOR
+      if (!GEditor) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("Editor not available for debug drawing"));
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Editor not available"), Resp,
+                               TEXT("EDITOR_NOT_AVAILABLE"));
+        return true;
+      }
+
+      UWorld *World = GEditor->GetEditorWorldContext().World();
+      if (!World) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("No world available for debug drawing"));
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("No world available"), Resp,
+                               TEXT("NO_WORLD"));
+        return true;
+      }
+
+      const FColor DebugColor((uint8)ColorArr[0], (uint8)ColorArr[1], (uint8)ColorArr[2], (uint8)ColorArr[3]);
+      const FString LowerShapeType = ShapeType.ToLower();
+
+      if (LowerShapeType == TEXT("sphere")) {
+        DrawDebugSphere(World, Loc, Size, 16, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("box")) {
+        DrawDebugBox(World, Loc, FVector(Size), FRotator::ZeroRotator.Quaternion(), DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("circle")) {
+        DrawDebugCircle(World, Loc, Size, 32, DebugColor, false, Duration, 0, Thickness, FVector::UpVector);
+      } else if (LowerShapeType == TEXT("line")) {
+        FVector EndLoc = Loc + FVector(100, 0, 0);
+        if (LocalPayload->HasField(TEXT("endLocation"))) {
+          const TSharedPtr<FJsonValue> EndVal = LocalPayload->TryGetField(TEXT("endLocation"));
+          if (EndVal.IsValid() && EndVal->Type == EJson::Array) {
+            const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
+            if (Arr.Num() >= 3)
+              EndLoc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+          }
+        }
+        DrawDebugLine(World, Loc, EndLoc, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("point")) {
+        DrawDebugPoint(World, Loc, Size, DebugColor, false, Duration);
+      } else if (LowerShapeType == TEXT("arrow")) {
+        FVector EndLoc = Loc + FVector(100, 0, 0);
+        DrawDebugDirectionalArrow(World, Loc, EndLoc, Size > 0 ? Size : 10.0f, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("capsule")) {
+        DrawDebugCapsule(World, Loc, Size, Size, FQuat::Identity, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("cylinder")) {
+        DrawDebugCylinder(World, Loc, Loc + FVector(0, 0, Size * 2), Size, 16, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("cone")) {
+        DrawDebugCone(World, Loc, FVector::UpVector, Size * 2, FMath::DegreesToRadians(45.0f), FMath::DegreesToRadians(45.0f), 16, DebugColor, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("coordinate")) {
+        DrawDebugCoordinateSystem(World, Loc, FRotator::ZeroRotator, Size, false, Duration, 0, Thickness);
+      } else if (LowerShapeType == TEXT("plane")) {
+        DrawDebugBox(World, Loc, FVector(Size, Size, 1.0f), FQuat::Identity, DebugColor, false, Duration, 0, Thickness);
+      } else {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Unsupported shape type: %s"), *ShapeType));
+        Resp->SetStringField(TEXT("supportedShapes"), TEXT("sphere, box, circle, line, point, arrow, capsule, cylinder, cone, coordinate, plane"));
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Unsupported shape type"), Resp,
+                               TEXT("UNSUPPORTED_SHAPE"));
+        return true;
+      }
+
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("shapeType"), ShapeType);
+      Resp->SetStringField(TEXT("location"), FString::Printf(TEXT("%.2f,%.2f,%.2f"), Loc.X, Loc.Y, Loc.Z));
+      Resp->SetNumberField(TEXT("duration"), Duration);
+      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Debug shape drawn"), Resp, FString());
+      return true;
+#else
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), false);
+      Resp->SetStringField(TEXT("error"), TEXT("Debug shape drawing requires editor build"));
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Debug shape drawing not available in non-editor build"), Resp,
+                             TEXT("NOT_AVAILABLE"));
+      return true;
+#endif
+    }
 
     // Handle particle spawning
     if (LowerSub == TEXT("particle")) {
@@ -941,6 +1112,17 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       return true;
 #endif
     } else if (LowerSub.Equals(TEXT("create_dynamic_light"))) {
+      // Validate required parameters - location is mandatory for meaningful light creation
+      if (!LocalPayload->HasField(TEXT("location"))) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetBoolField(TEXT("success"), false);
+        Resp->SetStringField(TEXT("error"), TEXT("location parameter is required for create_dynamic_light"));
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Missing required parameter: location"), Resp,
+                               TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+
       FString LightName;
       LocalPayload->TryGetStringField(TEXT("lightName"), LightName);
       FString LightType;
@@ -1427,26 +1609,184 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       bCreateImpact = true;
   }
 
+  // PROCEDURAL EFFECT HANDLERS
+  // These create actual actors/components without requiring Niagara system assets
+
+  if (bCreateFog) {
+    // Create volumetric fog using AExponentialHeightFog
+#if WITH_EDITOR
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not available"), nullptr,
+                             TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
+    }
+    UEditorActorSubsystem *ActorSS =
+        GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+    if (!ActorSS) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("EditorActorSubsystem not available"),
+                             nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
+      return true;
+    }
+
+    // Parse location
+    FVector Loc(0, 0, 0);
+    if (LocalPayload->HasField(TEXT("location"))) {
+      const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+      if (LocVal.IsValid() && LocVal->Type == EJson::Array) {
+        const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
+        if (Arr.Num() >= 3)
+          Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+      }
+    }
+
+    double Density = 0.05;
+    LocalPayload->TryGetNumberField(TEXT("density"), Density);
+    double Scattering = 0.5;
+    LocalPayload->TryGetNumberField(TEXT("scattering"), Scattering);
+    double Extinction = 0.5;
+    LocalPayload->TryGetNumberField(TEXT("extinction"), Extinction);
+
+#if __has_include("Engine/ExponentialHeightFog.h")
+    AActor *Spawned = SpawnActorInActiveWorld<AActor>(
+        AExponentialHeightFog::StaticClass(), Loc, FRotator::ZeroRotator);
+    if (Spawned) {
+      UExponentialHeightFogComponent *FogComp = Spawned->FindComponentByClass<UExponentialHeightFogComponent>();
+      if (FogComp) {
+        FogComp->SetFogDensity(static_cast<float>(Density));
+        // Enable volumetric fog
+#if ENGINE_MAJOR_VERSION == 5
+        FogComp->SetVolumetricFogEnabled(true);
+        FogComp->SetVolumetricFogScatteringDistribution(static_cast<float>(Scattering));
+        FogComp->SetVolumetricFogExtinctionScale(static_cast<float>(Extinction));
+#endif
+      }
+      FString Name;
+      LocalPayload->TryGetStringField(TEXT("name"), Name);
+      if (!Name.IsEmpty()) {
+        Spawned->SetActorLabel(Name);
+      } else {
+        Spawned->SetActorLabel(FString::Printf(TEXT("VolumetricFog_%lld"), FDateTime::Now().ToUnixTimestamp()));
+      }
+
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+      Resp->SetStringField(TEXT("effectType"), TEXT("volumetric_fog"));
+      McpHandlerUtils::AddVerification(Resp, Spawned);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Volumetric fog created"), Resp, FString());
+      return true;
+    }
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("ExponentialHeightFog not available in this build"),
+                           nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("create_volumetric_fog requires editor build."),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
+  if (bCreateTrail) {
+    // Create a particle trail using Cascade particles or Niagara if available
+    // If systemPath is provided, use Niagara; otherwise create a simple trail
+    FString SystemPath;
+    LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
+    if (SystemPath.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("emitter"), SystemPath);
+    }
+
+    if (!SystemPath.IsEmpty()) {
+      // Use the provided system path
+      return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
+                                 TEXT("create_particle_trail"), SystemPath);
+    }
+
+#if WITH_EDITOR
+    // Create a simple trail without an asset - spawn a NiagaraActor with default settings
+    if (!GEditor) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Editor not available"), nullptr,
+                             TEXT("EDITOR_NOT_AVAILABLE"));
+      return true;
+    }
+
+    FVector Loc(0, 0, 0);
+    if (LocalPayload->HasField(TEXT("location"))) {
+      const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
+      if (LocVal.IsValid() && LocVal->Type == EJson::Array) {
+        const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
+        if (Arr.Num() >= 3)
+          Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
+      }
+    }
+
+    // For procedural trail without asset, inform user that systemPath is needed
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), TEXT("systemPath or emitter parameter is required for particle trail creation. Please provide a valid Niagara system asset path."));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("systemPath required for particle trail"), Resp,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("create_particle_trail requires editor build."),
+                           nullptr, TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
+  }
+
+  if (bCreateEnv) {
+    // Create environment effect - requires a Niagara system asset
+    FString SystemPath;
+    LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
+    
+    if (!SystemPath.IsEmpty()) {
+      return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
+                                 TEXT("create_environment_effect"), SystemPath);
+    }
+
+    // Without systemPath, inform user
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), TEXT("systemPath parameter is required for environment effect creation. Please provide a valid Niagara system asset path."));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("systemPath required for environment effect"), Resp,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  if (bCreateImpact) {
+    // Create impact effect - requires a Niagara system asset
+    FString SystemPath;
+    LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
+
+    if (!SystemPath.IsEmpty()) {
+      return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
+                                 TEXT("create_impact_effect"), SystemPath);
+    }
+
+    // Without systemPath, inform user
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), TEXT("systemPath parameter is required for impact effect creation. Please provide a valid Niagara system asset path."));
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("systemPath required for impact effect"), Resp,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   if (bCreateRibbon) {
     // Require systemPath
     return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                TEXT("create_niagara_ribbon"), FString());
-  }
-  if (bCreateFog) {
-    return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
-                               TEXT("create_volumetric_fog"), FString());
-  }
-  if (bCreateTrail) {
-    return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
-                               TEXT("create_particle_trail"), FString());
-  }
-  if (bCreateEnv) {
-    return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
-                               TEXT("create_environment_effect"), FString());
-  }
-  if (bCreateImpact) {
-    return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
-                               TEXT("create_impact_effect"), FString());
   }
 
   // ============================================================================

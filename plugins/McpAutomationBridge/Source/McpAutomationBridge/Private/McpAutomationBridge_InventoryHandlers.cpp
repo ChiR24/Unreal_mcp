@@ -2850,53 +2850,92 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   // ===========================================================================
 
   if (SubAction == TEXT("get_inventory_info")) {
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
     FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
     FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
     FString RecipePath = GetPayloadString(Payload, TEXT("recipePath"));
     FString PickupPath = GetPayloadString(Payload, TEXT("pickupPath"));
 
+    // Validate that at least one path is provided
+    if (BlueprintPath.IsEmpty() && ItemPath.IsEmpty() && LootTablePath.IsEmpty() && 
+        RecipePath.IsEmpty() && PickupPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("At least one path parameter is required (blueprintPath, itemPath, lootTablePath, recipePath, or pickupPath)"),
+                          TEXT("MISSING_PARAMETER"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
     if (!BlueprintPath.IsEmpty()) {
       UBlueprint* Blueprint = Cast<UBlueprint>(
           StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
-      if (Blueprint) {
-        Result->SetStringField(TEXT("assetType"), TEXT("Blueprint"));
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("className"), Blueprint->GeneratedClass->GetName());
+      if (!Blueprint) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
+                            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
+      Result->SetStringField(TEXT("assetType"), TEXT("Blueprint"));
+      Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+      Result->SetStringField(TEXT("className"), Blueprint->GeneratedClass->GetName());
 
-        // Check for inventory/equipment components
-        USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
-        if (SCS) {
-          TArray<TSharedPtr<FJsonValue>> Components;
-          for (USCS_Node* Node : SCS->GetAllNodes()) {
-            if (Node) {
-              TSharedPtr<FJsonObject> CompInfo = McpHandlerUtils::CreateResultObject();
-              CompInfo->SetStringField(TEXT("name"), Node->GetVariableName().ToString());
-              CompInfo->SetStringField(TEXT("class"),
-                                       Node->ComponentClass ? Node->ComponentClass->GetName() : TEXT("Unknown"));
-              Components.Add(MakeShared<FJsonValueObject>(CompInfo));
-            }
+      // Check for inventory/equipment components
+      USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+      if (SCS) {
+        TArray<TSharedPtr<FJsonValue>> Components;
+        for (USCS_Node* Node : SCS->GetAllNodes()) {
+          if (Node) {
+            TSharedPtr<FJsonObject> CompInfo = McpHandlerUtils::CreateResultObject();
+            CompInfo->SetStringField(TEXT("name"), Node->GetVariableName().ToString());
+            CompInfo->SetStringField(TEXT("class"),
+                                     Node->ComponentClass ? Node->ComponentClass->GetName() : TEXT("Unknown"));
+            Components.Add(MakeShared<FJsonValueObject>(CompInfo));
           }
-          Result->SetArrayField(TEXT("components"), Components);
         }
+        Result->SetArrayField(TEXT("components"), Components);
       }
     } else if (!ItemPath.IsEmpty()) {
       // Use UDataAsset base class for loading - UPrimaryDataAsset is abstract in UE5.7
       UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
-      if (ItemAsset) {
-        Result->SetStringField(TEXT("assetType"), TEXT("Item"));
-        Result->SetStringField(TEXT("itemPath"), ItemPath);
-        Result->SetStringField(TEXT("className"), ItemAsset->GetClass()->GetName());
+      if (!ItemAsset) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Item not found: %s"), *ItemPath),
+                            TEXT("ASSET_NOT_FOUND"));
+        return true;
       }
+      Result->SetStringField(TEXT("assetType"), TEXT("Item"));
+      Result->SetStringField(TEXT("itemPath"), ItemPath);
+      Result->SetStringField(TEXT("className"), ItemAsset->GetClass()->GetName());
     } else if (!LootTablePath.IsEmpty()) {
+      UObject* LootTableAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
+      if (!LootTableAsset) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Loot table not found: %s"), *LootTablePath),
+                            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
       Result->SetStringField(TEXT("assetType"), TEXT("LootTable"));
       Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     } else if (!RecipePath.IsEmpty()) {
+      UObject* RecipeAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *RecipePath);
+      if (!RecipeAsset) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Recipe not found: %s"), *RecipePath),
+                            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
       Result->SetStringField(TEXT("assetType"), TEXT("Recipe"));
       Result->SetStringField(TEXT("recipePath"), RecipePath);
     } else if (!PickupPath.IsEmpty()) {
+      UBlueprint* PickupBlueprint = Cast<UBlueprint>(
+          StaticLoadObject(UBlueprint::StaticClass(), nullptr, *PickupPath));
+      if (!PickupBlueprint) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Pickup blueprint not found: %s"), *PickupPath),
+                            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
       Result->SetStringField(TEXT("assetType"), TEXT("Pickup"));
       Result->SetStringField(TEXT("pickupPath"), PickupPath);
     }

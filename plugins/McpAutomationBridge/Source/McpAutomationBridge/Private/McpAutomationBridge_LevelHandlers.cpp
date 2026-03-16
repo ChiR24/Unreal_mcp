@@ -246,21 +246,25 @@ static UWorld* McpSafeNewMap(bool bForceNewMap = true, UMcpAutomationBridgeSubsy
             Subsystem->SendProgressUpdate(RequestId, 55.0f, TEXT("Garbage collection complete"));
         }
         
-        // STEP 9: REMOVED - Calling StartFrame triggers assertion if TickCompletionEvents is not empty
-        // The assertion "check(!TickCompletionEvents[Index].Num())" at TickTaskManager.cpp:1097
-        // fires BEFORE LevelList is cleared, creating a catch-22.
+        // STEP 9: CRITICAL FIX - Call EndFrame() to clear FTickTaskManager's LevelList
+        // The FTickTaskManager maintains a LevelList that's populated by FillLevelList() during
+        // StartFrame() and cleared by LevelList.Reset() in EndFrame(). When NewMap() destroys
+        // the old world, FreeTickTaskLevel() asserts that the TickTaskLevel is NOT in LevelList.
+        // By calling EndFrame(), we ensure LevelList is cleared before world destruction.
         // 
-        // Instead, we rely on Steps 1-8 which are sufficient:
-        // - Setting bIsVisible = false prevents FillLevelList from adding levels
-        // - Disabling all actor/component ticks prevents new tick registrations
-        // - FlushRenderingCommands clears GPU work
-        // - GC cleans up references
-        // - 100ms sleep allows engine to settle
+        // This is safe because:
+        // 1. We've already unregistered all tick functions (Step 2)
+        // 2. We've set bIsVisible=false on all levels (Step 1)
+        // 3. EndFrame() doesn't have assertions that would fail if called outside a tick frame
+        // 4. The TickTaskSequencer.EndFrame() just clears batched tick data
+        // 5. The LevelList.Reset() is the critical operation we need
+        FTickTaskManagerInterface::Get().EndFrame();
+        UE_LOG(LogTemp, Log, TEXT("McpSafeNewMap: Called EndFrame() to clear LevelList"));
         
-        // Progress update: tick cleanup complete (via Steps 1-8)
+        // Progress update: LevelList cleared
         if (Subsystem && !RequestId.IsEmpty())
         {
-            Subsystem->SendProgressUpdate(RequestId, 65.0f, TEXT("Tick cleanup complete (via visibility/tick disable)"));
+            Subsystem->SendProgressUpdate(RequestId, 65.0f, TEXT("Cleared tick task level list"));
         }
         
         // STEP 10: Give the engine a moment to process cleanup

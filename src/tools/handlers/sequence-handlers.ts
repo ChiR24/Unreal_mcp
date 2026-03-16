@@ -102,8 +102,10 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'add_camera': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
+        path,
         spawnable: args.spawnable !== false,
         subAction: 'add_camera'
       }) as SequenceActionResponse;
@@ -161,8 +163,11 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'add_actors': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const actorNames: string[] = Array.isArray(args.actorNames) ? args.actorNames as string[] : [];
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      if (actorNames.length === 0) {
+        throw new Error('Missing required parameter: actorNames (must be non-empty array)');
+      }
       
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
@@ -194,8 +199,11 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'remove_actors': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const actorNames: string[] = Array.isArray(args.actorNames) ? args.actorNames as string[] : [];
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      if (actorNames.length === 0) {
+        throw new Error('Missing required parameter: actorNames (must be non-empty array)');
+      }
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         actorNames,
@@ -205,7 +213,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'get_bindings': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -214,14 +222,17 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'add_keyframe': {
-      const path = typeof args.path === 'string' ? args.path.trim() : '';
-      const actorName = typeof args.actorName === 'string' ? args.actorName : undefined;
-      const property = typeof args.property === 'string' ? args.property : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const actorName = requireNonEmptyString(args.actorName, 'actorName', 'Missing required parameter: actorName');
+      const property = typeof args.property === 'string' ? args.property : 'Transform';
       const frame = typeof args.frame === 'number' ? args.frame : Number(args.frame);
+      if (!Number.isFinite(frame)) {
+        throw new Error('Missing or invalid required parameter: frame (must be a number)');
+      }
 
       const payload: Record<string, unknown> = {
         ...args,
-        path: path || args.path,
+        path,
         actorName,
         property,
         frame,
@@ -277,7 +288,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     }
     case 'add_spawnable_from_class': {
       const className = requireNonEmptyString(args.className, 'className', 'Missing required parameter: className');
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         className,
@@ -287,7 +298,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'play': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -298,7 +309,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'pause': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -307,7 +318,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'stop': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -316,7 +327,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'set_properties': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -329,7 +340,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'get_properties': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -338,11 +349,11 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'set_playback_speed': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const speed = Number(args.speed);
       if (!Number.isFinite(speed) || speed <= 0) {
         throw new Error('Invalid speed: must be a positive number');
       }
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
       
       // Try setting speed
       let res = await executeAutomationRequest(tools, 'manage_sequence', {
@@ -354,10 +365,10 @@ export async function handleSequenceTools(action: string, args: Record<string, u
 
       // Fix: Auto-open if editor not open
       const errorCode = getErrorString(res).toUpperCase();
-      if ((!res || res.success === false) && errorCode === 'EDITOR_NOT_OPEN' && args.path) {
+      if ((!res || res.success === false) && errorCode === 'EDITOR_NOT_OPEN') {
         // Attempt to open the sequence
         await executeAutomationRequest(tools, 'manage_sequence', {
-          path: args.path as string,
+          path,
           subAction: 'open'
         });
 
@@ -439,7 +450,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'get_metadata': {
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
         path,
@@ -455,8 +466,8 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     }
     case 'add_track': {
       // Forward add_track to the C++ plugin - it requires MovieScene API
-      const path = typeof args.path === 'string' ? args.path.trim() : '';
-      const trackType = typeof args.trackType === 'string' ? args.trackType : '';
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const trackType = requireNonEmptyString(args.trackType, 'trackType', 'Missing required parameter: trackType');
       const trackName = typeof args.trackName === 'string' ? args.trackName : '';
       const actorName = typeof args.actorName === 'string' ? args.actorName : undefined;
 
@@ -484,7 +495,7 @@ export async function handleSequenceTools(action: string, args: Record<string, u
 
       const payload = {
         ...args,
-        path: path || args.path,
+        path,
         trackType,
         trackName,
         actorName,
@@ -496,24 +507,33 @@ export async function handleSequenceTools(action: string, args: Record<string, u
     }
     case 'add_section': {
       // Forward add_section to C++
-      const payload = { ...args, subAction: 'add_section' };
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const payload = { ...args, path, subAction: 'add_section' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'remove_track': {
       // Forward remove_track to C++
-      const payload = { ...args, subAction: 'remove_track' };
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const payload = { ...args, path, trackName, subAction: 'remove_track' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_muted': {
-      const payload = { ...args, subAction: 'set_track_muted' };
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const payload = { ...args, path, trackName, subAction: 'set_track_muted' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_solo': {
-      const payload = { ...args, subAction: 'set_track_solo' };
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const payload = { ...args, path, trackName, subAction: 'set_track_solo' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'set_track_locked': {
-      const payload = { ...args, subAction: 'set_track_locked' };
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const trackName = requireNonEmptyString(args.trackName, 'trackName', 'Missing required parameter: trackName');
+      const payload = { ...args, path, trackName, subAction: 'set_track_locked' };
       return cleanObject(await executeAutomationRequest(tools, 'manage_sequence', payload));
     }
     case 'list_tracks': {
@@ -526,12 +546,12 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       return cleanObject(res);
     }
     case 'set_work_range': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const start = Number(args.start);
       const end = Number(args.end);
       // Validate start/end are numbers
       if (!Number.isFinite(start)) throw new Error('Invalid start: must be a number');
       if (!Number.isFinite(end)) throw new Error('Invalid end: must be a number');
-      const path = typeof args.path === 'string' ? args.path.trim() : undefined;
 
       const res = await executeAutomationRequest(tools, 'manage_sequence', {
         ...args,
