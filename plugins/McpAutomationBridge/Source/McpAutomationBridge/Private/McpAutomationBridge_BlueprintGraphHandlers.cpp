@@ -223,12 +223,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     return true;
   }
 
-  UBlueprint *Blueprint = LoadObject<UBlueprint>(nullptr, *AssetPath);
+  // CRITICAL FIX: Use LoadBlueprintAsset instead of LoadObject to properly
+  // find in-memory blueprints first. This prevents reloading stale versions
+  // from disk when the blueprint has been modified in memory (e.g., after
+  // create_node adds nodes that haven't been saved to disk yet).
+  FString NormalizedPath;
+  FString LoadError;
+  UBlueprint *Blueprint = LoadBlueprintAsset(AssetPath, NormalizedPath, LoadError);
   if (!Blueprint) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Could not load blueprint at path: %s"),
-                        *AssetPath),
+        LoadError.IsEmpty()
+            ? FString::Printf(TEXT("Could not load blueprint at path: %s"),
+                              *AssetPath)
+            : LoadError,
         TEXT("ASSET_NOT_FOUND"));
     return true;
   }

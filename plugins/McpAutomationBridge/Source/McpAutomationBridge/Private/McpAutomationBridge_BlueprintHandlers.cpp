@@ -3601,6 +3601,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
             ? NormPath
             : Path;
 
+    // CRITICAL FIX: Validate that the blueprint exists BEFORE treating operation as idempotent.
+    // Previously, the code returned success for non-existent blueprints, causing false negatives
+    // in tests that expect "not found" errors for invalid paths.
+    bool bBlueprintExists = false;
+#if WITH_EDITOR
+    FString NormalizedCheck;
+    FString CheckLoadErr;
+    UBlueprint *CheckBlueprint = LoadBlueprintAsset(RegistryPath, NormalizedCheck, CheckLoadErr);
+    bBlueprintExists = (CheckBlueprint != nullptr);
+#endif
+    if (!bBlueprintExists) {
+      // Check if path exists in asset registry as fallback
+      bBlueprintExists = FindBlueprintNormalizedPath(RegistryPath, NormPath);
+    }
+
     TSharedPtr<FJsonObject> Entry =
         FMcpAutomationBridge_EnsureBlueprintEntry(RegistryPath);
     TArray<TSharedPtr<FJsonValue>> Events =
@@ -3620,8 +3635,19 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       }
     }
     if (FoundIdx == INDEX_NONE) {
+      // FIX: If blueprint doesn't exist, return error instead of idempotent success.
+      // Tests expect "not found" for non-existent blueprint paths.
+      if (!bBlueprintExists) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("eventName"), EventName);
+        Resp->SetStringField(TEXT("blueprintPath"), Path);
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Blueprint not found."),
+                               Resp, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+      }
       // Treat remove as idempotent: if the event is not present in
-      // the registry consider the request successful (no-op).
+      // the registry AND blueprint exists, consider the request successful (no-op).
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("eventName"), EventName);
       Resp->SetStringField(TEXT("blueprintPath"), Path);

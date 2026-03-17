@@ -587,12 +587,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     // -------------------------------------------------------------------------
     else if (LowerSub == TEXT("create_sky_sphere"))
     {
-        if (GEditor)
+        // Initialize to false - only set true on successful creation
+        bSuccess = false;
+        
+        if (!GEditor)
+        {
+            Message = TEXT("Editor not available");
+            ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+        }
+        else
         {
             UClass *SkySphereClass = LoadClass<AActor>(
                 nullptr, TEXT("/Script/Engine.Blueprint'/Engine/Maps/Templates/"
                               "SkySphere.SkySphere_C'"));
-            if (SkySphereClass)
+            if (!SkySphereClass)
+            {
+                Message = TEXT("SkySphere class not found at /Engine/Maps/Templates/SkySphere.SkySphere_C. "
+                               "This asset may not exist in the current project.");
+                ErrorCode = TEXT("CLASS_NOT_FOUND");
+                Resp->SetStringField(TEXT("missingAsset"), TEXT("/Engine/Maps/Templates/SkySphere"));
+            }
+            else
             {
                 AActor *SkySphere = SpawnActorInActiveWorld<AActor>(
                     SkySphereClass, FVector::ZeroVector, FRotator::ZeroRotator,
@@ -603,13 +618,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                     Message = TEXT("Sky sphere created");
                     Resp->SetStringField(TEXT("actorName"), SkySphere->GetActorLabel());
                 }
+                else
+                {
+                    Message = TEXT("Failed to spawn sky sphere actor");
+                    ErrorCode = TEXT("SPAWN_FAILED");
+                }
             }
-        }
-        if (!bSuccess)
-        {
-            bSuccess = false;
-            Message = TEXT("Failed to create sky sphere");
-            ErrorCode = TEXT("CREATION_FAILED");
         }
     }
     // -------------------------------------------------------------------------
@@ -654,15 +668,39 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
     // -------------------------------------------------------------------------
     else if (LowerSub == TEXT("create_fog_volume"))
     {
+        // Initialize to false - only set true on successful creation
+        bSuccess = false;
+        
         FVector Location(0, 0, 0);
-        Payload->TryGetNumberField(TEXT("x"), Location.X);
-        Payload->TryGetNumberField(TEXT("y"), Location.Y);
-        Payload->TryGetNumberField(TEXT("z"), Location.Z);
+        // Support both top-level x/y/z and location object
+        const TSharedPtr<FJsonObject> *LocObj = nullptr;
+        if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj)
+        {
+            (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+            (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+            (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+        }
+        else
+        {
+            Payload->TryGetNumberField(TEXT("x"), Location.X);
+            Payload->TryGetNumberField(TEXT("y"), Location.Y);
+            Payload->TryGetNumberField(TEXT("z"), Location.Z);
+        }
 
-        if (GEditor)
+        if (!GEditor)
+        {
+            Message = TEXT("Editor not available");
+            ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+        }
+        else
         {
             UClass *FogClass = LoadClass<AActor>(nullptr, TEXT("/Script/Engine.ExponentialHeightFog"));
-            if (FogClass)
+            if (!FogClass)
+            {
+                Message = TEXT("ExponentialHeightFog class not found");
+                ErrorCode = TEXT("CLASS_NOT_FOUND");
+            }
+            else
             {
                 AActor *FogVolume = SpawnActorInActiveWorld<AActor>(
                     FogClass, Location, FRotator::ZeroRotator, TEXT("FogVolume"));
@@ -672,13 +710,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                     Message = TEXT("Fog volume created");
                     Resp->SetStringField(TEXT("actorName"), FogVolume->GetActorLabel());
                 }
+                else
+                {
+                    Message = TEXT("Failed to spawn fog volume actor");
+                    ErrorCode = TEXT("SPAWN_FAILED");
+                }
             }
-        }
-        if (!bSuccess)
-        {
-            bSuccess = false;
-            Message = TEXT("Failed to create fog volume");
-            ErrorCode = TEXT("CREATION_FAILED");
         }
     }
     // -------------------------------------------------------------------------

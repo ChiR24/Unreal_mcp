@@ -391,6 +391,65 @@ static bool HandleCreateLevel(
         return true;
     }
 
+    // CRITICAL FIX for UE 5.7 World Memory Leaks:
+    // After saving, clean up the created world from memory. If we leave it in memory,
+    // subsequent LoadMap calls will crash with "World Memory Leaks" because the world
+    // package has root flags and can't be garbage collected.
+    //
+    // Root Cause: UWorld::CreateWorld(EWorldType::Inactive, ...) creates a standalone
+    // world that stays in memory as a root object. When FEditorFileUtils::LoadMap()
+    // tries to load the same package, UE 5.7 detects the existing package → Fatal Error.
+    //
+    // Reference: EditorServer.cpp line 2524 - "World Memory Leaks: %d leaks objects"
+    if (bSaveSucceeded && NewWorld)
+    {
+        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Cleaning up created world from memory after save: %s"), *FullPath);
+        
+        // Mark the world for destruction
+        NewWorld->bIsTearingDown = true;
+        
+        // Disable all ticking on this world to prevent tick assertions
+        if (NewWorld->PersistentLevel)
+        {
+            // Mark level as invisible
+            NewWorld->PersistentLevel->bIsVisible = false;
+            
+            for (AActor* Actor : NewWorld->PersistentLevel->Actors)
+            {
+                if (Actor)
+                {
+                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                    {
+                        Actor->PrimaryActorTick.UnRegisterTickFunction();
+                    }
+                    Actor->PrimaryActorTick.GetPrerequisites().Empty();
+                    
+                    for (UActorComponent* Component : Actor->GetComponents())
+                    {
+                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
+                        {
+                            Component->PrimaryComponentTick.UnRegisterTickFunction();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Mark the world and its package as transient so GC will collect them
+        NewWorld->SetFlags(RF_Transient);
+        if (Package)
+        {
+            Package->SetFlags(RF_Transient);
+        }
+        
+        // Force garbage collection to remove the world from memory
+        // This allows the level to be cleanly loaded later via LoadMap
+        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+        FlushRenderingCommands();
+        
+        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: World cleaned up from memory: %s"), *FullPath);
+    }
+
     FString Message = FString::Printf(TEXT("Created level: %s"), *FullPath);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;

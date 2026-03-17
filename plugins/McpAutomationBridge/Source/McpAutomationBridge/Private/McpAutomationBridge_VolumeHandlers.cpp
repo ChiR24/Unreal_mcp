@@ -2213,6 +2213,18 @@ static bool HandleAddTriggerVolume(
         return true;
     }
 
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
+    }
+
     // Attach to the target actor - check return value
     // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -2300,6 +2312,18 @@ static bool HandleAddBlockingVolume(
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Failed to spawn BlockingVolume"), nullptr);
         return true;
+    }
+
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
     }
 
     // Attach to the target actor - check return value
@@ -2396,6 +2420,18 @@ static bool HandleAddKillZVolume(
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Failed to spawn KillZVolume"), nullptr);
         return true;
+    }
+
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
     }
 
     // Attach to the target actor - check return value
@@ -2497,6 +2533,18 @@ static bool HandleAddPhysicsVolume(
     Volume->bWaterVolume = bWaterVolume;
     Volume->FluidFriction = FluidFriction;
     Volume->TerminalVelocity = TerminalVelocity;
+
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
+    }
 
     // Attach to the target actor - check return value
     // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
@@ -2612,6 +2660,18 @@ static bool HandleAddCullDistanceVolume(
         }
     }
 
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
+    }
+
     // Attach to the target actor - check return value
     // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -2714,6 +2774,18 @@ static bool HandleAddPostProcessVolume(
     Volume->BlendWeight = BlendWeight;
     Volume->bEnabled = bEnabled;
     Volume->bUnbound = bUnbound;
+
+    // Check if target actor is movable - if so, make volume movable too
+    // UE doesn't allow attaching static actors to movable actors
+    USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
+    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    {
+        // Set volume's root component to Movable so it can attach to movable actor
+        if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
+        {
+            BrushComp->SetMobility(EComponentMobility::Movable);
+        }
+    }
 
     // Attach to the target actor - check return value
     // Note: AttachToActor returns void in UE 5.0, bool in UE 5.1+

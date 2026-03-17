@@ -1035,6 +1035,26 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         FlushRenderingCommands();
         FPlatformProcess::Sleep(0.05f);
         
+        // CRITICAL FIX: Reload the saved level to ensure the world has the correct package name.
+        // UEditorLoadingAndSavingUtils::SaveMap() saves to disk but doesn't update the world's
+        // outer package. This causes "World Memory Leaks" crashes when load_level is called
+        // because McpSafeLoadMap doesn't recognize the saved level as the current level.
+        // Reloading ensures:
+        // 1. The world's package name matches the save path
+        // 2. All references are properly set up
+        // 3. Subsequent load_level calls correctly skip loading (already current)
+        UE_LOG(LogTemp, Log, TEXT("create_new_level: Reloading saved level to update package name: %s"), *SavePath);
+        bool bReloadSucceeded = McpSafeLoadMap(SavePath, true);
+        if (!bReloadSucceeded)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("create_new_level: Failed to reload saved level %s, but save succeeded"), *SavePath);
+            // Continue anyway - the level was saved successfully, just the reload failed
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("create_new_level: Successfully reloaded level with correct package name: %s"), *SavePath);
+        }
+        
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("levelPath"), SavePath);
         Resp->SetStringField(TEXT("packagePath"), SavePath);

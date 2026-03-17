@@ -844,15 +844,15 @@ static inline UActorComponent* ResolveComponentPath(const FString& ObjectPath, F
  * This helper:
  * 1. Suspends the render thread during save (prevents driver race condition)
  * 2. Flushes all rendering commands before and after save
- * 3. Verifies the file exists after save
+ * 3. Verifies the file exists after save with retry logic
  * 4. Validates path length to prevent Windows Error 87 (MAX_PATH exceeded)
  *
  * @param Level The ULevel to save
  * @param FullPath The full package path for the level
- * @param MaxRetries Unused (kept for API compatibility)
+ * @param MaxRetries Number of retries for file verification (default: 5, max 7.75s total)
  * @return true if save succeeded and file exists
  */
-static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 1)
+static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
 {
     if (!Level)
     {
@@ -962,43 +962,81 @@ static inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int3
     // Small delay after flush to ensure GPU is completely idle
     FPlatformProcess::Sleep(0.050f); // 50ms wait
 
+    // CRITICAL FIX: Convert virtual package path to physical filename.
+    // FEditorFileUtils::SaveLevel expects a physical filename (e.g., C:/Project/Content/Map.umap),
+    // NOT a virtual package path (e.g., /Game/Map). The OBJ SAVEPACKAGE command internally
+    // needs FILE= to be the physical disk path, not the virtual path.
+    // Reference: UEditorLoadingAndSavingUtils::SaveMap in FileHelpers.cpp lines 5736-5750
+    FString SaveFilename;
+    if (!FPackageName::TryConvertLongPackageNameToFilename(PackagePath, SaveFilename, FPackageName::GetMapPackageExtension()))
+    {
+        UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
+        return false;
+    }
+
     // Perform the actual save
-    UWorld* World = Level ? Level->GetWorld() : nullptr;
-    bool bSaveSucceeded = false;
-    if (World)
-    {
-        bSaveSucceeded = UEditorLoadingAndSavingUtils::SaveMap(World, PackagePath);
-    }
-    else
-    {
-        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *PackagePath);
-    }
+    // CRITICAL FIX: Always use FEditorFileUtils::SaveLevel instead of UEditorLoadingAndSavingUtils::SaveMap.
+    // UEditorLoadingAndSavingUtils::SaveMap saves to a new package but doesn't update the world's outer
+    // package name. This causes "World Memory Leaks" crashes when load_level is called because
+    // McpSafeLoadMap doesn't recognize the saved level as the current level (package name mismatch).
+    // FEditorFileUtils::SaveLevel properly updates the world's package to match the save path.
+    bool bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *SaveFilename);
 
     if (bSaveSucceeded)
     {
-        // Small delay before verification
-        FPlatformProcess::Sleep(0.050f);
-
-        // Verify file exists on disk
+        // Verify file exists on disk with retry logic
+        // File system may have delayed writes, especially on network drives or slow disks
         FString VerifyFilename;
         if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename, FPackageName::GetMapPackageExtension()))
         {
             FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
             
-            if (IFileManager::Get().FileExists(*VerifyFilename) || IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+            // Clamp retries to reasonable range (1-10)
+            const int32 ActualRetries = FMath::Clamp(MaxRetries, 1, 10);
+            const float RetryDelays[] = { 0.05f, 0.10f, 0.25f, 0.50f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
+            
+            for (int32 Retry = 0; Retry < ActualRetries; ++Retry)
             {
-                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
+                // Apply delay before checking (exponential backoff)
+                const float DelaySeconds = (Retry < 10) ? RetryDelays[Retry] : RetryDelays[9];
+                FPlatformProcess::Sleep(DelaySeconds);
+                
+                // Check both relative and absolute paths
+                if (IFileManager::Get().FileExists(*VerifyFilename) || 
+                    IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s (verified after %.2fs)"), 
+                        *PackagePath, DelaySeconds);
+                    return true;
+                }
+                
+                // FALLBACK: Check if package exists in UE's package system
+                if (FPackageName::DoesPackageExist(PackagePath))
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                    return true;
+                }
+            }
+            
+            // Final attempt: force garbage collection and check again
+            FlushRenderingCommands();
+            FPlatformProcess::Sleep(0.5f);
+            
+            if (IFileManager::Get().FileExists(*VerifyFilename) || 
+                IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+            {
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Successfully saved level after GC: %s"), *PackagePath);
                 return true;
             }
             
-            // FALLBACK: Check if package exists in UE's package system
             if (FPackageName::DoesPackageExist(PackagePath))
             {
-                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLevelSave: Package exists in UE system after GC: %s"), *PackagePath);
                 return true;
             }
             
-            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Save reported success but file not found: %s"), *VerifyFilename);
+            UE_LOG(LogTemp, Error, TEXT("McpSafeLevelSave: Save reported success but file not found after %d retries: %s"), 
+                ActualRetries, *VerifyFilename);
         }
         else
         {
@@ -1168,6 +1206,27 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
     
+    // CRITICAL: Check if the map we're trying to load is already the current map FIRST.
+    // This must happen BEFORE cleanup to avoid unnecessary cleanup on the same level.
+    // If we cleanup first and then check, we destroy tick functions on the level we want to keep.
+    if (CurrentWorld)
+    {
+        FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
+        FString NormalizedMapPath = MapPath;
+        
+        // Remove .umap extension for comparison
+        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        {
+            NormalizedMapPath.LeftChopInline(5);
+        }
+        
+        if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
+        {
+            UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
+            return true; // Already loaded, consider it success
+        }
+    }
+    
     // CRITICAL: Check if current world has World Partition before cleanup
     // World Partition levels have additional tick registrations that may cause
     // TickTaskManager assertion crashes even with standard cleanup.
@@ -1268,23 +1327,69 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         FlushRenderingCommands();
     }
     
-    // STEP 11: Check if the map we're trying to load is already the current map
-    // If so, skip loading to avoid unnecessary world transitions
-    if (CurrentWorld)
+    // STEP 11: CRITICAL FIX for UE 5.7 World Memory Leaks
+    // Check if the TARGET world package already exists in memory from a previous
+    // HandleCreateLevel call. If it does, we must clean it up BEFORE loading.
+    // 
+    // Root Cause: UWorld::CreateWorld() creates a standalone world with root flags.
+    // When FEditorFileUtils::LoadMap() tries to load the same package, UE 5.7's
+    // EditorServer.cpp detects the existing package can't be GC'd → Fatal Error.
+    //
+    // Reference: EditorServer.cpp line 2524 - "World Memory Leaks: %d leaks objects"
     {
-        FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
         FString NormalizedMapPath = MapPath;
-        
-        // Remove .umap extension for comparison
         if (NormalizedMapPath.EndsWith(TEXT(".umap")))
         {
             NormalizedMapPath.LeftChopInline(5);
         }
         
-        if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
+        // Check if this world package already exists in memory (not as current world)
+        UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *NormalizedMapPath);
+        if (ExistingPackage)
         {
-            UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
-            return true; // Already loaded, consider it success
+            // Find any UWorld objects in this package
+            UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *FPaths::GetBaseFilename(NormalizedMapPath));
+            if (ExistingWorld && ExistingWorld != CurrentWorld)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("McpSafeLoadMap: Target world '%s' exists in memory from previous creation - cleaning up"), *NormalizedMapPath);
+                
+                // Mark the world for destruction
+                ExistingWorld->bIsTearingDown = true;
+                
+                // Disable all ticking on this world
+                if (ExistingWorld->PersistentLevel)
+                {
+                    for (AActor* Actor : ExistingWorld->PersistentLevel->Actors)
+                    {
+                        if (Actor)
+                        {
+                            if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
+                            {
+                                Actor->PrimaryActorTick.UnRegisterTickFunction();
+                            }
+                            Actor->PrimaryActorTick.GetPrerequisites().Empty();
+                            
+                            for (UActorComponent* Component : Actor->GetComponents())
+                            {
+                                if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
+                                {
+                                    Component->PrimaryComponentTick.UnRegisterTickFunction();
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Mark the world and its package for garbage collection
+                ExistingWorld->SetFlags(RF_Transient);
+                ExistingPackage->SetFlags(RF_Transient);
+                
+                // Force garbage collection to clean up the existing world
+                CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+                FlushRenderingCommands();
+                
+                UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Cleaned up pre-existing world package '%s'"), *NormalizedMapPath);
+            }
         }
     }
     

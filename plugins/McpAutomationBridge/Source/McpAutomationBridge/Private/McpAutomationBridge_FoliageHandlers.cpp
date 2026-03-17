@@ -1143,50 +1143,46 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
 
   FString Name;
   if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    // Auto-generate name if not provided
+    Name = FString::Printf(TEXT("ProceduralFoliage_%lld"), FDateTime::UtcNow().GetTicks());
   }
 
-  const TSharedPtr<FJsonObject> *BoundsObj = nullptr;
-  if (!Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) || !BoundsObj) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("bounds required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
+  // Bounds are optional - provide defaults if not specified
   FVector Location(0, 0, 0);
   FVector Size(1000, 1000, 1000);
 
-  const TSharedPtr<FJsonObject> *LocObj = nullptr;
-  if ((*BoundsObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-    (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
-    (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
-    (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
-  }
+  const TSharedPtr<FJsonObject> *BoundsObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) && BoundsObj) {
+    const TSharedPtr<FJsonObject> *LocObj = nullptr;
+    if ((*BoundsObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
+      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
+      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
+      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
+    }
 
-  const TSharedPtr<FJsonObject> *SizeObj = nullptr;
-  if ((*BoundsObj)->TryGetObjectField(TEXT("size"), SizeObj) && SizeObj) {
-    (*SizeObj)->TryGetNumberField(TEXT("x"), Size.X);
-    (*SizeObj)->TryGetNumberField(TEXT("y"), Size.Y);
-    (*SizeObj)->TryGetNumberField(TEXT("z"), Size.Z);
+    const TSharedPtr<FJsonObject> *SizeObj = nullptr;
+    if ((*BoundsObj)->TryGetObjectField(TEXT("size"), SizeObj) && SizeObj) {
+      (*SizeObj)->TryGetNumberField(TEXT("x"), Size.X);
+      (*SizeObj)->TryGetNumberField(TEXT("y"), Size.Y);
+      (*SizeObj)->TryGetNumberField(TEXT("z"), Size.Z);
+    }
+    // If size is array
+    const TArray<TSharedPtr<FJsonValue>> *SizeArr = nullptr;
+    if ((*BoundsObj)->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr &&
+        SizeArr->Num() >= 3) {
+      Size.X = (*SizeArr)[0]->AsNumber();
+      Size.Y = (*SizeArr)[1]->AsNumber();
+      Size.Z = (*SizeArr)[2]->AsNumber();
+    }
   }
-  // If size is array
-  const TArray<TSharedPtr<FJsonValue>> *SizeArr = nullptr;
-  if ((*BoundsObj)->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr &&
-      SizeArr->Num() >= 3) {
-    Size.X = (*SizeArr)[0]->AsNumber();
-    Size.Y = (*SizeArr)[1]->AsNumber();
-    Size.Z = (*SizeArr)[2]->AsNumber();
-  }
+  // else: use default bounds (Location=0,0,0, Size=1000,1000,1000)
 
+  // FoliageTypes is optional - accept both 'foliageTypes' and 'types'
   const TArray<TSharedPtr<FJsonValue>> *FoliageTypesArr = nullptr;
   if (!Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr)) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("foliageTypes array required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    Payload->TryGetArrayField(TEXT("types"), FoliageTypesArr);
   }
+  // Note: Empty foliageTypes is allowed - creates a spawner without types
 
   int32 Seed = 12345;
   Payload->TryGetNumberField(TEXT("seed"), Seed);
@@ -1218,65 +1214,67 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Spawner->NumUniqueTiles = 10;
   Spawner->RandomSeed = Seed;
 
-  // Add foliage types to spawner
+  // Add foliage types to spawner (optional - may be null/empty)
   int32 TypeIndex = 0;
-  for (const TSharedPtr<FJsonValue> &Val : *FoliageTypesArr) {
-    const TSharedPtr<FJsonObject> *TypeObj = nullptr;
-    if (Val->TryGetObject(TypeObj) && TypeObj) {
-      FString MeshPath;
-      (*TypeObj)->TryGetStringField(TEXT("meshPath"), MeshPath);
-      double Density = 10.0;
-      (*TypeObj)->TryGetNumberField(TEXT("density"), Density);
+  if (FoliageTypesArr) {
+    for (const TSharedPtr<FJsonValue> &Val : *FoliageTypesArr) {
+      const TSharedPtr<FJsonObject> *TypeObj = nullptr;
+      if (Val->TryGetObject(TypeObj) && TypeObj) {
+        FString MeshPath;
+        (*TypeObj)->TryGetStringField(TEXT("meshPath"), MeshPath);
+        double Density = 10.0;
+        (*TypeObj)->TryGetNumberField(TEXT("density"), Density);
 
-      if (!MeshPath.IsEmpty()) {
-        UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-        if (Mesh) {
-          // Create FoliageType asset
-          FString FTName =
-              FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
-          FString FTPackagePath =
-              FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
-          UPackage *FTPackage = CreatePackage(*FTPackagePath);
-          UFoliageType_InstancedStaticMesh *FT =
-              NewObject<UFoliageType_InstancedStaticMesh>(
-                  FTPackage, FName(*FTName), RF_Public | RF_Standalone);
-          FT->SetStaticMesh(Mesh);
-          FT->Density = (float)Density;
-          FT->ReapplyDensity = true;
+        if (!MeshPath.IsEmpty()) {
+          UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+          if (Mesh) {
+            // Create FoliageType asset
+            FString FTName =
+                FString::Printf(TEXT("%s_FT_%d"), *AssetName, TypeIndex++);
+            FString FTPackagePath =
+                FString::Printf(TEXT("%s/%s"), *PackagePath, *FTName);
+            UPackage *FTPackage = CreatePackage(*FTPackagePath);
+            UFoliageType_InstancedStaticMesh *FT =
+                NewObject<UFoliageType_InstancedStaticMesh>(
+                    FTPackage, FName(*FTName), RF_Public | RF_Standalone);
+            FT->SetStaticMesh(Mesh);
+            FT->Density = (float)Density;
+            FT->ReapplyDensity = true;
 
-          FTPackage->MarkPackageDirty();
-          FAssetRegistryModule::AssetCreated(FT);
+            FTPackage->MarkPackageDirty();
+            FAssetRegistryModule::AssetCreated(FT);
 
-          // Add to Spawner using Reflection (since FoliageTypes is private)
-          FArrayProperty *FoliageTypesProp = FindFProperty<FArrayProperty>(
-              Spawner->GetClass(), TEXT("FoliageTypes"));
-          if (FoliageTypesProp) {
-            FScriptArrayHelper Helper(
-                FoliageTypesProp,
-                FoliageTypesProp->ContainerPtrToValuePtr<void>(Spawner));
-            int32 Index = Helper.AddValue();
-            void* RawData = Helper.GetRawPtr(Index);
-            McpSafeAssetSave(FT);
-            UScriptStruct *Struct = FFoliageTypeObject::StaticStruct();
+            // Add to Spawner using Reflection (since FoliageTypes is private)
+            FArrayProperty *FoliageTypesProp = FindFProperty<FArrayProperty>(
+                Spawner->GetClass(), TEXT("FoliageTypes"));
+            if (FoliageTypesProp) {
+              FScriptArrayHelper Helper(
+                  FoliageTypesProp,
+                  FoliageTypesProp->ContainerPtrToValuePtr<void>(Spawner));
+              int32 Index = Helper.AddValue();
+              void* RawData = Helper.GetRawPtr(Index);
+              McpSafeAssetSave(FT);
+              UScriptStruct *Struct = FFoliageTypeObject::StaticStruct();
 
-            FObjectProperty *ObjProp = FindFProperty<FObjectProperty>(
-                Struct, TEXT("FoliageTypeObject"));
-            if (ObjProp) {
-              ObjProp->SetObjectPropertyValue(
-                  ObjProp->ContainerPtrToValuePtr<void>(RawData), FT);
-            }
+              FObjectProperty *ObjProp = FindFProperty<FObjectProperty>(
+                  Struct, TEXT("FoliageTypeObject"));
+              if (ObjProp) {
+                ObjProp->SetObjectPropertyValue(
+                    ObjProp->ContainerPtrToValuePtr<void>(RawData), FT);
+              }
 
-            FBoolProperty *BoolProp =
-                FindFProperty<FBoolProperty>(Struct, TEXT("bIsAsset"));
-            if (BoolProp) {
-              BoolProp->SetPropertyValue(
-                  BoolProp->ContainerPtrToValuePtr<void>(RawData), true);
+              FBoolProperty *BoolProp =
+                  FindFProperty<FBoolProperty>(Struct, TEXT("bIsAsset"));
+              if (BoolProp) {
+                BoolProp->SetPropertyValue(
+                    BoolProp->ContainerPtrToValuePtr<void>(RawData), true);
+              }
             }
           }
         }
       }
     }
-  }
+  } // if (FoliageTypesArr)
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(Spawner);

@@ -999,7 +999,10 @@ Response->SetBoolField(TEXT("success"), true);
         else if (CompressionSettingsStr == TEXT("TC_HDR_Compressed")) NewSetting = TC_HDR_Compressed;
         else if (CompressionSettingsStr == TEXT("TC_BC7")) NewSetting = TC_BC7;
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->CompressionSettings = NewSetting;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -1066,7 +1069,10 @@ Response->SetBoolField(TEXT("success"), true);
         else if (TextureGroup.Contains(TEXT("Bokeh"))) NewGroup = TEXTUREGROUP_Bokeh;
         else if (TextureGroup.Contains(TEXT("Pixels2D"))) NewGroup = TEXTUREGROUP_Pixels2D;
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->LODGroup = NewGroup;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -1119,7 +1125,10 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->LODBias = LODBias;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -1172,7 +1181,10 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->VirtualTextureStreaming = bVirtualTextureStreaming;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -1224,7 +1236,10 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
         }
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->NeverStream = bNeverStream;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -2123,8 +2138,11 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
         }
         
+        // Set texture properties BEFORE writing data - use PreEditChange/PostEditChange lifecycle
+        OutputTexture->PreEditChange(nullptr);
         OutputTexture->SRGB = false;
         OutputTexture->CompressionSettings = TC_Masks;
+        OutputTexture->PostEditChange();
         
         uint8* OutData = OutputTexture->Source.LockMip(0);
         if (!OutData)
@@ -2702,7 +2720,10 @@ Response->SetBoolField(TEXT("success"), true);
         else if (FilterMode == TEXT("Trilinear")) Filter = TF_Trilinear;
         else if (FilterMode == TEXT("Default")) Filter = TF_Default;
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->Filter = Filter;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -2739,8 +2760,11 @@ Response->SetBoolField(TEXT("success"), true);
         else if (WrapMode == TEXT("Mirror")) { WrapU = TA_Mirror; WrapV = TA_Mirror; }
         else if (WrapMode == TEXT("Wrap")) { WrapU = TA_Wrap; WrapV = TA_Wrap; }
         
+        // Use PreEditChange/PostEditChange for proper texture property modification lifecycle
+        Texture->PreEditChange(nullptr);
         Texture->AddressX = WrapU;
         Texture->AddressY = WrapV;
+        Texture->PostEditChange();
         Texture->UpdateResource();
         Texture->MarkPackageDirty();
         
@@ -3029,13 +3053,20 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         AOTexture->Source.UnlockMip(0);
-        AOTexture->UpdateResource();
         
+        // CRITICAL: Use PreEditChange/PostEditChange lifecycle for texture property modifications
+        // This prevents TextureCompiler fatal error when setting CompressionSettings
+        // Must be called BEFORE UpdateResource to avoid "Registering a texture to the compile manager
+        // from inside a texture postcompilation" fatal error
+        AOTexture->PreEditChange(nullptr);
         // Set texture properties for AO
         AOTexture->SRGB = false;
         AOTexture->CompressionSettings = TC_Grayscale;
         AOTexture->MipGenSettings = TMGS_FromTextureGroup;
         AOTexture->LODGroup = TEXTUREGROUP_World;
+        AOTexture->PostEditChange();
+        
+        AOTexture->UpdateResource();
         
         if (bSave)
         {
