@@ -2216,7 +2216,7 @@ static bool HandleAddTriggerVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
@@ -2317,7 +2317,7 @@ static bool HandleAddBlockingVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
@@ -2425,7 +2425,7 @@ static bool HandleAddKillZVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
@@ -2537,7 +2537,7 @@ static bool HandleAddPhysicsVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
@@ -2663,7 +2663,7 @@ static bool HandleAddCullDistanceVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
@@ -2778,7 +2778,7 @@ static bool HandleAddPostProcessVolume(
     // Check if target actor is movable - if so, make volume movable too
     // UE doesn't allow attaching static actors to movable actors
     USceneComponent* TargetRootComponent = TargetActor->GetRootComponent();
-    if (TargetRootComponent && TargetRootComponent->GetMobility() != EComponentMobility::Static)
+    if (TargetRootComponent && TargetRootComponent->Mobility != EComponentMobility::Static)
     {
         // Set volume's root component to Movable so it can attach to movable actor
         if (UBrushComponent* BrushComp = Volume->GetBrushComponent())
