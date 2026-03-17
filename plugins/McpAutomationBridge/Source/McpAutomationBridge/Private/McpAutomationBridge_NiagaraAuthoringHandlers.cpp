@@ -202,6 +202,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     FString EmitterName = GetStringFieldNiagAuth(Payload, TEXT("emitterName"));
     bool bSave = GetBoolFieldNiagAuth(Payload, TEXT("save"), true);
 
+    // Validate all provided paths upfront (prevents hangs from extremely long paths)
+    // Guard against extremely long paths (UE limit is ~512 chars for full paths)
+    auto CheckPathLength = [&](const FString& PathToCheck, const FString& ParamName) {
+        if (PathToCheck.Len() > 512) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("'%s' is too long (%d chars). Maximum allowed is 512 characters."), *ParamName, PathToCheck.Len()), 
+                TEXT("INVALID_ARGUMENT"));
+            return false;
+        }
+        if (!PathToCheck.IsEmpty() && (!PathToCheck.StartsWith(TEXT("/")) || PathToCheck.Contains(TEXT("..")))) {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("'%s' has invalid format. Path must start with '/' and not contain '..'."), *ParamName), 
+                TEXT("INVALID_ARGUMENT"));
+            return false;
+        }
+        return true;
+    };
+    
+    if (!CheckPathLength(Path, TEXT("path"))) return true;
+    if (!CheckPathLength(AssetPath, TEXT("assetPath"))) return true;
+    if (!CheckPathLength(SystemPath, TEXT("systemPath"))) return true;
+    if (!CheckPathLength(EmitterPath, TEXT("emitterPath"))) return true;
+
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
@@ -2007,6 +2030,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FString TargetPath = AssetPath.IsEmpty() ? SystemPath : AssetPath;
+
+        // Guard against extremely long paths that could cause hangs
+        // UE path limit is typically 256 characters for asset names, 512 for full paths
+        if (TargetPath.Len() > 512)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Path too long (%d chars). Maximum allowed is 512 characters."), TargetPath.Len()), 
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Basic path format validation
+        if (!TargetPath.StartsWith(TEXT("/")) || TargetPath.Contains(TEXT("..")))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid path format. Path must start with '/' and not contain '..'."), 
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath);
         UNiagaraEmitter* Emitter = nullptr;

@@ -1657,7 +1657,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         FogComp->SetFogDensity(static_cast<float>(Density));
         // Enable volumetric fog
 #if ENGINE_MAJOR_VERSION == 5
-        FogComp->SetVolumetricFogEnabled(true);
+        FogComp->SetVolumetricFog(true);
         FogComp->SetVolumetricFogScatteringDistribution(static_cast<float>(Scattering));
         FogComp->SetVolumetricFogExtinctionScale(static_cast<float>(Extinction));
 #endif
