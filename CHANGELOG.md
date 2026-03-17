@@ -7,6 +7,202 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.19] - 2026-03-18
+
+> [!IMPORTANT]
+> ### 🛡️ Security Hardening & Major Plugin Refactoring
+> This release includes critical security fixes for command injection and path traversal vulnerabilities, a complete deep-level refactoring of 57 C++ handler files with centralized utilities, and removal of the WebAssembly integration.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Command Injection Prevention</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/288">#288</a>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| **sanitizeCommandArgument()** | Added semicolon sanitization to prevent command chaining attacks |
+| **Physics Tools** | Sanitized constraint names, actor names, vehicle names, destruction names |
+| **Animation Tools** | Sanitized state machine names, state names, transition conditions |
+| **System Handlers** | Sanitized vehicle type, save paths, and all user-provided strings |
+
+**Attack Vector Blocked:** Input like `"name;quit"` can no longer execute arbitrary commands.
+
+</details>
+
+<details>
+<summary><b>🔒 Path Traversal Fixes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/271">#271</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/282">#282</a>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| **validateSnapshotPath()** | Fixed bypass where paths equal to CWD (without trailing separator) were incorrectly rejected |
+| **Asset Handlers** | Added path sanitization to prevent traversal attacks |
+| **Blueprint Creation** | Added savePath sanitization |
+
+</details>
+
+<details>
+<summary><b>🔒 GraphQL CORS Hardening</b></summary>
+
+| Component | Change |
+|-----------|--------|
+| **Default CORS** | Changed from permissive `'*'` to safe loopback origins |
+| **Allowed Origins** | `localhost:4000`, `127.0.0.1:4000`, `localhost:3000`, `127.0.0.1:3000` |
+| **Warning** | Added security warning when `'*'` is explicitly configured |
+
+</details>
+
+### 🔧 Changed
+
+<details>
+<summary><b>🏗️ Complete C++ Plugin Refactoring</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/280">#280</a>)</summary>
+
+Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
+
+| New Infrastructure File | Purpose |
+|------------------------|---------|
+| `McpHandlerUtils.h/cpp` | Standardized JSON response builders (1,900 lines) |
+| `McpPropertyReflection.h/cpp` | Property reflection utilities (1,356 lines) |
+| `McpSafeOperations.h` | Safe asset/level save for UE 5.7 (659 lines) |
+| `McpVersionCompatibility.h` | UE 5.0-5.7 API compatibility macros (225 lines) |
+| `McpHandlerDeclarations.h` | Forward declarations (844 lines) |
+| `McpAutomationBridge_ConsoleCommandHandlers.cpp` | Batch and single command execution (302 lines) |
+
+**Bugs Fixed During Refactoring:**
+- EditorFunctionHandlers: use-after-free bug
+- EffectHandlers: truncated condition + missing braces
+- InventoryHandlers: duplicate TArray with undefined variables
+- MaterialAuthoringHandlers: duplicate include + missing UE 5.0 fallback
+- NavigationHandlers: case-sensitivity error
+- SkeletonHandlers: duplicate verification + redundant code
+- WidgetAuthoringHandlers: unreachable code block
+
+</details>
+
+<details>
+<summary><b>⚡ Performance Improvements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/283">#283</a>)</summary>
+
+| Component | Change |
+|-----------|--------|
+| **Batch Console Commands** | New batch execution API for parallel command processing |
+| **validate_assets** | Changed from sequential to `Promise.all` concurrent validation |
+| **State Machine Creation** | States now added in parallel instead of sequentially |
+
+</details>
+
+<details>
+<summary><b>🗑️ WebAssembly Integration Removed</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/240">#240</a>)</summary>
+
+Removed WebAssembly (wasm-pack/Rust) integration:
+- Deleted `src/wasm/` directory (874 lines)
+- Deleted `wasm/` Rust crate (1,500+ lines)
+- Removed WASM dependency from all handlers
+- Native C++ handlers provide equivalent functionality
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🐛 Blueprint Inspect Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/270">#270</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| Blueprint inspect crashed when variable list exceeded buffer | Fixed truncated variable list handling |
+| Function library blueprints not supported | Added function library blueprint support (#258) |
+
+</details>
+
+<details>
+<summary><b>🐛 GAS Duplicate Effect Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/251">#251</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `create_gameplay_effect` assertion failure on duplicates | Prevented duplicate GameplayEffect creation |
+
+</details>
+
+<details>
+<summary><b>🐛 Volume Handler Mobility</b></summary>
+
+| Bug | Fix |
+|-----|-----|
+| Volume attachment failed for movable actors | Added mobility check for target actors in volume handlers |
+
+</details>
+
+<details>
+<summary><b>🐛 UE 5.7 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/274">#274</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| GeometryScript AppendCapsule compile error on UE 5.5+ | Added version guard for segment steps parameter |
+
+</details>
+
+<details>
+<summary><b>🐛 Action Name Alignment</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/253">#253</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| TypeScript action names mismatched C++ handlers | Aligned all action names with C++ handler expectations |
+
+</details>
+
+### 🗑️ Removed
+
+<details>
+<summary><b>Deprecated Tool Files</b></summary>
+
+Removed deprecated standalone tool files (consolidated into handlers):
+- `src/tools/audio.ts` → `src/tools/handlers/audio-handlers.ts`
+- `src/tools/debug.ts` → consolidated into system handlers
+- `src/tools/introspection.ts` → `src/tools/handlers/inspect-handlers.ts`
+- `src/tools/materials.ts` → `src/tools/handlers/material-authoring-handlers.ts`
+- `src/tools/performance.ts` → `src/tools/handlers/performance-handlers.ts`
+- `src/tools/ui.ts` → consolidated into widget handlers
+- `src/tools/input.ts` → `src/tools/handlers/input-handlers.ts`
+- `src/tools/behavior-tree.ts` → consolidated
+- `src/tools/engine.ts` → consolidated
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>NPM Package Updates</b></summary>
+
+| Package | From | To | PR |
+|---------|------|-----|-----|
+| hono | 4.12.0 | 4.12.7 | [#261](https://github.com/ChiR24/Unreal_mcp/pull/261), [#277](https://github.com/ChiR24/Unreal_mcp/pull/277) |
+| express-rate-limit | 8.2.1 | 8.3.0 | [#269](https://github.com/ChiR24/Unreal_mcp/pull/269) |
+| @types/node | Various updates | | Multiple PRs |
+
+</details>
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | From | To | PR |
+|---------|------|-----|-----|
+| release-drafter/release-drafter | 6.2.0 | 7.0.0 | [#286](https://github.com/ChiR24/Unreal_mcp/pull/286) |
+| softprops/action-gh-release | 2.5.0 | 2.5.3 | [#287](https://github.com/ChiR24/Unreal_mcp/pull/287) |
+| actions/setup-node | 6.2.0 | 6.3.0 | [#257](https://github.com/ChiR24/Unreal_mcp/pull/257) |
+| github/codeql-action | 4.32.5 | 4.32.6 | [#266](https://github.com/ChiR24/Unreal_mcp/pull/266) |
+
+</details>
+
+### 📊 Statistics
+
+- **Commits:** 55 non-merge commits
+- **Files Changed:** 185 files
+- **Lines Added:** ~30,280
+- **Lines Removed:** ~20,440
+- **New C++ Infrastructure:** 5 files (~4,900 lines)
+- **Bugs Fixed:** 15+
+- **Security Fixes:** 4 critical
+
+---
+
 ## 🏷️ [0.5.18] - 2026-02-21
 
 > [!IMPORTANT]

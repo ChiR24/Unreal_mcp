@@ -4,6 +4,50 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [0.1.2] - 2026-03-18
+
+### Security
+- Command injection prevention via semicolon sanitization in all user inputs
+- Path traversal fixes in validateSnapshotPath and asset handlers
+- Blueprint creation savePath sanitization to prevent traversal attacks
+
+### Added
+- `McpAutomationBridge_ConsoleCommandHandlers.cpp` - Batch and single command execution (302 lines)
+- `McpHandlerUtils.h/cpp` - Standardized JSON response builders (1,900 lines)
+- `McpPropertyReflection.h/cpp` - Property reflection utilities (1,356 lines)
+- `McpSafeOperations.h` - Safe asset/level save for UE 5.7 (659 lines)
+- `McpVersionCompatibility.h` - UE 5.0-5.7 API compatibility macros (225 lines)
+- `McpHandlerDeclarations.h` - Forward declarations (844 lines)
+- Debug visualization shapes for better testing feedback
+- `list_objects`, `set_property`, `get_property` actions to control handlers
+
+### Fixed
+- EditorFunctionHandlers: use-after-free bug
+- EffectHandlers: truncated condition + missing braces
+- InventoryHandlers: duplicate TArray with undefined variables
+- MaterialAuthoringHandlers: duplicate include + missing UE 5.0 fallback
+- NavigationHandlers: case-sensitivity error
+- SkeletonHandlers: duplicate verification + redundant code + duplicate parsing
+- WidgetAuthoringHandlers: unreachable code block
+- Volume attachment to movable actors by checking mobility
+- World memory leaks in UE 5.7 by properly cleaning up created worlds
+- Texture property modification errors using PreEditChange/PostEditChange lifecycle
+- Blueprint loading to properly find in-memory blueprints first
+- Level save/load operations for correct package name matching
+- GeometryScript AppendCapsule segment steps for UE 5.5+ compatibility
+
+### Changed
+- Complete deep-level refactoring of 57 handler files with line-by-line review
+- Centralized utility infrastructure for consistent error handling
+- UE 5.0-5.7 cross-version compatibility with API abstraction macros
+- All handlers now use standardized response builders
+
+### Compatibility
+- Unreal Engine 5.0 - 5.7
+- Platforms: Win64, Mac, Linux
+
+---
+
 ## [0.1.1] - 2026-02-16
 
 ### Added

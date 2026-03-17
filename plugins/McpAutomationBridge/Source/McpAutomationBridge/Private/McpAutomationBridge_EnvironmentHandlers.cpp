@@ -398,33 +398,55 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                 FString AbsolutePath = FPaths::ProjectDir() / SafePath;
                 FPaths::MakeStandardFilename(AbsolutePath);
 
-                TSharedPtr<FJsonObject> Snapshot = McpHandlerUtils::CreateResultObject();
-                Snapshot->SetStringField(TEXT("timestamp"), FDateTime::UtcNow().ToString());
-                Snapshot->SetStringField(TEXT("type"), TEXT("environment_snapshot"));
+                // CRITICAL: Convert to absolute path for proper comparison
+                // This prevents path traversal via leading slash (e.g., /etc/passwd)
+                AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+                FPaths::NormalizeFilename(AbsolutePath);
 
-                FString JsonString;
-                TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
-                if (FJsonSerializer::Serialize(Snapshot.ToSharedRef(), Writer))
+                FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+                FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+                if (!NormalizedProjectDir.EndsWith(TEXT("/")))
                 {
-                    if (FFileHelper::SaveStringToFile(JsonString, *AbsolutePath))
+                    NormalizedProjectDir += TEXT("/");
+                }
+
+                if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase))
+                {
+                    bSuccess = false;
+                    Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path escapes project directory."), *Path);
+                    ErrorCode = TEXT("SECURITY_VIOLATION");
+                    Resp->SetStringField(TEXT("error"), Message);
+                }
+                else
+                {
+                    TSharedPtr<FJsonObject> Snapshot = McpHandlerUtils::CreateResultObject();
+                    Snapshot->SetStringField(TEXT("timestamp"), FDateTime::UtcNow().ToString());
+                    Snapshot->SetStringField(TEXT("type"), TEXT("environment_snapshot"));
+
+                    FString JsonString;
+                    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+                    if (FJsonSerializer::Serialize(Snapshot.ToSharedRef(), Writer))
                     {
-                        Resp->SetStringField(TEXT("exportPath"), SafePath);
-                        Resp->SetStringField(TEXT("message"), TEXT("Snapshot exported"));
+                        if (FFileHelper::SaveStringToFile(JsonString, *AbsolutePath))
+                        {
+                            Resp->SetStringField(TEXT("exportPath"), SafePath);
+                            Resp->SetStringField(TEXT("message"), TEXT("Snapshot exported"));
+                        }
+                        else
+                        {
+                            bSuccess = false;
+                            Message = TEXT("Failed to write snapshot file");
+                            ErrorCode = TEXT("WRITE_FAILED");
+                            Resp->SetStringField(TEXT("error"), Message);
+                        }
                     }
                     else
                     {
                         bSuccess = false;
-                        Message = TEXT("Failed to write snapshot file");
-                        ErrorCode = TEXT("WRITE_FAILED");
+                        Message = TEXT("Failed to serialize snapshot");
+                        ErrorCode = TEXT("SERIALIZE_FAILED");
                         Resp->SetStringField(TEXT("error"), Message);
                     }
-                }
-                else
-                {
-                    bSuccess = false;
-                    Message = TEXT("Failed to serialize snapshot");
-                    ErrorCode = TEXT("SERIALIZE_FAILED");
-                    Resp->SetStringField(TEXT("error"), Message);
                 }
             }
         }
@@ -462,29 +484,51 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                 FString AbsolutePath = FPaths::ProjectDir() / SafePath;
                 FPaths::MakeStandardFilename(AbsolutePath);
 
-                FString JsonString;
-                if (!FFileHelper::LoadFileToString(JsonString, *AbsolutePath))
+                // CRITICAL: Convert to absolute path for proper comparison
+                // This prevents path traversal via leading slash (e.g., /etc/passwd)
+                AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+                FPaths::NormalizeFilename(AbsolutePath);
+
+                FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+                FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+                if (!NormalizedProjectDir.EndsWith(TEXT("/")))
+                {
+                    NormalizedProjectDir += TEXT("/");
+                }
+
+                if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase))
                 {
                     bSuccess = false;
-                    Message = TEXT("Failed to read snapshot file");
-                    ErrorCode = TEXT("LOAD_FAILED");
+                    Message = FString::Printf(TEXT("Invalid or unsafe path: %s. Path escapes project directory."), *Path);
+                    ErrorCode = TEXT("SECURITY_VIOLATION");
                     Resp->SetStringField(TEXT("error"), Message);
                 }
                 else
                 {
-                    TSharedPtr<FJsonObject> SnapshotObj;
-                    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-                    if (!FJsonSerializer::Deserialize(Reader, SnapshotObj) || !SnapshotObj.IsValid())
+                    FString JsonString;
+                    if (!FFileHelper::LoadFileToString(JsonString, *AbsolutePath))
                     {
                         bSuccess = false;
-                        Message = TEXT("Failed to parse snapshot");
-                        ErrorCode = TEXT("PARSE_FAILED");
+                        Message = TEXT("Failed to read snapshot file");
+                        ErrorCode = TEXT("LOAD_FAILED");
                         Resp->SetStringField(TEXT("error"), Message);
                     }
                     else
                     {
-                        Resp->SetObjectField(TEXT("snapshot"), SnapshotObj.ToSharedRef());
-                        Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
+                        TSharedPtr<FJsonObject> SnapshotObj;
+                        TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+                        if (!FJsonSerializer::Deserialize(Reader, SnapshotObj) || !SnapshotObj.IsValid())
+                        {
+                            bSuccess = false;
+                            Message = TEXT("Failed to parse snapshot");
+                            ErrorCode = TEXT("PARSE_FAILED");
+                            Resp->SetStringField(TEXT("error"), Message);
+                        }
+                        else
+                        {
+                            Resp->SetObjectField(TEXT("snapshot"), SnapshotObj.ToSharedRef());
+                            Resp->SetStringField(TEXT("message"), TEXT("Snapshot imported"));
+                        }
                     }
                 }
             }
