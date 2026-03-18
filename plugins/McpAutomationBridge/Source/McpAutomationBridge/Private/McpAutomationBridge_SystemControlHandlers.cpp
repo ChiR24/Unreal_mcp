@@ -338,6 +338,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       return true;
     }
     
+    FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (SafeAssetPath.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Invalid asset path for export"),
+                          TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
     if (ExportPath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("exportPath is required for export"),
@@ -375,9 +383,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     }
     
     // Check if asset exists
-    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
       SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
+                          FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
@@ -390,10 +398,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     }
     
     // Load the asset
-    UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    UObject* Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
     if (!Asset) {
       SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath),
+                          FString::Printf(TEXT("Failed to load asset: %s"), *SafeAssetPath),
                           TEXT("LOAD_FAILED"));
       return true;
     }
@@ -421,7 +429,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     AssetTools.ExportAssets(AssetsToExport, ExportDir);
     
     // Check if file was created
-    FString ExpectedExportPath = ExportDir / FPaths::GetBaseFilename(AssetPath) + TEXT(".") + Extension;
+    FString ExpectedExportPath = ExportDir / FPaths::GetBaseFilename(SafeAssetPath) + TEXT(".") + Extension;
     if (FPaths::FileExists(ExpectedExportPath))
     {
       bExportSuccess = true;
@@ -475,7 +483,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     if (bExportSuccess) {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       AddAssetVerification(Result, Asset);
-      Result->SetStringField(TEXT("assetPath"), AssetPath);
+      Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
       Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetBoolField(TEXT("success"), true);
@@ -485,7 +493,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                              Result);
     } else {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-      Result->SetStringField(TEXT("assetPath"), AssetPath);
+      Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
       Result->SetStringField(TEXT("exportPath"), AbsoluteExportPath);
       Result->SetStringField(TEXT("format"), Extension);
       Result->SetStringField(TEXT("error"), ExportError);
