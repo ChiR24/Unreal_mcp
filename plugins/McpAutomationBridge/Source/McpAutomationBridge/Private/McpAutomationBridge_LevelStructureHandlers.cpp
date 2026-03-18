@@ -318,13 +318,26 @@ static bool HandleCreateLevel(
 #if ENGINE_MAJOR_VERSION >= 5
     if (bCreateWorldPartition)
     {
-        // World Partition is enabled via WorldSettings
-        AWorldSettings* WorldSettings = NewWorld->GetWorldSettings();
+        // World Partition is enabled via WorldSettings using CreateOrRepairWorldPartition
+        AWorldSettings* WorldSettings = NewWorld->GetWorldSettings(true);
         if (WorldSettings)
         {
-            // In UE5, World Partition is typically enabled at world creation time
-            // or via project settings. We mark it as requested but note the limitation.
-            bWorldPartitionActuallyEnabled = false; // Requires editor UI to fully enable
+            // Use the editor-only API to create World Partition
+            // This properly initializes the WorldPartition subsystem, RuntimeHash, and related structures
+            UWorldPartition* NewWorldPartition = UWorldPartition::CreateOrRepairWorldPartition(WorldSettings);
+            if (NewWorldPartition)
+            {
+                bWorldPartitionActuallyEnabled = true;
+                UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created World Partition for level: %s"), *FullPath);
+            }
+            else
+            {
+                UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Failed to create World Partition for level: %s"), *FullPath);
+            }
+        }
+        else
+        {
+            UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Failed to get WorldSettings for World Partition creation: %s"), *FullPath);
         }
     }
 #endif
@@ -401,14 +414,25 @@ static bool HandleCreateLevel(
     // tries to load the same package, UE 5.7 detects the existing package → Fatal Error.
     //
     // Reference: EditorServer.cpp line 2524 - "World Memory Leaks: %d leaks objects"
+    // Reference: World.cpp line 1488-1491 - CleanupWorld must be called for initialized Inactive worlds
     if (bSaveSucceeded && NewWorld)
     {
         UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Cleaning up created world from memory after save: %s"), *FullPath);
         
-        // Mark the world for destruction
+        // STEP 1: Call CleanupWorld() if the world was initialized
+        // This is CRITICAL for UE 5.7 - without this, HasEverBeenInitialized() remains true
+        // and the world can't be reused during LoadMap, causing "World Memory Leaks" crash.
+        // See World.cpp BeginDestroy() for reference.
+        if (NewWorld->IsInitialized())
+        {
+            UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Calling CleanupWorld() for initialized world"));
+            NewWorld->CleanupWorld();
+        }
+        
+        // STEP 2: Mark the world for destruction
         NewWorld->bIsTearingDown = true;
         
-        // Disable all ticking on this world to prevent tick assertions
+        // STEP 3: Disable all ticking on this world to prevent tick assertions
         if (NewWorld->PersistentLevel)
         {
             // Mark level as invisible
@@ -435,14 +459,27 @@ static bool HandleCreateLevel(
             }
         }
         
-        // Mark the world and its package as transient so GC will collect them
+        // STEP 4: Remove from root if the world was added to root
+        // The "(root)" flag in error messages indicates RF_RootSet - must clear this
+        if (NewWorld->IsRooted())
+        {
+            UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Removing world from root"));
+            NewWorld->RemoveFromRoot();
+        }
+        
+        // STEP 5: Mark the world and its package as transient so GC will collect them
         NewWorld->SetFlags(RF_Transient);
         if (Package)
         {
+            // Also remove package from root if needed
+            if (Package->IsRooted())
+            {
+                Package->RemoveFromRoot();
+            }
             Package->SetFlags(RF_Transient);
         }
         
-        // Force garbage collection to remove the world from memory
+        // STEP 6: Force garbage collection to remove the world from memory
         // This allows the level to be cleanly loaded later via LoadMap
         CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
         FlushRenderingCommands();
@@ -1869,9 +1906,10 @@ static bool HandleOpenLevelBlueprint(
     FString LevelPackageName = World->GetOutermost()->GetName();
     bool bIsSavedLevel = !LevelPackageName.IsEmpty() && !LevelPackageName.StartsWith(TEXT("/Temp/"));
 
-    // For unsaved levels, GetLevelScriptBlueprint(true) may fail to create the blueprint
+    // For unsaved levels, GetLevelScriptBlueprint(false) may fail to create the blueprint
     // because it requires a valid package path
-    ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(true);
+    // Pass false to allow creation of Level Blueprint if it doesn't exist
+    ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(false);
     if (!LevelBP)
     {
         // Try to create the level blueprint manually for unsaved levels
@@ -1935,11 +1973,12 @@ static bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(true);
+    // Pass false to allow creation of Level Blueprint if it doesn't exist
+    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(false);
     if (!LevelBP)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to get Level Blueprint"), nullptr);
+            TEXT("Failed to get or create Level Blueprint"), nullptr);
         return true;
     }
 

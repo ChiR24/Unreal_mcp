@@ -469,6 +469,22 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
         FlushRenderingCommands();
         
         // =====================================================================
+        // PHASE 4a: CRITICAL FIX - Call EndFrame() to clear FTickTaskManager's LevelList
+        // The FTickTaskManager maintains a LevelList that's populated by FillLevelList() during
+        // StartFrame() and cleared by LevelList.Reset() in EndFrame(). When LoadMap destroys
+        // the old world, FreeTickTaskLevel() asserts that the TickTaskLevel is NOT in LevelList.
+        // By calling EndFrame(), we ensure LevelList is cleared before world destruction.
+        // 
+        // This is safe because:
+        // 1. We've already unregistered all tick functions (PHASE 3)
+        // 2. We've set bIsVisible=false on all levels (PHASE 2)
+        // 3. EndFrame() doesn't have assertions that would fail if called outside a tick frame
+        // 4. The TickTaskSequencer.EndFrame() just clears batched tick data
+        // 5. The LevelList.Reset() is the critical operation we need
+        FTickTaskManagerInterface::Get().EndFrame();
+        UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Called EndFrame() to clear TickTaskManager LevelList"));
+        
+        // =====================================================================
         // PHASE 5: Send end-of-frame updates
         // =====================================================================
         CurrentWorld->SendAllEndOfFrameUpdates();

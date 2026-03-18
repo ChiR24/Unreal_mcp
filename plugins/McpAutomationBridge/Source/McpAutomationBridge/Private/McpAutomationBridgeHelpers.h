@@ -1297,6 +1297,21 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
         // STEP 4: Flush rendering commands to ensure all GPU work is complete
         FlushRenderingCommands();
         
+        // STEP 4a: CRITICAL FIX - Call EndFrame() to clear FTickTaskManager's LevelList
+        // The FTickTaskManager maintains a LevelList that's populated by FillLevelList() during
+        // StartFrame() and cleared by LevelList.Reset() in EndFrame(). When LoadMap destroys
+        // the old world, FreeTickTaskLevel() asserts that the TickTaskLevel is NOT in LevelList.
+        // By calling EndFrame(), we ensure LevelList is cleared before world destruction.
+        // 
+        // This is safe because:
+        // 1. We've already unregistered all tick functions (STEP 2)
+        // 2. We've set bIsVisible=false on all levels (STEP 1)
+        // 3. EndFrame() doesn't have assertions that would fail if called outside a tick frame
+        // 4. The TickTaskSequencer.EndFrame() just clears batched tick data
+        // 5. The LevelList.Reset() is the critical operation we need
+        FTickTaskManagerInterface::Get().EndFrame();
+        UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Called EndFrame() to clear TickTaskManager LevelList"));
+        
         // STEP 5: Unload streaming levels explicitly
         // This prevents UE-197643 where tick prerequisites cross level boundaries
         TArray<ULevelStreaming*> StreamingLevels = CurrentWorld->GetStreamingLevels();
@@ -1336,6 +1351,7 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
     // EditorServer.cpp detects the existing package can't be GC'd → Fatal Error.
     //
     // Reference: EditorServer.cpp line 2524 - "World Memory Leaks: %d leaks objects"
+    // Reference: World.cpp line 1488-1491 - CleanupWorld must be called for initialized Inactive worlds
     {
         FString NormalizedMapPath = MapPath;
         if (NormalizedMapPath.EndsWith(TEXT(".umap")))
@@ -1352,6 +1368,15 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
             if (ExistingWorld && ExistingWorld != CurrentWorld)
             {
                 UE_LOG(LogTemp, Warning, TEXT("McpSafeLoadMap: Target world '%s' exists in memory from previous creation - cleaning up"), *NormalizedMapPath);
+                
+                // STEP 11a: Call CleanupWorld() if the world was initialized
+                // This is CRITICAL - without this, HasEverBeenInitialized() remains true
+                // and the world can't be reused, causing "World Memory Leaks" crash.
+                if (ExistingWorld->IsInitialized())
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Calling CleanupWorld() for initialized world"));
+                    ExistingWorld->CleanupWorld();
+                }
                 
                 // Mark the world for destruction
                 ExistingWorld->bIsTearingDown = true;
@@ -1380,8 +1405,19 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
                     }
                 }
                 
+                // Remove from root if needed
+                if (ExistingWorld->IsRooted())
+                {
+                    UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Removing world from root"));
+                    ExistingWorld->RemoveFromRoot();
+                }
+                
                 // Mark the world and its package for garbage collection
                 ExistingWorld->SetFlags(RF_Transient);
+                if (ExistingPackage->IsRooted())
+                {
+                    ExistingPackage->RemoveFromRoot();
+                }
                 ExistingPackage->SetFlags(RF_Transient);
                 
                 // Force garbage collection to clean up the existing world
