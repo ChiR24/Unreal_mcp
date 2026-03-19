@@ -3996,6 +3996,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         parentLevel: commonSchemas.parentLevel,
         templateLevel: commonSchemas.templateLevel,
         bCreateWorldPartition: { type: 'boolean', description: 'Create with World Partition enabled.' },
+        bUseExternalActors: { type: 'boolean', description: 'Enable One File Per Actor (OFPA/External Actors) for Data Layer compatibility. Automatically enabled when bCreateWorldPartition is true.' },
         sublevelName: commonSchemas.sublevelName,
         sublevelPath: commonSchemas.levelPath,
         streamingMethod: {

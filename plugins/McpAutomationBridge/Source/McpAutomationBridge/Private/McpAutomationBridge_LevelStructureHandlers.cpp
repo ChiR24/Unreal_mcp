@@ -229,7 +229,17 @@ static bool HandleCreateLevel(
 
     FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"), TEXT("/Game/Maps"));
     bool bCreateWorldPartition = GetJsonBoolField(Payload, TEXT("bCreateWorldPartition"), false);
+    bool bUseExternalActors = GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false);
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+
+    // CRITICAL: When creating a World Partition level, OFPA (External Actors) should be enabled
+    // for data layer support. If bCreateWorldPartition is true but bUseExternalActors is not specified,
+    // automatically enable OFPA for better compatibility with data layers.
+    // This can be overridden by explicitly setting bUseExternalActors to false.
+    if (bCreateWorldPartition && !Payload->HasField(TEXT("bUseExternalActors")))
+    {
+        bUseExternalActors = true;
+    }
 
     // Security: Validate level path format to prevent traversal attacks
     FString SafeLevelPath = SanitizeProjectRelativePath(LevelPath);
@@ -342,6 +352,21 @@ static bool HandleCreateLevel(
     }
 #endif
 
+    // Enable One File Per Actor (OFPA/External Actors) if requested
+    // This is required for Data Layer support in World Partition levels
+    bool bExternalActorsActuallyEnabled = false;
+    if (bUseExternalActors && NewWorld->PersistentLevel)
+    {
+#if WITH_EDITORONLY_DATA
+        // Set the bUseExternalActors flag on the persistent level
+        // This enables actors to be stored as external packages, which is required
+        // for Data Layer compatibility in World Partition levels
+        NewWorld->PersistentLevel->bUseExternalActors = true;
+        bExternalActorsActuallyEnabled = true;
+        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Enabled External Actors (OFPA) for level: %s"), *FullPath);
+#endif
+    }
+
     // Mark package dirty
     Package->MarkPackageDirty();
 
@@ -382,6 +407,8 @@ static bool HandleCreateLevel(
     ResponseJson->SetStringField(TEXT("levelPath"), FullPath);
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
     ResponseJson->SetBoolField(TEXT("worldPartitionRequested"), bCreateWorldPartition);
+    ResponseJson->SetBoolField(TEXT("externalActorsEnabled"), bExternalActorsActuallyEnabled);
+    ResponseJson->SetBoolField(TEXT("externalActorsRequested"), bUseExternalActors);
     ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
     if (bCreateWorldPartition && !bWorldPartitionActuallyEnabled)
     {
@@ -784,7 +811,7 @@ static bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    // Find the streaming level
+    // Find the streaming level in the world's streaming levels array
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -792,6 +819,54 @@ static bool HandleConfigureLevelStreaming(
         {
             FoundLevel = StreamingLevel;
             break;
+        }
+    }
+
+    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
+    // This handles cases where the sublevel was created but the streaming reference wasn't loaded
+    if (!FoundLevel)
+    {
+        // Build potential full paths for the level
+        TArray<FString> PotentialPaths;
+        
+        // Try as-is first (might be a full path)
+        if (LevelName.StartsWith(TEXT("/Game/")))
+        {
+            PotentialPaths.Add(LevelName);
+        }
+        // Try under the current world's path
+        FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
+        PotentialPaths.Add(WorldPath / LevelName);
+        // Try under /Game/ directly
+        PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
+        // Try with the level name as a full path under /Game/
+        PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
+        
+        for (const FString& TestPath : PotentialPaths)
+        {
+            FString TestFullPath = TestPath;
+            if (!TestFullPath.EndsWith(TEXT(".umap")))
+            {
+                // Already a package path, check if package exists
+                if (FPackageName::DoesPackageExist(TestFullPath))
+                {
+                    // Found the level on disk - create a streaming reference
+                    ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
+                    if (NewStreamingLevel)
+                    {
+                        NewStreamingLevel->SetWorldAssetByPackageName(FName(*TestFullPath));
+                        NewStreamingLevel->LevelTransform = FTransform::Identity;
+                        NewStreamingLevel->SetShouldBeVisible(true);
+                        NewStreamingLevel->SetShouldBeLoaded(true);
+                        
+                        World->AddStreamingLevel(NewStreamingLevel);
+                        FoundLevel = NewStreamingLevel;
+                        
+                        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created streaming reference for existing level: %s"), *TestFullPath);
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -854,7 +929,7 @@ static bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Find the streaming level
+    // Find the streaming level in the world's streaming levels array
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -862,6 +937,54 @@ static bool HandleSetStreamingDistance(
         {
             FoundLevel = StreamingLevel;
             break;
+        }
+    }
+
+    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
+    // This handles cases where the sublevel was created but the streaming reference wasn't loaded
+    if (!FoundLevel)
+    {
+        // Build potential full paths for the level
+        TArray<FString> PotentialPaths;
+        
+        // Try as-is first (might be a full path)
+        if (LevelName.StartsWith(TEXT("/Game/")))
+        {
+            PotentialPaths.Add(LevelName);
+        }
+        // Try under the current world's path
+        FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
+        PotentialPaths.Add(WorldPath / LevelName);
+        // Try under /Game/ directly
+        PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
+        // Try with the level name as a full path under /Game/
+        PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
+        
+        for (const FString& TestPath : PotentialPaths)
+        {
+            FString TestFullPath = TestPath;
+            if (!TestFullPath.EndsWith(TEXT(".umap")))
+            {
+                // Already a package path, check if package exists
+                if (FPackageName::DoesPackageExist(TestFullPath))
+                {
+                    // Found the level on disk - create a streaming reference
+                    ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
+                    if (NewStreamingLevel)
+                    {
+                        NewStreamingLevel->SetWorldAssetByPackageName(FName(*TestFullPath));
+                        NewStreamingLevel->LevelTransform = FTransform::Identity;
+                        NewStreamingLevel->SetShouldBeVisible(true);
+                        NewStreamingLevel->SetShouldBeLoaded(true);
+                        
+                        World->AddStreamingLevel(NewStreamingLevel);
+                        FoundLevel = NewStreamingLevel;
+                        
+                        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created streaming reference for existing level: %s"), *TestFullPath);
+                        break;
+                    }
+                }
+            }
         }
     }
 
