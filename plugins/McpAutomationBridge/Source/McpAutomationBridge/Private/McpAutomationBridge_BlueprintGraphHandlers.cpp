@@ -511,7 +511,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // Loops
         {TEXT("ForLoop"), TEXT("K2Node_ForLoop")},
         {TEXT("ForLoopWithBreak"), TEXT("K2Node_ForLoopWithBreak")},
-        {TEXT("ForEachLoop"), TEXT("K2Node_ForEachElementInEnum")},
+        // NOTE: ForEachLoop for arrays is a macro node (K2Node_MacroInstance),
+        // not an enum node. We handle it explicitly below via CallFunction on
+        // KismetArrayLibrary. The alias here is intentionally removed to prevent
+        // routing to the enum-only variant.
+        {TEXT("ForEachElementInEnum"), TEXT("K2Node_ForEachElementInEnum")},
         {TEXT("WhileLoop"), TEXT("K2Node_WhileLoop")},
         // Data
         {TEXT("MakeArray"), TEXT("K2Node_MakeArray")},
@@ -724,23 +728,136 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    if (NodeType == TEXT("Cast") || NodeType.StartsWith(TEXT("CastTo"))) {
+    if (NodeType == TEXT("Cast") || NodeType == TEXT("K2Node_DynamicCast") ||
+        NodeType.StartsWith(TEXT("CastTo"))) {
       FString TargetClassName;
       Payload->TryGetStringField(TEXT("targetClass"), TargetClassName);
       if (TargetClassName.IsEmpty() && NodeType.StartsWith(TEXT("CastTo")))
         TargetClassName = NodeType.Mid(6);
+
+      // 1. Try native C++ class lookup first
       UClass *TargetClass = ResolveUClass(TargetClassName);
+
+      // 2. If that failed, try loading it as a Blueprint asset and using its
+      //    GeneratedClass. This is required for Blueprint targets like
+      //    "BP_CharacterBase" which resolve to "BP_CharacterBase_C".
+      if (!TargetClass) {
+        // Try common path prefixes if no slash is present
+        TArray<FString> PathsToTry;
+        if (TargetClassName.Contains(TEXT("/"))) {
+          PathsToTry.Add(TargetClassName);
+        } else {
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/Characters/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/Combat/%s"), *TargetClassName));
+        }
+        for (const FString &TryPath : PathsToTry) {
+          FString NormPath, LoadErr;
+          UBlueprint *CastBP = LoadBlueprintAsset(TryPath, NormPath, LoadErr);
+          if (CastBP && CastBP->GeneratedClass) {
+            TargetClass = CastBP->GeneratedClass;
+            break;
+          }
+        }
+      }
+
+      // 3. Last resort: search loaded objects for a GeneratedClass matching name
+      if (!TargetClass) {
+        FString SearchName = TargetClassName + TEXT("_C");
+        for (TObjectIterator<UClass> It; It; ++It) {
+          if (It->GetName().Equals(SearchName, ESearchCase::IgnoreCase) ||
+              It->GetName().Equals(TargetClassName, ESearchCase::IgnoreCase)) {
+            TargetClass = *It;
+            break;
+          }
+        }
+      }
+
       if (!TargetClass) {
         SendAutomationError(
             RequestingSocket, RequestId,
-            FString::Printf(TEXT("Class '%s' not found"), *TargetClassName),
+            FString::Printf(TEXT("Class '%s' not found. For Blueprint classes, "
+                                 "provide the full asset path e.g. '/Game/Blueprints/BP_CharacterBase'."),
+                            *TargetClassName),
             TEXT("CLASS_NOT_FOUND"));
         return true;
       }
+
+      // Set TargetType BEFORE calling CreateNode(false) so that
+      // AllocateDefaultPins (called inside Finalize) generates the typed
+      // "As <ClassName>" output pin. Then ReconstructNode to flush pin state.
       FGraphNodeCreator<UK2Node_DynamicCast> NodeCreator(*TargetGraph);
       UK2Node_DynamicCast *CastNode = NodeCreator.CreateNode(false);
       CastNode->TargetType = TargetClass;
       FinalizeAndReport(NodeCreator, CastNode);
+      if (CastNode) {
+        CastNode->ReconstructNode();
+        SaveLoadedAssetThrottled(Blueprint);
+      }
+      return true;
+    }
+
+    if (NodeType == TEXT("CallArrayFunction") ||
+        NodeType == TEXT("K2Node_CallArrayFunction")) {
+      // Array function nodes require special handling: they must be created via
+      // FGraphNodeCreator<UK2Node_CallFunction> (not the dynamic NewObject path)
+      // and ReconstructNode must be called after finalization so the wildcard
+      // array pins resolve to the correct typed pins once a TargetArray is wired.
+      FString MemberName, MemberClass;
+      Payload->TryGetStringField(TEXT("memberName"), MemberName);
+      Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
+
+      // Default to KismetArrayLibrary if no class specified
+      if (MemberClass.IsEmpty()) {
+        MemberClass = TEXT("KismetArrayLibrary");
+      }
+
+      UClass *ArrayLibClass = ResolveUClass(MemberClass);
+      if (!ArrayLibClass) {
+        // Try UKismetArrayLibrary directly
+        for (TObjectIterator<UClass> It; It; ++It) {
+          if (It->GetName().Equals(TEXT("KismetArrayLibrary"), ESearchCase::IgnoreCase) ||
+              It->GetName().Equals(TEXT("UKismetArrayLibrary"), ESearchCase::IgnoreCase)) {
+            ArrayLibClass = *It;
+            break;
+          }
+        }
+      }
+
+      UFunction *ArrayFunc = nullptr;
+      if (ArrayLibClass) {
+        ArrayFunc = ArrayLibClass->FindFunctionByName(*MemberName);
+      }
+
+      if (!ArrayFunc) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Array function '%s' not found in '%s'"),
+                            *MemberName, *MemberClass),
+            TEXT("FUNCTION_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
+      UK2Node_CallFunction *CallFuncNode = NodeCreator.CreateNode(false);
+      CallFuncNode->SetFromFunction(ArrayFunc);
+      // Finalize allocates default pins (wildcard at this point)
+      NodeCreator.Finalize();
+      CallFuncNode->NodePosX = X;
+      CallFuncNode->NodePosY = Y;
+      // ReconstructNode forces pin re-evaluation which is required for array
+      // function nodes so that TargetArray and ReturnValue pins appear correctly.
+      CallFuncNode->ReconstructNode();
+      FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint);
+
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), CallFuncNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), CallFuncNode->GetName());
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Array function node created."), Result);
       return true;
     }
 
@@ -844,19 +961,79 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FromNode->Modify();
     ToNode->Modify();
 
-    if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
+    const UEdGraphSchema *Schema = TargetGraph->GetSchema();
+
+    // Attempt 1: Connect as-is (correct direction expected by caller)
+    bool bConnected = Schema->TryCreateConnection(FromPin, ToPin);
+
+    // Attempt 2: Try reversed direction. This handles cases where the caller
+    // accidentally specifies output→input in the wrong order, and also fixes
+    // the common case where an Input pin is passed as FromPin.
+    if (!bConnected) {
+      bConnected = Schema->TryCreateConnection(ToPin, FromPin);
+    }
+
+    // Attempt 3: For object-typed pins connecting to a self/target pin,
+    // the Kismet schema may reject due to an exact type mismatch even when
+    // UE5 would accept the connection (e.g. SCS component ref → function self).
+    // Try BreakAllPinLinks on the target self pin first to clear stale state,
+    // then reattempt. Also try ReconstructNode on both nodes to force pin
+    // type refresh before the final attempt.
+    if (!bConnected) {
+      const bool bFromIsObject = (FromPin->PinType.PinCategory == TEXT("object") ||
+                                   FromPin->PinType.PinCategory == TEXT("Object"));
+      const bool bToIsObject   = (ToPin->PinType.PinCategory == TEXT("object") ||
+                                   ToPin->PinType.PinCategory == TEXT("Object"));
+
+      if (bFromIsObject || bToIsObject) {
+        // Reconstruct both nodes to refresh their pin type information
+        FromNode->ReconstructNode();
+        ToNode->ReconstructNode();
+
+        // Re-fetch pins after reconstruction (pointers may have changed)
+        FromPin = FromNode->FindPin(*FromPinClean);
+        ToPin   = ToNode->FindPin(*ToPinClean);
+
+        if (FromPin && ToPin) {
+          bConnected = Schema->TryCreateConnection(FromPin, ToPin);
+          if (!bConnected) {
+            bConnected = Schema->TryCreateConnection(ToPin, FromPin);
+          }
+        }
+      }
+    }
+
+    if (bConnected) {
+      // After a successful connection, reconstruct both nodes so that
+      // wildcard/typed pins (e.g. array function nodes) update their type
+      // information based on the newly connected pin type.
+      FromNode->ReconstructNode();
+      ToNode->ReconstructNode();
+
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-      
-      // CRITICAL: Save the blueprint to persist changes.
       SaveLoadedAssetThrottled(Blueprint);
-      
+
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Pins connected."), Result);
     } else {
+      // Provide a diagnostic message that includes pin type information
+      // to help the caller understand why the connection was rejected.
+      FString FromTypeStr = FromPin ? FromPin->PinType.PinCategory.ToString() : TEXT("?");
+      FString ToTypeStr   = ToPin   ? ToPin->PinType.PinCategory.ToString()   : TEXT("?");
+      if (FromPin && FromPin->PinType.PinSubCategoryObject.IsValid()) {
+        FromTypeStr += TEXT(" (") + FromPin->PinType.PinSubCategoryObject->GetName() + TEXT(")");
+      }
+      if (ToPin && ToPin->PinType.PinSubCategoryObject.IsValid()) {
+        ToTypeStr += TEXT(" (") + ToPin->PinType.PinSubCategoryObject->GetName() + TEXT(")");
+      }
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to connect pins (schema rejection)."),
+                          FString::Printf(TEXT("Failed to connect pins (schema rejection). "
+                                               "FromPin type: %s [%s], ToPin type: %s [%s]. "
+                                               "Ensure pin directions and types are compatible."),
+                                          *FromPinClean, *FromTypeStr,
+                                          *ToPinClean, *ToTypeStr),
                           TEXT("CONNECTION_FAILED"));
     }
     return true;
@@ -1206,6 +1383,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                                                     : TEXT("Output"));
       PinObj->SetStringField(TEXT("pinType"),
                              Pin->PinType.PinCategory.ToString());
+
+      // Always report the sub-category object name for object/class/struct pins.
+      // This is critical for cast nodes whose typed output pin ("As ClassName")
+      // must expose the target class so callers can wire it correctly.
+      if (Pin->PinType.PinSubCategoryObject.IsValid()) {
+        PinObj->SetStringField(TEXT("pinSubType"),
+                               Pin->PinType.PinSubCategoryObject->GetName());
+      }
 
       if (Pin->LinkedTo.Num() > 0) {
         TArray<TSharedPtr<FJsonValue>> LinkedArray;

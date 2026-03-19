@@ -2742,10 +2742,45 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
     } else if (LowerType == TEXT("object")) {
       PinType.PinCategory = MCP_PC_Object;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
+      // Read typed subclass from variablePinType JSON if provided.
+      // Supports: variablePinType={"PinSubCategoryObject":"AoStatGeneratorComponent"}
+      // or variablePinType={"objectClass":"AoStatGeneratorComponent"}
+      {
+        const TSharedPtr<FJsonObject> *PinTypeObj = nullptr;
+        if (LocalPayload->TryGetObjectField(TEXT("variablePinType"), PinTypeObj) && PinTypeObj) {
+          FString SubClassName;
+          if (!(*PinTypeObj)->TryGetStringField(TEXT("PinSubCategoryObject"), SubClassName) || SubClassName.IsEmpty()) {
+            (*PinTypeObj)->TryGetStringField(TEXT("objectClass"), SubClassName);
+          }
+          if (!SubClassName.IsEmpty()) {
+            if (UClass *SubClass = ResolveUClass(SubClassName)) {
+              PinType.PinSubCategoryObject = SubClass;
+            }
+          }
+        }
+        if (!PinType.PinSubCategoryObject.IsValid()) {
+          PinType.PinSubCategoryObject = UObject::StaticClass();
+        }
+      }
     } else if (LowerType == TEXT("class")) {
       PinType.PinCategory = MCP_PC_Class;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
+      {
+        const TSharedPtr<FJsonObject> *PinTypeObj = nullptr;
+        if (LocalPayload->TryGetObjectField(TEXT("variablePinType"), PinTypeObj) && PinTypeObj) {
+          FString SubClassName;
+          if (!(*PinTypeObj)->TryGetStringField(TEXT("PinSubCategoryObject"), SubClassName) || SubClassName.IsEmpty()) {
+            (*PinTypeObj)->TryGetStringField(TEXT("objectClass"), SubClassName);
+          }
+          if (!SubClassName.IsEmpty()) {
+            if (UClass *SubClass = ResolveUClass(SubClassName)) {
+              PinType.PinSubCategoryObject = SubClass;
+            }
+          }
+        }
+        if (!PinType.PinSubCategoryObject.IsValid()) {
+          PinType.PinSubCategoryObject = UObject::StaticClass();
+        }
+      }
     } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
       PinType.PinCategory = MCP_PC_Object;
       UClass *FoundClass = ResolveUClass(VarType);
