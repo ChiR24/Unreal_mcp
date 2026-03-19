@@ -6,6 +6,7 @@
 
 #include "McpPropertyReflection.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "UObject/TextProperty.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
