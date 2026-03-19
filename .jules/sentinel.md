@@ -42,3 +42,8 @@
 **Vulnerability:** Several handlers (`generate_thumbnail`, `generate_report`) used `FPaths::IsRelative()` to check paths before converting to absolute. However, providing an absolute path like `C:/Windows/System32/exploit.dll` would bypass this check entirely, allowing arbitrary file writes.
 **Learning:** Checking `IsRelative()` alone is insufficient for security - it only handles relative paths. Absolute paths bypass the check and are used directly without bounds validation.
 **Prevention:** Always use `SanitizeProjectFilePath` to reject absolute paths (it checks for `:` character), then construct the absolute path from `FPaths::ProjectDir() / SafePath` and verify bounds. Never trust user-provided paths directly, regardless of whether they appear relative or absolute.
+
+## 2024-05-24 - Unsanitized AssetPath in SystemControlHandlers
+**Vulnerability:** In `McpAutomationBridge_SystemControlHandlers.cpp`, the `export_asset` sub-action accepted a raw `AssetPath` from JSON payload and passed it directly to `UEditorAssetLibrary::DoesAssetExist` and `UEditorAssetLibrary::LoadAsset`.
+**Learning:** This could allow directory traversal or invalid character injection into the engine's asset loading system, potentially causing crashes or unauthorized file access.
+**Prevention:** Always use `SanitizeProjectRelativePath()` for any user-provided asset path before using it in engine functions. Ensure the sanitized path is checked for emptiness, and always use the sanitized variable (e.g., `SafeAssetPath`) for all subsequent logic, including string manipulation like `GetBaseFilename` and in response JSONs.
