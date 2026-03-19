@@ -229,17 +229,7 @@ static bool HandleCreateLevel(
 
     FString LevelPath = GetJsonStringField(Payload, TEXT("levelPath"), TEXT("/Game/Maps"));
     bool bCreateWorldPartition = GetJsonBoolField(Payload, TEXT("bCreateWorldPartition"), false);
-    bool bUseExternalActors = GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false);
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
-
-    // CRITICAL: When creating a World Partition level, OFPA (External Actors) should be enabled
-    // for data layer support. If bCreateWorldPartition is true but bUseExternalActors is not specified,
-    // automatically enable OFPA for better compatibility with data layers.
-    // This can be overridden by explicitly setting bUseExternalActors to false.
-    if (bCreateWorldPartition && !Payload->HasField(TEXT("bUseExternalActors")))
-    {
-        bUseExternalActors = true;
-    }
 
     // Security: Validate level path format to prevent traversal attacks
     FString SafeLevelPath = SanitizeProjectRelativePath(LevelPath);
@@ -328,44 +318,16 @@ static bool HandleCreateLevel(
 #if ENGINE_MAJOR_VERSION >= 5
     if (bCreateWorldPartition)
     {
-        // World Partition is enabled via WorldSettings using CreateOrRepairWorldPartition
-        AWorldSettings* WorldSettings = NewWorld->GetWorldSettings(true);
+        // World Partition is enabled via WorldSettings
+        AWorldSettings* WorldSettings = NewWorld->GetWorldSettings();
         if (WorldSettings)
         {
-            // Use the editor-only API to create World Partition
-            // This properly initializes the WorldPartition subsystem, RuntimeHash, and related structures
-            UWorldPartition* NewWorldPartition = UWorldPartition::CreateOrRepairWorldPartition(WorldSettings);
-            if (NewWorldPartition)
-            {
-                bWorldPartitionActuallyEnabled = true;
-                UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created World Partition for level: %s"), *FullPath);
-            }
-            else
-            {
-                UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Failed to create World Partition for level: %s"), *FullPath);
-            }
-        }
-        else
-        {
-            UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Failed to get WorldSettings for World Partition creation: %s"), *FullPath);
+            // In UE5, World Partition is typically enabled at world creation time
+            // or via project settings. We mark it as requested but note the limitation.
+            bWorldPartitionActuallyEnabled = false; // Requires editor UI to fully enable
         }
     }
 #endif
-
-    // Enable One File Per Actor (OFPA/External Actors) if requested
-    // This is required for Data Layer support in World Partition levels
-    bool bExternalActorsActuallyEnabled = false;
-    if (bUseExternalActors && NewWorld->PersistentLevel)
-    {
-#if WITH_EDITORONLY_DATA
-        // Set the bUseExternalActors flag on the persistent level
-        // This enables actors to be stored as external packages, which is required
-        // for Data Layer compatibility in World Partition levels
-        NewWorld->PersistentLevel->bUseExternalActors = true;
-        bExternalActorsActuallyEnabled = true;
-        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Enabled External Actors (OFPA) for level: %s"), *FullPath);
-#endif
-    }
 
     // Mark package dirty
     Package->MarkPackageDirty();
@@ -407,8 +369,6 @@ static bool HandleCreateLevel(
     ResponseJson->SetStringField(TEXT("levelPath"), FullPath);
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartitionActuallyEnabled);
     ResponseJson->SetBoolField(TEXT("worldPartitionRequested"), bCreateWorldPartition);
-    ResponseJson->SetBoolField(TEXT("externalActorsEnabled"), bExternalActorsActuallyEnabled);
-    ResponseJson->SetBoolField(TEXT("externalActorsRequested"), bUseExternalActors);
     ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
     if (bCreateWorldPartition && !bWorldPartitionActuallyEnabled)
     {
@@ -441,25 +401,14 @@ static bool HandleCreateLevel(
     // tries to load the same package, UE 5.7 detects the existing package → Fatal Error.
     //
     // Reference: EditorServer.cpp line 2524 - "World Memory Leaks: %d leaks objects"
-    // Reference: World.cpp line 1488-1491 - CleanupWorld must be called for initialized Inactive worlds
     if (bSaveSucceeded && NewWorld)
     {
         UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Cleaning up created world from memory after save: %s"), *FullPath);
         
-        // STEP 1: Call CleanupWorld() if the world was initialized
-        // This is CRITICAL for UE 5.7 - without this, HasEverBeenInitialized() remains true
-        // and the world can't be reused during LoadMap, causing "World Memory Leaks" crash.
-        // See World.cpp BeginDestroy() for reference.
-        if (NewWorld->IsInitialized())
-        {
-            UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Calling CleanupWorld() for initialized world"));
-            NewWorld->CleanupWorld();
-        }
-        
-        // STEP 2: Mark the world for destruction
+        // Mark the world for destruction
         NewWorld->bIsTearingDown = true;
         
-        // STEP 3: Disable all ticking on this world to prevent tick assertions
+        // Disable all ticking on this world to prevent tick assertions
         if (NewWorld->PersistentLevel)
         {
             // Mark level as invisible
@@ -486,27 +435,14 @@ static bool HandleCreateLevel(
             }
         }
         
-        // STEP 4: Remove from root if the world was added to root
-        // The "(root)" flag in error messages indicates RF_RootSet - must clear this
-        if (NewWorld->IsRooted())
-        {
-            UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Removing world from root"));
-            NewWorld->RemoveFromRoot();
-        }
-        
-        // STEP 5: Mark the world and its package as transient so GC will collect them
+        // Mark the world and its package as transient so GC will collect them
         NewWorld->SetFlags(RF_Transient);
         if (Package)
         {
-            // Also remove package from root if needed
-            if (Package->IsRooted())
-            {
-                Package->RemoveFromRoot();
-            }
             Package->SetFlags(RF_Transient);
         }
         
-        // STEP 6: Force garbage collection to remove the world from memory
+        // Force garbage collection to remove the world from memory
         // This allows the level to be cleanly loaded later via LoadMap
         CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
         FlushRenderingCommands();
@@ -574,12 +510,11 @@ static bool HandleCreateSublevel(
         }
     }
 
-    // Build full sublevel path
-    FString FullSublevelPath;
+    // Create sublevel path if not provided
     if (SublevelPath.IsEmpty())
     {
         FString WorldPath = World->GetOutermost()->GetName();
-        FullSublevelPath = FPaths::GetPath(WorldPath) / SublevelName;
+        SublevelPath = FPaths::GetPath(WorldPath) / SublevelName;
     }
     else
     {
@@ -592,186 +527,43 @@ static bool HandleCreateSublevel(
                 nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        FullSublevelPath = SafePath;
-    }
-    
-    // Ensure path starts with /Game/
-    if (!FullSublevelPath.StartsWith(TEXT("/Game/")))
-    {
-        FullSublevelPath = TEXT("/Game/") + FullSublevelPath;
+        SublevelPath = SafePath;
     }
 
-    // IDEMPOTENT: Check if sublevel already exists
-    if (FPackageName::DoesPackageExist(FullSublevelPath))
-    {
-        // Sublevel already exists - find or create streaming reference
-        ULevelStreaming* ExistingStreamingLevel = nullptr;
-        for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
-        {
-            if (StreamingLevel && StreamingLevel->GetWorldAssetPackageFName().ToString() == FullSublevelPath)
-            {
-                ExistingStreamingLevel = StreamingLevel;
-                break;
-            }
-        }
-        
-        TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-        ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
-        ResponseJson->SetStringField(TEXT("sublevelPath"), FullSublevelPath);
-        ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
-        ResponseJson->SetBoolField(TEXT("alreadyExisted"), true);
-        ResponseJson->SetBoolField(TEXT("streamingAdded"), ExistingStreamingLevel != nullptr);
-        
-        Subsystem->SendAutomationResponse(Socket, RequestId, true,
-            FString::Printf(TEXT("Sublevel already exists: %s"), *FullSublevelPath), ResponseJson);
-        return true;
-    }
-
-    // CRITICAL FIX: Create the actual sublevel asset on disk using UEditorLevelUtils
-    // This creates a proper .umap file that can be loaded later
-    // See: EditorLevelUtils.h - CreateNewStreamingLevel creates a new level and adds it as streaming
-    
-    // Build the package name for the new sublevel
-    FString SublevelPackageName = FullSublevelPath;
-    
-    // Create a new level package
-    UPackage* SublevelPackage = CreatePackage(*SublevelPackageName);
-    if (!SublevelPackage)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create package for sublevel: %s"), *SublevelPackageName), nullptr, TEXT("PACKAGE_CREATION_FAILED"));
-        return true;
-    }
-
-    // Create the new world for the sublevel
-    UWorld* NewSublevelWorld = UWorld::CreateWorld(EWorldType::Inactive, false, FName(*SublevelName), SublevelPackage);
-    if (!NewSublevelWorld)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to create world for sublevel: %s"), *SublevelName), nullptr, TEXT("WORLD_CREATION_FAILED"));
-        return true;
-    }
-
-    // Initialize the world if not already initialized
-    if (!NewSublevelWorld->bIsWorldInitialized)
-    {
-        NewSublevelWorld->InitWorld();
-    }
-
-    // Mark package dirty
-    SublevelPackage->MarkPackageDirty();
-
-    // Save the sublevel to disk
-    bool bSaveSucceeded = true;
-    if (bSave)
-    {
-        bSaveSucceeded = McpSafeLevelSave(NewSublevelWorld->PersistentLevel, SublevelPackageName);
-        
-        if (bSaveSucceeded)
-        {
-            // Flush asset registry so the new level is immediately discoverable
-            IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-            FString LevelFilename;
-            if (FPackageName::TryConvertLongPackageNameToFilename(SublevelPackageName, LevelFilename, FPackageName::GetMapPackageExtension()))
-            {
-                TArray<FString> FilesToScan;
-                FilesToScan.Add(LevelFilename);
-                AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
-            }
-        }
-    }
-
-    // Create streaming level to add to parent world
+    // Add streaming level
     ULevelStreamingDynamic* StreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
-    if (StreamingLevel)
+    if (!StreamingLevel)
     {
-        StreamingLevel->SetWorldAssetByPackageName(FName(*SublevelPackageName));
-        StreamingLevel->LevelTransform = FTransform::Identity;
-        StreamingLevel->SetShouldBeVisible(true);
-        StreamingLevel->SetShouldBeLoaded(true);
-        
-        // Add to world's streaming levels
-        World->AddStreamingLevel(StreamingLevel);
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Failed to create streaming level object"), nullptr);
+        return true;
     }
 
-    // Mark parent world dirty
+    // Configure the streaming level
+    StreamingLevel->SetWorldAssetByPackageName(FName(*SublevelPath));
+    StreamingLevel->LevelTransform = FTransform::Identity;
+    StreamingLevel->SetShouldBeVisible(true);
+    StreamingLevel->SetShouldBeLoaded(true);
+
+    // Add to world's streaming levels
+    World->AddStreamingLevel(StreamingLevel);
+
+    // Mark world dirty so changes can be saved
     World->MarkPackageDirty();
     
-    // Save parent world if requested (to persist streaming level reference)
-    if (bSave && StreamingLevel)
+    // Save if requested
+    if (bSave)
     {
         McpSafeAssetSave(World);
     }
 
-    // CRITICAL: Clean up the created sublevel world from memory to prevent "World Memory Leaks" crash
-    // Same fix as HandleCreateLevel - see that function for detailed comments
-    if (bSaveSucceeded && NewSublevelWorld)
-    {
-        if (NewSublevelWorld->IsInitialized())
-        {
-            NewSublevelWorld->CleanupWorld();
-        }
-        
-        NewSublevelWorld->bIsTearingDown = true;
-        
-        if (NewSublevelWorld->PersistentLevel)
-        {
-            NewSublevelWorld->PersistentLevel->bIsVisible = false;
-            for (AActor* Actor : NewSublevelWorld->PersistentLevel->Actors)
-            {
-                if (Actor)
-                {
-                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
-                    {
-                        Actor->PrimaryActorTick.UnRegisterTickFunction();
-                    }
-                    Actor->PrimaryActorTick.GetPrerequisites().Empty();
-                    for (UActorComponent* Component : Actor->GetComponents())
-                    {
-                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
-                        {
-                            Component->PrimaryComponentTick.UnRegisterTickFunction();
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (NewSublevelWorld->IsRooted())
-        {
-            NewSublevelWorld->RemoveFromRoot();
-        }
-        
-        NewSublevelWorld->SetFlags(RF_Transient);
-        if (SublevelPackage && SublevelPackage->IsRooted())
-        {
-            SublevelPackage->RemoveFromRoot();
-        }
-        if (SublevelPackage)
-        {
-            SublevelPackage->SetFlags(RF_Transient);
-        }
-        
-        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
-        FlushRenderingCommands();
-    }
-
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
+    McpHandlerUtils::AddVerification(ResponseJson, StreamingLevel);
     ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
-    ResponseJson->SetStringField(TEXT("sublevelPath"), FullSublevelPath);
     ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
-    ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
-    ResponseJson->SetBoolField(TEXT("streamingAdded"), StreamingLevel != nullptr);
+    ResponseJson->SetBoolField(TEXT("saved"), bSave);
 
-    if (bSave && !bSaveSucceeded)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Sublevel created but save failed: %s"), *SublevelName),
-            ResponseJson, TEXT("SAVE_FAILED"));
-        return true;
-    }
-
-    FString Message = FString::Printf(TEXT("Created sublevel: %s at %s"), *SublevelName, *FullSublevelPath);
+    FString Message = FString::Printf(TEXT("Created sublevel: %s"), *SublevelName);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
@@ -811,7 +603,7 @@ static bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    // Find the streaming level in the world's streaming levels array
+    // Find the streaming level
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -819,54 +611,6 @@ static bool HandleConfigureLevelStreaming(
         {
             FoundLevel = StreamingLevel;
             break;
-        }
-    }
-
-    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
-    // This handles cases where the sublevel was created but the streaming reference wasn't loaded
-    if (!FoundLevel)
-    {
-        // Build potential full paths for the level
-        TArray<FString> PotentialPaths;
-        
-        // Try as-is first (might be a full path)
-        if (LevelName.StartsWith(TEXT("/Game/")))
-        {
-            PotentialPaths.Add(LevelName);
-        }
-        // Try under the current world's path
-        FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
-        PotentialPaths.Add(WorldPath / LevelName);
-        // Try under /Game/ directly
-        PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
-        // Try with the level name as a full path under /Game/
-        PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
-        
-        for (const FString& TestPath : PotentialPaths)
-        {
-            FString TestFullPath = TestPath;
-            if (!TestFullPath.EndsWith(TEXT(".umap")))
-            {
-                // Already a package path, check if package exists
-                if (FPackageName::DoesPackageExist(TestFullPath))
-                {
-                    // Found the level on disk - create a streaming reference
-                    ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
-                    if (NewStreamingLevel)
-                    {
-                        NewStreamingLevel->SetWorldAssetByPackageName(FName(*TestFullPath));
-                        NewStreamingLevel->LevelTransform = FTransform::Identity;
-                        NewStreamingLevel->SetShouldBeVisible(true);
-                        NewStreamingLevel->SetShouldBeLoaded(true);
-                        
-                        World->AddStreamingLevel(NewStreamingLevel);
-                        FoundLevel = NewStreamingLevel;
-                        
-                        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created streaming reference for existing level: %s"), *TestFullPath);
-                        break;
-                    }
-                }
-            }
         }
     }
 
@@ -929,7 +673,7 @@ static bool HandleSetStreamingDistance(
         return true;
     }
 
-    // Find the streaming level in the world's streaming levels array
+    // Find the streaming level
     ULevelStreaming* FoundLevel = nullptr;
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
@@ -937,54 +681,6 @@ static bool HandleSetStreamingDistance(
         {
             FoundLevel = StreamingLevel;
             break;
-        }
-    }
-
-    // If not found in streaming levels, check if the level exists on disk and create a streaming reference
-    // This handles cases where the sublevel was created but the streaming reference wasn't loaded
-    if (!FoundLevel)
-    {
-        // Build potential full paths for the level
-        TArray<FString> PotentialPaths;
-        
-        // Try as-is first (might be a full path)
-        if (LevelName.StartsWith(TEXT("/Game/")))
-        {
-            PotentialPaths.Add(LevelName);
-        }
-        // Try under the current world's path
-        FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
-        PotentialPaths.Add(WorldPath / LevelName);
-        // Try under /Game/ directly
-        PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
-        // Try with the level name as a full path under /Game/
-        PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
-        
-        for (const FString& TestPath : PotentialPaths)
-        {
-            FString TestFullPath = TestPath;
-            if (!TestFullPath.EndsWith(TEXT(".umap")))
-            {
-                // Already a package path, check if package exists
-                if (FPackageName::DoesPackageExist(TestFullPath))
-                {
-                    // Found the level on disk - create a streaming reference
-                    ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
-                    if (NewStreamingLevel)
-                    {
-                        NewStreamingLevel->SetWorldAssetByPackageName(FName(*TestFullPath));
-                        NewStreamingLevel->LevelTransform = FTransform::Identity;
-                        NewStreamingLevel->SetShouldBeVisible(true);
-                        NewStreamingLevel->SetShouldBeLoaded(true);
-                        
-                        World->AddStreamingLevel(NewStreamingLevel);
-                        FoundLevel = NewStreamingLevel;
-                        
-                        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created streaming reference for existing level: %s"), *TestFullPath);
-                        break;
-                    }
-                }
-            }
         }
     }
 
@@ -1660,25 +1356,6 @@ static bool HandleCreateDataLayer(
         return true;
     }
 
-    // CRITICAL: Check if the level uses External Objects (One File Per Actor / OFPA)
-    // Data Layer instances require OFPA to be enabled, otherwise AddDataLayerInstance()
-    // will hit an assertion: "GetLevel()->IsUsingExternalObjects()"
-    // See WorldDataLayers.cpp:685
-    ULevel* PersistentLevel = World->PersistentLevel;
-    if (!PersistentLevel || !PersistentLevel->IsUsingExternalObjects())
-    {
-        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-        ErrorDetails->SetStringField(TEXT("reason"), TEXT("One File Per Actor (OFPA) / External Actors is not enabled for this level."));
-        ErrorDetails->SetStringField(TEXT("solution"), TEXT("Enable 'Use External Actors' in World Partition settings or convert the level via Edit > Convert Level."));
-        ErrorDetails->SetBoolField(TEXT("worldPartitionEnabled"), true);
-        ErrorDetails->SetBoolField(TEXT("externalActorsEnabled"), PersistentLevel ? PersistentLevel->IsUsingExternalObjects() : false);
-        
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data layers require 'One File Per Actor' (External Actors) to be enabled. Enable it in World Partition settings or use 'Edit > Convert Level' in the editor."),
-            ErrorDetails, TEXT("EXTERNAL_ACTORS_NOT_ENABLED"));
-        return true;
-    }
-
     // Get the Data Layer Editor Subsystem
     UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
     if (!DataLayerEditorSubsystem)
@@ -1825,24 +1502,6 @@ static bool HandleAssignActorToDataLayer(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
-        return true;
-    }
-
-    // CRITICAL: Check if the level uses External Objects (One File Per Actor / OFPA)
-    // Actor-to-DataLayer assignment requires OFPA for actors to be compatible with data layers.
-    // Non-OFPA actors cannot be assigned to data layers.
-    ULevel* PersistentLevel = World->PersistentLevel;
-    if (!PersistentLevel || !PersistentLevel->IsUsingExternalObjects())
-    {
-        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-        ErrorDetails->SetStringField(TEXT("reason"), TEXT("One File Per Actor (OFPA) / External Actors is not enabled for this level."));
-        ErrorDetails->SetStringField(TEXT("solution"), TEXT("Enable 'Use External Actors' in World Partition settings. Actors must be external to be compatible with data layers."));
-        ErrorDetails->SetBoolField(TEXT("worldPartitionEnabled"), true);
-        ErrorDetails->SetBoolField(TEXT("externalActorsEnabled"), PersistentLevel ? PersistentLevel->IsUsingExternalObjects() : false);
-        
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Actor-to-DataLayer assignment requires 'One File Per Actor' (External Actors). Actors must be stored as external packages to be compatible with data layers."),
-            ErrorDetails, TEXT("EXTERNAL_ACTORS_NOT_ENABLED"));
         return true;
     }
 
@@ -2210,10 +1869,9 @@ static bool HandleOpenLevelBlueprint(
     FString LevelPackageName = World->GetOutermost()->GetName();
     bool bIsSavedLevel = !LevelPackageName.IsEmpty() && !LevelPackageName.StartsWith(TEXT("/Temp/"));
 
-    // For unsaved levels, GetLevelScriptBlueprint(false) may fail to create the blueprint
+    // For unsaved levels, GetLevelScriptBlueprint(true) may fail to create the blueprint
     // because it requires a valid package path
-    // Pass false to allow creation of Level Blueprint if it doesn't exist
-    ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(false);
+    ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(true);
     if (!LevelBP)
     {
         // Try to create the level blueprint manually for unsaved levels
@@ -2277,12 +1935,11 @@ static bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    // Pass false to allow creation of Level Blueprint if it doesn't exist
-    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(false);
+    ULevelScriptBlueprint* LevelBP = CurrentLevel->GetLevelScriptBlueprint(true);
     if (!LevelBP)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to get or create Level Blueprint"), nullptr);
+            TEXT("Failed to get Level Blueprint"), nullptr);
         return true;
     }
 
