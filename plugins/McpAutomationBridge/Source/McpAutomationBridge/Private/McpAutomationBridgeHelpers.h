@@ -1372,7 +1372,8 @@ static inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = t
                 // STEP 11a: Call CleanupWorld() if the world was initialized
                 // This is CRITICAL - without this, HasEverBeenInitialized() remains true
                 // and the world can't be reused, causing "World Memory Leaks" crash.
-                if (ExistingWorld->IsInitialized())
+                // Note: Using bIsWorldInitialized directly for UE 5.0 compatibility (IsInitialized() added in 5.1)
+                if (ExistingWorld->bIsWorldInitialized)
                 {
                     UE_LOG(LogTemp, Log, TEXT("McpSafeLoadMap: Calling CleanupWorld() for initialized world"));
                     ExistingWorld->CleanupWorld();

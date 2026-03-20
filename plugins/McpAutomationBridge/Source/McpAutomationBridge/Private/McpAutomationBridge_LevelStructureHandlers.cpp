@@ -450,7 +450,8 @@ static bool HandleCreateLevel(
         // This is CRITICAL for UE 5.7 - without this, HasEverBeenInitialized() remains true
         // and the world can't be reused during LoadMap, causing "World Memory Leaks" crash.
         // See World.cpp BeginDestroy() for reference.
-        if (NewWorld->IsInitialized())
+        // Note: Using bIsWorldInitialized directly for UE 5.0 compatibility (IsInitialized() added in 5.1)
+        if (NewWorld->bIsWorldInitialized)
         {
             UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleCreateLevel: Calling CleanupWorld() for initialized world"));
             NewWorld->CleanupWorld();
@@ -705,9 +706,10 @@ static bool HandleCreateSublevel(
 
     // CRITICAL: Clean up the created sublevel world from memory to prevent "World Memory Leaks" crash
     // Same fix as HandleCreateLevel - see that function for detailed comments
+    // Note: Using bIsWorldInitialized directly for UE 5.0 compatibility (IsInitialized() added in 5.1)
     if (bSaveSucceeded && NewSublevelWorld)
     {
-        if (NewSublevelWorld->IsInitialized())
+        if (NewSublevelWorld->bIsWorldInitialized)
         {
             NewSublevelWorld->CleanupWorld();
         }
