@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
   "Version": 3,
-  "VersionName": "0.1.2",
+  "VersionName": "0.1.3",
   "FriendlyName": "MCP Automation Bridge",
   "Description": "Editor automation bridge enabling AI assistants (Claude, Cursor, etc.) to control Unreal Engine via Model Context Protocol (MCP). Provides 200+ automation actions for assets, actors, levels, animation, AI, Niagara, materials, foliage, landscapes, and more. Supports UE 5.0-5.7 with TLS/SSL security.",
   "Category": "Editor|Automation|AI",
