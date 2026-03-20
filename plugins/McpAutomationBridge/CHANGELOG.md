@@ -4,6 +4,28 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [0.1.3] - 2026-03-21
+
+### Security
+- Path traversal fix in `export_asset` action to prevent directory traversal attacks
+
+### Added
+- External actors support for World Partition in level structure handlers
+- Streaming reference creation for external actor packages
+
+### Fixed
+- UE 5.0 compatibility using `bIsWorldInitialized` direct access
+- Tick task manager crashes during world operations with proper cleanup
+- World cleanup issues with `FlushRenderingCommands` safety
+- Sublevel creation process with enhanced path handling
+- Missing includes for UE 5.7 build (contributed by @a2448825647)
+
+### Changed
+- Enhanced `McpAutomationBridgeHelpers.h` with additional safety helpers
+- Improved `McpSafeOperations.h` for safer world operations
+
+---
+
 ## [0.1.2] - 2026-03-18
 
 ### Security

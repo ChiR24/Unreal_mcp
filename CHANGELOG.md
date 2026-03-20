@@ -7,6 +7,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 🏷️ [0.5.20] - 2026-03-21
+
+> [!IMPORTANT]
+> ### 🛡️ Security Fix & UE 5.0 Compatibility
+> This release includes a critical path traversal fix in export_asset, UE 5.0 compatibility improvements, and external actors support for World Partition.
+
+### 🛡️ Security
+
+<details>
+<summary><b>🔒 Path Traversal in export_asset</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/5cf2a3c">5cf2a3c</a>)</summary>
+
+| Aspect | Details |
+|--------|---------|
+| **Severity** | 🚨 CRITICAL |
+| **Vulnerability** | Path traversal in `export_asset` action |
+| **Fix** | Added path validation to prevent directory traversal attacks |
+
+**Files Modified:**
+- `McpAutomationBridge_SystemControlHandlers.cpp`
+
+</details>
+
+### ✨ Added
+
+<details>
+<summary><b>🌍 External Actors Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/51143c3">51143c3</a>)</summary>
+
+| Feature | Description |
+|---------|-------------|
+| **External Actors** | Support for World Partition external actors in level structure handlers |
+| **Streaming Reference** | Streaming reference creation for external actor packages |
+
+**Files Modified:**
+- `McpAutomationBridge_LevelStructureHandlers.cpp` (+127 lines)
+
+</details>
+
+### 🛠️ Fixed
+
+<details>
+<summary><b>🎮 UE 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/1057023">1057023</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| `bIsWorldInitialized` API not available in UE 5.0 | Direct access to `bIsWorldInitialized` for UE 5.0 compatibility |
+
+**Files Modified:**
+- `McpAutomationBridgeHelpers.h`
+- `McpAutomationBridge_LevelStructureHandlers.cpp`
+
+</details>
+
+<details>
+<summary><b>🐛 Tick Task Manager Crashes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/8c311d7">8c311d7</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| Crashes from tick task manager during world operations | Added safety checks and proper cleanup in world management |
+| World cleanup issues | Enhanced cleanup with `FlushRenderingCommands` safety |
+
+**Files Modified:**
+- `McpAutomationBridgeHelpers.h` (+36 lines)
+- `McpAutomationBridge_LevelStructureHandlers.cpp` (+65 lines)
+- `McpSafeOperations.h` (+16 lines)
+
+</details>
+
+<details>
+<summary><b>🐛 Sublevel Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/bffb68c">bffb68c</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| Sublevel creation path handling issues | Enhanced sublevel creation process with proper path handling |
+
+**Files Modified:**
+- `McpAutomationBridge_LevelStructureHandlers.cpp` (+201 lines)
+
+</details>
+
+<details>
+<summary><b>🔧 UE 5.7 Build</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/295">#295</a>)</summary>
+
+| Bug | Fix |
+|-----|-----|
+| Missing includes causing build failures on UE 5.7 | Added missing includes in `McpHandlerUtils.cpp` and `McpPropertyReflection.cpp` |
+
+**Contributors:** @a2448825647
+
+</details>
+
+### 🔄 Dependencies
+
+<details>
+<summary><b>GitHub Actions Updates</b></summary>
+
+| Package | From | To | PR |
+|---------|------|-----|-----|
+| `release-drafter/release-drafter` | 7.0.0 | 7.1.1 | [#300](https://github.com/ChiR24/Unreal_mcp/pull/300) |
+| `softprops/action-gh-release` | 2.5.3 | 2.6.1 | [#301](https://github.com/ChiR24/Unreal_mcp/pull/301) |
+| `github/codeql-action` | 4.32.6 | 4.33.0 | [#299](https://github.com/ChiR24/Unreal_mcp/pull/299) |
+
+</details>
+
+<details>
+<summary><b>NPM Package Updates</b></summary>
+
+| Package | From | To | PR |
+|---------|------|-----|-----|
+| `flatted` | 3.3.3 | 3.4.2 | [#304](https://github.com/ChiR24/Unreal_mcp/pull/304) |
+
+</details>
+
+### 🔌 Plugin
+
+<details>
+<summary><b>MCP Automation Bridge v0.1.3</b></summary>
+
+Updated plugin version to 0.1.3 with all fixes and features from this release.
+
+See [Plugin CHANGELOG](Plugins/McpAutomationBridge/CHANGELOG.md) for details.
+
+</details>
+
+---
+
 ## 🏷️ [0.5.19] - 2026-03-18
 
 > [!IMPORTANT]
