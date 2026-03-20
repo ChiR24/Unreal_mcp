@@ -144,6 +144,41 @@ public:
    */
   void RegisterHandler(const FString &Action, FAutomationHandler Handler);
 
+  // =========================================================================
+  // Per-Request Error Capture (Public for handler access)
+  // =========================================================================
+  
+  /**
+   * Thread-local storage for capturing errors during handler execution.
+   * This is used to detect engine-level errors (like ensure failures)
+   * that don't propagate as exceptions but indicate operation failure.
+   */
+  struct FRequestErrorCapture
+  {
+    TArray<FString> ErrorMessages;
+    TArray<FString> WarningMessages;
+    bool bHasErrors = false;
+    bool bHasWarnings = false;
+  };
+  
+  /** Get the current request's error capture (thread-local) */
+  static FRequestErrorCapture& GetCurrentErrorCapture();
+  
+  /** Thread-local error capture storage - implemented in .cpp to avoid dllexport issues */
+  static FRequestErrorCapture& GetThreadLocalErrorCapture();
+  
+  /** Begin capturing errors for a request */
+  void BeginErrorCapture();
+  
+  /** End capturing errors and return any captured errors */
+  TArray<FString> EndErrorCapture();
+  
+  /** Check if any errors were captured during the current request */
+  bool HasCapturedErrors() const;
+  
+  /** Custom log output device for per-request error capture */
+  TSharedPtr<class FMcpRequestErrorDevice> RequestErrorDevice;
+
 private:
   // Telemetry structs moved to McpConnectionManager
 
@@ -181,7 +216,7 @@ private:
   // Active Log Device
   TSharedPtr<FOutputDevice> LogCaptureDevice;
 
-  // Action handlers (implemented in separate translation units)
+private:
   TMap<FString, FAutomationHandler> AutomationHandlers;
   void InitializeHandlers();
 

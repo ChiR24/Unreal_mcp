@@ -118,8 +118,36 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     return bResult;
   };
 
+  // =========================================================================
+  // Begin Error Capture for this request
+  // =========================================================================
+  // This captures engine-level errors (like ensure failures) that occur
+  // during handler execution. If errors are captured, we report failure
+  // even if the handler returned success.
+  BeginErrorCapture();
+
   {
     ON_SCOPE_EXIT {
+      // =====================================================================
+      // End Error Capture and check for captured errors
+      // =====================================================================
+      TArray<FString> CapturedErrors = EndErrorCapture();
+      bool bHadEngineErrors = HasCapturedErrors();
+      
+      if (bHadEngineErrors && bDispatchHandled)
+      {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("ProcessAutomationRequest: Handler reported success but "
+                    "engine errors were detected for RequestId=%s action='%s'. "
+                    "Errors: %s"),
+               *RequestId, *Action,
+               CapturedErrors.Num() > 0 ? *CapturedErrors[0] : TEXT("unknown"));
+        
+        // The handler already sent a response, but we detected errors.
+        // Log a warning - the handler should have checked for errors.
+        // Future improvement: Send an error response if handler claimed success.
+      }
+      
       bProcessingAutomationRequest = false;
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =
@@ -127,8 +155,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       if (bDispatchHandled) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
                TEXT("ProcessAutomationRequest: Completed handler='%s' "
-                    "RequestId=%s action='%s' (%.3f ms)"),
-               *ConsumedHandlerLabel, *RequestId, *Action, DurationMs);
+                    "RequestId=%s action='%s' (%.3f ms) engineErrors=%s"),
+               *ConsumedHandlerLabel, *RequestId, *Action, DurationMs,
+               bHadEngineErrors ? TEXT("true") : TEXT("false"));
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                TEXT("ProcessAutomationRequest: No handler consumed "

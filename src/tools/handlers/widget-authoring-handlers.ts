@@ -414,9 +414,9 @@ export async function handleWidgetAuthoringTools(
     case 'add_animation_keyframe': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.animationName, 'animationName', 'Missing required parameter: animationName');
-      requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
       // Adds a keyframe to an animation track
       // Accepts: time, value (type depends on track), interpolation (linear, cubic, constant)
+      // Note: slotName is optional - used for targeting specific widgets in the animation
       return sendRequest('add_animation_keyframe');
     }
 
@@ -433,16 +433,16 @@ export async function handleWidgetAuthoringTools(
     // =========================================================================
 
     case 'create_main_menu': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a main menu widget template
-      // Optional: folder, includePlayButton, includeSettingsButton, includeQuitButton, backgroundImage, titleText
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a main menu widget template in an existing widget blueprint
+      // Optional: title, includePlayButton, includeSettingsButton, includeQuitButton, backgroundImage
       return sendRequest('create_main_menu');
     }
 
     case 'create_pause_menu': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a pause menu widget template
-      // Optional: folder, includeResumeButton, includeSettingsButton, includeQuitToMenuButton
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a pause menu widget template in an existing widget blueprint
+      // Optional: includeResumeButton, includeSettingsButton, includeQuitToMenuButton
       return sendRequest('create_pause_menu');
     }
 
@@ -461,9 +461,9 @@ export async function handleWidgetAuthoringTools(
     }
 
     case 'create_hud_widget': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a HUD widget template
-      // Optional: folder, elements (array of: health_bar, ammo_counter, minimap, crosshair, compass, etc.)
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a HUD widget template in an existing widget blueprint
+      // Optional: elements (array of: health_bar, ammo_counter, minimap, crosshair, compass, etc.)
       return sendRequest('create_hud_widget');
     }
 
