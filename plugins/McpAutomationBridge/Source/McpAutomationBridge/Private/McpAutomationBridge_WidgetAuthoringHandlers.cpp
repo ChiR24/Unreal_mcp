@@ -520,7 +520,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CanvasPanel"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -530,7 +534,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Create canvas panel
-        UCanvasPanel* CanvasPanel = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UCanvasPanel* CanvasPanel = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), FName(*UniqueName));
         if (!CanvasPanel)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create canvas panel"), TEXT("CREATION_ERROR"));
@@ -547,14 +559,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         {
             // Find parent and add as child
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(CanvasPanel);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(CanvasPanel);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -577,7 +597,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("HorizontalBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("HorizontalBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -586,14 +610,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UHorizontalBox* HBox = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        int32 Suffix = 1;
+        while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+        {
+            UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+        }
+
+        UHorizontalBox* HBox = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), FName(*UniqueName));
         if (!HBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create horizontal box"), TEXT("CREATION_ERROR"));
             return true;
         }
 
-        // Add to parent or root
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         if (ParentSlot.IsEmpty())
         {
@@ -605,14 +635,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(HBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(HBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -635,7 +673,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("VerticalBox"));
+        // Accept "name" (tool schema field) or "slotName" (legacy), fall back to type default
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("VerticalBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -644,11 +687,33 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UVerticalBox* VBox = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), FName(*SlotName));
+        // Guard against duplicate widget names — append _N suffix until unique
+        FString UniqueName = SlotName;
+        int32 Suffix = 1;
+        while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+        {
+            UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+        }
+
+        UVerticalBox* VBox = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), FName(*UniqueName));
         if (!VBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create vertical box"), TEXT("CREATION_ERROR"));
             return true;
+        }
+
+        // Apply visibility if provided
+        FString VisibilityStr = GetJsonStringField(Payload, TEXT("visibility"));
+        if (!VisibilityStr.IsEmpty())
+        {
+            if (VisibilityStr.Equals(TEXT("Collapsed"), ESearchCase::IgnoreCase))
+                VBox->SetVisibility(ESlateVisibility::Collapsed);
+            else if (VisibilityStr.Equals(TEXT("Hidden"), ESearchCase::IgnoreCase))
+                VBox->SetVisibility(ESlateVisibility::Hidden);
+            else if (VisibilityStr.Equals(TEXT("HitTestInvisible"), ESearchCase::IgnoreCase))
+                VBox->SetVisibility(ESlateVisibility::HitTestInvisible);
+            else
+                VBox->SetVisibility(ESlateVisibility::Visible);
         }
 
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
@@ -662,14 +727,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(VBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(VBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -692,7 +765,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Overlay"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Overlay"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -701,7 +778,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UOverlay* OverlayWidget = WidgetBP->WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UOverlay* OverlayWidget = WidgetBP->WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), FName(*UniqueName));
         if (!OverlayWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create overlay"), TEXT("CREATION_ERROR"));
@@ -719,14 +804,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(OverlayWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(OverlayWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -753,7 +846,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextBlock"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextBlock"));
+        }
         FString Text = GetJsonStringField(Payload, TEXT("text"), TEXT("Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -763,7 +860,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UTextBlock* TextBlock = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UTextBlock* TextBlock = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), FName(*UniqueName));
         if (!TextBlock)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create text block"), TEXT("CREATION_ERROR"));
@@ -803,14 +908,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(TextBlock);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(TextBlock);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -833,7 +946,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Image"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Image"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -842,7 +959,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UImage* ImageWidget = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UImage* ImageWidget = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), FName(*UniqueName));
         if (!ImageWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create image"), TEXT("CREATION_ERROR"));
@@ -873,14 +998,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ImageWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ImageWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -903,7 +1036,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Button"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Button"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -912,7 +1049,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UButton* ButtonWidget = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UButton* ButtonWidget = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), FName(*UniqueName));
         if (!ButtonWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create button"), TEXT("CREATION_ERROR"));
@@ -938,14 +1083,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ButtonWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ButtonWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -968,7 +1121,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ProgressBar"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ProgressBar"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -977,7 +1134,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UProgressBar* ProgressBarWidget = WidgetBP->WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UProgressBar* ProgressBarWidget = WidgetBP->WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), FName(*UniqueName));
         if (!ProgressBarWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create progress bar"), TEXT("CREATION_ERROR"));
@@ -1009,14 +1174,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ProgressBarWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ProgressBarWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1039,7 +1212,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Slider"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Slider"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1048,7 +1225,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        USlider* SliderWidget = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        USlider* SliderWidget = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), FName(*UniqueName));
         if (!SliderWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create slider"), TEXT("CREATION_ERROR"));
@@ -1082,14 +1267,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(SliderWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(SliderWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1176,7 +1369,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("GridPanel"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("GridPanel"));
+        }
         int32 ColumnCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("columnCount"), 2));
         int32 RowCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("rowCount"), 2));
 
@@ -1187,7 +1384,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UGridPanel* GridPanel = WidgetBP->WidgetTree->ConstructWidget<UGridPanel>(UGridPanel::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UGridPanel* GridPanel = WidgetBP->WidgetTree->ConstructWidget<UGridPanel>(UGridPanel::StaticClass(), FName(*UniqueName));
         if (!GridPanel)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create grid panel"), TEXT("CREATION_ERROR"));
@@ -1206,14 +1411,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(GridPanel);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(GridPanel);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1236,7 +1449,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("UniformGridPanel"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("UniformGridPanel"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1245,7 +1462,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UUniformGridPanel* UniformGrid = WidgetBP->WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UUniformGridPanel* UniformGrid = WidgetBP->WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), FName(*UniqueName));
         if (!UniformGrid)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create uniform grid panel"), TEXT("CREATION_ERROR"));
@@ -1288,14 +1513,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(UniformGrid);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(UniformGrid);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1317,7 +1550,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WrapBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WrapBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1326,7 +1563,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UWrapBox* WrapBox = WidgetBP->WidgetTree->ConstructWidget<UWrapBox>(UWrapBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UWrapBox* WrapBox = WidgetBP->WidgetTree->ConstructWidget<UWrapBox>(UWrapBox::StaticClass(), FName(*UniqueName));
         if (!WrapBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create wrap box"), TEXT("CREATION_ERROR"));
@@ -1366,14 +1611,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(WrapBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(WrapBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1395,7 +1648,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScrollBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScrollBox"));
+        }
         FString Orientation = GetJsonStringField(Payload, TEXT("orientation"), TEXT("Vertical"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1405,7 +1662,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UScrollBox* ScrollBox = WidgetBP->WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UScrollBox* ScrollBox = WidgetBP->WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), FName(*UniqueName));
         if (!ScrollBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create scroll box"), TEXT("CREATION_ERROR"));
@@ -1457,14 +1722,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ScrollBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ScrollBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1486,7 +1759,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SizeBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SizeBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1495,7 +1772,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        USizeBox* SizeBox = WidgetBP->WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        USizeBox* SizeBox = WidgetBP->WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName(*UniqueName));
         if (!SizeBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create size box"), TEXT("CREATION_ERROR"));
@@ -1539,14 +1824,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(SizeBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(SizeBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1568,7 +1861,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScaleBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ScaleBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1577,7 +1874,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UScaleBox* ScaleBox = WidgetBP->WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UScaleBox* ScaleBox = WidgetBP->WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass(), FName(*UniqueName));
         if (!ScaleBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create scale box"), TEXT("CREATION_ERROR"));
@@ -1651,14 +1956,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ScaleBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ScaleBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1680,7 +1993,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Border"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Border"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1689,7 +2006,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UBorder* BorderWidget = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UBorder* BorderWidget = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(*UniqueName));
         if (!BorderWidget)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create border"), TEXT("CREATION_ERROR"));
@@ -1735,14 +2060,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         else
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(BorderWidget);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(BorderWidget);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1768,7 +2101,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("RichTextBlock"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("RichTextBlock"));
+        }
         FString Text = GetJsonStringField(Payload, TEXT("text"), TEXT("Rich Text"));
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1778,7 +2115,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        URichTextBlock* RichTextBlock = WidgetBP->WidgetTree->ConstructWidget<URichTextBlock>(URichTextBlock::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        URichTextBlock* RichTextBlock = WidgetBP->WidgetTree->ConstructWidget<URichTextBlock>(URichTextBlock::StaticClass(), FName(*UniqueName));
         if (!RichTextBlock)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create rich text block"), TEXT("CREATION_ERROR"));
@@ -1791,14 +2136,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(RichTextBlock);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(RichTextBlock);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1820,7 +2173,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CheckBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("CheckBox"));
+        }
         bool bIsChecked = GetJsonBoolField(Payload, TEXT("isChecked"), false);
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
@@ -1830,7 +2187,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UCheckBox* CheckBox = WidgetBP->WidgetTree->ConstructWidget<UCheckBox>(UCheckBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UCheckBox* CheckBox = WidgetBP->WidgetTree->ConstructWidget<UCheckBox>(UCheckBox::StaticClass(), FName(*UniqueName));
         if (!CheckBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create check box"), TEXT("CREATION_ERROR"));
@@ -1843,14 +2208,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(CheckBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(CheckBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1872,7 +2245,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextInput"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TextInput"));
+        }
         FString HintText = GetJsonStringField(Payload, TEXT("hintText"), TEXT(""));
         bool bMultiLine = GetJsonBoolField(Payload, TEXT("multiLine"), false);
 
@@ -1886,7 +2263,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         UWidget* TextInput = nullptr;
         if (bMultiLine)
         {
-            UMultiLineEditableTextBox* MultiLineText = WidgetBP->WidgetTree->ConstructWidget<UMultiLineEditableTextBox>(UMultiLineEditableTextBox::StaticClass(), FName(*SlotName));
+            FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UMultiLineEditableTextBox* MultiLineText = WidgetBP->WidgetTree->ConstructWidget<UMultiLineEditableTextBox>(UMultiLineEditableTextBox::StaticClass(), FName(*UniqueName));
             if (MultiLineText)
             {
                 MultiLineText->SetHintText(FText::FromString(HintText));
@@ -1895,7 +2280,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
         else
         {
-            UEditableTextBox* SingleLineText = WidgetBP->WidgetTree->ConstructWidget<UEditableTextBox>(UEditableTextBox::StaticClass(), FName(*SlotName));
+            FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UEditableTextBox* SingleLineText = WidgetBP->WidgetTree->ConstructWidget<UEditableTextBox>(UEditableTextBox::StaticClass(), FName(*UniqueName));
             if (SingleLineText)
             {
                 SingleLineText->SetHintText(FText::FromString(HintText));
@@ -1913,14 +2306,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(TextInput);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(TextInput);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -1942,7 +2343,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ComboBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ComboBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -1951,7 +2356,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UComboBoxString* ComboBox = WidgetBP->WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UComboBoxString* ComboBox = WidgetBP->WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), FName(*UniqueName));
         if (!ComboBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create combo box"), TEXT("CREATION_ERROR"));
@@ -1979,14 +2392,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ComboBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ComboBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -2008,7 +2429,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SpinBox"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SpinBox"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -2017,7 +2442,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        USpinBox* SpinBox = WidgetBP->WidgetTree->ConstructWidget<USpinBox>(USpinBox::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        USpinBox* SpinBox = WidgetBP->WidgetTree->ConstructWidget<USpinBox>(USpinBox::StaticClass(), FName(*UniqueName));
         if (!SpinBox)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create spin box"), TEXT("CREATION_ERROR"));
@@ -2048,14 +2481,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(SpinBox);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(SpinBox);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -2077,7 +2518,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ListView"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ListView"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -2086,7 +2531,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UListView* ListView = WidgetBP->WidgetTree->ConstructWidget<UListView>(UListView::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UListView* ListView = WidgetBP->WidgetTree->ConstructWidget<UListView>(UListView::StaticClass(), FName(*UniqueName));
         if (!ListView)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create list view"), TEXT("CREATION_ERROR"));
@@ -2097,14 +2550,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(ListView);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(ListView);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -2126,7 +2587,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TreeView"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("TreeView"));
+        }
 
         UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
         if (!WidgetBP)
@@ -2135,7 +2600,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UTreeView* TreeView = WidgetBP->WidgetTree->ConstructWidget<UTreeView>(UTreeView::StaticClass(), FName(*SlotName));
+        FString UniqueName = SlotName;
+        {
+            int32 Suffix = 1;
+            while (WidgetBP->WidgetTree->FindWidget(FName(*UniqueName)) != nullptr)
+            {
+                UniqueName = FString::Printf(TEXT("%s_%d"), *SlotName, Suffix++);
+            }
+        }
+        UTreeView* TreeView = WidgetBP->WidgetTree->ConstructWidget<UTreeView>(UTreeView::StaticClass(), FName(*UniqueName));
         if (!TreeView)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create tree view"), TEXT("CREATION_ERROR"));
@@ -2146,14 +2619,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (!ParentSlot.IsEmpty())
         {
             UWidget* ParentWidget = WidgetBP->WidgetTree->FindWidget(FName(*ParentSlot));
-            if (ParentWidget)
+            if (!ParentWidget)
             {
-                UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
-                if (ParentPanel)
-                {
-                    ParentPanel->AddChild(TreeView);
-                }
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' not found in widget tree"), *ParentSlot),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
+            if (!ParentPanel)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Parent widget '%s' is not a panel widget"), *ParentSlot),
+                    TEXT("INVALID_PARENT"));
+                return true;
+            }
+            ParentPanel->AddChild(TreeView);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4437,7 +4918,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_minimap"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Minimap"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Minimap"));
+        }
         float Size = GetJsonNumberField(Payload, TEXT("size"), 200.0f);
 
         if (WidgetPath.IsEmpty())
@@ -4496,7 +4981,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_compass"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Compass"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Compass"));
+        }
 
         if (WidgetPath.IsEmpty())
         {
@@ -4548,7 +5037,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_interaction_prompt"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("InteractionPrompt"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("InteractionPrompt"));
+        }
         FString DefaultText = GetJsonStringField(Payload, TEXT("text"), TEXT("Press E to Interact"));
 
         if (WidgetPath.IsEmpty())
@@ -4601,7 +5094,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_objective_tracker"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ObjectiveTracker"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("ObjectiveTracker"));
+        }
 
         if (WidgetPath.IsEmpty())
         {
@@ -4663,7 +5160,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_damage_indicator"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("DamageIndicator"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("DamageIndicator"));
+        }
 
         if (WidgetPath.IsEmpty())
         {
@@ -5184,7 +5685,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_safe_zone"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SafeZone"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SafeZone"));
+        }
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
 
         if (WidgetPath.IsEmpty())
@@ -5230,7 +5735,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_spacer"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Spacer"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Spacer"));
+        }
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         float SizeX = GetJsonNumberField(Payload, TEXT("sizeX"), 100.0f);
         float SizeY = GetJsonNumberField(Payload, TEXT("sizeY"), 100.0f);
@@ -5281,7 +5790,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_widget_switcher"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WidgetSwitcher"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WidgetSwitcher"));
+        }
         FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
         int32 ActiveIndex = GetJsonIntField(Payload, TEXT("activeIndex"), 0);
 
@@ -6045,7 +6558,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("add_quest_tracker"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("QuestTracker"));
+        FString SlotName = GetJsonStringField(Payload, TEXT("name"));
+        if (SlotName.IsEmpty())
+        {
+            SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("QuestTracker"));
+        }
 
         if (WidgetPath.IsEmpty())
         {
