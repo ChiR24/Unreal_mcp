@@ -117,6 +117,7 @@
 
 // Animation
 #include "Animation/WidgetAnimation.h"
+#include "Animation/WidgetAnimationBinding.h"
 #include "MovieScene.h"
 
 // Blueprint Editor
@@ -571,7 +572,6 @@ namespace WidgetAuthoringHelpers
      * 
      * @param WidgetBP The widget blueprint
      * @param WidgetTree The widget tree to create in
-     * @param WidgetClass The class of widget to create
      * @param WidgetName The name for the new widget
      * @return The created widget, or nullptr on failure
      */
@@ -622,6 +622,72 @@ namespace WidgetAuthoringHelpers
                 RegisterAnimationGuid(WidgetBP, Animation);
             }
         }
+    }
+
+    /**
+     * CRITICAL: Clear the entire widget tree and reset GUID map for a complete rebuild.
+     * 
+     * This is the ONLY safe way to replace the entire widget hierarchy because:
+     * 1. Setting RootWidget = nullptr doesn't actually remove widgets from the tree
+     * 2. Widgets still have WidgetTree as their outer
+     * 3. ForEachObjectWithOuter still finds orphaned widgets
+     * 4. The compiler validates ALL widgets in the tree, not just RootWidget
+     * 
+     * This function:
+     * 1. Removes all widgets from the tree
+     * 2. Clears the GUID map
+     * 3. Prepares for a fresh rebuild
+     * 
+     * @param WidgetBP The widget blueprint to clear
+     */
+    void ClearWidgetTreeForRebuild(UWidgetBlueprint* WidgetBP)
+    {
+        if (!WidgetBP || !WidgetBP->WidgetTree)
+        {
+            return;
+        }
+
+        UWidgetTree* WidgetTree = WidgetBP->WidgetTree;
+
+        // Step 1: Collect all widgets to remove
+        TArray<UWidget*> WidgetsToRemove;
+        WidgetTree->ForEachWidget([&WidgetsToRemove](UWidget* Widget) {
+            if (Widget)
+            {
+                WidgetsToRemove.Add(Widget);
+            }
+        });
+
+        // Step 2: Remove each widget from the tree hierarchy
+        for (UWidget* Widget : WidgetsToRemove)
+        {
+            if (Widget)
+            {
+                WidgetTree->RemoveWidget(Widget);
+            }
+        }
+
+        // Step 3: CRITICAL - Rename widgets to move them to transient package
+        // This changes their Outer from WidgetTree to GetTransientPackage()
+        // Without this, ForEachObjectWithOuter(WidgetTree, ...) in the compiler's
+        // ForEachSourceWidget will still find these orphaned widgets and trigger
+        // ensure failures because they're not in the GUID map.
+        for (UWidget* Widget : WidgetsToRemove)
+        {
+            if (Widget)
+            {
+                // Rename to transient package - this changes the Outer
+                Widget->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+            }
+        }
+
+        // Step 4: Clear the root widget pointer
+        WidgetTree->RootWidget = nullptr;
+
+        // Step 5: Clear the GUID map - we'll rebuild it from scratch
+        WidgetBP->WidgetVariableNameToGuidMap.Empty();
+
+        UE_LOG(LogTemp, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
     }
 }
 
@@ -3630,6 +3696,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
+        // Check for duplicate animation name
+        for (UWidgetAnimation* ExistingAnim : WidgetBP->Animations)
+        {
+            if (ExistingAnim && ExistingAnim->GetName().Equals(AnimationName, ESearchCase::IgnoreCase))
+            {
+                SendAutomationError(RequestingSocket, RequestId, 
+                    FString::Printf(TEXT("Animation '%s' already exists"), *AnimationName), 
+                    TEXT("ALREADY_EXISTS"));
+                return true;
+            }
+        }
+        
         // Create new UWidgetAnimation
         UWidgetAnimation* NewAnim = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
         if (!NewAnim)
@@ -3638,15 +3716,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
-        // Initialize the animation MovieScene
-        UMovieScene* MovieScene = NewAnim->GetMovieScene();
-        if (MovieScene)
+        // CRITICAL: Create and assign MovieScene immediately - GetMovieScene() returns nullptr until we do this
+        // This matches the engine's pattern in AnimationTabSummoner.cpp
+        NewAnim->MovieScene = NewObject<UMovieScene>(NewAnim, FName(*AnimationName), RF_Transactional);
+        if (!NewAnim->MovieScene)
         {
-            // Set display rate and playback range
-            MovieScene->SetDisplayRate(FFrameRate(30, 1));
-            int32 EndFrame = FMath::RoundToInt(Duration * 30.0);
-            MovieScene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), FFrameNumber(EndFrame)));
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation MovieScene"), TEXT("CREATE_FAILED"));
+            return true;
         }
+        
+        // Initialize the animation MovieScene with playback settings
+        UMovieScene* MovieScene = NewAnim->GetMovieScene();
+        
+        // Clamp duration to avoid zero-length animations
+        const double SafeDuration = FMath::Max(Duration, 0.01);
+        
+        // Set display rate (20 fps is the UE default for widget animations)
+        MovieScene->SetDisplayRate(FFrameRate(20, 1));
+        
+        // Set playback range based on duration
+        const FFrameTime InFrame = 0.0 * MovieScene->GetTickResolution();
+        const FFrameTime OutFrame = SafeDuration * MovieScene->GetTickResolution();
+        MovieScene->SetPlaybackRange(TRange<FFrameNumber>(InFrame.FrameNumber, OutFrame.FrameNumber + 1));
         
         // CRITICAL: Register animation GUID and add to Animations array
         // This prevents ensure failures in WidgetBlueprintCompiler.cpp line 805
@@ -3657,7 +3748,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
-        ResultJson->SetNumberField(TEXT("duration"), Duration);
+        ResultJson->SetNumberField(TEXT("duration"), SafeDuration);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget animation created"), ResultJson);
@@ -3728,8 +3819,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
+        // Add the possessable to the MovieScene
         FGuid BindingGuid = MovieScene->AddPossessable(TargetWidget->GetFName().ToString(), TargetWidget->GetClass());
-        Animation->BindPossessableObject(BindingGuid, *TargetWidget, WidgetBP);
+        
+        // CRITICAL: For editor-time (WidgetBlueprint context), we cannot use BindPossessableObject 
+        // because it expects a UUserWidget runtime context and will crash with CastChecked.
+        // Instead, directly add the binding to AnimationBindings array.
+        FWidgetAnimationBinding NewBinding;
+        NewBinding.AnimationGuid = BindingGuid;
+        NewBinding.WidgetName = TargetWidget->GetFName();
+        NewBinding.SlotWidgetName = NAME_None;
+        NewBinding.bIsRootWidget = false;
+        
+        Animation->AnimationBindings.Add(NewBinding);
         
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
@@ -3738,6 +3840,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ResultJson->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        McpSafeAssetSave(WidgetBP);
         
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation track added"), ResultJson);
         return true;
@@ -3867,22 +3970,25 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
-        // CRITICAL: Unregister existing root widget GUID before replacing to prevent ensure failures
-        if (WidgetBP->WidgetTree->RootWidget)
-        {
-            UnregisterWidgetGuid(WidgetBP, WidgetBP->WidgetTree->RootWidget);
-        }
+        // CRITICAL: Clear the entire widget tree for a complete rebuild.
+        // This removes ALL widgets and clears the GUID map, preventing orphaned widgets
+        // from triggering ensure failures during compilation.
+        // See: ForEachObjectWithOuter in WidgetBlueprintCompiler.cpp line 792
+        ClearWidgetTreeForRebuild(WidgetBP);
+        
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
+        // This prevents "Widget was added but did not get a GUID" ensure failures
         
         // Create Canvas Panel as root
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("MainMenuCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("MainMenuCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
         
         // Create vertical box for menu items
-        UVerticalBox* MenuBox = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("MenuVerticalBox"));
+        UVerticalBox* MenuBox = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("MenuVerticalBox"));
         RootCanvas->AddChild(MenuBox);
         
         // Add title text
-        UTextBlock* TitleText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("TitleText"));
+        UTextBlock* TitleText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("TitleText"));
         TitleText->SetText(FText::FromString(Title));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = TitleText->GetFont();
@@ -3894,27 +4000,28 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         MenuBox->AddChild(TitleText);
         
         // Add Play button
-        UButton* PlayButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("PlayButton"));
-        UTextBlock* PlayText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("PlayButtonText"));
+        UButton* PlayButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("PlayButton"));
+        UTextBlock* PlayText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("PlayButtonText"));
         PlayText->SetText(FText::FromString(TEXT("Play")));
         PlayButton->AddChild(PlayText);
         MenuBox->AddChild(PlayButton);
         
         // Add Settings button
-        UButton* SettingsButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("SettingsButton"));
-        UTextBlock* SettingsText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("SettingsButtonText"));
+        UButton* SettingsButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("SettingsButton"));
+        UTextBlock* SettingsText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("SettingsButtonText"));
         SettingsText->SetText(FText::FromString(TEXT("Settings")));
         SettingsButton->AddChild(SettingsText);
         MenuBox->AddChild(SettingsButton);
         
         // Add Quit button
-        UButton* QuitButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("QuitButton"));
-        UTextBlock* QuitText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("QuitButtonText"));
+        UButton* QuitButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("QuitButton"));
+        UTextBlock* QuitText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("QuitButtonText"));
         QuitText->SetText(FText::FromString(TEXT("Quit")));
         QuitButton->AddChild(QuitText);
         MenuBox->AddChild(QuitButton);
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
+        // Keeping it for safety in case any edge case widgets were missed
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -3945,27 +4052,29 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
-        // CRITICAL: Unregister existing root widget GUID before replacing to prevent ensure failures
-        if (WidgetBP->WidgetTree->RootWidget)
-        {
-            UnregisterWidgetGuid(WidgetBP, WidgetBP->WidgetTree->RootWidget);
-        }
+        // CRITICAL: Clear the entire widget tree for a complete rebuild.
+        // This removes ALL widgets and clears the GUID map, preventing orphaned widgets
+        // from triggering ensure failures during compilation.
+        ClearWidgetTreeForRebuild(WidgetBP);
+        
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
+        // This prevents "Widget was added but did not get a GUID" ensure failures
         
         // Create overlay for semi-transparent background
-        UOverlay* RootOverlay = WidgetBP->WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("PauseMenuOverlay"));
+        UOverlay* RootOverlay = CreateAndRegisterWidget<UOverlay>(WidgetBP, WidgetBP->WidgetTree, TEXT("PauseMenuOverlay"));
         WidgetBP->WidgetTree->RootWidget = RootOverlay;
         
         // Add background border with color
-        UBorder* Background = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Background"));
+        UBorder* Background = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, TEXT("Background"));
         Background->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.7f));
         RootOverlay->AddChild(Background);
         
         // Add menu vertical box
-        UVerticalBox* MenuBox = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("PauseMenuBox"));
+        UVerticalBox* MenuBox = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("PauseMenuBox"));
         RootOverlay->AddChild(MenuBox);
         
         // Add PAUSED title
-        UTextBlock* TitleText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("PausedTitle"));
+        UTextBlock* TitleText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("PausedTitle"));
         TitleText->SetText(FText::FromString(TEXT("PAUSED")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = TitleText->GetFont();
@@ -3977,20 +4086,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         MenuBox->AddChild(TitleText);
         
         // Add Resume button
-        UButton* ResumeButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ResumeButton"));
-        UTextBlock* ResumeText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ResumeText"));
+        UButton* ResumeButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("ResumeButton"));
+        UTextBlock* ResumeText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("ResumeText"));
         ResumeText->SetText(FText::FromString(TEXT("Resume")));
         ResumeButton->AddChild(ResumeText);
         MenuBox->AddChild(ResumeButton);
         
         // Add Main Menu button
-        UButton* MainMenuButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("MainMenuButton"));
-        UTextBlock* MainMenuText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("MainMenuText"));
+        UButton* MainMenuButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("MainMenuButton"));
+        UTextBlock* MainMenuText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("MainMenuText"));
         MainMenuText->SetText(FText::FromString(TEXT("Main Menu")));
         MainMenuButton->AddChild(MainMenuText);
         MenuBox->AddChild(MainMenuButton);
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4020,17 +4129,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
-        // CRITICAL: Unregister existing root widget GUID before replacing to prevent ensure failures
-        if (WidgetBP->WidgetTree->RootWidget)
-        {
-            UnregisterWidgetGuid(WidgetBP, WidgetBP->WidgetTree->RootWidget);
-        }
+        // CRITICAL: Clear the entire widget tree for a complete rebuild.
+        // This removes ALL widgets and clears the GUID map, preventing orphaned widgets
+        // from triggering ensure failures during compilation.
+        ClearWidgetTreeForRebuild(WidgetBP);
+        
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
+        // This prevents "Widget was added but did not get a GUID" ensure failures
         
         // Create Canvas Panel as root for HUD
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("HUDCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("HUDCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4084,17 +4195,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
         // Create horizontal box to hold health bar components
-        UHorizontalBox* HealthBox = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("HealthBarContainer"));
+        UHorizontalBox* HealthBox = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBarContainer"));
         Parent->AddChild(HealthBox);
         
         // Add health icon/label
-        UTextBlock* HealthLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("HealthLabel"));
+        UTextBlock* HealthLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthLabel"));
         HealthLabel->SetText(FText::FromString(TEXT("HP")));
         HealthBox->AddChild(HealthLabel);
         
         // Add progress bar for health
-        UProgressBar* HealthProgress = WidgetBP->WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("HealthBar"));
+        UProgressBar* HealthProgress = CreateAndRegisterWidget<UProgressBar>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBar"));
         HealthProgress->SetPercent(1.0f);
         HealthProgress->SetFillColorAndOpacity(FLinearColor(0.8f, 0.1f, 0.1f, 1.0f));
         HealthBox->AddChild(HealthProgress);
@@ -4109,7 +4221,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4159,8 +4271,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
         // Create crosshair image (uses a simple text-based crosshair, user can swap for image)
-        UTextBlock* Crosshair = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("Crosshair"));
+        UTextBlock* Crosshair = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("Crosshair"));
         Crosshair->SetText(FText::FromString(TEXT("+")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = Crosshair->GetFont();
@@ -4182,7 +4295,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4231,8 +4344,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
         
+        // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
         // Create ammo counter text
-        UTextBlock* AmmoText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("AmmoCounter"));
+        UTextBlock* AmmoText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("AmmoCounter"));
         AmmoText->SetText(FText::FromString(TEXT("30 / 90")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = AmmoText->GetFont();
@@ -4255,7 +4369,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
         
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
+        // RegisterAllWidgetGuids is now optional cleanup - all widgets already registered
         RegisterAllWidgetGuids(WidgetBP);
         
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4907,6 +5021,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         ApplyText->SetText(FText::FromString(TEXT("Apply")));
         ApplyButton->AddChild(ApplyText);
 
+        // CRITICAL: Register all widget GUIDs and mark as user-created
+        // This prevents ensure failures in WidgetBlueprintCompiler.cpp line 794
+        RegisterAllWidgetGuids(WidgetBP);
+
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
@@ -4990,6 +5108,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Slot->SetAlignment(FVector2D(0.5f, 0.5f));
             Slot->SetSize(FVector2D(400.0f, 20.0f));
         }
+
+        // CRITICAL: Register all widget GUIDs and mark as user-created
+        // This prevents ensure failures in WidgetBlueprintCompiler.cpp line 794
+        RegisterAllWidgetGuids(WidgetBP);
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
@@ -5083,15 +5205,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create compass container
-        UHorizontalBox* CompassContainer = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), *SlotName);
+        UHorizontalBox* CompassContainer = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
 
         // Create compass image (scrolling texture)
-        UImage* CompassImage = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_Image")));
+        UImage* CompassImage = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Image")));
         CompassContainer->AddChild(CompassImage);
 
         // Create direction indicator
-        UImage* DirectionIndicator = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_Indicator")));
+        UImage* DirectionIndicator = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Indicator")));
         CompassContainer->AddChild(DirectionIndicator);
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
@@ -5106,9 +5232,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Slot->SetPosition(FVector2D(0.0f, 20.0f));
             }
         }
-
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
-        RegisterAllWidgetGuids(WidgetBP);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
@@ -5139,15 +5262,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create prompt container
-        UHorizontalBox* PromptContainer = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), *SlotName);
+        UHorizontalBox* PromptContainer = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
 
         // Key icon
-        UImage* KeyIcon = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_KeyIcon")));
+        UImage* KeyIcon = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_KeyIcon")));
         PromptContainer->AddChild(KeyIcon);
 
         // Prompt text
-        UTextBlock* PromptText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_Text")));
+        UTextBlock* PromptText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Text")));
         PromptText->SetText(FText::FromString(DefaultText));
         PromptContainer->AddChild(PromptText);
 
@@ -5162,9 +5289,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Slot->SetAutoSize(true);
             }
         }
-
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
-        RegisterAllWidgetGuids(WidgetBP);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
@@ -5194,22 +5318,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create objective container
-        UVerticalBox* ObjectiveContainer = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), *SlotName);
+        UVerticalBox* ObjectiveContainer = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
 
         // Objective title
-        UTextBlock* ObjectiveTitle = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_Title")));
+        UTextBlock* ObjectiveTitle = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Title")));
         ObjectiveTitle->SetText(FText::FromString(TEXT("Objectives")));
         ObjectiveContainer->AddChild(ObjectiveTitle);
 
         // Objective list (vertical box for dynamic entries)
-        UVerticalBox* ObjectiveList = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), *(SlotName + TEXT("_List")));
+        UVerticalBox* ObjectiveList = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_List")));
         ObjectiveContainer->AddChild(ObjectiveList);
 
         // Sample objective item
-        UHorizontalBox* SampleObjective = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), *(SlotName + TEXT("_SampleItem")));
-        UCheckBox* ObjectiveCheck = WidgetBP->WidgetTree->ConstructWidget<UCheckBox>(UCheckBox::StaticClass(), *(SlotName + TEXT("_Check")));
-        UTextBlock* ObjectiveText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_ItemText")));
+        UHorizontalBox* SampleObjective = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_SampleItem")));
+        UCheckBox* ObjectiveCheck = CreateAndRegisterWidget<UCheckBox>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Check")));
+        UTextBlock* ObjectiveText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_ItemText")));
         ObjectiveText->SetText(FText::FromString(TEXT("Sample Objective")));
         SampleObjective->AddChild(ObjectiveCheck);
         SampleObjective->AddChild(ObjectiveText);
@@ -5227,9 +5355,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Slot->SetAutoSize(true);
             }
         }
-
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
-        RegisterAllWidgetGuids(WidgetBP);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
@@ -5259,22 +5384,26 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create damage indicator overlay (full screen)
-        UOverlay* DamageOverlay = WidgetBP->WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), *SlotName);
+        UOverlay* DamageOverlay = CreateAndRegisterWidget<UOverlay>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
 
         // Blood vignette image (edge damage indicator)
-        UImage* VignetteImage = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_Vignette")));
+        UImage* VignetteImage = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Vignette")));
         VignetteImage->SetVisibility(ESlateVisibility::Hidden);
         DamageOverlay->AddChild(VignetteImage);
 
         // Directional damage arrows container
-        UCanvasPanel* DirectionalCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), *(SlotName + TEXT("_Directional")));
+        UCanvasPanel* DirectionalCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Directional")));
         DamageOverlay->AddChild(DirectionalCanvas);
 
         // Add directional indicators (N, S, E, W)
         for (const FString& Dir : { TEXT("Top"), TEXT("Bottom"), TEXT("Left"), TEXT("Right") })
         {
-            UImage* DirIndicator = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_") + Dir));
+            UImage* DirIndicator = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_") + Dir));
             DirIndicator->SetVisibility(ESlateVisibility::Hidden);
             DirectionalCanvas->AddChild(DirIndicator);
         }
@@ -5290,8 +5419,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
         }
 
-        // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
-        RegisterAllWidgetGuids(WidgetBP);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
@@ -5343,12 +5471,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create root canvas
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
         // Background panel
-        UBorder* BackgroundPanel = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("InventoryBackground"));
+        UBorder* BackgroundPanel = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, TEXT("InventoryBackground"));
         RootCanvas->AddChild(BackgroundPanel);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(BackgroundPanel->Slot))
         {
@@ -5358,12 +5490,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Title
-        UTextBlock* TitleText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("InventoryTitle"));
+        UTextBlock* TitleText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("InventoryTitle"));
         TitleText->SetText(FText::FromString(TEXT("Inventory")));
         BackgroundPanel->AddChild(TitleText);
 
         // Create inventory grid
-        UUniformGridPanel* InventoryGrid = WidgetBP->WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("InventoryGrid"));
+        UUniformGridPanel* InventoryGrid = CreateAndRegisterWidget<UUniformGridPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("InventoryGrid"));
         BackgroundPanel->AddChild(InventoryGrid);
 
         // Add slot placeholders
@@ -5372,10 +5504,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             for (int32 Col = 0; Col < GridColumns; ++Col)
             {
                 FString SlotName = FString::Printf(TEXT("Slot_%d_%d"), Row, Col);
-                UBorder* SlotBorder = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), *SlotName);
+                UBorder* SlotBorder = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
                 InventoryGrid->AddChildToUniformGrid(SlotBorder, Row, Col);
                 
-                UImage* SlotImage = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_Image")));
+                UImage* SlotImage = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Image")));
                 SlotBorder->AddChild(SlotImage);
             }
         }
@@ -5432,12 +5564,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create root canvas
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
         // Dialog background
-        UBorder* DialogBg = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DialogBackground"));
+        UBorder* DialogBg = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogBackground"));
         RootCanvas->AddChild(DialogBg);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(DialogBg->Slot))
         {
@@ -5446,35 +5582,35 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Slot->SetSize(FVector2D(800.0f, 200.0f));
         }
 
-        UVerticalBox* DialogContainer = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("DialogContainer"));
+        UVerticalBox* DialogContainer = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogContainer"));
         DialogBg->AddChild(DialogContainer);
 
         // Speaker name
-        UTextBlock* SpeakerName = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("SpeakerName"));
+        UTextBlock* SpeakerName = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("SpeakerName"));
         SpeakerName->SetText(FText::FromString(TEXT("Speaker")));
         DialogContainer->AddChild(SpeakerName);
 
         // Dialog text
-        URichTextBlock* DialogText = WidgetBP->WidgetTree->ConstructWidget<URichTextBlock>(URichTextBlock::StaticClass(), TEXT("DialogText"));
+        URichTextBlock* DialogText = CreateAndRegisterWidget<URichTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogText"));
         DialogContainer->AddChild(DialogText);
 
         // Response options container
-        UVerticalBox* ResponseBox = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ResponseOptions"));
+        UVerticalBox* ResponseBox = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("ResponseOptions"));
         DialogContainer->AddChild(ResponseBox);
 
         // Sample response buttons
         for (int32 i = 1; i <= 3; ++i)
         {
             FString ResponseName = FString::Printf(TEXT("Response_%d"), i);
-            UButton* ResponseBtn = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), *ResponseName);
-            UTextBlock* ResponseText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(ResponseName + TEXT("_Text")));
+            UButton* ResponseBtn = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, *ResponseName);
+            UTextBlock* ResponseText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(ResponseName + TEXT("_Text")));
             ResponseText->SetText(FText::FromString(FString::Printf(TEXT("Response Option %d"), i)));
             ResponseBtn->AddChild(ResponseText);
             ResponseBox->AddChild(ResponseBtn);
         }
 
         // Continue indicator
-        UTextBlock* ContinueIndicator = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ContinueIndicator"));
+        UTextBlock* ContinueIndicator = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("ContinueIndicator"));
         ContinueIndicator->SetText(FText::FromString(TEXT("Press Space to continue...")));
         DialogContainer->AddChild(ContinueIndicator);
 
@@ -5528,12 +5664,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Create root canvas
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
         // Radial menu container (centered)
-        UOverlay* RadialContainer = WidgetBP->WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("RadialMenuContainer"));
+        UOverlay* RadialContainer = CreateAndRegisterWidget<UOverlay>(WidgetBP, WidgetBP->WidgetTree, TEXT("RadialMenuContainer"));
         RootCanvas->AddChild(RadialContainer);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(RadialContainer->Slot))
         {
@@ -5543,15 +5683,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Background ring
-        UImage* BackgroundRing = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("RadialBackground"));
+        UImage* BackgroundRing = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, TEXT("RadialBackground"));
         RadialContainer->AddChild(BackgroundRing);
 
         // Selection indicator
-        UImage* SelectionIndicator = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("SelectionIndicator"));
+        UImage* SelectionIndicator = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, TEXT("SelectionIndicator"));
         RadialContainer->AddChild(SelectionIndicator);
 
         // Create segment buttons (arranged in circle via canvas positions)
-        UCanvasPanel* SegmentCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("SegmentCanvas"));
+        UCanvasPanel* SegmentCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("SegmentCanvas"));
         RadialContainer->AddChild(SegmentCanvas);
 
         float Radius = 150.0f;
@@ -5563,7 +5703,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             float Y = FMath::Sin(RadAngle) * Radius;
 
             FString SegmentName = FString::Printf(TEXT("Segment_%d"), i);
-            UButton* SegmentBtn = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), *SegmentName);
+            UButton* SegmentBtn = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, *SegmentName);
             SegmentCanvas->AddChild(SegmentBtn);
             
             if (UCanvasPanelSlot* SegSlot = Cast<UCanvasPanelSlot>(SegmentBtn->Slot))
@@ -5574,12 +5714,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 SegSlot->SetSize(FVector2D(60.0f, 60.0f));
             }
 
-            UImage* SegmentIcon = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SegmentName + TEXT("_Icon")));
+            UImage* SegmentIcon = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SegmentName + TEXT("_Icon")));
             SegmentBtn->AddChild(SegmentIcon);
         }
 
         // Center button
-        UButton* CenterButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("CenterButton"));
+        UButton* CenterButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("CenterButton"));
         RadialContainer->AddChild(CenterButton);
 
         Package->MarkPackageDirty();
@@ -5814,7 +5954,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        USafeZone* SafeZone = WidgetBP->WidgetTree->ConstructWidget<USafeZone>(USafeZone::StaticClass(), *SlotName);
+        USafeZone* SafeZone = CreateAndRegisterWidget<USafeZone>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
         
         UPanelWidget* Parent = nullptr;
         if (!ParentSlot.IsEmpty())
@@ -5870,7 +6010,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        USpacer* Spacer = WidgetBP->WidgetTree->ConstructWidget<USpacer>(USpacer::StaticClass(), *SlotName);
+        USpacer* Spacer = CreateAndRegisterWidget<USpacer>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
         Spacer->SetSize(FVector2D(SizeX, SizeY));
 
         UPanelWidget* Parent = nullptr;
@@ -5928,7 +6068,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        UWidgetSwitcher* Switcher = WidgetBP->WidgetTree->ConstructWidget<UWidgetSwitcher>(UWidgetSwitcher::StaticClass(), *SlotName);
+        UWidgetSwitcher* Switcher = CreateAndRegisterWidget<UWidgetSwitcher>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
         Switcher->SetActiveWidgetIndex(ActiveIndex);
 
         UPanelWidget* Parent = nullptr;
@@ -6508,12 +6648,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Root canvas
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
         // Background
-        UImage* Background = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("Background"));
+        UImage* Background = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, TEXT("Background"));
         RootCanvas->AddChild(Background);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(Background->Slot))
         {
@@ -6522,7 +6666,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Scrolling credits container
-        UScrollBox* CreditsScroll = WidgetBP->WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("CreditsScroll"));
+        UScrollBox* CreditsScroll = CreateAndRegisterWidget<UScrollBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("CreditsScroll"));
         RootCanvas->AddChild(CreditsScroll);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(CreditsScroll->Slot))
         {
@@ -6533,18 +6677,18 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Credits content
-        UVerticalBox* CreditsContent = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("CreditsContent"));
+        UVerticalBox* CreditsContent = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("CreditsContent"));
         CreditsScroll->AddChild(CreditsContent);
 
         // Sample credits sections
         TArray<FString> Sections = { TEXT("Lead Developer"), TEXT("Art Director"), TEXT("Sound Design"), TEXT("Special Thanks") };
         for (const FString& Section : Sections)
         {
-            UTextBlock* SectionTitle = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(Section.Replace(TEXT(" "), TEXT("_")) + TEXT("_Title")));
+            UTextBlock* SectionTitle = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(Section.Replace(TEXT(" "), TEXT("_")) + TEXT("_Title")));
             SectionTitle->SetText(FText::FromString(Section));
             CreditsContent->AddChild(SectionTitle);
 
-            UTextBlock* SectionName = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(Section.Replace(TEXT(" "), TEXT("_")) + TEXT("_Name")));
+            UTextBlock* SectionName = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(Section.Replace(TEXT(" "), TEXT("_")) + TEXT("_Name")));
             SectionName->SetText(FText::FromString(TEXT("Your Name Here")));
             CreditsContent->AddChild(SectionName);
         }
@@ -6589,12 +6733,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Root canvas
-        UCanvasPanel* RootCanvas = WidgetBP->WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
+        UCanvasPanel* RootCanvas = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("RootCanvas"));
         WidgetBP->WidgetTree->RootWidget = RootCanvas;
 
         // Shop background
-        UBorder* ShopBg = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ShopBackground"));
+        UBorder* ShopBg = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, TEXT("ShopBackground"));
         RootCanvas->AddChild(ShopBg);
         if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(ShopBg->Slot))
         {
@@ -6603,68 +6751,68 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             Slot->SetSize(FVector2D(800.0f, 600.0f));
         }
 
-        UVerticalBox* ShopLayout = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ShopLayout"));
+        UVerticalBox* ShopLayout = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("ShopLayout"));
         ShopBg->AddChild(ShopLayout);
 
         // Header
-        UHorizontalBox* Header = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ShopHeader"));
+        UHorizontalBox* Header = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("ShopHeader"));
         ShopLayout->AddChild(Header);
 
-        UTextBlock* ShopTitle = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ShopTitle"));
+        UTextBlock* ShopTitle = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("ShopTitle"));
         ShopTitle->SetText(FText::FromString(TEXT("Shop")));
         Header->AddChild(ShopTitle);
 
-        UTextBlock* CurrencyDisplay = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("CurrencyDisplay"));
+        UTextBlock* CurrencyDisplay = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("CurrencyDisplay"));
         CurrencyDisplay->SetText(FText::FromString(TEXT("Gold: 0")));
         Header->AddChild(CurrencyDisplay);
 
         // Category tabs
-        UHorizontalBox* CategoryTabs = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CategoryTabs"));
+        UHorizontalBox* CategoryTabs = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("CategoryTabs"));
         ShopLayout->AddChild(CategoryTabs);
 
         TArray<FString> Categories = { TEXT("Weapons"), TEXT("Armor"), TEXT("Consumables"), TEXT("Special") };
         for (const FString& Category : Categories)
         {
-            UButton* TabBtn = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), *(Category + TEXT("_Tab")));
-            UTextBlock* TabText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(Category + TEXT("_TabText")));
+            UButton* TabBtn = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, *(Category + TEXT("_Tab")));
+            UTextBlock* TabText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(Category + TEXT("_TabText")));
             TabText->SetText(FText::FromString(Category));
             TabBtn->AddChild(TabText);
             CategoryTabs->AddChild(TabBtn);
         }
 
         // Items grid
-        UScrollBox* ItemsScroll = WidgetBP->WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("ItemsScroll"));
+        UScrollBox* ItemsScroll = CreateAndRegisterWidget<UScrollBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("ItemsScroll"));
         ShopLayout->AddChild(ItemsScroll);
 
-        UUniformGridPanel* ItemsGrid = WidgetBP->WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("ItemsGrid"));
+        UUniformGridPanel* ItemsGrid = CreateAndRegisterWidget<UUniformGridPanel>(WidgetBP, WidgetBP->WidgetTree, TEXT("ItemsGrid"));
         ItemsScroll->AddChild(ItemsGrid);
 
         // Sample item slots
         for (int32 i = 0; i < 8; ++i)
         {
             FString ItemName = FString::Printf(TEXT("ItemSlot_%d"), i);
-            UBorder* ItemSlot = WidgetBP->WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), *ItemName);
+            UBorder* ItemSlot = CreateAndRegisterWidget<UBorder>(WidgetBP, WidgetBP->WidgetTree, *ItemName);
             ItemsGrid->AddChildToUniformGrid(ItemSlot, i / ItemColumns, i % ItemColumns);
 
-            UVerticalBox* ItemContent = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), *(ItemName + TEXT("_Content")));
+            UVerticalBox* ItemContent = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, *(ItemName + TEXT("_Content")));
             ItemSlot->AddChild(ItemContent);
 
-            UImage* ItemIcon = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(ItemName + TEXT("_Icon")));
+            UImage* ItemIcon = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(ItemName + TEXT("_Icon")));
             ItemContent->AddChild(ItemIcon);
 
-            UTextBlock* ItemLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(ItemName + TEXT("_Name")));
+            UTextBlock* ItemLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(ItemName + TEXT("_Name")));
             ItemLabel->SetText(FText::FromString(TEXT("Item")));
             ItemContent->AddChild(ItemLabel);
 
-            UTextBlock* ItemPrice = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(ItemName + TEXT("_Price")));
+            UTextBlock* ItemPrice = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(ItemName + TEXT("_Price")));
             ItemPrice->SetText(FText::FromString(TEXT("100g")));
             ItemContent->AddChild(ItemPrice);
         }
 
         // Buy button
-        UButton* BuyButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BuyButton"));
+        UButton* BuyButton = CreateAndRegisterWidget<UButton>(WidgetBP, WidgetBP->WidgetTree, TEXT("BuyButton"));
         ShopLayout->AddChild(BuyButton);
-        UTextBlock* BuyText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("BuyButtonText"));
+        UTextBlock* BuyText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("BuyButtonText"));
         BuyText->SetText(FText::FromString(TEXT("Buy Selected")));
         BuyButton->AddChild(BuyText);
 
@@ -6698,32 +6846,36 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
+        // CRITICAL: Use CreateAndRegisterWidget to register GUIDs IMMEDIATELY after creation.
+        // This prevents ensure failures if compilation is triggered during widget creation.
+        // The compiler's ValidateAndFixUpVariableGuids() expects all widgets to be in the GUID map.
+        
         // Quest tracker container
-        UVerticalBox* QuestContainer = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), *SlotName);
+        UVerticalBox* QuestContainer = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, *SlotName);
 
         // Quest header
-        UTextBlock* QuestHeader = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_Header")));
+        UTextBlock* QuestHeader = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Header")));
         QuestHeader->SetText(FText::FromString(TEXT("Active Quest")));
         QuestContainer->AddChild(QuestHeader);
 
         // Quest title
-        UTextBlock* QuestTitle = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_Title")));
+        UTextBlock* QuestTitle = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Title")));
         QuestTitle->SetText(FText::FromString(TEXT("Quest Name")));
         QuestContainer->AddChild(QuestTitle);
 
         // Quest objectives list
-        UVerticalBox* ObjectivesList = WidgetBP->WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), *(SlotName + TEXT("_Objectives")));
+        UVerticalBox* ObjectivesList = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Objectives")));
         QuestContainer->AddChild(ObjectivesList);
 
         // Sample objectives
         for (int32 i = 1; i <= 3; ++i)
         {
-            UHorizontalBox* ObjRow = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), *FString::Printf(TEXT("%s_Objective_%d"), *SlotName, i));
+            UHorizontalBox* ObjRow = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *FString::Printf(TEXT("%s_Objective_%d"), *SlotName, i));
             
-            UCheckBox* ObjCheck = WidgetBP->WidgetTree->ConstructWidget<UCheckBox>(UCheckBox::StaticClass(), *FString::Printf(TEXT("%s_ObjCheck_%d"), *SlotName, i));
+            UCheckBox* ObjCheck = CreateAndRegisterWidget<UCheckBox>(WidgetBP, WidgetBP->WidgetTree, *FString::Printf(TEXT("%s_ObjCheck_%d"), *SlotName, i));
             ObjRow->AddChild(ObjCheck);
             
-            UTextBlock* ObjText = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *FString::Printf(TEXT("%s_ObjText_%d"), *SlotName, i));
+            UTextBlock* ObjText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *FString::Printf(TEXT("%s_ObjText_%d"), *SlotName, i));
             ObjText->SetText(FText::FromString(FString::Printf(TEXT("Objective %d (0/1)"), i)));
             ObjRow->AddChild(ObjText);
 
@@ -6731,14 +6883,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         // Quest rewards preview
-        UHorizontalBox* RewardsRow = WidgetBP->WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), *(SlotName + TEXT("_Rewards")));
+        UHorizontalBox* RewardsRow = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_Rewards")));
         QuestContainer->AddChild(RewardsRow);
 
-        UTextBlock* RewardsLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), *(SlotName + TEXT("_RewardsLabel")));
+        UTextBlock* RewardsLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_RewardsLabel")));
         RewardsLabel->SetText(FText::FromString(TEXT("Rewards: ")));
         RewardsRow->AddChild(RewardsLabel);
 
-        UImage* RewardIcon = WidgetBP->WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), *(SlotName + TEXT("_RewardIcon")));
+        UImage* RewardIcon = CreateAndRegisterWidget<UImage>(WidgetBP, WidgetBP->WidgetTree, *(SlotName + TEXT("_RewardIcon")));
         RewardsRow->AddChild(RewardIcon);
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
