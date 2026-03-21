@@ -8,28 +8,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 // =============================================================================
-// Thread-local error capture storage
-// =============================================================================
-
-namespace
-{
-    // Anonymous namespace to avoid dllexport issues with thread_local
-    thread_local UMcpAutomationBridgeSubsystem::FRequestErrorCapture TL_ErrorCapture;
-}
-
-// Getter for thread-local storage (avoids dllexport issues)
-UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsystem::GetThreadLocalErrorCapture()
-{
-    return TL_ErrorCapture;
-}
-
-// Static getter for current error capture (public API)
-UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture()
-{
-    return GetThreadLocalErrorCapture();
-}
-
-// =============================================================================
 // FMcpRequestErrorDevice - Custom log device for per-request error capture
 // =============================================================================
 
@@ -37,20 +15,33 @@ UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsyst
  * Custom output device that captures errors and warnings during request processing.
  * This is temporarily attached to GLog during handler execution to detect
  * engine-level errors (like ensure failures) that don't propagate as exceptions.
+ * 
+ * Note: Uses the subsystem's shared capture with mutex-protected access since
+ * GLog may route messages from worker threads.
  */
 class FMcpRequestErrorDevice : public FOutputDevice
 {
 public:
-    FMcpRequestErrorDevice() = default;
+    FMcpRequestErrorDevice(UMcpAutomationBridgeSubsystem* InSubsystem)
+        : Subsystem(InSubsystem)
+    {
+    }
 
     virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
     {
         // Only capture Error and Warning verbosity
         if (Verbosity == ELogVerbosity::Error || Verbosity == ELogVerbosity::Warning)
         {
+            if (!Subsystem)
+            {
+                return;
+            }
+            
             FString Message = FString::Printf(TEXT("[%s] %s"), *Category.ToString(), V);
             
-            auto& Capture = UMcpAutomationBridgeSubsystem::GetThreadLocalErrorCapture();
+            // Thread-safe access to shared capture
+            FScopeLock Lock(&Subsystem->ErrorCaptureMutex);
+            auto& Capture = Subsystem->CurrentErrorCapture;
             
             if (Verbosity == ELogVerbosity::Error)
             {
@@ -64,9 +55,13 @@ public:
             }
         }
         
-        // Forward to the next output device (don't suppress the message)
-        // This is intentional - we want to capture but not block logging
+        // Note: We do not explicitly forward here. When this device is attached to GLog,
+        // the engine still routes messages to all other output devices; this class only
+        // captures errors and warnings without suppressing normal logging.
     }
+
+private:
+    UMcpAutomationBridgeSubsystem* Subsystem = nullptr;
 };
 #include "Dom/JsonObject.h"
 #include "Async/TaskGraphInterfaces.h"
@@ -223,6 +218,13 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
     LogCaptureDevice.Reset();
   }
 
+  // Clean up RequestErrorDevice to prevent dangling pointer in GLog
+  if (RequestErrorDevice.IsValid()) {
+    if (GLog)
+      GLog->RemoveOutputDevice(RequestErrorDevice.Get());
+    RequestErrorDevice.Reset();
+  }
+
   Super::Deinitialize();
 }
 
@@ -264,21 +266,21 @@ UMcpAutomationBridgeSubsystem::GetBridgeState() const {
 // Per-Request Error Capture Implementation
 // =============================================================================
 
+UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture()
+{
+    return CurrentErrorCapture;
+}
+
 void UMcpAutomationBridgeSubsystem::BeginErrorCapture()
 {
-    // Get thread-local capture
-    FRequestErrorCapture& Capture = GetThreadLocalErrorCapture();
-    
-    // Clear any previous capture state
-    Capture.ErrorMessages.Empty();
-    Capture.WarningMessages.Empty();
-    Capture.bHasErrors = false;
-    Capture.bHasWarnings = false;
+    // Clear any previous capture state (thread-safe)
+    FScopeLock Lock(&ErrorCaptureMutex);
+    CurrentErrorCapture.Reset();
     
     // Create and attach the error capture device if not already
     if (!RequestErrorDevice.IsValid())
     {
-        RequestErrorDevice = MakeShared<FMcpRequestErrorDevice>();
+        RequestErrorDevice = MakeShared<FMcpRequestErrorDevice>(this);
     }
     
     // Attach to GLog to capture errors
@@ -296,20 +298,19 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
         GLog->RemoveOutputDevice(RequestErrorDevice.Get());
     }
     
-    // Get thread-local capture
-    FRequestErrorCapture& Capture = GetThreadLocalErrorCapture();
+    // Get captured errors (thread-safe)
+    FScopeLock Lock(&ErrorCaptureMutex);
     
-    // Return captured errors
     TArray<FString> AllMessages;
-    AllMessages.Append(Capture.ErrorMessages);
-    AllMessages.Append(Capture.WarningMessages);
+    AllMessages.Append(CurrentErrorCapture.ErrorMessages);
+    AllMessages.Append(CurrentErrorCapture.WarningMessages);
     
     return AllMessages;
 }
 
 bool UMcpAutomationBridgeSubsystem::HasCapturedErrors() const
 {
-    return GetThreadLocalErrorCapture().bHasErrors;
+    return CurrentErrorCapture.bHasErrors.load();
 }
 
 /**

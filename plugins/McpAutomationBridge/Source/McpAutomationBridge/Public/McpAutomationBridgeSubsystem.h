@@ -149,23 +149,32 @@ public:
   // =========================================================================
   
   /**
-   * Thread-local storage for capturing errors during handler execution.
+   * Storage for capturing errors during request execution.
    * This is used to detect engine-level errors (like ensure failures)
    * that don't propagate as exceptions but indicate operation failure.
-   */
+    * 
+    * Note: Uses thread-safe access via ErrorCaptureMutex since GLog may
+    * route messages from worker threads to this shared capture.
+    */
   struct FRequestErrorCapture
   {
     TArray<FString> ErrorMessages;
     TArray<FString> WarningMessages;
-    bool bHasErrors = false;
-    bool bHasWarnings = false;
+    std::atomic<bool> bHasErrors{false};
+    std::atomic<bool> bHasWarnings{false};
+    
+    // Reset is for internal use only - must be called with ErrorCaptureMutex held
+    void Reset()
+    {
+      ErrorMessages.Empty();
+      WarningMessages.Empty();
+      bHasErrors = false;
+      bHasWarnings = false;
+    }
   };
   
-  /** Get the current request's error capture (thread-local) */
-  static FRequestErrorCapture& GetCurrentErrorCapture();
-  
-  /** Thread-local error capture storage - implemented in .cpp to avoid dllexport issues */
-  static FRequestErrorCapture& GetThreadLocalErrorCapture();
+  /** Get the current request's error capture */
+  FRequestErrorCapture& GetCurrentErrorCapture();
   
   /** Begin capturing errors for a request */
   void BeginErrorCapture();
@@ -175,11 +184,21 @@ public:
   
   /** Check if any errors were captured during the current request */
   bool HasCapturedErrors() const;
+
+  // Friend class for error capture device to access private members
+  friend class FMcpRequestErrorDevice;
+
+private:
+  /** Request-scoped error capture (shared, not thread-local) */
+  FRequestErrorCapture CurrentErrorCapture;
+  
+  /** Mutex for thread-safe access to error capture from worker threads */
+  mutable FCriticalSection ErrorCaptureMutex;
   
   /** Custom log output device for per-request error capture */
   TSharedPtr<class FMcpRequestErrorDevice> RequestErrorDevice;
 
-private:
+public:
   // Telemetry structs moved to McpConnectionManager
 
   bool Tick(float DeltaTime);

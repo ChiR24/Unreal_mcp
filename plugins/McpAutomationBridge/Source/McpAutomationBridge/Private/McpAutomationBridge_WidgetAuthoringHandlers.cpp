@@ -700,6 +700,20 @@ using namespace WidgetAuthoringHelpers;
 namespace
 {
     /**
+     * Gets the MCP Automation Bridge subsystem from the editor.
+     * Note: UMcpAutomationBridgeSubsystem is a UEditorSubsystem, not UEngineSubsystem.
+     * @return Pointer to the subsystem, or nullptr if not available
+     */
+    UMcpAutomationBridgeSubsystem* GetAutomationBridgeSubsystem()
+    {
+        if (GEditor)
+        {
+            return GEditor->GetEditorSubsystem<UMcpAutomationBridgeSubsystem>();
+        }
+        return nullptr;
+    }
+    
+    /**
      * Checks if any engine errors were captured during widget operations.
      * This detects ensure failures and other engine-level errors that indicate
      * the operation may have partially failed despite returning no error code.
@@ -708,7 +722,11 @@ namespace
      */
     bool CheckForEngineErrors()
     {
-        return UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture().bHasErrors;
+        if (UMcpAutomationBridgeSubsystem* Subsystem = GetAutomationBridgeSubsystem())
+        {
+            return Subsystem->GetCurrentErrorCapture().bHasErrors;
+        }
+        return false;
     }
     
     /**
@@ -719,7 +737,10 @@ namespace
     TArray<FString> GetCapturedErrors()
     {
         TArray<FString> Errors;
-        Errors.Append(UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture().ErrorMessages);
+        if (UMcpAutomationBridgeSubsystem* Subsystem = GetAutomationBridgeSubsystem())
+        {
+            Errors.Append(Subsystem->GetCurrentErrorCapture().ErrorMessages);
+        }
         return Errors;
     }
     
@@ -5418,8 +5439,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Slot->SetOffsets(FMargin(0.0f));
             }
         }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 

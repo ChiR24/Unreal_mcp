@@ -25,6 +25,33 @@ function getTimeoutMs(): number {
 }
 
 /**
+ * Normalize path fields to ensure they start with /Game/ and use forward slashes.
+ * Returns a copy of the args with normalized paths.
+ */
+function normalizePathFields(args: Record<string, unknown>, fields: string[]): Record<string, unknown> {
+  const result = { ...args };
+
+  for (const field of fields) {
+    const value = result[field];
+    if (typeof value === 'string' && value.length > 0) {
+      let normalized = value.replace(/\\/g, '/');
+      // Replace /Content/ with /Game/ for common user mistake
+      if (normalized.startsWith('/Content/')) {
+        normalized = '/Game/' + normalized.slice('/Content/'.length);
+      }
+      // Ensure path starts with /Game/ if it doesn't start with a valid root
+      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
+      if (!normalized.startsWith('/')) {
+        normalized = '/Game/' + normalized;
+      }
+      result[field] = normalized;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Handles all widget authoring actions for the manage_widget_authoring tool.
  */
 export async function handleWidgetAuthoringTools(
@@ -32,7 +59,8 @@ export async function handleWidgetAuthoringTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
+  // Normalize path fields before processing
+  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder']);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge

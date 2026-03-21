@@ -118,14 +118,6 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     return bResult;
   };
 
-  // =========================================================================
-  // Begin Error Capture for this request
-  // =========================================================================
-  // This captures engine-level errors (like ensure failures) that occur
-  // during handler execution. If errors are captured, we report failure
-  // even if the handler returned success.
-  BeginErrorCapture();
-
   {
     ON_SCOPE_EXIT {
       // =====================================================================
@@ -141,7 +133,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                     "engine errors were detected for RequestId=%s action='%s'. "
                     "Errors: %s"),
                *RequestId, *Action,
-               CapturedErrors.Num() > 0 ? *CapturedErrors[0] : TEXT("unknown"));
+               CapturedErrors.Num() > 0 ? *FString::Join(CapturedErrors, TEXT("; ")) : TEXT("unknown"));
         
         // The handler already sent a response, but we detected errors.
         // Log a warning - the handler should have checked for errors.
@@ -172,6 +164,17 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     };
 
     try {
+      // =========================================================================
+      // Begin Error Capture for this request (inside try block)
+      // =========================================================================
+      // This captures engine-level errors (like ensure failures) that occur
+      // during handler execution. Captured errors are reported via warnings
+      // and logging; they do not override or force a failure response if a
+      // handler has already reported success.
+      // Note: BeginErrorCapture is placed inside the try block to avoid
+      // capturing our own catch-block error logging.
+      BeginErrorCapture();
+
       // Map this requestId to the requesting socket so responses can be
       // delivered reliably
       if (!RequestId.IsEmpty() && RequestingSocket.IsValid() &&
