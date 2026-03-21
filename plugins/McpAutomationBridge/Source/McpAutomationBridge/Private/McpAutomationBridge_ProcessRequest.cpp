@@ -120,6 +120,26 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
 
   {
     ON_SCOPE_EXIT {
+      // =====================================================================
+      // End Error Capture and check for captured errors
+      // =====================================================================
+      TArray<FString> CapturedErrors = EndErrorCapture();
+      bool bHadEngineErrors = HasCapturedErrors();
+      
+      if (bHadEngineErrors && bDispatchHandled)
+      {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+               TEXT("ProcessAutomationRequest: Handler reported success but "
+                    "engine errors were detected for RequestId=%s action='%s'. "
+                    "Errors: %s"),
+               *RequestId, *Action,
+               CapturedErrors.Num() > 0 ? *FString::Join(CapturedErrors, TEXT("; ")) : TEXT("unknown"));
+        
+        // The handler already sent a response, but we detected errors.
+        // Log a warning - the handler should have checked for errors.
+        // Future improvement: Send an error response if handler claimed success.
+      }
+      
       bProcessingAutomationRequest = false;
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =
@@ -127,8 +147,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       if (bDispatchHandled) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
                TEXT("ProcessAutomationRequest: Completed handler='%s' "
-                    "RequestId=%s action='%s' (%.3f ms)"),
-               *ConsumedHandlerLabel, *RequestId, *Action, DurationMs);
+                    "RequestId=%s action='%s' (%.3f ms) engineErrors=%s"),
+               *ConsumedHandlerLabel, *RequestId, *Action, DurationMs,
+               bHadEngineErrors ? TEXT("true") : TEXT("false"));
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
                TEXT("ProcessAutomationRequest: No handler consumed "
@@ -143,6 +164,17 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     };
 
     try {
+      // =========================================================================
+      // Begin Error Capture for this request (inside try block)
+      // =========================================================================
+      // This captures engine-level errors (like ensure failures) that occur
+      // during handler execution. Captured errors are reported via warnings
+      // and logging; they do not override or force a failure response if a
+      // handler has already reported success.
+      // Note: BeginErrorCapture is placed inside the try block to avoid
+      // capturing our own catch-block error logging.
+      BeginErrorCapture();
+
       // Map this requestId to the requesting socket so responses can be
       // delivered reliably
       if (!RequestId.IsEmpty() && RequestingSocket.IsValid() &&

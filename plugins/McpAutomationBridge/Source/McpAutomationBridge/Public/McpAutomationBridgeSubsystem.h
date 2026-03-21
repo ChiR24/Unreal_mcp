@@ -144,7 +144,61 @@ public:
    */
   void RegisterHandler(const FString &Action, FAutomationHandler Handler);
 
+  // =========================================================================
+  // Per-Request Error Capture (Public for handler access)
+  // =========================================================================
+  
+  /**
+   * Storage for capturing errors during request execution.
+   * This is used to detect engine-level errors (like ensure failures)
+   * that don't propagate as exceptions but indicate operation failure.
+    * 
+    * Note: Uses thread-safe access via ErrorCaptureMutex since GLog may
+    * route messages from worker threads to this shared capture.
+    */
+  struct FRequestErrorCapture
+  {
+    TArray<FString> ErrorMessages;
+    TArray<FString> WarningMessages;
+    std::atomic<bool> bHasErrors{false};
+    std::atomic<bool> bHasWarnings{false};
+    
+    // Reset is for internal use only - must be called with ErrorCaptureMutex held
+    void Reset()
+    {
+      ErrorMessages.Empty();
+      WarningMessages.Empty();
+      bHasErrors = false;
+      bHasWarnings = false;
+    }
+  };
+  
+  /** Get the current request's error capture */
+  FRequestErrorCapture& GetCurrentErrorCapture();
+  
+  /** Begin capturing errors for a request */
+  void BeginErrorCapture();
+  
+  /** End capturing errors and return any captured errors */
+  TArray<FString> EndErrorCapture();
+  
+  /** Check if any errors were captured during the current request */
+  bool HasCapturedErrors() const;
+
+  // Friend class for error capture device to access private members
+  friend class FMcpRequestErrorDevice;
+
 private:
+  /** Request-scoped error capture (shared, not thread-local) */
+  FRequestErrorCapture CurrentErrorCapture;
+  
+  /** Mutex for thread-safe access to error capture from worker threads */
+  mutable FCriticalSection ErrorCaptureMutex;
+  
+  /** Custom log output device for per-request error capture */
+  TSharedPtr<class FMcpRequestErrorDevice> RequestErrorDevice;
+
+public:
   // Telemetry structs moved to McpConnectionManager
 
   bool Tick(float DeltaTime);
@@ -181,7 +235,7 @@ private:
   // Active Log Device
   TSharedPtr<FOutputDevice> LogCaptureDevice;
 
-  // Action handlers (implemented in separate translation units)
+private:
   TMap<FString, FAutomationHandler> AutomationHandlers;
   void InitializeHandlers();
 

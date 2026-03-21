@@ -6,6 +6,63 @@
 #endif
 
 #include "McpAutomationBridgeSubsystem.h"
+
+// =============================================================================
+// FMcpRequestErrorDevice - Custom log device for per-request error capture
+// =============================================================================
+
+/**
+ * Custom output device that captures errors and warnings during request processing.
+ * This is temporarily attached to GLog during handler execution to detect
+ * engine-level errors (like ensure failures) that don't propagate as exceptions.
+ * 
+ * Note: Uses the subsystem's shared capture with mutex-protected access since
+ * GLog may route messages from worker threads.
+ */
+class FMcpRequestErrorDevice : public FOutputDevice
+{
+public:
+    FMcpRequestErrorDevice(UMcpAutomationBridgeSubsystem* InSubsystem)
+        : Subsystem(InSubsystem)
+    {
+    }
+
+    virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
+    {
+        // Only capture Error and Warning verbosity
+        if (Verbosity == ELogVerbosity::Error || Verbosity == ELogVerbosity::Warning)
+        {
+            if (!Subsystem)
+            {
+                return;
+            }
+            
+            FString Message = FString::Printf(TEXT("[%s] %s"), *Category.ToString(), V);
+            
+            // Thread-safe access to shared capture
+            FScopeLock Lock(&Subsystem->ErrorCaptureMutex);
+            auto& Capture = Subsystem->CurrentErrorCapture;
+            
+            if (Verbosity == ELogVerbosity::Error)
+            {
+                Capture.ErrorMessages.Add(Message);
+                Capture.bHasErrors = true;
+            }
+            else
+            {
+                Capture.WarningMessages.Add(Message);
+                Capture.bHasWarnings = true;
+            }
+        }
+        
+        // Note: We do not explicitly forward here. When this device is attached to GLog,
+        // the engine still routes messages to all other output devices; this class only
+        // captures errors and warnings without suppressing normal logging.
+    }
+
+private:
+    UMcpAutomationBridgeSubsystem* Subsystem = nullptr;
+};
 #include "Dom/JsonObject.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "Async/Async.h"
@@ -161,6 +218,13 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
     LogCaptureDevice.Reset();
   }
 
+  // Clean up RequestErrorDevice to prevent dangling pointer in GLog
+  if (RequestErrorDevice.IsValid()) {
+    if (GLog)
+      GLog->RemoveOutputDevice(RequestErrorDevice.Get());
+    RequestErrorDevice.Reset();
+  }
+
   Super::Deinitialize();
 }
 
@@ -196,6 +260,57 @@ UMcpAutomationBridgeSubsystem::GetBridgeState() const {
     }
   }
   return EMcpAutomationBridgeState::Disconnected;
+}
+
+// =============================================================================
+// Per-Request Error Capture Implementation
+// =============================================================================
+
+UMcpAutomationBridgeSubsystem::FRequestErrorCapture& UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture()
+{
+    return CurrentErrorCapture;
+}
+
+void UMcpAutomationBridgeSubsystem::BeginErrorCapture()
+{
+    // Clear any previous capture state (thread-safe)
+    FScopeLock Lock(&ErrorCaptureMutex);
+    CurrentErrorCapture.Reset();
+    
+    // Create and attach the error capture device if not already
+    if (!RequestErrorDevice.IsValid())
+    {
+        RequestErrorDevice = MakeShared<FMcpRequestErrorDevice>(this);
+    }
+    
+    // Attach to GLog to capture errors
+    if (GLog && RequestErrorDevice.IsValid())
+    {
+        GLog->AddOutputDevice(RequestErrorDevice.Get());
+    }
+}
+
+TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
+{
+    // Detach the error capture device
+    if (GLog && RequestErrorDevice.IsValid())
+    {
+        GLog->RemoveOutputDevice(RequestErrorDevice.Get());
+    }
+    
+    // Get captured errors (thread-safe)
+    FScopeLock Lock(&ErrorCaptureMutex);
+    
+    TArray<FString> AllMessages;
+    AllMessages.Append(CurrentErrorCapture.ErrorMessages);
+    AllMessages.Append(CurrentErrorCapture.WarningMessages);
+    
+    return AllMessages;
+}
+
+bool UMcpAutomationBridgeSubsystem::HasCapturedErrors() const
+{
+    return CurrentErrorCapture.bHasErrors.load();
 }
 
 /**

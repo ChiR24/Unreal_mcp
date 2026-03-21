@@ -25,6 +25,33 @@ function getTimeoutMs(): number {
 }
 
 /**
+ * Normalize path fields to ensure they start with /Game/ and use forward slashes.
+ * Returns a copy of the args with normalized paths.
+ */
+function normalizePathFields(args: Record<string, unknown>, fields: string[]): Record<string, unknown> {
+  const result = { ...args };
+
+  for (const field of fields) {
+    const value = result[field];
+    if (typeof value === 'string' && value.length > 0) {
+      let normalized = value.replace(/\\/g, '/');
+      // Replace /Content/ with /Game/ for common user mistake
+      if (normalized.startsWith('/Content/')) {
+        normalized = '/Game/' + normalized.slice('/Content/'.length);
+      }
+      // Ensure path starts with /Game/ if it doesn't start with a valid root
+      // Allow plugin paths like /MyPlugin/Assets to pass through unchanged
+      if (!normalized.startsWith('/')) {
+        normalized = '/Game/' + normalized;
+      }
+      result[field] = normalized;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Handles all widget authoring actions for the manage_widget_authoring tool.
  */
 export async function handleWidgetAuthoringTools(
@@ -32,7 +59,8 @@ export async function handleWidgetAuthoringTools(
   args: HandlerArgs,
   tools: ITools
 ): Promise<Record<string, unknown>> {
-  const argsRecord = args as Record<string, unknown>;
+  // Normalize path fields before processing
+  const argsRecord = normalizePathFields(args as Record<string, unknown>, ['widgetPath', 'folder']);
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
@@ -414,9 +442,9 @@ export async function handleWidgetAuthoringTools(
     case 'add_animation_keyframe': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.animationName, 'animationName', 'Missing required parameter: animationName');
-      requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
       // Adds a keyframe to an animation track
       // Accepts: time, value (type depends on track), interpolation (linear, cubic, constant)
+      // Note: slotName is optional - used for targeting specific widgets in the animation
       return sendRequest('add_animation_keyframe');
     }
 
@@ -433,16 +461,16 @@ export async function handleWidgetAuthoringTools(
     // =========================================================================
 
     case 'create_main_menu': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a main menu widget template
-      // Optional: folder, includePlayButton, includeSettingsButton, includeQuitButton, backgroundImage, titleText
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a main menu widget template in an existing widget blueprint
+      // Optional: title, includePlayButton, includeSettingsButton, includeQuitButton, backgroundImage
       return sendRequest('create_main_menu');
     }
 
     case 'create_pause_menu': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a pause menu widget template
-      // Optional: folder, includeResumeButton, includeSettingsButton, includeQuitToMenuButton
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a pause menu widget template in an existing widget blueprint
+      // Optional: includeResumeButton, includeSettingsButton, includeQuitToMenuButton
       return sendRequest('create_pause_menu');
     }
 
@@ -461,9 +489,9 @@ export async function handleWidgetAuthoringTools(
     }
 
     case 'create_hud_widget': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Creates a HUD widget template
-      // Optional: folder, elements (array of: health_bar, ammo_counter, minimap, crosshair, compass, etc.)
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Creates a HUD widget template in an existing widget blueprint
+      // Optional: elements (array of: health_bar, ammo_counter, minimap, crosshair, compass, etc.)
       return sendRequest('create_hud_widget');
     }
 
