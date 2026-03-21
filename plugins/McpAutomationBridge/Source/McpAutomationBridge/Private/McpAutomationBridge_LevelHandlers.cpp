@@ -1364,6 +1364,15 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       return true;
     }
 
+    // SECURITY: Sanitize export path as an asset path
+    FString SafeExportPath = SanitizeProjectRelativePath(ExportPath);
+    if (SafeExportPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Invalid or unsafe exportPath"), nullptr,
+                             TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+
     if (!GEditor) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
@@ -1399,11 +1408,19 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     }
 
     // Ensure directory
-    IFileManager::Get().MakeDirectory(*FPaths::GetPath(ExportPath), true);
+    FString AbsoluteFilePath;
+    if (FPackageName::TryConvertLongPackageNameToFilename(SafeExportPath, AbsoluteFilePath, FPackageName::GetMapPackageExtension())) {
+      IFileManager::Get().MakeDirectory(*FPaths::GetPath(AbsoluteFilePath), true);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Failed to resolve package path: %s"), *SafeExportPath), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
     // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
-    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, ExportPath);
+    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, SafeExportPath);
     if (bExported) {
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level exported"), nullptr);
