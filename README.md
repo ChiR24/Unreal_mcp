@@ -325,6 +325,7 @@ Blueprints • Materials • Textures • Static Meshes • Skeletal Meshes • 
 
 ---
 
+## GraphQL API
 
 Optional GraphQL endpoint for complex queries. **Disabled by default.**
 

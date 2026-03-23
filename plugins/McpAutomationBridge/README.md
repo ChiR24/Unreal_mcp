@@ -166,7 +166,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 - **Loopback-only binding** by default (127.0.0.1)
 - **TLS/SSL support** for secure connections
-- **Rate limiting** (600 messages/min, 120 automation requests/min)
+- **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests
 - **Command validation** blocks dangerous console commands
 
