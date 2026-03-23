@@ -2510,6 +2510,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                             if (Child.ChildTask)
                             {
                                 NodeCount++;
+                                NodeCount += Child.ChildTask->Services.Num();
                             }
                         }
                     }
