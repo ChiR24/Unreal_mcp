@@ -405,8 +405,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             Filter.PackagePaths.Add(FName(TEXT("/Game")));
         }
 
-        // Parse recursion (default to false for safety)
-        bool bRecursivePaths = false;
+        // Parse searchText for name-based filtering
+        FString SearchText;
+        Payload->TryGetStringField(TEXT("searchText"), SearchText);
+
+        // Parse recursion (default to false for safety, but true when searchText is provided)
+        bool bRecursivePaths = !SearchText.IsEmpty(); // default true for text search
         if (Payload->HasField(TEXT("recursivePaths")))
         {
             Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
@@ -421,12 +425,21 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Filter.bRecursiveClasses = bRecursiveClasses;
 
         // Execute query (uses cached AssetRegistry data)
-        FAssetRegistryModule& AssetRegistryModule = 
+        FAssetRegistryModule& AssetRegistryModule =
             FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
         TArray<FAssetData> AssetDataList;
         AssetRegistry.GetAssets(Filter, AssetDataList);
+
+        // Filter by searchText (case-insensitive substring match on asset name)
+        if (!SearchText.IsEmpty())
+        {
+            AssetDataList.RemoveAll([&SearchText](const FAssetData& Data)
+            {
+                return !Data.AssetName.ToString().Contains(SearchText, ESearchCase::IgnoreCase);
+            });
+        }
 
         // Apply limit
         int32 Limit = 100;
