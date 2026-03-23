@@ -85,6 +85,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         recursivePaths: commonSchemas.booleanProp,
         recursiveClasses: commonSchemas.booleanProp,
         limit: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
         sourcePath: commonSchemas.sourcePath,
         destinationPath: commonSchemas.destinationPath,
         assetPaths: commonSchemas.arrayOfStrings,
