@@ -360,17 +360,22 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
                         if (!bFound)
                         {
-                            // Build supported names list for error message
-                            TSet<FString> UniqueNames;
-                            for (const FClassMapping& Mapping : ClassMappings)
+                            // Build supported names list for error message (cached)
+                            static FString SupportedNames;
+                            if (SupportedNames.IsEmpty())
                             {
-                                UniqueNames.Add(Mapping.ShortName);
+                                TSet<FString> UniqueNames;
+                                for (const FClassMapping& Mapping : ClassMappings)
+                                {
+                                    UniqueNames.Add(Mapping.ShortName);
+                                }
+                                TArray<FString> SortedNames = UniqueNames.Array();
+                                SortedNames.Sort();
+                                SupportedNames = FString::Join(SortedNames, TEXT(", "));
                             }
-                            TArray<FString> SortedNames = UniqueNames.Array();
-                            SortedNames.Sort();
                             SendAutomationError(RequestingSocket, RequestId,
                                 FString::Printf(TEXT("Unknown short class name '%s'. Use full path (e.g. /Script/Engine.AnimSequence) or one of: %s."),
-                                    *ClassName, *FString::Join(SortedNames, TEXT(", "))),
+                                    *ClassName, *SupportedNames),
                                 TEXT("UNKNOWN_CLASS_NAME"));
                             return true;
                         }
@@ -447,6 +452,16 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
 
         TArray<FAssetData> AssetDataList;
         AssetRegistry.GetAssets(Filter, AssetDataList);
+
+        // Sort for deterministic pagination (AssetRegistry order is not guaranteed)
+        AssetDataList.Sort([](const FAssetData& A, const FAssetData& B)
+        {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+            return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
+#else
+            return A.ToSoftObjectPath().ToString() < B.ToSoftObjectPath().ToString();
+#endif
+        });
 
         // Apply offset and limit for pagination
         const int32 TotalCount = AssetDataList.Num();

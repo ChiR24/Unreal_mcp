@@ -170,7 +170,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         paths: commonSchemas.arrayOfStrings,
         path: commonSchemas.stringProp,
         nodeId: commonSchemas.nodeId,
-        details: commonSchemas.objectProp
+        details: commonSchemas.objectProp,
+        totalCount: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
+        limit: commonSchemas.numberProp
       }
     }
   },
