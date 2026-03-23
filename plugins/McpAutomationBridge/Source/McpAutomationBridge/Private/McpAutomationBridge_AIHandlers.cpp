@@ -2437,6 +2437,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
         if (!BlueprintPath.IsEmpty())
         {
+            BlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+            if (BlueprintPath.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Invalid blueprintPath: must be a valid project-relative path"),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
             UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
             if (BP && BP->GeneratedClass)
             {
@@ -2482,8 +2490,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                 AIInfo->SetStringField(TEXT("assignedBehaviorTree"), BT->GetName());
                 AIInfo->SetBoolField(TEXT("hasRootNode"), BT->RootNode != nullptr);
 
-                // Report associated blackboard from BT asset
-                if (BT->BlackboardAsset)
+                // Report associated blackboard from BT asset (only if
+                // blackboardPath was not explicitly provided, to avoid
+                // silently overwriting an explicit value)
+                FString ExplicitBBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+                if (BT->BlackboardAsset && ExplicitBBPath.IsEmpty())
                 {
                     AIInfo->SetStringField(TEXT("assignedBlackboard"),
                         BT->BlackboardAsset->GetName());
