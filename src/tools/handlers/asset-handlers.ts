@@ -547,15 +547,18 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       }
       case 'search_assets': {
         const params = normalizeArgs(args, [
+          { key: 'searchText' },
           { key: 'classNames' },
           { key: 'packagePaths' },
           { key: 'recursivePaths' },
           { key: 'recursiveClasses' },
           { key: 'limit' }
         ]);
+        const searchText = extractOptionalString(params, 'searchText');
         const classNames = extractOptionalArray<string>(params, 'classNames');
         const packagePaths = extractOptionalArray<string>(params, 'packagePaths');
-        const recursivePaths = extractOptionalBoolean(params, 'recursivePaths');
+        // When searchText is provided, default recursivePaths to true for broad search
+        const recursivePaths = extractOptionalBoolean(params, 'recursivePaths') ?? (searchText ? true : undefined);
         const recursiveClasses = extractOptionalBoolean(params, 'recursiveClasses');
         const limit = extractOptionalNumber(params, 'limit');
 
@@ -564,6 +567,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         if (pathSecurityError) return pathSecurityError;
 
         const res = await executeAutomationRequest(tools, 'asset_query', {
+          searchText,
           classNames,
           packagePaths,
           recursivePaths,
