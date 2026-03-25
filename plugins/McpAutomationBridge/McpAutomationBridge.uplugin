@@ -25,13 +25,13 @@
     {
       "Name": "McpAutomationBridgeGAS",
       "Type": "Editor",
-      "LoadingPhase": "Default",
+      "LoadingPhase": "None",
       "PlatformAllowList": ["Win64", "Mac", "Linux"]
     },
     {
       "Name": "McpAutomationBridgeAI",
       "Type": "Editor",
-      "LoadingPhase": "Default",
+      "LoadingPhase": "None",
       "PlatformAllowList": ["Win64", "Mac", "Linux"]
     }
   ],

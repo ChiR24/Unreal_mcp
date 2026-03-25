@@ -145,11 +145,11 @@ PublicDependencyModuleNames.AddRange(new string[]
             // StateTree, SmartObjects, MassAI modules are now handled by the separate AI module
             
             // Force GAS and AI feature flags to 0 in base module - handlers are in optional modules
-            // This prevents __has_include from finding headers when module isn't linked
-            PublicDefinitions.Add("MCP_HAS_GAS=0");
-            PublicDefinitions.Add("MCP_HAS_STATE_TREE=0");
-            PublicDefinitions.Add("MCP_HAS_SMART_OBJECTS=0");
-            PublicDefinitions.Add("MCP_HAS_MASS_AI=0");
+            // Use PrivateDefinitions (non-propagating) so optional modules can set their own values
+            PrivateDefinitions.Add("MCP_HAS_GAS=0");
+            PrivateDefinitions.Add("MCP_HAS_STATE_TREE=0");
+            PrivateDefinitions.Add("MCP_HAS_SMART_OBJECTS=0");
+            PrivateDefinitions.Add("MCP_HAS_MASS_AI=0");
 
             // Phase 22: Voice Chat and Online Subsystem (conditional - for sessions handlers)
             // VoiceChat module is from the VoiceChat plugin

@@ -7,44 +7,58 @@
 // when AI plugins (StateTree, SmartObjects, MassEntity, MassSpawner) are
 // enabled in the project.
 //
+// IMPORTANT: This module uses LoadingPhase "None" and is loaded manually by
+// the base McpAutomationBridgeSubsystem when AI plugins are available.
+//
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 // =============================================================================
 
 #include "McpAutomationBridgeAIModule.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Interfaces/IPluginManager.h"
+#include "HAL/IConsoleManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpAIModule, Log, All);
 
 const FName FMcpAutomationBridgeAIModule::ModuleName = TEXT("McpAutomationBridgeAI");
 
+// Console command to manually load AI module (for debugging)
+static FAutoConsoleCommand LoadAIModuleCmd(
+    TEXT("Mcp.LoadAIModule"),
+    TEXT("Manually load the McpAutomationBridgeAI module"),
+    FConsoleCommandDelegate::CreateLambda([]()
+    {
+        FModuleManager::Get().LoadModule(TEXT("McpAutomationBridgeAI"));
+    })
+);
+
 void FMcpAutomationBridgeAIModule::StartupModule()
 {
     UE_LOG(LogMcpAIModule, Log, TEXT("McpAutomationBridgeAI module starting up"));
     
-#if MCP_STATETREE_MODULE_AVAILABLE || MCP_SMARTOBJECTS_MODULE_AVAILABLE || MCP_MASSENTITY_MODULE_AVAILABLE || MCP_MASSSPAWNER_MODULE_AVAILABLE
+#if (MCP_STATETREE_MODULE_AVAILABLE || MCP_SMARTOBJECTS_MODULE_AVAILABLE || MCP_MASSENTITY_MODULE_AVAILABLE || MCP_MASSSPAWNER_MODULE_AVAILABLE)
     // Check if any AI module is actually loaded at runtime
-    bool bAnyAIModuleLoaded = 
+    bool bAnyAIModuleLoaded = false;
+    
 #if MCP_STATETREE_MODULE_AVAILABLE
-        FModuleManager::Get().IsModuleLoaded(TEXT("StateTreeModule")) ||
+    bAnyAIModuleLoaded |= FModuleManager::Get().IsModuleLoaded(TEXT("StateTreeModule"));
 #endif
 #if MCP_SMARTOBJECTS_MODULE_AVAILABLE
-        FModuleManager::Get().IsModuleLoaded(TEXT("SmartObjectsModule")) ||
+    bAnyAIModuleLoaded |= FModuleManager::Get().IsModuleLoaded(TEXT("SmartObjectsModule"));
 #endif
 #if MCP_MASSENTITY_MODULE_AVAILABLE
-        FModuleManager::Get().IsModuleLoaded(TEXT("MassEntity")) ||
+    bAnyAIModuleLoaded |= FModuleManager::Get().IsModuleLoaded(TEXT("MassEntity"));
 #endif
 #if MCP_MASSSPAWNER_MODULE_AVAILABLE
-        FModuleManager::Get().IsModuleLoaded(TEXT("MassSpawner")) ||
+    bAnyAIModuleLoaded |= FModuleManager::Get().IsModuleLoaded(TEXT("MassSpawner"));
 #endif
-        false;
 
     if (!bAnyAIModuleLoaded)
     {
         // Check if any AI plugin exists but isn't loaded yet
         bool bAnyPluginEnabled = false;
         
-#if MCP_STATETREE_MODULE_AVAILABLE
+#if MCP_STATETREE_MODULE_AVAILABLE && MCP_HAS_STATE_TREE
         TSharedPtr<IPlugin> StateTreePlugin = IPluginManager::Get().FindPlugin(TEXT("StateTree"));
         if (StateTreePlugin.IsValid() && StateTreePlugin->IsEnabled())
         {
@@ -53,7 +67,7 @@ void FMcpAutomationBridgeAIModule::StartupModule()
         }
 #endif
 
-#if MCP_SMARTOBJECTS_MODULE_AVAILABLE
+#if MCP_SMARTOBJECTS_MODULE_AVAILABLE && MCP_HAS_SMART_OBJECTS
         TSharedPtr<IPlugin> SmartObjectsPlugin = IPluginManager::Get().FindPlugin(TEXT("SmartObjects"));
         if (SmartObjectsPlugin.IsValid() && SmartObjectsPlugin->IsEnabled())
         {
@@ -62,7 +76,7 @@ void FMcpAutomationBridgeAIModule::StartupModule()
         }
 #endif
 
-#if MCP_MASSENTITY_MODULE_AVAILABLE
+#if MCP_MASSENTITY_MODULE_AVAILABLE && MCP_HAS_MASS_AI
         TSharedPtr<IPlugin> MassGameplayPlugin = IPluginManager::Get().FindPlugin(TEXT("MassGameplay"));
         if (MassGameplayPlugin.IsValid() && MassGameplayPlugin->IsEnabled())
         {
@@ -82,21 +96,8 @@ void FMcpAutomationBridgeAIModule::StartupModule()
         }
     }
     
-    // Get the subsystem and register handlers
-    if (GEditor)
-    {
-        if (UMcpAutomationBridgeSubsystem* Subsystem = GEditor->GetEditorSubsystem<UMcpAutomationBridgeSubsystem>())
-        {
-            RegisterAIHandlers(Subsystem);
-            bHandlersRegistered = true;
-            UE_LOG(LogMcpAIModule, Log, TEXT("AI handlers registered successfully"));
-        }
-        else
-        {
-            UE_LOG(LogMcpAIModule, Warning, 
-                TEXT("McpAutomationBridgeSubsystem not available - will retry on subsystem init"));
-        }
-    }
+    // Register handlers - subsystem should be available since we're loaded after it
+    TryRegisterHandlers();
 #else
     UE_LOG(LogMcpAIModule, Warning, 
         TEXT("AI module was not built with AI plugin support - handlers disabled"));
@@ -111,6 +112,34 @@ void FMcpAutomationBridgeAIModule::ShutdownModule()
         bHandlersRegistered = false;
         UE_LOG(LogMcpAIModule, Log, TEXT("AI module shut down"));
     }
+}
+
+void FMcpAutomationBridgeAIModule::TryRegisterHandlers()
+{
+#if (MCP_STATETREE_MODULE_AVAILABLE || MCP_SMARTOBJECTS_MODULE_AVAILABLE || MCP_MASSENTITY_MODULE_AVAILABLE || MCP_MASSSPAWNER_MODULE_AVAILABLE)
+    if (bHandlersRegistered)
+    {
+        return; // Already registered
+    }
+    
+    if (!GEditor)
+    {
+        UE_LOG(LogMcpAIModule, Warning, TEXT("GEditor not available - cannot register handlers"));
+        return;
+    }
+    
+    UMcpAutomationBridgeSubsystem* Subsystem = GEditor->GetEditorSubsystem<UMcpAutomationBridgeSubsystem>();
+    if (!Subsystem)
+    {
+        UE_LOG(LogMcpAIModule, Warning, 
+            TEXT("McpAutomationBridgeSubsystem not available - cannot register handlers"));
+        return;
+    }
+    
+    RegisterAIHandlers(Subsystem);
+    bHandlersRegistered = true;
+    UE_LOG(LogMcpAIModule, Log, TEXT("AI handlers registered successfully"));
+#endif
 }
 
 void FMcpAutomationBridgeAIModule::RegisterAIHandlers(UMcpAutomationBridgeSubsystem* Subsystem)

@@ -43,6 +43,9 @@ private:
     /** Register GAS handlers with the subsystem */
     void RegisterGASHandlers(UMcpAutomationBridgeSubsystem* Subsystem);
     
+    /** Try to register handlers (can be called after module load) */
+    void TryRegisterHandlers();
+    
     /** Flag to track if handlers were registered */
     bool bHandlersRegistered = false;
 };
