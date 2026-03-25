@@ -51,6 +51,24 @@ export async function handleAnimationAuthoringTools(
   tools: ITools
 ): Promise<Record<string, unknown>> {
   try {
+    // Global path security validation - validate ALL path parameters in raw args
+    // This catches injected malicious paths regardless of which parameter they're in
+    const allPathParams = [
+      'path', 'savePath', 'skeletonPath', 'skeletalMeshPath', 'sourceSkeleton', 'targetSkeleton',
+      'assetPath', 'animationPath', 'blueprintPath', 'retargeterPath', 'meshPath', 'montagePath',
+      'animSequencePath', 'animPath', 'animAssetPath', 'animMontagePath', 'blendSpacePath', 'rigPath'
+    ];
+
+    for (const param of allPathParams) {
+      const value = (args as Record<string, unknown>)[param];
+      if (value && typeof value === 'string') {
+        const pathValidation = validatePath(value, param);
+        if (!pathValidation.valid) {
+          return pathValidation.error;
+        }
+      }
+    }
+
     switch (action) {
       // ===== 10.1 Animation Sequences =====
       case 'create_animation_sequence': {

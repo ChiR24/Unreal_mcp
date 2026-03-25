@@ -3137,32 +3137,64 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
         ErrorCode = TEXT("INVALID_ARGUMENT");
         Resp->SetStringField(TEXT("error"), Message);
       } else {
-        if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
-          UEditorAssetLibrary::MakeDirectory(SavePath);
+        // Check if an asset already exists at the target path to prevent UObject class collision crash
+        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *SavePath, *MontageName);
+        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        {
+          UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+          if (ExistingAsset)
+          {
+            if (ExistingAsset->IsA<UAnimMontage>())
+            {
+              // Same type - return success with existing asset info
+              bSuccess = true;
+              Message = FString::Printf(TEXT("Animation montage '%s' already exists - reusing existing asset"), *MontageName);
+              Resp->SetStringField(TEXT("assetPath"), ObjectPath);
+              Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+              Resp->SetBoolField(TEXT("existingAsset"), true);
+              McpHandlerUtils::AddVerification(Resp, ExistingAsset);
+            }
+            else
+            {
+              // Different type - return error to prevent crash
+              FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+              Message = FString::Printf(
+                TEXT("Cannot create AnimMontage: asset '%s' already exists as type '%s'"),
+                *ObjectPath, *ExistingClassName);
+              ErrorCode = TEXT("ASSET_TYPE_MISMATCH");
+              Resp->SetStringField(TEXT("error"), Message);
+              Resp->SetStringField(TEXT("existingClass"), ExistingClassName);
+            }
+          }
         }
+        else {
+          if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
+            UEditorAssetLibrary::MakeDirectory(SavePath);
+          }
 
-        UAnimMontageFactory *MontageFactory = NewObject<UAnimMontageFactory>();
-        if (!MontageFactory) {
-          Message = TEXT("Failed to create AnimMontage factory");
-          ErrorCode = TEXT("FACTORY_FAILED");
-          Resp->SetStringField(TEXT("error"), Message);
-        } else {
-          MontageFactory->TargetSkeleton = TargetSkeleton;
-
-          FAssetToolsModule &AssetToolsModule =
-              FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
-          UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-              MontageName, SavePath, UAnimMontage::StaticClass(), MontageFactory);
-
-          if (!NewAsset) {
-            Message = TEXT("Failed to create animation montage");
-            ErrorCode = TEXT("ASSET_CREATION_FAILED");
+          UAnimMontageFactory *MontageFactory = NewObject<UAnimMontageFactory>();
+          if (!MontageFactory) {
+            Message = TEXT("Failed to create AnimMontage factory");
+            ErrorCode = TEXT("FACTORY_FAILED");
             Resp->SetStringField(TEXT("error"), Message);
           } else {
-            bSuccess = true;
-            Message = TEXT("Animation montage created successfully");
-            Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
-            Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+            MontageFactory->TargetSkeleton = TargetSkeleton;
+
+            FAssetToolsModule &AssetToolsModule =
+                FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+            UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
+                MontageName, SavePath, UAnimMontage::StaticClass(), MontageFactory);
+
+            if (!NewAsset) {
+              Message = TEXT("Failed to create animation montage");
+              ErrorCode = TEXT("ASSET_CREATION_FAILED");
+              Resp->SetStringField(TEXT("error"), Message);
+            } else {
+              bSuccess = true;
+              Message = TEXT("Animation montage created successfully");
+              Resp->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
+              Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+            }
           }
         }
       }

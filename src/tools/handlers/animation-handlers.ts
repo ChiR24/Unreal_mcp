@@ -32,6 +32,47 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
   const argsTyped = args as AnimationArgs;
   const animAction = String(action || '').toLowerCase();
 
+  // Global path security validation - validate ALL path parameters in args
+  // This catches injected malicious paths regardless of which parameter they're in
+  const allPathParams = [
+    'path', 'savePath', 'skeletonPath', 'skeletalMeshPath', 'sourceSkeleton', 'targetSkeleton',
+    'assetPath', 'animationPath', 'blueprintPath', 'retargeterPath', 'meshPath', 'montagePath',
+    'animSequencePath', 'animPath', 'animAssetPath', 'animMontagePath', 'blendSpacePath', 'rigPath'
+  ];
+  
+  for (const param of allPathParams) {
+    const value = (args as Record<string, unknown>)[param];
+    if (value && typeof value === 'string') {
+      try {
+        sanitizePath(value);
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : `Invalid ${param}: path traversal or illegal characters detected`
+        });
+      }
+    }
+  }
+  
+  // Validate paths in arrays (e.g., artifacts in cleanup)
+  const artifacts = (args as Record<string, unknown>).artifacts;
+  if (Array.isArray(artifacts)) {
+    for (const artifact of artifacts) {
+      if (typeof artifact === 'string') {
+        try {
+          sanitizePath(artifact);
+        } catch (e) {
+          return cleanObject({
+            success: false,
+            error: 'SECURITY_VIOLATION',
+            message: e instanceof Error ? e.message : 'Invalid path in artifacts: path traversal or illegal characters detected'
+          });
+        }
+      }
+    }
+  }
+
   // Route specific actions to their dedicated handlers
   if (animAction === 'create_animation_blueprint' || animAction === 'create_anim_blueprint' || animAction === 'create_animation_bp') {
     const name = argsTyped.name ?? argsTyped.blueprintName;
@@ -505,6 +546,8 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       })) as Record<string, unknown>;
     }
     default: {
+      // Path parameters already validated by global security check at top of function
+      // Just pass args through to the bridge
       const res = await executeAutomationRequest(tools, 'animation_physics', args, 'Automation bridge not available for animation/physics operations');
       return cleanObject(res) as Record<string, unknown>;
     }

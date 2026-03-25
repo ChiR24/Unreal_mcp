@@ -455,20 +455,19 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
         
-        // Check if an asset already exists at the target path to prevent UObject class collision crash
+        // Check if an asset already exists at the target path to prevent assertion failure
         FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
         if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
         {
-            // Check if existing asset is the same type
             UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
             if (ExistingAsset)
             {
-                if (ExistingAsset->IsA<UAnimSequence>())
+                if (Cast<UAnimBlueprint>(ExistingAsset))
                 {
                     // Same type - return success with existing asset info
                     Response->SetStringField(TEXT("assetPath"), ObjectPath);
                     Response->SetBoolField(TEXT("existingAsset"), true);
-                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' already exists - reusing existing asset"), *Name));
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' already exists - reusing existing asset"), *Name));
                     McpHandlerUtils::AddVerification(Response, ExistingAsset);
                     return Response;
                 }
@@ -477,7 +476,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                     // Different type - return error to prevent crash
                     FString ExistingClassName = ExistingAsset->GetClass()->GetName();
                     ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create AnimSequence: asset '%s' already exists as type '%s'"), 
+                        FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s'"), 
                             *ObjectPath, *ExistingClassName),
                         TEXT("ASSET_TYPE_MISMATCH")
                     );
@@ -592,11 +591,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             Controller.AddBoneCurve(BoneFName);
 
             // Verify the bone curve was actually added
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+            // Note: GetBoneTrackIndexByName is deprecated in UE 5.2+ but still functional
+            PRAGMA_DISABLE_DEPRECATION_WARNINGS
             const int32 AddedTrackIndex = Controller.GetModel()->GetBoneTrackIndexByName(BoneFName);
-#else
-            const int32 AddedTrackIndex = Controller.GetModel()->GetBoneTrackIndex(BoneFName);
-#endif
+            PRAGMA_ENABLE_DEPRECATION_WARNINGS
             if (AddedTrackIndex == INDEX_NONE)
             {
                 ANIM_ERROR_RESPONSE(
@@ -685,11 +683,10 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
 
         // Verify bone track exists before setting keys
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+        // Note: GetBoneTrackIndexByName is deprecated in UE 5.2+ but still functional
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
         const int32 TrackIndex = Controller.GetModel()->GetBoneTrackIndexByName(BoneFName);
-#else
-        const int32 TrackIndex = Controller.GetModel()->GetBoneTrackIndex(BoneFName);
-#endif
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
         if (TrackIndex == INDEX_NONE)
         {
             ANIM_ERROR_RESPONSE(
@@ -834,6 +831,15 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             NotifyUClass = UAnimNotify::StaticClass();
         }
         
+        // Validate that the class is not abstract - abstract classes cannot be instantiated
+        if (NotifyUClass && NotifyUClass->HasAnyClassFlags(CLASS_Abstract))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Cannot create AnimNotify: '%s' is an abstract class. Use a concrete subclass like AnimNotify_PlaySound or create a custom AnimNotify blueprint."), *FullClassName),
+                TEXT("ABSTRACT_CLASS_ERROR")
+            );
+        }
+        
         // Calculate time from frame
         float FrameRate = 30.0f;
 #if ENGINE_MAJOR_VERSION >= 5
@@ -900,6 +906,15 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         if (!NotifyStateClass)
         {
             NotifyStateClass = UAnimNotifyState::StaticClass();
+        }
+        
+        // Validate that the class is not abstract - abstract classes cannot be instantiated
+        if (NotifyStateClass && NotifyStateClass->HasAnyClassFlags(CLASS_Abstract))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Cannot create AnimNotifyState: '%s' is an abstract class. Use a concrete subclass like AnimNotifyState_PlayMontageNotify or create a custom AnimNotifyState blueprint."), *FullClassName),
+                TEXT("ABSTRACT_CLASS_ERROR")
+            );
         }
         
         // Calculate times from frames
@@ -1296,6 +1311,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         UAnimNotify* NewNotify = NewObject<UAnimNotify>(Montage, NotifyUClass);
         if (NewNotify)
         {
+#if WITH_EDITORONLY_DATA
+            // Ensure notify track exists before setting TrackIndex
+            // TrackIndex of -1 (INDEX_NONE) means "All Animates" and doesn't require a track
+            if (TrackIndex >= 0 && TrackIndex >= Montage->AnimNotifyTracks.Num())
+            {
+                // Add missing tracks up to and including the requested index
+                while (Montage->AnimNotifyTracks.Num() <= TrackIndex)
+                {
+                    FAnimNotifyTrack& NewTrack = Montage->AnimNotifyTracks.AddDefaulted_GetRef();
+                    NewTrack.TrackName = FName(*FString::Printf(TEXT("Track%d"), Montage->AnimNotifyTracks.Num() - 1));
+                }
+            }
+#endif
+            
             FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
             NotifyEvent.Notify = NewNotify;
             NotifyEvent.TriggerTimeOffset = Time;
