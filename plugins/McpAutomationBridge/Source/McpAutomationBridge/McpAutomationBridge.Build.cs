@@ -112,8 +112,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
                 "AudioEditor", "DataValidation", "NiagaraEditor",
-                // Phase 24: GAS, Audio, and missing module dependencies
-                "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
+                // Phase 24: GAS and Audio module dependencies
                 "AudioMixer"          // Required for FAudioEQEffect::ClampValues
             });
 
@@ -142,15 +141,15 @@ PublicDependencyModuleNames.AddRange(new string[]
             TryAddConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");
             TryAddConditionalModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
 
-            // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (conditional based on plugin availability)
-            // These modules may not be available in all UE versions or plugin configurations
-            TryAddConditionalModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
-            TryAddConditionalModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
-            TryAddConditionalModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
-            TryAddConditionalModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
-            TryAddConditionalModule(Target, EngineDir, "MassEntity", "MassEntity");
-            TryAddConditionalModule(Target, EngineDir, "MassSpawner", "MassSpawner");
-            TryAddConditionalModule(Target, EngineDir, "MassActors", "MassActors");
+            // Phase 16: AI Systems - Moved to McpAutomationBridgeAI module
+            // StateTree, SmartObjects, MassAI modules are now handled by the separate AI module
+            
+            // Force GAS and AI feature flags to 0 in base module - handlers are in optional modules
+            // This prevents __has_include from finding headers when module isn't linked
+            PublicDefinitions.Add("MCP_HAS_GAS=0");
+            PublicDefinitions.Add("MCP_HAS_STATE_TREE=0");
+            PublicDefinitions.Add("MCP_HAS_SMART_OBJECTS=0");
+            PublicDefinitions.Add("MCP_HAS_MASS_AI=0");
 
             // Phase 22: Voice Chat and Online Subsystem (conditional - for sessions handlers)
             // VoiceChat module is from the VoiceChat plugin

@@ -138,9 +138,34 @@
 // Conditional Includes (version-dependent)
 // =============================================================================
 
-// State Tree (UE 5.3+)
+// MCP_HAS_STATE_TREE, MCP_HAS_SMART_OBJECTS, MCP_HAS_MASS_AI are defined in Build.cs
+// If not defined (older builds), fall back to version checks
+#ifndef MCP_HAS_STATE_TREE
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
 #define MCP_HAS_STATE_TREE 1
+#else
+#define MCP_HAS_STATE_TREE 0
+#endif
+#endif
+
+#ifndef MCP_HAS_SMART_OBJECTS
+#if ENGINE_MAJOR_VERSION >= 5
+#define MCP_HAS_SMART_OBJECTS 1
+#else
+#define MCP_HAS_SMART_OBJECTS 0
+#endif
+#endif
+
+#ifndef MCP_HAS_MASS_AI
+#if ENGINE_MAJOR_VERSION >= 5
+#define MCP_HAS_MASS_AI 1
+#else
+#define MCP_HAS_MASS_AI 0
+#endif
+#endif
+
+// State Tree (UE 5.3+)
+#if MCP_HAS_STATE_TREE
 #if __has_include("StateTree.h")
 #include "StateTree.h"
 #include "StateTreeEditorData.h"
@@ -161,14 +186,12 @@
 #define MCP_STATE_TREE_COMPONENT_SCHEMA_AVAILABLE 0
 #endif
 #else
-#define MCP_HAS_STATE_TREE 0
 #define MCP_STATE_TREE_HEADERS_AVAILABLE 0
 #define MCP_STATE_TREE_COMPONENT_SCHEMA_AVAILABLE 0
 #endif
 
 // Smart Objects (UE 5.0+)
-#if ENGINE_MAJOR_VERSION >= 5
-#define MCP_HAS_SMART_OBJECTS 1
+#if MCP_HAS_SMART_OBJECTS
 #if __has_include("SmartObjectDefinition.h")
 #include "SmartObjectDefinition.h"
 #include "SmartObjectComponent.h"
@@ -179,13 +202,11 @@
 #define MCP_SMART_OBJECTS_HEADERS_AVAILABLE 0
 #endif
 #else
-#define MCP_HAS_SMART_OBJECTS 0
 #define MCP_SMART_OBJECTS_HEADERS_AVAILABLE 0
 #endif
 
 // Mass AI (UE 5.0+)
-#if ENGINE_MAJOR_VERSION >= 5
-#define MCP_HAS_MASS_AI 1
+#if MCP_HAS_MASS_AI
 #if __has_include("MassEntityConfigAsset.h")
 #include "MassEntityConfigAsset.h"
 #include "MassEntityTraitBase.h"
@@ -195,7 +216,6 @@
 #define MCP_MASS_AI_HEADERS_AVAILABLE 0
 #endif
 #else
-#define MCP_HAS_MASS_AI 0
 #define MCP_MASS_AI_HEADERS_AVAILABLE 0
 #endif
 

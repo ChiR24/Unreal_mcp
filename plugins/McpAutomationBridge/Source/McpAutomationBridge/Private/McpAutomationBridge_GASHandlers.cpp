@@ -97,8 +97,17 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGASHandlers, Log, All);
 #endif
 
 // GAS module check
+// MCP_HAS_GAS is defined in Build.cs based on module availability
+// If not defined (older builds), fall back to __has_include detection
+#ifndef MCP_HAS_GAS
 #if __has_include("AbilitySystemComponent.h")
 #define MCP_HAS_GAS 1
+#else
+#define MCP_HAS_GAS 0
+#endif
+#endif
+
+#if MCP_HAS_GAS
 #include "AbilitySystemComponent.h"
 #include "AttributeSet.h"
 #include "GameplayEffect.h"
@@ -107,8 +116,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpGASHandlers, Log, All);
 #include "GameplayCueNotify_Static.h"
 #include "GameplayCueNotify_Actor.h"
 #include "GameplayEffectExecutionCalculation.h"
-#else
-#define MCP_HAS_GAS 0
 #endif
 
 // Use consolidated JSON helpers from McpAutomationBridgeHelpers.h
