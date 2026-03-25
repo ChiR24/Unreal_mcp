@@ -37,12 +37,16 @@ public class McpAutomationBridgeGAS : ModuleRules
 
         if (bHasGAS)
         {
-            PublicDependencyModuleNames.Add("GameplayAbilities");
+            // Use PrivateDependency to avoid forcing hard public imports on dependents
+            PrivateDependencyModuleNames.Add("GameplayAbilities");
             PublicDefinitions.Add("MCP_GAS_MODULE_AVAILABLE=1");
+            // Set MCP_HAS_GAS=1 so base module handlers compile with GAS support
+            PublicDefinitions.Add("MCP_HAS_GAS=1");
         }
         else
         {
             PublicDefinitions.Add("MCP_GAS_MODULE_AVAILABLE=0");
+            PublicDefinitions.Add("MCP_HAS_GAS=0");
         }
 
         if (Target.bBuildEditor)

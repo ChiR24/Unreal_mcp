@@ -68,7 +68,9 @@ void FMcpAutomationBridgeAIModule::StartupModule()
         {
             bAnyPluginEnabled = true;
             FModuleManager::Get().LoadModule(TEXT("MassEntity"));
+#if MCP_MASSSPAWNER_MODULE_AVAILABLE
             FModuleManager::Get().LoadModule(TEXT("MassSpawner"));
+#endif
         }
 #endif
 

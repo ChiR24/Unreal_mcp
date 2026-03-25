@@ -32,6 +32,7 @@ public class McpAutomationBridgeAI : ModuleRules
         });
 
         // Conditional AI module dependencies
+        // Use PrivateDependencyModuleNames to avoid forcing hard public imports on dependents
         string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
 
         // StateTree support
@@ -40,12 +41,14 @@ public class McpAutomationBridgeAI : ModuleRules
                              Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "StateTree"));
         if (bHasStateTree)
         {
-            PublicDependencyModuleNames.Add("StateTreeModule");
+            PrivateDependencyModuleNames.Add("StateTreeModule");
             PublicDefinitions.Add("MCP_STATETREE_MODULE_AVAILABLE=1");
+            PublicDefinitions.Add("MCP_HAS_STATE_TREE=1");
         }
         else
         {
             PublicDefinitions.Add("MCP_STATETREE_MODULE_AVAILABLE=0");
+            PublicDefinitions.Add("MCP_HAS_STATE_TREE=0");
         }
 
         // SmartObjects support
@@ -54,12 +57,14 @@ public class McpAutomationBridgeAI : ModuleRules
                                  Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "SmartObjects"));
         if (bHasSmartObjects)
         {
-            PublicDependencyModuleNames.Add("SmartObjectsModule");
+            PrivateDependencyModuleNames.Add("SmartObjectsModule");
             PublicDefinitions.Add("MCP_SMARTOBJECTS_MODULE_AVAILABLE=1");
+            PublicDefinitions.Add("MCP_HAS_SMART_OBJECTS=1");
         }
         else
         {
             PublicDefinitions.Add("MCP_SMARTOBJECTS_MODULE_AVAILABLE=0");
+            PublicDefinitions.Add("MCP_HAS_SMART_OBJECTS=0");
         }
 
         // MassEntity support
@@ -68,7 +73,7 @@ public class McpAutomationBridgeAI : ModuleRules
                               Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "MassGameplay", "Source", "MassEntity"));
         if (bHasMassEntity)
         {
-            PublicDependencyModuleNames.Add("MassEntity");
+            PrivateDependencyModuleNames.Add("MassEntity");
             PublicDefinitions.Add("MCP_MASSENTITY_MODULE_AVAILABLE=1");
         }
         else
@@ -81,12 +86,22 @@ public class McpAutomationBridgeAI : ModuleRules
                                 Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "MassGameplay", "Source", "MassSpawner"));
         if (bHasMassSpawner)
         {
-            PublicDependencyModuleNames.Add("MassSpawner");
+            PrivateDependencyModuleNames.Add("MassSpawner");
             PublicDefinitions.Add("MCP_MASSSPAWNER_MODULE_AVAILABLE=1");
         }
         else
         {
             PublicDefinitions.Add("MCP_MASSSPAWNER_MODULE_AVAILABLE=0");
+        }
+
+        // Set MCP_HAS_MASS_AI if any Mass module is available
+        if (bHasMassEntity || bHasMassSpawner)
+        {
+            PublicDefinitions.Add("MCP_HAS_MASS_AI=1");
+        }
+        else
+        {
+            PublicDefinitions.Add("MCP_HAS_MASS_AI=0");
         }
 
         if (Target.bBuildEditor)
@@ -109,19 +124,19 @@ public class McpAutomationBridgeAI : ModuleRules
                 "GameplayDebugger"
             });
 
-            // Editor-specific AI modules
+            // Editor-specific AI modules (use PrivateDependency to avoid hard public imports)
             bool bHasStateTreeEditor = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "StateTreeEditorModule")) ||
                                        Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "StateTree", "Source", "StateTreeEditorModule"));
             if (bHasStateTreeEditor)
             {
-                PublicDependencyModuleNames.Add("StateTreeEditorModule");
+                PrivateDependencyModuleNames.Add("StateTreeEditorModule");
             }
 
             bool bHasSmartObjectsEditor = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SmartObjectsEditorModule")) ||
                                           Directory.Exists(Path.Combine(EngineDir, "Plugins", "Runtime", "SmartObjects", "Source", "SmartObjectsEditorModule"));
             if (bHasSmartObjectsEditor)
             {
-                PublicDependencyModuleNames.Add("SmartObjectsEditorModule");
+                PrivateDependencyModuleNames.Add("SmartObjectsEditorModule");
             }
         }
 
