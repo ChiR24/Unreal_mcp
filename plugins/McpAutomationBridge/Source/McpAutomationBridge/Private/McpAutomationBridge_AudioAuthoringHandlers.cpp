@@ -1692,6 +1692,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
         
+        // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
+        if (Name.Len() > 100)
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
+        }
+        
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1756,6 +1762,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
+        }
+        
+        // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
+        if (Name.Len() > 100)
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
         }
         
         // Create package and asset directly to avoid UI dialogs
@@ -2231,7 +2243,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
     {
         bool bSuccess = Response->HasField(TEXT("success")) && GetJsonBoolField(Response, TEXT("success"));
         FString Message = Response->HasField(TEXT("message")) ? GetJsonStringField(Response, TEXT("message")) : TEXT("Operation complete");
-        FString ErrorCode = Response->HasField(TEXT("errorCode")) ? GetJsonStringField(Response, TEXT("errorCode")) : TEXT("");
+        // BuildErrorResponse uses "code" field, not "errorCode"
+        FString ErrorCode = Response->HasField(TEXT("code")) ? GetJsonStringField(Response, TEXT("code")) : TEXT("");
         
         if (bSuccess)
         {
@@ -2239,7 +2252,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
         }
         else
         {
-            FString ErrorMsg = Response->HasField(TEXT("error")) ? GetJsonStringField(Response, TEXT("error")) : TEXT("Unknown error");
+            // BuildErrorResponse sets "error" field with the message
+            FString ErrorMsg = Response->HasField(TEXT("error")) ? GetJsonStringField(Response, TEXT("error")) : Message.Len() > 0 ? Message : TEXT("Unknown error");
             SendAutomationError(RequestingSocket, RequestId, ErrorMsg, ErrorCode);
         }
     }

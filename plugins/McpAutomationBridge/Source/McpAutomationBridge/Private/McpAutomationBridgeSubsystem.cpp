@@ -1103,6 +1103,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return HandleAudioAction(R, A, P, S);
                   });
 
+  // Audio authoring - uses subAction field (different from manage_audio which uses action)
+  RegisterHandler(TEXT("manage_audio_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleManageAudioAuthoringAction(R, A, P, S);
+                  });
+
   RegisterHandler(TEXT("manage_lighting"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,

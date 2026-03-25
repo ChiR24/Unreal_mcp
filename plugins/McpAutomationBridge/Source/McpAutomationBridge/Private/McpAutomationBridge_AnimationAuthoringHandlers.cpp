@@ -1307,24 +1307,27 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             NotifyUClass = UAnimNotify::StaticClass();
         }
         
+        // Ensure notify track exists BEFORE creating the notify
+        // This prevents the ensure/debugbreak in RefreshCacheData() when validating notify track indices
+        // The engine's RefreshCacheData() uses WITH_EDITOR, so we use the same guard here
+#if WITH_EDITOR
+        if (TrackIndex >= 0)
+        {
+            // Ensure we have enough tracks for the requested TrackIndex
+            // Use the engine's exact approach: FAnimNotifyTrack(Name, Color)
+            while (!Montage->AnimNotifyTracks.IsValidIndex(TrackIndex))
+            {
+                const int32 NewTrackIndex = Montage->AnimNotifyTracks.Add(
+                    FAnimNotifyTrack(*FString::FromInt(Montage->AnimNotifyTracks.Num() + 1), FLinearColor::White)
+                );
+            }
+        }
+#endif
+        
         // Create notify
         UAnimNotify* NewNotify = NewObject<UAnimNotify>(Montage, NotifyUClass);
         if (NewNotify)
         {
-#if WITH_EDITORONLY_DATA
-            // Ensure notify track exists before setting TrackIndex
-            // TrackIndex of -1 (INDEX_NONE) means "All Animates" and doesn't require a track
-            if (TrackIndex >= 0 && TrackIndex >= Montage->AnimNotifyTracks.Num())
-            {
-                // Add missing tracks up to and including the requested index
-                while (Montage->AnimNotifyTracks.Num() <= TrackIndex)
-                {
-                    FAnimNotifyTrack& NewTrack = Montage->AnimNotifyTracks.AddDefaulted_GetRef();
-                    NewTrack.TrackName = FName(*FString::Printf(TEXT("Track%d"), Montage->AnimNotifyTracks.Num() - 1));
-                }
-            }
-#endif
-            
             FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
             NotifyEvent.Notify = NewNotify;
             NotifyEvent.TriggerTimeOffset = Time;
@@ -1856,6 +1859,34 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         if (!Skeleton)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
+        }
+        
+        // Check if an asset already exists at the target path to prevent assertion failure in Kismet2.cpp
+        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
+        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        {
+            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            if (ExistingAsset)
+            {
+                if (Cast<UAnimBlueprint>(ExistingAsset))
+                {
+                    // Same type - return success with existing asset info
+                    Response->SetStringField(TEXT("assetPath"), ObjectPath);
+                    Response->SetBoolField(TEXT("existingAsset"), true);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' already exists - reusing existing asset"), *Name));
+                    return Response;
+                }
+                else
+                {
+                    // Different type - return error to prevent assertion crash
+                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                    ANIM_ERROR_RESPONSE(
+                        FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s'"), 
+                            *ObjectPath, *ExistingClassName),
+                        TEXT("ASSET_TYPE_MISMATCH")
+                    );
+                }
+            }
         }
         
         // Create package and asset directly to avoid UI dialogs
