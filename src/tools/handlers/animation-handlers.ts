@@ -2,7 +2,9 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, AnimationArgs, ComponentInfo, AutomationResponse } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { normalizeArgs } from './argument-helper.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
+import { sanitizePath } from '../../utils/path-security.js';
 
 /** Response from getComponents */
 interface ComponentsResponse {
@@ -35,7 +37,19 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
     const name = argsTyped.name ?? argsTyped.blueprintName;
     const skeletonPath = argsTyped.skeletonPath ?? argsTyped.targetSkeleton;
     let meshPath = argsTyped.meshPath;
-    const savePath = argsTyped.savePath ?? argsTyped.path ?? '/Game/Animations';
+    
+    // Validate and sanitize savePath
+    let savePath: string;
+    try {
+      const rawPath = String(argsTyped.savePath ?? argsTyped.path ?? '/Game/Animations');
+      savePath = sanitizePath(rawPath);
+    } catch (e) {
+      return cleanObject({
+        success: false,
+        error: 'SECURITY_VIOLATION',
+        message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+      });
+    }
 
     // Auto-resolve skeleton/mesh from actorName if not provided
     if (!skeletonPath && argsTyped.actorName) {
@@ -161,11 +175,25 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
 
   switch (animAction) {
     case 'create_blend_space': {
+      // Validate and sanitize paths
+      let savePath: string;
+      try {
+        const rawPath = String(mutableArgs.path || mutableArgs.savePath || '/Game/Animations');
+        savePath = sanitizePath(rawPath);
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
       // Use executeAutomationRequest to pass all params including flattened axis params
+      // Note: C++ handler reads 'action' field, not 'subAction'
       const payload = {
+        action: 'create_blend_space',
         name: mutableArgs.name,
-        path: mutableArgs.path || mutableArgs.savePath,
-        savePath: mutableArgs.savePath || mutableArgs.path,
+        path: savePath,
+        savePath,
         skeletonPath: mutableArgs.skeletonPath,
         horizontalAxis: mutableArgs.horizontalAxis,
         verticalAxis: mutableArgs.verticalAxis,
@@ -173,44 +201,160 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         minX: mutableArgs.minX,
         maxX: mutableArgs.maxX,
         minY: mutableArgs.minY,
-        maxY: mutableArgs.maxY,
-        subAction: 'create_blend_space'
+        maxY: mutableArgs.maxY
       };
       const res = await executeAutomationRequest(tools, 'animation_physics', payload, 'Automation bridge not available for blend space creation');
       return cleanObject(res) as Record<string, unknown>;
     }
-    case 'create_state_machine':
+    case 'create_state_machine': {
+      // Validate blueprint path
+      let blueprintPath: string | undefined;
+      try {
+        const rawPath = mutableArgs.blueprintPath || mutableArgs.path || mutableArgs.savePath;
+        if (rawPath && typeof rawPath === 'string') {
+          blueprintPath = sanitizePath(rawPath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
+      // Note: C++ handler reads 'action' field, not 'subAction'
       return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.ANIMATION_PHYSICS, {
-        subAction: 'add_state_machine',
+        action: 'create_state_machine',
         machineName: mutableArgs.machineName || mutableArgs.name,
         states: mutableArgs.states as unknown[],
         transitions: mutableArgs.transitions as unknown[],
-        blueprintPath: mutableArgs.blueprintPath || mutableArgs.path || mutableArgs.savePath
+        blueprintPath
       })) as Record<string, unknown>;
-    case 'setup_ik':
+    }
+    case 'setup_ik': {
+      // Validate and sanitize paths
+      let savePath: string;
+      try {
+        const rawPath = String(mutableArgs.savePath || mutableArgs.path || '/Game/Animations');
+        savePath = sanitizePath(rawPath);
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
+      // Pass ALL required parameters to C++ handler
       return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
         action: 'setup_ik',
+        name: mutableArgs.name,
+        savePath,
+        skeletonPath: mutableArgs.skeletonPath,
         actorName: mutableArgs.actorName,
         ikBones: mutableArgs.ikBones as unknown[],
         enableFootPlacement: mutableArgs.enableFootPlacement
       })) as Record<string, unknown>;
+    }
     case 'create_procedural_anim': {
-      // TODO: Requires C++ implementation for procedural animation system creation
-      return cleanObject({
-        success: false,
-        isError: true,
-        error: 'NOT_IMPLEMENTED',
-        message: 'create_procedural_anim requires engine-side implementation. C++ handler needed.'
-      });
+      const params = normalizeArgs(args, [
+        { key: 'name', required: true },
+        { key: 'path', aliases: ['directory'], default: '/Game/Animations' },
+        { key: 'skeletonPath', required: true },
+        { key: 'boneTracks', required: true },
+        { key: 'numFrames', default: 30 },
+        { key: 'frameRate', default: 30 },
+        { key: 'save', default: true }
+      ]);
+
+      let savePath: string;
+      let skeletonPath: string;
+      try {
+        savePath = sanitizePath(String(params.path || '/Game/Animations'));
+        skeletonPath = sanitizePath(String(params.skeletonPath));
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
+
+      if (!Array.isArray(params.boneTracks)) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'boneTracks must be an array of bone track definitions'
+        });
+      }
+
+      return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
+        action: 'create_procedural_anim',
+        subAction: 'create_procedural_anim',
+        name: params.name,
+        path: savePath,
+        savePath,
+        skeletonPath,
+        boneTracks: params.boneTracks,
+        numFrames: params.numFrames,
+        frameRate: params.frameRate,
+        save: params.save
+      })) as Record<string, unknown>;
     }
     case 'create_blend_tree': {
-      // TODO: Requires C++ implementation for blend tree creation
-      return cleanObject({
-        success: false,
-        isError: true,
-        error: 'NOT_IMPLEMENTED',
-        message: 'create_blend_tree requires engine-side implementation. C++ handler needed.'
-      });
+      // Validate blueprint path
+      let blueprintPath: string | undefined;
+      try {
+        const rawPath = mutableArgs.blueprintPath || mutableArgs.path || mutableArgs.savePath;
+        if (rawPath && typeof rawPath === 'string') {
+          blueprintPath = sanitizePath(rawPath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
+
+      if (!blueprintPath) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'blueprintPath is required for create_blend_tree'
+        });
+      }
+
+      // Validate and sanitize animation paths in children array
+      const sanitizedChildren: unknown[] = [];
+      if (Array.isArray(mutableArgs.children)) {
+        for (const child of mutableArgs.children as Record<string, unknown>[]) {
+          if (child && typeof child === 'object' && child.animationPath) {
+            try {
+              const sanitizedPath = sanitizePath(String(child.animationPath));
+              sanitizedChildren.push({ ...child, animationPath: sanitizedPath });
+            } catch {
+              return cleanObject({
+                success: false,
+                error: 'SECURITY_VIOLATION',
+                message: `Invalid animationPath in children: path traversal or illegal characters detected`
+              });
+            }
+          } else {
+            sanitizedChildren.push(child);
+          }
+        }
+      }
+
+      // Build payload for C++ handler
+      const payload: Record<string, unknown> = {
+        action: 'create_blend_tree',
+        blueprintPath,
+        treeName: mutableArgs.treeName || mutableArgs.name || 'BlendTree',
+        blendParameters: mutableArgs.blendParameters as unknown[],
+        children: sanitizedChildren.length > 0 ? sanitizedChildren : mutableArgs.children as unknown[],
+        save: mutableArgs.save !== false
+      };
+
+      return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.ANIMATION_PHYSICS, payload)) as Record<string, unknown>;
     }
     case 'cleanup':
       return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
@@ -218,6 +362,18 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
         artifacts: mutableArgs.artifacts as unknown[]
       })) as Record<string, unknown>;
     case 'create_animation_asset': {
+      // Validate and sanitize path
+      let savePath: string;
+      try {
+        const rawPath = String(mutableArgs.path || mutableArgs.savePath || '/Game/Animations');
+        savePath = sanitizePath(rawPath);
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
       let assetType = mutableArgs.assetType;
       if (!assetType && mutableArgs.name) {
         if (mutableArgs.name.toLowerCase().endsWith('montage') || mutableArgs.name.toLowerCase().includes('montage')) {
@@ -227,39 +383,110 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
       return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
         action: 'create_animation_asset',
         name: mutableArgs.name,
-        savePath: mutableArgs.path || mutableArgs.savePath,
+        savePath,
         skeletonPath: mutableArgs.skeletonPath,
         assetType
       })) as Record<string, unknown>;
     }
-    case 'add_notify':
+    case 'add_notify': {
+      // Validate asset path
+      let assetPath: string | undefined;
+      try {
+        const rawPath = mutableArgs.animationPath || mutableArgs.assetPath;
+        if (rawPath && typeof rawPath === 'string') {
+          assetPath = sanitizePath(rawPath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid path: path traversal or illegal characters detected'
+        });
+      }
       return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
         action: 'add_notify',
-        assetPath: mutableArgs.animationPath || mutableArgs.assetPath,
+        assetPath,
         notifyName: mutableArgs.notifyName || mutableArgs.name,
         time: mutableArgs.time ?? mutableArgs.startTime
       })) as Record<string, unknown>;
-    case 'configure_vehicle':
-      // configureVehicle uses console commands via automation bridge
+    }
+    case 'configure_vehicle': {
+      const params = normalizeArgs(args, [
+        { key: 'actorName', required: true },
+        { key: 'vehicleType', default: 'WheeledVehicle4W' }, // WheeledVehicle4W, WheeledVehicle, Tank
+        { key: 'wheels' }, // Array of {boneName, offset, radius, width, friction}
+        { key: 'engine' }, // {maxRPM, maxTorque, gears}
+        { key: 'transmission' }, // {gearRatios, finalDrive}
+        { key: 'mass', default: 1500 },
+        { key: 'dragCoefficient', default: 0.3 }
+      ]);
+
       return cleanObject(await executeAutomationRequest(tools, 'animation_physics', {
         action: 'configure_vehicle',
-        vehicleName: mutableArgs.vehicleName,
-        vehicleType: mutableArgs.vehicleType,
-        wheels: mutableArgs.wheels as unknown[],
-        engine: mutableArgs.engine,
-        transmission: mutableArgs.transmission
+        subAction: 'configure_vehicle',
+        actorName: params.actorName,
+        vehicleType: params.vehicleType,
+        wheels: params.wheels,
+        engine: params.engine,
+        transmission: params.transmission,
+        mass: params.mass,
+        dragCoefficient: params.dragCoefficient
       })) as Record<string, unknown>;
+    }
     case 'setup_physics_simulation': {
+      // Validate and sanitize paths
+      let savePath: string | undefined;
+      try {
+        const rawSavePath = mutableArgs.savePath;
+        if (rawSavePath && typeof rawSavePath === 'string') {
+          savePath = sanitizePath(rawSavePath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid savePath: path traversal or illegal characters detected'
+        });
+      }
+
+      let meshPath: string | undefined;
+      try {
+        const rawMeshPath = mutableArgs.meshPath;
+        if (rawMeshPath && typeof rawMeshPath === 'string') {
+          meshPath = sanitizePath(rawMeshPath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid meshPath: path traversal or illegal characters detected'
+        });
+      }
+
+      let skeletonPath: string | undefined;
+      try {
+        const rawSkeletonPath = mutableArgs.skeletonPath;
+        if (rawSkeletonPath && typeof rawSkeletonPath === 'string') {
+          skeletonPath = sanitizePath(rawSkeletonPath);
+        }
+      } catch (e) {
+        return cleanObject({
+          success: false,
+          error: 'SECURITY_VIOLATION',
+          message: e instanceof Error ? e.message : 'Invalid skeletonPath: path traversal or illegal characters detected'
+        });
+      }
+
       // Support both meshPath/skeletonPath and actorName parameters
       const payload: Record<string, unknown> = {
-        meshPath: mutableArgs.meshPath,
-        skeletonPath: mutableArgs.skeletonPath,
+        meshPath,
+        skeletonPath,
         physicsAssetName: mutableArgs.physicsAssetName,
-        savePath: mutableArgs.savePath
+        savePath
       };
 
       // If actorName is provided but no meshPath, resolve the skeletal mesh from the actor
-      if (mutableArgs.actorName && !mutableArgs.meshPath && !mutableArgs.skeletonPath) {
+      if (mutableArgs.actorName && !meshPath && !skeletonPath) {
         payload.actorName = mutableArgs.actorName;
       }
 

@@ -1394,6 +1394,7 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
   #include "ControlRigBlueprintFactory.h"
 #endif
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "EditorAssetLibrary.h"  // For DoesAssetExist, LoadAsset in crash prevention checks
 #endif
 
 #if MCP_HAS_CONTROLRIG_FACTORY
@@ -1441,6 +1442,62 @@ UBlueprint *UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 
   // Build full package name
   FString FullPackageName = NormalizedPath / AssetName;
+
+  // ============================================================================
+  // CRASH PREVENTION: Pre-check for existing assets
+  // ============================================================================
+  // UE crashes when:
+  // 1. Creating a blueprint with a name that already exists (assertion)
+  // 2. Creating an object where a different class exists at that path (fatal)
+  // We must check BEFORE calling CreatePackage/CreateBlueprint.
+
+  // Check 1: Does a saved asset exist at this path?
+  FString FullObjectPath = FullPackageName + TEXT(".") + AssetName;
+  if (UEditorAssetLibrary::DoesAssetExist(FullObjectPath)) {
+    UObject *ExistingAsset = UEditorAssetLibrary::LoadAsset(FullObjectPath);
+    if (ExistingAsset) {
+      // Check if it's a ControlRigBlueprint - safe to reuse
+      if (ExistingAsset->IsA<UControlRigBlueprint>()) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Control Rig Blueprint already exists, reusing: %s"),
+               *FullObjectPath);
+        // Return existing asset - operation is idempotent
+        return Cast<UBlueprint>(ExistingAsset);
+      } else {
+        // Different type at same path - would cause fatal crash
+        OutError = FString::Printf(
+            TEXT("Asset exists at path but is not a ControlRigBlueprint (is %s). "
+                 "Cannot create ControlRigBlueprint at this path."),
+            *ExistingAsset->GetClass()->GetName());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"),
+               *OutError);
+        return nullptr;
+      }
+    }
+  }
+
+  // Check 2: Is there an in-memory object at this path? (unsaved blueprint)
+  // This catches objects that exist in memory but aren't saved to disk yet
+  UPackage *ExistingPackage = FindPackage(nullptr, *FullPackageName);
+  if (ExistingPackage) {
+    UObject *ExistingObject = FindObject<UObject>(ExistingPackage, *AssetName);
+    if (ExistingObject) {
+      if (ExistingObject->IsA<UControlRigBlueprint>()) {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+               TEXT("Control Rig Blueprint already exists in memory, reusing: %s"),
+               *FullObjectPath);
+        return Cast<UBlueprint>(ExistingObject);
+      } else {
+        OutError = FString::Printf(
+            TEXT("In-memory object exists at path but is not a ControlRigBlueprint (is %s). "
+                 "Cannot create ControlRigBlueprint at this path."),
+            *ExistingObject->GetClass()->GetName());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"),
+               *OutError);
+        return nullptr;
+      }
+    }
+  }
 
   // Create the package
   UPackage *Package = CreatePackage(*FullPackageName);

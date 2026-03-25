@@ -455,6 +455,36 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
         
+        // Check if an asset already exists at the target path to prevent UObject class collision crash
+        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
+        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        {
+            // Check if existing asset is the same type
+            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            if (ExistingAsset)
+            {
+                if (ExistingAsset->IsA<UAnimSequence>())
+                {
+                    // Same type - return success with existing asset info
+                    Response->SetStringField(TEXT("assetPath"), ObjectPath);
+                    Response->SetBoolField(TEXT("existingAsset"), true);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' already exists - reusing existing asset"), *Name));
+                    McpHandlerUtils::AddVerification(Response, ExistingAsset);
+                    return Response;
+                }
+                else
+                {
+                    // Different type - return error to prevent crash
+                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                    ANIM_ERROR_RESPONSE(
+                        FString::Printf(TEXT("Cannot create AnimSequence: asset '%s' already exists as type '%s'"), 
+                            *ObjectPath, *ExistingClassName),
+                        TEXT("ASSET_TYPE_MISMATCH")
+                    );
+                }
+            }
+        }
+        
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -492,6 +522,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetBoolField(TEXT("existingAsset"), false);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' created"), *Name));
         McpHandlerUtils::AddVerification(Response, NewSequence);
         return Response;
@@ -559,6 +590,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
         {
             Controller.AddBoneCurve(BoneFName);
+
+            // Verify the bone curve was actually added
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+            const int32 AddedTrackIndex = Controller.GetModel()->GetBoneTrackIndexByName(BoneFName);
+#else
+            const int32 AddedTrackIndex = Controller.GetModel()->GetBoneTrackIndex(BoneFName);
+#endif
+            if (AddedTrackIndex == INDEX_NONE)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to add bone track '%s' - bone may not exist in skeleton"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
         }
 #elif ENGINE_MAJOR_VERSION >= 5
         // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
@@ -574,6 +619,16 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FRawAnimSequenceTrack NewTrack;
             Sequence->AddNewRawTrack(BoneFName, &NewTrack);
             PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+            // Verify the bone track was actually added
+            const FBoneAnimationTrack* AddedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+            if (AddedTrack == nullptr)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to add bone track '%s' - bone may not exist in skeleton"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
         }
 #else
         // UE4 approach
@@ -628,6 +683,20 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         {
             Controller.AddBoneCurve(BoneFName);
         }
+
+        // Verify bone track exists before setting keys
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+        const int32 TrackIndex = Controller.GetModel()->GetBoneTrackIndexByName(BoneFName);
+#else
+        const int32 TrackIndex = Controller.GetModel()->GetBoneTrackIndex(BoneFName);
+#endif
+        if (TrackIndex == INDEX_NONE)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
+                TEXT("BONE_TRACK_NOT_FOUND")
+            );
+        }
         
         // Build transform key
         FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
@@ -653,6 +722,16 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FRawAnimSequenceTrack NewTrack;
             Sequence->AddNewRawTrack(BoneFName, &NewTrack);
             PRAGMA_ENABLE_DEPRECATION_WARNINGS
+        }
+
+        // Verify bone track exists before setting keys
+        const FBoneAnimationTrack* VerifiedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
+        if (VerifiedTrack == nullptr)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
+                TEXT("BONE_TRACK_NOT_FOUND")
+            );
         }
         
         FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;

@@ -207,13 +207,19 @@ async function createReverbZone(tools: ITools, args: AudioArgs): Promise<Record<
 }
 
 /**
- * Enable audio analysis
+ * Enable audio analysis - Toggle real-time audio analysis
  */
 async function enableAudioAnalysis(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  // enable is required
+  const enable = toBoolean(args.enable ?? args.enabled);
+  if (enable === undefined) {
+    throw new Error('Missing required parameter: enable');
+  }
+
   const payload = {
-    enabled: toBoolean(args.enabled),
-    fftSize: toNumber(args.fftSize),
-    outputType: toString(args.outputType)
+    enable,
+    analysisType: toString(args.analysisType) || 'FFT', // FFT, Amplitude, Frequency
+    windowSize: toNumber(args.windowSize) ?? 1024,
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.ENABLE_AUDIO_ANALYSIS, payload)) as Record<string, unknown>;
@@ -236,25 +242,30 @@ async function fadeSound(tools: ITools, args: AudioArgs): Promise<Record<string,
 }
 
 /**
- * Set doppler effect
+ * Set doppler effect - Configure doppler effect for sounds
  */
 async function setDopplerEffect(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
   const payload = {
-    enabled: toBoolean(args.enabled),
-    scale: toNumber(args.scale) ?? 1.0
+    soundPath: toString(args.soundPath), // Optional - applies to attenuation settings
+    dopplerIntensity: toNumber(args.dopplerIntensity) ?? 1.0,
+    velocityScale: toNumber(args.velocityScale) ?? 1.0,
+    save: toBoolean(args.save) ?? true,
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.SET_DOPPLER_EFFECT, payload)) as Record<string, unknown>;
 }
 
 /**
- * Set audio occlusion
+ * Set audio occlusion - Configure audio occlusion settings
  */
 async function setAudioOcclusion(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
   const payload = {
-    enabled: toBoolean(args.enabled),
-    lowPassFilterFrequency: toNumber(args.lowPassFilterFrequency),
-    volumeAttenuation: toNumber(args.volumeAttenuation)
+    soundPath: toString(args.soundPath),
+    enable: toBoolean(args.enable) ?? true,
+    occlusionVolumeScale: toNumber(args.occlusionVolumeScale) ?? 0.5,
+    occlusionFilterScale: toNumber(args.occlusionFilterScale) ?? 0.5,
+    occlusionInterpolationTime: toNumber(args.occlusionInterpolationTime) ?? 0.1,
+    save: toBoolean(args.save) ?? true,
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.SET_AUDIO_OCCLUSION, payload)) as Record<string, unknown>;
