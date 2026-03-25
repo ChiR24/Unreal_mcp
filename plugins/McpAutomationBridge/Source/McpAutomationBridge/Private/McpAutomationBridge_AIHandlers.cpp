@@ -2433,36 +2433,111 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     {
         TSharedPtr<FJsonObject> AIInfo = McpHandlerUtils::CreateResultObject();
 
-        // Check for controller
+        // --- blueprintPath: auto-discover AI setup from Pawn/Character/AIController blueprint ---
+        FString BlueprintPath = GetStringFieldAI(Payload, TEXT("blueprintPath"));
+        if (!BlueprintPath.IsEmpty())
+        {
+            BlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+            if (BlueprintPath.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("Invalid blueprintPath: must be a valid project-relative path"),
+                    TEXT("INVALID_PATH"));
+                return true;
+            }
+            UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+            if (BP && BP->GeneratedClass)
+            {
+                UObject* CDO = BP->GeneratedClass->GetDefaultObject();
+
+                // Pawn/Character: extract AIControllerClass
+                if (APawn* PawnCDO = Cast<APawn>(CDO))
+                {
+                    if (PawnCDO->AIControllerClass)
+                    {
+                        AIInfo->SetStringField(TEXT("controllerClass"),
+                            PawnCDO->AIControllerClass->GetName());
+                    }
+                }
+                // AIController: report directly
+                else if (Cast<AAIController>(CDO))
+                {
+                    AIInfo->SetStringField(TEXT("controllerClass"),
+                        BP->GeneratedClass->GetName());
+                }
+            }
+        }
+
+        // --- controllerPath: explicit controller blueprint (overrides blueprintPath discovery) ---
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
         if (!ControllerPath.IsEmpty())
         {
             UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
             if (Controller)
             {
-                AIInfo->SetStringField(TEXT("controllerClass"), Controller->GeneratedClass ? Controller->GeneratedClass->GetName() : TEXT("Unknown"));
+                AIInfo->SetStringField(TEXT("controllerClass"),
+                    Controller->GeneratedClass ? Controller->GeneratedClass->GetName() : TEXT("Unknown"));
             }
         }
 
-        // Check for behavior tree
+        // --- behaviorTreePath ---
         FString BTPath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
         if (!BTPath.IsEmpty())
         {
             UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
             if (BT)
             {
-                AIInfo->SetStringField(TEXT("behaviorTreeName"), BT->GetName());
+                AIInfo->SetStringField(TEXT("assignedBehaviorTree"), BT->GetName());
                 AIInfo->SetBoolField(TEXT("hasRootNode"), BT->RootNode != nullptr);
+
+                // Report associated blackboard from BT asset (only if
+                // blackboardPath was not explicitly provided, to avoid
+                // silently overwriting an explicit value)
+                FString ExplicitBBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
+                if (BT->BlackboardAsset && ExplicitBBPath.IsEmpty())
+                {
+                    AIInfo->SetStringField(TEXT("assignedBlackboard"),
+                        BT->BlackboardAsset->GetName());
+                }
+
+                // Count BT nodes (composites + tasks + decorators + services)
+                if (BT->RootNode)
+                {
+                    int32 NodeCount = 0;
+                    TArray<UBTCompositeNode*> Stack;
+                    Stack.Add(BT->RootNode);
+                    while (Stack.Num() > 0)
+                    {
+                        UBTCompositeNode* Current = Stack.Pop();
+                        NodeCount++;
+                        NodeCount += Current->Services.Num();
+                        for (const FBTCompositeChild& Child : Current->Children)
+                        {
+                            NodeCount += Child.Decorators.Num();
+                            if (Child.ChildComposite)
+                            {
+                                Stack.Add(Child.ChildComposite);
+                            }
+                            if (Child.ChildTask)
+                            {
+                                NodeCount++;
+                                NodeCount += Child.ChildTask->Services.Num();
+                            }
+                        }
+                    }
+                    AIInfo->SetNumberField(TEXT("btNodeCount"), NodeCount);
+                }
             }
         }
 
-        // Check for blackboard
+        // --- blackboardPath ---
         FString BBPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
         if (!BBPath.IsEmpty())
         {
             UBlackboardData* BB = LoadObject<UBlackboardData>(nullptr, *BBPath);
             if (BB)
             {
+                AIInfo->SetStringField(TEXT("assignedBlackboard"), BB->GetName());
                 AIInfo->SetNumberField(TEXT("keyCount"), BB->Keys.Num());
                 TArray<TSharedPtr<FJsonValue>> KeysArray;
                 for (const FBlackboardEntry& Entry : BB->Keys)
@@ -2473,11 +2548,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                     KeyObj->SetBoolField(TEXT("instanceSynced"), Entry.bInstanceSynced);
                     KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
                 }
-                AIInfo->SetArrayField(TEXT("keys"), KeysArray);
+                AIInfo->SetArrayField(TEXT("blackboardKeys"), KeysArray);
             }
         }
 
-        // Check for EQS query
+        // --- queryPath ---
         FString QueryPath = GetStringFieldAI(Payload, TEXT("queryPath"));
         if (!QueryPath.IsEmpty())
         {

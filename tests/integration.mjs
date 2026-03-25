@@ -75,6 +75,13 @@ const testCases = [
   { scenario: 'Splines: Get specific spline info', toolName: 'manage_splines', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found' },
+  // search_assets: searchText filtering (fix for Issue #233)
+  { scenario: 'Asset: search by text (exact name)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'BP_IntegrationTest' }, expected: 'success' },
+  { scenario: 'Asset: search by text (partial, case-insensitive)', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'integrationtest' }, expected: 'success' },
+  { scenario: 'Asset: search by text + class filter', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'IntegrationTest', classNames: ['Blueprint'] }, expected: 'success' },
+  { scenario: 'Asset: search by text + path filter', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'IntegrationTest', packagePaths: ['/Game/IntegrationTest'], recursivePaths: true }, expected: 'success' },
+  { scenario: 'Asset: search with no matches', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: 'ZZZZZ_NonExistent_Asset_12345' }, expected: 'success' },
+  { scenario: 'Asset: search without searchText (structured query)', toolName: 'manage_asset', arguments: { action: 'search_assets', classNames: ['Blueprint'], packagePaths: ['/Game/IntegrationTest'] }, expected: 'success' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_Cube' }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete advanced test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: ADV_TEST_FOLDER, force: true }, expected: 'success|not found' }
