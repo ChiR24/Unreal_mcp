@@ -335,7 +335,7 @@ export async function handleAnimationTools(action: string, args: HandlerArgs, to
               return cleanObject({
                 success: false,
                 error: 'SECURITY_VIOLATION',
-                message: `Invalid animationPath in children: path traversal or illegal characters detected`
+                message: 'Invalid animationPath in children: path traversal or illegal characters detected'
               });
             }
           } else {
