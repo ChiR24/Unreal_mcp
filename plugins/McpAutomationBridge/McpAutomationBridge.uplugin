@@ -21,6 +21,18 @@
       "Type": "Editor",
       "LoadingPhase": "Default",
       "PlatformAllowList": ["Win64", "Mac", "Linux"]
+    },
+    {
+      "Name": "McpAutomationBridgeGAS",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": ["Win64", "Mac", "Linux"]
+    },
+    {
+      "Name": "McpAutomationBridgeAI",
+      "Type": "Editor",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": ["Win64", "Mac", "Linux"]
     }
   ],
   "Plugins": [
