@@ -93,7 +93,13 @@
 #define MCP_HAS_CONTROLRIG 0
 #endif
 
-#if __has_include("ControlRigBlueprint.h")
+// Control Rig Blueprint - header location changed in UE 5.5+
+// UE 5.5+: ControlRigDeveloper/Public/ControlRigBlueprintLegacy.h
+// UE 5.0-5.4: ControlRigBlueprint.h (various locations)
+#if __has_include("ControlRigBlueprintLegacy.h")
+#include "ControlRigBlueprintLegacy.h"
+#define MCP_HAS_CONTROLRIG_BLUEPRINT 1
+#elif __has_include("ControlRigBlueprint.h")
 #include "ControlRigBlueprint.h"
 #define MCP_HAS_CONTROLRIG_BLUEPRINT 1
 #else
@@ -118,7 +124,11 @@
 #endif
 
 // IK Rig support (UE 5.0+)
-#if __has_include("IKRigDefinition.h")
+// Header path: Engine/Plugins/Animation/IKRig/Source/IKRig/Public/Rig/IKRigDefinition.h
+#if __has_include("Rig/IKRigDefinition.h")
+#include "Rig/IKRigDefinition.h"
+#define MCP_HAS_IKRIG 1
+#elif __has_include("IKRigDefinition.h")
 #include "IKRigDefinition.h"
 #define MCP_HAS_IKRIG 1
 #else
@@ -211,6 +221,21 @@
 #define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 1
 #else
 #define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 0
+#endif
+
+// Animation State Graph (for creating individual states with BoundGraph)
+#if __has_include("AnimationStateGraph.h")
+#include "AnimationStateGraph.h"
+#define MCP_HAS_ANIMATION_STATE_GRAPH 1
+#else
+#define MCP_HAS_ANIMATION_STATE_GRAPH 0
+#endif
+
+#if __has_include("AnimationStateGraphSchema.h")
+#include "AnimationStateGraphSchema.h"
+#define MCP_HAS_ANIMATION_STATE_GRAPH_SCHEMA 1
+#else
+#define MCP_HAS_ANIMATION_STATE_GRAPH_SCHEMA 0
 #endif
 
 // Blend node types
@@ -607,10 +632,42 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
         
+        // Validate that the bone exists in the skeleton before trying to add a track
+        USkeleton* Skeleton = Sequence->GetSkeleton();
+        if (!Skeleton)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Animation sequence has no skeleton reference"), TEXT("NO_SKELETON"));
+        }
+        
+        FName BoneFName(*BoneName);
+        
+        // Check if the bone exists in the skeleton's reference skeleton
+        const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+        int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
+        if (BoneIndex == INDEX_NONE)
+        {
+            // Provide helpful error message with available bone names
+            TArray<FString> AvailableBones;
+            const int32 NumBones = FMath::Min(RefSkeleton.GetNum(), 10); // Limit to first 10 bones
+            for (int32 i = 0; i < NumBones; ++i)
+            {
+                AvailableBones.Add(RefSkeleton.GetBoneName(i).ToString());
+            }
+            FString BoneList = FString::Join(AvailableBones, TEXT(", "));
+            if (RefSkeleton.GetNum() > 10)
+            {
+                BoneList += FString::Printf(TEXT(" ... and %d more"), RefSkeleton.GetNum() - 10);
+            }
+            
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone '%s' not found in skeleton. Available bones: %s"), *BoneName, *BoneList),
+                TEXT("BONE_NOT_FOUND_IN_SKELETON")
+            );
+        }
+        
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
-        FName BoneFName(*BoneName);
         
         if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
         {
@@ -624,7 +681,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             if (AddedTrackIndex == INDEX_NONE)
             {
                 ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to add bone track '%s' - bone may not exist in skeleton"), *BoneName),
+                    FString::Printf(TEXT("Failed to add bone track '%s' - internal error"), *BoneName),
                     TEXT("BONE_TRACK_ADD_FAILED")
                 );
             }
@@ -632,7 +689,6 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 #elif ENGINE_MAJOR_VERSION >= 5
         // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
-        FName BoneFName(*BoneName);
         
         const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
         if (Track == nullptr)
@@ -649,14 +705,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             if (AddedTrack == nullptr)
             {
                 ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to add bone track '%s' - bone may not exist in skeleton"), *BoneName),
+                    FString::Printf(TEXT("Failed to add bone track '%s' - internal error"), *BoneName),
                     TEXT("BONE_TRACK_ADD_FAILED")
                 );
             }
         }
 #else
         // UE4 approach
-        FName BoneFName(*BoneName);
         int32 TrackIndex = Sequence->GetRawAnimationData().FindBoneTrackByName(BoneFName);
         if (TrackIndex == INDEX_NONE)
         {
@@ -2128,9 +2183,38 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         StateNode->NodePosY = NodePosY;
         StateCreator.Finalize();
         
-        // Rename the state's bound graph to set the state name
-        if (StateNode->BoundGraph)
+        // IMPORTANT: FGraphNodeCreator does NOT call PostPlacedNewNode(), which is where
+        // the BoundGraph is normally created. We must create it manually here.
+        // This mirrors UAnimStateNode::PostPlacedNewNode() logic.
+        if (!StateNode->BoundGraph)
         {
+            // Create the animation state graph (BoundGraph)
+            StateNode->BoundGraph = FBlueprintEditorUtils::CreateNewGraph(
+                StateNode,
+                FName(*StateName),
+                UAnimationStateGraph::StaticClass(),
+                UAnimationStateGraphSchema::StaticClass()
+            );
+            
+            if (StateNode->BoundGraph)
+            {
+                // Initialize the state graph with default nodes (result node, etc.)
+                const UEdGraphSchema* StateSchema = StateNode->BoundGraph->GetSchema();
+                if (StateSchema)
+                {
+                    StateSchema->CreateDefaultNodesForGraph(*StateNode->BoundGraph);
+                }
+                
+                // Add the new graph as a child of the state machine graph
+                if (SMGraph->SubGraphs.Find(StateNode->BoundGraph) == INDEX_NONE)
+                {
+                    SMGraph->SubGraphs.Add(StateNode->BoundGraph);
+                }
+            }
+        }
+        else
+        {
+            // BoundGraph already exists (shouldn't happen with FGraphNodeCreator), rename it
             FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
         }
         

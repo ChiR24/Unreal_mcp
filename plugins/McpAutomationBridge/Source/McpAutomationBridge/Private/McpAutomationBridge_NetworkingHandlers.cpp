@@ -1689,9 +1689,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), bSuccess);
         ResultJson->SetStringField(TEXT("variableName"), VarName);
         ResultJson->SetStringField(TEXT("dataType"), DataType);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' added"), *VarName, *DataType));
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' %s"), *VarName, *DataType, bSuccess ? TEXT("added") : TEXT("could not be added (may already exist)")));
         McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network prediction data added"), ResultJson);
+        SendAutomationResponse(RequestingSocket, RequestId, bSuccess, TEXT("Network prediction data added"), ResultJson);
         return true;
     }
 

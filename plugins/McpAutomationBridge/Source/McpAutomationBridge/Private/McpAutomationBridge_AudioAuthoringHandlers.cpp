@@ -346,20 +346,26 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
                 USoundNode* LastNode = PlayerNode;
                 
                 // Add looping if requested
+                // Use InsertChildNode() to properly create both the child slot AND corresponding graph pin
+                // Direct ChildNodes.Add() bypasses graph pin creation, causing crash in LinkGraphNodesFromSoundNodes()
                 if (bLooping)
                 {
                     USoundNodeLooping* LoopNode = NewCue->ConstructSoundNode<USoundNodeLooping>();
-                    LoopNode->ChildNodes.Add(LastNode);
+                    LoopNode->InsertChildNode(0);        // Creates slot + corresponding graph pin
+                    LoopNode->ChildNodes[0] = LastNode;  // Assign child to the slot
                     LastNode = LoopNode;
                 }
                 
                 // Add modulation if volume/pitch differs from default
+                // Use InsertChildNode() to properly create both the child slot AND corresponding graph pin
+                // Direct ChildNodes.Add() bypasses graph pin creation, causing crash in LinkGraphNodesFromSoundNodes()
                 if (Volume != 1.0f || Pitch != 1.0f)
                 {
                     USoundNodeModulator* ModNode = NewCue->ConstructSoundNode<USoundNodeModulator>();
+                    ModNode->InsertChildNode(0);         // Creates slot + corresponding graph pin
+                    ModNode->ChildNodes[0] = LastNode;   // Assign child to the slot
                     ModNode->PitchMin = ModNode->PitchMax = Pitch;
                     ModNode->VolumeMin = ModNode->VolumeMax = Volume;
-                    ModNode->ChildNodes.Add(LastNode);
                     LastNode = ModNode;
                 }
                 
