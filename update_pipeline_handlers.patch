@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+import fs from 'fs';
+
+function validateUbtArgumentsString(extraArgs: string): void {
+=======
+import fs from 'fs';
+
+function validateUbtArgumentsString(extraArgs: string): void {
+>>>>>>> REPLACE

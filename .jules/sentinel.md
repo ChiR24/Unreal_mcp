@@ -57,3 +57,8 @@
 **Vulnerability:** The `screenshot` sub-action in `McpAutomationBridge_UiHandlers.cpp` accepted a raw `path` parameter and directly used it to construct the file path for saving viewport screenshots. This allowed attackers to perform path traversal attacks (e.g., `../../../Windows/System32/exploit`) and write arbitrary files outside the project directory.
 **Learning:** Raw string manipulation and `FPaths::Combine` are not sufficient safety controls when building file paths from untrusted input. User-provided paths must always be validated before filesystem operations.
 **Prevention:** Always validate all paths leading to filesystem write operations with `SanitizeProjectFilePath()`, then ensure the `FPaths::ConvertRelativePathToFull` normalized version strictly starts with the normalized project directory. Apply the defense-in-depth pattern: sanitize input, construct path, validate boundaries.
+
+## 2026-03-26 - [Blocking Synchronous FS Operations in Pipeline Handlers]
+**Vulnerability:** The `pipeline-handlers.ts` used `fs.existsSync` and `fs.readdirSync` to validate paths and discover project files. These synchronous file system operations block the Node.js event loop, which can cause a Denial of Service (DoS) for the entire MCP server if a slow network drive or large directory is accessed.
+**Learning:** Even simple tool checks can become performance bottlenecks or DoS vectors in Node.js if they use synchronous I/O. Asynchronous operations are critical for maintaining server responsiveness.
+**Prevention:** Always prefer asynchronous file system operations (using `fs.promises`) over synchronous ones (`fs.*Sync`) in tool handlers to ensure the MCP server remains responsive and does not block the Node.js event loop.

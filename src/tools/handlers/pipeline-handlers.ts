@@ -86,8 +86,11 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
 
       if (enginePath) {
         const possiblePath = path.join(enginePath, 'Engine', 'Binaries', 'DotNET', 'UnrealBuildTool', 'UnrealBuildTool.exe');
-        if (fs.existsSync(possiblePath)) {
+        try {
+          await fs.promises.access(possiblePath, fs.constants.F_OK);
           ubtPath = possiblePath;
+        } catch {
+          // File does not exist, use default
         }
       }
 
@@ -103,7 +106,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       let uprojectFile = projectPath;
       if (!uprojectFile.endsWith('.uproject')) {
         try {
-          const files = fs.readdirSync(projectPath);
+          const files = await fs.promises.readdir(projectPath);
           const found = files.find(f => f.endsWith('.uproject'));
           if (found) {
             uprojectFile = path.join(projectPath, found);
