@@ -118,6 +118,21 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   }
 
 #if WITH_EDITOR
+  if (!Payload.IsValid()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
+                        TEXT("INVALID_PAYLOAD"));
+    return true;
+  }
+
+  FString SubAction;
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
+      SubAction.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Missing 'subAction' for manage_behavior_tree"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   // Runtime check: Verify BehaviorTreeEditor module is loaded for graph editing operations
   // This handles the case where headers were available at compile time
   // but the plugin is not enabled in the target project at runtime
@@ -134,21 +149,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
               TEXT("BEHAVIORTREEEDITOR_PLUGIN_NOT_ENABLED"));
           return true;
       }
-  }
-
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString SubAction;
-  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
-      SubAction.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Missing 'subAction' for manage_behavior_tree"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
   }
 
   // ===========================================================================
