@@ -362,6 +362,14 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
+    case 'reparent_blueprint': {
+      const res = await executeAutomationRequest(tools, 'reparent_blueprint', {
+        blueprintPath: argsTyped.blueprintPath || argsTyped.name || (argsRecord.path as string) || '',
+        parentClass: argsTyped.parentClass ?? (argsRecord.parentClass as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
+    }
     case 'set_scs_property': {
       const res = await executeAutomationRequest(tools, 'set_scs_component_property', {
         blueprint_path: argsTyped.name || argsTyped.blueprintPath || (argsRecord.path as string) || '',
