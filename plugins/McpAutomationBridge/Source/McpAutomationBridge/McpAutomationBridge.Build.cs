@@ -456,7 +456,70 @@ PublicDependencyModuleNames.AddRange(new string[]
     }
 
     /// <summary>
-    /// Conditionally adds a module dependency if it exists in the engine or plugins directories.
+    /// Searches for an optional module in standard engine and plugin locations.
+    /// Checks Runtime/Editor source directories and common plugin subdirectories.
+    /// </summary>
+    /// <param name="EngineDir">Absolute path to the engine root directory.</param>
+    /// <param name="SearchName">The directory name to search for.</param>
+    /// <returns>True if the module directory was found, false otherwise.</returns>
+    private bool FindOptionalModule(string EngineDir, string SearchName)
+    {
+        try
+        {
+            // Check Runtime modules
+            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", SearchName);
+            if (Directory.Exists(RuntimePath))
+            {
+                return true;
+            }
+
+            // Check Editor modules
+            string EditorPath = Path.Combine(EngineDir, "Source", "Editor", SearchName);
+            if (Directory.Exists(EditorPath))
+            {
+                return true;
+            }
+
+            // Check Plugins directory
+            string PluginsDir = Path.Combine(EngineDir, "Plugins");
+            if (Directory.Exists(PluginsDir))
+            {
+                // Check common plugin locations
+                string[] SearchPaths = new string[]
+                {
+                    Path.Combine(PluginsDir, "AI", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", SearchName),
+                    Path.Combine(PluginsDir, "Experimental", SearchName),
+                    Path.Combine(PluginsDir, "Developer", SearchName),
+                    Path.Combine(PluginsDir, "Animation", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "IKRig", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Animation", "ControlRig", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Experimental", "ChaosVehiclesPlugin", "Source", SearchName)
+                };
+
+                foreach (string SearchPath in SearchPaths)
+                {
+                    if (Directory.Exists(SearchPath))
+                    {
+                        return true;
+                    }
+                }
+
+                // Fallback: bounded depth search (max 4 levels)
+                return SearchDirectoryBounded(PluginsDir, SearchName, 4);
+            }
+        }
+        catch { /* Module not available - this is expected for optional modules */ }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds an optional module conditionally - only if it exists.
     /// Used for optional AI modules that may not be available in all UE versions (StateTree, SmartObjects, MassEntity).
     /// </summary>
     /// <param name="Target">Build target settings.</param>
@@ -465,15 +528,58 @@ PublicDependencyModuleNames.AddRange(new string[]
     /// <param name="SearchName">The directory name to search for in engine/plugin paths.</param>
     private void TryAddConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
     {
-        try
+        if (FindOptionalModule(EngineDir, SearchName))
         {
-            // Check Runtime modules
-            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", SearchName);
-            if (Directory.Exists(RuntimePath))
+            PrivateDependencyModuleNames.Add(ModuleName);
+        }
+    }
+
+    /// <summary>
+    /// Adds an optional module as a dependency with Windows delay-load support.
+    /// 
+    /// NOTE: Delay-load only works for function imports. Modules that export DATA symbols
+    /// (variables, constants like `FrontendInvalidID`) cannot be delay-loaded and will fail
+    /// with LNK1194. For those modules, use AddOptionalConditionalModule() instead.
+    /// </summary>
+    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    {
+        if (FindOptionalModule(EngineDir, SearchName))
+        {
+            // Add to PrivateDependencyModuleNames - this is REQUIRED for linking
+            PrivateDependencyModuleNames.Add(ModuleName);
+
+            // On Windows, add delay-load flag so the DLL loads even if optional plugins are missing
+            // Note: This only works for function imports, not data symbols
+            if (Target.Platform == UnrealTargetPlatform.Win64)
             {
-                PrivateDependencyModuleNames.Add(ModuleName);
-                return;
+                PublicDelayLoadDLLs.Add(string.Format("UnrealEditor-{0}.dll", ModuleName));
             }
+
+            Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' with delay-load", ModuleName));
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds an optional module conditionally - only if it exists.
+    /// Use this for modules that export DATA symbols (cannot use delay-load).
+    /// The plugin will only work in projects where these modules are enabled.
+    /// </summary>
+    private bool AddOptionalConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    {
+        if (FindOptionalModule(EngineDir, SearchName))
+        {
+            // Add as hard dependency - no delay-load
+            PrivateDependencyModuleNames.Add(ModuleName);
+            Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' (conditional)", ModuleName));
+            return true;
+        }
+
+        return false;
+    }
+}
 
             // Check Editor modules
             string EditorPath = Path.Combine(EngineDir, "Source", "Editor", SearchName);
