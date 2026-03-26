@@ -33,6 +33,7 @@
 #include "HAL/PlatformProcess.h"
 #include "RenderingThread.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "UObject/SoftObjectPath.h"
 
 #if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
@@ -658,6 +659,75 @@ inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
     TArray<FString> PathsToScan;
     PathsToScan.Add(InPath);
     AssetRegistry.ScanPathsSynchronous(PathsToScan, bRecursive);
+}
+
+/**
+ * Perform garbage collection after asset deletion.
+ * 
+ * CRITICAL FOR UE 5.7+:
+ * After deleting assets (especially AnimBlueprints, IKRigs, IKRetargeters),
+ * garbage collection must be forced to prevent access violations during
+ * UWorld::CleanupWorld.
+ *
+ * @param bFullPurge If true, perform a full purge (more aggressive)
+ */
+inline void McpSafePostDeleteGC(bool bFullPurge = true)
+{
+    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Starting post-delete cleanup"));
+    
+    // Flush rendering commands to ensure all GPU work is complete
+    FlushRenderingCommands();
+    
+    // Force garbage collection
+    if (GEditor)
+    {
+        GEditor->ForceGarbageCollection(bFullPurge);
+    }
+    
+    // Flush again to process any pending destroy operations
+    FlushRenderingCommands();
+    
+    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Post-delete cleanup completed"));
+}
+
+/**
+ * Check if an asset class is considered "risky" for deletion (may have world references).
+ * These asset types may cause crashes if deleted without proper cleanup.
+ *
+ * @param AssetPath The asset path to check
+ * @return true if the asset is a risky type that needs extra cleanup
+ */
+inline bool IsRiskyAssetClassForDelete(const FString& AssetPath)
+{
+    // Asset types that commonly have world references or cause crashes on delete
+    static const TArray<FString> RiskyClasses = {
+        TEXT("AnimBlueprint"),
+        TEXT("AnimSequence"),
+        TEXT("IKRigDefinition"),
+        TEXT("IKRetargeter"),
+        TEXT("ControlRigBlueprint"),
+        TEXT("WidgetBlueprint"),
+        TEXT("Blueprint")
+    };
+    
+    FAssetRegistryModule& AssetRegistryModule = 
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+    
+    FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
+    if (AssetData.IsValid())
+    {
+        FString ClassName = AssetData.AssetClassPath.ToString();
+        for (const FString& RiskyClass : RiskyClasses)
+        {
+            if (ClassName.Contains(RiskyClass))
+            {
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
 #else

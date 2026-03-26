@@ -127,6 +127,14 @@
 // Editor Utilities
 #include "EditorAssetLibrary.h"
 
+// Notification System (SNotificationList.h must come before NotificationManager.h for FNotificationInfo)
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
+
+// Asset Editor Subsystem
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "Editor.h"
+
 // Internationalization
 #include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
@@ -847,7 +855,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     // 19.1 Widget Creation
     // =========================================================================
 
-    if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase))
+    // Accept both 'create_widget_blueprint' and 'create_widget' for flexibility
+    if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase) ||
+        SubAction.Equals(TEXT("create_widget"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"));
         if (Name.IsEmpty())
@@ -959,6 +969,82 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
+        return true;
+    }
+
+    // =========================================================================
+    // show_widget: Show a widget in viewport or display notification
+    // =========================================================================
+    if (SubAction.Equals(TEXT("show_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetId = GetJsonStringField(Payload, TEXT("widgetId"));
+        FString Message = GetJsonStringField(Payload, TEXT("message"));
+        
+        // Handle notification widget specially
+        if (WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase))
+        {
+            FString NotificationText = Message.IsEmpty() ? TEXT("Notification") : Message;
+            
+            // Use notification system
+            FNotificationInfo Info(FText::FromString(NotificationText));
+            Info.ExpireDuration = 3.0f;
+            Info.bUseLargeFont = true;
+            
+            FSlateNotificationManager::Get().AddNotification(Info);
+            
+            ResultJson->SetBoolField(TEXT("success"), true);
+            ResultJson->SetStringField(TEXT("message"), TEXT("Notification shown"));
+            ResultJson->SetStringField(TEXT("widgetId"), WidgetId);
+            
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Notification shown"), ResultJson);
+            return true;
+        }
+        
+        // For regular widgets, we need a path
+        FString EffectivePath = WidgetPath.IsEmpty() ? GetJsonStringField(Payload, TEXT("name")) : WidgetPath;
+        if (EffectivePath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Missing required parameter: widgetPath or name"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+        
+        // SECURITY: Validate widget path
+        FString SanitizedPath = SanitizeProjectRelativePath(EffectivePath);
+        if (SanitizedPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("Invalid widgetPath: path traversal or invalid characters detected"), 
+                TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        EffectivePath = SanitizedPath;
+        
+        // Load the widget blueprint
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(EffectivePath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                FString::Printf(TEXT("Widget blueprint not found: %s"), *EffectivePath), 
+                TEXT("NOT_FOUND"));
+            return true;
+        }
+        
+        // Note: Actually showing the widget in viewport requires PIE (Play In Editor)
+        // In editor mode, we can open the widget designer instead
+        if (GEditor)
+        {
+            // Open the widget blueprint in the editor
+            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(WidgetBP);
+        }
+        
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Widget opened: %s"), *EffectivePath));
+        ResultJson->SetStringField(TEXT("widgetPath"), EffectivePath);
+        
+        SendAutomationResponse(RequestingSocket, RequestId, true, 
+            FString::Printf(TEXT("Widget opened: %s"), *EffectivePath), ResultJson);
         return true;
     }
 

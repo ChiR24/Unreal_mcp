@@ -67,12 +67,18 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("spawn_category"))
     {
+        // Accept both 'categoryName' and 'category' for flexibility
         FString CategoryName;
-        if (!Payload->TryGetStringField(TEXT("categoryName"), CategoryName) ||
-            CategoryName.TrimStartAndEnd().IsEmpty())
+        if (!Payload->TryGetStringField(TEXT("categoryName"), CategoryName))
+        {
+            // Fallback to 'category' field if 'categoryName' not found
+            Payload->TryGetStringField(TEXT("category"), CategoryName);
+        }
+        
+        if (CategoryName.TrimStartAndEnd().IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing or empty categoryName."), TEXT("INVALID_ARGUMENT"));
+                TEXT("Missing or empty category/categoryName."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

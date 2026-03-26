@@ -75,6 +75,7 @@
 #include "UObject/SavePackage.h"
 #include "Misc/PackageName.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/Kismet2NameValidators.h"
 
 // Blend Space factories
 #if __has_include("Factories/BlendSpaceFactoryNew.h") && __has_include("Factories/BlendSpaceFactory1D.h")
@@ -463,7 +464,14 @@ static UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const
         if (UAnimStateNode* StateNode = Cast<UAnimStateNode>(Node))
         {
             // Use GetStateName for more accurate matching
-            if (StateNode->GetStateName() == Name)
+            // Also try case-insensitive matching for robustness
+            FString StateName = StateNode->GetStateName();
+            if (StateName == Name)
+            {
+                return StateNode;
+            }
+            // Case-insensitive fallback
+            if (StateName.Equals(Name, ESearchCase::IgnoreCase))
             {
                 return StateNode;
             }
@@ -669,9 +677,26 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
         
+        // Validate the controller model is available
+        if (!Controller.GetModel())
+        {
+            ANIM_ERROR_RESPONSE(
+                TEXT("Animation data model is not available - cannot add bone track"),
+                TEXT("MODEL_NOT_AVAILABLE")
+            );
+        }
+        
         if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
         {
-            Controller.AddBoneCurve(BoneFName);
+            // AddBoneCurve returns bool - check the result
+            const bool bAdded = Controller.AddBoneCurve(BoneFName);
+            if (!bAdded)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("AddBoneCurve failed for bone '%s' - the bone may not be valid for this animation"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
 
             // Verify the bone curve was actually added
             // Note: GetBoneTrackIndexByName is deprecated in UE 5.2+ but still functional
@@ -681,7 +706,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             if (AddedTrackIndex == INDEX_NONE)
             {
                 ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to add bone track '%s' - internal error"), *BoneName),
+                    FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
                     TEXT("BONE_TRACK_ADD_FAILED")
                 );
             }
@@ -2185,19 +2210,24 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         
         // IMPORTANT: FGraphNodeCreator does NOT call PostPlacedNewNode(), which is where
         // the BoundGraph is normally created. We must create it manually here.
-        // This mirrors UAnimStateNode::PostPlacedNewNode() logic.
+        // This mirrors UAnimStateNode::PostPlacedNewNode() logic exactly.
         if (!StateNode->BoundGraph)
         {
-            // Create the animation state graph (BoundGraph)
+            // Create the animation state graph (BoundGraph) with NAME_None first
+            // This matches UE's PostPlacedNewNode() behavior
             StateNode->BoundGraph = FBlueprintEditorUtils::CreateNewGraph(
                 StateNode,
-                FName(*StateName),
+                NAME_None,
                 UAnimationStateGraph::StaticClass(),
                 UAnimationStateGraphSchema::StaticClass()
             );
             
             if (StateNode->BoundGraph)
             {
+                // Use RenameGraphWithSuggestion for proper name validation (matches UE behavior)
+                TSharedPtr<INameValidatorInterface> NameValidator = FNameValidatorFactory::MakeValidator(StateNode);
+                FBlueprintEditorUtils::RenameGraphWithSuggestion(StateNode->BoundGraph, NameValidator, *StateName);
+                
                 // Initialize the state graph with default nodes (result node, etc.)
                 const UEdGraphSchema* StateSchema = StateNode->BoundGraph->GetSchema();
                 if (StateSchema)
@@ -2218,12 +2248,16 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             FBlueprintEditorUtils::RenameGraph(StateNode->BoundGraph, *StateName);
         }
         
+        // Get the actual state name that was assigned (may differ from requested due to validation)
+        FString ActualStateName = StateNode->GetStateName();
+        
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
         
-        Response->SetStringField(TEXT("stateName"), StateName);
+        Response->SetStringField(TEXT("stateName"), ActualStateName);
+        Response->SetStringField(TEXT("requestedName"), StateName);
         Response->SetStringField(TEXT("stateMachine"), StateMachineName);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *StateName, *StateMachineName));
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *ActualStateName, *StateMachineName));
 #else
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);

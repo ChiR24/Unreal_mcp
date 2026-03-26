@@ -162,8 +162,28 @@ static bool HandleConfigureLocalSessionSettings(
     using namespace SessionsHelpers;
 
     // VALIDATION: Require at least one session setting parameter
-    // Empty payload is not valid - client must specify what to configure
-    if (!Payload.IsValid() || Payload->Values.Num() <= 1)  // Only 'action' field present
+    // Check for actual session parameters, not just field count
+    // Note: The MCP layer adds 'action' and 'subAction' fields, so we can't just count fields
+    const TArray<FString> SettingParams = {
+        TEXT("sessionName"), TEXT("maxPlayers"), TEXT("bIsLANMatch"),
+        TEXT("bAllowJoinInProgress"), TEXT("bAllowInvites"), TEXT("bUsesPresence"),
+        TEXT("bUseLobbiesIfAvailable"), TEXT("bShouldAdvertise")
+    };
+    
+    bool bHasAnySetting = false;
+    if (Payload.IsValid())
+    {
+        for (const FString& Param : SettingParams)
+        {
+            if (Payload->HasField(Param))
+            {
+                bHasAnySetting = true;
+                break;
+            }
+        }
+    }
+    
+    if (!bHasAnySetting)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             TEXT("At least one session setting parameter is required (sessionName, maxPlayers, bIsLANMatch, bAllowJoinInProgress, bAllowInvites, bUsesPresence, bUseLobbiesIfAvailable, or bShouldAdvertise)"), nullptr);
