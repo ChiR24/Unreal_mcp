@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
 #include "McpAutomationBridgeSettings.generated.h"
 

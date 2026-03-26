@@ -96,14 +96,13 @@ PublicDependencyModuleNames.AddRange(new string[]
 
         if (Target.bBuildEditor)
         {
-            // Editor-only Public Dependencies
+            // Editor-only Public Dependencies (required for all editor builds)
             PublicDependencyModuleNames.AddRange(new string[] 
             { 
-                "LevelSequenceEditor", "Sequencer", "MovieSceneTools", "Niagara", "NiagaraEditor", "UnrealEd",
-                "WorldPartitionEditor", "DataLayerEditor", "EnhancedInput", "InputEditor",
-                // Required for linking symbols used in handlers (already in base: AIModule, Landscape, Engine)
-                "BehaviorTreeEditor",  // UBehaviorTreeGraphNode classes
+                "Sequencer", "MovieSceneTools", "Niagara", "UnrealEd",
+                "WorldPartitionEditor", "DataLayerEditor",
                 "MaterialEditor"  // UMaterialExpressionRotator and other material expressions
+                // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });
 
             PrivateDependencyModuleNames.AddRange(new string[]
@@ -111,10 +110,8 @@ PublicDependencyModuleNames.AddRange(new string[]
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
-                "AudioEditor", "DataValidation", "NiagaraEditor",
-                // Phase 24: GAS, Audio, and missing module dependencies
-                "GameplayAbilities",  // Required for UAttributeSet, UGameplayEffect, UGameplayAbility, etc.
-                "AudioMixer"          // Required for FAudioEQEffect::ClampValues
+                "AudioEditor", "AudioMixer"
+                // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });
 
             // Add OpenSSL for TLS support (requires WITH_SSL)
@@ -122,42 +119,81 @@ PublicDependencyModuleNames.AddRange(new string[]
 
             PrivateDependencyModuleNames.AddRange(new string[]
             {
-"LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
+                "LandscapeEditor","LandscapeEditorUtilities","Foliage","FoliageEdit",
                 "AnimGraph","AnimationBlueprintLibrary","Persona","ToolMenus","EditorWidgets","PropertyEditor","LevelEditor",
-                "ControlRig","ControlRigDeveloper","ControlRigEditor","RigVM","RigVMDeveloper","UMG","UMGEditor","ProceduralMeshComponent","MergeActors",
-                "EnvironmentQueryEditor", "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph",
+                "RigVM","RigVMDeveloper","UMG","UMGEditor","MergeActors",
+                "RenderCore", "RHI", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph",
                 "MeshUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon",
-                // Phase 6: Geometry Script (GeometryScripting plugin dependency in .uplugin ensures availability)
-                "GeometryCore", "GeometryScriptingCore", "GeometryScriptingEditor", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
-                // Phase 24: Navigation volumes
+                "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription",
                 "NavigationSystem"
+                // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });
 
             // --- Feature Detection Logic ---
 
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
 
-            // Phase 11: MetaSound modules (conditional - may not be available in all UE versions)
-            TryAddConditionalModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine");
-            TryAddConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");
-            TryAddConditionalModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
+            // =========================================================================
+            // OPTIONAL PLUGINS - Dynamic Loading
+            // =========================================================================
+            // All plugins marked Optional: true in .uplugin must use dynamic loading
+            // to prevent hard DLL imports that fail when plugins are not enabled.
 
-            // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (conditional based on plugin availability)
-            // These modules may not be available in all UE versions or plugin configurations
-            TryAddConditionalModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
-            TryAddConditionalModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
-            TryAddConditionalModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
-            TryAddConditionalModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
-            TryAddConditionalModule(Target, EngineDir, "MassEntity", "MassEntity");
-            TryAddConditionalModule(Target, EngineDir, "MassSpawner", "MassSpawner");
-            TryAddConditionalModule(Target, EngineDir, "MassActors", "MassActors");
+            // Phase 24: GAS - Gameplay Ability System (optional plugin)
+            AddOptionalDynamicModule(Target, EngineDir, "GameplayAbilities", "GameplayAbilities");
 
-            // Phase 22: Voice Chat and Online Subsystem (conditional - for sessions handlers)
-            // VoiceChat module is from the VoiceChat plugin
-            TryAddConditionalModule(Target, EngineDir, "VoiceChat", "VoiceChat");
-            // OnlineSubsystem provides IOnlineVoice for muting
-            TryAddConditionalModule(Target, EngineDir, "OnlineSubsystem", "OnlineSubsystem");
-            TryAddConditionalModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
+            // Phase 11: MetaSound modules (optional plugin)
+            // Note: MetasoundFrontend exports data symbols (FrontendInvalidID) so cannot use delay-load
+            AddOptionalDynamicModule(Target, EngineDir, "MetasoundEngine", "MetasoundEngine");
+            AddOptionalConditionalModule(Target, EngineDir, "MetasoundFrontend", "MetasoundFrontend");  // Has data symbols
+            AddOptionalDynamicModule(Target, EngineDir, "MetasoundEditor", "MetasoundEditor");
+
+            // Phase 16: AI Systems - StateTree, SmartObjects, MassAI (optional plugins)
+            AddOptionalDynamicModule(Target, EngineDir, "StateTreeModule", "StateTreeModule");
+            AddOptionalDynamicModule(Target, EngineDir, "StateTreeEditorModule", "StateTreeEditorModule");
+            AddOptionalDynamicModule(Target, EngineDir, "SmartObjectsModule", "SmartObjectsModule");
+            AddOptionalDynamicModule(Target, EngineDir, "SmartObjectsEditorModule", "SmartObjectsEditorModule");
+            AddOptionalDynamicModule(Target, EngineDir, "MassEntity", "MassEntity");
+            AddOptionalDynamicModule(Target, EngineDir, "MassSpawner", "MassSpawner");
+            AddOptionalDynamicModule(Target, EngineDir, "MassActors", "MassActors");
+            // Note: MassGameplay is a plugin name, not a module name. The MassGameplay plugin contains
+            // modules like MassActors, MassSpawner, MassCommon, MassMovement, etc.
+
+            // Phase 22: Voice Chat and Online Subsystem (optional plugins)
+            AddOptionalDynamicModule(Target, EngineDir, "VoiceChat", "VoiceChat");
+            AddOptionalDynamicModule(Target, EngineDir, "OnlineSubsystem", "OnlineSubsystem");
+            AddOptionalDynamicModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
+
+            // ControlRig (optional plugin) - for animation rigging and IK
+            AddOptionalDynamicModule(Target, EngineDir, "ControlRig", "ControlRig");
+            AddOptionalDynamicModule(Target, EngineDir, "ControlRigDeveloper", "ControlRigDeveloper");
+            AddOptionalDynamicModule(Target, EngineDir, "ControlRigEditor", "ControlRigEditor");
+
+            // ProceduralMeshComponent (optional plugin) - for procedural geometry
+            AddOptionalDynamicModule(Target, EngineDir, "ProceduralMeshComponent", "ProceduralMeshComponent");
+
+            // EnvironmentQueryEditor (optional plugin) - for EQS authoring
+            AddOptionalDynamicModule(Target, EngineDir, "EnvironmentQueryEditor", "EnvironmentQueryEditor");
+
+            // GeometryScripting (optional plugin) - for geometry scripting
+            AddOptionalDynamicModule(Target, EngineDir, "GeometryScriptingCore", "GeometryScriptingCore");
+            AddOptionalDynamicModule(Target, EngineDir, "GeometryScriptingEditor", "GeometryScriptingEditor");
+
+            // LevelSequenceEditor (optional plugin) - for Sequencer/Cinematics
+            AddOptionalDynamicModule(Target, EngineDir, "LevelSequenceEditor", "LevelSequenceEditor");
+
+            // NiagaraEditor (optional plugin) - for Niagara authoring
+            AddOptionalDynamicModule(Target, EngineDir, "NiagaraEditor", "NiagaraEditor");
+
+            // EnhancedInput (optional plugin) - for Enhanced Input system
+            AddOptionalDynamicModule(Target, EngineDir, "EnhancedInput", "EnhancedInput");
+            AddOptionalDynamicModule(Target, EngineDir, "InputEditor", "InputEditor");
+
+            // BehaviorTreeEditor (optional plugin) - for Behavior Tree graph editing
+            AddOptionalDynamicModule(Target, EngineDir, "BehaviorTreeEditor", "BehaviorTreeEditor");
+
+            // DataValidation (optional plugin) - for data validation
+            AddOptionalDynamicModule(Target, EngineDir, "DataValidation", "DataValidation");
 
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
@@ -475,5 +511,169 @@ PublicDependencyModuleNames.AddRange(new string[]
             }
         }
         catch { /* Module not available - this is expected for optional modules */ }
+    }
+
+    /// <summary>
+    /// Adds an optional module as a dependency with Windows delay-load support.
+    /// 
+    /// NOTE: Delay-load only works for function imports. Modules that export DATA symbols
+    /// (variables, constants like `FrontendInvalidID`) cannot be delay-loaded and will fail
+    /// with LNK1194. For those modules, use TryAddConditionalModule() instead.
+    /// </summary>
+    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    {
+        bool bModuleFound = false;
+
+        try
+        {
+            // Check Runtime modules
+            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", SearchName);
+            if (Directory.Exists(RuntimePath))
+            {
+                bModuleFound = true;
+            }
+
+            // Check Editor modules
+            if (!bModuleFound)
+            {
+                string EditorPath = Path.Combine(EngineDir, "Source", "Editor", SearchName);
+                if (Directory.Exists(EditorPath))
+                {
+                    bModuleFound = true;
+                }
+            }
+
+            // Check Plugins directory
+            if (!bModuleFound)
+            {
+                string PluginsDir = Path.Combine(EngineDir, "Plugins");
+                if (Directory.Exists(PluginsDir))
+                {
+                    // Check common plugin locations
+                    string[] SearchPaths = new string[]
+                    {
+                        Path.Combine(PluginsDir, "AI", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", SearchName),
+                        Path.Combine(PluginsDir, "Experimental", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Developer", SearchName)
+                    };
+
+                    foreach (string SearchPath in SearchPaths)
+                    {
+                        if (Directory.Exists(SearchPath))
+                        {
+                            bModuleFound = true;
+                            break;
+                        }
+                    }
+
+                    // Fallback: bounded depth search (max 4 levels)
+                    if (!bModuleFound)
+                    {
+                        bModuleFound = SearchDirectoryBounded(PluginsDir, SearchName, 4);
+                    }
+                }
+            }
+
+            if (bModuleFound)
+            {
+                // Add to PrivateDependencyModuleNames - this is REQUIRED for linking
+                PrivateDependencyModuleNames.Add(ModuleName);
+
+                // On Windows, add delay-load flag so the DLL loads even if optional plugins are missing
+                // Note: This only works for function imports, not data symbols
+                if (Target.Platform == UnrealTargetPlatform.Win64)
+                {
+                    PublicDelayLoadDLLs.Add(string.Format("UnrealEditor-{0}.dll", ModuleName));
+                }
+
+                Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' with delay-load", ModuleName));
+                return true;
+            }
+        }
+        catch { /* Module not available - this is expected for optional modules */ }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Adds an optional module conditionally - only if it exists.
+    /// Use this for modules that export DATA symbols (cannot use delay-load).
+    /// The plugin will only work in projects where these modules are enabled.
+    /// </summary>
+    private bool AddOptionalConditionalModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
+    {
+        bool bModuleFound = false;
+
+        try
+        {
+            // Check Runtime modules
+            string RuntimePath = Path.Combine(EngineDir, "Source", "Runtime", SearchName);
+            if (Directory.Exists(RuntimePath))
+            {
+                bModuleFound = true;
+            }
+
+            // Check Editor modules
+            if (!bModuleFound)
+            {
+                string EditorPath = Path.Combine(EngineDir, "Source", "Editor", SearchName);
+                if (Directory.Exists(EditorPath))
+                {
+                    bModuleFound = true;
+                }
+            }
+
+            // Check Plugins directory
+            if (!bModuleFound)
+            {
+                string PluginsDir = Path.Combine(EngineDir, "Plugins");
+                if (Directory.Exists(PluginsDir))
+                {
+                    // Check common plugin locations
+                    string[] SearchPaths = new string[]
+                    {
+                        Path.Combine(PluginsDir, "AI", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", SearchName),
+                        Path.Combine(PluginsDir, "Experimental", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                        Path.Combine(PluginsDir, "Developer", SearchName)
+                    };
+
+                    foreach (string SearchPath in SearchPaths)
+                    {
+                        if (Directory.Exists(SearchPath))
+                        {
+                            bModuleFound = true;
+                            break;
+                        }
+                    }
+
+                    // Fallback: bounded depth search (max 4 levels)
+                    if (!bModuleFound)
+                    {
+                        bModuleFound = SearchDirectoryBounded(PluginsDir, SearchName, 4);
+                    }
+                }
+            }
+
+            if (bModuleFound)
+            {
+                // Add as hard dependency - no delay-load
+                PrivateDependencyModuleNames.Add(ModuleName);
+                Console.WriteLine(string.Format("McpAutomationBridge: Added optional module '{0}' (conditional)", ModuleName));
+                return true;
+            }
+        }
+        catch { /* Module not available - this is expected for optional modules */ }
+
+        return false;
     }
 }
