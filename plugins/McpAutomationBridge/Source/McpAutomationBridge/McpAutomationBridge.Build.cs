@@ -152,6 +152,11 @@ PublicDependencyModuleNames.AddRange(new string[]
             TryAddConditionalModule(Target, EngineDir, "MassSpawner", "MassSpawner");
             TryAddConditionalModule(Target, EngineDir, "MassActors", "MassActors");
 
+            // Phase: IKRig and Vehicles (conditional based on plugin availability)
+            TryAddConditionalModule(Target, EngineDir, "IKRig", "IKRig");
+            TryAddConditionalModule(Target, EngineDir, "ChaosVehicles", "ChaosVehicles");
+            TryAddConditionalModule(Target, EngineDir, "AnimationData", "AnimationData");
+
             // Phase 22: Voice Chat and Online Subsystem (conditional - for sessions handlers)
             // VoiceChat module is from the VoiceChat plugin
             TryAddConditionalModule(Target, EngineDir, "VoiceChat", "VoiceChat");
