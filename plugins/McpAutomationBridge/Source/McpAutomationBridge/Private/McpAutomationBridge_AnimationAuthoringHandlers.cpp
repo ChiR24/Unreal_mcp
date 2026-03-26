@@ -363,10 +363,28 @@ static UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
         return nullptr;
     }
     
-    // Search through function graphs for the AnimGraph
+    // Search through UbergraphPages first (most common location for AnimGraph)
+    for (UEdGraph* Graph : AnimBP->UbergraphPages)
+    {
+        if (Graph && Graph->GetName() == TEXT("AnimGraph"))
+        {
+            return Graph;
+        }
+    }
+    
+    // Also search through function graphs
     for (UEdGraph* Graph : AnimBP->FunctionGraphs)
     {
         if (Graph && Graph->GetName() == TEXT("AnimGraph"))
+        {
+            return Graph;
+        }
+    }
+    
+    // Fallback: look for any graph with AnimGraph in the name
+    for (UEdGraph* Graph : AnimBP->UbergraphPages)
+    {
+        if (Graph && Graph->GetName().Contains(TEXT("AnimGraph")))
         {
             return Graph;
         }
@@ -1477,6 +1495,34 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
         
+        // Check if an asset already exists at the target path to prevent modal dialog
+        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
+        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        {
+            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            if (ExistingAsset)
+            {
+                if (Cast<UBlendSpace1D>(ExistingAsset))
+                {
+                    // Same type - return success with existing asset info
+                    Response->SetStringField(TEXT("assetPath"), ObjectPath);
+                    Response->SetBoolField(TEXT("existingAsset"), true);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' already exists - reusing existing asset"), *Name));
+                    return Response;
+                }
+                else
+                {
+                    // Different type - return error to prevent modal dialog
+                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                    ANIM_ERROR_RESPONSE(
+                        FString::Printf(TEXT("Cannot create BlendSpace1D: asset '%s' already exists as type '%s'"), 
+                            *ObjectPath, *ExistingClassName),
+                        TEXT("ASSET_TYPE_MISMATCH")
+                    );
+                }
+            }
+        }
+        
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1553,6 +1599,34 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         if (!Skeleton)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
+        }
+        
+        // Check if an asset already exists at the target path to prevent modal dialog
+        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
+        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        {
+            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            if (ExistingAsset)
+            {
+                if (Cast<UBlendSpace>(ExistingAsset))
+                {
+                    // Same type - return success with existing asset info
+                    Response->SetStringField(TEXT("assetPath"), ObjectPath);
+                    Response->SetBoolField(TEXT("existingAsset"), true);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 2D '%s' already exists - reusing existing asset"), *Name));
+                    return Response;
+                }
+                else
+                {
+                    // Different type - return error to prevent modal dialog
+                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                    ANIM_ERROR_RESPONSE(
+                        FString::Printf(TEXT("Cannot create BlendSpace: asset '%s' already exists as type '%s'"), 
+                            *ObjectPath, *ExistingClassName),
+                        TEXT("ASSET_TYPE_MISMATCH")
+                    );
+                }
+            }
         }
         
         // Create package and asset directly to avoid UI dialogs
@@ -1933,7 +2007,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(TEXT("stateMachineName is required"), TEXT("MISSING_STATE_MACHINE_NAME"));
         }
         
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        // Try to find in-memory version first (may have unsaved changes from create_anim_blueprint)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
@@ -2000,7 +2080,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(TEXT("stateName is required"), TEXT("MISSING_STATE_NAME"));
         }
         
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        // Try to find in-memory version first (may have unsaved changes from add_state_machine)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
@@ -2068,7 +2154,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(TEXT("fromState and toState are required"), TEXT("MISSING_STATES"));
         }
         
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        // Try to find in-memory version first (may have unsaved changes from add_state)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
@@ -2148,7 +2240,13 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         bool bBidirectional = GetBoolFieldAnimAuth(Params, TEXT("bidirectional"), false);
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
         
-        UAnimBlueprint* AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        // Try to find in-memory version first (may have unsaved changes)
+        UAnimBlueprint* AnimBP = FindObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+        if (!AnimBP)
+        {
+            // Fall back to loading from disk
+            AnimBP = Cast<UAnimBlueprint>(StaticLoadObject(UAnimBlueprint::StaticClass(), nullptr, *BlueprintPath));
+        }
         if (!AnimBP)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
@@ -2227,6 +2325,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     {
         FString BlueprintPath = NormalizeAnimPath(GetStringFieldAnimAuth(Params, TEXT("blueprintPath"), TEXT("")));
         FString BlendType = GetStringFieldAnimAuth(Params, TEXT("blendType"), TEXT("TwoWayBlend"));
+        FString NodeName = GetStringFieldAnimAuth(Params, TEXT("nodeName"), TEXT(""));
         int32 NodePosX = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionX"), 0));
         int32 NodePosY = static_cast<int32>(GetNumberFieldAnimAuth(Params, TEXT("positionY"), 0));
         bool bSave = GetBoolFieldAnimAuth(Params, TEXT("save"), true);
@@ -2246,6 +2345,7 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         FString CreatedNodeType;
+        FString CreatedNodeName = NodeName;
         
 #if MCP_HAS_TWO_WAY_BLEND
         if (BlendType == TEXT("TwoWayBlend") || BlendType == TEXT("Blend"))
@@ -2254,8 +2354,18 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
             BlendNode->NodePosX = NodePosX;
             BlendNode->NodePosY = NodePosY;
+            // Set the node name via NodeComment so it can be found later
+            if (!NodeName.IsEmpty())
+            {
+                BlendNode->NodeComment = NodeName;
+                BlendNode->bCommentBubbleVisible = true;
+            }
             NodeCreator.Finalize();
             CreatedNodeType = TEXT("TwoWayBlend");
+            if (CreatedNodeName.IsEmpty())
+            {
+                CreatedNodeName = FString::Printf(TEXT("BlendNode_%d"), BlendNode->NodeGuid.A);
+            }
         }
         else
 #endif
@@ -2266,8 +2376,18 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             UAnimGraphNode_LayeredBoneBlend* BlendNode = NodeCreator.CreateNode();
             BlendNode->NodePosX = NodePosX;
             BlendNode->NodePosY = NodePosY;
+            // Set the node name via NodeComment so it can be found later
+            if (!NodeName.IsEmpty())
+            {
+                BlendNode->NodeComment = NodeName;
+                BlendNode->bCommentBubbleVisible = true;
+            }
             NodeCreator.Finalize();
             CreatedNodeType = TEXT("LayeredBoneBlend");
+            if (CreatedNodeName.IsEmpty())
+            {
+                CreatedNodeName = FString::Printf(TEXT("LayeredBlendNode_%d"), BlendNode->NodeGuid.A);
+            }
         }
         else
 #endif
@@ -2278,8 +2398,18 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
             BlendNode->NodePosX = NodePosX;
             BlendNode->NodePosY = NodePosY;
+            // Set the node name via NodeComment so it can be found later
+            if (!NodeName.IsEmpty())
+            {
+                BlendNode->NodeComment = NodeName;
+                BlendNode->bCommentBubbleVisible = true;
+            }
             NodeCreator.Finalize();
             CreatedNodeType = TEXT("TwoWayBlend");
+            if (CreatedNodeName.IsEmpty())
+            {
+                CreatedNodeName = FString::Printf(TEXT("BlendNode_%d"), BlendNode->NodeGuid.A);
+            }
 #else
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph blend node headers not available in this build."), *BlendType), TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
 #endif
@@ -2289,7 +2419,8 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         SaveAnimAsset(AnimBP, bSave);
         
         Response->SetStringField(TEXT("nodeType"), CreatedNodeType);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' created"), *CreatedNodeType));
+        Response->SetStringField(TEXT("nodeName"), CreatedNodeName);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' (name: %s) created"), *CreatedNodeType, *CreatedNodeName));
 #else
         // AnimGraph headers not available - return error instead of fake success
         ANIM_ERROR_RESPONSE(
@@ -2472,14 +2603,24 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
         
-        // Find the node by name
+        // Find the node by name (search both NodeTitle and NodeComment)
         UEdGraphNode* FoundNode = nullptr;
         for (UEdGraphNode* Node : AnimGraph->Nodes)
         {
-            if (Node && Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Contains(NodeName))
+            if (Node)
             {
-                FoundNode = Node;
-                break;
+                // Check NodeComment first (custom name set via add_blend_node)
+                if (Node->NodeComment.Contains(NodeName))
+                {
+                    FoundNode = Node;
+                    break;
+                }
+                // Also check the node title
+                if (Node->GetNodeTitle(ENodeTitleType::ListView).ToString().Contains(NodeName))
+                {
+                    FoundNode = Node;
+                    break;
+                }
             }
         }
         
@@ -2489,7 +2630,53 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         }
         
         // Find and set the property using reflection
-        FProperty* Property = FoundNode->GetClass()->FindPropertyByName(FName(*PropertyName));
+        // Support dot notation for nested properties (e.g., "BlendNode.Alpha")
+        void* TargetContainer = FoundNode;
+        FProperty* Property = nullptr;
+        FString RemainingPath = PropertyName;
+        
+        while (!RemainingPath.IsEmpty())
+        {
+            FString CurrentPart;
+            int32 DotIndex;
+            if (RemainingPath.FindChar(TEXT('.'), DotIndex))
+            {
+                CurrentPart = RemainingPath.Left(DotIndex);
+                RemainingPath = RemainingPath.Mid(DotIndex + 1);
+            }
+            else
+            {
+                CurrentPart = RemainingPath;
+                RemainingPath.Empty();
+            }
+            
+            FProperty* CurrentProp = TargetContainer 
+                ? FoundNode->GetClass()->FindPropertyByName(FName(*CurrentPart))
+                : nullptr;
+            
+            // If searching on a struct, use the struct's property lookup
+            if (!CurrentProp && Property)
+            {
+                if (FStructProperty* StructProp = CastField<FStructProperty>(Property))
+                {
+                    CurrentProp = StructProp->Struct->FindPropertyByName(FName(*CurrentPart));
+                    if (CurrentProp)
+                    {
+                        TargetContainer = Property->ContainerPtrToValuePtr<void>(TargetContainer);
+                        Property = CurrentProp;
+                        continue;
+                    }
+                }
+            }
+            
+            if (!CurrentProp)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Property '%s' not found on node '%s'"), *CurrentPart, *NodeName), TEXT("PROPERTY_NOT_FOUND"));
+            }
+            
+            Property = CurrentProp;
+        }
+        
         if (!Property)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Property '%s' not found on node '%s'"), *PropertyName, *NodeName), TEXT("PROPERTY_NOT_FOUND"));

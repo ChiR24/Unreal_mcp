@@ -217,7 +217,7 @@
 #include "Sound/SoundEffectSubmix.h"
 
 // --- Audio Volume ---
-#include "GameFramework/AudioVolume.h"
+#include "Sound/AudioVolume.h"
 #include "Components/BrushComponent.h"
 
 #endif // WITH_EDITOR
@@ -2012,16 +2012,25 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
        return true;
      }
      UWorld *World = GEditor->GetEditorWorldContext().World();
-     if (!World) {
-       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
-                           TEXT("NO_WORLD"));
-       return true;
-     }
+      if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                            TEXT("NO_WORLD"));
+        return true;
+      }
 
-     // Spawn AudioVolume actor
-     FActorSpawnParameters SpawnParams;
-     SpawnParams.Name = FName(*ZoneName);
-     AAudioVolume *AudioVolume = World->SpawnActor<AAudioVolume>(Location, FRotator::ZeroRotator, SpawnParams);
+      // Check for existing actor with same name (name collision detection)
+      AActor* ExistingActor = FindAudioActorByName(ZoneName, World);
+      if (ExistingActor) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Actor '%s' already exists in level"), *ZoneName),
+                            TEXT("DUPLICATE_NAME"));
+        return true;
+      }
+
+      // Spawn AudioVolume actor
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = FName(*ZoneName);
+      AAudioVolume *AudioVolume = World->SpawnActor<AAudioVolume>(Location, FRotator::ZeroRotator, SpawnParams);
      if (!AudioVolume) {
        SendAutomationError(RequestingSocket, RequestId,
                            TEXT("Failed to spawn AudioVolume"), TEXT("SPAWN_FAILED"));
