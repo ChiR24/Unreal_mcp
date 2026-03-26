@@ -131,30 +131,13 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
       return cleanObject(res);
     }
     case 'apply_baseline_settings': {
-      // Console commands only - composite action
-      const distanceScale = typeof argsRecord.distanceScale === 'number' ? argsRecord.distanceScale : 1.0;
-      const skeletalBias = typeof argsRecord.skeletalBias === 'number' ? argsRecord.skeletalBias : 0;
-      const vsync = typeof argsRecord.vsync === 'boolean' ? argsRecord.vsync : false;
-      const maxFPS = typeof argsTyped.maxFPS === 'number' ? argsTyped.maxFPS : 60;
-      const hzb = typeof argsRecord.hzb === 'boolean' ? argsRecord.hzb : true;
+      // Delegate to C++ handler which uses IConsoleManager for reliable CVar setting
+      const profile = typeof argsRecord.profile === 'string' ? argsRecord.profile : 'balanced';
       
-      const commands = [
-        `r.StaticMeshLODDistanceScale ${distanceScale}`,
-        `r.SkeletalMeshLODDistanceScale ${distanceScale}`,
-        `r.SkeletalMeshLODBias ${skeletalBias}`,
-        `r.HZBOcclusion ${hzb ? 1 : 0}`,
-        `r.VSync ${vsync ? 1 : 0}`,
-        `t.MaxFPS ${maxFPS}`,
-      ];
-      
-      // Use batch execution for all console commands - significantly faster than sequential
-      await executeBatchConsoleCommands(tools, commands);
-      
-      return { 
-        success: true, 
-        message: 'Baseline performance settings applied',
-        params: { distanceScale, skeletalBias, vsync, maxFPS, hzb }
-      };
+      const res = await executeAutomationRequest(tools, 'apply_baseline_settings', {
+        profile
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     case 'optimize_draw_calls':
     case 'merge_actors': {
@@ -240,21 +223,13 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
       return cleanObject(res);
     }
     case 'configure_world_partition': {
-      // Console commands only
-      const enabled = argsTyped.enabled !== false;
-      const commands: string[] = [`wp.Runtime.EnableStreaming ${enabled ? 1 : 0}`];
-      
-      if (typeof argsRecord.streamingDistance === 'number') {
-        commands.push(`wp.Runtime.StreamingDistance ${argsRecord.streamingDistance}`);
-      }
-      if (typeof argsRecord.cellSize === 'number') {
-        commands.push(`wp.Runtime.CellSize ${argsRecord.cellSize}`);
-      }
-      
-      // Use batch execution for all console commands - significantly faster than sequential
-      await executeBatchConsoleCommands(tools, commands);
-      
-      return { success: true, message: 'World Partition configured' };
+      // Delegate to C++ handler which uses IConsoleManager for reliable CVar setting
+      const res = await executeAutomationRequest(tools, 'configure_world_partition', {
+        enabled: argsTyped.enabled !== false,
+        cellSize: argsRecord.cellSize as number | undefined,
+        loadingRange: argsRecord.loadingRange as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
     }
     default:
       return ResponseFactory.error(`Unknown performance action: ${action}`);

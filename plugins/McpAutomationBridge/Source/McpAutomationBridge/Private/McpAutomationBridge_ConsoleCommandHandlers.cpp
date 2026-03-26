@@ -180,12 +180,14 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             // Execute the console command
             bool bSuccess = false;
             
-            // Try to execute via GEngine
+            // Try to execute via GEngine - Exec returns true if command was handled
             if (GEngine)
             {
-                GEngine->Exec(World, *Command);
-                bSuccess = true; // Exec doesn't return success, assume it worked
-                ExecutedCount++;
+                bSuccess = GEngine->Exec(World, *Command);
+                if (bSuccess)
+                {
+                    ExecutedCount++;
+                }
             }
             
             if (!bSuccess)

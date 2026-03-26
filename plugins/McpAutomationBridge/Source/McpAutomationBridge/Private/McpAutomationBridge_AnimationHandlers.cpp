@@ -1109,6 +1109,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
 
                       const FName BoneFName(*BoneName);
 
+                      // CRITICAL: Validate bone exists in skeleton before attempting to add track
+                      const FReferenceSkeleton& RefSkeleton = TargetSkeleton->GetReferenceSkeleton();
+                      const int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
+                      if (BoneIndex == INDEX_NONE)
+                      {
+                        // Bone doesn't exist in skeleton - skip this track
+                        UE_LOG(LogTemp, Warning, TEXT("create_procedural_anim: Bone '%s' not found in skeleton %s"), 
+                               *BoneName, *TargetSkeleton->GetName());
+                        continue;
+                      }
+
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
                       if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName)) {
                         Controller.AddBoneCurve(BoneFName);
