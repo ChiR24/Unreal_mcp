@@ -39,6 +39,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
 
 // -----------------------------------------------------------------------------
 // Engine Includes
@@ -77,6 +78,21 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     }
 
 #if WITH_EDITOR
+    // Runtime check: Verify EnhancedInput module is loaded
+    // This handles the case where headers were available at compile time
+    // but the plugin is not enabled in the target project at runtime
+    if (!FModuleManager::Get().IsModuleLoaded(TEXT("EnhancedInput")))
+    {
+        if (!FModuleManager::Get().ModuleExists(TEXT("EnhancedInput")) ||
+            !FModuleManager::Get().LoadModule(TEXT("EnhancedInput")))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("EnhancedInput plugin is not enabled in this project. Enable the Enhanced Input plugin to use Input features."),
+                TEXT("ENHANCEDINPUT_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+    }
+
     // Validate payload
     if (!Payload.IsValid())
     {

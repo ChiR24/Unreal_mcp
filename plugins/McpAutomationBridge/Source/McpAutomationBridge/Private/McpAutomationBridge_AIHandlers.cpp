@@ -47,6 +47,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
 
 // JSON
 #include "Dom/JsonObject.h"
@@ -207,6 +208,70 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpAIHandlers, Log, All);
 #define GetStringFieldAI GetJsonStringField
 #define GetNumberFieldAI GetJsonNumberField
 #define GetBoolFieldAI GetJsonBoolField
+
+// =============================================================================
+// Runtime Module Check Helpers
+// =============================================================================
+// These helpers check if optional AI modules are loaded at runtime.
+// Required because DynamicallyLoadedModuleNames allows DLL to load without
+// hard dependencies, but code must verify module availability before use.
+
+/**
+ * Check if StateTree module is loaded at runtime.
+ * Returns true if module is available, false otherwise.
+ * Attempts to load the module if it exists but isn't loaded yet.
+ */
+static bool IsStateTreeModuleAvailable()
+{
+#if MCP_HAS_STATE_TREE
+    if (FModuleManager::Get().IsModuleLoaded(TEXT("StateTreeModule")))
+    {
+        return true;
+    }
+    // Try to load it
+    if (FModuleManager::Get().ModuleExists(TEXT("StateTreeModule")))
+    {
+        return FModuleManager::Get().LoadModule(TEXT("StateTreeModule")) != nullptr;
+    }
+#endif
+    return false;
+}
+
+/**
+ * Check if SmartObjects module is loaded at runtime.
+ */
+static bool IsSmartObjectsModuleAvailable()
+{
+#if MCP_HAS_SMART_OBJECTS
+    if (FModuleManager::Get().IsModuleLoaded(TEXT("SmartObjectsModule")))
+    {
+        return true;
+    }
+    if (FModuleManager::Get().ModuleExists(TEXT("SmartObjectsModule")))
+    {
+        return FModuleManager::Get().LoadModule(TEXT("SmartObjectsModule")) != nullptr;
+    }
+#endif
+    return false;
+}
+
+/**
+ * Check if MassEntity module is loaded at runtime.
+ */
+static bool IsMassModuleAvailable()
+{
+#if MCP_HAS_MASS_AI
+    if (FModuleManager::Get().IsModuleLoaded(TEXT("MassEntity")))
+    {
+        return true;
+    }
+    if (FModuleManager::Get().ModuleExists(TEXT("MassEntity")))
+    {
+        return FModuleManager::Get().LoadModule(TEXT("MassEntity")) != nullptr;
+    }
+#endif
+    return false;
+}
 
 // Helper to save package
 // Note: This helper is used for NEW assets created with CreatePackage + factory.
@@ -1519,6 +1584,17 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     if (SubAction == TEXT("create_state_tree"))
     {
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
+        // Runtime check: Verify StateTree module is actually loaded
+        // This handles the case where headers were available at compile time
+        // but the plugin is not enabled in the target project at runtime
+        if (!IsStateTreeModuleAvailable())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("StateTree plugin is not enabled in this project. Enable the StateTree plugin to use State Tree features."),
+                TEXT("STATETREE_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+        
         FString Name = GetStringFieldAI(Payload, TEXT("name"));
         FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
         FString SchemaType = GetStringFieldAI(Payload, TEXT("schemaType"), TEXT("Component"));
@@ -1951,6 +2027,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     if (SubAction == TEXT("create_smart_object_definition"))
     {
 #if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
+        // Runtime check: Verify SmartObjects module is actually loaded
+        if (!IsSmartObjectsModuleAvailable())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("SmartObjects plugin is not enabled in this project. Enable the SmartObjects plugin to use Smart Object features."),
+                TEXT("SMARTOBJECTS_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+        
         FString Name = GetStringFieldAI(Payload, TEXT("name"));
         FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
         
@@ -2245,6 +2330,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
     if (SubAction == TEXT("create_mass_entity_config"))
     {
 #if MCP_HAS_MASS_AI && MCP_MASS_AI_HEADERS_AVAILABLE
+        // Runtime check: Verify MassEntity module is actually loaded
+        if (!IsMassModuleAvailable())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("MassEntity plugin is not enabled in this project. Enable the MassEntity plugin to use Mass AI features."),
+                TEXT("MASS_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+        
         FString Name = GetStringFieldAI(Payload, TEXT("name"));
         FString Path = GetStringFieldAI(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
         

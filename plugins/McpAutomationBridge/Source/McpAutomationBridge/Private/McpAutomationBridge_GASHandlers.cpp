@@ -73,6 +73,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
 
 // =============================================================================
 // Logging Category
@@ -290,6 +291,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
     SendAutomationError(RequestingSocket, RequestId, TEXT("GameplayAbilities plugin not enabled."), TEXT("GAS_NOT_AVAILABLE"));
     return true;
 #else
+    // Runtime check: Verify GameplayAbilities module is actually loaded
+    // This handles the case where headers were available at compile time (MCP_HAS_GAS=1)
+    // but the plugin is not enabled in the target project at runtime
+    if (!FModuleManager::Get().IsModuleLoaded(TEXT("GameplayAbilities")))
+    {
+        // Attempt to load the module - this may succeed if the plugin is available but not yet loaded
+        if (!FModuleManager::Get().ModuleExists(TEXT("GameplayAbilities")) || 
+            !FModuleManager::Get().LoadModule(TEXT("GameplayAbilities")))
+        {
+            SendAutomationError(RequestingSocket, RequestId, 
+                TEXT("GameplayAbilities plugin is not enabled in this project. Enable the GameplayAbilities plugin to use GAS features."), 
+                TEXT("GAS_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+    }
+    
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
