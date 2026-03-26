@@ -45,6 +45,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
 
 // =============================================================================
 // Editor-Only Headers
@@ -117,6 +118,24 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   }
 
 #if WITH_EDITOR
+  // Runtime check: Verify BehaviorTreeEditor module is loaded for graph editing operations
+  // This handles the case where headers were available at compile time
+  // but the plugin is not enabled in the target project at runtime
+  // Note: "create" subAction doesn't require the editor module (only core BehaviorTree runtime classes)
+  // but graph operations (add_node, connect_nodes, etc.) do require it
+  const bool bNeedsEditorModule = (SubAction != TEXT("create"));
+  if (bNeedsEditorModule && !FModuleManager::Get().IsModuleLoaded(TEXT("BehaviorTreeEditor")))
+  {
+      if (!FModuleManager::Get().ModuleExists(TEXT("BehaviorTreeEditor")) ||
+          !FModuleManager::Get().LoadModule(TEXT("BehaviorTreeEditor")))
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("BehaviorTreeEditor plugin is not enabled in this project. Enable the Behavior Tree Editor plugin to use Behavior Tree graph editing features."),
+              TEXT("BEHAVIORTREEEDITOR_PLUGIN_NOT_ENABLED"));
+          return true;
+      }
+  }
+
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));

@@ -42,6 +42,8 @@
 #include "McpVersionCompatibility.h"  // MUST be first
 #include "McpHandlerUtils.h"
 
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
+
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
@@ -180,6 +182,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     }
 
 #if WITH_EDITOR
+    // Runtime check: Verify NiagaraEditor module is loaded
+    // This handles the case where headers were available at compile time
+    // but the plugin is not enabled in the target project at runtime
+    if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor")))
+    {
+        if (!FModuleManager::Get().ModuleExists(TEXT("NiagaraEditor")) ||
+            !FModuleManager::Get().LoadModule(TEXT("NiagaraEditor")))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("NiagaraEditor plugin is not enabled in this project. Enable the Niagara plugin to use Niagara VFX features."),
+                TEXT("NIAGARAEDITOR_PLUGIN_NOT_ENABLED"));
+            return true;
+        }
+    }
+
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
