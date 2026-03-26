@@ -1827,18 +1827,19 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   int32 DeletedCount = 0;
   TArray<FString> NotFoundPaths;
   TArray<FString> FailedToDeletePaths;
-  bool bDeletedRiskyAssets = false;
   
   for (const FString &Path : PathsToDelete) {
     // Check if it's a directory first (folder path)
     if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
-      // Directory exists - attempt to delete it
-      // Check if directory contains risky assets before deletion
-      if (UEditorAssetLibrary::DeleteDirectory(Path)) {
+      // Directory exists - use safe folder deletion with proper cleanup
+      // CRITICAL for UE 5.7+: Use McpSafeDeleteFolder instead of UEditorAssetLibrary::DeleteDirectory
+      // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
+      // AnimBlueprints, IKRigs, IKRetargeters, etc.
+      if (McpSafeOperations::McpSafeDeleteFolder(Path, true))
+      {
         // Verify the directory was actually deleted
         if (!UEditorAssetLibrary::DoesDirectoryExist(Path)) {
           DeletedCount++;
-          bDeletedRiskyAssets = true; // Assume folder might contain risky assets
         } else {
           // Delete returned true but directory still exists
           FailedToDeletePaths.Add(Path);
@@ -1847,11 +1848,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
         FailedToDeletePaths.Add(Path);
       }
     } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
-      // Check if this is a risky asset type
-      if (McpSafeOperations::IsRiskyAssetClassForDelete(Path)) {
-        bDeletedRiskyAssets = true;
-      }
-      
       // Asset exists - attempt to delete it
       if (UEditorAssetLibrary::DeleteAsset(Path)) {
         // Verify the asset was actually deleted
@@ -1868,12 +1864,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       // Asset/directory does not exist
       NotFoundPaths.Add(Path);
     }
-  }
-
-  // CRITICAL for UE 5.7+: Force garbage collection after deleting risky assets
-  // This prevents access violations during UWorld::CleanupWorld
-  if (bDeletedRiskyAssets && DeletedCount > 0) {
-    McpSafeOperations::McpSafePostDeleteGC(true);
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
