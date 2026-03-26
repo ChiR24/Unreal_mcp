@@ -136,9 +136,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
   // Runtime check: Verify BehaviorTreeEditor module is loaded for graph editing operations
   // This handles the case where headers were available at compile time
   // but the plugin is not enabled in the target project at runtime
-  // Note: "create" subAction doesn't require the editor module (only core BehaviorTree runtime classes)
-  // but graph operations (add_node, connect_nodes, etc.) do require it
-  const bool bNeedsEditorModule = (SubAction != TEXT("create"));
+  // Note: "create" subAction requires the editor module when MCP_HAS_BEHAVIOR_TREE_GRAPH is enabled
+  // because it instantiates UBehaviorTreeGraph classes. Without graph support (UE 5.0-5.2),
+  // "create" only uses core BehaviorTree runtime classes.
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+  const bool bNeedsEditorModule = true;  // UE 5.3+: All operations need BehaviorTreeEditor for graph classes
+#else
+  const bool bNeedsEditorModule = (SubAction != TEXT("create"));  // UE 5.0-5.2: Only graph ops need editor module
+#endif
   if (bNeedsEditorModule && !FModuleManager::Get().IsModuleLoaded(TEXT("BehaviorTreeEditor")))
   {
       if (!FModuleManager::Get().ModuleExists(TEXT("BehaviorTreeEditor")) ||
