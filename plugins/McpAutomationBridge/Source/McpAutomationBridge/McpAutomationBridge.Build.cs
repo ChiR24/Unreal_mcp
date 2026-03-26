@@ -195,6 +195,12 @@ PublicDependencyModuleNames.AddRange(new string[]
             // DataValidation (optional plugin) - for data validation
             AddOptionalDynamicModule(Target, EngineDir, "DataValidation", "DataValidation");
 
+            // Phase: IKRig and Vehicles (optional plugins)
+            AddOptionalDynamicModule(Target, EngineDir, "IKRig", "IKRig");
+            AddOptionalDynamicModule(Target, EngineDir, "IKRigEditor", "IKRigEditor");
+            AddOptionalDynamicModule(Target, EngineDir, "ChaosVehicles", "ChaosVehicles");
+            AddOptionalDynamicModule(Target, EngineDir, "AnimationData", "AnimationData");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
@@ -487,10 +493,14 @@ PublicDependencyModuleNames.AddRange(new string[]
                     Path.Combine(PluginsDir, "AI", SearchName),
                     Path.Combine(PluginsDir, "Runtime", SearchName),
                     Path.Combine(PluginsDir, "Experimental", SearchName),
+                    Path.Combine(PluginsDir, "Animation", SearchName),  // Animation plugins like IKRig, ControlRig
+                    Path.Combine(PluginsDir, "Animation", "IKRig", "Source", SearchName),  // IKRigEditor module
+                    Path.Combine(PluginsDir, "Animation", "ControlRig", "Source", SearchName),  // ControlRig modules
                     Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
-                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName)
+                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Experimental", "ChaosVehiclesPlugin", "Source", SearchName)  // ChaosVehicles module
                 };
 
                 foreach (string SearchPath in SearchPaths)

@@ -18,7 +18,7 @@ async function createSoundCue(tools: ITools, args: AudioArgs): Promise<Record<st
 
   const name = args.name ?? '';
   const wavePath = args.wavePath ?? args.soundPath ?? '';
-  const savePath = toString(args.savePath) || '/Game/Audio/Cues';
+  const savePath = toString(args.savePath ?? args.path) || '/Game/Audio/Cues';
   const { volume, pitch } = validateAudioParams(
     toNumber(args.settings?.volume),
     toNumber(args.settings?.pitch)
@@ -122,6 +122,7 @@ async function createSoundClass(tools: ITools, args: AudioArgs): Promise<Record<
 
   const payload = {
     name: args.name ?? '',
+    path: toString(args.path) || '/Game/Audio/Classes',
     parentClass: toString(args.parentClass),
     properties: args.properties
   };
@@ -137,6 +138,7 @@ async function createSoundMix(tools: ITools, args: AudioArgs): Promise<Record<st
 
   const payload = {
     name: args.name ?? '',
+    path: toString(args.path) || '/Game/Audio/Mixes',
     classAdjusters: args.classAdjusters
   };
 

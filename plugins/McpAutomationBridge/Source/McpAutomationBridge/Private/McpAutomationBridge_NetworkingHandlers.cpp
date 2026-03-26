@@ -267,8 +267,9 @@ namespace NetworkingHelpers
 
     /**
      * Find actor by name in the given world.
+     * Checks both GetActorLabel() (user-visible name) and GetName() (internal name).
      * @param World The world to search in
-     * @param ActorName Exact actor name to match
+     * @param ActorName Actor label or internal name to match
      * @return Found AActor or nullptr
      */
     AActor* FindActorByName(UWorld* World, const FString& ActorName)
@@ -278,7 +279,10 @@ namespace NetworkingHelpers
         for (TActorIterator<AActor> It(World); It; ++It)
         {
             AActor* Actor = *It;
-            if (Actor && Actor->GetName() == ActorName)
+            // Check both GetActorLabel() (user-visible name) and GetName() (internal name)
+            // This matches the behavior of UMcpAutomationBridgeSubsystem::FindActorByName
+            if (Actor && (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
+                          Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)))
             {
                 return Actor;
             }
@@ -1685,9 +1689,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         ResultJson->SetBoolField(TEXT("success"), bSuccess);
         ResultJson->SetStringField(TEXT("variableName"), VarName);
         ResultJson->SetStringField(TEXT("dataType"), DataType);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' added"), *VarName, *DataType));
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Network prediction data variable '%s' of type '%s' %s"), *VarName, *DataType, bSuccess ? TEXT("added") : TEXT("could not be added (may already exist)")));
         McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Network prediction data added"), ResultJson);
+        SendAutomationResponse(RequestingSocket, RequestId, bSuccess, TEXT("Network prediction data added"), ResultJson);
         return true;
     }
 

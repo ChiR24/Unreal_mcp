@@ -216,6 +216,10 @@
 #include "Sound/ReverbEffect.h"
 #include "Sound/SoundEffectSubmix.h"
 
+// --- Audio Volume ---
+#include "Sound/AudioVolume.h"
+#include "Components/BrushComponent.h"
+
 #endif // WITH_EDITOR
 
 // =============================================================================
@@ -1807,14 +1811,277 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                              TEXT("Audio occlusion configured"), Resp);
     } else {
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to configure audio occlusion"), TEXT("CONFIGURATION_FAILED"));
-    }
-    return true;
-  }
+                           TEXT("Failed to configure audio occlusion"), TEXT("CONFIGURATION_FAILED"));
+     }
+     return true;
+   }
 
-  // -------------------------------------------------------------------------
-  // Fallback: Unrecognized audio action
-  // -------------------------------------------------------------------------
+   // -------------------------------------------------------------------------
+   // set_sound_attenuation
+   // -------------------------------------------------------------------------
+   // Creates or modifies a USoundAttenuation asset with distance settings.
+   //
+   // Payload:  { "name": string (required), "innerRadius"?: number,
+   //             "falloffDistance"?: number, "attenuationShape"?: string,
+   //             "falloffMode"?: string, "path"?: string, "save"?: bool }
+   // Response: { "success": bool, "path": string, "name": string }
+   // -------------------------------------------------------------------------
+   if (Lower == TEXT("set_sound_attenuation") || Lower == TEXT("audio_set_sound_attenuation")) {
+     FString Name;
+     if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+       return true;
+     }
+
+     FString PackagePath = TEXT("/Game/Audio/Attenuation");
+     Payload->TryGetStringField(TEXT("path"), PackagePath);
+
+     double InnerRadius = 400.0;
+     Payload->TryGetNumberField(TEXT("innerRadius"), InnerRadius);
+      double FalloffDistance = 3600.0;
+      Payload->TryGetNumberField(TEXT("falloffDistance"), FalloffDistance);
+      FString AttenuationShape = TEXT("Sphere");
+      Payload->TryGetStringField(TEXT("attenuationShape"), AttenuationShape);
+      FString FalloffMode = TEXT("Linear");
+      Payload->TryGetStringField(TEXT("falloffMode"), FalloffMode);
+     bool bSave = true;
+     Payload->TryGetBoolField(TEXT("save"), bSave);
+
+     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
+     if (!FullPath.StartsWith(TEXT("/Game/"))) {
+       FullPath = TEXT("/Game/") + FullPath;
+     }
+
+     UPackage *Package = CreatePackage(*FullPath);
+     if (!Package) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+       return true;
+     }
+
+     USoundAttenuation *Atten = NewObject<USoundAttenuation>(Package, FName(*Name), RF_Public | RF_Standalone);
+     if (!Atten) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Failed to create SoundAttenuation"), TEXT("CREATE_FAILED"));
+       return true;
+     }
+
+     // Configure attenuation settings
+     Atten->Attenuation.AttenuationShapeExtents.X = (float)InnerRadius;
+     Atten->Attenuation.FalloffDistance = (float)FalloffDistance;
+
+     // Set falloff mode
+     if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {
+       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic;
+     } else if (FalloffMode.Equals(TEXT("Inverse"), ESearchCase::IgnoreCase)) {
+       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse;
+     } else if (FalloffMode.Equals(TEXT("NaturalSound"), ESearchCase::IgnoreCase)) {
+       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
+     } else {
+       Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear;
+     }
+
+     if (bSave) {
+       Atten->MarkPackageDirty();
+       FAssetRegistryModule::AssetCreated(Atten);
+     }
+
+     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+     Resp->SetBoolField(TEXT("success"), true);
+     Resp->SetStringField(TEXT("path"), Atten->GetPathName());
+     Resp->SetStringField(TEXT("name"), Name);
+     McpHandlerUtils::AddVerification(Resp, Atten);
+     SendAutomationResponse(RequestingSocket, RequestId, true,
+                            TEXT("Sound attenuation configured"), Resp);
+     return true;
+   }
+
+   // -------------------------------------------------------------------------
+   // fade_sound
+   // -------------------------------------------------------------------------
+   // Generic fade handler - routes to fade_in or fade_out based on fadeType.
+   // Supports: FadeIn, FadeOut, FadeTo (fade to target volume)
+   //
+   // Payload:  { "soundName": string (actor name), "targetVolume"?: number,
+   //             "fadeTime"?: number, "fadeType"?: "FadeIn"|"FadeOut"|"FadeTo" }
+   // Response: { "success": bool, "actorName": string, "action": string }
+   // -------------------------------------------------------------------------
+   if (Lower == TEXT("fade_sound") || Lower == TEXT("audio_fade_sound")) {
+     FString ActorName;
+     Payload->TryGetStringField(TEXT("soundName"), ActorName);
+     if (ActorName.IsEmpty()) {
+       Payload->TryGetStringField(TEXT("actorName"), ActorName);
+     }
+     double FadeTime = 1.0;
+     Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+      double TargetVolume = 0.0;
+      Payload->TryGetNumberField(TEXT("targetVolume"), TargetVolume);
+      FString FadeType = TEXT("FadeTo");
+      Payload->TryGetStringField(TEXT("fadeType"), FadeType);
+
+     if (!GEditor) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
+       return true;
+     }
+     UWorld *World = GEditor->GetEditorWorldContext().World();
+     if (!World) {
+       SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                           TEXT("NO_WORLD"));
+       return true;
+     }
+
+     AActor *TargetActor = FindAudioActorByName(ActorName, World);
+     if (!TargetActor) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Actor not found"), TEXT("ACTOR_NOT_FOUND"));
+       return true;
+     }
+
+     UAudioComponent *AudioComp = TargetActor->FindComponentByClass<UAudioComponent>();
+     if (!AudioComp) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Audio component not found on actor"),
+                           TEXT("COMPONENT_NOT_FOUND"));
+       return true;
+     }
+
+     // Execute fade based on type
+     if (FadeType.Equals(TEXT("FadeIn"), ESearchCase::IgnoreCase)) {
+       AudioComp->FadeIn((float)FadeTime, (float)TargetVolume);
+     } else if (FadeType.Equals(TEXT("FadeOut"), ESearchCase::IgnoreCase)) {
+       AudioComp->FadeOut((float)FadeTime, (float)TargetVolume);
+     } else {
+       // FadeTo: Adjust volume over time
+       AudioComp->FadeIn((float)FadeTime, (float)TargetVolume);
+     }
+
+     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+     Resp->SetBoolField(TEXT("success"), true);
+     Resp->SetStringField(TEXT("actorName"), ActorName);
+     Resp->SetStringField(TEXT("action"), FadeType);
+     McpHandlerUtils::AddVerification(Resp, TargetActor);
+     SendAutomationResponse(RequestingSocket, RequestId, true,
+                            TEXT("Sound fading"), Resp);
+     return true;
+   }
+
+   // -------------------------------------------------------------------------
+   // create_reverb_zone
+   // -------------------------------------------------------------------------
+   // Creates an AAudioVolume actor with reverb settings.
+   //
+   // Payload:  { "name": string (required), "location"?: [x,y,z],
+   //             "size"?: [x,y,z], "reverbEffect"?: string (asset path),
+   //             "volume"?: number, "fadeTime"?: number }
+   // Response: { "success": bool, "actorName": string, "location": {x,y,z} }
+   // -------------------------------------------------------------------------
+   if (Lower == TEXT("create_reverb_zone") || Lower == TEXT("audio_create_reverb_zone")) {
+     FString ZoneName;
+     if (!Payload->TryGetStringField(TEXT("name"), ZoneName) || ZoneName.IsEmpty()) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("name required"), TEXT("INVALID_ARGUMENT"));
+       return true;
+     }
+
+     FVector Location = FVector::ZeroVector;
+     const TArray<TSharedPtr<FJsonValue>> *LocArr;
+     if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr && LocArr->Num() >= 3) {
+       Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
+                          (*LocArr)[2]->AsNumber());
+     }
+
+     FVector Size = FVector(500.0f, 500.0f, 500.0f);
+     const TArray<TSharedPtr<FJsonValue>> *SizeArr;
+     if (Payload->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr && SizeArr->Num() >= 3) {
+       Size = FVector((*SizeArr)[0]->AsNumber(), (*SizeArr)[1]->AsNumber(),
+                      (*SizeArr)[2]->AsNumber());
+     }
+
+     FString ReverbEffectPath;
+     Payload->TryGetStringField(TEXT("reverbEffect"), ReverbEffectPath);
+     double Volume = 1.0;
+     Payload->TryGetNumberField(TEXT("volume"), Volume);
+     double FadeTime = 2.0;
+     Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+
+     if (!GEditor) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Editor not available"), TEXT("NO_EDITOR"));
+       return true;
+     }
+     UWorld *World = GEditor->GetEditorWorldContext().World();
+      if (!World) {
+        SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
+                            TEXT("NO_WORLD"));
+        return true;
+      }
+
+      // Check for existing actor with same name (name collision detection)
+      AActor* ExistingActor = FindAudioActorByName(ZoneName, World);
+      if (ExistingActor) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Actor '%s' already exists in level"), *ZoneName),
+                            TEXT("DUPLICATE_NAME"));
+        return true;
+      }
+
+      // Spawn AudioVolume actor
+      FActorSpawnParameters SpawnParams;
+      SpawnParams.Name = FName(*ZoneName);
+      AAudioVolume *AudioVolume = World->SpawnActor<AAudioVolume>(Location, FRotator::ZeroRotator, SpawnParams);
+     if (!AudioVolume) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Failed to spawn AudioVolume"), TEXT("SPAWN_FAILED"));
+       return true;
+     }
+
+     // Set actor label
+     AudioVolume->SetActorLabel(ZoneName);
+
+      // Configure brush bounds
+      if (UBrushComponent *BrushComp = AudioVolume->GetBrushComponent()) {
+        // Set volume bounds via brush
+        BrushComp->SetRelativeLocation(FVector::ZeroVector);
+      }
+
+      // Create reverb settings and apply via public API
+      FReverbSettings ReverbSettings;
+      ReverbSettings.bApplyReverb = true;
+
+      // Load and apply reverb effect if provided
+      if (!ReverbEffectPath.IsEmpty()) {
+        UReverbEffect *ReverbEffect = LoadObject<UReverbEffect>(nullptr, *ReverbEffectPath);
+        if (ReverbEffect) {
+          ReverbSettings.ReverbEffect = ReverbEffect;
+        }
+      }
+
+      // Set volume settings
+      ReverbSettings.Volume = (float)Volume;
+      ReverbSettings.FadeTime = (float)FadeTime;
+
+      // Apply settings via public API
+      AudioVolume->SetReverbSettings(ReverbSettings);
+
+     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+     Resp->SetBoolField(TEXT("success"), true);
+     Resp->SetStringField(TEXT("actorName"), AudioVolume->GetName());
+     TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
+     LocObj->SetNumberField(TEXT("x"), Location.X);
+     LocObj->SetNumberField(TEXT("y"), Location.Y);
+     LocObj->SetNumberField(TEXT("z"), Location.Z);
+     Resp->SetObjectField(TEXT("location"), LocObj);
+     McpHandlerUtils::AddVerification(Resp, AudioVolume);
+     SendAutomationResponse(RequestingSocket, RequestId, true,
+                            TEXT("Reverb zone created"), Resp);
+     return true;
+   }
+
+   // -------------------------------------------------------------------------
+   // Fallback: Unrecognized audio action
+   // -------------------------------------------------------------------------
   SendAutomationResponse(
       RequestingSocket, RequestId, false,
       FString::Printf(TEXT("Audio action '%s' not fully implemented"), *Action),

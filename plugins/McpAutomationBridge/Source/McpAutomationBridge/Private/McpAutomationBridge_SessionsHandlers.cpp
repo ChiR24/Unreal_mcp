@@ -161,6 +161,15 @@ static bool HandleConfigureLocalSessionSettings(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require at least one session setting parameter
+    // Empty payload is not valid - client must specify what to configure
+    if (!Payload.IsValid() || Payload->Values.Num() <= 1)  // Only 'action' field present
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("At least one session setting parameter is required (sessionName, maxPlayers, bIsLANMatch, bAllowJoinInProgress, bAllowInvites, bUsesPresence, bUseLobbiesIfAvailable, or bShouldAdvertise)"), nullptr);
+        return true;
+    }
+
     // Extract session settings from payload
     FString SessionName = GetStringFieldSess(Payload, TEXT("sessionName"), TEXT("DefaultSession"));
     int32 MaxPlayers = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("maxPlayers"), 4.0));
@@ -197,6 +206,14 @@ static bool HandleConfigureSessionInterface(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require interfaceType parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("interfaceType")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("interfaceType is required. Valid types: Default, LAN, Null"), nullptr);
+        return true;
+    }
+
     FString InterfaceType = GetStringFieldSess(Payload, TEXT("interfaceType"), TEXT("Default"));
 
     // Validate interface type
@@ -228,6 +245,14 @@ static bool HandleConfigureSplitScreen(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require at least one split screen parameter
+    if (!Payload.IsValid() || (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("splitScreenType"))))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("At least one split screen parameter is required (enabled or splitScreenType)"), nullptr);
+        return true;
+    }
 
     bool bEnabled = GetBoolFieldSess(Payload, TEXT("enabled"), true);
     FString SplitScreenType = GetStringFieldSess(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
@@ -297,6 +322,14 @@ static bool HandleSetSplitScreenType(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require splitScreenType parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("splitScreenType")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("splitScreenType is required. Valid types: None, TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, FourPlayer_Grid"), nullptr);
+        return true;
+    }
+
     FString SplitScreenType = GetStringFieldSess(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
 
     // Validate split screen type
@@ -331,6 +364,14 @@ static bool HandleAddLocalPlayer(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require controllerId parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("controllerId")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("controllerId is required to add a local player"), nullptr);
+        return true;
+    }
 
     int32 ControllerId = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("controllerId"), -1));
 
@@ -374,6 +415,14 @@ static bool HandleRemoveLocalPlayer(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require playerIndex parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("playerIndex")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("playerIndex is required to remove a local player"), nullptr);
+        return true;
+    }
 
     int32 PlayerIndex = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("playerIndex"), -1));
 
@@ -425,6 +474,14 @@ static bool HandleConfigureLanPlay(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require at least one LAN play parameter
+    if (!Payload.IsValid() || (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("serverPort")) && !Payload->HasField(TEXT("serverPassword"))))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("At least one LAN play parameter is required (enabled, serverPort, or serverPassword)"), nullptr);
+        return true;
+    }
 
     bool bEnabled = GetBoolFieldSess(Payload, TEXT("enabled"), true);
     int32 ServerPort = static_cast<int32>(GetNumberFieldSess(Payload, TEXT("serverPort"), 7777));
@@ -580,6 +637,14 @@ static bool HandleEnableVoiceChat(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require voiceEnabled parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("voiceEnabled")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("voiceEnabled is required (true to enable, false to disable)"), nullptr);
+        return true;
+    }
+
     bool bEnabled = GetBoolFieldSess(Payload, TEXT("voiceEnabled"), true);
     bool bSuccess = false;
     FString StatusMessage;
@@ -682,7 +747,22 @@ static bool HandleConfigureVoiceSettings(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require voiceSettings parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("voiceSettings")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("voiceSettings is required with at least one setting (volume, noiseGateThreshold, noiseSuppression, echoCancellation, or sampleRate)"), nullptr);
+        return true;
+    }
+
     TSharedPtr<FJsonObject> VoiceSettings = GetObjectField(Payload, TEXT("voiceSettings"));
+    
+    if (!VoiceSettings.IsValid())
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("voiceSettings must be a valid object"), nullptr);
+        return true;
+    }
     
     double Volume = 1.0;
     double NoiseGateThreshold = 0.01;
@@ -690,14 +770,11 @@ static bool HandleConfigureVoiceSettings(
     bool bEchoCancellation = true;
     int32 SampleRate = 16000;
 
-    if (VoiceSettings.IsValid())
-    {
-        Volume = FMath::Clamp(GetNumberFieldSess(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
-        NoiseGateThreshold = GetNumberFieldSess(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
-        bNoiseSuppression = GetBoolFieldSess(VoiceSettings, TEXT("noiseSuppression"), true);
-        bEchoCancellation = GetBoolFieldSess(VoiceSettings, TEXT("echoCancellation"), true);
-        SampleRate = static_cast<int32>(GetNumberFieldSess(VoiceSettings, TEXT("sampleRate"), 16000));
-    }
+    Volume = FMath::Clamp(GetNumberFieldSess(VoiceSettings, TEXT("volume"), 1.0), 0.0, 1.0);
+    NoiseGateThreshold = GetNumberFieldSess(VoiceSettings, TEXT("noiseGateThreshold"), 0.01);
+    bNoiseSuppression = GetBoolFieldSess(VoiceSettings, TEXT("noiseSuppression"), true);
+    bEchoCancellation = GetBoolFieldSess(VoiceSettings, TEXT("echoCancellation"), true);
+    SampleRate = static_cast<int32>(GetNumberFieldSess(VoiceSettings, TEXT("sampleRate"), 16000));
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     
@@ -721,6 +798,14 @@ static bool HandleSetVoiceChannel(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require channelName parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("channelName")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("channelName is required. Optionally provide channelType (Team, Global, Proximity, Party)"), nullptr);
+        return true;
+    }
 
     FString ChannelName = GetStringFieldSess(Payload, TEXT("channelName"), TEXT("Default"));
     FString ChannelType = GetStringFieldSess(Payload, TEXT("channelType"), TEXT("Global"));
@@ -867,6 +952,14 @@ static bool HandleSetVoiceAttenuation(
 {
     using namespace SessionsHelpers;
 
+    // VALIDATION: Require attenuationRadius parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("attenuationRadius")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("attenuationRadius is required. Optionally provide attenuationFalloff (0.1-10.0)"), nullptr);
+        return true;
+    }
+
     double AttenuationRadius = GetNumberFieldSess(Payload, TEXT("attenuationRadius"), 2000.0);
     double AttenuationFalloff = GetNumberFieldSess(Payload, TEXT("attenuationFalloff"), 1.0);
 
@@ -892,6 +985,14 @@ static bool HandleConfigurePushToTalk(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace SessionsHelpers;
+
+    // VALIDATION: Require pushToTalkEnabled parameter
+    if (!Payload.IsValid() || !Payload->HasField(TEXT("pushToTalkEnabled")))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("pushToTalkEnabled is required. Optionally provide pushToTalkKey (e.g., 'V', 'Space', 'LeftShift')"), nullptr);
+        return true;
+    }
 
     bool bPushToTalkEnabled = GetBoolFieldSess(Payload, TEXT("pushToTalkEnabled"), false);
     FString PushToTalkKey = GetStringFieldSess(Payload, TEXT("pushToTalkKey"), TEXT("V"));
