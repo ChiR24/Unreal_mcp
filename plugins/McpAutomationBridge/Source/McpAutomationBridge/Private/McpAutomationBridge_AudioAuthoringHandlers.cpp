@@ -1523,6 +1523,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewAtten, bSave);
         
         FString FullPath = NewAtten->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewAtten);
         return Response;
@@ -1743,6 +1744,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewVoice, bSave);
         
         FString FullPath = NewVoice->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewVoice);
         return Response;
@@ -1793,6 +1795,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewWave, bSave);
         
         FString FullPath = NewWave->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewWave);
         return Response;
@@ -1960,6 +1963,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewEffect, bSave);
         
         FString FullPath = NewEffect->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewEffect);
         return Response;

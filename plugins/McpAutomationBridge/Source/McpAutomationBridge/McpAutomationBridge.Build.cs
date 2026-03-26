@@ -154,6 +154,7 @@ PublicDependencyModuleNames.AddRange(new string[]
 
             // Phase: IKRig and Vehicles (conditional based on plugin availability)
             TryAddConditionalModule(Target, EngineDir, "IKRig", "IKRig");
+            TryAddConditionalModule(Target, EngineDir, "IKRigEditor", "IKRigEditor");
             TryAddConditionalModule(Target, EngineDir, "ChaosVehicles", "ChaosVehicles");
             TryAddConditionalModule(Target, EngineDir, "AnimationData", "AnimationData");
 
@@ -456,10 +457,14 @@ PublicDependencyModuleNames.AddRange(new string[]
                     Path.Combine(PluginsDir, "AI", SearchName),
                     Path.Combine(PluginsDir, "Runtime", SearchName),
                     Path.Combine(PluginsDir, "Experimental", SearchName),
+                    Path.Combine(PluginsDir, "Animation", SearchName),  // Animation plugins like IKRig, ControlRig
+                    Path.Combine(PluginsDir, "Animation", "IKRig", "Source", SearchName),  // IKRigEditor module
+                    Path.Combine(PluginsDir, "Animation", "ControlRig", "Source", SearchName),  // ControlRig modules
                     Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "MassGameplay", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "SmartObjects", "Source", SearchName),
-                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName)
+                    Path.Combine(PluginsDir, "Runtime", "StateTree", "Source", SearchName),
+                    Path.Combine(PluginsDir, "Experimental", "ChaosVehiclesPlugin", "Source", SearchName)  // ChaosVehicles module
                 };
 
                 foreach (string SearchPath in SearchPaths)

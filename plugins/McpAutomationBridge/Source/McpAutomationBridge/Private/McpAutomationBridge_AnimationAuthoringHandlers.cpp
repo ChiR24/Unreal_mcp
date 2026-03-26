@@ -157,6 +157,14 @@
 #define MCP_HAS_IKRETARGETER 0
 #endif
 
+// IK Retargeter Controller (for setting IK Rigs on retargeter)
+#if __has_include("RetargetEditor/IKRetargeterController.h")
+#include "RetargetEditor/IKRetargeterController.h"
+#define MCP_HAS_IKRETARGETER_CONTROLLER 1
+#else
+#define MCP_HAS_IKRETARGETER_CONTROLLER 0
+#endif
+
 // Pose Asset
 #if __has_include("Animation/PoseAsset.h")
 #include "Animation/PoseAsset.h"
@@ -3007,16 +3015,6 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         
         UIKRetargetFactory* Factory = NewObject<UIKRetargetFactory>();
         
-        // Set source IK Rig if provided
-        if (!SourceIKRigPath.IsEmpty())
-        {
-            UIKRigDefinition* SourceRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *SourceIKRigPath));
-            if (SourceRig)
-            {
-                Factory->SourceIKRig = SourceRig;
-            }
-        }
-        
         UIKRetargeter* Retargeter = Cast<UIKRetargeter>(Factory->FactoryCreateNew(
             UIKRetargeter::StaticClass(),
             Package,
@@ -3030,6 +3028,47 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Retargeter"), TEXT("CREATION_FAILED"));
         }
+        
+        // Set source and target IK Rigs using the controller (UE 5.7+ requires this as direct access is private)
+#if MCP_HAS_IKRETARGETER_CONTROLLER
+        if (UIKRetargeterController* Controller = UIKRetargeterController::GetController(Retargeter))
+        {
+            if (!SourceIKRigPath.IsEmpty())
+            {
+                UIKRigDefinition* SourceRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *SourceIKRigPath));
+                if (SourceRig)
+                {
+                    Controller->SetIKRig(ERetargetSourceOrTarget::Source, SourceRig);
+                }
+            }
+            if (!TargetIKRigPath.IsEmpty())
+            {
+                UIKRigDefinition* TargetRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *TargetIKRigPath));
+                if (TargetRig)
+                {
+                    Controller->SetIKRig(ERetargetSourceOrTarget::Target, TargetRig);
+                }
+            }
+        }
+#else
+        // Fallback for older UE versions where direct access was public
+        if (!SourceIKRigPath.IsEmpty())
+        {
+            UIKRigDefinition* SourceRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *SourceIKRigPath));
+            if (SourceRig)
+            {
+                Retargeter->SourceIKRigAsset = SourceRig;
+            }
+        }
+        if (!TargetIKRigPath.IsEmpty())
+        {
+            UIKRigDefinition* TargetRig = Cast<UIKRigDefinition>(StaticLoadObject(UIKRigDefinition::StaticClass(), nullptr, *TargetIKRigPath));
+            if (TargetRig)
+            {
+                Retargeter->TargetIKRigAsset = TargetRig;
+            }
+        }
+#endif
         
         // Save if requested
         if (bSave)
