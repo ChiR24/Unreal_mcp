@@ -77,7 +77,30 @@
     "eslint": "^10.0.2",
     "rimraf": "^6.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^4.0.16"
+  },
+  "overrides": {
+    "@typescript-eslint/eslint-plugin": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/parser": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/project-service": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/tsconfig-utils": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/type-utils": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/utils": {
+      "typescript": "^6.0.2"
+    }
   }
 }
