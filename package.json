@@ -87,6 +87,12 @@
     "@typescript-eslint/parser": {
       "typescript": "^6.0.2"
     },
+    "@typescript-eslint/project-service": {
+      "typescript": "^6.0.2"
+    },
+    "@typescript-eslint/tsconfig-utils": {
+      "typescript": "^6.0.2"
+    },
     "@typescript-eslint/type-utils": {
       "typescript": "^6.0.2"
     },
