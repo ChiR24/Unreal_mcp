@@ -1092,6 +1092,9 @@ private:
   bool HandleControlEditorConsoleCommand(const FString &RequestId,
                                           const TSharedPtr<FJsonObject> &Payload,
                                           TSharedPtr<FMcpBridgeWebSocket> Socket);
+  bool HandleReadLog(const FString &RequestId,
+                     const TSharedPtr<FJsonObject> &Payload,
+                     TSharedPtr<FMcpBridgeWebSocket> Socket);
   bool HandleControlEditorStepFrame(const FString &RequestId,
                                     const TSharedPtr<FJsonObject> &Payload,
                                     TSharedPtr<FMcpBridgeWebSocket> Socket);

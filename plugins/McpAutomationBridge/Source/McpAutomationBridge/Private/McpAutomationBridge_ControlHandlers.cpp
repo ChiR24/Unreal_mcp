@@ -127,6 +127,7 @@
 
 #if __has_include("FileHelpers.h")
 #include "FileHelpers.h"
+#include "HAL/PlatformFileManager.h"
 #endif
 #include "Animation/SkeletalMeshActor.h"
 #include "Components/ActorComponent.h"
@@ -3173,26 +3174,422 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
     return true;
   }
 
-  // Execute the console command in editor context
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
-    return true;
-  }
   UWorld* World = GEditor->GetEditorWorldContext().World();
-  GEditor->Exec(World, *Command);
 
+  // -----------------------------------------------------------------------
+  // Capture output through two channels:
+  //   1. DirectCapture — passed directly to Exec(), catches most CVars and
+  //      built-in console commands.
+  //   2. LogCapture    — registered with GLog, catches Python (py ...) and
+  //      any editor path that writes through GOutputDeviceRedirector instead
+  //      of the passed device.
+  // -----------------------------------------------------------------------
+  FMcpOutputCapture DirectCapture;
+  FMcpOutputCapture LogCapture;
+
+  if (GLog)
+  {
+      GLog->AddOutputDevice(&LogCapture);
+  }
+
+  GEditor->Exec(World, *Command, DirectCapture);
+
+  if (GLog)
+  {
+      GLog->RemoveOutputDevice(&LogCapture);
+      GLog->Flush();
+  }
+
+  // Merge channels, deduplicating lines that appeared in both.
+  TArray<FString> DirectLines  = DirectCapture.Consume();
+  TArray<FString> LogLines     = LogCapture.Consume();
+
+  TArray<FString> OutputLines;
+  OutputLines.Append(DirectLines);
+  TSet<FString> DirectSet(DirectLines);
+  for (const FString& Line : LogLines)
+  {
+      if (!DirectSet.Contains(Line))
+      {
+          OutputLines.Add(Line);
+      }
+  }
+
+  // Build the response with captured output.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("command"), Command);
-  Resp->SetStringField(TEXT("message"), TEXT("Console command executed"));
 
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Console command executed"), Resp, FString());
+  if (OutputLines.Num() > 0)
+  {
+      TArray<TSharedPtr<FJsonValue>> OutputJsonLines;
+      OutputJsonLines.Reserve(OutputLines.Num());
+      for (const FString& Line : OutputLines)
+      {
+          OutputJsonLines.Add(MakeShared<FJsonValueString>(Line));
+      }
+      Resp->SetArrayField(TEXT("output"), OutputJsonLines);
+  }
+
+  FString Msg = OutputLines.Num() > 0
+      ? FString::Printf(TEXT("Command executed: %s"), *Command)
+      : FString::Printf(TEXT("Command executed: %s (no output)"), *Command);
+
+  SendAutomationResponse(Socket, RequestId, true, Msg, Resp, FString());
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
                               TEXT("Console command requires editor build."), nullptr);
+  return true;
+#endif
+}
+
+// =============================================================================
+// HandleReadLog
+// =============================================================================
+// Reads UE editor log files directly from disk and returns their content.
+//
+// Payload fields (all optional):
+//   logType   — which log to read:
+//                 "current"  (default) — current session log
+//                 "previous"           — previous session log (.bak)
+//                 "crash"              — most recent crash CrashContext.runtime-xml
+//                 "crash_callstack"    — just the CallStack from crash context
+//                 "all"                — list all available log files
+//   tail      — (int) return only the last N lines (default 200, 0 = all)
+//   filter    — (string) case-insensitive substring filter applied per-line
+//   severity  — "error", "warning", "all" (default "all") — filter by log
+//                severity prefix [Error], [Warning], Fatal, Assert
+//
+// Returns:
+//   { logFile, lines: [...], lineCount, totalLines, filtered, logType }
+// =============================================================================
+bool UMcpAutomationBridgeSubsystem::HandleReadLog(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+#if WITH_EDITOR
+
+  // ---- Parse parameters ----
+  FString LogTypeArg = TEXT("current");
+  if (Payload.IsValid()) Payload->TryGetStringField(TEXT("logType"), LogTypeArg);
+  LogTypeArg = LogTypeArg.ToLower().TrimStartAndEnd();
+
+  int32 TailLines = 200;
+  if (Payload.IsValid()) Payload->TryGetNumberField(TEXT("tail"), TailLines);
+  if (TailLines < 0) TailLines = 0;
+
+  FString Filter;
+  if (Payload.IsValid()) Payload->TryGetStringField(TEXT("filter"), Filter);
+  FString FilterLower = Filter.ToLower();
+
+  FString Severity = TEXT("all");
+  if (Payload.IsValid()) Payload->TryGetStringField(TEXT("severity"), Severity);
+  Severity = Severity.ToLower().TrimStartAndEnd();
+
+  // ---- Resolve the project saved dir ----
+  const FString SavedDir    = FPaths::ProjectSavedDir();
+  const FString LogsDir     = FPaths::Combine(SavedDir, TEXT("Logs"));
+  const FString CrashesDir  = FPaths::Combine(SavedDir, TEXT("Crashes"));
+  const FString ProjectName = FApp::GetProjectName();
+
+  IPlatformFile& PF = FPlatformFileManager::Get().GetPlatformFile();
+
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
+  // ---- Handle "all" — list available files ----
+  if (LogTypeArg == TEXT("all")) {
+    TArray<TSharedPtr<FJsonValue>> FileList;
+
+    // Main log
+    FString MainLog = FPaths::Combine(LogsDir, ProjectName + TEXT(".log"));
+    if (PF.FileExists(*MainLog)) {
+      TSharedPtr<FJsonObject> F = MakeShared<FJsonObject>();
+      F->SetStringField(TEXT("type"), TEXT("current"));
+      F->SetStringField(TEXT("path"), MainLog);
+      F->SetNumberField(TEXT("sizeKB"), PF.FileSize(*MainLog) / 1024);
+      FileList.Add(MakeShared<FJsonValueObject>(F));
+    }
+
+    // Backup log
+    FString BackupLog = FPaths::Combine(LogsDir, ProjectName + TEXT(".log.bak"));
+    if (PF.FileExists(*BackupLog)) {
+      TSharedPtr<FJsonObject> F = MakeShared<FJsonObject>();
+      F->SetStringField(TEXT("type"), TEXT("previous"));
+      F->SetStringField(TEXT("path"), BackupLog);
+      F->SetNumberField(TEXT("sizeKB"), PF.FileSize(*BackupLog) / 1024);
+      FileList.Add(MakeShared<FJsonValueObject>(F));
+    }
+
+    // Most recent crash dir
+    FString LatestCrashDir;
+    FDateTime LatestCrashTime = FDateTime::MinValue();
+    if (PF.DirectoryExists(*CrashesDir)) {
+      PF.IterateDirectory(*CrashesDir,
+        [&](const TCHAR* Path, bool bIsDir) -> bool {
+          if (bIsDir) {
+            FFileStatData Stat = PF.GetStatData(Path);
+            if (Stat.ModificationTime > LatestCrashTime) {
+              LatestCrashTime = Stat.ModificationTime;
+              LatestCrashDir  = Path;
+            }
+          }
+          return true;
+        });
+    }
+    if (!LatestCrashDir.IsEmpty()) {
+      FString CrashXml = FPaths::Combine(LatestCrashDir, TEXT("CrashContext.runtime-xml"));
+      if (PF.FileExists(*CrashXml)) {
+        TSharedPtr<FJsonObject> F = MakeShared<FJsonObject>();
+        F->SetStringField(TEXT("type"), TEXT("crash"));
+        F->SetStringField(TEXT("path"), CrashXml);
+        F->SetStringField(TEXT("crashDir"), LatestCrashDir);
+        F->SetNumberField(TEXT("sizeKB"), PF.FileSize(*CrashXml) / 1024);
+        FileList.Add(MakeShared<FJsonValueObject>(F));
+      }
+    }
+
+    Result->SetArrayField(TEXT("files"), FileList);
+    Result->SetNumberField(TEXT("fileCount"), FileList.Num());
+    Result->SetStringField(TEXT("logsDir"),   LogsDir);
+    Result->SetStringField(TEXT("crashesDir"), CrashesDir);
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Log files listed."), Result);
+    return true;
+  }
+
+  // ---- Resolve the target file path ----
+  FString TargetFile;
+  bool    bIsCrashXml = false;
+
+  if (LogTypeArg == TEXT("crash") || LogTypeArg == TEXT("crash_callstack")) {
+    bIsCrashXml = true;
+    // Find the most recent crash directory
+    FString LatestDir;
+    FDateTime LatestTime = FDateTime::MinValue();
+    if (PF.DirectoryExists(*CrashesDir)) {
+      PF.IterateDirectory(*CrashesDir,
+        [&](const TCHAR* Path, bool bIsDir) -> bool {
+          if (bIsDir) {
+            FFileStatData Stat = PF.GetStatData(Path);
+            if (Stat.ModificationTime > LatestTime) {
+              LatestTime = Stat.ModificationTime;
+              LatestDir  = Path;
+            }
+          }
+          return true;
+        });
+    }
+    if (LatestDir.IsEmpty()) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("No crash directories found."), Result,
+                             TEXT("NOT_FOUND"));
+      return true;
+    }
+    TargetFile = FPaths::Combine(LatestDir, TEXT("CrashContext.runtime-xml"));
+    Result->SetStringField(TEXT("crashDir"), LatestDir);
+  } else if (LogTypeArg == TEXT("previous")) {
+    TargetFile = FPaths::Combine(LogsDir, ProjectName + TEXT(".log.bak"));
+  } else {
+    // "current" or anything else
+    TargetFile = FPaths::Combine(LogsDir, ProjectName + TEXT(".log"));
+  }
+
+  if (!PF.FileExists(*TargetFile)) {
+    Result->SetStringField(TEXT("logFile"), TargetFile);
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("Log file not found: %s"), *TargetFile),
+                           Result, TEXT("NOT_FOUND"));
+    return true;
+  }
+
+  // ---- Read the file with shared read access ----
+  // UE holds an exclusive write lock on the active log file. FFileHelper::
+  // LoadFileToString uses GENERIC_READ without FILE_SHARE_WRITE on Windows,
+  // causing a sharing violation. We use IFileHandle with AllowShareWrite to
+  // bypass it via UE's platform abstraction (no raw Win32 API needed).
+  FString RawContent;
+  {
+    bool bReadOk = false;
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    // Open with shared-write access so the active log lock is not violated.
+    TUniquePtr<IFileHandle> FileHandle(PlatformFile.OpenRead(*TargetFile, /* bAllowWrite */ true));
+    if (FileHandle)
+    {
+      const int64 TotalSize = FileHandle->Size();
+      if (TotalSize > 0)
+      {
+        const int64 MaxBytes = 32LL * 1024 * 1024; // 32 MB cap
+        const int64 ReadSize = FMath::Min(TotalSize, MaxBytes);
+        TArray<uint8> Bytes;
+        Bytes.SetNumUninitialized(static_cast<int32>(ReadSize) + 1);
+        if (FileHandle->Read(Bytes.GetData(), ReadSize))
+        {
+          Bytes[static_cast<int32>(ReadSize)] = 0;
+          RawContent = UTF8_TO_TCHAR(
+              reinterpret_cast<const char*>(Bytes.GetData()));
+          bReadOk = true;
+        }
+      }
+      else
+      {
+        RawContent = TEXT("");
+        bReadOk = true;
+      }
+    }
+    else
+    {
+      // Fallback: try standard load (works for non-locked files)
+      bReadOk = FFileHelper::LoadFileToString(RawContent, *TargetFile);
+    }
+    if (!bReadOk) {
+      Result->SetStringField(TEXT("logFile"), TargetFile);
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("Failed to read log file."), Result,
+                             TEXT("READ_ERROR"));
+      return true;
+    }
+  }
+
+  // ---- Special handling: crash XML — extract key fields ----
+  if (bIsCrashXml) {
+    auto ExtractXmlField = [&](const FString& Tag) -> FString {
+      FString Pattern = TEXT("<") + Tag + TEXT(">");
+      int32 Start = RawContent.Find(Pattern);
+      if (Start == INDEX_NONE) {
+        // Try with attributes: <Tag attr="...">
+        Pattern = TEXT("<") + Tag;
+        Start = RawContent.Find(Pattern);
+        if (Start == INDEX_NONE) return FString();
+        Start = RawContent.Find(TEXT(">"), ESearchCase::CaseSensitive, ESearchDir::FromStart, Start);
+        if (Start == INDEX_NONE) return FString();
+        Start++; // skip '>'
+      } else {
+        Start += Pattern.Len();
+      }
+      int32 End = RawContent.Find(TEXT("</") + Tag + TEXT(">"),
+                                   ESearchCase::CaseSensitive, ESearchDir::FromStart, Start);
+      if (End == INDEX_NONE) End = FMath::Min(Start + 2000, RawContent.Len());
+      return RawContent.Mid(Start, End - Start).TrimStartAndEnd();
+    };
+
+    FString ErrorMsg   = ExtractXmlField(TEXT("ErrorMessage"));
+    FString CallStack  = ExtractXmlField(TEXT("CallStack"));
+    FString SourceCtx  = ExtractXmlField(TEXT("SourceContext"));
+    FString CrashType  = ExtractXmlField(TEXT("CrashType"));
+    FString EngineMode = ExtractXmlField(TEXT("EngineMode"));
+    FString GameName   = ExtractXmlField(TEXT("GameName"));
+    FString EngineVer  = ExtractXmlField(TEXT("BuildVersion"));
+
+    // Parse callstack into individual frames
+    TArray<TSharedPtr<FJsonValue>> StackFrames;
+    if (!CallStack.IsEmpty()) {
+      TArray<FString> FrameLines;
+      CallStack.ParseIntoArrayLines(FrameLines, true);
+      for (const FString& Frame : FrameLines) {
+        FString Trimmed = Frame.TrimStartAndEnd();
+        if (!Trimmed.IsEmpty()) {
+          StackFrames.Add(MakeShared<FJsonValueString>(Trimmed));
+        }
+      }
+    }
+
+    // If only callstack requested, return just that
+    if (LogTypeArg == TEXT("crash_callstack")) {
+      Result->SetStringField(TEXT("logFile"),    TargetFile);
+      Result->SetStringField(TEXT("logType"),    TEXT("crash_callstack"));
+      Result->SetStringField(TEXT("errorMessage"), ErrorMsg);
+      Result->SetArrayField (TEXT("callStack"),   StackFrames);
+      Result->SetNumberField(TEXT("frameCount"),  StackFrames.Num());
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Crash callstack: %d frames. Error: %s"),
+                                             StackFrames.Num(),
+                                             ErrorMsg.IsEmpty() ? TEXT("(none)") : *ErrorMsg),
+                             Result);
+      return true;
+    }
+
+    Result->SetStringField(TEXT("logFile"),      TargetFile);
+    Result->SetStringField(TEXT("logType"),      TEXT("crash"));
+    Result->SetStringField(TEXT("errorMessage"), ErrorMsg);
+    Result->SetStringField(TEXT("crashType"),    CrashType);
+    Result->SetStringField(TEXT("engineMode"),   EngineMode);
+    Result->SetStringField(TEXT("gameName"),     GameName);
+    Result->SetStringField(TEXT("engineVersion"), EngineVer);
+    Result->SetStringField(TEXT("sourceContext"), SourceCtx);
+    Result->SetArrayField (TEXT("callStack"),    StackFrames);
+    Result->SetNumberField(TEXT("frameCount"),   StackFrames.Num());
+    SendAutomationResponse(
+        Socket, RequestId, true,
+        FString::Printf(TEXT("Crash log read. Error: %s"),
+                        ErrorMsg.IsEmpty() ? TEXT("(none)") : *ErrorMsg),
+        Result);
+    return true;
+  }
+
+  // ---- Parse into lines ----
+  TArray<FString> AllLines;
+  RawContent.ParseIntoArrayLines(AllLines, false);
+  const int32 TotalLines = AllLines.Num();
+
+  // ---- Apply severity filter ----
+  auto MatchesSeverity = [&](const FString& Line) -> bool {
+    if (Severity == TEXT("all")) return true;
+    const FString L = Line.ToLower();
+    if (Severity == TEXT("error")) {
+      return L.Contains(TEXT("[error]"))   || L.Contains(TEXT("error:"))  ||
+             L.Contains(TEXT("fatal"))     || L.Contains(TEXT("assert"))  ||
+             L.Contains(TEXT("critical"))  || L.Contains(TEXT("crash"));
+    }
+    if (Severity == TEXT("warning")) {
+      return L.Contains(TEXT("[warning]")) || L.Contains(TEXT("warning:")) ||
+             L.Contains(TEXT("[error]"))   || L.Contains(TEXT("error:"))   ||
+             L.Contains(TEXT("fatal"))     || L.Contains(TEXT("assert"));
+    }
+    return true;
+  };
+
+  // ---- Apply substring filter ----
+  TArray<FString> Filtered;
+  Filtered.Reserve(AllLines.Num());
+  for (const FString& Line : AllLines) {
+    if (!MatchesSeverity(Line)) continue;
+    if (!FilterLower.IsEmpty() && !Line.ToLower().Contains(FilterLower)) continue;
+    Filtered.Add(Line);
+  }
+
+  const int32 FilteredTotal = Filtered.Num();
+
+  // ---- Apply tail ----
+  int32 StartIdx = 0;
+  if (TailLines > 0 && Filtered.Num() > TailLines) {
+    StartIdx = Filtered.Num() - TailLines;
+  }
+
+  TArray<TSharedPtr<FJsonValue>> OutputLines;
+  OutputLines.Reserve(Filtered.Num() - StartIdx);
+  for (int32 i = StartIdx; i < Filtered.Num(); ++i) {
+    OutputLines.Add(MakeShared<FJsonValueString>(Filtered[i]));
+  }
+
+  Result->SetStringField(TEXT("logFile"),       TargetFile);
+  Result->SetStringField(TEXT("logType"),        LogTypeArg);
+  Result->SetNumberField(TEXT("totalLines"),     TotalLines);
+  Result->SetNumberField(TEXT("filteredTotal"),  FilteredTotal);
+  Result->SetNumberField(TEXT("returnedLines"),  OutputLines.Num());
+  Result->SetBoolField  (TEXT("truncated"),      StartIdx > 0);
+  Result->SetStringField(TEXT("filter"),         Filter);
+  Result->SetStringField(TEXT("severity"),       Severity);
+  Result->SetArrayField (TEXT("lines"),          OutputLines);
+
+  SendAutomationResponse(
+      Socket, RequestId, true,
+      FString::Printf(TEXT("Log read: %d/%d lines returned from %s"),
+                      OutputLines.Num(), TotalLines, *TargetFile),
+      Result);
+  return true;
+
+#else
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
+                            TEXT("read_log requires editor build."), nullptr);
   return true;
 #endif
 }

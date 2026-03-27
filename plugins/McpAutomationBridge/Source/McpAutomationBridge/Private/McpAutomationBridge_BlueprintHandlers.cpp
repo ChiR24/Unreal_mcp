@@ -1249,8 +1249,20 @@ static void DiagnosticPatternChecks(const FString &CleanAction,
                              TEXT("addvariable"),
                              TEXT("blueprint_add_event"),
                              TEXT("add_event"),
+                             TEXT("blueprint_remove_event"),
+                             TEXT("remove_event"),
+                             TEXT("blueprint_rename_event"),
+                             TEXT("rename_event"),
                              TEXT("blueprint_add_function"),
                              TEXT("add_function"),
+                             TEXT("blueprint_rename_function"),
+                             TEXT("rename_function"),
+                             TEXT("blueprint_remove_function"),
+                             TEXT("remove_function"),
+                             TEXT("blueprint_rename_variable"),
+                             TEXT("rename_variable"),
+                             TEXT("blueprint_remove_variable"),
+                             TEXT("remove_variable"),
                              TEXT("blueprint_modify_scs"),
                              TEXT("modify_scs"),
                              TEXT("blueprint_set_default"),
@@ -2742,10 +2754,45 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       PinType.PinSubCategoryObject = TBaseStructure<FTransform>::Get();
     } else if (LowerType == TEXT("object")) {
       PinType.PinCategory = MCP_PC_Object;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
+      // Read typed subclass from variablePinType JSON if provided.
+      // Supports: variablePinType={"PinSubCategoryObject":"AoStatGeneratorComponent"}
+      // or variablePinType={"objectClass":"AoStatGeneratorComponent"}
+      {
+        const TSharedPtr<FJsonObject> *PinTypeObj = nullptr;
+        if (LocalPayload->TryGetObjectField(TEXT("variablePinType"), PinTypeObj) && PinTypeObj) {
+          FString SubClassName;
+          if (!(*PinTypeObj)->TryGetStringField(TEXT("PinSubCategoryObject"), SubClassName) || SubClassName.IsEmpty()) {
+            (*PinTypeObj)->TryGetStringField(TEXT("objectClass"), SubClassName);
+          }
+          if (!SubClassName.IsEmpty()) {
+            if (UClass *SubClass = ResolveUClass(SubClassName)) {
+              PinType.PinSubCategoryObject = SubClass;
+            }
+          }
+        }
+        if (!PinType.PinSubCategoryObject.IsValid()) {
+          PinType.PinSubCategoryObject = UObject::StaticClass();
+        }
+      }
     } else if (LowerType == TEXT("class")) {
       PinType.PinCategory = MCP_PC_Class;
-      PinType.PinSubCategoryObject = UObject::StaticClass();
+      {
+        const TSharedPtr<FJsonObject> *PinTypeObj = nullptr;
+        if (LocalPayload->TryGetObjectField(TEXT("variablePinType"), PinTypeObj) && PinTypeObj) {
+          FString SubClassName;
+          if (!(*PinTypeObj)->TryGetStringField(TEXT("PinSubCategoryObject"), SubClassName) || SubClassName.IsEmpty()) {
+            (*PinTypeObj)->TryGetStringField(TEXT("objectClass"), SubClassName);
+          }
+          if (!SubClassName.IsEmpty()) {
+            if (UClass *SubClass = ResolveUClass(SubClassName)) {
+              PinType.PinSubCategoryObject = SubClass;
+            }
+          }
+        }
+        if (!PinType.PinSubCategoryObject.IsValid()) {
+          PinType.PinSubCategoryObject = UObject::StaticClass();
+        }
+      }
     } else if (!VarType.TrimStartAndEnd().IsEmpty()) {
       PinType.PinCategory = MCP_PC_Object;
       UClass *FoundClass = ResolveUClass(VarType);
@@ -3724,6 +3771,348 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // RENAME a custom event node (changes CustomFunctionName on K2Node_CustomEvent)
+  // Parameters: blueprintPath, oldName, newName
+  // ---------------------------------------------------------------------------
+  if (ActionMatchesPattern(TEXT("blueprint_rename_event")) ||
+      ActionMatchesPattern(TEXT("rename_event")) ||
+      AlphaNumLower.Contains(TEXT("blueprintrenameevent")) ||
+      AlphaNumLower.Contains(TEXT("renameevent"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_rename_event handler: RequestId=%s"),
+           *RequestId);
+
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_rename_event requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString OldName;
+    LocalPayload->TryGetStringField(TEXT("oldName"), OldName);
+    FString NewName;
+    LocalPayload->TryGetStringField(TEXT("newName"), NewName);
+
+    if (OldName.IsEmpty() || NewName.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Missing 'oldName' or 'newName' in payload."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
+    FString RenameNormalized;
+    FString RenameLoadErr;
+    UBlueprint *RenameBlueprint =
+        LoadBlueprintAsset(Path, RenameNormalized, RenameLoadErr);
+    if (!RenameBlueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             RenameLoadErr.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : RenameLoadErr,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    UEdGraph *RenameGraph =
+        FBlueprintEditorUtils::FindEventGraph(RenameBlueprint);
+    if (!RenameGraph) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No event graph found in blueprint."), nullptr,
+                             TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    // Find the custom event node matching OldName
+    UK2Node_CustomEvent *FoundEvent = nullptr;
+    for (UEdGraphNode *Node : RenameGraph->Nodes) {
+      if (UK2Node_CustomEvent *CustomEvent =
+              Cast<UK2Node_CustomEvent>(Node)) {
+        if (CustomEvent->CustomFunctionName.ToString().Equals(
+                OldName, ESearchCase::IgnoreCase)) {
+          FoundEvent = CustomEvent;
+          break;
+        }
+      }
+    }
+
+    if (!FoundEvent) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Custom event '%s' not found in blueprint."),
+                          *OldName),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    // Rename it
+    RenameGraph->Modify();
+    FoundEvent->Modify();
+    FoundEvent->CustomFunctionName = FName(*NewName);
+    FoundEvent->ReconstructNode();
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(RenameBlueprint);
+    McpSafeCompileBlueprint(RenameBlueprint);
+    const bool bRenameSaved = SaveLoadedAssetThrottled(RenameBlueprint);
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("HandleBlueprintAction: event renamed from '%s' to '%s' in "
+                "'%s' (saved=%s)"),
+           *OldName, *NewName, *Path, bRenameSaved ? TEXT("true") : TEXT("false"));
+
+    TSharedPtr<FJsonObject> RenameResult = McpHandlerUtils::CreateResultObject();
+    RenameResult->SetStringField(TEXT("oldName"), OldName);
+    RenameResult->SetStringField(TEXT("newName"), NewName);
+    RenameResult->SetStringField(TEXT("blueprintPath"), RenameNormalized);
+    McpHandlerUtils::AddVerification(RenameResult, RenameBlueprint);
+
+    // Update registry if the event is tracked there
+    FString RenameRegPath =
+        !RenameNormalized.IsEmpty() ? RenameNormalized : Path;
+    TSharedPtr<FJsonObject> RenameEntry =
+        FMcpAutomationBridge_EnsureBlueprintEntry(RenameRegPath);
+    if (RenameEntry->HasField(TEXT("events"))) {
+      TArray<TSharedPtr<FJsonValue>> RegEvents =
+          RenameEntry->GetArrayField(TEXT("events"));
+      for (TSharedPtr<FJsonValue> &V : RegEvents) {
+        if (!V.IsValid() || V->Type != EJson::Object) continue;
+        TSharedPtr<FJsonObject> Obj = V->AsObject();
+        FString CandName;
+        if (Obj->TryGetStringField(TEXT("name"), CandName) &&
+            CandName.Equals(OldName, ESearchCase::IgnoreCase)) {
+          Obj->SetStringField(TEXT("name"), NewName);
+          break;
+        }
+      }
+      RenameEntry->SetArrayField(TEXT("events"), RegEvents);
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Event renamed successfully"), RenameResult);
+    return true;
+
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_rename_event requires editor build with K2 node headers"),
+        nullptr, TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // ---------------------------------------------------------------------------
+  // RENAME a function graph within a blueprint
+  // Parameters: blueprintPath, oldName, newName
+  // ---------------------------------------------------------------------------
+  if (ActionMatchesPattern(TEXT("blueprint_rename_function")) ||
+      ActionMatchesPattern(TEXT("rename_function")) ||
+      AlphaNumLower.Contains(TEXT("blueprintrenamefunction")) ||
+      AlphaNumLower.Contains(TEXT("renamefunction"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_rename_function handler: RequestId=%s"),
+           *RequestId);
+
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_rename_function requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString OldFuncName;
+    LocalPayload->TryGetStringField(TEXT("oldName"), OldFuncName);
+    FString NewFuncName;
+    LocalPayload->TryGetStringField(TEXT("newName"), NewFuncName);
+
+    if (OldFuncName.IsEmpty() || NewFuncName.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Missing 'oldName' or 'newName' in payload."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    FString RenFuncNormalized;
+    FString RenFuncLoadErr;
+    UBlueprint *RenFuncBlueprint =
+        LoadBlueprintAsset(Path, RenFuncNormalized, RenFuncLoadErr);
+    if (!RenFuncBlueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             RenFuncLoadErr.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : RenFuncLoadErr,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Find the function graph by name
+    UEdGraph *FuncGraph = nullptr;
+    for (UEdGraph *Graph : RenFuncBlueprint->FunctionGraphs) {
+      if (Graph && Graph->GetName().Equals(OldFuncName, ESearchCase::IgnoreCase)) {
+        FuncGraph = Graph;
+        break;
+      }
+    }
+
+    if (!FuncGraph) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Function '%s' not found in blueprint."),
+                          *OldFuncName),
+          nullptr, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    // Use FBlueprintEditorUtils to rename the function
+    FBlueprintEditorUtils::RenameGraph(FuncGraph, NewFuncName);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(RenFuncBlueprint);
+    McpSafeCompileBlueprint(RenFuncBlueprint);
+    const bool bFuncSaved = SaveLoadedAssetThrottled(RenFuncBlueprint);
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("HandleBlueprintAction: function renamed from '%s' to '%s' in "
+                "'%s' (saved=%s)"),
+           *OldFuncName, *NewFuncName, *Path, bFuncSaved ? TEXT("true") : TEXT("false"));
+
+    TSharedPtr<FJsonObject> RenFuncResult = McpHandlerUtils::CreateResultObject();
+    RenFuncResult->SetStringField(TEXT("oldName"), OldFuncName);
+    RenFuncResult->SetStringField(TEXT("newName"), NewFuncName);
+    RenFuncResult->SetStringField(TEXT("blueprintPath"), RenFuncNormalized);
+    McpHandlerUtils::AddVerification(RenFuncResult, RenFuncBlueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Function renamed successfully"), RenFuncResult);
+    return true;
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_rename_function requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // ---------------------------------------------------------------------------
+  // REMOVE a function graph from a blueprint
+  // Parameters: blueprintPath, functionName (or oldName for consistency)
+  // Idempotent: returns success if the function doesn't exist.
+  // ---------------------------------------------------------------------------
+  if (ActionMatchesPattern(TEXT("blueprint_remove_function")) ||
+      ActionMatchesPattern(TEXT("remove_function")) ||
+      AlphaNumLower.Contains(TEXT("blueprintremovefunction")) ||
+      AlphaNumLower.Contains(TEXT("removefunction"))) {
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered blueprint_remove_function handler: RequestId=%s"),
+           *RequestId);
+
+    FString Path = ResolveBlueprintRequestedPath();
+    if (Path.IsEmpty()) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          TEXT("blueprint_remove_function requires a blueprint path."), nullptr,
+          TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    // Accept either 'functionName' or 'name' for ergonomic consistency
+    FString FuncName;
+    if (!LocalPayload->TryGetStringField(TEXT("functionName"), FuncName) || FuncName.IsEmpty()) {
+      if (!LocalPayload->TryGetStringField(TEXT("name"), FuncName) || FuncName.IsEmpty()) {
+        LocalPayload->TryGetStringField(TEXT("oldName"), FuncName);
+      }
+    }
+
+    if (FuncName.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("Missing 'functionName' in payload."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+#if WITH_EDITOR
+    FString RemFuncNormalized;
+    FString RemFuncLoadErr;
+    UBlueprint *RemFuncBlueprint =
+        LoadBlueprintAsset(Path, RemFuncNormalized, RemFuncLoadErr);
+    if (!RemFuncBlueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             RemFuncLoadErr.IsEmpty()
+                                 ? TEXT("Failed to load blueprint")
+                                 : RemFuncLoadErr,
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Find the function graph by name
+    UEdGraph *RemFuncGraph = nullptr;
+    for (UEdGraph *Graph : RemFuncBlueprint->FunctionGraphs) {
+      if (Graph && Graph->GetName().Equals(FuncName, ESearchCase::IgnoreCase)) {
+        RemFuncGraph = Graph;
+        break;
+      }
+    }
+
+    TSharedPtr<FJsonObject> RemFuncResult = McpHandlerUtils::CreateResultObject();
+    RemFuncResult->SetStringField(TEXT("functionName"), FuncName);
+    RemFuncResult->SetStringField(TEXT("blueprintPath"), RemFuncNormalized);
+
+    if (!RemFuncGraph) {
+      // Idempotent — function not present, treat as success
+      RemFuncResult->SetStringField(
+          TEXT("note"),
+          TEXT("Function not found; treated as removed (idempotent)."));
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Function not present; treated as removed"),
+                             RemFuncResult, FString());
+      return true;
+    }
+
+    // Use FBlueprintEditorUtils::RemoveGraph — the safe UE API for function deletion
+    FBlueprintEditorUtils::RemoveGraph(RemFuncBlueprint, RemFuncGraph,
+                                       EGraphRemoveFlags::Recompile);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(RemFuncBlueprint);
+    McpSafeCompileBlueprint(RemFuncBlueprint);
+    const bool bRemFuncSaved = SaveLoadedAssetThrottled(RemFuncBlueprint);
+
+    // Prune the removed function from the in-memory registry so that
+    // subsequent blueprint_get calls don't re-introduce it via the merge path.
+    {
+      const FString RegistryKey = !RemFuncNormalized.IsEmpty() ? RemFuncNormalized : Path;
+      TSharedPtr<FJsonObject> RegEntry = FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
+      if (RegEntry.IsValid() && RegEntry->HasField(TEXT("functions"))) {
+        TArray<TSharedPtr<FJsonValue>> RegFuncs = RegEntry->GetArrayField(TEXT("functions"));
+        RegFuncs.RemoveAll([&FuncName](const TSharedPtr<FJsonValue> &V) {
+          if (!V.IsValid() || V->Type != EJson::Object) return false;
+          FString N;
+          return V->AsObject()->TryGetStringField(TEXT("name"), N) &&
+                 N.Equals(FuncName, ESearchCase::IgnoreCase);
+        });
+        RegEntry->SetArrayField(TEXT("functions"), RegFuncs);
+      }
+    }
+
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+           TEXT("HandleBlueprintAction: function '%s' removed from '%s' (saved=%s)"),
+           *FuncName, *Path, bRemFuncSaved ? TEXT("true") : TEXT("false"));
+
+    McpHandlerUtils::AddVerification(RemFuncResult, RemFuncBlueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Function removed successfully"), RemFuncResult);
+    return true;
+
+#else
+    SendAutomationResponse(
+        RequestingSocket, RequestId, false,
+        TEXT("blueprint_remove_function requires editor build"), nullptr,
+        TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
   // Add a function to the blueprint (synchronous editor implementation)
   if (ActionMatchesPattern(TEXT("blueprint_add_function")) ||
       ActionMatchesPattern(TEXT("add_function")) ||
@@ -4259,10 +4648,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
           TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
-    bool bSaveAfterCompile = false;
+    // Save defaults to TRUE — compile should always persist to disk unless
+    // the caller explicitly passes save:false or saveAfterCompile:false.
+    // Accept both field names for compatibility.
+    bool bSaveAfterCompile = true;
     if (LocalPayload->HasField(TEXT("saveAfterCompile")))
-      LocalPayload->TryGetBoolField(TEXT("saveAfterCompile"),
-                                    bSaveAfterCompile);
+      LocalPayload->TryGetBoolField(TEXT("saveAfterCompile"), bSaveAfterCompile);
+    if (LocalPayload->HasField(TEXT("save")))
+      LocalPayload->TryGetBoolField(TEXT("save"), bSaveAfterCompile);
     // Editor-only compile
 #if WITH_EDITOR
     FString Normalized;
@@ -4279,7 +4672,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     McpSafeCompileBlueprint(BP);
     bool bSaved = false;
     if (bSaveAfterCompile) {
-      bSaved = SaveLoadedAssetThrottled(BP);
+      // Use bForce=true to bypass throttle — compile is an explicit user action.
+      bSaved = SaveLoadedAssetThrottled(BP, -1.0, true);
     }
     TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetBoolField(TEXT("compiled"), true);
@@ -4500,10 +4894,31 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         if (RegistryEntry->HasField(TEXT("functions"))) {
           TArray<TSharedPtr<FJsonValue>> RegFuncs =
               RegistryEntry->GetArrayField(TEXT("functions"));
+          // Build the live-graph name set so we never re-introduce deleted functions.
+          // The snapshot already contains all live functions (from FunctionGraphs);
+          // the registry may still reference graphs that were removed this session.
+          TSet<FString> LiveGraphNames;
+          for (UEdGraph *Graph : BP->FunctionGraphs) {
+            if (Graph) {
+              LiveGraphNames.Add(Graph->GetName().ToLower());
+            }
+          }
           if (!Entry->HasField(TEXT("functions"))) {
-            Entry->SetArrayField(TEXT("functions"), RegFuncs);
+            // Snapshot had no functions field — populate from registry but only
+            // include entries whose graph still actually exists.
+            TArray<TSharedPtr<FJsonValue>> FilteredRegFuncs;
+            for (const auto &Val : RegFuncs) {
+              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+              FString N;
+              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) &&
+                  LiveGraphNames.Contains(N.ToLower())) {
+                FilteredRegFuncs.Add(Val);
+              }
+            }
+            Entry->SetArrayField(TEXT("functions"), FilteredRegFuncs);
           } else {
-            // Merge unique
+            // Merge: add registry entries not already in the snapshot, but only
+            // if their graph still exists in FunctionGraphs.
             TArray<TSharedPtr<FJsonValue>> ExistingFuncs =
                 Entry->GetArrayField(TEXT("functions"));
             TSet<FString> KnownNames;
@@ -4511,13 +4926,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               const TSharedPtr<FJsonObject> Obj = Val->AsObject();
               FString N;
               if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
-                KnownNames.Add(N);
+                KnownNames.Add(N.ToLower());
             }
             for (const auto &Val : RegFuncs) {
               const TSharedPtr<FJsonObject> Obj = Val->AsObject();
               FString N;
               if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) &&
-                  !KnownNames.Contains(N))
+                  !KnownNames.Contains(N.ToLower()) &&
+                  LiveGraphNames.Contains(N.ToLower()))
                 ExistingFuncs.Add(Val);
             }
             Entry->SetArrayField(TEXT("functions"), ExistingFuncs);
@@ -4527,10 +4943,24 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         if (RegistryEntry->HasField(TEXT("events"))) {
           TArray<TSharedPtr<FJsonValue>> RegEvents =
               RegistryEntry->GetArrayField(TEXT("events"));
+          // Build the live-event name set from the snapshot (which was built from
+          // UbergraphPages nodes), so we never re-introduce deleted event nodes.
+          TSet<FString> LiveEventNames;
+          if (Entry->HasField(TEXT("events"))) {
+            for (const auto &Val : Entry->GetArrayField(TEXT("events"))) {
+              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+              FString N;
+              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
+                LiveEventNames.Add(N.ToLower());
+            }
+          }
           if (!Entry->HasField(TEXT("events"))) {
+            // Snapshot had no events — only import from registry what's actually live.
+            // Since we have no live set, accept all registry entries as a best-effort
+            // fallback (the snapshot collector may have run before nodes loaded).
             Entry->SetArrayField(TEXT("events"), RegEvents);
           } else {
-            // Merge unique
+            // Merge unique, but guard against registry entries not in the live snapshot.
             TArray<TSharedPtr<FJsonValue>> ExistingEvents =
                 Entry->GetArrayField(TEXT("events"));
             TSet<FString> KnownNames;
@@ -4538,13 +4968,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
               const TSharedPtr<FJsonObject> Obj = Val->AsObject();
               FString N;
               if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
-                KnownNames.Add(N);
+                KnownNames.Add(N.ToLower());
             }
             for (const auto &Val : RegEvents) {
               const TSharedPtr<FJsonObject> Obj = Val->AsObject();
               FString N;
               if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) &&
-                  !KnownNames.Contains(N))
+                  !KnownNames.Contains(N.ToLower()) &&
+                  LiveEventNames.Contains(N.ToLower()))
                 ExistingEvents.Add(Val);
             }
             Entry->SetArrayField(TEXT("events"), ExistingEvents);
@@ -5332,6 +5763,134 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
         RequestingSocket, RequestId, false,
         TEXT("blueprint_set_metadata requires editor build"), nullptr,
         TEXT("NOT_AVAILABLE"));
+    return true;
+#endif
+  }
+
+  // ---------------------------------------------------------------------------
+  // reparent_blueprint: Change a Blueprint's parent class.
+  //
+  // Payload fields:
+  //   blueprintPath  (required) — /Game/... path to the Blueprint asset.
+  //   newParent      (required) — New parent class name or full path,
+  //                              e.g. "AoCharacterBase" or
+  //                              "/Script/ArenaOfTheAncients.AoCharacterBase".
+  //
+  // The Blueprint is recompiled and saved after reparenting.
+  // ---------------------------------------------------------------------------
+  if (ActionMatchesPattern(TEXT("reparent_blueprint")) ||
+      ActionMatchesPattern(TEXT("reparent")) ||
+      AlphaNumLower.Contains(TEXT("reparentblueprint"))) {
+#if WITH_EDITOR
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
+           TEXT("Entered reparent_blueprint handler: RequestId=%s"), *RequestId);
+
+    FString BpPath = ResolveBlueprintRequestedPath();
+    if (BpPath.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("reparent_blueprint requires blueprintPath."),
+                             nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+      return true;
+    }
+
+    FString NewParentSpec;
+    // TypeScript layer sends "parentClass"; also accept "newParent" for
+    // direct API callers.
+    if (!Payload->TryGetStringField(TEXT("parentClass"), NewParentSpec) ||
+        NewParentSpec.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("newParent"), NewParentSpec);
+    }
+    if (NewParentSpec.IsEmpty()) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("reparent_blueprint requires parentClass or newParent."),
+                             nullptr, TEXT("INVALID_PARAMS"));
+      return true;
+    }
+
+    // Load the blueprint.
+    UBlueprint *Blueprint = LoadObject<UBlueprint>(nullptr, *BpPath);
+    if (!Blueprint) {
+      // Try resolving .uasset path variants.
+      FString AssetPath = BpPath + TEXT(".") + FPaths::GetBaseFilename(BpPath);
+      Blueprint = LoadObject<UBlueprint>(nullptr, *AssetPath);
+    }
+    if (!Blueprint) {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Blueprint not found: %s"), *BpPath),
+                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+      return true;
+    }
+
+    // Resolve the new parent class — try by name first, then full path.
+    UClass *NewParentClass = nullptr;
+    // Try exact path (e.g. /Script/MyModule.MyClass)
+    NewParentClass = FindObject<UClass>(nullptr, *NewParentSpec);
+    if (!NewParentClass) {
+      // Try searching all loaded classes by short name.
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(NewParentSpec, ESearchCase::IgnoreCase)) {
+          NewParentClass = *It;
+          break;
+        }
+      }
+    }
+    if (!NewParentClass) {
+      // Try loading the class asset (handles Blueprint parents).
+      UObject *Loaded = StaticLoadObject(UClass::StaticClass(), nullptr, *NewParentSpec);
+      if (Loaded) NewParentClass = Cast<UClass>(Loaded);
+    }
+    if (!NewParentClass) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Parent class not found: '%s'. "
+                               "Use the exact C++ class name or full asset path."),
+                          *NewParentSpec),
+          nullptr, TEXT("CLASS_NOT_FOUND"));
+      return true;
+    }
+
+    // Guard: can't parent a class to itself or a child of itself.
+    if (Blueprint->GeneratedClass &&
+        (NewParentClass == Blueprint->GeneratedClass ||
+         NewParentClass->IsChildOf(Blueprint->GeneratedClass))) {
+      SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Cannot reparent: '%s' is the same as or a "
+                               "child of the Blueprint's own class."),
+                          *NewParentSpec),
+          nullptr, TEXT("INVALID_PARENT"));
+      return true;
+    }
+
+    FString OldParentName = Blueprint->ParentClass
+                                ? Blueprint->ParentClass->GetName()
+                                : TEXT("None");
+
+    // Set the new parent class directly and mark structurally modified.
+    // This is the correct UE5 pattern — FBlueprintEditorUtils::ReparentBlueprint
+    // does not exist; direct ParentClass assignment + structural modification
+    // is how the engine's own widget/BP tooling handles reparenting.
+    Blueprint->ParentClass = NewParentClass;
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+
+    // Recompile and save.
+    FKismetEditorUtilities::CompileBlueprint(Blueprint);
+    SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("blueprintPath"),  BpPath);
+    Result->SetStringField(TEXT("oldParent"),       OldParentName);
+    Result->SetStringField(TEXT("newParent"),       NewParentClass->GetName());
+    Result->SetStringField(TEXT("newParentPath"),   NewParentClass->GetPathName());
+    Result->SetBoolField  (TEXT("compiled"),        true);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Blueprint reparented and recompiled."), Result);
+    return true;
+#else
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("reparent_blueprint requires editor build."),
+                           nullptr, TEXT("NOT_AVAILABLE"));
     return true;
 #endif
   }

@@ -242,7 +242,150 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         return true;
     }
 
-    // Unknown subaction
+
+    // =========================================================
+    // GET UBT LOG  (v8)
+    // subAction="get_ubt_log"
+    // Returns the last N lines of the UnrealBuildTool Log.txt.
+    // This is the primary source of compile errors from Live
+    // Coding and full rebuilds. Optional param: "lines" (int,
+    // default 100). Optional param: "filter" (string, filters
+    // to lines containing this substring).
+    // =========================================================
+    if (SubAction == TEXT("get_ubt_log")) {
+        int32 MaxLines = 100;
+        FString Filter;
+        if (Payload->HasField(TEXT("lines"))) {
+            double LinesVal = 0.0;
+            Payload->TryGetNumberField(TEXT("lines"), LinesVal);
+            MaxLines = FMath::Clamp((int32)LinesVal, 1, 2000);
+        }
+        Payload->TryGetStringField(TEXT("filter"), Filter);
+
+        // UBT log is always at %LOCALAPPDATA%\UnrealBuildTool\Log.txt
+        FString LocalAppData = FPlatformMisc::GetEnvironmentVariable(TEXT("LOCALAPPDATA"));
+        FString UbtLogPath = FPaths::Combine(LocalAppData,
+            TEXT("UnrealBuildTool"), TEXT("Log.txt"));
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("logPath"), UbtLogPath);
+
+        if (!FPaths::FileExists(UbtLogPath)) {
+            Result->SetStringField(TEXT("error"),
+                FString::Printf(TEXT("UBT log not found at: %s"), *UbtLogPath));
+            Result->SetArrayField(TEXT("lines"), TArray<TSharedPtr<FJsonValue>>());
+            SendAutomationResponse(RequestingSocket, RequestId, true,
+                TEXT("UBT log not found."), Result);
+            return true;
+        }
+
+        FString LogContent;
+        FFileHelper::LoadFileToString(LogContent, *UbtLogPath);
+
+        TArray<FString> AllLines;
+        LogContent.ParseIntoArrayLines(AllLines);
+
+        // Apply filter if provided
+        TArray<FString> FilteredLines;
+        for (const FString& Line : AllLines) {
+            if (Filter.IsEmpty() || Line.Contains(Filter, ESearchCase::IgnoreCase)) {
+                FilteredLines.Add(Line);
+            }
+        }
+
+        // Take last MaxLines
+        int32 StartIdx = FMath::Max(0, FilteredLines.Num() - MaxLines);
+        TArray<TSharedPtr<FJsonValue>> LineArray;
+        for (int32 i = StartIdx; i < FilteredLines.Num(); i++) {
+            LineArray.Add(MakeShared<FJsonValueString>(FilteredLines[i]));
+        }
+
+        Result->SetArrayField(TEXT("lines"), LineArray);
+        Result->SetNumberField(TEXT("totalLines"), FilteredLines.Num());
+        Result->SetNumberField(TEXT("returnedLines"), LineArray.Num());
+        Result->SetBoolField(TEXT("filtered"), !Filter.IsEmpty());
+
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            TEXT("UBT log retrieved."), Result);
+        return true;
+    }
+
+    // =========================================================
+    // GET LIVE CODING LOG  (v8)
+    // subAction="get_livecoding_log"
+    // Returns the last N lines of the main editor log filtered
+    // to LiveCoding entries only — this is where Live Coding
+    // compile errors appear. Also returns UBT log tail for
+    // RulesError / module-not-found errors.
+    // Optional param: "lines" (int, default 80).
+    // =========================================================
+    if (SubAction == TEXT("get_livecoding_log")) {
+        int32 MaxLines = 80;
+        if (Payload->HasField(TEXT("lines"))) {
+            double LinesVal = 0.0;
+            Payload->TryGetNumberField(TEXT("lines"), LinesVal);
+            MaxLines = FMath::Clamp((int32)LinesVal, 1, 2000);
+        }
+
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+
+        // ---- Section 1: Editor log — LiveCoding entries ----
+        FString ProjectDir = FPaths::ProjectDir();
+        FString ProjectName = FApp::GetProjectName();
+        FString EditorLogPath = FPaths::Combine(
+            ProjectDir, TEXT("Saved"), TEXT("Logs"),
+            ProjectName + TEXT(".log"));
+
+        TArray<TSharedPtr<FJsonValue>> LcLines;
+        if (FPaths::FileExists(EditorLogPath)) {
+            FString LogContent;
+            FFileHelper::LoadFileToString(LogContent, *EditorLogPath);
+            TArray<FString> AllLines;
+            LogContent.ParseIntoArrayLines(AllLines);
+
+            // Collect lines mentioning LiveCoding or live compile events
+            TArray<FString> LcFiltered;
+            for (const FString& Line : AllLines) {
+                if (Line.Contains(TEXT("LiveCoding"), ESearchCase::IgnoreCase) ||
+                    Line.Contains(TEXT("Live coding"), ESearchCase::IgnoreCase) ||
+                    Line.Contains(TEXT("Live Coding"), ESearchCase::IgnoreCase)) {
+                    LcFiltered.Add(Line);
+                }
+            }
+            int32 StartIdx = FMath::Max(0, LcFiltered.Num() - MaxLines);
+            for (int32 i = StartIdx; i < LcFiltered.Num(); i++) {
+                LcLines.Add(MakeShared<FJsonValueString>(LcFiltered[i]));
+            }
+        }
+        Result->SetArrayField(TEXT("liveCodingLines"), LcLines);
+        Result->SetStringField(TEXT("editorLogPath"), EditorLogPath);
+
+        // ---- Section 2: UBT log — last MaxLines/2 lines ----
+        // RulesErrors and module-not-found errors appear only here.
+        FString LocalAppData = FPlatformMisc::GetEnvironmentVariable(TEXT("LOCALAPPDATA"));
+        FString UbtLogPath = FPaths::Combine(LocalAppData,
+            TEXT("UnrealBuildTool"), TEXT("Log.txt"));
+        TArray<TSharedPtr<FJsonValue>> UbtLines;
+        if (FPaths::FileExists(UbtLogPath)) {
+            FString UbtContent;
+            FFileHelper::LoadFileToString(UbtContent, *UbtLogPath);
+            TArray<FString> AllUbtLines;
+            UbtContent.ParseIntoArrayLines(AllUbtLines);
+            int32 UbtMax = FMath::Max(1, MaxLines / 2);
+            int32 StartIdx = FMath::Max(0, AllUbtLines.Num() - UbtMax);
+            for (int32 i = StartIdx; i < AllUbtLines.Num(); i++) {
+                UbtLines.Add(MakeShared<FJsonValueString>(AllUbtLines[i]));
+            }
+        }
+        Result->SetArrayField(TEXT("ubtLogLines"), UbtLines);
+        Result->SetStringField(TEXT("ubtLogPath"), UbtLogPath);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            TEXT("Live Coding log retrieved."), Result);
+        return true;
+    }
+
+        // Unknown subaction
     SendAutomationError(RequestingSocket, RequestId, 
         TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;

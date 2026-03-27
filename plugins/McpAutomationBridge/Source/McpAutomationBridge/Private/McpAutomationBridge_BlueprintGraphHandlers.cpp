@@ -49,6 +49,10 @@
 #include "McpVersionCompatibility.h"
 
 #include "McpAutomationBridgeGlobals.h"
+
+namespace McpKeyValidation {
+  bool IsKeyNameRegistered(const FString& KeyName);
+}
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpHandlerUtils.h"
@@ -81,6 +85,9 @@
 #include "K2Node_FunctionResult.h"
 #include "K2Node_IfThenElse.h"
 #include "K2Node_InputAxisEvent.h"
+#include "K2Node_InputKey.h"
+#include "GameplayTagContainer.h"
+
 #include "K2Node_Knot.h"
 #include "K2Node_Literal.h"
 #include "K2Node_MakeArray.h"
@@ -346,7 +353,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // CRITICAL: Save the blueprint to persist the new node.
         // Without this, the node exists only in memory and can be lost
         // between requests when the blueprint is reloaded.
-        SaveLoadedAssetThrottled(Blueprint);
+        SaveLoadedAssetThrottled(Blueprint, -1.0, true);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
@@ -511,7 +518,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // Loops
         {TEXT("ForLoop"), TEXT("K2Node_ForLoop")},
         {TEXT("ForLoopWithBreak"), TEXT("K2Node_ForLoopWithBreak")},
-        {TEXT("ForEachLoop"), TEXT("K2Node_ForEachElementInEnum")},
+        // NOTE: ForEachLoop for arrays is a macro node (K2Node_MacroInstance),
+        // not an enum node. We handle it explicitly below via CallFunction on
+        // KismetArrayLibrary. The alias here is intentionally removed to prevent
+        // routing to the enum-only variant.
+        {TEXT("ForEachElementInEnum"), TEXT("K2Node_ForEachElementInEnum")},
         {TEXT("WhileLoop"), TEXT("K2Node_WhileLoop")},
         // Data
         {TEXT("MakeArray"), TEXT("K2Node_MakeArray")},
@@ -535,8 +546,42 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
 
     // Helper: Try to find a UK2Node subclass by name
     auto FindNodeClassByName = [](const FString &TypeName) -> UClass * {
-      // First check for aliases
+      // -----------------------------------------------------------------------
+      // BLOCKLIST: Node types that crash when created programmatically because
+      // they require internal state (property references, delegate bindings,
+      // etc.) to be set BEFORE AllocateDefaultPins() is called.  The dynamic
+      // fallback cannot satisfy these preconditions safely.
+      //
+      // K2Node_AssignDelegate   — crashes: DelegateProperty is null at pin alloc
+      // K2Node_AddDelegate      — crashes: same delegate property null deref
+      // K2Node_RemoveDelegate   — crashes: same
+      // K2Node_ClearDelegate    — crashes: same
+      // K2Node_CallDelegate     — crashes: same
+      //
+      // These nodes must be placed via the editor's right-click context menu,
+      // which resolves the delegate property before constructing the node.
+      // -----------------------------------------------------------------------
+      static const TSet<FString> BlockedNodeTypes = {
+        TEXT("K2Node_AssignDelegate"),
+        TEXT("K2Node_AddDelegate"),
+        TEXT("K2Node_RemoveDelegate"),
+        TEXT("K2Node_ClearDelegate"),
+        TEXT("K2Node_CallDelegate"),
+        TEXT("AssignDelegate"),
+        TEXT("AddDelegate"),
+        TEXT("RemoveDelegate"),
+        TEXT("ClearDelegate"),
+        TEXT("CallDelegate"),
+      };
+
+      // Resolve aliases first so we can check the resolved name too
       FString ResolvedName = TypeName;
+      if (BlockedNodeTypes.Contains(TypeName) ||
+          BlockedNodeTypes.Contains(FString::Printf(TEXT("K2Node_%s"), *TypeName))) {
+        return nullptr; // Blocked — would crash on AllocateDefaultPins()
+      }
+
+      // Check for aliases
       if (const FString *Alias = NodeTypeAliases.Find(TypeName)) {
         ResolvedName = *Alias;
       }
@@ -724,23 +769,136 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    if (NodeType == TEXT("Cast") || NodeType.StartsWith(TEXT("CastTo"))) {
+    if (NodeType == TEXT("Cast") || NodeType == TEXT("K2Node_DynamicCast") ||
+        NodeType.StartsWith(TEXT("CastTo"))) {
       FString TargetClassName;
       Payload->TryGetStringField(TEXT("targetClass"), TargetClassName);
       if (TargetClassName.IsEmpty() && NodeType.StartsWith(TEXT("CastTo")))
         TargetClassName = NodeType.Mid(6);
+
+      // 1. Try native C++ class lookup first
       UClass *TargetClass = ResolveUClass(TargetClassName);
+
+      // 2. If that failed, try loading it as a Blueprint asset and using its
+      //    GeneratedClass. This is required for Blueprint targets like
+      //    "BP_CharacterBase" which resolve to "BP_CharacterBase_C".
+      if (!TargetClass) {
+        // Try common path prefixes if no slash is present
+        TArray<FString> PathsToTry;
+        if (TargetClassName.Contains(TEXT("/"))) {
+          PathsToTry.Add(TargetClassName);
+        } else {
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/Characters/%s"), *TargetClassName));
+          PathsToTry.Add(FString::Printf(TEXT("/Game/Blueprints/Combat/%s"), *TargetClassName));
+        }
+        for (const FString &TryPath : PathsToTry) {
+          FString NormPath, LoadErr;
+          UBlueprint *CastBP = LoadBlueprintAsset(TryPath, NormPath, LoadErr);
+          if (CastBP && CastBP->GeneratedClass) {
+            TargetClass = CastBP->GeneratedClass;
+            break;
+          }
+        }
+      }
+
+      // 3. Last resort: search loaded objects for a GeneratedClass matching name
+      if (!TargetClass) {
+        FString SearchName = TargetClassName + TEXT("_C");
+        for (TObjectIterator<UClass> It; It; ++It) {
+          if (It->GetName().Equals(SearchName, ESearchCase::IgnoreCase) ||
+              It->GetName().Equals(TargetClassName, ESearchCase::IgnoreCase)) {
+            TargetClass = *It;
+            break;
+          }
+        }
+      }
+
       if (!TargetClass) {
         SendAutomationError(
             RequestingSocket, RequestId,
-            FString::Printf(TEXT("Class '%s' not found"), *TargetClassName),
+            FString::Printf(TEXT("Class '%s' not found. For Blueprint classes, "
+                                 "provide the full asset path e.g. '/Game/Blueprints/BP_CharacterBase'."),
+                            *TargetClassName),
             TEXT("CLASS_NOT_FOUND"));
         return true;
       }
+
+      // Set TargetType BEFORE calling CreateNode(false) so that
+      // AllocateDefaultPins (called inside Finalize) generates the typed
+      // "As <ClassName>" output pin. Then ReconstructNode to flush pin state.
       FGraphNodeCreator<UK2Node_DynamicCast> NodeCreator(*TargetGraph);
       UK2Node_DynamicCast *CastNode = NodeCreator.CreateNode(false);
       CastNode->TargetType = TargetClass;
       FinalizeAndReport(NodeCreator, CastNode);
+      if (CastNode) {
+        CastNode->ReconstructNode();
+        SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+      }
+      return true;
+    }
+
+    if (NodeType == TEXT("CallArrayFunction") ||
+        NodeType == TEXT("K2Node_CallArrayFunction")) {
+      // Array function nodes require special handling: they must be created via
+      // FGraphNodeCreator<UK2Node_CallFunction> (not the dynamic NewObject path)
+      // and ReconstructNode must be called after finalization so the wildcard
+      // array pins resolve to the correct typed pins once a TargetArray is wired.
+      FString MemberName, MemberClass;
+      Payload->TryGetStringField(TEXT("memberName"), MemberName);
+      Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
+
+      // Default to KismetArrayLibrary if no class specified
+      if (MemberClass.IsEmpty()) {
+        MemberClass = TEXT("KismetArrayLibrary");
+      }
+
+      UClass *ArrayLibClass = ResolveUClass(MemberClass);
+      if (!ArrayLibClass) {
+        // Try UKismetArrayLibrary directly
+        for (TObjectIterator<UClass> It; It; ++It) {
+          if (It->GetName().Equals(TEXT("KismetArrayLibrary"), ESearchCase::IgnoreCase) ||
+              It->GetName().Equals(TEXT("UKismetArrayLibrary"), ESearchCase::IgnoreCase)) {
+            ArrayLibClass = *It;
+            break;
+          }
+        }
+      }
+
+      UFunction *ArrayFunc = nullptr;
+      if (ArrayLibClass) {
+        ArrayFunc = ArrayLibClass->FindFunctionByName(*MemberName);
+      }
+
+      if (!ArrayFunc) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Array function '%s' not found in '%s'"),
+                            *MemberName, *MemberClass),
+            TEXT("FUNCTION_NOT_FOUND"));
+        return true;
+      }
+
+      FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
+      UK2Node_CallFunction *CallFuncNode = NodeCreator.CreateNode(false);
+      CallFuncNode->SetFromFunction(ArrayFunc);
+      // Finalize allocates default pins (wildcard at this point)
+      NodeCreator.Finalize();
+      CallFuncNode->NodePosX = X;
+      CallFuncNode->NodePosY = Y;
+      // ReconstructNode forces pin re-evaluation which is required for array
+      // function nodes so that TargetArray and ReturnValue pins appear correctly.
+      CallFuncNode->ReconstructNode();
+      FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), CallFuncNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), CallFuncNode->GetName());
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Array function node created."), Result);
       return true;
     }
 
@@ -761,7 +919,297 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    // ========== DYNAMIC FALLBACK: Create ANY node class by name ==========
+
+    // =========================================================
+    // ENHANCED INPUT ACTION NODE  (v8)
+    // nodeType="EnhancedInputAction"
+    // Required: inputActionPath (or memberName) = full content path
+    //   e.g. /Game/Input/Actions/IA_Move
+    // Binds InputAction BEFORE Finalize() so AllocateDefaultPins
+    // generates the correct ActionValue pin type (Axis2D etc.).
+    // Requires UE 5.1+ (EnhancedInputEditor module).
+    // =========================================================
+    if (NodeType == TEXT("EnhancedInputAction") ||
+        NodeType == TEXT("K2Node_EnhancedInputAction")) {
+      FString ActionPath;
+      if (!Payload->TryGetStringField(TEXT("inputActionPath"), ActionPath) ||
+          ActionPath.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("memberName"), ActionPath);
+      }
+      if (ActionPath.IsEmpty()) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            TEXT("inputActionPath is required for EnhancedInputAction nodes. "
+                 "Provide the full content path, e.g. /Game/Input/Actions/IA_Move."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      // Header-free approach: find the class at runtime via TObjectIterator
+      // and set InputAction via FObjectProperty reflection. No include needed.
+      UClass *EINodeClass = nullptr;
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(TEXT("K2Node_EnhancedInputAction"),
+                                 ESearchCase::IgnoreCase) &&
+            !It->HasAnyClassFlags(CLASS_Abstract)) {
+          EINodeClass = *It;
+          break;
+        }
+      }
+      if (!EINodeClass) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            TEXT("K2Node_EnhancedInputAction class not found. "
+                 "Ensure the EnhancedInput plugin is enabled."),
+            TEXT("NODE_TYPE_NOT_FOUND"));
+        return true;
+      }
+      // Load the InputAction asset via generic StaticLoadObject
+      UObject *InputActionObj = StaticLoadObject(
+          UObject::StaticClass(), nullptr, *ActionPath);
+      if (!InputActionObj) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("InputAction asset not found at '%s'. "
+                     "Verify the path, e.g. /Game/Input/Actions/IA_Move."),
+                *ActionPath),
+            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
+      // Create the node via NewObject (same as dynamic fallback but with
+      // InputAction set BEFORE AllocateDefaultPins so the ActionValue pin
+      // gets the correct type — Bool/Axis1D/Axis2D/Axis3D)
+      UEdGraphNode *EINode = NewObject<UEdGraphNode>(TargetGraph, EINodeClass);
+      if (!EINode) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to instantiate K2Node_EnhancedInputAction."),
+                            TEXT("CREATE_FAILED"));
+        return true;
+      }
+      // Set InputAction via FObjectProperty reflection — no typed header needed
+      if (FObjectProperty *Prop = CastField<FObjectProperty>(
+              EINodeClass->FindPropertyByName(TEXT("InputAction")))) {
+        Prop->SetObjectPropertyValue(
+            Prop->ContainerPtrToValuePtr<void>(EINode), InputActionObj);
+      }
+      // Now add to graph and allocate pins (InputAction already set)
+      TargetGraph->AddNode(EINode, false, false);
+      EINode->CreateNewGuid();
+      EINode->PostPlacedNewNode();
+      EINode->AllocateDefaultPins();
+      EINode->NodePosX = X;
+      EINode->NodePosY = Y;
+      FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), EINode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), EINode->GetName());
+      Result->SetStringField(TEXT("nodeClass"), EINodeClass->GetName());
+      // Report the resolved action name so caller can verify binding worked
+      Result->SetStringField(TEXT("inputAction"), InputActionObj->GetPathName());
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("EnhancedInputAction node created."), Result);
+      return true;
+    }
+
+    // =========================================================
+    // ADD MAPPING CONTEXT NODE  (v8)
+    // nodeType="AddMappingContext"
+    // Emits a CallFunction node targeting
+    // UEnhancedInputLocalPlayerSubsystem::AddMappingContext.
+    // Wire the Target pin to a GetEnhancedInputSubsystem node.
+    // =========================================================
+    if (NodeType == TEXT("AddMappingContext")) {
+      UClass *EISubsysClass = nullptr;
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(TEXT("EnhancedInputLocalPlayerSubsystem"),
+                                 ESearchCase::IgnoreCase)) {
+          EISubsysClass = *It;
+          break;
+        }
+      }
+      UFunction *AddMappingFunc = EISubsysClass
+          ? EISubsysClass->FindFunctionByName(TEXT("AddMappingContext"))
+          : nullptr;
+      if (!AddMappingFunc) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            TEXT("AddMappingContext not found on EnhancedInputLocalPlayerSubsystem. "
+                 "Ensure the EnhancedInput plugin is enabled."),
+            TEXT("FUNCTION_NOT_FOUND"));
+        return true;
+      }
+      FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*TargetGraph);
+      UK2Node_CallFunction *CallNode = NodeCreator.CreateNode(false);
+      CallNode->SetFromFunction(AddMappingFunc);
+      FinalizeAndReport(NodeCreator, CallNode);
+      return true;
+    }
+
+    // =========================================================
+    // GET ENHANCED INPUT SUBSYSTEM NODE  (v8)
+    // nodeType="GetEnhancedInputSubsystem"
+    // Creates a K2Node_GetSubsystem pre-configured with
+    // UEnhancedInputLocalPlayerSubsystem as the subsystem class.
+    // =========================================================
+    if (NodeType == TEXT("GetEnhancedInputSubsystem")) {
+      UClass *GetSubsystemNodeClass = nullptr;
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(TEXT("K2Node_GetSubsystem"),
+                                 ESearchCase::IgnoreCase) &&
+            !It->HasAnyClassFlags(CLASS_Abstract)) {
+          GetSubsystemNodeClass = *It;
+          break;
+        }
+      }
+      if (!GetSubsystemNodeClass) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("K2Node_GetSubsystem class not found."),
+                            TEXT("NODE_TYPE_NOT_FOUND"));
+        return true;
+      }
+      UClass *EISubsysClass = nullptr;
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(TEXT("EnhancedInputLocalPlayerSubsystem"),
+                                 ESearchCase::IgnoreCase)) {
+          EISubsysClass = *It;
+          break;
+        }
+      }
+      UEdGraphNode *NewNode =
+          NewObject<UEdGraphNode>(TargetGraph, GetSubsystemNodeClass);
+      if (!NewNode) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to create GetSubsystem node."),
+                            TEXT("CREATE_FAILED"));
+        return true;
+      }
+      TargetGraph->AddNode(NewNode, false, false);
+      NewNode->CreateNewGuid();
+      if (EISubsysClass) {
+        FProperty *ClassProp =
+            GetSubsystemNodeClass->FindPropertyByName(TEXT("SubsystemClass"));
+        if (FClassProperty *CProp = CastField<FClassProperty>(ClassProp)) {
+          void *PropPtr = CProp->ContainerPtrToValuePtr<void>(NewNode);
+          CProp->SetPropertyValue(PropPtr, EISubsysClass);
+        }
+      }
+      NewNode->PostPlacedNewNode();
+      NewNode->AllocateDefaultPins();
+      // ReconstructNode forces pin regeneration now that SubsystemClass is set,
+      // ensuring ReturnValue is typed as EnhancedInputLocalPlayerSubsystem.
+      NewNode->ReconstructNode();
+      NewNode->NodePosX = X;
+      NewNode->NodePosY = Y;
+      FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+      Result->SetStringField(TEXT("nodeClass"), GetSubsystemNodeClass->GetName());
+      FText TitleText = NewNode->GetNodeTitle(ENodeTitleType::FullTitle);
+      Result->SetStringField(TEXT("nodeTitle"), TitleText.ToString());
+      if (EISubsysClass) {
+        Result->SetStringField(TEXT("subsystemClass"), EISubsysClass->GetPathName());
+      }
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("GetEnhancedInputSubsystem node created."), Result);
+      return true;
+    }
+
+    // =========================================================
+    // nodeType="GetWorldSubsystem"
+    // Creates a K2Node_GetSubsystem pre-configured with any UWorldSubsystem
+    // subclass.  Pass the subsystem class name via "className" e.g.
+    //   { "nodeType": "GetWorldSubsystem", "className": "AoBattleManager" }
+    // The ReturnValue pin will be typed as the requested subsystem class so
+    // it can be wired directly into subsystem function "self" pins.
+    // =========================================================
+    if (NodeType == TEXT("GetWorldSubsystem") ||
+        NodeType == TEXT("K2Node_GetWorldSubsystem")) {
+      // Locate the K2Node_GetSubsystem UClass (same node used by
+      // GetEnhancedInputSubsystem — it works for all subsystem kinds).
+      UClass *GetSubsystemNodeClass = nullptr;
+      for (TObjectIterator<UClass> It; It; ++It) {
+        if (It->GetName().Equals(TEXT("K2Node_GetSubsystem"),
+                                 ESearchCase::IgnoreCase) &&
+            !It->HasAnyClassFlags(CLASS_Abstract)) {
+          GetSubsystemNodeClass = *It;
+          break;
+        }
+      }
+      if (!GetSubsystemNodeClass) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("K2Node_GetSubsystem class not found."),
+                            TEXT("NODE_TYPE_NOT_FOUND"));
+        return true;
+      }
+
+      // Resolve the requested subsystem class from "className".
+      FString SubsystemClassName;
+      Payload->TryGetStringField(TEXT("className"), SubsystemClassName);
+      UClass *SubsysClass = nullptr;
+      if (!SubsystemClassName.IsEmpty()) {
+        for (TObjectIterator<UClass> It; It; ++It) {
+          if (It->GetName().Equals(SubsystemClassName,
+                                   ESearchCase::IgnoreCase)) {
+            SubsysClass = *It;
+            break;
+          }
+        }
+      }
+
+      UEdGraphNode *NewNode =
+          NewObject<UEdGraphNode>(TargetGraph, GetSubsystemNodeClass);
+      if (!NewNode) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to create GetWorldSubsystem node."),
+                            TEXT("CREATE_FAILED"));
+        return true;
+      }
+      TargetGraph->AddNode(NewNode, false, false);
+      NewNode->CreateNewGuid();
+
+      // Stamp the subsystem class into the SubsystemClass property so UE
+      // generates a correctly-typed ReturnValue pin.
+      if (SubsysClass) {
+        FProperty *ClassProp =
+            GetSubsystemNodeClass->FindPropertyByName(TEXT("SubsystemClass"));
+        if (FClassProperty *CProp = CastField<FClassProperty>(ClassProp)) {
+          void *PropPtr = CProp->ContainerPtrToValuePtr<void>(NewNode);
+          CProp->SetPropertyValue(PropPtr, SubsysClass);
+        }
+      }
+
+      NewNode->PostPlacedNewNode();
+      NewNode->AllocateDefaultPins();
+      NewNode->ReconstructNode();
+      NewNode->NodePosX = X;
+      NewNode->NodePosY = Y;
+      FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"),    NewNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"),  NewNode->GetName());
+      Result->SetStringField(TEXT("nodeClass"), GetSubsystemNodeClass->GetName());
+      FText TitleText = NewNode->GetNodeTitle(ENodeTitleType::FullTitle);
+      Result->SetStringField(TEXT("nodeTitle"), TitleText.ToString());
+      if (SubsysClass) {
+        Result->SetStringField(TEXT("subsystemClass"), SubsysClass->GetPathName());
+      } else {
+        Result->SetStringField(TEXT("subsystemClass"),
+                               TEXT("Unknown — className not found or not provided"));
+      }
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("GetWorldSubsystem node created."), Result);
+      return true;
+    }
+
+        // ========== DYNAMIC FALLBACK: Create ANY node class by name ==========
     UClass *NodeClass = FindNodeClassByName(NodeType);
     if (NodeClass) {
       UEdGraphNode *NewNode = NewObject<UEdGraphNode>(TargetGraph, NodeClass);
@@ -777,7 +1225,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // CRITICAL: Save the blueprint to persist the new node.
         // Without this, the node exists only in memory and can be lost
         // between requests when the blueprint is reloaded.
-        SaveLoadedAssetThrottled(Blueprint);
+        SaveLoadedAssetThrottled(Blueprint, -1.0, true);
         
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
@@ -791,12 +1239,39 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                             TEXT("CREATE_FAILED"));
       }
     } else {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Node type '%s' not found. Use list_node_types "
-                               "to see available types."),
-                          *NodeType),
-          TEXT("NODE_TYPE_NOT_FOUND"));
+      // Check if it was blocked (delegate node) vs genuinely not found
+      static const TArray<FString> DelegateNodeNames = {
+        TEXT("AssignDelegate"), TEXT("AddDelegate"), TEXT("RemoveDelegate"),
+        TEXT("ClearDelegate"),  TEXT("CallDelegate"),
+        TEXT("K2Node_AssignDelegate"), TEXT("K2Node_AddDelegate"),
+        TEXT("K2Node_RemoveDelegate"), TEXT("K2Node_ClearDelegate"),
+        TEXT("K2Node_CallDelegate"),
+      };
+      bool bIsBlockedDelegate = false;
+      for (const FString& DN : DelegateNodeNames) {
+        if (NodeType.Equals(DN, ESearchCase::IgnoreCase)) {
+          bIsBlockedDelegate = true; break;
+        }
+      }
+      if (bIsBlockedDelegate) {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("Node type '%s' is blocked: delegate bind/assign nodes "
+                     "require the editor right-click menu to resolve the "
+                     "delegate property before construction. Creating them via "
+                     "MCP causes a null-ptr crash in AllocateDefaultPins(). "
+                     "Add these nodes manually in the Blueprint editor."),
+                *NodeType),
+            TEXT("NODE_TYPE_BLOCKED"));
+      } else {
+        SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("Node type '%s' not found. Use list_node_types "
+                                 "to see available types."),
+                            *NodeType),
+            TEXT("NODE_TYPE_NOT_FOUND"));
+      }
     }
     return true;
   } else if (SubAction == TEXT("connect_pins")) {
@@ -844,19 +1319,79 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FromNode->Modify();
     ToNode->Modify();
 
-    if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
+    const UEdGraphSchema *Schema = TargetGraph->GetSchema();
+
+    // Attempt 1: Connect as-is (correct direction expected by caller)
+    bool bConnected = Schema->TryCreateConnection(FromPin, ToPin);
+
+    // Attempt 2: Try reversed direction. This handles cases where the caller
+    // accidentally specifies output→input in the wrong order, and also fixes
+    // the common case where an Input pin is passed as FromPin.
+    if (!bConnected) {
+      bConnected = Schema->TryCreateConnection(ToPin, FromPin);
+    }
+
+    // Attempt 3: For object-typed pins connecting to a self/target pin,
+    // the Kismet schema may reject due to an exact type mismatch even when
+    // UE5 would accept the connection (e.g. SCS component ref → function self).
+    // Try BreakAllPinLinks on the target self pin first to clear stale state,
+    // then reattempt. Also try ReconstructNode on both nodes to force pin
+    // type refresh before the final attempt.
+    if (!bConnected) {
+      const bool bFromIsObject = (FromPin->PinType.PinCategory == TEXT("object") ||
+                                   FromPin->PinType.PinCategory == TEXT("Object"));
+      const bool bToIsObject   = (ToPin->PinType.PinCategory == TEXT("object") ||
+                                   ToPin->PinType.PinCategory == TEXT("Object"));
+
+      if (bFromIsObject || bToIsObject) {
+        // Reconstruct both nodes to refresh their pin type information
+        FromNode->ReconstructNode();
+        ToNode->ReconstructNode();
+
+        // Re-fetch pins after reconstruction (pointers may have changed)
+        FromPin = FromNode->FindPin(*FromPinClean);
+        ToPin   = ToNode->FindPin(*ToPinClean);
+
+        if (FromPin && ToPin) {
+          bConnected = Schema->TryCreateConnection(FromPin, ToPin);
+          if (!bConnected) {
+            bConnected = Schema->TryCreateConnection(ToPin, FromPin);
+          }
+        }
+      }
+    }
+
+    if (bConnected) {
+      // After a successful connection, reconstruct both nodes so that
+      // wildcard/typed pins (e.g. array function nodes) update their type
+      // information based on the newly connected pin type.
+      FromNode->ReconstructNode();
+      ToNode->ReconstructNode();
+
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-      
-      // CRITICAL: Save the blueprint to persist changes.
-      SaveLoadedAssetThrottled(Blueprint);
-      
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Result, Blueprint);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Pins connected."), Result);
     } else {
+      // Provide a diagnostic message that includes pin type information
+      // to help the caller understand why the connection was rejected.
+      FString FromTypeStr = FromPin ? FromPin->PinType.PinCategory.ToString() : TEXT("?");
+      FString ToTypeStr   = ToPin   ? ToPin->PinType.PinCategory.ToString()   : TEXT("?");
+      if (FromPin && FromPin->PinType.PinSubCategoryObject.IsValid()) {
+        FromTypeStr += TEXT(" (") + FromPin->PinType.PinSubCategoryObject->GetName() + TEXT(")");
+      }
+      if (ToPin && ToPin->PinType.PinSubCategoryObject.IsValid()) {
+        ToTypeStr += TEXT(" (") + ToPin->PinType.PinSubCategoryObject->GetName() + TEXT(")");
+      }
       SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to connect pins (schema rejection)."),
+                          FString::Printf(TEXT("Failed to connect pins (schema rejection). "
+                                               "FromPin type: %s [%s], ToPin type: %s [%s]. "
+                                               "Ensure pin directions and types are compatible."),
+                                          *FromPinClean, *FromTypeStr,
+                                          *ToPinClean, *ToTypeStr),
                           TEXT("CONNECTION_FAILED"));
     }
     return true;
@@ -960,7 +1495,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     
     // CRITICAL: Save the blueprint to persist changes.
-    SaveLoadedAssetThrottled(Blueprint);
+    SaveLoadedAssetThrottled(Blueprint, -1.0, true);
     
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -984,7 +1519,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       FBlueprintEditorUtils::RemoveNode(Blueprint, TargetNode, true);
       
       // CRITICAL: Save the blueprint to persist changes.
-      SaveLoadedAssetThrottled(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint, -1.0, true);
       
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -1019,7 +1554,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     // CRITICAL: Save the blueprint to persist the new node.
     // Without this, the node exists only in memory and can be lost
     // between requests when the blueprint is reloaded.
-    SaveLoadedAssetThrottled(Blueprint);
+    SaveLoadedAssetThrottled(Blueprint, -1.0, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), RerouteNode->NodeGuid.ToString());
@@ -1078,26 +1613,170 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                                      ESearchCase::IgnoreCase)) {
         TargetNode->bCommentBubblePinned = Value.ToBool();
         bHandled = true;
+      } else {
+        // ----------------------------------------------------------------
+        // REFLECTION FALLBACK (v8.1)
+        // Set any FClassProperty or FObjectProperty on the node by name,
+        // using Value as a content/script path to load the class or asset.
+        //
+        // Handles:
+        //   SubsystemClass — K2Node_GetSubsystem  (FClassProperty)
+        //   InputAction    — K2Node_EnhancedInputAction (FObjectProperty)
+        //   Any other UClass*/UObject* UPROPERTY by its exact name
+        //
+        // After setting, ReconstructNode() rebuilds typed output pins.
+        // ----------------------------------------------------------------
+        UClass *NodeClass = TargetNode->GetClass();
+        FProperty *Prop = NodeClass->FindPropertyByName(*PropertyName);
+        if (Prop) {
+          void *PropPtr = Prop->ContainerPtrToValuePtr<void>(TargetNode);
+          if (FClassProperty *CProp = CastField<FClassProperty>(Prop)) {
+            // Try full script/content path first
+            UClass *TargetClass = LoadClass<UObject>(nullptr, *Value);
+            if (!TargetClass) {
+              FString ShortName = FPackageName::GetShortName(*Value);
+              for (TObjectIterator<UClass> It; It; ++It) {
+                if (It->GetName().Equals(ShortName, ESearchCase::IgnoreCase)) {
+                  TargetClass = *It; break;
+                }
+              }
+            }
+            if (TargetClass) {
+              CProp->SetPropertyValue(PropPtr, TargetClass);
+              TargetNode->ReconstructNode();
+              bHandled = true;
+            }
+          } else if (FObjectProperty *OProp = CastField<FObjectProperty>(Prop)) {
+            UObject *ObjVal = StaticLoadObject(UObject::StaticClass(), nullptr, *Value);
+            if (ObjVal) {
+              OProp->SetObjectPropertyValue(PropPtr, ObjVal);
+              TargetNode->ReconstructNode();
+              bHandled = true;
+            }
+          } else if (FStructProperty *SProp = CastField<FStructProperty>(Prop)) {
+            // ----------------------------------------------------------------
+            // FGameplayTag struct support — handles any node property whose
+            // type is FGameplayTag.  Pass the tag string directly, e.g.
+            // "Ability.Jump".  The tag must already be registered in the
+            // project's GameplayTagManager.
+            // ----------------------------------------------------------------
+            if (SProp->Struct && SProp->Struct->GetFName() == FName(TEXT("GameplayTag"))) {
+              FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName(*Value), /*bErrorIfNotFound=*/false);
+              if (Tag.IsValid()) {
+                SProp->CopyCompleteValue(PropPtr, &Tag);
+                TargetNode->ReconstructNode();
+                bHandled = true;
+              } else {
+                SendAutomationError(
+                    RequestingSocket, RequestId,
+                    FString::Printf(
+                        TEXT("Gameplay tag '%s' is not registered. Ensure the "
+                             "tag exists in the project's tag list before "
+                             "setting it on a node."),
+                        *Value),
+                    TEXT("INVALID_GAMEPLAY_TAG"));
+                return true;
+              }
+            }
+            // Other FStructProperty types fall through to PROPERTY_NOT_SUPPORTED.
+            // Note: FKey is handled via direct K2Node_InputKey cast below.
+          }
+        }
+      }
+
+      // ----------------------------------------------------------------
+      // K2Node_InputKey special case — set the key binding by name.
+      // This is handled outside the reflection path because FKey requires
+      // InputCoreTypes.h which may not be transitively available here.
+      // We cast to UK2Node_InputKey and write directly to its InputKey
+      // FProperty using the struct's known name rather than TBaseStructure<FKey>.
+      //
+      // Usage:  propertyName=InputKey  value=Enter
+      //         propertyName=InputKey  value=SpaceBar
+      //         propertyName=InputKey  value=Gamepad_FaceButton_Bottom
+      // ----------------------------------------------------------------
+      if (!bHandled &&
+          (PropertyName.Equals(TEXT("InputKey"), ESearchCase::IgnoreCase)) &&
+          TargetNode->GetClass()->GetFName() == FName(TEXT("K2Node_InputKey"))) {
+        // Locate the InputKey FProperty by name on the node class
+        UClass *NodeClass = TargetNode->GetClass();
+        FProperty *KeyProp = NodeClass->FindPropertyByName(FName(TEXT("InputKey")));
+        if (KeyProp) {
+          // The struct name for FKey is "Key" in UE reflection (not "FKey")
+          FStructProperty *KeyStructProp = CastField<FStructProperty>(KeyProp);
+          if (KeyStructProp && KeyStructProp->Struct &&
+              (KeyStructProp->Struct->GetFName() == FName(TEXT("Key")) ||
+               KeyStructProp->Struct->GetFName() == FName(TEXT("InputKey")))) {
+            // -------------------------------------------------------
+            // VALIDATION before writing anything.
+            // -------------------------------------------------------
+            if (!McpKeyValidation::IsKeyNameRegistered(Value)) {
+              SendAutomationError(
+                  RequestingSocket, RequestId,
+                  FString::Printf(
+                      TEXT("Invalid key name '%s' — not registered in UE's "
+                           "input system. Use the exact EKeys name e.g. "
+                           "Enter, SpaceBar, F, LeftMouseButton, "
+                           "Gamepad_FaceButton_Bottom."),
+                      *Value),
+                  TEXT("INVALID_KEY_NAME"));
+              return true;
+            }
+            // -------------------------------------------------------
+            // WRITE via ImportText — the only path that survives
+            // Blueprint compile and asset serialisation.
+            //
+            // FStructProperty::ImportText() is the same pipeline used
+            // by the details panel and TrySetDefaultValue internally.
+            // For FKey the expected import string is just the key name,
+            // e.g. "Enter", "SpaceBar", "F".
+            // -------------------------------------------------------
+            FProperty* InputKeyProp = TargetNode->GetClass()->FindPropertyByName(FName(TEXT("InputKey")));
+            if (InputKeyProp) {
+              TargetNode->PreEditChange(InputKeyProp);
+              void* StructPtr = InputKeyProp->ContainerPtrToValuePtr<void>(TargetNode);
+              const TCHAR* ImportResult = KeyStructProp->ImportText_Direct(
+                  *Value, StructPtr, TargetNode, PPF_None);
+              if (ImportResult != nullptr) {
+                FPropertyChangedEvent PropChangedEvent(InputKeyProp, EPropertyChangeType::ValueSet);
+                TargetNode->PostEditChangeProperty(PropChangedEvent);
+                TargetNode->ReconstructNode();
+                bHandled = true;
+              }
+            }
+          }
+        }
+        if (!bHandled) {
+          SendAutomationError(
+              RequestingSocket, RequestId,
+              FString::Printf(
+                  TEXT("Could not set InputKey '%s'. Verify the key name is a "
+                       "valid EKeys entry e.g. Enter, SpaceBar, F, "
+                       "LeftMouseButton, Gamepad_FaceButton_Bottom."),
+                  *Value),
+              TEXT("INVALID_KEY_NAME"));
+          return true;
+        }
       }
 
       if (bHandled) {
         TargetGraph->NotifyGraphChanged();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        
-        // CRITICAL: Save the blueprint to persist changes.
-        SaveLoadedAssetThrottled(Blueprint);
-        
+        SaveLoadedAssetThrottled(Blueprint, -1.0, true);
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
         Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
+        FText TitleText = TargetNode->GetNodeTitle(ENodeTitleType::FullTitle);
+        Result->SetStringField(TEXT("nodeTitle"), TitleText.ToString());
         McpHandlerUtils::AddVerification(Result, Blueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Node property updated."), Result);
       } else {
         SendAutomationError(
             RequestingSocket, RequestId,
-            FString::Printf(TEXT("Unsupported node property '%s'"),
-                            *PropertyName),
+            FString::Printf(TEXT("Unsupported node property '%s'. "
+                "For class/object properties use the exact UPROPERTY name "
+                "and a full content or script path as value."), *PropertyName),
             TEXT("PROPERTY_NOT_SUPPORTED"));
       }
     } else {
@@ -1130,6 +1809,28 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                                                       : TEXT("Output"));
         PinObj->SetStringField(TEXT("pinType"),
                                Pin->PinType.PinCategory.ToString());
+        if (Pin->PinType.PinSubCategoryObject.IsValid()) {
+          PinObj->SetStringField(TEXT("pinSubType"),
+                                 Pin->PinType.PinSubCategoryObject->GetName());
+        }
+        if (!Pin->DefaultValue.IsEmpty()) {
+          PinObj->SetStringField(TEXT("defaultValue"), Pin->DefaultValue);
+        } else if (Pin->DefaultObject) {
+          PinObj->SetStringField(TEXT("defaultObjectPath"),
+                                 Pin->DefaultObject->GetPathName());
+        }
+        if (Pin->LinkedTo.Num() > 0) {
+          TArray<TSharedPtr<FJsonValue>> LinkedArr;
+          for (UEdGraphPin *LP : Pin->LinkedTo) {
+            if (!LP) continue;
+            UEdGraphNode *LN = LP->GetOwningNode();
+            FString Entry = LN
+              ? FString::Printf(TEXT("%s:%s"), *LN->NodeGuid.ToString(), *LP->PinName.ToString())
+              : LP->PinName.ToString();
+            LinkedArr.Add(MakeShared<FJsonValueString>(Entry));
+          }
+          PinObj->SetArrayField(TEXT("linkedTo"), LinkedArr);
+        }
         Pins.Add(MakeShared<FJsonValueObject>(PinObj));
       }
       Result->SetArrayField(TEXT("pins"), Pins);
@@ -1155,6 +1856,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       NodeObj->SetStringField(
           TEXT("nodeTitle"),
           Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+      NodeObj->SetNumberField(TEXT("x"), Node->NodePosX);
+      NodeObj->SetNumberField(TEXT("y"), Node->NodePosY);
       Nodes.Add(MakeShared<FJsonValueObject>(NodeObj));
     }
     Result->SetArrayField(TEXT("nodes"), Nodes);
@@ -1207,6 +1910,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       PinObj->SetStringField(TEXT("pinType"),
                              Pin->PinType.PinCategory.ToString());
 
+      // Always report the sub-category object name for object/class/struct pins.
+      // This is critical for cast nodes whose typed output pin ("As ClassName")
+      // must expose the target class so callers can wire it correctly.
+      if (Pin->PinType.PinSubCategoryObject.IsValid()) {
+        PinObj->SetStringField(TEXT("pinSubType"),
+                               Pin->PinType.PinSubCategoryObject->GetName());
+      }
+
       if (Pin->LinkedTo.Num() > 0) {
         TArray<TSharedPtr<FJsonValue>> LinkedArray;
         for (UEdGraphPin *LinkedPin : Pin->LinkedTo) {
@@ -1246,6 +1957,66 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin details retrieved."), Result);
     return true;
+  } else if (SubAction == TEXT("find_nodes_by_title")) {
+    // Find all nodes whose title contains the given filter string (case-insensitive).
+    // Returns: { matches: [{nodeId, nodeName, nodeTitle, x, y}] }
+    FString TitleFilter;
+    Payload->TryGetStringField(TEXT("titleFilter"), TitleFilter);
+    TitleFilter = TitleFilter.ToLower();
+
+    TArray<TSharedPtr<FJsonValue>> Matches;
+    for (UEdGraphNode *Node : TargetGraph->Nodes) {
+      FString Title = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
+      if (TitleFilter.IsEmpty() || Title.ToLower().Contains(TitleFilter)) {
+        TSharedPtr<FJsonObject> M = McpHandlerUtils::CreateResultObject();
+        M->SetStringField(TEXT("nodeId"),    Node->NodeGuid.ToString());
+        M->SetStringField(TEXT("nodeName"),  Node->GetName());
+        M->SetStringField(TEXT("nodeTitle"), Title);
+        M->SetNumberField(TEXT("x"),         Node->NodePosX);
+        M->SetNumberField(TEXT("y"),         Node->NodePosY);
+        Matches.Add(MakeShared<FJsonValueObject>(M));
+      }
+    }
+    TSharedPtr<FJsonObject> FNResult = McpHandlerUtils::CreateResultObject();
+    FNResult->SetArrayField(TEXT("matches"), Matches);
+    FNResult->SetNumberField(TEXT("count"), Matches.Num());
+    McpHandlerUtils::AddVerification(FNResult, Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Nodes found."), FNResult);
+    return true;
+
+  } else if (SubAction == TEXT("get_graph_connections")) {
+    // Returns the complete wiring map for the graph as a flat list of connections.
+    // Each entry: { fromNode, fromNodeTitle, fromPin, toNode, toNodeTitle, toPin }
+    // Only output→input connections are listed (each wire appears once).
+    // This replaces the pattern of calling get_node_details 10+ times to trace wiring.
+    TArray<TSharedPtr<FJsonValue>> Connections;
+    for (UEdGraphNode *Node : TargetGraph->Nodes) {
+      for (UEdGraphPin *Pin : Node->Pins) {
+        if (!Pin || Pin->Direction != EGPD_Output) continue;
+        for (UEdGraphPin *LinkedPin : Pin->LinkedTo) {
+          if (!LinkedPin) continue;
+          UEdGraphNode *TargetN = LinkedPin->GetOwningNode();
+          if (!TargetN) continue;
+          TSharedPtr<FJsonObject> C = McpHandlerUtils::CreateResultObject();
+          C->SetStringField(TEXT("fromNode"),      Node->NodeGuid.ToString());
+          C->SetStringField(TEXT("fromNodeTitle"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+          C->SetStringField(TEXT("fromPin"),       Pin->PinName.ToString());
+          C->SetStringField(TEXT("toNode"),        TargetN->NodeGuid.ToString());
+          C->SetStringField(TEXT("toNodeTitle"),   TargetN->GetNodeTitle(ENodeTitleType::ListView).ToString());
+          C->SetStringField(TEXT("toPin"),         LinkedPin->PinName.ToString());
+          Connections.Add(MakeShared<FJsonValueObject>(C));
+        }
+      }
+    }
+    TSharedPtr<FJsonObject> GCResult = McpHandlerUtils::CreateResultObject();
+    GCResult->SetArrayField(TEXT("connections"), Connections);
+    GCResult->SetNumberField(TEXT("count"), Connections.Num());
+    McpHandlerUtils::AddVerification(GCResult, Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Graph connections retrieved."), GCResult);
+    return true;
+
   } else if (SubAction == TEXT("list_node_types")) {
     // List all available UK2Node types for AI discoverability
     TArray<TSharedPtr<FJsonValue>> NodeTypes;
@@ -1310,7 +2081,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     
     // CRITICAL: Save the blueprint to persist changes.
-    SaveLoadedAssetThrottled(Blueprint);
+    SaveLoadedAssetThrottled(Blueprint, -1.0, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NodeId);
@@ -1320,6 +2091,69 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     McpHandlerUtils::AddVerification(Result, Blueprint);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin default value set."), Result);
+    return true;
+  }
+
+  if (SubAction == TEXT("list_graphs")) {
+    // Returns all graphs in the blueprint: EventGraph, function graphs, macro graphs.
+    // Each entry contains: name, schema, nodeCount.
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TArray<TSharedPtr<FJsonValue>> GraphsArray;
+
+    auto AddGraphs = [&](const TArray<UEdGraph*>& Graphs) {
+      for (UEdGraph* G : Graphs) {
+        if (!G) continue;
+        TSharedPtr<FJsonObject> GObj = MakeShared<FJsonObject>();
+        GObj->SetStringField(TEXT("name"), G->GetName());
+        GObj->SetStringField(TEXT("schema"),
+            G->Schema ? G->Schema->GetName() : TEXT("Unknown"));
+        GObj->SetNumberField(TEXT("nodeCount"), G->Nodes.Num());
+        GraphsArray.Add(MakeShared<FJsonValueObject>(GObj));
+      }
+    };
+
+    AddGraphs(Blueprint->UbergraphPages);
+    AddGraphs(Blueprint->FunctionGraphs);
+    AddGraphs(Blueprint->MacroGraphs);
+
+    Result->SetArrayField(TEXT("graphs"), GraphsArray);
+    Result->SetNumberField(TEXT("count"), GraphsArray.Num());
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Graphs listed."), Result);
+    return true;
+  }
+
+  if (SubAction == TEXT("get_node_properties")) {
+    // Diagnostic: dumps all UPROPERTY names and types on any graph node.
+    // Use to discover the correct propertyName for set_node_property.
+    FString NodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    UEdGraphNode *TargetNode = FindNodeByIdOrName(NodeId);
+    if (!TargetNode) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+    TArray<TSharedPtr<FJsonValue>> Props;
+    for (TFieldIterator<FProperty> It(TargetNode->GetClass(),
+                                      EFieldIterationFlags::IncludeSuper); It; ++It) {
+      TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+      P->SetStringField(TEXT("name"),  It->GetName());
+      P->SetStringField(TEXT("type"),  It->GetClass()->GetName());
+      P->SetBoolField(TEXT("isClass"),  CastField<FClassProperty>(*It)  != nullptr);
+      P->SetBoolField(TEXT("isObject"), CastField<FObjectProperty>(*It) != nullptr);
+      Props.Add(MakeShared<FJsonValueObject>(P));
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("nodeId"),    TargetNode->NodeGuid.ToString());
+    Result->SetStringField(TEXT("nodeClass"), TargetNode->GetClass()->GetName());
+    FText TitleText = TargetNode->GetNodeTitle(ENodeTitleType::FullTitle);
+    Result->SetStringField(TEXT("nodeTitle"), TitleText.ToString());
+    Result->SetArrayField(TEXT("properties"), Props);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Node properties listed."), Result);
     return true;
   }
 

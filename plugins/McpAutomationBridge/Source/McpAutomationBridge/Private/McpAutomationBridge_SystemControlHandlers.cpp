@@ -39,7 +39,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
-      Lower != TEXT("export_asset")) {
+      Lower != TEXT("export_asset") &&
+      Lower != TEXT("read_log")  &&
+      Lower != TEXT("read_logs") &&
+      Lower != TEXT("get_log")   &&
+      Lower != TEXT("get_logs")) {
     return false; // Not handled by this function
   }
 
@@ -495,6 +499,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                              Result, TEXT("EXPORT_FAILED"));
     }
     return true;
+  }
+
+  // read_log / get_log: read UE log files and crash reports
+  if (Lower == TEXT("read_log")  || Lower == TEXT("read_logs") ||
+      Lower == TEXT("get_log")   || Lower == TEXT("get_logs")) {
+    return HandleReadLog(RequestId, Payload, RequestingSocket);
   }
 
   return false;
