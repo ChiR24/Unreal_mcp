@@ -431,6 +431,24 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
+  async renameEvent(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+    if (!params.oldName) return { success: false, error: 'INVALID_ARGUMENT', message: 'oldName is required' } as const;
+    if (!params.newName) return { success: false, error: 'INVALID_ARGUMENT', message: 'newName is required' } as const;
+    try {
+      const pluginResp = await this.sendAction('blueprint_rename_event', { blueprintCandidates: candidates, requestedPath: primary, oldName: params.oldName, newName: params.newName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_rename_event' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_RENAME_EVENT_FAILED', message: pluginResp?.message ?? 'Failed to rename event via automation bridge' } as const;
+    } catch (err: unknown) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
   async addFunction(params: { blueprintName: string; functionName: string; inputs?: Array<{ name: string; type: string }>; outputs?: Array<{ name: string; type: string }>; isPublic?: boolean; category?: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
     const candidates = this.buildCandidates(params.blueprintName);
     const primary = candidates[0];
@@ -443,6 +461,41 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_add_function' } as const;
     }
     return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_ADD_FUNCTION_FAILED', message: pluginResp?.message ?? 'Failed to add function via automation bridge' } as const;
+  }
+
+  async renameFunction(params: { blueprintName: string; oldName: string; newName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+    if (!params.oldName) return { success: false, error: 'INVALID_ARGUMENT', message: 'oldName is required' } as const;
+    if (!params.newName) return { success: false, error: 'INVALID_ARGUMENT', message: 'newName is required' } as const;
+    try {
+      const pluginResp = await this.sendAction('blueprint_rename_function', { blueprintCandidates: candidates, requestedPath: primary, oldName: params.oldName, newName: params.newName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_rename_function' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_RENAME_FUNCTION_FAILED', message: pluginResp?.message ?? 'Failed to rename function via automation bridge' } as const;
+    } catch (err: unknown) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
+  }
+
+  async removeFunction(params: { blueprintName: string; functionName: string; timeoutMs?: number; waitForCompletion?: boolean; waitForCompletionTimeoutMs?: number }): Promise<StandardActionResponse> {
+    const candidates = this.buildCandidates(params.blueprintName);
+    const primary = candidates[0];
+    if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
+    if (!params.functionName) return { success: false, error: 'INVALID_ARGUMENT', message: 'functionName is required' } as const;
+    try {
+      const pluginResp = await this.sendAction('blueprint_remove_function', { blueprintCandidates: candidates, requestedPath: primary, functionName: params.functionName }, { timeoutMs: params.timeoutMs, waitForEvent: !!params.waitForCompletion, waitForEventTimeoutMs: params.waitForCompletionTimeoutMs });
+      if (pluginResp && pluginResp.success) return pluginResp;
+      if (pluginResp && this.isUnknownActionResponse(pluginResp)) {
+        return { success: false, error: 'UNKNOWN_PLUGIN_ACTION', message: 'Automation plugin does not implement blueprint_remove_function' } as const;
+      }
+      return { success: false, error: pluginResp?.error ?? 'BLUEPRINT_REMOVE_FUNCTION_FAILED', message: pluginResp?.message ?? 'Failed to remove function via automation bridge' } as const;
+    } catch (err: unknown) {
+      return { success: false, error: String(err), message: String(err) } as const;
+    }
   }
 
   async setVariableMetadata(params: { blueprintName: string; variableName: string; metadata: Record<string, unknown>; timeoutMs?: number }): Promise<StandardActionResponse> {

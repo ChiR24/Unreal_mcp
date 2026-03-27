@@ -644,7 +644,18 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       };
     }
     case 'read_log':
-      return cleanObject(await tools.logTools.readOutputLog(args as Record<string, unknown>));
+    case 'read_logs':
+    case 'get_log':
+    case 'get_logs': {
+      // All logType variants are routed through the C++ bridge, which locates
+      // the log file reliably via FPaths::ProjectSavedDir() regardless of the
+      // Node.js working directory or UE_PROJECT_PATH env var.
+      const res = await executeAutomationRequest(
+        tools, 'read_log', args,
+        'Automation bridge not available for log reading'
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
     case 'export_asset': {
       // Export asset to FBX/OBJ format
       // This requires editor-only functionality

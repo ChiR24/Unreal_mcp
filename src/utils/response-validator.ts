@@ -49,21 +49,45 @@ function buildSummaryText(toolName: string, payload: unknown): string {
   // Keys to skip (internal/redundant)
   const skipKeys = new Set(['requestId', 'type', 'data', 'result', 'warnings']);
 
+  // Keys whose array values should be serialized in full rather than summarised.
+  // These are rich data payloads where every field matters to the caller.
+  const FULL_SERIALIZE_KEYS = new Set([
+    'connections', 'pins', 'matches', 'graphs', 'nodes', 'nodeList',
+    'pinDetails', 'pinList', 'wiring', 'edges', 'links', 'properties'
+  ]);
+
   // Helper to format a value for display
-  const formatValue = (val: unknown): string => {
+  const formatValue = (val: unknown, parentKey?: string): string => {
     if (val === null || val === undefined) return '';
-    if (typeof val === 'string') return val.length > 150 ? val.slice(0, 150) + '...' : val;
+    if (typeof val === 'string') return val.length > 500 ? val.slice(0, 500) + '...' : val;
     if (typeof val === 'number' || typeof val === 'boolean') return String(val);
 
-    // Handle arrays - show items with names/paths
+    // Handle arrays
     if (Array.isArray(val)) {
       if (val.length === 0) return '[] (0)';
+
+      // Full serialization for rich data keys — don't summarise, show complete objects
+      if (parentKey && FULL_SERIALIZE_KEYS.has(parentKey)) {
+        const items = val.map(v => {
+          if (isRecord(v)) return JSON.stringify(v);
+          return String(v);
+        });
+        const suffix = val.length > 50 ? `, ... (+${val.length - 50} more)` : '';
+        return `[${items.slice(0, 50).join(', ')}${suffix}] (${val.length})`;
+      }
+
+      // Standard summary: prefer named identifier fields, fall back to full JSON (no truncation cap)
       const items = val.slice(0, 30).map(v => {
         if (isRecord(v)) {
-          // Try common identifier fields
-          return v.name || v.path || v.id || v.nodeId || v.nodeName || v.className ||
-            v.displayName || v.type || v.assetPath || v.objectPath ||
-            JSON.stringify(v).slice(0, 50);
+          // If the object has only simple scalar fields, show full JSON — it's compact enough
+          const keys = Object.keys(v);
+          const allScalar = keys.every(k => typeof v[k] !== 'object' || v[k] === null);
+          if (allScalar && keys.length <= 8) return JSON.stringify(v);
+          // Otherwise try common identifier fields
+          const id = v.name || v.path || v.id || v.nodeId || v.nodeName || v.className ||
+            v.displayName || v.type || v.assetPath || v.objectPath;
+          if (id) return String(id);
+          return JSON.stringify(v);
         }
         return String(v);
       });
@@ -75,19 +99,19 @@ function buildSummaryText(toolName: string, payload: unknown): string {
     if (isRecord(val)) {
       const keys = Object.keys(val);
       // Check if it looks like a 3D vector/transform
-      if (keys.some(k => ['x', 'y', 'z', 'pitch', 'yaw', 'roll'].includes(k))) {
+      if (keys.length <= 3 && keys.some(k => ['x', 'y', 'z', 'pitch', 'yaw', 'roll'].includes(k))) {
         const x = val.x ?? val.pitch ?? 0;
         const y = val.y ?? val.yaw ?? 0;
         const z = val.z ?? val.roll ?? 0;
         return `[${x}, ${y}, ${z}]`;
       }
-      // Generic object - show key=value pairs
-      const entries = Object.entries(val).slice(0, 8);
+      // Generic object — show key=value pairs, no truncation on values
+      const entries = Object.entries(val).slice(0, 12);
       const formatted = entries.map(([k, v]) => {
-        const vStr = typeof v === 'object' ? JSON.stringify(v).slice(0, 40) : String(v);
+        const vStr = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
         return `${k}=${vStr}`;
       });
-      return `{ ${formatted.join(', ')}${keys.length > 8 ? ' ...' : ''} }`;
+      return `{ ${formatted.join(', ')}${keys.length > 12 ? ' ...' : ''} }`;
     }
 
     return String(val);
@@ -97,7 +121,7 @@ function buildSummaryText(toolName: string, payload: unknown): string {
   // 1. First add 'success' and 'error' at the start
   for (const key of ['success', 'error']) {
     if (effectivePayload[key] !== undefined && !addedKeys.has(key)) {
-      const formatted = formatValue(effectivePayload[key]);
+      const formatted = formatValue(effectivePayload[key], key);
       if (formatted) {
         parts.push(`${key}: ${formatted}`);
         addedKeys.add(key);
@@ -122,7 +146,7 @@ function buildSummaryText(toolName: string, payload: unknown): string {
     // Skip count/totalCount if we already have arrays showing counts
     if ((key === 'count' || key === 'totalCount') && hasArrays) continue;
 
-    const formatted = formatValue(val);
+    const formatted = formatValue(val, key);
     if (formatted) {
       parts.push(`${key}: ${formatted}`);
       addedKeys.add(key);

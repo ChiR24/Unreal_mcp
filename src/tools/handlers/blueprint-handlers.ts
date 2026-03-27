@@ -216,6 +216,18 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
       }) as Record<string, unknown>;
       return cleanObject(res);
     }
+    case 'rename_event': {
+      const res = await executeAutomationRequest(tools, 'blueprint_rename_event', {
+        blueprintCandidates: [argsTyped.blueprintPath || argsTyped.name || (argsRecord.path as string) || ''],
+        requestedPath: argsTyped.blueprintPath || argsTyped.name || (argsRecord.path as string) || '',
+        oldName: (argsRecord.oldName as string) ?? '',
+        newName: (argsRecord.newName as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
+    }
     case 'add_function': {
       // Prioritize explicit path for blueprint, allowing 'name' to be function name
       const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
@@ -229,6 +241,31 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         outputs: argsRecord.outputs as { name: string; type: string }[] | undefined,
         isPublic: argsRecord.isPublic as boolean | undefined,
         category: argsRecord.category as string | undefined,
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'rename_function': {
+      const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
+      const res = await executeAutomationRequest(tools, 'blueprint_rename_function', {
+        blueprintCandidates: [blueprintName],
+        requestedPath: blueprintName,
+        oldName: (argsRecord.oldName as string) ?? '',
+        newName: (argsRecord.newName as string) ?? '',
+        timeoutMs: argsRecord.timeoutMs as number | undefined,
+        waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
+        waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
+      }) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'remove_function': {
+      const blueprintName = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name || '';
+      const res = await executeAutomationRequest(tools, 'blueprint_remove_function', {
+        blueprintCandidates: [blueprintName],
+        requestedPath: blueprintName,
+        functionName: (argsRecord.functionName as string | undefined) || argsTyped.memberName || '',
         timeoutMs: argsRecord.timeoutMs as number | undefined,
         waitForCompletion: argsRecord.waitForCompletion as boolean | undefined,
         waitForCompletionTimeoutMs: argsRecord.waitForCompletionTimeoutMs as number | undefined
@@ -437,7 +474,11 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
     case 'get_graph_details':
     case 'create_node':
     case 'list_node_types':
-    case 'set_pin_default_value': {
+    case 'set_pin_default_value':
+    case 'find_nodes_by_title':
+    case 'get_graph_connections':
+    case 'get_node_properties':
+    case 'list_graphs': {
       // Normalize blueprintPath to assetPath for C++ handler compatibility
       const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
       
@@ -498,18 +539,38 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
 export async function handleBlueprintGet(args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as BlueprintArgs;
   const argsRecord = args as Record<string, unknown>;
-  
+
   const res = await executeAutomationRequest(tools, 'blueprint_get', args, 'Automation bridge not available for blueprint operations') as { success?: boolean; message?: string; [key: string]: unknown } | null;
   if (res && res.success) {
     const blueprintPath = argsTyped.blueprintPath || (argsRecord.path as string | undefined) || argsTyped.name;
-    // Extract blueprint data from response and wrap in 'blueprint' property for schema compliance
-    const { success, message, error, blueprintPath: _, ...blueprintData } = res;
+
+    // Unwrap nested automation_response envelopes — the bridge sometimes wraps
+    // the real payload in { type: 'automation_response', result: { ... } }
+    const unwrap = (obj: Record<string, unknown>): Record<string, unknown> => {
+      let current = obj;
+      let depth = 0;
+      while (depth < 5) {
+        const inner = current.result ?? current.data;
+        if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+          current = inner as Record<string, unknown>;
+          depth++;
+        } else {
+          break;
+        }
+      }
+      return current;
+    };
+
+    const unwrapped = unwrap(res);
+
+    // Strip internal envelope fields; keep all real blueprint fields
+    const { success, message, error, type: _type, requestId: _rid, blueprintPath: _bp, ...blueprintData } = unwrapped;
+
     return cleanObject({
-      success,
-      message: message || 'Blueprint fetched',
+      success: success ?? res.success,
+      message: (message as string | undefined) || 'Blueprint fetched',
       error,
       blueprintPath: typeof blueprintPath === 'string' ? blueprintPath : undefined,
-      // Include blueprint object for schema compliance - contains all blueprint-specific data
       blueprint: Object.keys(blueprintData).length > 0 ? blueprintData : { path: blueprintPath }
     }) as Record<string, unknown>;
   }

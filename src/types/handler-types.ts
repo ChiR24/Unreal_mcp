@@ -83,6 +83,7 @@ export interface ActorArgs extends HandlerArgs {
     componentName?: string;
     componentType?: string;
     properties?: Record<string, unknown>;
+    titleFilter?: string;
 }
 
 // ============================================================================

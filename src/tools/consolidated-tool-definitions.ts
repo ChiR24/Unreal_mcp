@@ -185,9 +185,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           enum: [
             'create', 'get_blueprint', 'get', 'compile',
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
-            'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
+            'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'rename_function', 'remove_function', 'add_event', 'remove_event', 'rename_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
             'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
-            'list_node_types', 'set_pin_default_value', 'reparent_blueprint'
+            'list_node_types', 'set_pin_default_value', 'reparent_blueprint',
+            'find_nodes_by_title', 'get_graph_connections', 'get_node_properties', 'list_graphs'
           ],
           description: 'Blueprint action'
         },
@@ -268,7 +269,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         fromPinName: commonSchemas.sourcePin,
         toNodeId: commonSchemas.targetNodeId,
         toPin: commonSchemas.targetPin,
-        toPinName: commonSchemas.targetPin
+        toPinName: commonSchemas.targetPin,
+        // find_nodes_by_title: case-insensitive filter for node titles
+        titleFilter: { type: 'string', description: 'Title substring filter for find_nodes_by_title (case-insensitive). Empty string returns all nodes.' }
       },
       required: ['action']
     },
@@ -727,7 +730,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             'set_cvar', 'get_project_settings', 'validate_assets',
-            'set_project_setting'
+            'set_project_setting',
+            'read_log', 'read_logs', 'get_log', 'get_logs'
           ],
           description: 'Action'
         },
@@ -749,7 +753,22 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
-        configName: commonSchemas.stringProp
+        configName: commonSchemas.stringProp,
+        // read_log params
+        logType: {
+          type: 'string',
+          enum: ['current', 'previous', 'crash', 'crash_callstack', 'all'],
+          description: 'Which log to read. current=active session log, previous=last session .bak, crash=most recent crash CrashContext.runtime-xml, crash_callstack=just the callstack frames from the latest crash, all=list available log files.'
+        },
+        tail: {
+          type: 'number',
+          description: 'Return only the last N lines (0 = all lines, default 200). Applies to current/previous logs.'
+        },
+        severity: {
+          type: 'string',
+          enum: ['all', 'error', 'warning'],
+          description: 'Filter lines by severity. error=Fatal/Assert/[Error], warning=adds [Warning] lines too, all=no severity filter.'
+        }
       },
       required: ['action']
     },

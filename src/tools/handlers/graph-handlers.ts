@@ -10,6 +10,7 @@ import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 interface ProcessedGraphArgs extends GraphArgs {
     subAction?: string;
     nodeCategory?: string;
+    titleFilter?: string;
     [key: string]: unknown;
 }
 
