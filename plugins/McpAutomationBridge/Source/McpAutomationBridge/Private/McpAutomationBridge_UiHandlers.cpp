@@ -43,7 +43,10 @@
 #include "McpAutomationBridgeGlobals.h"
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpAutomationBridgeSettings.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 // =============================================================================
 // Editor-Only Headers
@@ -52,7 +55,12 @@
 
 // Asset Management
 #include "AssetToolsModule.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 #include "EditorAssetLibrary.h"
+#include "EditorUtilitySubsystem.h"
+#include "EditorUtilityWidget.h"
+#include "EditorUtilityWidgetBlueprint.h"
+#include "EditorUtilityWidgetBlueprintFactory.h"
 
 // Widget Support
 #include "Blueprint/UserWidget.h"
@@ -67,14 +75,19 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Framework/Commands/UIAction.h"
+#include "Framework/Docking/TabManager.h"
 #include "HAL/FileManager.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "ImageUtils.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
+#include "Styling/AppStyle.h"
+#include "ToolMenus.h"
 #include "UnrealClient.h"
 
 // Widget Factory (version-dependent header location)
@@ -86,6 +99,911 @@
 #endif
 
 #endif // WITH_EDITOR
+
+#if WITH_EDITOR
+namespace
+{
+
+  enum class EMcpEditorCommandKind : uint8
+  {
+    ConsoleCommand,
+    OpenAsset,
+    RunEditorUtility,
+    OpenEditorUtilityWidget,
+  };
+
+  struct FMcpEditorCommandDefinition
+  {
+    FName Name;
+    FString Label;
+    FString Tooltip;
+    FString IconName;
+    EMcpEditorCommandKind Kind = EMcpEditorCommandKind::ConsoleCommand;
+    FString Command;
+    FString AssetPath;
+    FString TabId;
+  };
+
+  struct FMcpUiDiscoverySettings
+  {
+    TArray<FString> JsonDefinitionRoots;
+    TArray<FString> KnownMenuNames;
+    FString JsonToolTabIdPrefix;
+  };
+
+  struct FMcpDiscoveredUiTargetDefinition
+  {
+    FString SourceType;
+    FString DisplayName;
+    FString Identifier;
+    FString TabId;
+    FString AssetPath;
+    FString DefinitionPath;
+    FString StatusFileName;
+    FString StateFileName;
+    FString Tooltip;
+    FString MenuName;
+    TArray<FString> MenuHierarchy;
+    TArray<FString> Aliases;
+  };
+
+  static TMap<FName, TSharedPtr<FMcpEditorCommandDefinition>> GMcpEditorCommands;
+  static const FName GMcpToolMenuOwnerName(TEXT("McpAutomationBridge"));
+
+  FString NormalizeMcpLookupKey(const FString &Value)
+  {
+    FString Result;
+    Result.Reserve(Value.Len());
+    for (const TCHAR Character : Value)
+    {
+      if (FChar::IsAlnum(Character))
+      {
+        Result.AppendChar(FChar::ToLower(Character));
+      }
+    }
+    return Result;
+  }
+
+  void AddUniqueTrimmedValue(TArray<FString> &Values, const FString &Value)
+  {
+    const FString Trimmed = Value.TrimStartAndEnd();
+    if (!Trimmed.IsEmpty() && !Values.Contains(Trimmed))
+    {
+      Values.Add(Trimmed);
+    }
+  }
+
+  const FMcpUiDiscoverySettings &GetUiDiscoverySettings()
+  {
+    static bool bInitialized = false;
+    static FMcpUiDiscoverySettings Settings;
+    if (!bInitialized)
+    {
+      if (const UMcpAutomationBridgeSettings *BridgeSettings =
+              GetDefault<UMcpAutomationBridgeSettings>())
+      {
+        Settings.JsonToolTabIdPrefix =
+            BridgeSettings->JsonToolTabIdPrefix.TrimStartAndEnd();
+
+        for (const FString &Root : BridgeSettings->UiDefinitionRoots)
+        {
+          AddUniqueTrimmedValue(Settings.JsonDefinitionRoots, Root);
+        }
+        for (const FString &MenuName : BridgeSettings->KnownToolMenuNames)
+        {
+          AddUniqueTrimmedValue(Settings.KnownMenuNames, MenuName);
+        }
+      }
+
+      bInitialized = true;
+    }
+    return Settings;
+  }
+
+  FString ResolveProjectScopedPath(const FString &RelativePath)
+  {
+    const FString Normalized = RelativePath.TrimStartAndEnd();
+    if (Normalized.IsEmpty())
+    {
+      return FPaths::ProjectDir();
+    }
+    if (FPaths::IsRelative(Normalized))
+    {
+      return FPaths::ConvertRelativePathToFull(
+          FPaths::Combine(FPaths::ProjectDir(), Normalized));
+    }
+    return FPaths::ConvertRelativePathToFull(Normalized);
+  }
+
+  bool LoadJsonObjectFromFile(const FString &FilePath,
+                              TSharedPtr<FJsonObject> &OutObject)
+  {
+    FString JsonText;
+    if (!FFileHelper::LoadFileToString(JsonText, *FilePath))
+    {
+      return false;
+    }
+
+    const TSharedRef<TJsonReader<>> Reader =
+        TJsonReaderFactory<>::Create(JsonText);
+    return FJsonSerializer::Deserialize(Reader, OutObject) &&
+           OutObject.IsValid();
+  }
+
+  FString MakeDefaultStatusFileName(const FString &ToolName)
+  {
+    FString BaseName = ToolName;
+    BaseName.RemoveFromEnd(TEXT("Tool"));
+    if (BaseName.IsEmpty())
+    {
+      BaseName = ToolName;
+    }
+    return BaseName + TEXT("Status.txt");
+  }
+
+  FString MakeDefaultStateFileName(const FString &ToolName)
+  {
+    FString BaseName = ToolName;
+    BaseName.RemoveFromEnd(TEXT("Tool"));
+    if (BaseName.IsEmpty())
+    {
+      BaseName = ToolName;
+    }
+    return BaseName + TEXT("State.json");
+  }
+
+  FName MakeJsonToolTabId(const FString &ToolName,
+                          const FString &ExplicitTabId)
+  {
+    const FString TrimmedExplicitTabId = ExplicitTabId.TrimStartAndEnd();
+    if (!TrimmedExplicitTabId.IsEmpty())
+    {
+      return FName(*TrimmedExplicitTabId);
+    }
+
+    const FString Prefix = GetUiDiscoverySettings().JsonToolTabIdPrefix.TrimStartAndEnd();
+    return Prefix.IsEmpty()
+               ? FName(*ToolName)
+               : FName(*FString::Printf(TEXT("%s.%s"), *Prefix, *ToolName));
+  }
+
+  TArray<FString> BuildUiTargetAliases(
+      const FMcpDiscoveredUiTargetDefinition &Target)
+  {
+    TArray<FString> Aliases;
+    AddUniqueTrimmedValue(Aliases, Target.Identifier);
+    AddUniqueTrimmedValue(Aliases, Target.DisplayName);
+    AddUniqueTrimmedValue(Aliases, Target.TabId);
+    AddUniqueTrimmedValue(Aliases, Target.AssetPath);
+    AddUniqueTrimmedValue(Aliases, Target.MenuName);
+
+    FString WithoutSuffix = Target.Identifier;
+    WithoutSuffix.RemoveFromEnd(TEXT("Tool"));
+    AddUniqueTrimmedValue(Aliases, WithoutSuffix);
+
+    return Aliases;
+  }
+
+  FString BuildMenuDisplayName(const FString &MenuName)
+  {
+    int32 SeparatorIndex = INDEX_NONE;
+    if (MenuName.FindLastChar(TEXT('.'), SeparatorIndex) &&
+        SeparatorIndex + 1 < MenuName.Len())
+    {
+      return MenuName.Mid(SeparatorIndex + 1);
+    }
+
+    return MenuName;
+  }
+
+  TArray<FMcpDiscoveredUiTargetDefinition> DiscoverJsonUiTargets()
+  {
+    TArray<FMcpDiscoveredUiTargetDefinition> Result;
+    for (const FString &ConfiguredRoot : GetUiDiscoverySettings().JsonDefinitionRoots)
+    {
+      const FString UiRoot = ResolveProjectScopedPath(ConfiguredRoot);
+      if (!IFileManager::Get().DirectoryExists(*UiRoot))
+      {
+        continue;
+      }
+
+      TArray<FString> JsonFiles;
+      IFileManager::Get().FindFiles(JsonFiles,
+                                    *FPaths::Combine(UiRoot, TEXT("*.json")),
+                                    true, false);
+      JsonFiles.Sort();
+
+      for (const FString &JsonFileName : JsonFiles)
+      {
+        const FString JsonPath = FPaths::Combine(UiRoot, JsonFileName);
+        TSharedPtr<FJsonObject> RootObject;
+        if (!LoadJsonObjectFromFile(JsonPath, RootObject))
+        {
+          continue;
+        }
+
+        FMcpDiscoveredUiTargetDefinition Target;
+        const FString ToolName = FPaths::GetBaseFilename(JsonFileName);
+        Target.SourceType = TEXT("json_tool");
+        Target.Identifier = ToolName;
+        Target.DefinitionPath = JsonPath;
+        Target.DisplayName = ToolName;
+        Target.DisplayName.RemoveFromEnd(TEXT("Tool"));
+        Target.StatusFileName = MakeDefaultStatusFileName(ToolName);
+        Target.StateFileName = MakeDefaultStateFileName(ToolName);
+        Target.Tooltip =
+            FString::Printf(TEXT("Open the %s tool."), *Target.DisplayName);
+
+        FString ExplicitTabId;
+        RootObject->TryGetStringField(TEXT("TabLabel"), Target.DisplayName);
+        RootObject->TryGetStringField(TEXT("TabId"), ExplicitTabId);
+        RootObject->TryGetStringField(TEXT("StatusFile"), Target.StatusFileName);
+        RootObject->TryGetStringField(TEXT("StateFile"), Target.StateFileName);
+        RootObject->TryGetStringField(TEXT("Tooltip"), Target.Tooltip);
+
+        Target.TabId = MakeJsonToolTabId(ToolName, ExplicitTabId).ToString();
+        Target.Aliases = BuildUiTargetAliases(Target);
+        Result.Add(Target);
+      }
+    }
+
+    Result.Sort([](const FMcpDiscoveredUiTargetDefinition &Left,
+                   const FMcpDiscoveredUiTargetDefinition &Right)
+                {
+      const int32 LabelCompare =
+          Left.DisplayName.Compare(Right.DisplayName, ESearchCase::IgnoreCase);
+      return LabelCompare == 0
+                 ? Left.Identifier.Compare(Right.Identifier,
+                                           ESearchCase::IgnoreCase) < 0
+                 : LabelCompare < 0; });
+    return Result;
+  }
+
+  TArray<FMcpDiscoveredUiTargetDefinition> DiscoverKnownToolMenuTargets(
+      const TArray<FString> &AdditionalMenuNames,
+      TArray<FString> &OutResolvedMenuNames,
+      TArray<FString> &OutMissingMenuNames)
+  {
+    TArray<FMcpDiscoveredUiTargetDefinition> Result;
+
+    TArray<FString> RequestedMenuNames;
+    for (const FString &ConfiguredMenuName : GetUiDiscoverySettings().KnownMenuNames)
+    {
+      AddUniqueTrimmedValue(RequestedMenuNames, ConfiguredMenuName);
+    }
+    for (const FString &RequestedMenuName : AdditionalMenuNames)
+    {
+      AddUniqueTrimmedValue(RequestedMenuNames, RequestedMenuName);
+    }
+
+    UToolMenus *ToolMenus = UToolMenus::TryGet();
+    if (!ToolMenus)
+    {
+      return Result;
+    }
+
+    for (const FString &RequestedMenuName : RequestedMenuNames)
+    {
+      const FName MenuName(*RequestedMenuName);
+      UToolMenu *Menu = ToolMenus->FindMenu(MenuName);
+      if (!Menu)
+      {
+        AddUniqueTrimmedValue(OutMissingMenuNames, RequestedMenuName);
+        continue;
+      }
+
+      FMcpDiscoveredUiTargetDefinition Target;
+      Target.SourceType = TEXT("tool_menu");
+      Target.Identifier = RequestedMenuName;
+      Target.DisplayName = BuildMenuDisplayName(RequestedMenuName);
+      Target.MenuName = RequestedMenuName;
+      Target.Tooltip = TEXT("Known ToolMenus entry point");
+
+      const TArray<FName> HierarchyNames = Menu->GetMenuHierarchyNames(true);
+      for (const FName &HierarchyName : HierarchyNames)
+      {
+        Target.MenuHierarchy.Add(HierarchyName.ToString());
+      }
+
+      Target.Aliases = BuildUiTargetAliases(Target);
+      Result.Add(Target);
+      AddUniqueTrimmedValue(OutResolvedMenuNames, RequestedMenuName);
+    }
+
+    return Result;
+  }
+
+  const FMcpDiscoveredUiTargetDefinition *FindDiscoveredUiTargetByIdentifier(
+      const TArray<FMcpDiscoveredUiTargetDefinition> &Targets,
+      const FString &Identifier)
+  {
+    const FString LookupKey = NormalizeMcpLookupKey(Identifier);
+    if (LookupKey.IsEmpty())
+    {
+      return nullptr;
+    }
+
+    for (const FMcpDiscoveredUiTargetDefinition &Target : Targets)
+    {
+      for (const FString &Alias : Target.Aliases)
+      {
+        if (NormalizeMcpLookupKey(Alias) == LookupKey)
+        {
+          return &Target;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
+  FName MakeEditorUtilityRegistrationId(const UObject *Asset,
+                                        const FString &RequestedTabId)
+  {
+    if (!Asset)
+    {
+      return NAME_None;
+    }
+
+    const FString AssetPath = Asset->GetPathName();
+    const FString TrimmedTabId = RequestedTabId.TrimStartAndEnd();
+    if (!TrimmedTabId.IsEmpty() &&
+        TrimmedTabId.StartsWith(AssetPath, ESearchCase::CaseSensitive))
+    {
+      return FName(*TrimmedTabId);
+    }
+
+    return TrimmedTabId.IsEmpty()
+               ? FName(*(AssetPath + TEXT("_ActiveTab")))
+               : FName(*(AssetPath + TrimmedTabId));
+  }
+
+  bool CloseSlateTabById(const FName TabId)
+  {
+    if (TabId.IsNone())
+    {
+      return false;
+    }
+
+    const TSharedPtr<SDockTab> LiveTab =
+        FGlobalTabmanager::Get()->FindExistingLiveTab(TabId);
+    if (!LiveTab.IsValid())
+    {
+      return false;
+    }
+
+    LiveTab->RequestCloseTab();
+    return true;
+  }
+
+  TSharedPtr<FMcpEditorCommandDefinition> BuildEditorCommandDefinition(
+      const TSharedPtr<FJsonObject> &Payload, const FName DefaultName,
+      FString &OutError)
+  {
+    TSharedPtr<FMcpEditorCommandDefinition> Definition =
+        MakeShared<FMcpEditorCommandDefinition>();
+    Definition->Name = DefaultName;
+
+    FString Label;
+    Payload->TryGetStringField(TEXT("label"), Label);
+    Definition->Label = Label.IsEmpty() ? DefaultName.ToString() : Label;
+
+    Payload->TryGetStringField(TEXT("tooltip"), Definition->Tooltip);
+    Payload->TryGetStringField(TEXT("icon"), Definition->IconName);
+
+    FString KindString;
+    Payload->TryGetStringField(TEXT("commandType"), KindString);
+    KindString = KindString.ToLower();
+
+    if (KindString.IsEmpty())
+    {
+      if (Payload->HasField(TEXT("assetPath")))
+      {
+        Definition->Kind = EMcpEditorCommandKind::OpenAsset;
+      }
+      else if (Payload->HasField(TEXT("utilityPath")) ||
+               Payload->HasField(TEXT("editorUtilityPath")))
+      {
+        Definition->Kind = EMcpEditorCommandKind::RunEditorUtility;
+      }
+      else if (Payload->HasField(TEXT("widgetPath")) ||
+               Payload->HasField(TEXT("editorUtilityWidgetPath")))
+      {
+        Definition->Kind = EMcpEditorCommandKind::OpenEditorUtilityWidget;
+      }
+      else
+      {
+        Definition->Kind = EMcpEditorCommandKind::ConsoleCommand;
+      }
+    }
+    else if (KindString == TEXT("open_asset"))
+    {
+      Definition->Kind = EMcpEditorCommandKind::OpenAsset;
+    }
+    else if (KindString == TEXT("run_editor_utility"))
+    {
+      Definition->Kind = EMcpEditorCommandKind::RunEditorUtility;
+    }
+    else if (KindString == TEXT("open_editor_utility_widget"))
+    {
+      Definition->Kind = EMcpEditorCommandKind::OpenEditorUtilityWidget;
+    }
+    else
+    {
+      Definition->Kind = EMcpEditorCommandKind::ConsoleCommand;
+    }
+
+    Payload->TryGetStringField(TEXT("command"), Definition->Command);
+    Payload->TryGetStringField(TEXT("assetPath"), Definition->AssetPath);
+    if (Definition->AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("utilityPath"), Definition->AssetPath);
+    }
+    if (Definition->AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("editorUtilityPath"), Definition->AssetPath);
+    }
+    if (Definition->AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("widgetPath"), Definition->AssetPath);
+    }
+    if (Definition->AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("editorUtilityWidgetPath"), Definition->AssetPath);
+    }
+    Payload->TryGetStringField(TEXT("tabId"), Definition->TabId);
+
+    if (Definition->Kind == EMcpEditorCommandKind::ConsoleCommand &&
+        Definition->Command.IsEmpty())
+    {
+      OutError = TEXT("command is required for console-backed editor commands");
+      return nullptr;
+    }
+
+    if ((Definition->Kind == EMcpEditorCommandKind::OpenAsset ||
+         Definition->Kind == EMcpEditorCommandKind::RunEditorUtility ||
+         Definition->Kind == EMcpEditorCommandKind::OpenEditorUtilityWidget) &&
+        Definition->AssetPath.IsEmpty())
+    {
+      OutError = TEXT("assetPath, utilityPath, or widgetPath is required for this editor command");
+      return nullptr;
+    }
+
+    return Definition;
+  }
+
+  bool OpenAssetEditorByPath(const FString &AssetPath, FString &OutMessage)
+  {
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+      OutMessage = FString::Printf(TEXT("Asset not found: %s"), *AssetPath);
+      return false;
+    }
+
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+      OutMessage = FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath);
+      return false;
+    }
+
+    UAssetEditorSubsystem *AssetEditorSubsystem =
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+    if (!AssetEditorSubsystem)
+    {
+      OutMessage = TEXT("AssetEditorSubsystem not available");
+      return false;
+    }
+
+    if (!AssetEditorSubsystem->OpenEditorForAsset(Asset))
+    {
+      OutMessage = FString::Printf(TEXT("Failed to open asset editor for %s"), *AssetPath);
+      return false;
+    }
+
+    OutMessage = FString::Printf(TEXT("Opened asset editor for %s"), *AssetPath);
+    return true;
+  }
+
+  bool RunEditorUtilityAsset(const FString &AssetPath, const FString &RequestedTabId,
+                             const bool bRequireWidget, FString &OutMessage,
+                             FString &OutExecutedTabId)
+  {
+    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    {
+      OutMessage = FString::Printf(TEXT("Editor utility asset not found: %s"), *AssetPath);
+      return false;
+    }
+
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    if (!Asset)
+    {
+      OutMessage = FString::Printf(TEXT("Failed to load editor utility asset: %s"), *AssetPath);
+      return false;
+    }
+
+    UEditorUtilitySubsystem *UtilitySubsystem =
+        GEditor->GetEditorSubsystem<UEditorUtilitySubsystem>();
+    if (!UtilitySubsystem)
+    {
+      OutMessage = TEXT("EditorUtilitySubsystem not available");
+      return false;
+    }
+
+    if (UEditorUtilityWidgetBlueprint *WidgetBlueprint =
+            Cast<UEditorUtilityWidgetBlueprint>(Asset))
+    {
+      FName RegistrationId =
+          MakeEditorUtilityRegistrationId(WidgetBlueprint, RequestedTabId);
+      bool bOpened = false;
+      if (RequestedTabId.TrimStartAndEnd().IsEmpty())
+      {
+        UEditorUtilityWidget *Widget =
+            UtilitySubsystem->SpawnAndRegisterTabAndGetID(WidgetBlueprint,
+                                                          RegistrationId);
+        bOpened = Widget != nullptr || UtilitySubsystem->DoesTabExist(RegistrationId);
+      }
+      else
+      {
+        RegistrationId = FName(*RequestedTabId.TrimStartAndEnd());
+        UtilitySubsystem->RegisterTabAndGetID(WidgetBlueprint, RegistrationId);
+        bOpened = UtilitySubsystem->SpawnRegisteredTabByID(RegistrationId);
+      }
+
+      if (!bOpened)
+      {
+        OutMessage = FString::Printf(TEXT("Failed to open editor utility widget: %s"), *AssetPath);
+        return false;
+      }
+
+      OutExecutedTabId = RegistrationId.ToString();
+      OutMessage = FString::Printf(TEXT("Opened editor utility widget %s"), *AssetPath);
+      return true;
+    }
+
+    if (bRequireWidget)
+    {
+      OutMessage = FString::Printf(TEXT("Asset is not an Editor Utility Widget: %s"), *AssetPath);
+      return false;
+    }
+
+    if (!UtilitySubsystem->TryRun(Asset))
+    {
+      OutMessage = FString::Printf(TEXT("Failed to run editor utility asset: %s"), *AssetPath);
+      return false;
+    }
+
+    OutMessage = FString::Printf(TEXT("Ran editor utility asset %s"), *AssetPath);
+    return true;
+  }
+
+  bool ExecuteEditorCommandDefinition(const FMcpEditorCommandDefinition &Definition,
+                                      FString &OutMessage,
+                                      FString &OutExecutedTabId)
+  {
+    switch (Definition.Kind)
+    {
+    case EMcpEditorCommandKind::OpenAsset:
+      return OpenAssetEditorByPath(Definition.AssetPath, OutMessage);
+    case EMcpEditorCommandKind::RunEditorUtility:
+      return RunEditorUtilityAsset(Definition.AssetPath, Definition.TabId, false,
+                                   OutMessage, OutExecutedTabId);
+    case EMcpEditorCommandKind::OpenEditorUtilityWidget:
+      return RunEditorUtilityAsset(Definition.AssetPath, Definition.TabId, true,
+                                   OutMessage, OutExecutedTabId);
+    case EMcpEditorCommandKind::ConsoleCommand:
+    default:
+    {
+      UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+      return GEditor && GEditor->Exec(World, *Definition.Command)
+                 ? (OutMessage = FString::Printf(TEXT("Executed command %s"), *Definition.Command), true)
+                 : (OutMessage = FString::Printf(TEXT("Failed to execute command %s"), *Definition.Command), false);
+    }
+    }
+  }
+
+  FSlateIcon MakeRegisteredIcon(const FString &IconName)
+  {
+    return IconName.IsEmpty()
+               ? FSlateIcon()
+               : FSlateIcon(FAppStyle::GetAppStyleSetName(), FName(*IconName));
+  }
+
+  FString ToCommandKindString(const EMcpEditorCommandKind Kind)
+  {
+    switch (Kind)
+    {
+    case EMcpEditorCommandKind::OpenAsset:
+      return TEXT("open_asset");
+    case EMcpEditorCommandKind::RunEditorUtility:
+      return TEXT("run_editor_utility");
+    case EMcpEditorCommandKind::OpenEditorUtilityWidget:
+      return TEXT("open_editor_utility_widget");
+    case EMcpEditorCommandKind::ConsoleCommand:
+    default:
+      return TEXT("console_command");
+    }
+  }
+
+  TSharedPtr<FMcpEditorCommandDefinition> FindEditorCommandDefinition(
+      const FName CommandName)
+  {
+    if (const TSharedPtr<FMcpEditorCommandDefinition> *Found =
+            GMcpEditorCommands.Find(CommandName))
+    {
+      return *Found;
+    }
+    return nullptr;
+  }
+
+  TArray<FMcpDiscoveredUiTargetDefinition> DiscoverRegisteredCommandTargets()
+  {
+    TArray<FMcpDiscoveredUiTargetDefinition> Result;
+
+    TArray<FName> CommandNames;
+    GMcpEditorCommands.GetKeys(CommandNames);
+    CommandNames.Sort(FNameLexicalLess());
+
+    for (const FName &CommandName : CommandNames)
+    {
+      const TSharedPtr<FMcpEditorCommandDefinition> Definition =
+          FindEditorCommandDefinition(CommandName);
+      if (!Definition.IsValid())
+      {
+        continue;
+      }
+
+      FMcpDiscoveredUiTargetDefinition Target;
+      Target.SourceType = TEXT("registered_command");
+      Target.Identifier = CommandName.ToString();
+      Target.DisplayName = Definition->Label.IsEmpty() ? Target.Identifier
+                                                       : Definition->Label;
+      Target.TabId = Definition->TabId;
+      Target.AssetPath = Definition->AssetPath;
+      Target.Tooltip = Definition->Tooltip;
+      Target.Aliases = BuildUiTargetAliases(Target);
+      Result.Add(Target);
+    }
+
+    return Result;
+  }
+
+  void AppendDiscoveredTargets(
+      TArray<FMcpDiscoveredUiTargetDefinition> &Targets,
+      const TArray<FMcpDiscoveredUiTargetDefinition> &AdditionalTargets)
+  {
+    for (const FMcpDiscoveredUiTargetDefinition &Target : AdditionalTargets)
+    {
+      Targets.Add(Target);
+    }
+  }
+
+  TArray<FString> ReadRequestedMenuNames(const TSharedPtr<FJsonObject> &Payload)
+  {
+    TArray<FString> RequestedMenuNames;
+    if (!Payload.IsValid())
+    {
+      return RequestedMenuNames;
+    }
+
+    FString MenuName;
+    if (Payload->TryGetStringField(TEXT("menuName"), MenuName))
+    {
+      AddUniqueTrimmedValue(RequestedMenuNames, MenuName);
+    }
+
+    const TArray<TSharedPtr<FJsonValue>> *MenuValues = nullptr;
+    if (Payload->TryGetArrayField(TEXT("menuNames"), MenuValues))
+    {
+      for (const TSharedPtr<FJsonValue> &Value : *MenuValues)
+      {
+        FString RequestedMenuName;
+        if (Value.IsValid() && Value->TryGetString(RequestedMenuName))
+        {
+          AddUniqueTrimmedValue(RequestedMenuNames, RequestedMenuName);
+        }
+      }
+    }
+
+    return RequestedMenuNames;
+  }
+
+  TArray<FMcpDiscoveredUiTargetDefinition> DiscoverUiTargets(
+      const TSharedPtr<FJsonObject> &Payload, TArray<FString> &OutResolvedMenuNames,
+      TArray<FString> &OutMissingMenuNames)
+  {
+    TArray<FMcpDiscoveredUiTargetDefinition> Targets = DiscoverJsonUiTargets();
+    AppendDiscoveredTargets(Targets, DiscoverRegisteredCommandTargets());
+    AppendDiscoveredTargets(Targets, DiscoverKnownToolMenuTargets(
+                                         ReadRequestedMenuNames(Payload),
+                                         OutResolvedMenuNames,
+                                         OutMissingMenuNames));
+    return Targets;
+  }
+
+  TSharedPtr<FJsonObject> BuildUiTargetObject(
+      const FMcpDiscoveredUiTargetDefinition &Target)
+  {
+    TSharedPtr<FJsonObject> TargetObject =
+        McpHandlerUtils::CreateResultObject();
+    TargetObject->SetStringField(TEXT("sourceType"), Target.SourceType);
+    TargetObject->SetStringField(TEXT("displayName"), Target.DisplayName);
+    TargetObject->SetStringField(TEXT("identifier"), Target.Identifier);
+    if (!Target.TabId.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("tabId"), Target.TabId);
+    }
+    if (!Target.AssetPath.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("assetPath"), Target.AssetPath);
+    }
+    if (!Target.DefinitionPath.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("definitionPath"), Target.DefinitionPath);
+    }
+    if (!Target.StatusFileName.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("statusFile"), Target.StatusFileName);
+    }
+    if (!Target.StateFileName.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("stateFile"), Target.StateFileName);
+    }
+    if (!Target.Tooltip.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("tooltip"), Target.Tooltip);
+    }
+    if (!Target.MenuName.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("menuName"), Target.MenuName);
+    }
+
+    TArray<TSharedPtr<FJsonValue>> AliasValues;
+    for (const FString &Alias : Target.Aliases)
+    {
+      AliasValues.Add(MakeShared<FJsonValueString>(Alias));
+    }
+    TargetObject->SetArrayField(TEXT("aliases"), AliasValues);
+
+    if (!Target.MenuHierarchy.IsEmpty())
+    {
+      TArray<TSharedPtr<FJsonValue>> HierarchyValues;
+      for (const FString &HierarchyName : Target.MenuHierarchy)
+      {
+        HierarchyValues.Add(MakeShared<FJsonValueString>(HierarchyName));
+      }
+      TargetObject->SetArrayField(TEXT("menuHierarchy"), HierarchyValues);
+    }
+
+    if (!Target.TabId.IsEmpty())
+    {
+      TargetObject->SetBoolField(TEXT("isOpen"),
+                                 FGlobalTabmanager::Get()
+                                     ->FindExistingLiveTab(FName(*Target.TabId))
+                                     .IsValid());
+    }
+
+    return TargetObject;
+  }
+
+  FUIAction MakeRegisteredToolAction(const FName CommandName)
+  {
+    return FUIAction(FExecuteAction::CreateLambda([CommandName]()
+                                                  {
+    const TSharedPtr<FMcpEditorCommandDefinition> Definition =
+        FindEditorCommandDefinition(CommandName);
+    if (!Definition.IsValid()) {
+      UE_LOG(LogTemp, Warning,
+             TEXT("McpAutomationBridge registered command missing: %s"),
+             *CommandName.ToString());
+      return;
+    }
+
+    FString ExecutionMessage;
+    FString ExecutedTabId;
+    if (!ExecuteEditorCommandDefinition(*Definition.Get(), ExecutionMessage,
+                                        ExecutedTabId)) {
+      UE_LOG(LogTemp, Warning,
+             TEXT("McpAutomationBridge command '%s' failed: %s"),
+             *CommandName.ToString(), *ExecutionMessage);
+    } }));
+  }
+
+  bool RegisterCommandMenuEntry(const FName MenuName, const FName SectionName,
+                                const FName EntryName, const FName CommandName,
+                                const bool bToolbar, FString &OutError)
+  {
+    const TSharedPtr<FMcpEditorCommandDefinition> Definition =
+        FindEditorCommandDefinition(CommandName);
+    if (!Definition.IsValid())
+    {
+      OutError = FString::Printf(TEXT("Unknown registered command: %s"),
+                                 *CommandName.ToString());
+      return false;
+    }
+
+    UToolMenus *ToolMenus = UToolMenus::TryGet();
+    if (!ToolMenus)
+    {
+      OutError = TEXT("ToolMenus subsystem is not available");
+      return false;
+    }
+
+    FToolMenuOwnerScoped OwnerScope{FToolMenuOwner(GMcpToolMenuOwnerName)};
+    UToolMenu *Menu = ToolMenus->ExtendMenu(MenuName);
+    if (!Menu)
+    {
+      OutError = FString::Printf(TEXT("Failed to extend menu: %s"),
+                                 *MenuName.ToString());
+      return false;
+    }
+
+    FToolMenuSection &Section = Menu->FindOrAddSection(SectionName);
+    ToolMenus->RemoveEntry(MenuName, SectionName, EntryName);
+
+    const FUIAction Action = MakeRegisteredToolAction(CommandName);
+    FToolMenuEntry Entry = bToolbar
+                               ? FToolMenuEntry::InitToolBarButton(
+                                     EntryName, Action, FText::FromString(Definition->Label),
+                                     FText::FromString(Definition->Tooltip),
+                                     MakeRegisteredIcon(Definition->IconName))
+                               : FToolMenuEntry::InitMenuEntry(
+                                     EntryName, FText::FromString(Definition->Label),
+                                     FText::FromString(Definition->Tooltip),
+                                     MakeRegisteredIcon(Definition->IconName), Action);
+    Entry.Owner = FToolMenuOwner(GMcpToolMenuOwnerName);
+    Section.AddEntry(Entry);
+    ToolMenus->RefreshMenuWidget(MenuName);
+    return true;
+  }
+
+  TArray<TSharedRef<SWindow>> GetVisibleSlateWindows()
+  {
+    TArray<TSharedRef<SWindow>> Windows;
+    if (FSlateApplication::IsInitialized())
+    {
+      FSlateApplication::Get().GetAllVisibleWindowsOrdered(Windows);
+    }
+    return Windows;
+  }
+
+  TArray<TSharedPtr<FJsonValue>> BuildVisibleWindowObjects()
+  {
+    TArray<TSharedPtr<FJsonValue>> WindowValues;
+    const TSharedPtr<SWindow> ActiveWindow =
+        FSlateApplication::IsInitialized()
+            ? FSlateApplication::Get().GetActiveTopLevelRegularWindow()
+            : nullptr;
+
+    int32 WindowIndex = 0;
+    for (const TSharedRef<SWindow> &Window : GetVisibleSlateWindows())
+    {
+      TSharedPtr<FJsonObject> WindowObject = McpHandlerUtils::CreateResultObject();
+      const FString Title = Window->GetTitle().ToString();
+      const FSlateRect WindowRect = Window->GetRectInScreen();
+      const FSlateRect ClientRect = Window->GetClientRectInScreen();
+      const FVector2D WindowSize = Window->GetSizeInScreen();
+      const FVector2D ClientSize = Window->GetClientSizeInScreen();
+      WindowObject->SetNumberField(TEXT("index"), WindowIndex++);
+      WindowObject->SetStringField(TEXT("title"), Title);
+      WindowObject->SetBoolField(TEXT("isActive"), ActiveWindow == Window);
+      WindowObject->SetBoolField(TEXT("isVisible"), Window->IsVisible());
+      WindowObject->SetNumberField(TEXT("x"), WindowRect.Left);
+      WindowObject->SetNumberField(TEXT("y"), WindowRect.Top);
+      WindowObject->SetNumberField(TEXT("width"), WindowSize.X);
+      WindowObject->SetNumberField(TEXT("height"), WindowSize.Y);
+      WindowObject->SetNumberField(TEXT("clientX"), ClientRect.Left);
+      WindowObject->SetNumberField(TEXT("clientY"), ClientRect.Top);
+      WindowObject->SetNumberField(TEXT("clientWidth"), ClientSize.X);
+      WindowObject->SetNumberField(TEXT("clientHeight"), ClientSize.Y);
+      WindowValues.Add(MakeShared<FJsonValueObject>(WindowObject));
+    }
+
+    return WindowValues;
+  }
+
+} // namespace
+#endif
 
 // =============================================================================
 // Handler Implementation
@@ -106,18 +1024,21 @@
 bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
   const FString LowerAction = Action.ToLower();
   bool bIsSystemControl =
       LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
   bool bIsManageUi =
       LowerAction.Equals(TEXT("manage_ui"), ESearchCase::IgnoreCase);
 
-  if (!bIsSystemControl && !bIsManageUi) {
+  if (!bIsSystemControl && !bIsManageUi)
+  {
     return false;
   }
 
-  if (!Payload.IsValid()) {
+  if (!Payload.IsValid())
+  {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Payload missing."),
                         TEXT("INVALID_PAYLOAD"));
     return true;
@@ -127,9 +1048,12 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // Extract SubAction
   // -------------------------------------------------------------------------
   FString SubAction;
-  if (Payload->HasField(TEXT("subAction"))) {
+  if (Payload->HasField(TEXT("subAction")))
+  {
     SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-  } else {
+  }
+  else
+  {
     Payload->TryGetStringField(TEXT("action"), SubAction);
   }
   const FString LowerSub = SubAction.ToLower();
@@ -143,20 +1067,643 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
 #if WITH_EDITOR
   // ===========================================================================
+  // SubAction: list_ui_targets
+  // ===========================================================================
+  if (LowerSub == TEXT("list_ui_targets"))
+  {
+    TArray<FString> ResolvedMenuNames;
+    TArray<FString> MissingMenuNames;
+    const TArray<FMcpDiscoveredUiTargetDefinition> Targets =
+        DiscoverUiTargets(Payload, ResolvedMenuNames, MissingMenuNames);
+
+    TArray<TSharedPtr<FJsonValue>> TargetValues;
+    for (const FMcpDiscoveredUiTargetDefinition &Target : Targets)
+    {
+      const TSharedPtr<FJsonObject> TargetObject = BuildUiTargetObject(Target);
+      TargetValues.Add(MakeShared<FJsonValueObject>(TargetObject));
+    }
+
+    TArray<TSharedPtr<FJsonValue>> JsonRootValues;
+    for (const FString &JsonRoot : GetUiDiscoverySettings().JsonDefinitionRoots)
+    {
+      JsonRootValues.Add(MakeShared<FJsonValueString>(JsonRoot));
+    }
+
+    TArray<TSharedPtr<FJsonValue>> KnownMenuValues;
+    for (const FString &MenuName : ResolvedMenuNames)
+    {
+      KnownMenuValues.Add(MakeShared<FJsonValueString>(MenuName));
+    }
+
+    TArray<TSharedPtr<FJsonValue>> MissingMenuValues;
+    for (const FString &MenuName : MissingMenuNames)
+    {
+      MissingMenuValues.Add(MakeShared<FJsonValueString>(MenuName));
+    }
+
+    Resp->SetArrayField(TEXT("targets"), TargetValues);
+    Resp->SetArrayField(TEXT("jsonDefinitionRoots"), JsonRootValues);
+    Resp->SetArrayField(TEXT("knownMenuNames"), KnownMenuValues);
+    Resp->SetArrayField(TEXT("missingMenuNames"), MissingMenuValues);
+    Resp->SetNumberField(TEXT("count"), TargetValues.Num());
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Listed %d UI targets"), TargetValues.Num());
+  }
+  // ===========================================================================
+  // SubAction: list_visible_windows
+  // ===========================================================================
+  else if (LowerSub == TEXT("list_visible_windows"))
+  {
+    if (!FSlateApplication::IsInitialized())
+    {
+      Message = TEXT("Slate application is not initialized");
+      ErrorCode = TEXT("SLATE_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      const TArray<TSharedPtr<FJsonValue>> WindowValues =
+          BuildVisibleWindowObjects();
+      Resp->SetArrayField(TEXT("windows"), WindowValues);
+      Resp->SetNumberField(TEXT("count"), WindowValues.Num());
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Listed %d visible Slate windows"),
+                                WindowValues.Num());
+    }
+  }
+  // ===========================================================================
+  // SubAction: open_ui_target
+  // ===========================================================================
+  else if (LowerSub == TEXT("open_ui_target"))
+  {
+    FString ExactTabIdString;
+    FString Identifier;
+    Payload->TryGetStringField(TEXT("tabId"), ExactTabIdString);
+    Payload->TryGetStringField(TEXT("identifier"), Identifier);
+
+    if (ExactTabIdString.TrimStartAndEnd().IsEmpty() &&
+        Identifier.TrimStartAndEnd().IsEmpty())
+    {
+      Message = TEXT("tabId or identifier is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      FString OpenedTabId;
+      FString OpenedTarget;
+      FString OpenedTargetType;
+
+      if (!ExactTabIdString.TrimStartAndEnd().IsEmpty())
+      {
+        const FName ExactTabId(*ExactTabIdString.TrimStartAndEnd());
+        const TSharedPtr<SDockTab> OpenedTab =
+            FGlobalTabmanager::Get()->TryInvokeTab(ExactTabId);
+        if (OpenedTab.IsValid())
+        {
+          bSuccess = true;
+          OpenedTabId = ExactTabId.ToString();
+          OpenedTarget = ExactTabIdString.TrimStartAndEnd();
+          OpenedTargetType = TEXT("slate_tab");
+          Message = FString::Printf(TEXT("Opened tab %s"), *OpenedTabId);
+        }
+      }
+
+      if (!bSuccess && !Identifier.TrimStartAndEnd().IsEmpty())
+      {
+        TArray<FString> ResolvedMenuNames;
+        TArray<FString> MissingMenuNames;
+        const TArray<FMcpDiscoveredUiTargetDefinition> Targets =
+            DiscoverUiTargets(Payload, ResolvedMenuNames, MissingMenuNames);
+        if (const FMcpDiscoveredUiTargetDefinition *Target =
+                FindDiscoveredUiTargetByIdentifier(Targets, Identifier))
+        {
+          if (Target->SourceType == TEXT("registered_command"))
+          {
+            const TSharedPtr<FMcpEditorCommandDefinition> Definition =
+                FindEditorCommandDefinition(FName(*Target->Identifier));
+            FString ExecutedTabId;
+            if (Definition.IsValid() &&
+                ExecuteEditorCommandDefinition(*Definition.Get(), Message,
+                                               ExecutedTabId))
+            {
+              bSuccess = true;
+              OpenedTabId = ExecutedTabId;
+              OpenedTarget = Target->Identifier;
+              OpenedTargetType = Target->SourceType;
+            }
+          }
+          else if (!Target->TabId.IsEmpty())
+          {
+            const TSharedPtr<SDockTab> OpenedTab =
+                FGlobalTabmanager::Get()->TryInvokeTab(FName(*Target->TabId));
+            if (OpenedTab.IsValid())
+            {
+              bSuccess = true;
+              OpenedTabId = Target->TabId;
+              OpenedTarget = Target->Identifier;
+              OpenedTargetType = Target->SourceType;
+              Message = FString::Printf(TEXT("Opened UI target %s"),
+                                        *Target->DisplayName);
+            }
+            else
+            {
+              Message = FString::Printf(TEXT("Failed to open UI target %s"),
+                                        *Target->Identifier);
+              ErrorCode = TEXT("EXECUTION_FAILED");
+            }
+          }
+          else
+          {
+            Message = FString::Printf(TEXT("UI target %s cannot be opened directly"),
+                                      *Target->Identifier);
+            ErrorCode = TEXT("INVALID_ARGUMENT");
+          }
+        }
+      }
+
+      if (bSuccess)
+      {
+        Resp->SetStringField(TEXT("target"), OpenedTarget);
+        Resp->SetStringField(TEXT("targetType"), OpenedTargetType);
+        if (!OpenedTabId.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("tabId"), OpenedTabId);
+        }
+      }
+      else if (ErrorCode.IsEmpty())
+      {
+        Message = TEXT("UI target not found or could not be opened");
+        ErrorCode = TEXT("NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    }
+  }
+  // ===========================================================================
+  // SubAction: close_tab
+  // ===========================================================================
+  else if (LowerSub == TEXT("close_tab"))
+  {
+    FString ExactTabIdString;
+    FString Identifier;
+    FString WidgetPath;
+    Payload->TryGetStringField(TEXT("tabId"), ExactTabIdString);
+    Payload->TryGetStringField(TEXT("identifier"), Identifier);
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    if (WidgetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("utilityPath"), WidgetPath);
+    }
+    if (WidgetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("editorUtilityPath"), WidgetPath);
+    }
+
+    if (ExactTabIdString.TrimStartAndEnd().IsEmpty() &&
+        Identifier.TrimStartAndEnd().IsEmpty() &&
+        WidgetPath.TrimStartAndEnd().IsEmpty())
+    {
+      Message = TEXT("tabId, identifier, or widgetPath is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      bool bClosed = false;
+      FString ClosedTabId;
+      FString ClosedTarget;
+      FString ClosedType;
+      UEditorUtilitySubsystem *UtilitySubsystem =
+          GEditor->GetEditorSubsystem<UEditorUtilitySubsystem>();
+
+      if (!WidgetPath.TrimStartAndEnd().IsEmpty())
+      {
+        UObject *Asset = UEditorAssetLibrary::LoadAsset(WidgetPath);
+        UEditorUtilityWidgetBlueprint *WidgetBlueprint =
+            Cast<UEditorUtilityWidgetBlueprint>(Asset);
+        if (!WidgetBlueprint)
+        {
+          Message = FString::Printf(
+              TEXT("Editor Utility Widget asset not found: %s"), *WidgetPath);
+          ErrorCode = TEXT("NOT_FOUND");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else if (!UtilitySubsystem)
+        {
+          Message = TEXT("EditorUtilitySubsystem not available");
+          ErrorCode = TEXT("NOT_AVAILABLE");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+          const FName RegistrationId =
+              MakeEditorUtilityRegistrationId(WidgetBlueprint, ExactTabIdString);
+          bClosed = UtilitySubsystem->CloseTabByID(RegistrationId);
+          ClosedTabId = RegistrationId.ToString();
+          ClosedTarget = WidgetPath;
+          ClosedType = TEXT("editor_utility_widget");
+        }
+      }
+
+      if (!bClosed && !ExactTabIdString.TrimStartAndEnd().IsEmpty())
+      {
+        const FName ExactTabId(*ExactTabIdString.TrimStartAndEnd());
+        bClosed = UtilitySubsystem && UtilitySubsystem->CloseTabByID(ExactTabId);
+        if (!bClosed)
+        {
+          bClosed = CloseSlateTabById(ExactTabId);
+          if (bClosed)
+          {
+            ClosedType = TEXT("slate_tab");
+          }
+        }
+        else
+        {
+          ClosedType = TEXT("editor_utility_widget");
+        }
+
+        if (bClosed)
+        {
+          ClosedTabId = ExactTabId.ToString();
+          ClosedTarget = ExactTabIdString.TrimStartAndEnd();
+        }
+      }
+
+      if (!bClosed && !Identifier.TrimStartAndEnd().IsEmpty())
+      {
+        TArray<FString> ResolvedMenuNames;
+        TArray<FString> MissingMenuNames;
+        const TArray<FMcpDiscoveredUiTargetDefinition> Targets =
+            DiscoverUiTargets(Payload, ResolvedMenuNames, MissingMenuNames);
+        if (const FMcpDiscoveredUiTargetDefinition *Target =
+                FindDiscoveredUiTargetByIdentifier(Targets, Identifier))
+        {
+          bClosed = CloseSlateTabById(FName(*Target->TabId));
+          if (bClosed)
+          {
+            ClosedTabId = Target->TabId;
+            ClosedTarget = Identifier.TrimStartAndEnd();
+            ClosedType = Target->SourceType;
+          }
+        }
+      }
+
+      if (bClosed)
+      {
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Closed tab %s"), *ClosedTabId);
+        Resp->SetStringField(TEXT("tabId"), ClosedTabId);
+        Resp->SetStringField(TEXT("target"), ClosedTarget);
+        Resp->SetStringField(TEXT("targetType"), ClosedType);
+      }
+      else if (ErrorCode.IsEmpty())
+      {
+        Message = TEXT("Tab not found or not currently open");
+        ErrorCode = TEXT("NOT_FOUND");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    }
+  }
+  // ===========================================================================
+  // SubAction: list_editor_commands
+  // ===========================================================================
+  else if (LowerSub == TEXT("list_editor_commands"))
+  {
+    TArray<FName> CommandNames;
+    GMcpEditorCommands.GetKeys(CommandNames);
+    CommandNames.Sort(FNameLexicalLess());
+
+    TArray<TSharedPtr<FJsonValue>> CommandValues;
+    for (const FName &CommandName : CommandNames)
+    {
+      const TSharedPtr<FMcpEditorCommandDefinition> Definition =
+          FindEditorCommandDefinition(CommandName);
+      if (!Definition.IsValid())
+      {
+        continue;
+      }
+
+      TSharedPtr<FJsonObject> CommandObject =
+          McpHandlerUtils::CreateResultObject();
+      CommandObject->SetStringField(TEXT("name"), CommandName.ToString());
+      CommandObject->SetStringField(TEXT("label"), Definition->Label);
+      CommandObject->SetStringField(TEXT("tooltip"), Definition->Tooltip);
+      CommandObject->SetStringField(TEXT("icon"), Definition->IconName);
+      CommandObject->SetStringField(TEXT("commandType"),
+                                    ToCommandKindString(Definition->Kind));
+      if (!Definition->Command.IsEmpty())
+      {
+        CommandObject->SetStringField(TEXT("command"), Definition->Command);
+      }
+      if (!Definition->AssetPath.IsEmpty())
+      {
+        CommandObject->SetStringField(TEXT("assetPath"),
+                                      Definition->AssetPath);
+      }
+      if (!Definition->TabId.IsEmpty())
+      {
+        CommandObject->SetStringField(TEXT("tabId"), Definition->TabId);
+      }
+      CommandValues.Add(MakeShared<FJsonValueObject>(CommandObject));
+    }
+
+    Resp->SetArrayField(TEXT("commands"), CommandValues);
+    Resp->SetStringField(TEXT("scope"), TEXT("session"));
+    Resp->SetNumberField(TEXT("count"), CommandValues.Num());
+    bSuccess = true;
+    Message = FString::Printf(TEXT("Listed %d registered editor commands"),
+                              CommandValues.Num());
+  }
+
+  // ===========================================================================
+  // SubAction: create_editor_utility_widget
+  // ===========================================================================
+  else if (LowerSub == TEXT("create_editor_utility_widget"))
+  {
+    FString WidgetName;
+    if (!Payload->TryGetStringField(TEXT("name"), WidgetName) ||
+        WidgetName.IsEmpty())
+    {
+      Message = TEXT("name field required for create_editor_utility_widget");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      FString SavePath;
+      Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty())
+      {
+        SavePath = TEXT("/Game/EditorUtilities");
+      }
+
+      const FString NormalizedPath = SavePath.TrimStartAndEnd();
+      const FString TargetPath =
+          FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
+
+      if (UEditorAssetLibrary::DoesAssetExist(TargetPath))
+      {
+        bSuccess = true;
+        Message = FString::Printf(
+            TEXT("Editor utility widget already exists at %s"), *TargetPath);
+        Resp->SetStringField(TEXT("widgetPath"), TargetPath);
+        Resp->SetBoolField(TEXT("exists"), true);
+      }
+      else
+      {
+        UEditorUtilityWidgetBlueprintFactory *Factory =
+            NewObject<UEditorUtilityWidgetBlueprintFactory>();
+        if (!Factory)
+        {
+          Message = TEXT("Failed to create editor utility widget factory");
+          ErrorCode = TEXT("FACTORY_CREATION_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+          Factory->BlueprintType = BPTYPE_Normal;
+          Factory->ParentClass = UEditorUtilityWidget::StaticClass();
+
+          FString ParentClassPath;
+          if (Payload->TryGetStringField(TEXT("parentClass"), ParentClassPath) &&
+              !ParentClassPath.IsEmpty())
+          {
+            UClass *ParentClass =
+                LoadClass<UUserWidget>(nullptr, *ParentClassPath);
+            if (!ParentClass)
+            {
+              ParentClass = FindObject<UClass>(nullptr, *ParentClassPath);
+            }
+
+            if (!ParentClass ||
+                !ParentClass->IsChildOf(UEditorUtilityWidget::StaticClass()))
+            {
+              Message = FString::Printf(
+                  TEXT("parentClass must derive from EditorUtilityWidget: %s"),
+                  *ParentClassPath);
+              ErrorCode = TEXT("INVALID_ARGUMENT");
+              Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+              Factory->ParentClass = ParentClass;
+            }
+          }
+
+          if (ErrorCode.IsEmpty())
+          {
+            IAssetTools &AssetTools = FAssetToolsModule::GetModule().Get();
+            UObject *NewAsset = AssetTools.CreateAsset(
+                WidgetName, NormalizedPath,
+                UEditorUtilityWidgetBlueprint::StaticClass(), Factory);
+            UEditorUtilityWidgetBlueprint *WidgetBlueprint =
+                Cast<UEditorUtilityWidgetBlueprint>(NewAsset);
+
+            if (!WidgetBlueprint)
+            {
+              Message = TEXT("Failed to create editor utility widget asset");
+              ErrorCode = TEXT("ASSET_CREATION_FAILED");
+              Resp->SetStringField(TEXT("error"), Message);
+            }
+            else
+            {
+              SaveLoadedAssetThrottled(WidgetBlueprint, -1.0, true);
+              ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
+
+              bSuccess = true;
+              Message = FString::Printf(
+                  TEXT("Editor utility widget created at %s"),
+                  *WidgetBlueprint->GetPathName());
+              Resp->SetStringField(TEXT("widgetPath"),
+                                   WidgetBlueprint->GetPathName());
+              Resp->SetStringField(TEXT("widgetName"), WidgetName);
+              Resp->SetBoolField(TEXT("exists"), false);
+            }
+          }
+        }
+      }
+    }
+  }
+  // ===========================================================================
+  // SubAction: run_editor_utility
+  // ===========================================================================
+  else if (LowerSub == TEXT("run_editor_utility"))
+  {
+    FString AssetPath;
+    Payload->TryGetStringField(TEXT("utilityPath"), AssetPath);
+    if (AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("editorUtilityPath"), AssetPath);
+    }
+    if (AssetPath.IsEmpty())
+    {
+      Payload->TryGetStringField(TEXT("widgetPath"), AssetPath);
+    }
+
+    if (AssetPath.IsEmpty())
+    {
+      Message = TEXT("utilityPath, editorUtilityPath, or widgetPath is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      FString TabId;
+      Payload->TryGetStringField(TEXT("tabId"), TabId);
+
+      FString ExecutedTabId;
+      bSuccess = RunEditorUtilityAsset(AssetPath, TabId, false, Message,
+                                       ExecutedTabId);
+      if (bSuccess)
+      {
+        Resp->SetStringField(TEXT("assetPath"), AssetPath);
+        if (!ExecutedTabId.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("tabId"), ExecutedTabId);
+        }
+      }
+      else
+      {
+        ErrorCode = TEXT("EXECUTION_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    }
+  }
+  // ===========================================================================
+  // SubAction: register_editor_command
+  // ===========================================================================
+  else if (LowerSub == TEXT("register_editor_command"))
+  {
+    FString CommandNameString;
+    if (!Payload->TryGetStringField(TEXT("name"), CommandNameString) ||
+        CommandNameString.IsEmpty())
+    {
+      Message = TEXT("name is required for register_editor_command");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      const FName CommandName(*CommandNameString);
+      FString DefinitionError;
+      TSharedPtr<FMcpEditorCommandDefinition> Definition =
+          BuildEditorCommandDefinition(Payload, CommandName, DefinitionError);
+      if (!Definition.IsValid())
+      {
+        Message = DefinitionError;
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+      else
+      {
+        GMcpEditorCommands.Add(CommandName, Definition);
+        bSuccess = true;
+        Message = FString::Printf(TEXT("Registered editor command %s"),
+                                  *CommandName.ToString());
+        Resp->SetStringField(TEXT("name"), CommandName.ToString());
+        Resp->SetStringField(TEXT("label"), Definition->Label);
+        Resp->SetStringField(TEXT("commandType"),
+                             ToCommandKindString(Definition->Kind));
+        if (!Definition->Command.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("command"), Definition->Command);
+        }
+        if (!Definition->AssetPath.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("assetPath"), Definition->AssetPath);
+        }
+        if (!Definition->TabId.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("tabId"), Definition->TabId);
+        }
+      }
+    }
+  }
+  // ===========================================================================
+  // SubAction: add_menu_entry / add_toolbar_button
+  // ===========================================================================
+  else if (LowerSub == TEXT("add_menu_entry") ||
+           LowerSub == TEXT("add_toolbar_button"))
+  {
+    FString MenuNameString;
+    FString CommandNameString;
+    if (!Payload->TryGetStringField(TEXT("menuName"), MenuNameString) ||
+        MenuNameString.IsEmpty())
+    {
+      Message = TEXT("menuName is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else if (!Payload->TryGetStringField(TEXT("commandName"),
+                                         CommandNameString) ||
+             CommandNameString.IsEmpty())
+    {
+      Message = TEXT("commandName is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      FString SectionNameString;
+      Payload->TryGetStringField(TEXT("section"), SectionNameString);
+      if (SectionNameString.IsEmpty())
+      {
+        SectionNameString = TEXT("McpAutomationBridge");
+      }
+
+      FString EntryNameString;
+      Payload->TryGetStringField(TEXT("entryName"), EntryNameString);
+      if (EntryNameString.IsEmpty())
+      {
+        EntryNameString = CommandNameString;
+      }
+
+      const bool bToolbarButton = LowerSub == TEXT("add_toolbar_button");
+      FString RegistrationError;
+      bSuccess = RegisterCommandMenuEntry(
+          FName(*MenuNameString), FName(*SectionNameString),
+          FName(*EntryNameString), FName(*CommandNameString), bToolbarButton,
+          RegistrationError);
+
+      if (bSuccess)
+      {
+        Message = FString::Printf(
+            TEXT("Added %s '%s' to %s"),
+            bToolbarButton ? TEXT("toolbar button") : TEXT("menu entry"),
+            *EntryNameString, *MenuNameString);
+        Resp->SetStringField(TEXT("menuName"), MenuNameString);
+        Resp->SetStringField(TEXT("section"), SectionNameString);
+        Resp->SetStringField(TEXT("entryName"), EntryNameString);
+        Resp->SetStringField(TEXT("commandName"), CommandNameString);
+      }
+      else
+      {
+        Message = RegistrationError;
+        ErrorCode = TEXT("REGISTRATION_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+    }
+  }
+  // ===========================================================================
   // SubAction: create_widget
   // ===========================================================================
-  if (LowerSub == TEXT("create_widget")) {
+  else if (LowerSub == TEXT("create_widget"))
+  {
 #if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
     FString WidgetName;
     if (!Payload->TryGetStringField(TEXT("name"), WidgetName) ||
-        WidgetName.IsEmpty()) {
+        WidgetName.IsEmpty())
+    {
       Message = TEXT("name field required for create_widget");
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
-    } else {
+    }
+    else
+    {
       FString SavePath;
       Payload->TryGetStringField(TEXT("savePath"), SavePath);
-      if (SavePath.IsEmpty()) {
+      if (SavePath.IsEmpty())
+      {
         SavePath = TEXT("/Game/UI/Widgets");
       }
 
@@ -166,23 +1713,30 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       const FString NormalizedPath = SavePath.TrimStartAndEnd();
       const FString TargetPath =
           FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
-      if (UEditorAssetLibrary::DoesAssetExist(TargetPath)) {
+      if (UEditorAssetLibrary::DoesAssetExist(TargetPath))
+      {
         bSuccess = true;
         Message = FString::Printf(TEXT("Widget blueprint already exists at %s"),
                                   *TargetPath);
         Resp->SetStringField(TEXT("widgetPath"), TargetPath);
         Resp->SetBoolField(TEXT("exists"), true);
-        if (!WidgetType.IsEmpty()) {
+        if (!WidgetType.IsEmpty())
+        {
           Resp->SetStringField(TEXT("widgetType"), WidgetType);
         }
         Resp->SetStringField(TEXT("widgetName"), WidgetName);
-      } else {
+      }
+      else
+      {
         UWidgetBlueprintFactory *Factory = NewObject<UWidgetBlueprintFactory>();
-        if (!Factory) {
+        if (!Factory)
+        {
           Message = TEXT("Failed to create widget blueprint factory");
           ErrorCode = TEXT("FACTORY_CREATION_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
-        } else {
+        }
+        else
+        {
           UObject *NewAsset = Factory->FactoryCreateNew(
               UWidgetBlueprint::StaticClass(),
               UEditorAssetLibrary::DoesAssetExist(NormalizedPath)
@@ -192,11 +1746,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
           UWidgetBlueprint *WidgetBlueprint = Cast<UWidgetBlueprint>(NewAsset);
 
-          if (!WidgetBlueprint) {
+          if (!WidgetBlueprint)
+          {
             Message = TEXT("Failed to create widget blueprint asset");
             ErrorCode = TEXT("ASSET_CREATION_FAILED");
             Resp->SetStringField(TEXT("error"), Message);
-          } else {
+          }
+          else
+          {
             // Force immediate save and registry scan
             SaveLoadedAssetThrottled(WidgetBlueprint, -1.0, true);
             ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
@@ -207,7 +1764,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             Resp->SetStringField(TEXT("widgetPath"),
                                  WidgetBlueprint->GetPathName());
             Resp->SetStringField(TEXT("widgetName"), WidgetName);
-            if (!WidgetType.IsEmpty()) {
+            if (!WidgetType.IsEmpty())
+            {
               Resp->SetStringField(TEXT("widgetType"), WidgetType);
             }
           }
@@ -224,30 +1782,40 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: add_widget_child
   // ===========================================================================
-  else if (LowerSub == TEXT("add_widget_child")) {
+  else if (LowerSub == TEXT("add_widget_child"))
+  {
 #if WITH_EDITOR && MCP_HAS_WIDGET_FACTORY
     FString WidgetPath;
     if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) ||
-        WidgetPath.IsEmpty()) {
+        WidgetPath.IsEmpty())
+    {
       Message = TEXT("widgetPath required for add_widget_child");
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
-    } else {
+    }
+    else
+    {
       UWidgetBlueprint *WidgetBP =
           LoadObject<UWidgetBlueprint>(nullptr, *WidgetPath);
-      if (!WidgetBP) {
+      if (!WidgetBP)
+      {
         Message = FString::Printf(TEXT("Could not find Widget Blueprint at %s"),
                                   *WidgetPath);
         ErrorCode = TEXT("ASSET_NOT_FOUND");
         Resp->SetStringField(TEXT("error"), Message);
-      } else {
+      }
+      else
+      {
         FString ChildClassPath;
         if (!Payload->TryGetStringField(TEXT("childClass"), ChildClassPath) ||
-            ChildClassPath.IsEmpty()) {
+            ChildClassPath.IsEmpty())
+        {
           Message = TEXT("childClass required (e.g. /Script/UMG.Button)");
           ErrorCode = TEXT("INVALID_ARGUMENT");
           Resp->SetStringField(TEXT("error"), Message);
-        } else {
+        }
+        else
+        {
           UClass *WidgetClass =
               UEditorAssetLibrary::FindAssetData(ChildClassPath)
                       .GetAsset()
@@ -256,7 +1824,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                   : FindObject<UClass>(nullptr, *ChildClassPath);
 
           // Try partial search for common UMG widgets
-          if (!WidgetClass) {
+          if (!WidgetClass)
+          {
             if (ChildClassPath.Contains(TEXT(".")))
               WidgetClass = FindObject<UClass>(nullptr, *ChildClassPath);
             else
@@ -265,13 +1834,16 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                   *FString::Printf(TEXT("/Script/UMG.%s"), *ChildClassPath));
           }
 
-          if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass())) {
+          if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass()))
+          {
             Message = FString::Printf(
                 TEXT("Could not resolve valid UWidget class from '%s'"),
                 *ChildClassPath);
             ErrorCode = TEXT("CLASS_NOT_FOUND");
             Resp->SetStringField(TEXT("error"), Message);
-          } else {
+          }
+          else
+          {
             FString ParentName;
             Payload->TryGetStringField(TEXT("parentName"), ParentName);
 
@@ -283,34 +1855,46 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             bool bAdded = false;
             bool bIsRoot = false;
 
-            if (ParentName.IsEmpty()) {
+            if (ParentName.IsEmpty())
+            {
               // Try to set as RootWidget if empty
-              if (WidgetBP->WidgetTree->RootWidget == nullptr) {
+              if (WidgetBP->WidgetTree->RootWidget == nullptr)
+              {
                 WidgetBP->WidgetTree->RootWidget = NewWidget;
                 bAdded = true;
                 bIsRoot = true;
-              } else {
+              }
+              else
+              {
                 // Try to add to existing root if it's a panel
                 UPanelWidget *RootPanel =
                     Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-                if (RootPanel) {
+                if (RootPanel)
+                {
                   RootPanel->AddChild(NewWidget);
                   bAdded = true;
-                } else {
+                }
+                else
+                {
                   Message = TEXT("Root widget is not a panel and already "
                                  "exists. Specify parentName.");
                   ErrorCode = TEXT("ROOT_Full");
                 }
               }
-            } else {
+            }
+            else
+            {
               // Find parent
               UWidget *ParentWidget =
                   WidgetBP->WidgetTree->FindWidget(FName(*ParentName));
               UPanelWidget *ParentPanel = Cast<UPanelWidget>(ParentWidget);
-              if (ParentPanel) {
+              if (ParentPanel)
+              {
                 ParentPanel->AddChild(NewWidget);
                 bAdded = true;
-              } else {
+              }
+              else
+              {
                 Message = FString::Printf(
                     TEXT("Parent '%s' not found or is not a PanelWidget"),
                     *ParentName);
@@ -318,14 +1902,17 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
               }
             }
 
-            if (bAdded) {
+            if (bAdded)
+            {
               bSuccess = true;
               Message = FString::Printf(TEXT("Added %s to %s"),
                                         *WidgetClass->GetName(),
                                         *WidgetBP->GetName());
               Resp->SetStringField(TEXT("widgetName"), NewWidget->GetName());
               Resp->SetStringField(TEXT("childClass"), WidgetClass->GetName());
-            } else {
+            }
+            else
+            {
               if (Message.IsEmpty())
                 Message = TEXT("Failed to add widget child.");
               Resp->SetStringField(TEXT("error"), Message);
@@ -343,57 +1930,21 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: screenshot
   // ===========================================================================
-  else if (LowerSub == TEXT("screenshot")) {
+  else if (LowerSub == TEXT("screenshot"))
+  {
     // Take a screenshot of the viewport and return as base64
-    FString RawScreenshotPath;
-    Payload->TryGetStringField(TEXT("path"), RawScreenshotPath);
-
     FString ScreenshotPath;
-    if (RawScreenshotPath.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("path"), ScreenshotPath);
+    if (ScreenshotPath.IsEmpty())
+    {
       ScreenshotPath =
           FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor");
-    } else {
-      FString SafePath = SanitizeProjectFilePath(RawScreenshotPath);
-      if (SafePath.IsEmpty()) {
-        Message = FString::Printf(TEXT("Invalid or unsafe screenshot path: %s. Path must be relative to project."), *RawScreenshotPath);
-        ErrorCode = TEXT("SECURITY_VIOLATION");
-        Resp->SetStringField(TEXT("error"), Message);
-        SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
-        return true;
-      }
-
-      ScreenshotPath = FPaths::ProjectDir() / SafePath;
-      ScreenshotPath = FPaths::ConvertRelativePathToFull(ScreenshotPath);
-      FPaths::NormalizeFilename(ScreenshotPath);
-
-      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-        NormalizedProjectDir += TEXT("/");
-      }
-
-      if (!ScreenshotPath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-        Message = FString::Printf(TEXT("Invalid or unsafe screenshot path: %s. Path escapes project directory."), *RawScreenshotPath);
-        ErrorCode = TEXT("SECURITY_VIOLATION");
-        Resp->SetStringField(TEXT("error"), Message);
-        SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
-        return true;
-      }
     }
 
     FString Filename;
     Payload->TryGetStringField(TEXT("filename"), Filename);
-    
-    // SECURITY: Sanitize filename to prevent path traversal
-    // Strip directory components and validate against traversal patterns
-    Filename = FPaths::GetCleanFilename(Filename);
-    if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
-      // Reject suspicious filename and use default
-      Filename = FString::Printf(TEXT("Screenshot_%lld"),
-                                 FDateTime::Now().ToUnixTimestamp());
-    }
-    
-    if (Filename.IsEmpty()) {
+    if (Filename.IsEmpty())
+    {
       Filename = FString::Printf(TEXT("Screenshot_%lld"),
                                  FDateTime::Now().ToUnixTimestamp());
     }
@@ -402,30 +1953,39 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
     // Get viewport
-    if (!GEngine || !GEngine->GameViewport) {
+    if (!GEngine || !GEngine->GameViewport)
+    {
       Message = TEXT("No game viewport available");
       ErrorCode = TEXT("NO_VIEWPORT");
       Resp->SetStringField(TEXT("error"), Message);
-    } else {
+    }
+    else
+    {
       UGameViewportClient *ViewportClient = GEngine->GameViewport;
       FViewport *Viewport = ViewportClient->Viewport;
 
-      if (!Viewport) {
+      if (!Viewport)
+      {
         Message = TEXT("No viewport available");
         ErrorCode = TEXT("NO_VIEWPORT");
         Resp->SetStringField(TEXT("error"), Message);
-      } else {
+      }
+      else
+      {
         // Capture viewport pixels
         TArray<FColor> Bitmap;
         FIntVector Size(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 0);
 
         bool bReadSuccess = Viewport->ReadPixels(Bitmap);
 
-        if (!bReadSuccess || Bitmap.Num() == 0) {
+        if (!bReadSuccess || Bitmap.Num() == 0)
+        {
           Message = TEXT("Failed to read viewport pixels");
           ErrorCode = TEXT("CAPTURE_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
-        } else {
+        }
+        else
+        {
           // Ensure we have the right size
           const int32 Width = Size.X;
           const int32 Height = Size.Y;
@@ -441,7 +2001,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           FImageUtils::CompressImageArray(Width, Height, Bitmap, PngData);
 #endif
 
-          if (PngData.Num() == 0) {
+          if (PngData.Num() == 0)
+          {
             // Alternative: compress as PNG using IImageWrapper
             IImageWrapperModule &ImageWrapperModule =
                 FModuleManager::LoadModuleChecked<IImageWrapperModule>(
@@ -449,10 +2010,12 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             TSharedPtr<IImageWrapper> ImageWrapper =
                 ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 
-            if (ImageWrapper.IsValid()) {
+            if (ImageWrapper.IsValid())
+            {
               TArray<uint8> RawData;
               RawData.SetNum(Width * Height * 4);
-              for (int32 i = 0; i < Bitmap.Num(); ++i) {
+              for (int32 i = 0; i < Bitmap.Num(); ++i)
+              {
                 RawData[i * 4 + 0] = Bitmap[i].R;
                 RawData[i * 4 + 1] = Bitmap[i].G;
                 RawData[i * 4 + 2] = Bitmap[i].B;
@@ -460,7 +2023,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
               }
 
               if (ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width,
-                                       Height, ERGBFormat::RGBA, 8)) {
+                                       Height, ERGBFormat::RGBA, 8))
+              {
                 PngData = ImageWrapper->GetCompressed(100);
               }
             }
@@ -484,7 +2048,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
 
           // Return base64 encoded image if requested
-          if (bReturnBase64 && PngData.Num() > 0) {
+          if (bReturnBase64 && PngData.Num() > 0)
+          {
             FString Base64Data = FBase64::Encode(PngData);
             Resp->SetStringField(TEXT("imageBase64"), Base64Data);
             Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
@@ -496,20 +2061,27 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: play_in_editor
   // ===========================================================================
-  else if (LowerSub == TEXT("play_in_editor")) {
+  else if (LowerSub == TEXT("play_in_editor"))
+  {
     // Start play in editor
-    if (GEditor && GEditor->PlayWorld) {
+    if (GEditor && GEditor->PlayWorld)
+    {
       Message = TEXT("Already playing in editor");
       ErrorCode = TEXT("ALREADY_PLAYING");
       Resp->SetStringField(TEXT("error"), Message);
-    } else {
+    }
+    else
+    {
       // Execute play command
       bool bCommandSuccess = GEditor->Exec(nullptr, TEXT("Play In Editor"));
-      if (bCommandSuccess) {
+      if (bCommandSuccess)
+      {
         bSuccess = true;
         Message = TEXT("Started play in editor");
         Resp->SetStringField(TEXT("status"), TEXT("playing"));
-      } else {
+      }
+      else
+      {
         Message = TEXT("Failed to start play in editor");
         ErrorCode = TEXT("PLAY_FAILED");
         Resp->SetStringField(TEXT("error"), Message);
@@ -519,22 +2091,29 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: stop_play
   // ===========================================================================
-  else if (LowerSub == TEXT("stop_play")) {
+  else if (LowerSub == TEXT("stop_play"))
+  {
     // Stop play in editor
-    if (GEditor && GEditor->PlayWorld) {
+    if (GEditor && GEditor->PlayWorld)
+    {
       // Execute stop command
       bool bCommandSuccess =
           GEditor->Exec(nullptr, TEXT("Stop Play In Editor"));
-      if (bCommandSuccess) {
+      if (bCommandSuccess)
+      {
         bSuccess = true;
         Message = TEXT("Stopped play in editor");
         Resp->SetStringField(TEXT("status"), TEXT("stopped"));
-      } else {
+      }
+      else
+      {
         Message = TEXT("Failed to stop play in editor");
         ErrorCode = TEXT("STOP_FAILED");
         Resp->SetStringField(TEXT("error"), Message);
       }
-    } else {
+    }
+    else
+    {
       Message = TEXT("Not currently playing in editor");
       ErrorCode = TEXT("NOT_PLAYING");
       Resp->SetStringField(TEXT("error"), Message);
@@ -543,14 +2122,18 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: save_all
   // ===========================================================================
-  else if (LowerSub == TEXT("save_all")) {
+  else if (LowerSub == TEXT("save_all"))
+  {
     // Save all assets and levels
     bool bCommandSuccess = GEditor->Exec(nullptr, TEXT("Asset Save All"));
-    if (bCommandSuccess) {
+    if (bCommandSuccess)
+    {
       bSuccess = true;
       Message = TEXT("Saved all assets");
       Resp->SetStringField(TEXT("status"), TEXT("saved"));
-    } else {
+    }
+    else
+    {
       Message = TEXT("Failed to save all assets");
       ErrorCode = TEXT("SAVE_FAILED");
       Resp->SetStringField(TEXT("error"), Message);
@@ -559,7 +2142,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: simulate_input
   // ===========================================================================
-  else if (LowerSub == TEXT("simulate_input")) {
+  else if (LowerSub == TEXT("simulate_input"))
+  {
     FString KeyName;
     Payload->TryGetStringField(TEXT("keyName"),
                                KeyName); // Changed to keyName to match schema
@@ -570,23 +2154,29 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     Payload->TryGetStringField(TEXT("eventType"), EventType);
 
     FKey Key = FKey(FName(*KeyName));
-    if (Key.IsValid()) {
+    if (Key.IsValid())
+    {
       const uint32 CharacterCode = 0;
       const uint32 KeyCode = 0;
       const bool bIsRepeat = false;
       FModifierKeysState ModifierState;
 
-      if (EventType == TEXT("KeyDown")) {
+      if (EventType == TEXT("KeyDown"))
+      {
         FKeyEvent KeyEvent(Key, ModifierState,
                            FSlateApplication::Get().GetUserIndexForKeyboard(),
                            bIsRepeat, CharacterCode, KeyCode);
         FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
-      } else if (EventType == TEXT("KeyUp")) {
+      }
+      else if (EventType == TEXT("KeyUp"))
+      {
         FKeyEvent KeyEvent(Key, ModifierState,
                            FSlateApplication::Get().GetUserIndexForKeyboard(),
                            bIsRepeat, CharacterCode, KeyCode);
         FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
-      } else {
+      }
+      else
+      {
         // Press and Release
         FKeyEvent KeyDownEvent(
             Key, ModifierState,
@@ -602,7 +2192,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
       bSuccess = true;
       Message = FString::Printf(TEXT("Simulated input for key: %s"), *KeyName);
-    } else {
+    }
+    else
+    {
       Message = FString::Printf(TEXT("Invalid key name: %s"), *KeyName);
       ErrorCode = TEXT("INVALID_KEY");
       Resp->SetStringField(TEXT("error"), Message);
@@ -611,28 +2203,38 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: create_hud
   // ===========================================================================
-  else if (LowerSub == TEXT("create_hud")) {
+  else if (LowerSub == TEXT("create_hud"))
+  {
     FString WidgetPath;
     Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
     UClass *WidgetClass = LoadClass<UUserWidget>(nullptr, *WidgetPath);
-    if (WidgetClass && GEngine && GEngine->GameViewport) {
+    if (WidgetClass && GEngine && GEngine->GameViewport)
+    {
       UWorld *World = GEngine->GameViewport->GetWorld();
-      if (World) {
+      if (World)
+      {
         UUserWidget *Widget = CreateWidget<UUserWidget>(World, WidgetClass);
-        if (Widget) {
+        if (Widget)
+        {
           Widget->AddToViewport();
           bSuccess = true;
           Message = TEXT("HUD created and added to viewport");
           Resp->SetStringField(TEXT("widgetName"), Widget->GetName());
-        } else {
+        }
+        else
+        {
           Message = TEXT("Failed to create widget");
           ErrorCode = TEXT("CREATE_FAILED");
         }
-      } else {
+      }
+      else
+      {
         Message = TEXT("No world context found (is PIE running?)");
         ErrorCode = TEXT("NO_WORLD");
       }
-    } else {
+    }
+    else
+    {
       Message =
           FString::Printf(TEXT("Failed to load widget class: %s"), *WidgetPath);
       ErrorCode = TEXT("CLASS_NOT_FOUND");
@@ -641,7 +2243,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: set_widget_text
   // ===========================================================================
-  else if (LowerSub == TEXT("set_widget_text")) {
+  else if (LowerSub == TEXT("set_widget_text"))
+  {
     FString Key, Value;
     Payload->TryGetStringField(TEXT("key"), Key);
     Payload->TryGetStringField(TEXT("value"), Value);
@@ -653,16 +2256,19 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         GEditor->GetEditorWorldContext().World(), Widgets,
         UUserWidget::StaticClass(), false);
     // Also try Game Viewport world if Editor World is not right context (PIE)
-    if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWorld()) {
+    if (GEngine && GEngine->GameViewport && GEngine->GameViewport->GetWorld())
+    {
       UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
           GEngine->GameViewport->GetWorld(), Widgets,
           UUserWidget::StaticClass(), false);
     }
 
-    for (UUserWidget *Widget : Widgets) {
+    for (UUserWidget *Widget : Widgets)
+    {
       // Search inside this widget for a TextBlock named Key
       UWidget *Child = Widget->GetWidgetFromName(FName(*Key));
-      if (UTextBlock *TextBlock = Cast<UTextBlock>(Child)) {
+      if (UTextBlock *TextBlock = Cast<UTextBlock>(Child))
+      {
         TextBlock->SetText(FText::FromString(Value));
         bFound = true;
         bSuccess = true;
@@ -672,17 +2278,21 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
       // Also check if the widget ITSELF is the one (though UserWidget !=
       // TextBlock usually)
-      if (Widget->GetName() == Key) {
+      if (Widget->GetName() == Key)
+      {
         // Can't set text on UserWidget directly unless it implements interface?
         // Assuming Key refers to child widget name usually
       }
     }
 
-    if (!bFound) {
+    if (!bFound)
+    {
       // Fallback: Use TObjectIterator to find ANY UTextBlock with that name,
       // risky but covers cases
-      for (TObjectIterator<UTextBlock> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
+      for (TObjectIterator<UTextBlock> It; It; ++It)
+      {
+        if (It->GetName() == Key && It->GetWorld())
+        {
           It->SetText(FText::FromString(Value));
           bFound = true;
           bSuccess = true;
@@ -692,7 +2302,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
 
-    if (!bFound) {
+    if (!bFound)
+    {
       Message = FString::Printf(TEXT("Widget/TextBlock '%s' not found"), *Key);
       ErrorCode = TEXT("WIDGET_NOT_FOUND");
     }
@@ -700,15 +2311,19 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: set_widget_image
   // ===========================================================================
-  else if (LowerSub == TEXT("set_widget_image")) {
+  else if (LowerSub == TEXT("set_widget_image"))
+  {
     FString Key, TexturePath;
     Payload->TryGetStringField(TEXT("key"), Key);
     Payload->TryGetStringField(TEXT("texturePath"), TexturePath);
     UTexture2D *Texture = LoadObject<UTexture2D>(nullptr, *TexturePath);
-    if (Texture) {
+    if (Texture)
+    {
       bool bFound = false;
-      for (TObjectIterator<UImage> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
+      for (TObjectIterator<UImage> It; It; ++It)
+      {
+        if (It->GetName() == Key && It->GetWorld())
+        {
           It->SetBrushFromTexture(Texture);
           bFound = true;
           bSuccess = true;
@@ -716,11 +2331,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           break;
         }
       }
-      if (!bFound) {
+      if (!bFound)
+      {
         Message = FString::Printf(TEXT("Image widget '%s' not found"), *Key);
         ErrorCode = TEXT("WIDGET_NOT_FOUND");
       }
-    } else {
+    }
+    else
+    {
       Message = TEXT("Failed to load texture");
       ErrorCode = TEXT("ASSET_NOT_FOUND");
     }
@@ -728,7 +2346,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: set_widget_visibility
   // ===========================================================================
-  else if (LowerSub == TEXT("set_widget_visibility")) {
+  else if (LowerSub == TEXT("set_widget_visibility"))
+  {
     FString Key;
     bool bVisible = true;
     Payload->TryGetStringField(TEXT("key"), Key);
@@ -736,8 +2355,10 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
     bool bFound = false;
     // Try UserWidgets
-    for (TObjectIterator<UUserWidget> It; It; ++It) {
-      if (It->GetName() == Key && It->GetWorld()) {
+    for (TObjectIterator<UUserWidget> It; It; ++It)
+    {
+      if (It->GetName() == Key && It->GetWorld())
+      {
         It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                    : ESlateVisibility::Collapsed);
         bFound = true;
@@ -746,9 +2367,12 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
     // If not found, try generic UWidget
-    if (!bFound) {
-      for (TObjectIterator<UWidget> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
+    if (!bFound)
+    {
+      for (TObjectIterator<UWidget> It; It; ++It)
+      {
+        if (It->GetName() == Key && It->GetWorld())
+        {
           It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                      : ESlateVisibility::Collapsed);
           bFound = true;
@@ -758,10 +2382,13 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
     }
 
-    if (bFound) {
+    if (bFound)
+    {
       Message = FString::Printf(TEXT("Set visibility on '%s' to %s"), *Key,
                                 bVisible ? TEXT("Visible") : TEXT("Collapsed"));
-    } else {
+    }
+    else
+    {
       Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
       ErrorCode = TEXT("WIDGET_NOT_FOUND");
     }
@@ -769,12 +2396,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // SubAction: remove_widget_from_viewport
   // ===========================================================================
-  else if (LowerSub == TEXT("remove_widget_from_viewport")) {
+  else if (LowerSub == TEXT("remove_widget_from_viewport"))
+  {
     FString Key;
     Payload->TryGetStringField(TEXT("key"),
                                Key); // If empty, remove all? OR specific
 
-    if (Key.IsEmpty()) {
+    if (Key.IsEmpty())
+    {
       // Remove all user widgets?
       TArray<UUserWidget *> TempWidgets;
       UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
@@ -782,30 +2411,39 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           UUserWidget::StaticClass(), true);
       // Implementation:
       if (GEngine && GEngine->GameViewport &&
-          GEngine->GameViewport->GetWorld()) {
+          GEngine->GameViewport->GetWorld())
+      {
         TArray<UUserWidget *> Widgets;
         UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
             GEngine->GameViewport->GetWorld(), Widgets,
             UUserWidget::StaticClass(), true);
-        for (UUserWidget *W : Widgets) {
+        for (UUserWidget *W : Widgets)
+        {
           W->RemoveFromParent();
         }
         bSuccess = true;
         Message = TEXT("Removed all widgets");
       }
-    } else {
+    }
+    else
+    {
       bool bFound = false;
-      for (TObjectIterator<UUserWidget> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
+      for (TObjectIterator<UUserWidget> It; It; ++It)
+      {
+        if (It->GetName() == Key && It->GetWorld())
+        {
           It->RemoveFromParent();
           bFound = true;
           bSuccess = true;
           break;
         }
       }
-      if (bFound) {
+      if (bFound)
+      {
         Message = FString::Printf(TEXT("Removed widget '%s'"), *Key);
-      } else {
+      }
+      else
+      {
         Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
         ErrorCode = TEXT("WIDGET_NOT_FOUND");
       }
@@ -814,7 +2452,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   // Unknown SubAction
   // ===========================================================================
-  else {
+  else
+  {
     Message = FString::Printf(
         TEXT("System control action '%s' not implemented"), *LowerSub);
     ErrorCode = TEXT("NOT_IMPLEMENTED");
@@ -828,7 +2467,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 #endif
 
   Resp->SetBoolField(TEXT("success"), bSuccess);
-  if (Message.IsEmpty()) {
+  if (Message.IsEmpty())
+  {
     Message = bSuccess ? TEXT("System control action completed")
                        : TEXT("System control action failed");
   }
