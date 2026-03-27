@@ -73,9 +73,9 @@ namespace
         return Json;
     }
 
-    /** @brief Contract: builds category, tool, and action-count metadata from the public catalog without changing the existing response keys. */
+    /** @brief Contract: builds backward-compatible tool-name, structured-tool, and category-group metadata from the public catalog. */
     void BuildCatalogResponse(
-        TArray<TSharedPtr<FJsonValue>> &OutCategories,
+        TArray<TSharedPtr<FJsonValue>> &OutToolNames,
         TArray<TSharedPtr<FJsonValue>> &OutTools,
         TArray<TSharedPtr<FJsonValue>> &OutCategoryGroups,
         int32 &OutActionCount)
@@ -85,12 +85,12 @@ namespace
 
         for (const FMcpAutomationBridgeToolCatalogEntry &Entry : GetPublicMcpAutomationBridgeToolCatalog())
         {
+            OutToolNames.Add(MakeShared<FJsonValueString>(Entry.ToolName));
             OutTools.Add(MakeShared<FJsonValueObject>(MakeToolJson(Entry)));
 
             if (!SeenGroups.Contains(Entry.Category))
             {
                 SeenGroups.Add(Entry.Category);
-                OutCategories.Add(MakeShared<FJsonValueString>(Entry.Category));
                 OutCategoryGroups.Add(MakeShared<FJsonValueString>(Entry.Category));
             }
 
@@ -144,10 +144,15 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         FString ExtraArgs;
         Payload->TryGetStringField(TEXT("extraArgs"), ExtraArgs);
 
-        // Construct UBT executable path
-        // Location: Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe
+        // Construct the platform-specific UBT executable path.
+        const FString UBTExecutableName =
+#if PLATFORM_WINDOWS
+            TEXT("UnrealBuildTool.exe");
+#else
+            TEXT("UnrealBuildTool");
+#endif
         const FString UBTPath = FPaths::ConvertRelativePathToFull(
-            FPaths::EngineDir() / TEXT("Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.exe"));
+            FPaths::EngineDir() / TEXT("Binaries/DotNET/UnrealBuildTool") / UBTExecutableName);
 
         // Build command line
         const FString Params = FString::Printf(TEXT("%s %s %s %s"),
@@ -191,23 +196,23 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("list_categories"))
     {
-        TArray<TSharedPtr<FJsonValue>> Categories;
+        TArray<TSharedPtr<FJsonValue>> ToolNames;
         TArray<TSharedPtr<FJsonValue>> Tools;
         TArray<TSharedPtr<FJsonValue>> CategoryGroups;
         int32 ActionCount = 0;
-        BuildCatalogResponse(Categories, Tools, CategoryGroups, ActionCount);
+        BuildCatalogResponse(ToolNames, Tools, CategoryGroups, ActionCount);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetArrayField(TEXT("categories"), Categories);
+        Result->SetArrayField(TEXT("categories"), ToolNames);
         Result->SetArrayField(TEXT("tools"), Tools);
         Result->SetArrayField(TEXT("categoryGroups"), CategoryGroups);
-        Result->SetNumberField(TEXT("count"), Categories.Num());
+        Result->SetNumberField(TEXT("count"), ToolNames.Num());
         Result->SetNumberField(TEXT("groupCount"), CategoryGroups.Num());
         Result->SetNumberField(TEXT("actionCount"), ActionCount);
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               FString::Printf(TEXT("Listed %d public MCP categories from the bridge catalog"), Categories.Num()), Result);
+                               FString::Printf(TEXT("Listed %d public MCP tools from the bridge catalog"), ToolNames.Num()), Result);
         return true;
     }
 
@@ -217,11 +222,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     if (SubAction == TEXT("get_status"))
     {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        TArray<TSharedPtr<FJsonValue>> Categories;
+        TArray<TSharedPtr<FJsonValue>> ToolNames;
         TArray<TSharedPtr<FJsonValue>> Tools;
         TArray<TSharedPtr<FJsonValue>> CategoryGroups;
         int32 ActionCount = 0;
-        BuildCatalogResponse(Categories, Tools, CategoryGroups, ActionCount);
+        BuildCatalogResponse(ToolNames, Tools, CategoryGroups, ActionCount);
 
         // Connection status
         Result->SetBoolField(TEXT("connected"), true);
@@ -242,10 +247,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
 
         // Action statistics
         Result->SetNumberField(TEXT("totalActions"), ActionCount);
-        Result->SetNumberField(TEXT("toolCategories"), Categories.Num());
+        Result->SetNumberField(TEXT("toolCategories"), ToolNames.Num());
         Result->SetNumberField(TEXT("categoryGroups"), CategoryGroups.Num());
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
-        Result->SetArrayField(TEXT("categories"), Categories);
+        Result->SetArrayField(TEXT("categories"), ToolNames);
         Result->SetArrayField(TEXT("categoryGroupNames"), CategoryGroups);
         Result->SetArrayField(TEXT("tools"), Tools);
 

@@ -90,6 +90,20 @@
 #include "ToolMenus.h"
 #include "UnrealClient.h"
 
+#if __has_include("Interfaces/IMainFrameModule.h")
+#include "Interfaces/IMainFrameModule.h"
+#define MCP_HAS_MAINFRAME_MODULE 1
+#else
+#define MCP_HAS_MAINFRAME_MODULE 0
+#endif
+
+#if __has_include("LevelEditor.h")
+#include "LevelEditor.h"
+#define MCP_HAS_LEVEL_EDITOR_MODULE 1
+#else
+#define MCP_HAS_LEVEL_EDITOR_MODULE 0
+#endif
+
 // Widget Factory (version-dependent header location)
 #if __has_include("Factories/WidgetBlueprintFactory.h")
 #include "Factories/WidgetBlueprintFactory.h"
@@ -143,6 +157,13 @@ namespace
     FString StateFileName;
     FString Tooltip;
     FString MenuName;
+    FString SourceMenuName;
+    FString SectionName;
+    FString EntryName;
+    FString EntryType;
+    int32 SectionIndex = INDEX_NONE;
+    int32 EntryIndex = INDEX_NONE;
+    bool bCanOpenDirectly = false;
     TArray<FString> MenuHierarchy;
     TArray<FString> Aliases;
   };
@@ -173,30 +194,60 @@ namespace
     }
   }
 
+  FString MakeProjectRelativeDefinitionPath(const FString &ResolvedFilePath)
+  {
+    FString AbsolutePath = FPaths::ConvertRelativePathToFull(ResolvedFilePath);
+    FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+    FPaths::MakeStandardFilename(AbsolutePath);
+    FPaths::MakeStandardFilename(ProjectRoot);
+
+    if (!ProjectRoot.EndsWith(TEXT("/")))
+    {
+      ProjectRoot += TEXT("/");
+    }
+
+    if (!AbsolutePath.StartsWith(ProjectRoot))
+    {
+      return FString();
+    }
+
+    return SanitizeProjectFilePath(AbsolutePath.RightChop(ProjectRoot.Len()));
+  }
+
+  FName MakeOwnedToolMenuEntryName(const FName EntryName)
+  {
+    const FString TrimmedName = EntryName.ToString().TrimStartAndEnd();
+    if (TrimmedName.StartsWith(TEXT("McpAutomationBridge.")))
+    {
+      return FName(*TrimmedName);
+    }
+
+    return FName(*FString::Printf(TEXT("McpAutomationBridge.%s"), *TrimmedName));
+  }
+
   const FMcpUiDiscoverySettings &GetUiDiscoverySettings()
   {
-    static bool bInitialized = false;
     static FMcpUiDiscoverySettings Settings;
-    if (!bInitialized)
+    Settings.JsonToolTabIdPrefix = TEXT("");
+    Settings.JsonDefinitionRoots.Empty();
+    Settings.KnownMenuNames.Empty();
+
+    if (const UMcpAutomationBridgeSettings *BridgeSettings =
+            GetDefault<UMcpAutomationBridgeSettings>())
     {
-      if (const UMcpAutomationBridgeSettings *BridgeSettings =
-              GetDefault<UMcpAutomationBridgeSettings>())
+      Settings.JsonToolTabIdPrefix =
+          BridgeSettings->JsonToolTabIdPrefix.TrimStartAndEnd();
+
+      for (const FString &Root : BridgeSettings->UiDefinitionRoots)
       {
-        Settings.JsonToolTabIdPrefix =
-            BridgeSettings->JsonToolTabIdPrefix.TrimStartAndEnd();
-
-        for (const FString &Root : BridgeSettings->UiDefinitionRoots)
-        {
-          AddUniqueTrimmedValue(Settings.JsonDefinitionRoots, Root);
-        }
-        for (const FString &MenuName : BridgeSettings->KnownToolMenuNames)
-        {
-          AddUniqueTrimmedValue(Settings.KnownMenuNames, MenuName);
-        }
+        AddUniqueTrimmedValue(Settings.JsonDefinitionRoots, Root);
       }
-
-      bInitialized = true;
+      for (const FString &MenuName : BridgeSettings->KnownToolMenuNames)
+      {
+        AddUniqueTrimmedValue(Settings.KnownMenuNames, MenuName);
+      }
     }
+
     return Settings;
   }
 
@@ -276,6 +327,9 @@ namespace
     AddUniqueTrimmedValue(Aliases, Target.TabId);
     AddUniqueTrimmedValue(Aliases, Target.AssetPath);
     AddUniqueTrimmedValue(Aliases, Target.MenuName);
+    AddUniqueTrimmedValue(Aliases, Target.SourceMenuName);
+    AddUniqueTrimmedValue(Aliases, Target.SectionName);
+    AddUniqueTrimmedValue(Aliases, Target.EntryName);
 
     FString WithoutSuffix = Target.Identifier;
     WithoutSuffix.RemoveFromEnd(TEXT("Tool"));
@@ -294,6 +348,473 @@ namespace
     }
 
     return MenuName;
+  }
+
+  FString GetResolvedTextAttribute(const TAttribute<FText> &TextAttribute)
+  {
+    return TextAttribute.Get().ToString().TrimStartAndEnd();
+  }
+
+  FString GetToolMenuEntryDisplayName(const FToolMenuEntry &Entry)
+  {
+    FString DisplayName = GetResolvedTextAttribute(Entry.Label);
+    if (!DisplayName.IsEmpty())
+    {
+      return DisplayName;
+    }
+
+    DisplayName = GetResolvedTextAttribute(Entry.ToolBarData.LabelOverride);
+    if (!DisplayName.IsEmpty())
+    {
+      return DisplayName;
+    }
+
+    DisplayName = Entry.Name.ToString().TrimStartAndEnd();
+    if (!DisplayName.IsEmpty())
+    {
+      return DisplayName;
+    }
+
+    return TEXT("Unnamed Menu Entry");
+  }
+
+  FString GetToolMenuEntryTooltip(const FToolMenuEntry &Entry)
+  {
+    const FString Tooltip = GetResolvedTextAttribute(Entry.ToolTip);
+    if (!Tooltip.IsEmpty())
+    {
+      return Tooltip;
+    }
+
+    return Entry.IsSubMenu() ? TEXT("Runtime ToolMenus submenu")
+                             : TEXT("Runtime ToolMenus entry");
+  }
+
+  FString DescribeToolMenuEntryType(const FToolMenuEntry &Entry)
+  {
+    if (Entry.IsSubMenu())
+    {
+      return TEXT("submenu");
+    }
+
+    switch (Entry.Type)
+    {
+    case EMultiBlockType::MenuEntry:
+      return TEXT("menu_entry");
+    case EMultiBlockType::ToolBarButton:
+      return TEXT("toolbar_button");
+    case EMultiBlockType::ToolBarComboButton:
+      return TEXT("toolbar_combo_button");
+    case EMultiBlockType::Separator:
+      return TEXT("separator");
+    case EMultiBlockType::Heading:
+      return TEXT("heading");
+    case EMultiBlockType::EditableText:
+      return TEXT("editable_text");
+    case EMultiBlockType::Widget:
+      return TEXT("widget");
+    case EMultiBlockType::ButtonRow:
+      return TEXT("button_row");
+    case EMultiBlockType::None:
+    default:
+      return TEXT("menu_block");
+    }
+  }
+
+  bool CanDirectlyOpenToolMenuEntry(const FToolMenuEntry &Entry)
+  {
+    return !Entry.IsSubMenu() && Entry.Type != EMultiBlockType::None &&
+           Entry.Type != EMultiBlockType::Separator &&
+           Entry.Type != EMultiBlockType::Heading &&
+           Entry.Type != EMultiBlockType::EditableText &&
+           Entry.Type != EMultiBlockType::Widget &&
+           Entry.Type != EMultiBlockType::ButtonRow;
+  }
+
+  bool RequiresExplicitToolMenuContext(const FString &MenuName)
+  {
+    return MenuName.Contains(TEXT("ContentBrowser."),
+                             ESearchCase::IgnoreCase) ||
+           MenuName.Contains(TEXT("ContextMenu"),
+                             ESearchCase::IgnoreCase);
+  }
+
+  bool BuildToolMenuExecutionContext(const FString &MenuName,
+                                     FToolMenuContext &OutContext)
+  {
+#if MCP_HAS_MAINFRAME_MODULE && MCP_HAS_LEVEL_EDITOR_MODULE
+    if (!MenuName.StartsWith(TEXT("LevelEditor.MainMenu.")))
+    {
+      return false;
+    }
+
+    IMainFrameModule *MainFrameModule =
+        FModuleManager::GetModulePtr<IMainFrameModule>(TEXT("MainFrame"));
+    FLevelEditorModule *LevelEditorModule =
+        FModuleManager::GetModulePtr<FLevelEditorModule>(TEXT("LevelEditor"));
+    if (!MainFrameModule || !LevelEditorModule)
+    {
+      return false;
+    }
+
+    TSharedPtr<FTabManager> LevelEditorTabManager =
+        LevelEditorModule->GetLevelEditorTabManager();
+    if (!LevelEditorTabManager.IsValid())
+    {
+      return false;
+    }
+
+    OutContext.AppendCommandList(LevelEditorModule->GetGlobalLevelEditorActions());
+    MainFrameModule->MakeMainMenu(LevelEditorTabManager, FName(*MenuName),
+                                  OutContext);
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  FString MakeToolMenuPath(const FString &BaseMenuName, const FName &EntryName)
+  {
+    if (BaseMenuName.IsEmpty() || EntryName.IsNone())
+    {
+      return FString();
+    }
+
+    return UToolMenus::JoinMenuPaths(FName(*BaseMenuName), EntryName).ToString();
+  }
+
+  FString MakeToolMenuEntryIdentifier(const FString &RequestedMenuName,
+                                      const FString &SourceMenuName,
+                                      const FToolMenuSection &Section,
+                                      const int32 SectionIndex,
+                                      const int32 EntryIndex)
+  {
+    const FString SectionKey = Section.Name.IsNone()
+                                   ? FString::Printf(TEXT("section-%d"), SectionIndex)
+                                   : Section.Name.ToString();
+    return FString::Printf(TEXT("%s::%s::%s::%d"), *RequestedMenuName,
+                           *SourceMenuName, *SectionKey, EntryIndex);
+  }
+
+  void AppendToolMenuEntryTargets(
+      const FString &RequestedMenuName, const UToolMenu *Menu,
+      TArray<FMcpDiscoveredUiTargetDefinition> &OutTargets)
+  {
+    if (!Menu)
+    {
+      return;
+    }
+
+    const FString MenuDisplayName = BuildMenuDisplayName(RequestedMenuName);
+    const FString SourceMenuName = Menu->GetMenuName().ToString();
+    TArray<FString> MenuHierarchy;
+    for (const FName &HierarchyName : Menu->GetMenuHierarchyNames(true))
+    {
+      MenuHierarchy.Add(HierarchyName.ToString());
+    }
+
+    for (int32 SectionIndex = 0; SectionIndex < Menu->Sections.Num();
+         ++SectionIndex)
+    {
+      const FToolMenuSection &Section = Menu->Sections[SectionIndex];
+      const FString SectionName = Section.Name.ToString();
+
+      for (int32 EntryIndex = 0; EntryIndex < Section.Blocks.Num(); ++EntryIndex)
+      {
+        const FToolMenuEntry &Entry = Section.Blocks[EntryIndex];
+
+        FMcpDiscoveredUiTargetDefinition Target;
+        Target.SourceType = TEXT("tool_menu_entry");
+        Target.Identifier = MakeToolMenuEntryIdentifier(RequestedMenuName,
+                                                        SourceMenuName,
+                                                        Section, SectionIndex,
+                                                        EntryIndex);
+        Target.DisplayName = GetToolMenuEntryDisplayName(Entry);
+        Target.Tooltip = GetToolMenuEntryTooltip(Entry);
+        Target.MenuName = RequestedMenuName;
+        Target.SourceMenuName = SourceMenuName;
+        Target.SectionName = SectionName;
+        Target.EntryName = Entry.Name.ToString();
+        Target.EntryType = DescribeToolMenuEntryType(Entry);
+        Target.SectionIndex = SectionIndex;
+        Target.EntryIndex = EntryIndex;
+        Target.bCanOpenDirectly =
+            CanDirectlyOpenToolMenuEntry(Entry) &&
+            !RequiresExplicitToolMenuContext(RequestedMenuName) &&
+            !RequiresExplicitToolMenuContext(SourceMenuName);
+        Target.MenuHierarchy = MenuHierarchy;
+        Target.Aliases = BuildUiTargetAliases(Target);
+        AddUniqueTrimmedValue(Target.Aliases,
+                              FString::Printf(TEXT("%s > %s"), *MenuDisplayName,
+                                              *Target.DisplayName));
+        AddUniqueTrimmedValue(Target.Aliases,
+                              FString::Printf(TEXT("%s > %s"),
+                                              *RequestedMenuName,
+                                              *Target.DisplayName));
+        if (!SectionName.IsEmpty())
+        {
+          AddUniqueTrimmedValue(Target.Aliases,
+                                FString::Printf(TEXT("%s > %s > %s"),
+                                                *MenuDisplayName, *SectionName,
+                                                *Target.DisplayName));
+        }
+
+        OutTargets.Add(Target);
+      }
+    }
+  }
+
+  bool ExecuteToolMenuEntryTarget(
+      const FMcpDiscoveredUiTargetDefinition &Target, FString &OutMessage,
+      FString &OutErrorCode)
+  {
+    if (!FSlateApplication::IsInitialized())
+    {
+      OutMessage = TEXT("Slate application is not initialized");
+      OutErrorCode = TEXT("SLATE_NOT_AVAILABLE");
+      return false;
+    }
+
+    if (Target.MenuName.IsEmpty() || Target.SectionIndex == INDEX_NONE ||
+        Target.EntryIndex == INDEX_NONE)
+    {
+      OutMessage =
+          FString::Printf(TEXT("UI target %s is missing ToolMenus metadata"),
+                          *Target.Identifier);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+      return false;
+    }
+
+    if (!Target.bCanOpenDirectly)
+    {
+      OutMessage = FString::Printf(TEXT("UI target %s cannot be opened directly"),
+                                   *Target.Identifier);
+      OutErrorCode = TEXT("INVALID_ARGUMENT");
+      return false;
+    }
+
+    UToolMenus *ToolMenus = UToolMenus::TryGet();
+    if (!ToolMenus)
+    {
+      OutMessage = TEXT("ToolMenus subsystem is not available");
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      return false;
+    }
+
+    const FString SourceMenuName = Target.SourceMenuName.IsEmpty()
+                                       ? Target.MenuName
+                                       : Target.SourceMenuName;
+    FToolMenuContext ExecutionContext;
+    const bool bHasExecutionContext =
+        BuildToolMenuExecutionContext(Target.MenuName, ExecutionContext);
+
+    auto ResolveSection = [&Target](UToolMenu *CandidateMenu)
+        -> FToolMenuSection *
+    {
+      if (!CandidateMenu)
+      {
+        return nullptr;
+      }
+
+      if (!Target.SectionName.IsEmpty())
+      {
+        if (FToolMenuSection *NamedSection =
+                CandidateMenu->FindSection(FName(*Target.SectionName)))
+        {
+          return NamedSection;
+        }
+      }
+
+      if (CandidateMenu->Sections.IsValidIndex(Target.SectionIndex))
+      {
+        return &CandidateMenu->Sections[Target.SectionIndex];
+      }
+
+      return nullptr;
+    };
+
+    auto ResolveEntry = [&Target, &ResolveSection](UToolMenu *CandidateMenu)
+        -> FToolMenuEntry *
+    {
+      FToolMenuSection *Section = ResolveSection(CandidateMenu);
+      if (!Section)
+      {
+        return nullptr;
+      }
+
+      if (!Target.EntryName.IsEmpty())
+      {
+        if (FToolMenuEntry *NamedEntry =
+                Section->FindEntry(FName(*Target.EntryName)))
+        {
+          return NamedEntry;
+        }
+      }
+
+      if (Section->Blocks.IsValidIndex(Target.EntryIndex))
+      {
+        return &Section->Blocks[Target.EntryIndex];
+      }
+
+      for (FToolMenuEntry &Entry : Section->Blocks)
+      {
+        if (GetToolMenuEntryDisplayName(Entry).Equals(Target.DisplayName,
+                                                      ESearchCase::CaseSensitive))
+        {
+          return &Entry;
+        }
+      }
+
+      return nullptr;
+    };
+
+    auto TryExecuteAction = [&OutMessage, &OutErrorCode,
+                             &Target](const FUIAction &Action,
+                                      const TCHAR *FailureReason) -> bool
+    {
+      if (!Action.ExecuteAction.IsBound())
+      {
+        return false;
+      }
+
+      bool bCanExecute = true;
+      if (Action.CanExecuteAction.IsBound())
+      {
+        bCanExecute = Action.CanExecuteAction.Execute();
+      }
+
+      if (!bCanExecute)
+      {
+        OutMessage = FString::Printf(
+            TEXT("UI target %s is not executable in the current editor context (%s)"),
+            *Target.DisplayName, FailureReason);
+        OutErrorCode = TEXT("EXECUTION_FAILED");
+        return false;
+      }
+
+      Action.ExecuteAction.Execute();
+      return true;
+    };
+
+    auto TryExecuteFromMenu =
+        [&Target, &OutMessage, &OutErrorCode, &ResolveSection, &ResolveEntry,
+         &TryExecuteAction](UToolMenu *CandidateMenu,
+                            const FString &CandidateMenuName) -> bool
+    {
+      if (!CandidateMenu)
+      {
+        return false;
+      }
+
+      FToolMenuSection *CandidateSection = ResolveSection(CandidateMenu);
+      if (!CandidateSection)
+      {
+        OutMessage = FString::Printf(
+            TEXT("UI target %s section '%s' was not found in menu %s"),
+            *Target.DisplayName, *Target.SectionName, *CandidateMenuName);
+        OutErrorCode = TEXT("NOT_FOUND");
+        return false;
+      }
+
+      FToolMenuEntry *CandidateEntry = ResolveEntry(CandidateMenu);
+      if (!CandidateEntry)
+      {
+        OutMessage = FString::Printf(
+            TEXT("UI target %s entry '%s' was not found in menu %s"),
+            *Target.DisplayName, *Target.EntryName, *CandidateMenuName);
+        OutErrorCode = TEXT("NOT_FOUND");
+        return false;
+      }
+
+      if (CandidateEntry->TryExecuteToolUIAction(CandidateMenu->Context))
+      {
+        return true;
+      }
+
+      TSharedPtr<const FUICommandList> CommandList;
+      if (const FUIAction *CommandAction =
+              CandidateEntry->GetActionForCommand(CandidateMenu->Context,
+                                                  CommandList))
+      {
+        if (TryExecuteAction(*CommandAction, TEXT("command binding")))
+        {
+          return true;
+        }
+      }
+
+      OutMessage = FString::Printf(
+          TEXT("UI target %s has no executable tool or command action in menu %s"),
+          *Target.DisplayName, *CandidateMenuName);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+      return false;
+    };
+
+    const bool bRequestedMenuNeedsContext =
+        RequiresExplicitToolMenuContext(Target.MenuName);
+    const bool bSourceMenuNeedsContext =
+        RequiresExplicitToolMenuContext(SourceMenuName);
+
+    if (!bRequestedMenuNeedsContext)
+    {
+      if (UToolMenu *GeneratedRequestedMenu =
+              ToolMenus->GenerateMenu(FName(*Target.MenuName),
+                                      bHasExecutionContext ? ExecutionContext
+                                                           : FToolMenuContext()))
+      {
+        if (TryExecuteFromMenu(GeneratedRequestedMenu, Target.MenuName))
+        {
+          OutMessage = FString::Printf(TEXT("Executed UI target %s"),
+                                       *Target.DisplayName);
+          return true;
+        }
+      }
+    }
+
+    if (UToolMenu *RequestedMenu = ToolMenus->FindMenu(FName(*Target.MenuName)))
+    {
+      if (TryExecuteFromMenu(RequestedMenu, Target.MenuName))
+      {
+        OutMessage = FString::Printf(TEXT("Executed UI target %s"),
+                                     *Target.DisplayName);
+        return true;
+      }
+    }
+
+    if (UToolMenu *SourceMenu = ToolMenus->FindMenu(FName(*SourceMenuName)))
+    {
+      if (TryExecuteFromMenu(SourceMenu, SourceMenuName))
+      {
+        OutMessage = FString::Printf(TEXT("Executed UI target %s"),
+                                     *Target.DisplayName);
+        return true;
+      }
+    }
+
+    if (!bSourceMenuNeedsContext && SourceMenuName != Target.MenuName)
+    {
+      if (UToolMenu *GeneratedSourceMenu =
+              ToolMenus->GenerateMenu(FName(*SourceMenuName),
+                                      bHasExecutionContext ? ExecutionContext
+                                                           : FToolMenuContext()))
+      {
+        if (TryExecuteFromMenu(GeneratedSourceMenu, SourceMenuName))
+        {
+          OutMessage = FString::Printf(TEXT("Executed UI target %s"),
+                                       *Target.DisplayName);
+          return true;
+        }
+      }
+    }
+
+    if (OutErrorCode.IsEmpty())
+    {
+      OutMessage = FString::Printf(
+          TEXT("Failed to execute UI target %s from menus %s and %s"),
+          *Target.DisplayName, *Target.MenuName, *SourceMenuName);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+    }
+
+    return false;
   }
 
   TArray<FMcpDiscoveredUiTargetDefinition> DiscoverJsonUiTargets()
@@ -326,7 +847,7 @@ namespace
         const FString ToolName = FPaths::GetBaseFilename(JsonFileName);
         Target.SourceType = TEXT("json_tool");
         Target.Identifier = ToolName;
-        Target.DefinitionPath = JsonPath;
+        Target.DefinitionPath = MakeProjectRelativeDefinitionPath(JsonPath);
         Target.DisplayName = ToolName;
         Target.DisplayName.RemoveFromEnd(TEXT("Tool"));
         Target.StatusFileName = MakeDefaultStatusFileName(ToolName);
@@ -397,6 +918,7 @@ namespace
       Target.Identifier = RequestedMenuName;
       Target.DisplayName = BuildMenuDisplayName(RequestedMenuName);
       Target.MenuName = RequestedMenuName;
+      Target.SourceMenuName = RequestedMenuName;
       Target.Tooltip = TEXT("Known ToolMenus entry point");
 
       const TArray<FName> HierarchyNames = Menu->GetMenuHierarchyNames(true);
@@ -407,7 +929,141 @@ namespace
 
       Target.Aliases = BuildUiTargetAliases(Target);
       Result.Add(Target);
+
+      const TArray<UToolMenu *> HierarchyMenus = ToolMenus->CollectHierarchy(MenuName);
+      for (UToolMenu *HierarchyMenu : HierarchyMenus)
+      {
+        AppendToolMenuEntryTargets(RequestedMenuName, HierarchyMenu, Result);
+      }
       AddUniqueTrimmedValue(OutResolvedMenuNames, RequestedMenuName);
+    }
+
+    return Result;
+  }
+
+  TArray<FMcpDiscoveredUiTargetDefinition> DiscoverMainMenuDropdownTargets(
+      TArray<FString> &OutDiscoveredMenuNames)
+  {
+    TArray<FMcpDiscoveredUiTargetDefinition> Result;
+
+    UToolMenus *ToolMenus = UToolMenus::TryGet();
+    if (!ToolMenus)
+    {
+      return Result;
+    }
+
+    const FString MenuBarName = TEXT("LevelEditor.MainMenu");
+    FToolMenuContext MenuContext;
+    const bool bHasMenuContext =
+        BuildToolMenuExecutionContext(MenuBarName, MenuContext);
+
+    UToolMenu *GeneratedMenuBar = nullptr;
+    if (bHasMenuContext)
+    {
+      GeneratedMenuBar = ToolMenus->GenerateMenu(FName(*MenuBarName), MenuContext);
+    }
+
+    TArray<UToolMenu *> MenuBars = ToolMenus->CollectHierarchy(FName(*MenuBarName));
+    if (GeneratedMenuBar && !MenuBars.Contains(GeneratedMenuBar))
+    {
+      MenuBars.Add(GeneratedMenuBar);
+    }
+    if (MenuBars.Num() == 0)
+    {
+      if (UToolMenu *FoundMenuBar = ToolMenus->FindMenu(FName(*MenuBarName)))
+      {
+        MenuBars.Add(FoundMenuBar);
+      }
+    }
+    if (MenuBars.Num() == 0)
+    {
+      return Result;
+    }
+
+    for (UToolMenu *MenuBar : MenuBars)
+    {
+      if (!MenuBar)
+      {
+        continue;
+      }
+
+      for (const FToolMenuSection &Section : MenuBar->Sections)
+      {
+        for (const FToolMenuEntry &Entry : Section.Blocks)
+        {
+          if (!Entry.IsSubMenu())
+          {
+            continue;
+          }
+
+          const FString CandidateMenuName = MakeToolMenuPath(MenuBarName, Entry.Name);
+          const FString DisplayName = GetToolMenuEntryDisplayName(Entry);
+          if (DisplayName.IsEmpty())
+          {
+            continue;
+          }
+
+          FMcpDiscoveredUiTargetDefinition Target;
+          Target.SourceType = TEXT("tool_menu");
+          Target.Identifier = CandidateMenuName.IsEmpty()
+                                  ? FString::Printf(TEXT("%s::%s"), *MenuBarName,
+                                                    *DisplayName)
+                                  : CandidateMenuName;
+          Target.DisplayName = DisplayName;
+          Target.MenuName = CandidateMenuName;
+          Target.SourceMenuName = CandidateMenuName;
+          Target.EntryName = Entry.Name.ToString();
+          Target.EntryType = TEXT("submenu");
+          Target.Tooltip = GetToolMenuEntryTooltip(Entry);
+          Target.MenuHierarchy.Add(MenuBar->GetMenuName().ToString());
+
+          const FName CandidateMenuFName(*CandidateMenuName);
+          UToolMenu *ResolvedMenu = nullptr;
+          if (!CandidateMenuName.IsEmpty())
+          {
+            ResolvedMenu = ToolMenus->FindMenu(CandidateMenuFName);
+            if (!ResolvedMenu && bHasMenuContext &&
+                !RequiresExplicitToolMenuContext(CandidateMenuName))
+            {
+              ResolvedMenu = ToolMenus->GenerateMenu(CandidateMenuFName, MenuContext);
+            }
+          }
+
+          if (ResolvedMenu)
+          {
+            Target.MenuHierarchy.Reset();
+            for (const FName &HierarchyName :
+                 ResolvedMenu->GetMenuHierarchyNames(true))
+            {
+              Target.MenuHierarchy.Add(HierarchyName.ToString());
+            }
+            AddUniqueTrimmedValue(OutDiscoveredMenuNames, CandidateMenuName);
+          }
+
+          Target.Aliases = BuildUiTargetAliases(Target);
+          AddUniqueTrimmedValue(Target.Aliases,
+                                FString::Printf(TEXT("%s > %s"), *MenuBarName,
+                                                *Target.DisplayName));
+          if (Entry.Name == TEXT("Actions"))
+          {
+            AddUniqueTrimmedValue(Target.Aliases, TEXT("Actor"));
+            AddUniqueTrimmedValue(Target.Aliases, TEXT("Actions"));
+            AddUniqueTrimmedValue(Target.Aliases, TEXT("Actor Menu"));
+          }
+
+          const bool bAlreadyPresent = Result.ContainsByPredicate(
+              [&Target](const FMcpDiscoveredUiTargetDefinition &ExistingTarget)
+              {
+                return ExistingTarget.SourceType == Target.SourceType &&
+                       ExistingTarget.Identifier.Equals(Target.Identifier,
+                                                        ESearchCase::IgnoreCase);
+              });
+          if (!bAlreadyPresent)
+          {
+            Result.Add(Target);
+          }
+        }
+      }
     }
 
     return Result;
@@ -820,7 +1476,17 @@ namespace
   {
     for (const FMcpDiscoveredUiTargetDefinition &Target : AdditionalTargets)
     {
-      Targets.Add(Target);
+      const bool bAlreadyPresent = Targets.ContainsByPredicate(
+          [&Target](const FMcpDiscoveredUiTargetDefinition &ExistingTarget)
+          {
+            return ExistingTarget.SourceType == Target.SourceType &&
+                   ExistingTarget.Identifier.Equals(Target.Identifier,
+                                                    ESearchCase::IgnoreCase);
+          });
+      if (!bAlreadyPresent)
+      {
+        Targets.Add(Target);
+      }
     }
   }
 
@@ -860,8 +1526,18 @@ namespace
   {
     TArray<FMcpDiscoveredUiTargetDefinition> Targets = DiscoverJsonUiTargets();
     AppendDiscoveredTargets(Targets, DiscoverRegisteredCommandTargets());
+
+    TArray<FString> RequestedMenuNames = ReadRequestedMenuNames(Payload);
+    TArray<FString> AutoDiscoveredMenuNames;
+    AppendDiscoveredTargets(Targets,
+                            DiscoverMainMenuDropdownTargets(AutoDiscoveredMenuNames));
+    for (const FString &MenuName : AutoDiscoveredMenuNames)
+    {
+      AddUniqueTrimmedValue(RequestedMenuNames, MenuName);
+    }
+
     AppendDiscoveredTargets(Targets, DiscoverKnownToolMenuTargets(
-                                         ReadRequestedMenuNames(Payload),
+                                         RequestedMenuNames,
                                          OutResolvedMenuNames,
                                          OutMissingMenuNames));
     return Targets;
@@ -902,6 +1578,37 @@ namespace
     if (!Target.MenuName.IsEmpty())
     {
       TargetObject->SetStringField(TEXT("menuName"), Target.MenuName);
+    }
+    if (!Target.SourceMenuName.IsEmpty() &&
+        Target.SourceMenuName != Target.MenuName)
+    {
+      TargetObject->SetStringField(TEXT("sourceMenuName"),
+                                   Target.SourceMenuName);
+    }
+    if (!Target.SectionName.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("sectionName"), Target.SectionName);
+    }
+    if (!Target.EntryName.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("entryName"), Target.EntryName);
+    }
+    if (!Target.EntryType.IsEmpty())
+    {
+      TargetObject->SetStringField(TEXT("entryType"), Target.EntryType);
+    }
+    if (Target.SectionIndex != INDEX_NONE)
+    {
+      TargetObject->SetNumberField(TEXT("sectionIndex"), Target.SectionIndex);
+    }
+    if (Target.EntryIndex != INDEX_NONE)
+    {
+      TargetObject->SetNumberField(TEXT("entryIndex"), Target.EntryIndex);
+    }
+    if (Target.SourceType == TEXT("tool_menu_entry"))
+    {
+      TargetObject->SetBoolField(TEXT("canOpenDirectly"),
+                                 Target.bCanOpenDirectly);
     }
 
     TArray<TSharedPtr<FJsonValue>> AliasValues;
@@ -986,16 +1693,17 @@ namespace
     }
 
     FToolMenuSection &Section = Menu->FindOrAddSection(SectionName);
-    ToolMenus->RemoveEntry(MenuName, SectionName, EntryName);
+    const FName OwnedEntryName = MakeOwnedToolMenuEntryName(EntryName);
+    ToolMenus->RemoveEntry(MenuName, SectionName, OwnedEntryName);
 
     const FUIAction Action = MakeRegisteredToolAction(CommandName);
     FToolMenuEntry Entry = bToolbar
                                ? FToolMenuEntry::InitToolBarButton(
-                                     EntryName, Action, FText::FromString(Definition->Label),
+                                     OwnedEntryName, Action, FText::FromString(Definition->Label),
                                      FText::FromString(Definition->Tooltip),
                                      MakeRegisteredIcon(Definition->IconName))
                                : FToolMenuEntry::InitMenuEntry(
-                                     EntryName, FText::FromString(Definition->Label),
+                                     OwnedEntryName, FText::FromString(Definition->Label),
                                      FText::FromString(Definition->Tooltip),
                                      MakeRegisteredIcon(Definition->IconName), Action);
     Entry.Owner = FToolMenuOwner(GMcpToolMenuOwnerName);
@@ -1206,16 +1914,43 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       if (!ExactTabIdString.TrimStartAndEnd().IsEmpty())
       {
         const FName ExactTabId(*ExactTabIdString.TrimStartAndEnd());
-        const TSharedPtr<SDockTab> OpenedTab =
-            FGlobalTabmanager::Get()->TryInvokeTab(ExactTabId);
-        if (OpenedTab.IsValid())
+        if (!FSlateApplication::IsInitialized())
         {
-          bSuccess = true;
-          bResolvedTarget = true;
-          OpenedTabId = ExactTabId.ToString();
-          OpenedTarget = ExactTabIdString.TrimStartAndEnd();
-          OpenedTargetType = TEXT("slate_tab");
-          Message = FString::Printf(TEXT("Opened tab %s"), *OpenedTabId);
+          Message = TEXT("Slate application is not initialized");
+          ErrorCode = TEXT("SLATE_NOT_AVAILABLE");
+        }
+        else
+        {
+          const bool bKnownTabId =
+              FGlobalTabmanager::Get()->HasTabSpawner(ExactTabId) ||
+              FGlobalTabmanager::Get()->FindExistingLiveTab(ExactTabId).IsValid();
+
+          if (bKnownTabId)
+          {
+            bResolvedTarget = true;
+            const TSharedPtr<SDockTab> OpenedTab =
+                FGlobalTabmanager::Get()->TryInvokeTab(ExactTabId);
+            if (OpenedTab.IsValid())
+            {
+              bSuccess = true;
+              OpenedTabId = ExactTabId.ToString();
+              OpenedTarget = ExactTabIdString.TrimStartAndEnd();
+              OpenedTargetType = TEXT("slate_tab");
+              Message = FString::Printf(TEXT("Opened tab %s"), *OpenedTabId);
+            }
+            else
+            {
+              Message = FString::Printf(TEXT("Failed to open tab %s"),
+                                        *ExactTabIdString.TrimStartAndEnd());
+              ErrorCode = TEXT("EXECUTION_FAILED");
+            }
+          }
+          else
+          {
+            Message = FString::Printf(TEXT("UI tab not found: %s"),
+                                      *ExactTabIdString.TrimStartAndEnd());
+            ErrorCode = TEXT("NOT_FOUND");
+          }
         }
       }
 
@@ -1254,6 +1989,19 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
               ErrorCode = TEXT("EXECUTION_FAILED");
             }
           }
+          else if (Target->SourceType == TEXT("tool_menu_entry"))
+          {
+            if (ExecuteToolMenuEntryTarget(*Target, Message, ErrorCode))
+            {
+              bSuccess = true;
+              OpenedTarget = Target->Identifier;
+              OpenedTargetType = Target->SourceType;
+            }
+            else if (ErrorCode.IsEmpty())
+            {
+              ErrorCode = TEXT("EXECUTION_FAILED");
+            }
+          }
           else if (!Target->TabId.IsEmpty())
           {
             const TSharedPtr<SDockTab> OpenedTab =
@@ -1280,6 +2028,12 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
                                       *Target->Identifier);
             ErrorCode = TEXT("INVALID_ARGUMENT");
           }
+        }
+        else
+        {
+          Message = FString::Printf(TEXT("UI target not found: %s"),
+                                    *Identifier.TrimStartAndEnd());
+          ErrorCode = TEXT("NOT_FOUND");
         }
       }
 
@@ -1525,11 +2279,34 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
       if (UEditorAssetLibrary::DoesAssetExist(TargetPath))
       {
-        bSuccess = true;
-        Message = FString::Printf(
-            TEXT("Editor utility widget already exists at %s"), *TargetPath);
-        Resp->SetStringField(TEXT("widgetPath"), TargetPath);
-        Resp->SetBoolField(TEXT("exists"), true);
+        UObject *ExistingAsset = UEditorAssetLibrary::LoadAsset(TargetPath);
+        UEditorUtilityWidgetBlueprint *ExistingWidget =
+            Cast<UEditorUtilityWidgetBlueprint>(ExistingAsset);
+
+        if (!ExistingAsset)
+        {
+          Message = FString::Printf(TEXT("Existing asset could not be loaded: %s"),
+                                    *TargetPath);
+          ErrorCode = TEXT("ASSET_LOAD_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else if (!ExistingWidget)
+        {
+          Message = FString::Printf(
+              TEXT("Existing asset at %s is not an EditorUtilityWidgetBlueprint"),
+              *TargetPath);
+          ErrorCode = TEXT("TYPE_MISMATCH");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+          bSuccess = true;
+          Message = FString::Printf(
+              TEXT("Editor utility widget already exists at %s"), *TargetPath);
+          Resp->SetStringField(TEXT("widgetPath"), TargetPath);
+          Resp->SetBoolField(TEXT("exists"), true);
+          Resp->SetStringField(TEXT("widgetName"), WidgetName);
+        }
       }
       else
       {
@@ -1740,6 +2517,8 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
 
       const bool bToolbarButton = LowerSub == TEXT("add_toolbar_button");
+      const FString RegisteredEntryName =
+          MakeOwnedToolMenuEntryName(FName(*EntryNameString)).ToString();
       FString RegistrationError;
       bSuccess = RegisterCommandMenuEntry(
           FName(*MenuNameString), FName(*SectionNameString),
@@ -1751,10 +2530,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         Message = FString::Printf(
             TEXT("Added %s '%s' to %s"),
             bToolbarButton ? TEXT("toolbar button") : TEXT("menu entry"),
-            *EntryNameString, *MenuNameString);
+            *RegisteredEntryName, *MenuNameString);
         Resp->SetStringField(TEXT("menuName"), MenuNameString);
         Resp->SetStringField(TEXT("section"), SectionNameString);
-        Resp->SetStringField(TEXT("entryName"), EntryNameString);
+        Resp->SetStringField(TEXT("entryName"), RegisteredEntryName);
+        Resp->SetStringField(TEXT("requestedEntryName"), EntryNameString);
         Resp->SetStringField(TEXT("commandName"), CommandNameString);
       }
       else
@@ -1796,16 +2576,37 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
       if (UEditorAssetLibrary::DoesAssetExist(TargetPath))
       {
-        bSuccess = true;
-        Message = FString::Printf(TEXT("Widget blueprint already exists at %s"),
-                                  *TargetPath);
-        Resp->SetStringField(TEXT("widgetPath"), TargetPath);
-        Resp->SetBoolField(TEXT("exists"), true);
-        if (!WidgetType.IsEmpty())
+        UObject *ExistingAsset = UEditorAssetLibrary::LoadAsset(TargetPath);
+        UWidgetBlueprint *ExistingWidget = Cast<UWidgetBlueprint>(ExistingAsset);
+
+        if (!ExistingAsset)
         {
-          Resp->SetStringField(TEXT("widgetType"), WidgetType);
+          Message = FString::Printf(TEXT("Existing asset could not be loaded: %s"),
+                                    *TargetPath);
+          ErrorCode = TEXT("ASSET_LOAD_FAILED");
+          Resp->SetStringField(TEXT("error"), Message);
         }
-        Resp->SetStringField(TEXT("widgetName"), WidgetName);
+        else if (!ExistingWidget)
+        {
+          Message = FString::Printf(
+              TEXT("Existing asset at %s is not a WidgetBlueprint"),
+              *TargetPath);
+          ErrorCode = TEXT("TYPE_MISMATCH");
+          Resp->SetStringField(TEXT("error"), Message);
+        }
+        else
+        {
+          bSuccess = true;
+          Message = FString::Printf(TEXT("Widget blueprint already exists at %s"),
+                                    *TargetPath);
+          Resp->SetStringField(TEXT("widgetPath"), TargetPath);
+          Resp->SetBoolField(TEXT("exists"), true);
+          if (!WidgetType.IsEmpty())
+          {
+            Resp->SetStringField(TEXT("widgetType"), WidgetType);
+          }
+          Resp->SetStringField(TEXT("widgetName"), WidgetName);
+        }
       }
       else
       {
@@ -2164,23 +2965,32 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
           // Always save to disk
           IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
-          bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
-
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width,
-                                    Height);
-          Resp->SetStringField(TEXT("screenshotPath"), FullPath);
-          Resp->SetStringField(TEXT("filename"), Filename);
-          Resp->SetNumberField(TEXT("width"), Width);
-          Resp->SetNumberField(TEXT("height"), Height);
-          Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
-
-          // Return base64 encoded image if requested
-          if (bReturnBase64 && PngData.Num() > 0)
+          const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
+          if (!bSaved || !IFileManager::Get().FileExists(*FullPath))
           {
-            FString Base64Data = FBase64::Encode(PngData);
-            Resp->SetStringField(TEXT("imageBase64"), Base64Data);
-            Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+            Message = FString::Printf(TEXT("Failed to save screenshot to %s"),
+                                      *FullPath);
+            ErrorCode = TEXT("SAVE_FAILED");
+            Resp->SetStringField(TEXT("error"), Message);
+          }
+          else
+          {
+            bSuccess = true;
+            Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width,
+                                      Height);
+            Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+            Resp->SetStringField(TEXT("filename"), Filename);
+            Resp->SetNumberField(TEXT("width"), Width);
+            Resp->SetNumberField(TEXT("height"), Height);
+            Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
+
+            // Return base64 encoded image if requested
+            if (bReturnBase64 && PngData.Num() > 0)
+            {
+              FString Base64Data = FBase64::Encode(PngData);
+              Resp->SetStringField(TEXT("imageBase64"), Base64Data);
+              Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+            }
           }
         }
       }
@@ -2191,8 +3001,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   else if (LowerSub == TEXT("play_in_editor"))
   {
+    if (!GEditor)
+    {
+      Message = TEXT("Editor is not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
     // Start play in editor
-    if (GEditor && GEditor->PlayWorld)
+    else if (GEditor->PlayWorld)
     {
       Message = TEXT("Already playing in editor");
       ErrorCode = TEXT("ALREADY_PLAYING");
@@ -2221,8 +3037,14 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   else if (LowerSub == TEXT("stop_play"))
   {
+    if (!GEditor)
+    {
+      Message = TEXT("Editor is not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
     // Stop play in editor
-    if (GEditor && GEditor->PlayWorld)
+    else if (GEditor->PlayWorld)
     {
       // Execute stop command
       bool bCommandSuccess =
@@ -2252,19 +3074,28 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   else if (LowerSub == TEXT("save_all"))
   {
-    // Save all assets and levels
-    bool bCommandSuccess = GEditor->Exec(nullptr, TEXT("Asset Save All"));
-    if (bCommandSuccess)
+    if (!GEditor)
     {
-      bSuccess = true;
-      Message = TEXT("Saved all assets");
-      Resp->SetStringField(TEXT("status"), TEXT("saved"));
+      Message = TEXT("Editor is not available");
+      ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
     }
     else
     {
-      Message = TEXT("Failed to save all assets");
-      ErrorCode = TEXT("SAVE_FAILED");
-      Resp->SetStringField(TEXT("error"), Message);
+      // Save all assets and levels
+      bool bCommandSuccess = GEditor->Exec(nullptr, TEXT("Asset Save All"));
+      if (bCommandSuccess)
+      {
+        bSuccess = true;
+        Message = TEXT("Saved all assets");
+        Resp->SetStringField(TEXT("status"), TEXT("saved"));
+      }
+      else
+      {
+        Message = TEXT("Failed to save all assets");
+        ErrorCode = TEXT("SAVE_FAILED");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
     }
   }
   // ===========================================================================
