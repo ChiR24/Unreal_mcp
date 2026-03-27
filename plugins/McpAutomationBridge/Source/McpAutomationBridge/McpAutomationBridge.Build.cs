@@ -159,8 +159,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             // Note: MassGameplay is a plugin name, not a module name. The MassGameplay plugin contains
             // modules like MassActors, MassSpawner, MassCommon, MassMovement, etc.
 
-            // Phase 22: Voice Chat and Online Subsystem (optional plugins)
-            AddOptionalDynamicModule(Target, EngineDir, "VoiceChat", "VoiceChat");
+            // Phase 22: Online Subsystem (optional plugins)
             AddOptionalDynamicModule(Target, EngineDir, "OnlineSubsystem", "OnlineSubsystem");
             AddOptionalDynamicModule(Target, EngineDir, "OnlineSubsystemUtils", "OnlineSubsystemUtils");
 
@@ -492,6 +491,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                     Path.Combine(PluginsDir, "Experimental", SearchName),
                     Path.Combine(PluginsDir, "Developer", SearchName),
                     Path.Combine(PluginsDir, "Animation", SearchName),
+                    Path.Combine(PluginsDir, "Online", SearchName),  // OnlineSubsystem, VoiceChat
                     Path.Combine(PluginsDir, "Animation", "IKRig", "Source", SearchName),
                     Path.Combine(PluginsDir, "Animation", "ControlRig", "Source", SearchName),
                     Path.Combine(PluginsDir, "Runtime", "MassEntity", "Source", SearchName),

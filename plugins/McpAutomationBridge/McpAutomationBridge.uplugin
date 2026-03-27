@@ -141,11 +141,6 @@
       "Name": "OnlineSubsystemUtils",
       "Enabled": true,
       "Optional": true
-    },
-    {
-      "Name": "VoiceChat",
-      "Enabled": true,
-      "Optional": true
     }
   ]
 }

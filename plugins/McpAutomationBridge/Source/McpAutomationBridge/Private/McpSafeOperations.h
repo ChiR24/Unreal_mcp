@@ -748,14 +748,34 @@ inline bool IsRiskyAssetClassForDelete(const FString& AssetPath)
 }
 
 /**
- * Check if an asset is a world/map asset.
+ * Check if an asset is a world/map asset using ONLY registry metadata.
+ * CRITICAL: Do NOT call GetClass() or GetAsset() here as they can load packages.
  */
 inline bool IsWorldAsset(const FAssetData& AssetData)
 {
     FString ClassName = AssetData.AssetClassPath.ToString();
+    // Check for World, Map, Level asset types using string matching only
     return ClassName.Contains(TEXT("World")) || 
            ClassName.Contains(TEXT("Map")) ||
-           AssetData.GetClass()->IsChildOf(UWorld::StaticClass());
+           ClassName.Contains(TEXT("Level"));
+}
+
+/**
+ * Check if any world package in the given list is currently loaded.
+ * Uses package name matching only - does NOT load assets.
+ */
+inline bool HasLoadedWorlds(const TArray<FAssetData>& WorldAssets)
+{
+    for (const FAssetData& AssetData : WorldAssets)
+    {
+        FString PackageName = AssetData.PackageName.ToString();
+        // Check if package is loaded using FindObject (doesn't load)
+        if (FindObject<UPackage>(nullptr, *PackageName))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -763,11 +783,11 @@ inline bool IsWorldAsset(const FAssetData& AssetData)
  * 
  * CRITICAL FOR UE 5.7+:
  * This function prevents crashes during folder deletion by:
- * 1. Enumerating all assets and separating maps/worlds
- * 2. Closing all asset editors before deletion
- * 3. Switching away from any loaded world in the folder
- * 4. Deleting in phases (non-maps first, maps last)
- * 5. Running GC between phases
+ * 1. Enumerating all assets using REGISTRY ONLY (no GetAsset/GetClass)
+ * 2. Checking for LOADED world packages and switching away BEFORE any loads
+ * 3. Unloading all worlds in the target folder
+ * 4. Only THEN loading non-world assets for deletion
+ * 5. Deleting in phases with GC between each phase
  *
  * @param FolderPath The folder path to delete (e.g., /Game/MyFolder)
  * @param bForce If true, force delete even if assets are referenced
@@ -781,7 +801,8 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
     
-    // Enumerate all assets in the folder recursively
+    // STEP 1: Enumerate all assets in the folder recursively using REGISTRY ONLY
+    // DO NOT call GetAsset() or GetClass() here - only use metadata
     FARFilter Filter;
     Filter.PackagePaths.Add(FName(*FolderPath));
     Filter.bRecursivePaths = true;
@@ -798,7 +819,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Found %d assets in '%s'"), AllAssets.Num(), *FolderPath);
     
-    // Separate world/map assets from other assets
+    // STEP 2: Separate world/map assets from other assets using REGISTRY ONLY
     TArray<FAssetData> WorldAssets;
     TArray<FAssetData> OtherAssets;
     
@@ -819,55 +840,48 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: %d world assets, %d other assets"), 
         WorldAssets.Num(), OtherAssets.Num());
     
-    // PHASE 1: Check if current world is in the folder being deleted
+    // STEP 3: Check for ANY loaded world packages BEFORE touching any assets
+    // This includes the current editor world AND any streaming/sub levels
+    bool bHasLoadedWorlds = HasLoadedWorlds(WorldAssets);
+    
+    // Also check if folder contains the current world path
     UWorld* CurrentWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     FString CurrentWorldPath;
     if (CurrentWorld)
     {
         CurrentWorldPath = CurrentWorld->GetPathName();
-        // Check if current world is under the folder being deleted
-        for (const FAssetData& WorldData : WorldAssets)
+        if (CurrentWorldPath.StartsWith(FolderPath))
         {
-            FString WorldPath = WorldData.GetObjectPathString();
-            int32 DotPos = INDEX_NONE;
-            if (WorldPath.FindChar(TEXT('.'), DotPos))
-            {
-                WorldPath = WorldPath.Left(DotPos);
-            }
-            if (CurrentWorldPath.StartsWith(WorldPath) || CurrentWorldPath.StartsWith(FolderPath))
-            {
-                UE_LOG(LogMcpSafeOperations, Warning, 
-                    TEXT("McpSafeDeleteFolder: Current world '%s' is in deletion target, switching to empty map"), 
-                    *CurrentWorldPath);
-                
-                // Switch to an empty/blank map to avoid crashes
-                // Use the default empty map pattern
-                FString EmptyMapPath = TEXT("/Engine/Maps/Entry");
-                if (!UEditorAssetLibrary::DoesAssetExist(EmptyMapPath))
-                {
-                    // Create a new empty world using NewBlankMap
-                    UEditorLoadingAndSavingUtils::NewBlankMap(false);
-                }
-                else
-                {
-                    UEditorLoadingAndSavingUtils::LoadMap(EmptyMapPath);
-                }
-                
-                // Flush and GC after map switch
-                FlushRenderingCommands();
-                GEditor->ForceGarbageCollection(true);
-                FlushRenderingCommands();
-                break;
-            }
+            bHasLoadedWorlds = true;
         }
     }
     
-    // PHASE 2: Close all asset editors for assets being deleted
-    // This prevents crashes from editors holding references
+    // STEP 4: If there are any loaded worlds in the target, switch to blank map FIRST
+    // This MUST happen before ANY GetAsset() calls
+    if (bHasLoadedWorlds)
+    {
+        UE_LOG(LogMcpSafeOperations, Warning, 
+            TEXT("McpSafeDeleteFolder: Target folder contains loaded worlds, switching to blank map"));
+        
+        // Create a new empty world - this unloads all current worlds
+        UEditorLoadingAndSavingUtils::NewBlankMap(false);
+        
+        // Flush and GC to ensure worlds are fully unloaded
+        FlushRenderingCommands();
+        if (GEditor) GEditor->ForceGarbageCollection(true);
+        FlushRenderingCommands();
+        
+        UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Switched to blank map, worlds should be unloaded"));
+    }
+    
+    // STEP 5: Now safe to close editors and load assets for deletion
+    // Close editors for assets being deleted
+#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     if (AssetEditorSubsystem)
     {
-        for (const FAssetData& AssetData : AllAssets)
+        // Only close editors for assets that are already loaded
+        for (const FAssetData& AssetData : OtherAssets)
         {
             UObject* Asset = AssetData.GetAsset();
             if (Asset)
@@ -875,10 +889,11 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
                 AssetEditorSubsystem->CloseAllEditorsForAsset(Asset);
             }
         }
-        UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Closed all asset editors"));
+        UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Closed asset editors"));
     }
+#endif
     
-    // PHASE 3: Collect objects to delete for non-world assets
+    // STEP 6: Collect non-world objects to delete
     TArray<UObject*> ObjectsToDelete;
     for (const FAssetData& AssetData : OtherAssets)
     {
@@ -889,7 +904,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
         }
     }
     
-    // PHASE 4: Delete non-world assets
+    // STEP 7: Delete non-world assets
     if (ObjectsToDelete.Num() > 0)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Deleting %d non-world assets"), ObjectsToDelete.Num());
@@ -905,11 +920,11 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
         
         // GC after deleting non-world assets
         FlushRenderingCommands();
-        GEditor->ForceGarbageCollection(true);
+        if (GEditor) GEditor->ForceGarbageCollection(true);
         FlushRenderingCommands();
     }
     
-    // PHASE 5: Delete world/map assets separately (they're more dangerous)
+    // STEP 8: Delete world/map assets separately (they should be unloaded now)
     if (WorldAssets.Num() > 0)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Deleting %d world assets"), WorldAssets.Num());
@@ -938,14 +953,14 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
         
         // Final GC after deleting world assets
         FlushRenderingCommands();
-        GEditor->ForceGarbageCollection(true);
+        if (GEditor) GEditor->ForceGarbageCollection(true);
         FlushRenderingCommands();
     }
     
-    // PHASE 6: Remove the folder from asset registry
+    // STEP 9: Remove the folder from asset registry
     AssetRegistry.RemovePath(FolderPath);
     
-    // PHASE 7: Delete the empty physical directory
+    // STEP 10: Delete the empty physical directory
     FString LocalPath;
     if (FPackageName::TryConvertLongPackageNameToFilename(FolderPath, LocalPath))
     {
