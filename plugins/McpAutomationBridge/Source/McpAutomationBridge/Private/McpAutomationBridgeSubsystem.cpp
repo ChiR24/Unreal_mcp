@@ -470,7 +470,8 @@ void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
 }
 
 /**
- * @brief Registers an automation action handler for the given action string.
+ * @brief Contract: binds one exact action string to the callable the bridge
+ * dispatch layer should execute for that action.
  *
  * If a non-empty handler is provided, stores it under Action (replacing any
  * existing handler for the same key). If Handler is null/invalid, the call is a
@@ -479,6 +480,7 @@ void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
  * @param Action The action identifier string used to look up the handler.
  * @param Handler Callable invoked when the specified action is requested.
  */
+// Contract: this function is the single binding point between action names and dispatch callables.
 void UMcpAutomationBridgeSubsystem::RegisterHandler(
     const FString &Action, FAutomationHandler Handler)
 {
@@ -916,6 +918,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
                                             const TSharedPtr<FJsonObject> &P,
                                             TSharedPtr<FMcpBridgeWebSocket> S)
                   { return HandleUiAction(R, A, P, S); });
+  RegisterHandler(TEXT("control_editor"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleControlEditorAction(R, A, P, S);
+                  });
   RegisterHandler(TEXT("control_environment"),
                   [this](const FString &R, const FString &A,
                          const TSharedPtr<FJsonObject> &P,
@@ -1086,6 +1095,13 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
                          TSharedPtr<FMcpBridgeWebSocket> S)
                   {
                     return HandleManageMaterialAuthoringAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_material_graph"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleMaterialGraphAction(R, A, P, S);
                   });
 
   // === Missing registrations for Phase 35+ tools ===
@@ -1259,6 +1275,20 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
                   {
                     return HandleManageAnimationAuthoringAction(R, A, P, S);
                   });
+  RegisterHandler(TEXT("manage_niagara_authoring"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleManageNiagaraAuthoringAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_niagara_graph"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleNiagaraGraphAction(R, A, P, S);
+                  });
 
   RegisterHandler(TEXT("manage_effect"),
                   [this](const FString &R, const FString &A,
@@ -1291,6 +1321,34 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers()
                          TSharedPtr<FMcpBridgeWebSocket> S)
                   {
                     return HandlePerformanceAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_tests"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleTestAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_logs"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleLogAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_debug"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleDebugAction(R, A, P, S);
+                  });
+  RegisterHandler(TEXT("manage_insights"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S)
+                  {
+                    return HandleInsightsAction(R, A, P, S);
                   });
 
   // Phase 21: Game Framework

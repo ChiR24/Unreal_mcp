@@ -24,22 +24,14 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 | **UI Automation**       | UI target discovery, visible-window listing, editor utility widgets, ToolMenus integration |
 | **System**              | Console commands, UBT, tests, logs, project settings, catalog-backed pipeline status       |
 
-**200+ automation actions** across 36 MCP tools.
+Automation actions are exposed through a catalog-backed MCP surface; use `manage_pipeline list_categories` or `manage_pipeline get_status` to inspect the current runtime contract.
 
-## PR Merge Highlights
+Notable UI and pipeline capabilities include:
 
-This README documents the bridge surface after merging the newer project plugin changes into this distributable plugin package.
-
-- `manage_ui list_visible_windows`: adds live Slate window discovery so callers can resolve the exact window title before driving screenshots or simulated input.
-- Window-aware `control_editor screenshot`: reports the resolved capture target and stronger diagnostics so screenshot automation is easier to verify and debug.
-- Tab-scoped and window-scoped `control_editor simulate_input`: lets automation target a known dock tab or a specific editor window instead of falling back to the active viewport.
-- Catalog-backed `manage_pipeline list_categories` and `manage_pipeline get_status`: keeps the public tool metadata in one plugin-owned catalog so pipeline status and published tool information stay in sync.
-
-Why these changes were merged:
-
-- They make UI automation deterministic instead of relying on whichever editor window happens to be active.
-- They reduce false positives during screenshot and input workflows by returning clearer targeting information.
-- They remove duplicated tool metadata maintenance by sourcing pipeline-facing tool information from one catalog.
+- `manage_ui list_visible_windows` exposes live Slate window discovery so callers can resolve the exact target before driving screenshots or simulated input.
+- Window-aware `control_editor screenshot` reports the resolved capture target and stronger diagnostics for easier verification.
+- Tab-scoped and window-scoped `control_editor simulate_input` lets automation target a known dock tab or editor window instead of falling back to the active viewport.
+- Catalog-backed `manage_pipeline list_categories` and `manage_pipeline get_status` keep published tool metadata in one plugin-owned source of truth.
 
 ---
 

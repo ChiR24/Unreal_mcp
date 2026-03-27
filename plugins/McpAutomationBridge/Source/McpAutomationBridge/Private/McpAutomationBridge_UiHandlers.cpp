@@ -572,11 +572,14 @@ namespace
     return Definition;
   }
 
-  bool OpenAssetEditorByPath(const FString &AssetPath, FString &OutMessage)
+  /** @brief Contract: opens an asset editor for a resolved asset path and reports editor-availability failures distinctly from execution failures. */
+  bool OpenAssetEditorByPath(const FString &AssetPath, FString &OutMessage,
+                             FString &OutErrorCode)
   {
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
     {
       OutMessage = FString::Printf(TEXT("Asset not found: %s"), *AssetPath);
+      OutErrorCode = TEXT("NOT_FOUND");
       return false;
     }
 
@@ -584,6 +587,14 @@ namespace
     if (!Asset)
     {
       OutMessage = FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+      return false;
+    }
+
+    if (!GEditor)
+    {
+      OutMessage = TEXT("Editor is not available");
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
       return false;
     }
 
@@ -592,12 +603,14 @@ namespace
     if (!AssetEditorSubsystem)
     {
       OutMessage = TEXT("AssetEditorSubsystem not available");
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
       return false;
     }
 
     if (!AssetEditorSubsystem->OpenEditorForAsset(Asset))
     {
       OutMessage = FString::Printf(TEXT("Failed to open asset editor for %s"), *AssetPath);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
       return false;
     }
 
@@ -605,13 +618,16 @@ namespace
     return true;
   }
 
+  /** @brief Contract: runs or opens a resolved editor utility asset while preserving the specific reason the target could not execute. */
   bool RunEditorUtilityAsset(const FString &AssetPath, const FString &RequestedTabId,
                              const bool bRequireWidget, FString &OutMessage,
-                             FString &OutExecutedTabId)
+                             FString &OutExecutedTabId,
+                             FString &OutErrorCode)
   {
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
     {
       OutMessage = FString::Printf(TEXT("Editor utility asset not found: %s"), *AssetPath);
+      OutErrorCode = TEXT("NOT_FOUND");
       return false;
     }
 
@@ -619,6 +635,14 @@ namespace
     if (!Asset)
     {
       OutMessage = FString::Printf(TEXT("Failed to load editor utility asset: %s"), *AssetPath);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+      return false;
+    }
+
+    if (!GEditor)
+    {
+      OutMessage = TEXT("Editor is not available");
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
       return false;
     }
 
@@ -627,6 +651,7 @@ namespace
     if (!UtilitySubsystem)
     {
       OutMessage = TEXT("EditorUtilitySubsystem not available");
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
       return false;
     }
 
@@ -653,6 +678,7 @@ namespace
       if (!bOpened)
       {
         OutMessage = FString::Printf(TEXT("Failed to open editor utility widget: %s"), *AssetPath);
+        OutErrorCode = TEXT("EXECUTION_FAILED");
         return false;
       }
 
@@ -664,12 +690,14 @@ namespace
     if (bRequireWidget)
     {
       OutMessage = FString::Printf(TEXT("Asset is not an Editor Utility Widget: %s"), *AssetPath);
+      OutErrorCode = TEXT("INVALID_ARGUMENT");
       return false;
     }
 
     if (!UtilitySubsystem->TryRun(Asset))
     {
       OutMessage = FString::Printf(TEXT("Failed to run editor utility asset: %s"), *AssetPath);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
       return false;
     }
 
@@ -677,27 +705,45 @@ namespace
     return true;
   }
 
+  /** @brief Contract: executes a resolved registered command definition and returns the most specific error code available when execution fails. */
   bool ExecuteEditorCommandDefinition(const FMcpEditorCommandDefinition &Definition,
                                       FString &OutMessage,
-                                      FString &OutExecutedTabId)
+                                      FString &OutExecutedTabId,
+                                      FString &OutErrorCode)
   {
     switch (Definition.Kind)
     {
     case EMcpEditorCommandKind::OpenAsset:
-      return OpenAssetEditorByPath(Definition.AssetPath, OutMessage);
+      return OpenAssetEditorByPath(Definition.AssetPath, OutMessage,
+                                   OutErrorCode);
     case EMcpEditorCommandKind::RunEditorUtility:
       return RunEditorUtilityAsset(Definition.AssetPath, Definition.TabId, false,
-                                   OutMessage, OutExecutedTabId);
+                                   OutMessage, OutExecutedTabId,
+                                   OutErrorCode);
     case EMcpEditorCommandKind::OpenEditorUtilityWidget:
       return RunEditorUtilityAsset(Definition.AssetPath, Definition.TabId, true,
-                                   OutMessage, OutExecutedTabId);
+                                   OutMessage, OutExecutedTabId,
+                                   OutErrorCode);
     case EMcpEditorCommandKind::ConsoleCommand:
     default:
     {
-      UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-      return GEditor && GEditor->Exec(World, *Definition.Command)
-                 ? (OutMessage = FString::Printf(TEXT("Executed command %s"), *Definition.Command), true)
-                 : (OutMessage = FString::Printf(TEXT("Failed to execute command %s"), *Definition.Command), false);
+      if (!GEditor)
+      {
+        OutMessage = TEXT("Editor is not available");
+        OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+        return false;
+      }
+
+      UWorld *World = GEditor->GetEditorWorldContext().World();
+      if (GEditor->Exec(World, *Definition.Command))
+      {
+        OutMessage = FString::Printf(TEXT("Executed command %s"), *Definition.Command);
+        return true;
+      }
+
+      OutMessage = FString::Printf(TEXT("Failed to execute command %s"), *Definition.Command);
+      OutErrorCode = TEXT("EXECUTION_FAILED");
+      return false;
     }
     }
   }
@@ -901,11 +947,12 @@ namespace
 
     FString ExecutionMessage;
     FString ExecutedTabId;
+    FString ExecutionErrorCode;
     if (!ExecuteEditorCommandDefinition(*Definition.Get(), ExecutionMessage,
-                                        ExecutedTabId)) {
+                      ExecutedTabId, ExecutionErrorCode)) {
       UE_LOG(LogTemp, Warning,
-             TEXT("McpAutomationBridge command '%s' failed: %s"),
-             *CommandName.ToString(), *ExecutionMessage);
+         TEXT("McpAutomationBridge command '%s' failed [%s]: %s"),
+         *CommandName.ToString(), *ExecutionErrorCode, *ExecutionMessage);
     } }));
   }
 
@@ -1021,6 +1068,7 @@ namespace
  * @param RequestingSocket WebSocket for response delivery.
  * @return true if the action was handled, false otherwise.
  */
+/** @brief Contract: handles manage_ui requests while preserving distinct not-found, editor-availability, slate-availability, and resolved-target execution failures. */
 bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -1138,6 +1186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   {
     FString ExactTabIdString;
     FString Identifier;
+    bool bResolvedTarget = false;
     Payload->TryGetStringField(TEXT("tabId"), ExactTabIdString);
     Payload->TryGetStringField(TEXT("identifier"), Identifier);
 
@@ -1162,6 +1211,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         if (OpenedTab.IsValid())
         {
           bSuccess = true;
+          bResolvedTarget = true;
           OpenedTabId = ExactTabId.ToString();
           OpenedTarget = ExactTabIdString.TrimStartAndEnd();
           OpenedTargetType = TEXT("slate_tab");
@@ -1178,6 +1228,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         if (const FMcpDiscoveredUiTargetDefinition *Target =
                 FindDiscoveredUiTargetByIdentifier(Targets, Identifier))
         {
+          bResolvedTarget = true;
           if (Target->SourceType == TEXT("registered_command"))
           {
             const TSharedPtr<FMcpEditorCommandDefinition> Definition =
@@ -1185,12 +1236,22 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
             FString ExecutedTabId;
             if (Definition.IsValid() &&
                 ExecuteEditorCommandDefinition(*Definition.Get(), Message,
-                                               ExecutedTabId))
+                                               ExecutedTabId, ErrorCode))
             {
               bSuccess = true;
               OpenedTabId = ExecutedTabId;
               OpenedTarget = Target->Identifier;
               OpenedTargetType = Target->SourceType;
+            }
+            else if (!Definition.IsValid())
+            {
+              Message = FString::Printf(TEXT("Registered command definition not found for %s"),
+                                        *Target->Identifier);
+              ErrorCode = TEXT("EXECUTION_FAILED");
+            }
+            else if (ErrorCode.IsEmpty())
+            {
+              ErrorCode = TEXT("EXECUTION_FAILED");
             }
           }
           else if (!Target->TabId.IsEmpty())
@@ -1230,6 +1291,18 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         {
           Resp->SetStringField(TEXT("tabId"), OpenedTabId);
         }
+      }
+      else if (bResolvedTarget)
+      {
+        if (ErrorCode.IsEmpty())
+        {
+          ErrorCode = TEXT("EXECUTION_FAILED");
+        }
+        if (Message.IsEmpty())
+        {
+          Message = TEXT("Resolved UI target could not be opened");
+        }
+        Resp->SetStringField(TEXT("error"), Message);
       }
       else if (ErrorCode.IsEmpty())
       {
@@ -1273,10 +1346,19 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       FString ClosedTabId;
       FString ClosedTarget;
       FString ClosedType;
-      UEditorUtilitySubsystem *UtilitySubsystem =
-          GEditor->GetEditorSubsystem<UEditorUtilitySubsystem>();
+      UEditorUtilitySubsystem *UtilitySubsystem = nullptr;
+      if (!GEditor)
+      {
+        Message = TEXT("Editor is not available");
+        ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+        Resp->SetStringField(TEXT("error"), Message);
+      }
+      else
+      {
+        UtilitySubsystem = GEditor->GetEditorSubsystem<UEditorUtilitySubsystem>();
+      }
 
-      if (!WidgetPath.TrimStartAndEnd().IsEmpty())
+      if (ErrorCode.IsEmpty() && !WidgetPath.TrimStartAndEnd().IsEmpty())
       {
         UObject *Asset = UEditorAssetLibrary::LoadAsset(WidgetPath);
         UEditorUtilityWidgetBlueprint *WidgetBlueprint =
@@ -1305,7 +1387,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         }
       }
 
-      if (!bClosed && !ExactTabIdString.TrimStartAndEnd().IsEmpty())
+      if (ErrorCode.IsEmpty() && !bClosed && !ExactTabIdString.TrimStartAndEnd().IsEmpty())
       {
         const FName ExactTabId(*ExactTabIdString.TrimStartAndEnd());
         bClosed = UtilitySubsystem && UtilitySubsystem->CloseTabByID(ExactTabId);
@@ -1329,7 +1411,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
         }
       }
 
-      if (!bClosed && !Identifier.TrimStartAndEnd().IsEmpty())
+      if (ErrorCode.IsEmpty() && !bClosed && !Identifier.TrimStartAndEnd().IsEmpty())
       {
         TArray<FString> ResolvedMenuNames;
         TArray<FString> MissingMenuNames;
@@ -1553,7 +1635,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
 
       FString ExecutedTabId;
       bSuccess = RunEditorUtilityAsset(AssetPath, TabId, false, Message,
-                                       ExecutedTabId);
+                                       ExecutedTabId, ErrorCode);
       if (bSuccess)
       {
         Resp->SetStringField(TEXT("assetPath"), AssetPath);
@@ -1564,7 +1646,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       }
       else
       {
-        ErrorCode = TEXT("EXECUTION_FAILED");
         Resp->SetStringField(TEXT("error"), Message);
       }
     }

@@ -2,6 +2,7 @@
 
 namespace
 {
+    /** @brief Contract: builds a subaction catalog row with the stable name and summary that runtime diagnostics publish. */
     FMcpAutomationBridgeToolSubActionCatalogEntry MakeSubAction(const TCHAR *Name, const TCHAR *Summary)
     {
         FMcpAutomationBridgeToolSubActionCatalogEntry Entry;
@@ -10,6 +11,7 @@ namespace
         return Entry;
     }
 
+    /** @brief Contract: builds one tool catalog row that every runtime metadata view reads from. */
     FMcpAutomationBridgeToolCatalogEntry MakeTool(
         const TCHAR *ToolName,
         const TCHAR *Category,
@@ -27,6 +29,7 @@ namespace
     }
 }
 
+/** @brief Contract: returns the canonical bridge catalog that defines the public MCP surface and internal validation source. */
 const TArray<FMcpAutomationBridgeToolCatalogEntry> &GetMcpAutomationBridgeToolCatalog()
 {
     static const TArray<FMcpAutomationBridgeToolCatalogEntry> Catalog = {
@@ -83,6 +86,7 @@ const TArray<FMcpAutomationBridgeToolCatalogEntry> &GetMcpAutomationBridgeToolCa
     return Catalog;
 }
 
+/** @brief Contract: filters the canonical catalog down to the entries published through the bridge's public MCP surface. */
 TArray<FMcpAutomationBridgeToolCatalogEntry> GetPublicMcpAutomationBridgeToolCatalog()
 {
     TArray<FMcpAutomationBridgeToolCatalogEntry> PublicCatalog;
@@ -96,6 +100,7 @@ TArray<FMcpAutomationBridgeToolCatalogEntry> GetPublicMcpAutomationBridgeToolCat
     return PublicCatalog;
 }
 
+/** @brief Contract: resolves one canonical catalog entry by exact tool name for diagnostics and dispatch validation. */
 const FMcpAutomationBridgeToolCatalogEntry *FindMcpAutomationBridgeToolCatalogEntry(const FString &ToolName)
 {
     for (const FMcpAutomationBridgeToolCatalogEntry &Entry : GetMcpAutomationBridgeToolCatalog())
@@ -109,6 +114,7 @@ const FMcpAutomationBridgeToolCatalogEntry *FindMcpAutomationBridgeToolCatalogEn
     return nullptr;
 }
 
+/** @brief Contract: counts the number of public tool families currently exposed by the catalog. */
 int32 CountPublicMcpAutomationBridgeTools()
 {
     int32 Count = 0;
@@ -122,6 +128,7 @@ int32 CountPublicMcpAutomationBridgeTools()
     return Count;
 }
 
+/** @brief Contract: counts the number of public actions represented by the catalog, including implicit single-action tools. */
 int32 CountPublicMcpAutomationBridgeToolActions()
 {
     int32 Count = 0;

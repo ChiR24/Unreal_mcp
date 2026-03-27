@@ -45,6 +45,7 @@
 
 namespace
 {
+    /** @brief Contract: serializes one public subaction row from the canonical tool catalog. */
     TSharedPtr<FJsonObject> MakeSubActionJson(const FMcpAutomationBridgeToolSubActionCatalogEntry &Entry)
     {
         TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
@@ -53,6 +54,7 @@ namespace
         return Json;
     }
 
+    /** @brief Contract: serializes one public tool row from the canonical tool catalog. */
     TSharedPtr<FJsonObject> MakeToolJson(const FMcpAutomationBridgeToolCatalogEntry &Entry)
     {
         TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
@@ -71,8 +73,9 @@ namespace
         return Json;
     }
 
+    /** @brief Contract: builds category, tool, and action-count metadata from the public catalog without changing the existing response keys. */
     void BuildCatalogResponse(
-        TArray<TSharedPtr<FJsonValue>> &OutToolNames,
+        TArray<TSharedPtr<FJsonValue>> &OutCategories,
         TArray<TSharedPtr<FJsonValue>> &OutTools,
         TArray<TSharedPtr<FJsonValue>> &OutCategoryGroups,
         int32 &OutActionCount)
@@ -82,12 +85,12 @@ namespace
 
         for (const FMcpAutomationBridgeToolCatalogEntry &Entry : GetPublicMcpAutomationBridgeToolCatalog())
         {
-            OutToolNames.Add(MakeShared<FJsonValueString>(Entry.ToolName));
             OutTools.Add(MakeShared<FJsonValueObject>(MakeToolJson(Entry)));
 
             if (!SeenGroups.Contains(Entry.Category))
             {
                 SeenGroups.Add(Entry.Category);
+                OutCategories.Add(MakeShared<FJsonValueString>(Entry.Category));
                 OutCategoryGroups.Add(MakeShared<FJsonValueString>(Entry.Category));
             }
 
@@ -100,6 +103,7 @@ namespace
 // Handler Implementation
 // =============================================================================
 
+/** @brief Contract: serves the catalog-backed manage_pipeline surface while preserving the existing response keys used by the local MCP wrapper. */
 bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     const FString &RequestId,
     const FString &Action,
@@ -203,7 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
-                               FString::Printf(TEXT("Listed %d public MCP tools from the bridge catalog"), Categories.Num()), Result);
+                               FString::Printf(TEXT("Listed %d public MCP categories from the bridge catalog"), Categories.Num()), Result);
         return true;
     }
 
@@ -213,11 +217,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     if (SubAction == TEXT("get_status"))
     {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        TArray<TSharedPtr<FJsonValue>> ToolNames;
+        TArray<TSharedPtr<FJsonValue>> Categories;
         TArray<TSharedPtr<FJsonValue>> Tools;
         TArray<TSharedPtr<FJsonValue>> CategoryGroups;
         int32 ActionCount = 0;
-        BuildCatalogResponse(ToolNames, Tools, CategoryGroups, ActionCount);
+        BuildCatalogResponse(Categories, Tools, CategoryGroups, ActionCount);
 
         // Connection status
         Result->SetBoolField(TEXT("connected"), true);
@@ -238,10 +242,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
 
         // Action statistics
         Result->SetNumberField(TEXT("totalActions"), ActionCount);
-        Result->SetNumberField(TEXT("toolCategories"), ToolNames.Num());
+        Result->SetNumberField(TEXT("toolCategories"), Categories.Num());
         Result->SetNumberField(TEXT("categoryGroups"), CategoryGroups.Num());
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
-        Result->SetArrayField(TEXT("categories"), ToolNames);
+        Result->SetArrayField(TEXT("categories"), Categories);
         Result->SetArrayField(TEXT("categoryGroupNames"), CategoryGroups);
         Result->SetArrayField(TEXT("tools"), Tools);
 
