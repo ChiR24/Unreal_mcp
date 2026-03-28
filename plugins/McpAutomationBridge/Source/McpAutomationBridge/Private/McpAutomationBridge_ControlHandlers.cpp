@@ -1082,12 +1082,13 @@ namespace
     return true;
   }
 
-  bool CaptureWindowScreenshotToFile(const TSharedPtr<SWindow> &TargetWindow,
-                                     const FString &FullPath,
-                                     FIntPoint &OutSize,
-                                     FString &OutError)
+  bool CaptureWindowScreenshotToBitmap(const TSharedPtr<SWindow> &TargetWindow,
+                                       TArray<FColor> &OutImageData,
+                                       FIntPoint &OutSize,
+                                       FString &OutError)
   {
     OutSize = FIntPoint::ZeroValue;
+    OutImageData.Reset();
 
     if (!FSlateApplication::IsInitialized())
     {
@@ -1101,7 +1102,6 @@ namespace
       return false;
     }
 
-    TArray<FColor> OutImageData;
     FIntVector OutImageSize;
     if (!FSlateApplication::Get().TakeScreenshot(TargetWindow.ToSharedRef(), OutImageData,
                                                  OutImageSize))
@@ -1110,13 +1110,189 @@ namespace
       return false;
     }
 
-    if (!SaveBitmapToPngFile(OutImageData, OutImageSize.X, OutImageSize.Y, FullPath,
+    if (OutImageData.Num() == 0 || OutImageSize.X <= 0 || OutImageSize.Y <= 0)
+    {
+      OutError = TEXT("Window screenshot capture returned no pixel data");
+      return false;
+    }
+
+    OutSize = FIntPoint(OutImageSize.X, OutImageSize.Y);
+    return true;
+  }
+
+  bool CaptureWindowScreenshotToFile(const TSharedPtr<SWindow> &TargetWindow,
+                                     const FString &FullPath,
+                                     FIntPoint &OutSize,
+                                     FString &OutError)
+  {
+    TArray<FColor> OutImageData;
+    if (!CaptureWindowScreenshotToBitmap(TargetWindow, OutImageData, OutSize,
+                                         OutError))
+    {
+      return false;
+    }
+
+    return SaveBitmapToPngFile(OutImageData, OutSize.X, OutSize.Y, FullPath,
+                               OutError);
+  }
+
+  void CollectVisibleChildWindows(const TSharedRef<SWindow> &CurrentWindow,
+                                  TArray<TSharedRef<SWindow>> &OutWindows)
+  {
+    const TArray<TSharedRef<SWindow>> &ChildWindows = CurrentWindow->GetChildWindows();
+    for (const TSharedRef<SWindow> &ChildWindow : ChildWindows)
+    {
+      if (ChildWindow->IsVisible() && !ChildWindow->IsWindowMinimized())
+      {
+        OutWindows.Add(ChildWindow);
+      }
+
+      CollectVisibleChildWindows(ChildWindow, OutWindows);
+    }
+  }
+
+  void BlendBitmapIntoCanvas(const TArray<FColor> &SourceBitmap,
+                             const int32 SourceWidth,
+                             const int32 SourceHeight,
+                             TArray<FColor> &CanvasBitmap,
+                             const int32 CanvasWidth,
+                             const int32 CanvasHeight,
+                             const int32 OffsetX,
+                             const int32 OffsetY)
+  {
+    if (SourceWidth <= 0 || SourceHeight <= 0 || CanvasWidth <= 0 || CanvasHeight <= 0)
+    {
+      return;
+    }
+
+    for (int32 SourceY = 0; SourceY < SourceHeight; ++SourceY)
+    {
+      const int32 DestY = OffsetY + SourceY;
+      if (DestY < 0 || DestY >= CanvasHeight)
+      {
+        continue;
+      }
+
+      for (int32 SourceX = 0; SourceX < SourceWidth; ++SourceX)
+      {
+        const int32 DestX = OffsetX + SourceX;
+        if (DestX < 0 || DestX >= CanvasWidth)
+        {
+          continue;
+        }
+
+        const FColor &SourcePixel = SourceBitmap[SourceY * SourceWidth + SourceX];
+        FColor &DestPixel = CanvasBitmap[DestY * CanvasWidth + DestX];
+
+        if (SourcePixel.A >= 255)
+        {
+          DestPixel = SourcePixel;
+          continue;
+        }
+
+        if (SourcePixel.A <= 0)
+        {
+          continue;
+        }
+
+        const uint32 SourceAlpha = static_cast<uint32>(SourcePixel.A);
+        const uint32 InverseAlpha = 255u - SourceAlpha;
+        DestPixel.R = static_cast<uint8>((static_cast<uint32>(SourcePixel.R) * SourceAlpha + static_cast<uint32>(DestPixel.R) * InverseAlpha) / 255u);
+        DestPixel.G = static_cast<uint8>((static_cast<uint32>(SourcePixel.G) * SourceAlpha + static_cast<uint32>(DestPixel.G) * InverseAlpha) / 255u);
+        DestPixel.B = static_cast<uint8>((static_cast<uint32>(SourcePixel.B) * SourceAlpha + static_cast<uint32>(DestPixel.B) * InverseAlpha) / 255u);
+        DestPixel.A = static_cast<uint8>(FMath::Max<uint32>(DestPixel.A, SourceAlpha));
+      }
+    }
+  }
+
+  bool CaptureWindowScreenshotIncludingChildWindowsToFile(
+      const TSharedPtr<SWindow> &TargetWindow,
+      const FString &FullPath,
+      FIntPoint &OutSize,
+      int32 &OutIncludedChildWindowCount,
+      FString &OutError)
+  {
+    OutSize = FIntPoint::ZeroValue;
+    OutIncludedChildWindowCount = 0;
+
+    TArray<FColor> RootBitmap;
+    FIntPoint RootSize;
+    if (!CaptureWindowScreenshotToBitmap(TargetWindow, RootBitmap, RootSize,
+                                         OutError))
+    {
+      return false;
+    }
+
+    const FSlateRect RootRect = TargetWindow->GetRectInScreen();
+    int32 UnionLeft = FMath::FloorToInt(RootRect.Left);
+    int32 UnionTop = FMath::FloorToInt(RootRect.Top);
+    int32 UnionRight = UnionLeft + RootSize.X;
+    int32 UnionBottom = UnionTop + RootSize.Y;
+
+    struct FMcpChildWindowBitmap
+    {
+      TArray<FColor> Bitmap;
+      FIntPoint Size = FIntPoint::ZeroValue;
+      FSlateRect Rect;
+    };
+
+    TArray<FMcpChildWindowBitmap> ChildBitmaps;
+    if (TargetWindow.IsValid())
+    {
+      TArray<TSharedRef<SWindow>> ChildWindows;
+      CollectVisibleChildWindows(TargetWindow.ToSharedRef(), ChildWindows);
+      for (const TSharedRef<SWindow> &ChildWindow : ChildWindows)
+      {
+        TArray<FColor> ChildBitmap;
+        FIntPoint ChildSize;
+        FString ChildError;
+        if (!CaptureWindowScreenshotToBitmap(ChildWindow, ChildBitmap, ChildSize,
+                                             ChildError))
+        {
+          OutError = ChildError;
+          return false;
+        }
+
+        const FSlateRect ChildRect = ChildWindow->GetRectInScreen();
+        UnionLeft = FMath::Min(UnionLeft, FMath::FloorToInt(ChildRect.Left));
+        UnionTop = FMath::Min(UnionTop, FMath::FloorToInt(ChildRect.Top));
+        UnionRight = FMath::Max(UnionRight, FMath::FloorToInt(ChildRect.Left) + ChildSize.X);
+        UnionBottom = FMath::Max(UnionBottom, FMath::FloorToInt(ChildRect.Top) + ChildSize.Y);
+
+        FMcpChildWindowBitmap &StoredChild = ChildBitmaps.AddDefaulted_GetRef();
+        StoredChild.Bitmap = MoveTemp(ChildBitmap);
+        StoredChild.Size = ChildSize;
+        StoredChild.Rect = ChildRect;
+      }
+    }
+
+    const int32 CanvasWidth = FMath::Max(1, UnionRight - UnionLeft);
+    const int32 CanvasHeight = FMath::Max(1, UnionBottom - UnionTop);
+    TArray<FColor> CanvasBitmap;
+    CanvasBitmap.Init(FColor(0, 0, 0, 0), CanvasWidth * CanvasHeight);
+
+    BlendBitmapIntoCanvas(RootBitmap, RootSize.X, RootSize.Y, CanvasBitmap,
+                          CanvasWidth, CanvasHeight,
+                          FMath::FloorToInt(RootRect.Left) - UnionLeft,
+                          FMath::FloorToInt(RootRect.Top) - UnionTop);
+
+    for (const FMcpChildWindowBitmap &ChildBitmap : ChildBitmaps)
+    {
+      BlendBitmapIntoCanvas(ChildBitmap.Bitmap, ChildBitmap.Size.X,
+                            ChildBitmap.Size.Y, CanvasBitmap, CanvasWidth,
+                            CanvasHeight,
+                            FMath::FloorToInt(ChildBitmap.Rect.Left) - UnionLeft,
+                            FMath::FloorToInt(ChildBitmap.Rect.Top) - UnionTop);
+    }
+
+    if (!SaveBitmapToPngFile(CanvasBitmap, CanvasWidth, CanvasHeight, FullPath,
                              OutError))
     {
       return false;
     }
 
-    OutSize = FIntPoint(OutImageSize.X, OutImageSize.Y);
+    OutIncludedChildWindowCount = ChildBitmaps.Num();
+    OutSize = FIntPoint(CanvasWidth, CanvasHeight);
     return true;
   }
 
@@ -4431,6 +4607,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   Payload->TryGetStringField(TEXT("name"), TargetWindowName);
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
+  const bool bIncludeMenus =
+      !Payload->HasField(TEXT("includeMenus"))
+          ? true
+          : GetJsonBoolField(Payload, TEXT("includeMenus"), true);
   const bool bCaptureEditorWindow =
       !TargetWindowName.IsEmpty() ||
       Mode.Equals(TEXT("editor"), ESearchCase::IgnoreCase) ||
@@ -4466,9 +4646,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     }
 
     FIntPoint OutImageSize;
+    int32 IncludedMenuWindowCount = 0;
     FString SaveError;
-    if (!CaptureWindowScreenshotToFile(TargetWindow, FullPath, OutImageSize,
-                                       SaveError))
+    if (bIncludeMenus)
+    {
+      if (!CaptureWindowScreenshotIncludingChildWindowsToFile(
+              TargetWindow, FullPath, OutImageSize, IncludedMenuWindowCount,
+              SaveError))
+      {
+        SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), SaveError,
+                                  nullptr);
+        return true;
+      }
+    }
+    else if (!CaptureWindowScreenshotToFile(TargetWindow, FullPath, OutImageSize,
+                                            SaveError))
     {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), SaveError,
                                 nullptr);
@@ -4481,6 +4673,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Resp->SetStringField(TEXT("captureTarget"), TEXT("editor_window"));
     Resp->SetStringField(TEXT("windowTitle"), TargetWindow->GetTitle().ToString());
     Resp->SetStringField(TEXT("captureMode"), TEXT("editor_window"));
+    Resp->SetBoolField(TEXT("includeMenus"), bIncludeMenus);
+    Resp->SetNumberField(TEXT("includedMenuWindowCount"), IncludedMenuWindowCount);
     Resp->SetNumberField(TEXT("width"), OutImageSize.X);
     Resp->SetNumberField(TEXT("height"), OutImageSize.Y);
     Resp->SetStringField(TEXT("message"), TEXT("Editor window screenshot captured"));
