@@ -490,6 +490,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         if (Payload->HasField(TEXT("limit")))
         {
             Payload->TryGetNumberField(TEXT("limit"), Limit);
+            Limit = FMath::Max(0, Limit);
         }
 
         // Apply offset first, then limit
@@ -502,7 +503,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             AssetDataList.Empty();
         }
 
-        if (Limit > 0 && AssetDataList.Num() > Limit)
+        if (Limit == 0)
+        {
+            AssetDataList.Empty();
+        }
+        else if (AssetDataList.Num() > Limit)
         {
             AssetDataList.SetNum(Limit);
         }
