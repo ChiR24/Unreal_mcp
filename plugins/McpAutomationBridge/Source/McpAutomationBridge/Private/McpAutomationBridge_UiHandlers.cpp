@@ -345,15 +345,54 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   // ===========================================================================
   else if (LowerSub == TEXT("screenshot")) {
     // Take a screenshot of the viewport and return as base64
+    FString RawScreenshotPath;
+    Payload->TryGetStringField(TEXT("path"), RawScreenshotPath);
+
     FString ScreenshotPath;
-    Payload->TryGetStringField(TEXT("path"), ScreenshotPath);
-    if (ScreenshotPath.IsEmpty()) {
+    if (RawScreenshotPath.IsEmpty()) {
       ScreenshotPath =
           FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor");
+    } else {
+      FString SafePath = SanitizeProjectFilePath(RawScreenshotPath);
+      if (SafePath.IsEmpty()) {
+        Message = FString::Printf(TEXT("Invalid or unsafe screenshot path: %s. Path must be relative to project."), *RawScreenshotPath);
+        ErrorCode = TEXT("SECURITY_VIOLATION");
+        Resp->SetStringField(TEXT("error"), Message);
+        SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+        return true;
+      }
+
+      ScreenshotPath = FPaths::ProjectDir() / SafePath;
+      ScreenshotPath = FPaths::ConvertRelativePathToFull(ScreenshotPath);
+      FPaths::NormalizeFilename(ScreenshotPath);
+
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!ScreenshotPath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        Message = FString::Printf(TEXT("Invalid or unsafe screenshot path: %s. Path escapes project directory."), *RawScreenshotPath);
+        ErrorCode = TEXT("SECURITY_VIOLATION");
+        Resp->SetStringField(TEXT("error"), Message);
+        SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+        return true;
+      }
     }
 
     FString Filename;
     Payload->TryGetStringField(TEXT("filename"), Filename);
+    
+    // SECURITY: Sanitize filename to prevent path traversal
+    // Strip directory components and validate against traversal patterns
+    Filename = FPaths::GetCleanFilename(Filename);
+    if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
+      // Reject suspicious filename and use default
+      Filename = FString::Printf(TEXT("Screenshot_%lld"),
+                                 FDateTime::Now().ToUnixTimestamp());
+    }
+    
     if (Filename.IsEmpty()) {
       Filename = FString::Printf(TEXT("Screenshot_%lld"),
                                  FDateTime::Now().ToUnixTimestamp());

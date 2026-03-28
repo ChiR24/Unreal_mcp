@@ -1,12 +1,7 @@
 #pragma once
 
-#include "Containers/Array.h"
-#include "Containers/UnrealString.h"
-#include "Delegates/Delegate.h"
-#include "HAL/CriticalSection.h"
+#include "CoreMinimal.h"
 #include "HAL/Runnable.h"
-#include "Templates/Atomic.h"
-#include "Templates/SharedPointer.h"
 
 class FSocket;
 class FInternetAddr;

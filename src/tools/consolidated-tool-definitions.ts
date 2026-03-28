@@ -3869,7 +3869,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_sessions',
     category: 'utility',
-    description: 'Configure local multiplayer: split-screen layouts, LAN hosting/joining, voice chat channels, and push-to-talk.',
+    description: 'Configure local multiplayer: split-screen layouts, LAN hosting/joining, voice chat channels, and push-to-talk.\n\nRequired parameters by action:\n- configure_local_session_settings: At least one setting param required\n- configure_session_interface: interfaceType\n- configure_split_screen: enabled or splitScreenType\n- set_split_screen_type: splitScreenType\n- add_local_player: controllerId (requires PIE)\n- remove_local_player: playerIndex (requires PIE)\n- configure_lan_play: enabled, serverPort, or serverPassword\n- host_lan_server: mapName (requires PIE)\n- join_lan_server: serverAddress (requires PIE)\n- enable_voice_chat: voiceEnabled\n- configure_voice_settings: voiceSettings\n- set_voice_channel: channelName\n- mute_player: playerName or targetPlayerId\n- set_voice_attenuation: attenuationRadius\n- configure_push_to_talk: pushToTalkEnabled\n- get_sessions_info: No additional params required',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3897,23 +3897,23 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         interfaceType: {
           type: 'string',
           enum: ['Default', 'LAN', 'Null'],
-          description: 'Type of session interface to use.'
+          description: 'Type of session interface to use. REQUIRED for configure_session_interface.'
         },
         enabled: commonSchemas.enabled,
         splitScreenType: {
           type: 'string',
           enum: ['None', 'TwoPlayer_Horizontal', 'TwoPlayer_Vertical', 'ThreePlayer_FavorTop', 'ThreePlayer_FavorBottom', 'FourPlayer_Grid'],
-          description: 'Split-screen layout type.'
+          description: 'Split-screen layout type. REQUIRED for set_split_screen_type.'
         },
-        playerIndex: commonSchemas.numberProp,
-        controllerId: commonSchemas.numberProp,
-        serverAddress: commonSchemas.serverAddress,
+        playerIndex: { ...commonSchemas.numberProp, description: 'Local player index. REQUIRED for remove_local_player.' },
+        controllerId: { ...commonSchemas.numberProp, description: 'Controller ID for player input. REQUIRED for add_local_player.' },
+        serverAddress: { ...commonSchemas.serverAddress, description: 'Server IP address. REQUIRED for join_lan_server.' },
         serverPort: commonSchemas.numberProp,
         serverPassword: { type: 'string', description: 'Server password for protected games.' },
         serverName: { type: 'string', description: 'Display name for the server.' },
-        mapName: { type: 'string', description: 'Map to load for hosting.' },
+        mapName: { type: 'string', description: 'Map to load for hosting. REQUIRED for host_lan_server.' },
         travelOptions: { type: 'string', description: 'Travel URL options string.' },
-        voiceEnabled: { type: 'boolean', description: 'Enable/disable voice chat.' },
+        voiceEnabled: { type: 'boolean', description: 'Enable/disable voice chat. REQUIRED for enable_voice_chat.' },
         voiceSettings: {
           type: 'object',
           properties: {
@@ -3923,20 +3923,20 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             echoCancellation: { type: 'boolean', description: 'Enable echo cancellation.' },
             sampleRate: { type: 'number', description: 'Audio sample rate in Hz.' }
           },
-          description: 'Voice processing settings.'
+          description: 'Voice processing settings. REQUIRED for configure_voice_settings.'
         },
-        channelName: commonSchemas.channelName,
+        channelName: { ...commonSchemas.channelName, description: 'Voice channel name. REQUIRED for set_voice_channel.' },
         channelType: {
           type: 'string',
           enum: ['Team', 'Global', 'Proximity', 'Party'],
           description: 'Voice channel type.'
         },
-        playerName: { type: 'string', description: 'Player name for voice operations.' },
-        targetPlayerId: { type: 'string', description: 'Target player ID.' },
+        playerName: { type: 'string', description: 'Player name for voice operations. REQUIRED for mute_player (or targetPlayerId).' },
+        targetPlayerId: { type: 'string', description: 'Target player ID. REQUIRED for mute_player (or playerName).' },
         muted: commonSchemas.muted,
-        attenuationRadius: { type: 'number', description: 'Radius for voice attenuation (Proximity chat).' },
+        attenuationRadius: { type: 'number', description: 'Radius for voice attenuation (Proximity chat). REQUIRED for set_voice_attenuation.' },
         attenuationFalloff: { type: 'number', description: 'Falloff rate for voice attenuation.' },
-        pushToTalkEnabled: { type: 'boolean', description: 'Enable push-to-talk mode.' },
+        pushToTalkEnabled: { type: 'boolean', description: 'Enable push-to-talk mode. REQUIRED for configure_push_to_talk.' },
         pushToTalkKey: { type: 'string', description: 'Key binding for push-to-talk.' }
       },
       required: ['action']

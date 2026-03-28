@@ -38,6 +38,7 @@
 #include "McpVersionCompatibility.h"  // MUST be first
 #include "McpHandlerUtils.h"
 
+#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
 #include "Dom/JsonObject.h"
 #include "LevelSequence.h"
 #include "McpAutomationBridgeGlobals.h"
@@ -175,6 +176,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // Runtime check: Verify LevelSequenceEditor module is loaded
+  // This handles the case where headers were available at compile time
+  // but the plugin is not enabled in the target project at runtime
+  if (!FModuleManager::Get().IsModuleLoaded(TEXT("LevelSequenceEditor")))
+  {
+      if (!FModuleManager::Get().ModuleExists(TEXT("LevelSequenceEditor")) ||
+          !FModuleManager::Get().LoadModule(TEXT("LevelSequenceEditor")))
+      {
+          SendAutomationError(Socket, RequestId,
+              TEXT("LevelSequenceEditor plugin is not enabled in this project. Enable the Level Sequence Editor plugin to use Sequencer features."),
+              TEXT("LEVELSEQUENCEEDITOR_PLUGIN_NOT_ENABLED"));
+          return true;
+      }
+  }
+
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString Name;

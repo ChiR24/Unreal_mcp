@@ -346,20 +346,26 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
                 USoundNode* LastNode = PlayerNode;
                 
                 // Add looping if requested
+                // Use InsertChildNode() to properly create both the child slot AND corresponding graph pin
+                // Direct ChildNodes.Add() bypasses graph pin creation, causing crash in LinkGraphNodesFromSoundNodes()
                 if (bLooping)
                 {
                     USoundNodeLooping* LoopNode = NewCue->ConstructSoundNode<USoundNodeLooping>();
-                    LoopNode->ChildNodes.Add(LastNode);
+                    LoopNode->InsertChildNode(0);        // Creates slot + corresponding graph pin
+                    LoopNode->ChildNodes[0] = LastNode;  // Assign child to the slot
                     LastNode = LoopNode;
                 }
                 
                 // Add modulation if volume/pitch differs from default
+                // Use InsertChildNode() to properly create both the child slot AND corresponding graph pin
+                // Direct ChildNodes.Add() bypasses graph pin creation, causing crash in LinkGraphNodesFromSoundNodes()
                 if (Volume != 1.0f || Pitch != 1.0f)
                 {
                     USoundNodeModulator* ModNode = NewCue->ConstructSoundNode<USoundNodeModulator>();
+                    ModNode->InsertChildNode(0);         // Creates slot + corresponding graph pin
+                    ModNode->ChildNodes[0] = LastNode;   // Assign child to the slot
                     ModNode->PitchMin = ModNode->PitchMax = Pitch;
                     ModNode->VolumeMin = ModNode->VolumeMax = Volume;
-                    ModNode->ChildNodes.Add(LastNode);
                     LastNode = ModNode;
                 }
                 
@@ -1523,6 +1529,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewAtten, bSave);
         
         FString FullPath = NewAtten->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewAtten);
         return Response;
@@ -1692,6 +1699,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
         }
         
+        // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
+        if (Name.Len() > 100)
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
+        }
+        
         // Create package and asset directly to avoid UI dialogs
         FString PackagePath = Path / Name;
         UPackage* Package = CreatePackage(*PackagePath);
@@ -1737,6 +1750,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewVoice, bSave);
         
         FString FullPath = NewVoice->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewVoice);
         return Response;
@@ -1756,6 +1770,12 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         if (Name.IsEmpty())
         {
             return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
+        }
+        
+        // Validate name length to prevent engine crash (UE FName limit is ~1024, but practical limit is much lower)
+        if (Name.Len() > 100)
+        {
+            return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters"));
         }
         
         // Create package and asset directly to avoid UI dialogs
@@ -1781,6 +1801,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewWave, bSave);
         
         FString FullPath = NewWave->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewWave);
         return Response;
@@ -1948,6 +1969,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         SaveAudioAsset(NewEffect, bSave);
         
         FString FullPath = NewEffect->GetPathName();
+        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("assetPath"), FullPath);
         McpHandlerUtils::AddVerification(Response, NewEffect);
         return Response;
@@ -2231,7 +2253,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
     {
         bool bSuccess = Response->HasField(TEXT("success")) && GetJsonBoolField(Response, TEXT("success"));
         FString Message = Response->HasField(TEXT("message")) ? GetJsonStringField(Response, TEXT("message")) : TEXT("Operation complete");
-        FString ErrorCode = Response->HasField(TEXT("errorCode")) ? GetJsonStringField(Response, TEXT("errorCode")) : TEXT("");
+        // BuildErrorResponse uses "code" field, not "errorCode"
+        FString ErrorCode = Response->HasField(TEXT("code")) ? GetJsonStringField(Response, TEXT("code")) : TEXT("");
         
         if (bSuccess)
         {
@@ -2239,7 +2262,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
         }
         else
         {
-            FString ErrorMsg = Response->HasField(TEXT("error")) ? GetJsonStringField(Response, TEXT("error")) : TEXT("Unknown error");
+            // BuildErrorResponse sets "error" field with the message
+            FString ErrorMsg = Response->HasField(TEXT("error")) ? GetJsonStringField(Response, TEXT("error")) : Message.Len() > 0 ? Message : TEXT("Unknown error");
             SendAutomationError(RequestingSocket, RequestId, ErrorMsg, ErrorCode);
         }
     }

@@ -232,6 +232,25 @@ namespace GameFrameworkHelpers
         
         FString AssetPath = FullPath / Name;
         
+        // CRITICAL: Check if a Blueprint with this name already exists to prevent
+        // engine assertion failure in Kismet2.cpp (line 435). The engine asserts
+        // that no Blueprint with the target name exists before creation.
+        // This prevents crashes from name collisions between different action tests.
+        UBlueprint* ExistingBP = FindObject<UBlueprint>(nullptr, *AssetPath);
+        if (ExistingBP)
+        {
+            OutError = FString::Printf(TEXT("Blueprint already exists: %s"), *AssetPath);
+            return nullptr;
+        }
+        
+        // Also check using UEditorAssetLibrary for assets that may not be loaded yet
+        // This is version-safe and works across UE 5.0-5.7
+        if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
+        {
+            OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *AssetPath);
+            return nullptr;
+        }
+        
         UPackage* Package = CreatePackage(*AssetPath);
         if (!Package)
         {

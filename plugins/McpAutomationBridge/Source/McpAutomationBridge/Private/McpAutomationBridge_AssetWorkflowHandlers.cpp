@@ -1828,15 +1828,12 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   TArray<FString> FailedToDeletePaths;
   
   for (const FString &Path : PathsToDelete) {
-    // CRITICAL FIX: Use DoesAssetDirectoryExistOnDisk for strict validation
-    // UEditorAssetLibrary::DoesDirectoryExist() uses AssetRegistry cache which may
-    // contain stale entries. We need to check if the directory ACTUALLY exists on disk.
-    if (DoesAssetDirectoryExistOnDisk(Path)) {
-      // Directory exists on disk - attempt to delete it
+    // Check if it's a directory first (folder path)
+    if (UEditorAssetLibrary::DoesDirectoryExist(Path)) {
+      // Directory exists - attempt to delete it
       if (UEditorAssetLibrary::DeleteDirectory(Path)) {
-        // CRITICAL FIX: Verify the directory was actually deleted
-        // DeleteDirectory may return true even if deletion failed
-        if (!DoesAssetDirectoryExistOnDisk(Path)) {
+        // Verify the directory was actually deleted
+        if (!UEditorAssetLibrary::DoesDirectoryExist(Path)) {
           DeletedCount++;
         } else {
           // Delete returned true but directory still exists
@@ -1848,8 +1845,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     } else if (UEditorAssetLibrary::DoesAssetExist(Path)) {
       // Asset exists - attempt to delete it
       if (UEditorAssetLibrary::DeleteAsset(Path)) {
-        // CRITICAL FIX: Verify the asset was actually deleted
-        // DeleteAsset may return true even if deletion failed
+        // Verify the asset was actually deleted
         if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
           DeletedCount++;
         } else {

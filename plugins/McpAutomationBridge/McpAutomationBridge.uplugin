@@ -58,6 +58,21 @@
       "Optional": true
     },
     {
+      "Name": "IKRig",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "ChaosVehiclesPlugin",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
+      "Name": "AnimationData",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "ProceduralMeshComponent",
       "Enabled": true,
       "Optional": true
