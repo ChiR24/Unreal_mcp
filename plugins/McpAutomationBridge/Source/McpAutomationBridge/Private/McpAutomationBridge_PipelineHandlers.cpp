@@ -73,11 +73,11 @@ namespace
         return Json;
     }
 
-    /** @brief Contract: builds backward-compatible tool-name, structured-tool, and category-group metadata from the public catalog. */
+    /** @brief Contract: builds backward-compatible tool-name, structured-tool, and category-group-name metadata from the public catalog. */
     void BuildCatalogResponse(
         TArray<TSharedPtr<FJsonValue>> &OutToolNames,
         TArray<TSharedPtr<FJsonValue>> &OutTools,
-        TArray<TSharedPtr<FJsonValue>> &OutCategoryGroups,
+        TArray<TSharedPtr<FJsonValue>> &OutCategoryGroupNames,
         int32 &OutActionCount)
     {
         TSet<FString> SeenGroups;
@@ -91,7 +91,7 @@ namespace
             if (!SeenGroups.Contains(Entry.Category))
             {
                 SeenGroups.Add(Entry.Category);
-                OutCategoryGroups.Add(MakeShared<FJsonValueString>(Entry.Category));
+                OutCategoryGroupNames.Add(MakeShared<FJsonValueString>(Entry.Category));
             }
 
             OutActionCount += Entry.SubActions.Num() > 0 ? Entry.SubActions.Num() : 1;
@@ -103,7 +103,10 @@ namespace
 // Handler Implementation
 // =============================================================================
 
-/** @brief Contract: serves the catalog-backed manage_pipeline surface while preserving the existing response keys used by the local MCP wrapper. */
+/** @brief Contract: serves the catalog-backed manage_pipeline surface while preserving the existing response keys used by the local MCP wrapper.
+ * categoryGroupNames is the canonical array field, groupCount is the canonical numeric count field,
+ * and categoryGroups remains a legacy alias whose shape differs by subaction for backward compatibility.
+ */
 bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     const FString &RequestId,
     const FString &Action,
@@ -198,16 +201,17 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
     {
         TArray<TSharedPtr<FJsonValue>> ToolNames;
         TArray<TSharedPtr<FJsonValue>> Tools;
-        TArray<TSharedPtr<FJsonValue>> CategoryGroups;
+        TArray<TSharedPtr<FJsonValue>> CategoryGroupNames;
         int32 ActionCount = 0;
-        BuildCatalogResponse(ToolNames, Tools, CategoryGroups, ActionCount);
+        BuildCatalogResponse(ToolNames, Tools, CategoryGroupNames, ActionCount);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetArrayField(TEXT("categories"), ToolNames);
         Result->SetArrayField(TEXT("tools"), Tools);
-        Result->SetArrayField(TEXT("categoryGroups"), CategoryGroups);
+        Result->SetArrayField(TEXT("categoryGroups"), CategoryGroupNames);
+        Result->SetArrayField(TEXT("categoryGroupNames"), CategoryGroupNames);
         Result->SetNumberField(TEXT("count"), ToolNames.Num());
-        Result->SetNumberField(TEXT("groupCount"), CategoryGroups.Num());
+        Result->SetNumberField(TEXT("groupCount"), CategoryGroupNames.Num());
         Result->SetNumberField(TEXT("actionCount"), ActionCount);
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
 
@@ -224,9 +228,9 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         TArray<TSharedPtr<FJsonValue>> ToolNames;
         TArray<TSharedPtr<FJsonValue>> Tools;
-        TArray<TSharedPtr<FJsonValue>> CategoryGroups;
+        TArray<TSharedPtr<FJsonValue>> CategoryGroupNames;
         int32 ActionCount = 0;
-        BuildCatalogResponse(ToolNames, Tools, CategoryGroups, ActionCount);
+        BuildCatalogResponse(ToolNames, Tools, CategoryGroupNames, ActionCount);
 
         // Connection status
         Result->SetBoolField(TEXT("connected"), true);
@@ -248,10 +252,11 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         // Action statistics
         Result->SetNumberField(TEXT("totalActions"), ActionCount);
         Result->SetNumberField(TEXT("toolCategories"), ToolNames.Num());
-        Result->SetNumberField(TEXT("categoryGroups"), CategoryGroups.Num());
+        Result->SetNumberField(TEXT("categoryGroups"), CategoryGroupNames.Num());
+        Result->SetNumberField(TEXT("groupCount"), CategoryGroupNames.Num());
         Result->SetStringField(TEXT("catalogSource"), TEXT("McpAutomationBridgeToolCatalog"));
         Result->SetArrayField(TEXT("categories"), ToolNames);
-        Result->SetArrayField(TEXT("categoryGroupNames"), CategoryGroups);
+        Result->SetArrayField(TEXT("categoryGroupNames"), CategoryGroupNames);
         Result->SetArrayField(TEXT("tools"), Tools);
 
         // Runtime info
