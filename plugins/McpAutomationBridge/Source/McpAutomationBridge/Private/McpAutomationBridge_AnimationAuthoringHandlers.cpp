@@ -2040,13 +2040,36 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
                 }
                 else
                 {
-                    // Different type - return error to prevent assertion crash
-                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
-                    ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s'"), 
-                            *ObjectPath, *ExistingClassName),
-                        TEXT("ASSET_TYPE_MISMATCH")
-                    );
+                    UBlueprint* ExistingBlueprint = Cast<UBlueprint>(ExistingAsset);
+                    const bool bLegacyAnimInstanceBlueprint =
+                        ExistingBlueprint && ExistingBlueprint->ParentClass &&
+                        ExistingBlueprint->ParentClass->IsChildOf(UAnimInstance::StaticClass());
+
+                    if (bLegacyAnimInstanceBlueprint)
+                    {
+                        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                            TEXT("create_anim_blueprint: Replacing legacy AnimInstance Blueprint at '%s'"),
+                            *ObjectPath);
+
+                        const bool bDeletedLegacyAsset = UEditorAssetLibrary::DeleteAsset(ObjectPath);
+                        if (!bDeletedLegacyAsset || UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+                        {
+                            ANIM_ERROR_RESPONSE(
+                                FString::Printf(TEXT("Failed to replace legacy AnimInstance Blueprint at '%s' before creating AnimBlueprint"), *ObjectPath),
+                                TEXT("LEGACY_ASSET_DELETE_FAILED")
+                            );
+                        }
+                    }
+                    else
+                    {
+                        // Different type - return error to prevent assertion crash
+                        FString ExistingClassName = ExistingAsset->GetClass()->GetName();
+                        ANIM_ERROR_RESPONSE(
+                            FString::Printf(TEXT("Cannot create AnimBlueprint: asset '%s' already exists as type '%s'"), 
+                                *ObjectPath, *ExistingClassName),
+                            TEXT("ASSET_TYPE_MISMATCH")
+                        );
+                    }
                 }
             }
         }

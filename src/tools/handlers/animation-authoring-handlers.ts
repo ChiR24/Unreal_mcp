@@ -960,12 +960,14 @@ export async function handleAnimationAuthoringTools(
       }
 
       // ===== 10.4 Animation Blueprints =====
-      case 'create_anim_blueprint': {
+      case 'create_anim_blueprint':
+      case 'create_animation_bp':
+      case 'create_animation_blueprint': {
         const params = normalizeArgs(args, [
           { key: 'name', required: true },
-          { key: 'path', aliases: ['directory'], default: '/Game/Blueprints' },
+          { key: 'path', aliases: ['directory', 'savePath'], default: '/Game/Blueprints' },
           { key: 'skeletonPath', required: true },
-          { key: 'parentClass', default: 'AnimInstance' },
+          { key: 'parentClass', aliases: ['parent'], default: 'AnimInstance' },
           { key: 'save', default: true },
         ]);
 

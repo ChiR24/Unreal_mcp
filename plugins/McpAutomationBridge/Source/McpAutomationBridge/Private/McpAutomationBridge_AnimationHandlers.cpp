@@ -4685,12 +4685,24 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
     return true;
   }
 
+  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBlueprint);
+
+  bool bShouldSave = true;
+  Payload->TryGetBoolField(TEXT("save"), bShouldSave);
+  if (bShouldSave)
+  {
+    McpSafeAssetSave(AnimBlueprint);
+  }
+
+  FAssetRegistryModule::AssetCreated(AnimBlueprint);
+
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), AnimBlueprint->GetPathName());
   Resp->SetStringField(TEXT("blueprintName"), BlueprintName);
   Resp->SetStringField(TEXT("skeletonPath"), SkeletonPath);
+  Resp->SetStringField(TEXT("createdClass"), AnimBlueprint->GetClass()->GetPathName());
 
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Animation blueprint created successfully"), Resp,
