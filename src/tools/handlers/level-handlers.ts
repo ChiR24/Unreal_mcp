@@ -461,12 +461,21 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'cleanup_invalid_datalayers': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim().length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
+
       // CRITICAL FIX: DO NOT load the level here - let the C++ handler do it
       // The C++ HandleWorldPartitionAction already checks if the level needs to be loaded
       // and will only load if the current world differs from the requested levelPath.
       // Loading here would destroy unsaved actors in the current world.
-      
-      // Route to manage_world_partition
       
       // Route to manage_world_partition
       const res = await executeAutomationRequest(tools, 'manage_world_partition', {
@@ -476,6 +485,17 @@ export async function handleLevelTools(action: string, args: HandlerArgs, tools:
       return cleanObject(res) as Record<string, unknown>;
     }
     case 'create_datalayer': {
+      // CRITICAL FIX: levelPath is REQUIRED for World Partition operations
+      // Without levelPath, the handler cannot load the correct World Partition level
+      if (!argsTyped.levelPath || typeof argsTyped.levelPath !== 'string' || argsTyped.levelPath.trim().length === 0) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: 'Missing required parameter: levelPath (World Partition level path required)',
+          action
+        });
+      }
+
       // Route to manage_world_partition
       const dataLayerName = argsTyped.dataLayerName || argsTyped.dataLayerLabel;
       if (!dataLayerName || typeof dataLayerName !== 'string' || dataLayerName.trim().length === 0) {
