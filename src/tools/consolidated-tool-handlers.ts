@@ -43,6 +43,7 @@ import { handleVolumeTools } from './handlers/volume-handlers.js';
 import { handleNavigationTools } from './handlers/navigation-handlers.js';
 import { handleSplineTools } from './handlers/spline-handlers.js';
 import { handleManageToolsTools } from './handlers/manage-tools-handlers.js';
+import { handleMrqTools } from './handlers/mrq-handlers.js';
 // import { getDynamicHandlerForTool } from './dynamic-handler-registry.js';
 // import { consolidatedToolDefinitions } from './consolidated-tool-definitions.js';
 
@@ -463,6 +464,11 @@ function registerDefaultHandlers() {
 
   // 40. SPLINE SYSTEM (Phase 26)
   toolRegistry.register('manage_splines', async (args, tools) => await handleSplineTools(getAction(args), args, tools));
+
+  // MRQ - Movie Render Queue
+  toolRegistry.register('manage_mrq', async (args, tools) => {
+    return await handleMrqTools(getAction(args), args, tools);
+  });
 }
 
 // Initialize default handlers immediately

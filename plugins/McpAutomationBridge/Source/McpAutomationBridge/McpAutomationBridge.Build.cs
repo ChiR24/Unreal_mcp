@@ -239,6 +239,12 @@ PublicDependencyModuleNames.AddRange(new string[]
             AddOptionalDynamicModule(Target, EngineDir, "ChaosVehicles", "ChaosVehicles");
             AddOptionalDynamicModule(Target, EngineDir, "AnimationData", "AnimationData");
 
+            // Movie Render Queue / Pipeline (optional plugin) - for MRQ automation
+            AddOptionalDynamicModule(Target, EngineDir, "MovieRenderPipelineCore", "MovieRenderPipelineCore");
+            AddOptionalDynamicModule(Target, EngineDir, "MovieRenderPipelineSettings", "MovieRenderPipelineSettings");
+            AddOptionalDynamicModule(Target, EngineDir, "MovieRenderPipelineEditor", "MovieRenderPipelineEditor");
+            AddOptionalDynamicModule(Target, EngineDir, "MovieRenderPipelineRenderPasses", "MovieRenderPipelineRenderPasses");
+
             // Ensure editor builds expose full Blueprint graph editing APIs.
             PublicDefinitions.Add("MCP_HAS_K2NODE_HEADERS=1");
             PublicDefinitions.Add("MCP_HAS_EDGRAPH_SCHEMA_K2=1");
