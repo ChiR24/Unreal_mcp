@@ -4699,5 +4699,41 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  {
+    name: 'manage_mrq',
+    category: 'authoring',
+    description: 'Movie Render Queue (MRQ) management. Read/write render queue jobs, CVar overrides, output settings, presets, and trigger renders. Actions: get_queue, get_job_config, get_cvars, set_cvars, get_output_settings, set_output_settings, create_job, delete_job, render, get_render_status, load_preset.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'get_queue', 'get_job_config', 'get_cvars', 'set_cvars',
+            'get_output_settings', 'set_output_settings',
+            'create_job', 'delete_job', 'render', 'get_render_status',
+            'load_preset'
+          ],
+          description: 'MRQ action to perform'
+        },
+        jobIndex: { type: 'number', description: 'Job index in the queue (default 0)' },
+        map: { type: 'string', description: 'Map path for create_job (e.g., /Game/Maps/MyLevel.MyLevel)' },
+        sequence: { type: 'string', description: 'Level sequence path for create_job' },
+        jobName: { type: 'string', description: 'Job name for create_job' },
+        set: { type: 'object', description: 'CVar overrides to set (key: cvar name, value: float). Used with set_cvars.' },
+        cvars: { type: 'object', description: 'Alias for set — CVar overrides as { name: value } pairs' },
+        remove: { type: 'array', items: { type: 'string' }, description: 'CVar names to remove. Used with set_cvars.' },
+        startCommands: { type: 'array', items: { type: 'string' }, description: 'Console commands to run before render' },
+        endCommands: { type: 'array', items: { type: 'string' }, description: 'Console commands to run after render' },
+        outputDirectory: { type: 'string', description: 'Output directory path for set_output_settings' },
+        resolutionX: { type: 'number', description: 'Output width for set_output_settings' },
+        resolutionY: { type: 'number', description: 'Output height for set_output_settings' },
+        fileNameFormat: { type: 'string', description: 'Filename format with tokens like {sequence_name}, {frame_number}' },
+        overrideExisting: { type: 'boolean', description: 'Overwrite existing output files' },
+        presetPath: { type: 'string', description: 'Asset path to MRQ preset config for load_preset' }
+      },
+      required: ['action']
+    }
   }
 ];

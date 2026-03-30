@@ -914,6 +914,11 @@ private:
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
+  // Movie Render Queue (MRQ)
+  bool HandleMrqAction(const FString &RequestId, const FString &Action,
+                       const TSharedPtr<FJsonObject> &Payload,
+                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
 private:
   // Ticker handle for managing the subsystems tick function
   FTSTicker::FDelegateHandle TickHandle;
