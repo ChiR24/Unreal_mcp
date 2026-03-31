@@ -85,6 +85,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         recursivePaths: commonSchemas.booleanProp,
         recursiveClasses: commonSchemas.booleanProp,
         limit: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
         sourcePath: commonSchemas.sourcePath,
         destinationPath: commonSchemas.destinationPath,
         assetPaths: commonSchemas.arrayOfStrings,
@@ -169,7 +170,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         paths: commonSchemas.arrayOfStrings,
         path: commonSchemas.stringProp,
         nodeId: commonSchemas.nodeId,
-        details: commonSchemas.objectProp
+        details: commonSchemas.objectProp,
+        totalCount: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
+        limit: commonSchemas.numberProp
       }
     }
   },

@@ -293,64 +293,89 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
                     }
                     else
                     {
-                        // Map common short names to full paths
-                        const bool bIsBlueprint = ClassName.Equals(TEXT("Blueprint"), ESearchCase::IgnoreCase);
-                        const bool bIsStaticMesh = ClassName.Equals(TEXT("StaticMesh"), ESearchCase::IgnoreCase);
-                        const bool bIsSkeletalMesh = ClassName.Equals(TEXT("SkeletalMesh"), ESearchCase::IgnoreCase);
-                        const bool bIsMaterial = ClassName.Equals(TEXT("Material"), ESearchCase::IgnoreCase);
-                        const bool bIsMaterialInstance = ClassName.Equals(TEXT("MaterialInstance"), ESearchCase::IgnoreCase) ||
-                            ClassName.Equals(TEXT("MaterialInstanceConstant"), ESearchCase::IgnoreCase);
-                        const bool bIsTexture2D = ClassName.Equals(TEXT("Texture2D"), ESearchCase::IgnoreCase);
-                        const bool bIsLevel = ClassName.Equals(TEXT("Level"), ESearchCase::IgnoreCase) ||
-                            ClassName.Equals(TEXT("World"), ESearchCase::IgnoreCase);
-                        const bool bIsSoundCue = ClassName.Equals(TEXT("SoundCue"), ESearchCase::IgnoreCase);
-                        const bool bIsSoundWave = ClassName.Equals(TEXT("SoundWave"), ESearchCase::IgnoreCase);
-
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-                        if (bIsBlueprint)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("Blueprint")));
-                        else if (bIsStaticMesh)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("StaticMesh")));
-                        else if (bIsSkeletalMesh)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("SkeletalMesh")));
-                        else if (bIsMaterial)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("Material")));
-                        else if (bIsMaterialInstance)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("MaterialInstanceConstant")));
-                        else if (bIsTexture2D)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("Texture2D")));
-                        else if (bIsLevel)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("World")));
-                        else if (bIsSoundCue)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("SoundCue")));
-                        else if (bIsSoundWave)
-                            Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/Engine"), TEXT("SoundWave")));
-#else
-                        if (bIsBlueprint)
-                            Filter.ClassNames.Add(TEXT("Blueprint"));
-                        else if (bIsStaticMesh)
-                            Filter.ClassNames.Add(TEXT("StaticMesh"));
-                        else if (bIsSkeletalMesh)
-                            Filter.ClassNames.Add(TEXT("SkeletalMesh"));
-                        else if (bIsMaterial)
-                            Filter.ClassNames.Add(TEXT("Material"));
-                        else if (bIsMaterialInstance)
-                            Filter.ClassNames.Add(TEXT("MaterialInstanceConstant"));
-                        else if (bIsTexture2D)
-                            Filter.ClassNames.Add(TEXT("Texture2D"));
-                        else if (bIsLevel)
-                            Filter.ClassNames.Add(TEXT("World"));
-                        else if (bIsSoundCue)
-                            Filter.ClassNames.Add(TEXT("SoundCue"));
-                        else if (bIsSoundWave)
-                            Filter.ClassNames.Add(TEXT("SoundWave"));
-#endif
-                        else
+                        // Map common short names to full class paths
+                        // Format: { ShortName, { PackagePath, ClassName } }
+                        struct FClassMapping
                         {
-                            // Unknown short class name - return error instead of widening query
+                            const TCHAR* ShortName;
+                            const TCHAR* PackagePath;
+                            const TCHAR* ClassNameStr;
+                        };
+
+                        static const FClassMapping ClassMappings[] =
+                        {
+                            // Core asset types
+                            { TEXT("Blueprint"),                TEXT("/Script/Engine"),              TEXT("Blueprint") },
+                            { TEXT("StaticMesh"),               TEXT("/Script/Engine"),              TEXT("StaticMesh") },
+                            { TEXT("SkeletalMesh"),             TEXT("/Script/Engine"),              TEXT("SkeletalMesh") },
+                            { TEXT("Material"),                 TEXT("/Script/Engine"),              TEXT("Material") },
+                            { TEXT("MaterialInstance"),         TEXT("/Script/Engine"),              TEXT("MaterialInstanceConstant") },
+                            { TEXT("MaterialInstanceConstant"), TEXT("/Script/Engine"),              TEXT("MaterialInstanceConstant") },
+                            { TEXT("Texture2D"),                TEXT("/Script/Engine"),              TEXT("Texture2D") },
+                            { TEXT("Level"),                    TEXT("/Script/Engine"),              TEXT("World") },
+                            { TEXT("World"),                    TEXT("/Script/Engine"),              TEXT("World") },
+                            { TEXT("SoundCue"),                 TEXT("/Script/Engine"),              TEXT("SoundCue") },
+                            { TEXT("SoundWave"),                TEXT("/Script/Engine"),              TEXT("SoundWave") },
+                            // Animation types
+                            { TEXT("AnimSequence"),             TEXT("/Script/Engine"),              TEXT("AnimSequence") },
+                            { TEXT("AnimMontage"),              TEXT("/Script/Engine"),              TEXT("AnimMontage") },
+                            { TEXT("AnimBlueprint"),            TEXT("/Script/Engine"),              TEXT("AnimBlueprint") },
+                            { TEXT("BlendSpace"),               TEXT("/Script/Engine"),              TEXT("BlendSpace") },
+                            { TEXT("BlendSpace1D"),             TEXT("/Script/Engine"),              TEXT("BlendSpace1D") },
+                            { TEXT("Skeleton"),                 TEXT("/Script/Engine"),              TEXT("Skeleton") },
+                            { TEXT("PhysicsAsset"),             TEXT("/Script/Engine"),              TEXT("PhysicsAsset") },
+                            // Niagara / Particle
+                            { TEXT("NiagaraSystem"),            TEXT("/Script/Niagara"),             TEXT("NiagaraSystem") },
+                            { TEXT("NiagaraEmitter"),           TEXT("/Script/Niagara"),             TEXT("NiagaraEmitter") },
+                            { TEXT("ParticleSystem"),           TEXT("/Script/Engine"),              TEXT("ParticleSystem") },
+                            // Audio
+                            { TEXT("SoundBase"),                TEXT("/Script/Engine"),              TEXT("SoundBase") },
+                            { TEXT("MetaSoundSource"),          TEXT("/Script/MetasoundEngine"),     TEXT("MetaSoundSource") },
+                            // UI
+                            { TEXT("WidgetBlueprint"),          TEXT("/Script/UMGEditor"),           TEXT("WidgetBlueprint") },
+                            // Data / Misc
+                            { TEXT("DataTable"),                TEXT("/Script/Engine"),              TEXT("DataTable") },
+                            { TEXT("DataAsset"),                TEXT("/Script/Engine"),              TEXT("DataAsset") },
+                            { TEXT("CurveFloat"),               TEXT("/Script/Engine"),              TEXT("CurveFloat") },
+                            { TEXT("Texture"),                  TEXT("/Script/Engine"),              TEXT("Texture") },
+                            { TEXT("TextureRenderTarget2D"),    TEXT("/Script/Engine"),              TEXT("TextureRenderTarget2D") },
+                            { TEXT("MaterialFunction"),         TEXT("/Script/Engine"),              TEXT("MaterialFunction") },
+                            { TEXT("LevelSequence"),            TEXT("/Script/LevelSequence"),       TEXT("LevelSequence") },
+                        };
+
+                        bool bFound = false;
+                        for (const FClassMapping& Mapping : ClassMappings)
+                        {
+                            if (ClassName.Equals(Mapping.ShortName, ESearchCase::IgnoreCase))
+                            {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+                                Filter.ClassPaths.Add(FTopLevelAssetPath(Mapping.PackagePath, Mapping.ClassNameStr));
+#else
+                                Filter.ClassNames.Add(FName(Mapping.ClassNameStr));
+#endif
+                                bFound = true;
+                                break;
+                            }
+                        }
+
+                        if (!bFound)
+                        {
+                            // Build supported names list for error message (cached)
+                            static FString SupportedNames;
+                            if (SupportedNames.IsEmpty())
+                            {
+                                TSet<FString> UniqueNames;
+                                for (const FClassMapping& Mapping : ClassMappings)
+                                {
+                                    UniqueNames.Add(Mapping.ShortName);
+                                }
+                                TArray<FString> SortedNames = UniqueNames.Array();
+                                SortedNames.Sort();
+                                SupportedNames = FString::Join(SortedNames, TEXT(", "));
+                            }
                             SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Unknown short class name '%s'. Use full path (e.g. /Script/Engine.Blueprint) or one of: Blueprint, StaticMesh, SkeletalMesh, Material, MaterialInstance, Texture2D, Level, World, SoundCue, SoundWave."),
-                                    *ClassName),
+                                FString::Printf(TEXT("Unknown short class name '%s'. Use full path (e.g. /Script/Engine.AnimSequence) or one of: %s."),
+                                    *ClassName, *SupportedNames),
                                 TEXT("UNKNOWN_CLASS_NAME"));
                             return true;
                         }
@@ -441,13 +466,48 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
             });
         }
 
-        // Apply limit
+        // Sort for deterministic pagination (AssetRegistry order is not guaranteed)
+        AssetDataList.Sort([](const FAssetData& A, const FAssetData& B)
+        {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+            return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
+#else
+            return A.ToSoftObjectPath().ToString() < B.ToSoftObjectPath().ToString();
+#endif
+        });
+
+        // Apply offset and limit for pagination
+        const int32 TotalCount = AssetDataList.Num();
+
+        int32 Offset = 0;
+        if (Payload->HasField(TEXT("offset")))
+        {
+            Payload->TryGetNumberField(TEXT("offset"), Offset);
+            Offset = FMath::Max(0, Offset);
+        }
+
         int32 Limit = 100;
         if (Payload->HasField(TEXT("limit")))
         {
             Payload->TryGetNumberField(TEXT("limit"), Limit);
+            Limit = FMath::Max(0, Limit);
         }
-        if (Limit > 0 && AssetDataList.Num() > Limit)
+
+        // Apply offset first, then limit
+        if (Offset > 0 && Offset < AssetDataList.Num())
+        {
+            AssetDataList.RemoveAt(0, Offset);
+        }
+        else if (Offset >= AssetDataList.Num())
+        {
+            AssetDataList.Empty();
+        }
+
+        if (Limit == 0)
+        {
+            AssetDataList.Empty();
+        }
+        else if (AssetDataList.Num() > Limit)
         {
             AssetDataList.SetNum(Limit);
         }
@@ -475,6 +535,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetQueryAction(
         Result->SetBoolField(TEXT("success"), true);
         Result->SetArrayField(TEXT("assets"), AssetsArray);
         Result->SetNumberField(TEXT("count"), AssetsArray.Num());
+        Result->SetNumberField(TEXT("totalCount"), TotalCount);
+        Result->SetNumberField(TEXT("offset"), Offset);
+        Result->SetNumberField(TEXT("limit"), Limit);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, 
             TEXT("Assets found."), Result);
