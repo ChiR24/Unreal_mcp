@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- `MCP_ADDITIONAL_PATH_PREFIXES` environment variable to whitelist custom UE content mount points (plugins with `CanContainContent`). Default is empty (no change to existing behavior). Enables projects with modular plugin architecture to access Blueprint assets at custom mount points like `/ProjectObject/`, `/ProjectAnimation/`, etc.
+
+---
+
 ## 🏷️ [0.5.20] - 2026-03-21
 
 > [!IMPORTANT]
