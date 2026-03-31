@@ -4731,9 +4731,55 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         resolutionY: { type: 'number', description: 'Output height for set_output_settings' },
         fileNameFormat: { type: 'string', description: 'Filename format with tokens like {sequence_name}, {frame_number}' },
         overrideExisting: { type: 'boolean', description: 'Overwrite existing output files' },
+        zeroPadFrameNumbers: { type: 'number', description: 'Number of digits for zero-padded frame numbers (default 4)' },
+        frameNumberOffset: { type: 'number', description: 'Offset added to frame numbers in output filenames' },
+        handleFrameCount: { type: 'number', description: 'Number of extra frames to render before/after sequence range' },
+        useCustomFrameRate: { type: 'boolean', description: 'Use a custom frame rate for output' },
+        useCustomPlaybackRange: { type: 'boolean', description: 'Use custom start/end frames instead of sequence range' },
+        customStartFrame: { type: 'number', description: 'Custom start frame (requires useCustomPlaybackRange)' },
+        customEndFrame: { type: 'number', description: 'Custom end frame (requires useCustomPlaybackRange)' },
         presetPath: { type: 'string', description: 'Asset path to MRQ preset config for load_preset' }
       },
       required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+        result: {
+          type: 'object',
+          description: 'Action-specific result object',
+          properties: {
+            jobs: { type: 'array', description: 'Array of job objects (get_queue)' },
+            jobCount: { type: 'number' },
+            isRendering: { type: 'boolean' },
+            jobIndex: { type: 'number' },
+            jobName: commonSchemas.stringProp,
+            consoleVariables: { type: 'object', description: 'CVar name→value pairs' },
+            startConsoleCommands: { type: 'array', items: { type: 'string' } },
+            endConsoleCommands: { type: 'array', items: { type: 'string' } },
+            totalCVars: { type: 'number' },
+            outputDirectory: commonSchemas.stringProp,
+            resolutionX: { type: 'number' },
+            resolutionY: { type: 'number' },
+            fileNameFormat: commonSchemas.stringProp,
+            overrideExisting: { type: 'boolean' },
+            zeroPadFrameNumbers: { type: 'number' },
+            frameNumberOffset: { type: 'number' },
+            handleFrameCount: { type: 'number' },
+            useCustomFrameRate: { type: 'boolean' },
+            useCustomPlaybackRange: { type: 'boolean' },
+            customStartFrame: { type: 'number' },
+            customEndFrame: { type: 'number' },
+            remainingJobs: { type: 'number' },
+            renderStarted: { type: 'boolean' },
+            presetPath: commonSchemas.stringProp,
+            settingCount: { type: 'number' }
+          }
+        }
+      }
     }
   }
 ];

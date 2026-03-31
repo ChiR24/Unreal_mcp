@@ -97,7 +97,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
     ErrorResult->SetStringField(TEXT("error"), TEXT("MRQ_NOT_AVAILABLE"));
     ErrorResult->SetStringField(TEXT("message"), TEXT("Movie Render Queue plugin is not available in this engine build"));
     SendAutomationResponse(RequestingSocket, RequestId, false,
-        TEXT("Movie Render Queue plugin is not available"), ErrorResult);
+        TEXT("Movie Render Queue plugin is not available"), ErrorResult, TEXT("MRQ_NOT_AVAILABLE"));
     return true;
 #else
     FString SubAction;
@@ -113,7 +113,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
         TSharedPtr<FJsonObject> ErrorResult = MakeShared<FJsonObject>();
         ErrorResult->SetStringField(TEXT("error"), TEXT("SUBSYSTEM_NOT_FOUND"));
         SendAutomationResponse(RequestingSocket, RequestId, false,
-            TEXT("MRQ subsystem not available (editor only)"), ErrorResult);
+            TEXT("MRQ subsystem not available (editor only)"), ErrorResult, TEXT("SUBSYSTEM_NOT_FOUND"));
         return true;
     }
 
@@ -182,7 +182,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -280,7 +280,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -337,7 +337,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -347,11 +347,19 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("NO_CONFIG"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("Job has no pipeline config"), Err);
+                TEXT("Job has no pipeline config"), Err, TEXT("NO_CONFIG"));
             return true;
         }
 
         UMoviePipelineConsoleVariableSetting* CVars = Cast<UMoviePipelineConsoleVariableSetting>(Config->FindOrAddSettingByClass(UMoviePipelineConsoleVariableSetting::StaticClass()));
+        if (!CVars)
+        {
+            TSharedPtr<FJsonObject> Err2 = MakeShared<FJsonObject>();
+            Err2->SetStringField(TEXT("error"), TEXT("SETTING_NOT_AVAILABLE"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("Failed to find or create CVar setting"), Err2, TEXT("SETTING_NOT_AVAILABLE"));
+            return true;
+        }
 
         // Set CVars from payload
         const TSharedPtr<FJsonObject>* SetObj = nullptr;
@@ -430,7 +438,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -477,7 +485,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -487,18 +495,40 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("NO_CONFIG"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("Job has no pipeline config"), Err);
+                TEXT("Job has no pipeline config"), Err, TEXT("NO_CONFIG"));
             return true;
         }
 
         UMoviePipelineOutputSetting* Output = Cast<UMoviePipelineOutputSetting>(Config->FindOrAddSettingByClass(UMoviePipelineOutputSetting::StaticClass()));
+        if (!Output)
+        {
+            TSharedPtr<FJsonObject> Err2 = MakeShared<FJsonObject>();
+            Err2->SetStringField(TEXT("error"), TEXT("SETTING_NOT_AVAILABLE"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("Failed to find or create output setting"), Err2, TEXT("SETTING_NOT_AVAILABLE"));
+            return true;
+        }
 
         FString StrVal;
         double NumVal;
         bool BoolVal;
 
         if (Payload->TryGetStringField(TEXT("outputDirectory"), StrVal))
-            Output->OutputDirectory.Path = StrVal;
+        {
+            // Normalize and reject path traversal
+            FString CleanDir = StrVal;
+            FPaths::NormalizeFilename(CleanDir);
+            FPaths::CollapseRelativeDirectories(CleanDir);
+            if (CleanDir.Contains(TEXT("..")))
+            {
+                TSharedPtr<FJsonObject> Err2 = MakeShared<FJsonObject>();
+                Err2->SetStringField(TEXT("error"), TEXT("INVALID_PATH"));
+                SendAutomationResponse(RequestingSocket, RequestId, false,
+                    TEXT("outputDirectory rejected: path traversal (..) not allowed"), Err2, TEXT("INVALID_PATH"));
+                return true;
+            }
+            Output->OutputDirectory.Path = CleanDir;
+        }
         if (Payload->TryGetNumberField(TEXT("resolutionX"), NumVal))
             Output->OutputResolution.X = (int32)NumVal;
         if (Payload->TryGetNumberField(TEXT("resolutionY"), NumVal))
@@ -539,11 +569,9 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("NO_QUEUE"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("No MRQ queue available"), Err);
+                TEXT("No MRQ queue available"), Err, TEXT("NO_QUEUE"));
             return true;
         }
-
-        UMoviePipelineExecutorJob* NewJob = Queue->AllocateNewJob(UMoviePipelineExecutorJob::StaticClass());
 
         FString MapPath, SequencePath, JobName;
         if (Payload.IsValid())
@@ -553,10 +581,18 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             Payload->TryGetStringField(TEXT("jobName"), JobName);
         }
 
-        if (!MapPath.IsEmpty())
-            NewJob->Map = FSoftObjectPath(MapPath);
-        if (!SequencePath.IsEmpty())
-            NewJob->Sequence = FSoftObjectPath(SequencePath);
+        if (MapPath.IsEmpty() || SequencePath.IsEmpty())
+        {
+            TSharedPtr<FJsonObject> Err2 = MakeShared<FJsonObject>();
+            Err2->SetStringField(TEXT("error"), TEXT("MISSING_REQUIRED_FIELDS"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("create_job requires both 'map' and 'sequence'"), Err2, TEXT("MISSING_REQUIRED_FIELDS"));
+            return true;
+        }
+
+        UMoviePipelineExecutorJob* NewJob = Queue->AllocateNewJob(UMoviePipelineExecutorJob::StaticClass());
+        NewJob->Map = FSoftObjectPath(MapPath);
+        NewJob->Sequence = FSoftObjectPath(SequencePath);
         if (!JobName.IsEmpty())
             NewJob->JobName = JobName;
         else
@@ -582,7 +618,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -603,7 +639,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("ALREADY_RENDERING"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("A render is already in progress"), Err);
+                TEXT("A render is already in progress"), Err, TEXT("ALREADY_RENDERING"));
             return true;
         }
 
@@ -612,7 +648,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("EMPTY_QUEUE"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("Queue is empty — add jobs before rendering"), Err);
+                TEXT("Queue is empty — add jobs before rendering"), Err, TEXT("EMPTY_QUEUE"));
             return true;
         }
 
@@ -660,7 +696,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("MISSING_PRESET_PATH"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("presetPath is required"), Err);
+                TEXT("presetPath is required"), Err, TEXT("MISSING_PRESET_PATH"));
             return true;
         }
 
@@ -670,7 +706,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("INVALID_JOB_INDEX"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("No job at index %d"), JobIndex), Err);
+                FString::Printf(TEXT("No job at index %d"), JobIndex), Err, TEXT("INVALID_JOB_INDEX"));
             return true;
         }
 
@@ -681,7 +717,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
             TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
             Err->SetStringField(TEXT("error"), TEXT("PRESET_NOT_FOUND"));
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                FString::Printf(TEXT("Preset not found: %s"), *PresetPath), Err);
+                FString::Printf(TEXT("Preset not found: %s"), *PresetPath), Err, TEXT("PRESET_NOT_FOUND"));
             return true;
         }
 
@@ -700,7 +736,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
     Err->SetStringField(TEXT("error"), TEXT("UNKNOWN_ACTION"));
     Err->SetStringField(TEXT("action"), SubAction);
     SendAutomationResponse(RequestingSocket, RequestId, false,
-        FString::Printf(TEXT("Unknown MRQ action: %s"), *SubAction), Err);
+        FString::Printf(TEXT("Unknown MRQ action: %s"), *SubAction), Err, TEXT("UNKNOWN_ACTION"));
     return true;
 #endif // MCP_HAS_MRQ
 }
