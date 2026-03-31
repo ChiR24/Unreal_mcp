@@ -1,4 +1,12 @@
-export function sanitizePath(path: string, allowedRoots: string[] = ['/Game', '/Engine']): string {
+import { getAdditionalPathPrefixes } from '../config.js';
+
+export function sanitizePath(path: string, allowedRoots?: string[]): string {
+    // Default roots include configured additional prefixes (without trailing slash)
+    if (!allowedRoots) {
+        const additional = getAdditionalPathPrefixes()
+            .map(p => p.replace(/\/$/, ''));
+        allowedRoots = ['/Game', '/Engine', ...additional];
+    }
     if (!path || typeof path !== 'string') {
         throw new Error('Invalid path: must be a non-empty string');
     }

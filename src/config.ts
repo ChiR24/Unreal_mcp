@@ -96,7 +96,7 @@ export function getAdditionalPathPrefixes(): string[] {
     .map(s => {
       let p = s.startsWith('/') ? s : `/${s}`;
       if (!p.endsWith('/')) p += '/';
-      if (p.includes('..') || p.includes('//')) return '';
+      if (p === '/' || p.includes('..') || p.includes('//')) return '';
       return p;
     })
     .filter(s => s.length > 0);
