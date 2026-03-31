@@ -126,9 +126,9 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
       case 'list': {
         // Route through C++ HandleListAssets for proper asset enumeration
         const params = normalizeArgs(args, [
-          { key: 'path', aliases: ['directory', 'assetPath'], default: '/Game' },
+          { key: 'path', aliases: ['directory', 'directoryPath', 'assetPath'], default: '/Game' },
           { key: 'limit', default: 50 },
-          { key: 'recursive', default: false },
+          { key: 'recursive', aliases: ['recursivePaths'], default: false },
           { key: 'depth', default: undefined }
         ]);
 
@@ -552,7 +552,8 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           { key: 'packagePaths' },
           { key: 'recursivePaths' },
           { key: 'recursiveClasses' },
-          { key: 'limit' }
+          { key: 'limit' },
+          { key: 'offset' }
         ]);
         const searchText = extractOptionalString(params, 'searchText');
         const classNames = extractOptionalArray<string>(params, 'classNames');
@@ -561,6 +562,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
         const recursivePaths = extractOptionalBoolean(params, 'recursivePaths') ?? (searchText ? true : undefined);
         const recursiveClasses = extractOptionalBoolean(params, 'recursiveClasses');
         const limit = extractOptionalNumber(params, 'limit');
+        const offset = extractOptionalNumber(params, 'offset');
 
         // SECURITY: Validate packagePaths for traversal attempts
         const pathSecurityError = validatePathsSecurity(packagePaths, 'packagePaths');
@@ -573,6 +575,7 @@ export async function handleAssetTools(action: string, args: HandlerArgs, tools:
           recursivePaths,
           recursiveClasses,
           limit,
+          offset,
           subAction: 'search_assets'
         }) as AssetOperationResponse;
         return ResponseFactory.success(res, 'Assets found');
