@@ -2,6 +2,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { EditorArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest, requireNonEmptyString, validateExpectedParams, validateRequiredParams, validateArgsSecurity } from './common-handlers.js';
+import { sanitizeCommandArgument } from '../../utils/validation.js';
 
 /**
  * Action aliases for test compatibility
@@ -209,24 +210,29 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       const durationSeconds = typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
       const metadata = args.metadata;
       
+      const safeFilename = sanitizeCommandArgument(filename);
+
       // Try automation bridge first with all params
       try {
         const res = await executeAutomationRequest(tools, 'control_editor', {
           action: 'start_recording',
-          filename,
+          filename, // JSON path - use raw value (JSON.stringify handles escaping)
           frameRate,
           durationSeconds,
           metadata
         });
         return cleanObject(res);
       } catch {
+        if (!safeFilename) {
+          return { success: false, error: 'Filename is required after sanitization', action: 'start_recording' };
+        }
         // Fallback to console command
-        await executeAutomationRequest(tools, 'console_command', { command: `DemoRec ${filename}` });
+        await executeAutomationRequest(tools, 'console_command', { command: `DemoRec ${safeFilename}` });
         return { 
           success: true, 
-          message: `Started recording to ${filename}`, 
+          message: `Started recording to ${safeFilename}`,
           action: 'start_recording',
-          filename,
+          filename: safeFilename,
           frameRate,
           durationSeconds
         };
@@ -269,12 +275,16 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return { ...cleanObject(res), action: 'execute_command' };
     }
     case 'set_camera_fov': {
-      await executeAutomationRequest(tools, 'console_command', { command: `fov ${args.fov}` });
-      return { success: true, message: `Set FOV to ${args.fov}`, action: 'set_camera_fov' };
+      const safeFov = sanitizeCommandArgument(String(args.fov));
+      if (!safeFov) return { success: false, error: 'FOV is required after sanitization', action: 'set_camera_fov' };
+      await executeAutomationRequest(tools, 'console_command', { command: `fov ${safeFov}` });
+      return { success: true, message: `Set FOV to ${safeFov}`, action: 'set_camera_fov' };
     }
     case 'set_game_speed': {
-      await executeAutomationRequest(tools, 'console_command', { command: `slomo ${args.speed}` });
-      return { success: true, message: `Set game speed to ${args.speed}`, action: 'set_game_speed' };
+      const safeSpeed = sanitizeCommandArgument(String(args.speed));
+      if (!safeSpeed) return { success: false, error: 'Speed is required after sanitization', action: 'set_game_speed' };
+      await executeAutomationRequest(tools, 'console_command', { command: `slomo ${safeSpeed}` });
+      return { success: true, message: `Set game speed to ${safeSpeed}`, action: 'set_game_speed' };
     }
     case 'set_view_mode': {
       const viewMode = requireNonEmptyString(args.viewMode, 'viewMode');
