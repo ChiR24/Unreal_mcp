@@ -412,6 +412,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         realtime: commonSchemas.booleanProp,
         stat: commonSchemas.stringProp,
         category: commonSchemas.stringProp,
+        includeMenus: commonSchemas.booleanProp,
         preferences: commonSchemas.objectProp,
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,

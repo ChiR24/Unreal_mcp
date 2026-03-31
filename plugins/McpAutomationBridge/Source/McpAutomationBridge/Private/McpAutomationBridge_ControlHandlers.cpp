@@ -99,8 +99,20 @@
 // -----------------------------------------------------------------------------
 #include "Components/LightComponent.h"
 #include "Editor.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Framework/Application/SlateUser.h"
+#include "Framework/Docking/TabManager.h"
+#include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
+#include "InputCoreTypes.h"
+#include "HAL/PlatformProcess.h"
+#include "ImageUtils.h"
+#include "IImageWrapperModule.h"
 #include "Modules/ModuleManager.h"
-#include "IAssetViewport.h"  // For IAssetViewport::GetAssetViewportClient()
+#include "IAssetViewport.h" // For IAssetViewport::GetAssetViewportClient()
+#include "Rendering/DrawElements.h"
+#include "Widgets/Docking/SDockTab.h"
+#include "Widgets/SLeafWidget.h"
+#include "Widgets/SWindow.h"
 
 // -----------------------------------------------------------------------------
 // Editor-only Includes: Level Editor (optional, may not be available)
@@ -147,6 +159,1231 @@
 
 #endif // WITH_EDITOR
 
+#if WITH_EDITOR
+namespace
+{
+  constexpr int32 GMcpSimulatedPointerIndex = 0;
+
+  int32 GetSimulatedSlateUserIndex()
+  {
+    if (FSlateApplication::IsInitialized())
+    {
+      return static_cast<int32>(FSlateApplication::Get().GetUserIndexForKeyboard());
+    }
+
+    return 0;
+  }
+
+  FInputDeviceId GetSimulatedInputDeviceId(const int32 SlateUserIndex)
+  {
+    FInputDeviceId InputDeviceId = INPUTDEVICEID_NONE;
+
+    if (FSlateApplication::IsInitialized())
+    {
+      if (TSharedPtr<FSlateUser> SlateUser = FSlateApplication::Get().GetUser(SlateUserIndex))
+      {
+        const FPlatformUserId PlatformUser = SlateUser->GetPlatformUserId();
+        InputDeviceId = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(PlatformUser);
+      }
+    }
+
+    if (!InputDeviceId.IsValid())
+    {
+      InputDeviceId = IPlatformInputDeviceMapper::Get().GetDefaultInputDevice();
+    }
+
+    return InputDeviceId;
+  }
+
+  void SetFocusedWidgetResponseFields(const TSharedPtr<FJsonObject> &Resp)
+  {
+    if (!Resp.IsValid() || !FSlateApplication::IsInitialized())
+    {
+      return;
+    }
+
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const uint32 KeyboardUserIndex = SlateApp.GetUserIndexForKeyboard();
+
+    const TSharedPtr<SWidget> KeyboardFocusedWidget = SlateApp.GetKeyboardFocusedWidget();
+    const TSharedPtr<SWidget> UserFocusedWidget = SlateApp.GetUserFocusedWidget(KeyboardUserIndex);
+
+    Resp->SetStringField(TEXT("keyboardFocusedWidgetType"), KeyboardFocusedWidget.IsValid() ? KeyboardFocusedWidget->GetTypeAsString() : TEXT(""));
+    Resp->SetStringField(TEXT("userFocusedWidgetType"), UserFocusedWidget.IsValid() ? UserFocusedWidget->GetTypeAsString() : TEXT(""));
+    Resp->SetNumberField(TEXT("keyboardUserIndex"), static_cast<double>(KeyboardUserIndex));
+  }
+
+  struct FMcpResolvedVirtualInputTarget
+  {
+    TSharedPtr<SWindow> Window;
+    TSharedPtr<SDockTab> Tab;
+    FString TabId;
+    FString WindowTitle;
+    FSlateRect ClientRect;
+  };
+
+  bool TryGetPointerPositionFromPayload(const TSharedPtr<FJsonObject> &Payload, FVector2D &OutPosition);
+  TSet<FKey> ConvertPressedButtonNamesToKeys(const TSet<FString> &PressedButtonNames);
+  FModifierKeysState BuildModifierKeyState(const TSet<FString> &PressedModifierKeys);
+  FPointerEvent BuildMouseButtonEvent(const FVector2D &Position,
+                                      const FVector2D &LastPosition,
+                                      const TSet<FKey> &PressedButtons,
+                                      const FKey &EffectingButton,
+                                      const FModifierKeysState &ModifierKeys,
+                                      float WheelDelta);
+  FPointerEvent BuildMouseMoveEvent(const FVector2D &Position,
+                                    const FVector2D &LastPosition,
+                                    const TSet<FKey> &PressedButtons,
+                                    const FModifierKeysState &ModifierKeys);
+  void StoreSimulatedPosition(FVector2D &StoredPosition, bool &bHasStoredPosition, const FVector2D &Position);
+
+  class SMcpBridgeVirtualCursorOverlay final : public SLeafWidget
+  {
+  public:
+    SLATE_BEGIN_ARGS(SMcpBridgeVirtualCursorOverlay)
+        : _CursorPosition(FVector2D::ZeroVector)
+    {
+    }
+    SLATE_ARGUMENT(FVector2D, CursorPosition)
+    SLATE_END_ARGS()
+
+    void Construct(const FArguments &InArgs)
+    {
+      CursorPosition = InArgs._CursorPosition;
+      SetVisibility(EVisibility::HitTestInvisible);
+    }
+
+    void SetCursorPosition(const FVector2D &InCursorPosition)
+    {
+      CursorPosition = InCursorPosition;
+      Invalidate(EInvalidateWidget::Paint);
+    }
+
+    virtual FVector2D ComputeDesiredSize(float) const override
+    {
+      return FVector2D(1.0f, 1.0f);
+    }
+
+    virtual int32 OnPaint(const FPaintArgs &Args, const FGeometry &AllottedGeometry,
+                          const FSlateRect &MyCullingRect, FSlateWindowElementList &OutDrawElements,
+                          int32 LayerId, const FWidgetStyle &InWidgetStyle,
+                          bool bParentEnabled) const override
+    {
+      const FVector2D LocalSize = AllottedGeometry.GetLocalSize();
+      const FVector2D LocalCursor(
+          FMath::Clamp(CursorPosition.X, 0.0f, LocalSize.X),
+          FMath::Clamp(CursorPosition.Y, 0.0f, LocalSize.Y));
+
+      const FLinearColor CursorColor(1.0f, 0.25f, 0.1f, 0.95f);
+      const FVector2D HorizontalStart = LocalCursor + FVector2D(-10.0f, 0.0f);
+      const FVector2D HorizontalEnd = LocalCursor + FVector2D(10.0f, 0.0f);
+      const FVector2D VerticalStart = LocalCursor + FVector2D(0.0f, -10.0f);
+      const FVector2D VerticalEnd = LocalCursor + FVector2D(0.0f, 10.0f);
+
+      TArray<FVector2D> HorizontalLine;
+      HorizontalLine.Add(HorizontalStart);
+      HorizontalLine.Add(HorizontalEnd);
+      FSlateDrawElement::MakeLines(
+          OutDrawElements,
+          LayerId,
+          AllottedGeometry.ToPaintGeometry(),
+          HorizontalLine,
+          ESlateDrawEffect::None,
+          CursorColor,
+          true,
+          2.0f);
+
+      TArray<FVector2D> VerticalLine;
+      VerticalLine.Add(VerticalStart);
+      VerticalLine.Add(VerticalEnd);
+      FSlateDrawElement::MakeLines(
+          OutDrawElements,
+          LayerId + 1,
+          AllottedGeometry.ToPaintGeometry(),
+          VerticalLine,
+          ESlateDrawEffect::None,
+          CursorColor,
+          true,
+          2.0f);
+
+      TArray<FVector2D> CursorBox;
+      CursorBox.Add(LocalCursor + FVector2D(-4.0f, -4.0f));
+      CursorBox.Add(LocalCursor + FVector2D(4.0f, -4.0f));
+      CursorBox.Add(LocalCursor + FVector2D(4.0f, 4.0f));
+      CursorBox.Add(LocalCursor + FVector2D(-4.0f, 4.0f));
+      CursorBox.Add(LocalCursor + FVector2D(-4.0f, -4.0f));
+      FSlateDrawElement::MakeLines(
+          OutDrawElements,
+          LayerId + 2,
+          AllottedGeometry.ToPaintGeometry(),
+          CursorBox,
+          ESlateDrawEffect::None,
+          FLinearColor(1.0f, 0.95f, 0.2f, 0.95f),
+          true,
+          1.5f);
+
+      return LayerId + 2;
+    }
+
+  private:
+    FVector2D CursorPosition = FVector2D::ZeroVector;
+  };
+
+  TArray<TSharedRef<SWindow>> GetVisibleSlateWindows()
+  {
+    TArray<TSharedRef<SWindow>> Windows;
+    if (FSlateApplication::IsInitialized())
+    {
+      FSlateApplication::Get().GetAllVisibleWindowsOrdered(Windows);
+    }
+    return Windows;
+  }
+
+  void DetachVirtualCursorOverlay(UMcpAutomationBridgeSubsystem *Self)
+  {
+    if (Self == nullptr)
+    {
+      return;
+    }
+
+    if (Self->SimulatedTargetWindow.IsValid() && Self->SimulatedVirtualCursorOverlay.IsValid())
+    {
+      Self->SimulatedTargetWindow.Pin()->RemoveOverlaySlot(Self->SimulatedVirtualCursorOverlay.ToSharedRef());
+    }
+
+    Self->SimulatedVirtualCursorOverlay.Reset();
+    Self->SimulatedTargetWindow.Reset();
+    Self->SimulatedTargetDockTab.Reset();
+    Self->SimulatedTargetTabId.Reset();
+    Self->SimulatedTargetWindowTitle.Reset();
+  }
+
+  void ResetVirtualInputState(UMcpAutomationBridgeSubsystem *Self)
+  {
+    if (Self == nullptr)
+    {
+      return;
+    }
+
+    Self->SimulatedPressedMouseButtons.Reset();
+    Self->SimulatedPressedModifierKeys.Reset();
+    Self->SimulatedPointerPosition = FVector2D::ZeroVector;
+    Self->bSimulatedPointerPositionValid = false;
+    FSlateApplication::Get().ReleaseAllPointerCapture();
+    DetachVirtualCursorOverlay(Self);
+  }
+
+  FVector2D ClampClientPositionToWindow(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &Position)
+  {
+    const FVector2D ClientSize = Target.ClientRect.GetSize();
+    return FVector2D(
+        FMath::Clamp(Position.X, 0.0f, ClientSize.X),
+        FMath::Clamp(Position.Y, 0.0f, ClientSize.Y));
+  }
+
+  FVector2D ClientPositionToScreen(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &Position)
+  {
+    return FVector2D(Target.ClientRect.Left + Position.X, Target.ClientRect.Top + Position.Y);
+  }
+
+  bool TryGetRelativePointerPositionFromPayload(const TSharedPtr<FJsonObject> &Payload, FVector2D &OutPosition)
+  {
+    if (!Payload.IsValid())
+    {
+      return false;
+    }
+
+    double X = 0.0;
+    double Y = 0.0;
+    if (Payload->TryGetNumberField(TEXT("clientX"), X) && Payload->TryGetNumberField(TEXT("clientY"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    if (Payload->TryGetNumberField(TEXT("x"), X) && Payload->TryGetNumberField(TEXT("y"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    return false;
+  }
+
+  bool TryGetRelativePointObjectField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, FVector2D &OutPosition)
+  {
+    if (!Payload.IsValid())
+    {
+      return false;
+    }
+
+    const TSharedPtr<FJsonObject> *PointObject = nullptr;
+    if (!Payload->TryGetObjectField(FieldName, PointObject) || PointObject == nullptr || !PointObject->IsValid())
+    {
+      return false;
+    }
+
+    double X = 0.0;
+    double Y = 0.0;
+    if ((*PointObject)->TryGetNumberField(TEXT("clientX"), X) && (*PointObject)->TryGetNumberField(TEXT("clientY"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    if ((*PointObject)->TryGetNumberField(TEXT("x"), X) && (*PointObject)->TryGetNumberField(TEXT("y"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    return false;
+  }
+
+  bool ResolveVirtualInputTarget(UMcpAutomationBridgeSubsystem *Self,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 bool &bOutAttempted,
+                                 FMcpResolvedVirtualInputTarget &OutTarget,
+                                 FString &OutError)
+  {
+    bOutAttempted = false;
+    OutError.Reset();
+
+    if (Self == nullptr || !FSlateApplication::IsInitialized())
+    {
+      return false;
+    }
+
+    FString RequestedTabId;
+    FString RequestedWindowTitle;
+    if (Payload.IsValid())
+    {
+      Payload->TryGetStringField(TEXT("tabId"), RequestedTabId);
+      Payload->TryGetStringField(TEXT("windowTitle"), RequestedWindowTitle);
+    }
+
+    RequestedTabId = RequestedTabId.TrimStartAndEnd();
+    RequestedWindowTitle = RequestedWindowTitle.TrimStartAndEnd();
+
+    if (!RequestedTabId.IsEmpty())
+    {
+      bOutAttempted = true;
+      const TSharedPtr<SDockTab> TargetTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FName(*RequestedTabId));
+      if (!TargetTab.IsValid())
+      {
+        OutError = FString::Printf(TEXT("Live tab %s was not found"), *RequestedTabId);
+        return false;
+      }
+
+      const TSharedPtr<SWindow> TargetWindow = TargetTab->GetParentWindow();
+      if (!TargetWindow.IsValid())
+      {
+        OutError = FString::Printf(TEXT("Tab %s does not have a live parent window"), *RequestedTabId);
+        return false;
+      }
+
+      OutTarget.Window = TargetWindow;
+      OutTarget.Tab = TargetTab;
+      OutTarget.TabId = RequestedTabId;
+      OutTarget.WindowTitle = TargetWindow->GetTitle().ToString();
+      OutTarget.ClientRect = TargetWindow->GetClientRectInScreen();
+      return true;
+    }
+
+    if (!RequestedWindowTitle.IsEmpty())
+    {
+      bOutAttempted = true;
+      for (const TSharedRef<SWindow> &Window : GetVisibleSlateWindows())
+      {
+        if (Window->GetTitle().ToString().Equals(RequestedWindowTitle, ESearchCase::IgnoreCase))
+        {
+          OutTarget.Window = Window;
+          OutTarget.WindowTitle = Window->GetTitle().ToString();
+          OutTarget.ClientRect = Window->GetClientRectInScreen();
+          return true;
+        }
+      }
+
+      OutError = FString::Printf(TEXT("Visible window '%s' was not found"), *RequestedWindowTitle);
+      return false;
+    }
+
+    if (Self->SimulatedTargetWindow.IsValid())
+    {
+      bOutAttempted = true;
+      OutTarget.Window = Self->SimulatedTargetWindow.Pin();
+      OutTarget.Tab = Self->SimulatedTargetDockTab.Pin();
+      OutTarget.TabId = Self->SimulatedTargetTabId;
+      OutTarget.WindowTitle = Self->SimulatedTargetWindowTitle;
+      OutTarget.ClientRect = OutTarget.Window->GetClientRectInScreen();
+      return true;
+    }
+
+    return false;
+  }
+
+  void AttachVirtualCursorOverlay(UMcpAutomationBridgeSubsystem *Self,
+                                  const FMcpResolvedVirtualInputTarget &Target,
+                                  const FVector2D &ClientPosition)
+  {
+    if (Self == nullptr || !Target.Window.IsValid())
+    {
+      return;
+    }
+
+    const bool bTargetChanged = !Self->SimulatedTargetWindow.IsValid() || Self->SimulatedTargetWindow.Pin() != Target.Window;
+    if (bTargetChanged)
+    {
+      DetachVirtualCursorOverlay(Self);
+    }
+
+    if (!Self->SimulatedVirtualCursorOverlay.IsValid())
+    {
+      const TSharedRef<SMcpBridgeVirtualCursorOverlay> Overlay = SNew(SMcpBridgeVirtualCursorOverlay)
+                                                                     .CursorPosition(ClientPosition);
+      Self->SimulatedVirtualCursorOverlay = Overlay;
+      Target.Window->AddOverlaySlot(INT32_MAX)
+          .HAlign(HAlign_Fill)
+          .VAlign(VAlign_Fill)
+              [Overlay];
+    }
+    else
+    {
+      StaticCastSharedPtr<SMcpBridgeVirtualCursorOverlay>(Self->SimulatedVirtualCursorOverlay)->SetCursorPosition(ClientPosition);
+    }
+
+    Self->SimulatedTargetWindow = Target.Window;
+    Self->SimulatedTargetDockTab = Target.Tab;
+    Self->SimulatedTargetTabId = Target.TabId;
+    Self->SimulatedTargetWindowTitle = Target.WindowTitle;
+  }
+
+  FWidgetPath LocateTargetWidgetPath(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &ScreenPosition)
+  {
+    TArray<TSharedRef<SWindow>> TargetWindows;
+    TargetWindows.Add(Target.Window.ToSharedRef());
+    return FSlateApplication::Get().LocateWindowUnderMouse(FVector2f(static_cast<float>(ScreenPosition.X), static_cast<float>(ScreenPosition.Y)), TargetWindows, false, GetSimulatedSlateUserIndex());
+  }
+
+  bool FocusVirtualTargetAtPosition(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &ScreenPosition)
+  {
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const uint32 KeyboardUserIndex = SlateApp.GetUserIndexForKeyboard();
+    FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    if (!WidgetPath.IsValid())
+    {
+      return false;
+    }
+
+    TSharedPtr<SWidget> FallbackFocusableWidget;
+    for (int32 WidgetIndex = WidgetPath.Widgets.Num() - 1; WidgetIndex >= 0; --WidgetIndex)
+    {
+      const TSharedRef<SWidget> &CandidateWidget = WidgetPath.Widgets[WidgetIndex].Widget;
+      if (!CandidateWidget->SupportsKeyboardFocus())
+      {
+        continue;
+      }
+
+      if (!FallbackFocusableWidget.IsValid())
+      {
+        FallbackFocusableWidget = CandidateWidget;
+      }
+
+      const FString CandidateType = CandidateWidget->GetTypeAsString();
+      if (CandidateType == TEXT("SEditableTextBox") ||
+          CandidateType == TEXT("SMultiLineEditableTextBox") ||
+          CandidateType == TEXT("SComboBox"))
+      {
+        FWidgetPath FocusPath = WidgetPath.GetPathDownTo(CandidateWidget);
+        return SlateApp.SetUserFocus(KeyboardUserIndex, FocusPath, EFocusCause::SetDirectly);
+      }
+    }
+
+    if (FallbackFocusableWidget.IsValid())
+    {
+      FWidgetPath FocusPath = WidgetPath.GetPathDownTo(FallbackFocusableWidget.ToSharedRef());
+      return SlateApp.SetUserFocus(KeyboardUserIndex, FocusPath, EFocusCause::SetDirectly);
+    }
+
+    return SlateApp.SetUserFocus(KeyboardUserIndex, WidgetPath, EFocusCause::SetDirectly);
+  }
+
+  bool DispatchVirtualMouseMove(UMcpAutomationBridgeSubsystem *Self,
+                                const FMcpResolvedVirtualInputTarget &Target,
+                                const FVector2D &ClientPosition)
+  {
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FVector2D ClampedPosition = ClampClientPositionToWindow(Target, ClientPosition);
+    const FVector2D LastClientPosition = Self->bSimulatedPointerPositionValid ? Self->SimulatedPointerPosition : ClampedPosition;
+    const FVector2D ScreenPosition = ClientPositionToScreen(Target, ClampedPosition);
+    const FVector2D LastScreenPosition = ClientPositionToScreen(Target, LastClientPosition);
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(Self->SimulatedPressedMouseButtons);
+    const FPointerEvent MoveEvent = BuildMouseMoveEvent(ScreenPosition, LastScreenPosition, PressedButtons, BuildModifierKeyState(Self->SimulatedPressedModifierKeys));
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    const bool bHandled = WidgetPath.IsValid() && SlateApp.RoutePointerMoveEvent(WidgetPath, MoveEvent, false);
+    StoreSimulatedPosition(Self->SimulatedPointerPosition, Self->bSimulatedPointerPositionValid, ClampedPosition);
+    AttachVirtualCursorOverlay(Self, Target, ClampedPosition);
+    return bHandled;
+  }
+
+  bool DispatchVirtualMouseDown(UMcpAutomationBridgeSubsystem *Self,
+                                const FMcpResolvedVirtualInputTarget &Target,
+                                const FVector2D &ClientPosition,
+                                const FKey &MouseButton)
+  {
+    const FVector2D ClampedPosition = ClampClientPositionToWindow(Target, ClientPosition);
+    DispatchVirtualMouseMove(Self, Target, ClampedPosition);
+    const FVector2D ScreenPosition = ClientPositionToScreen(Target, Self->SimulatedPointerPosition);
+    Self->SimulatedPressedMouseButtons.Add(MouseButton.GetFName().ToString());
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(Self->SimulatedPressedMouseButtons);
+    const FPointerEvent MouseDownEvent = BuildMouseButtonEvent(ScreenPosition, ScreenPosition, PressedButtons, MouseButton, BuildModifierKeyState(Self->SimulatedPressedModifierKeys), 0.0f);
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    FocusVirtualTargetAtPosition(Target, ScreenPosition);
+    const bool bHandled = WidgetPath.IsValid() && SlateApp.RoutePointerDownEvent(WidgetPath, MouseDownEvent).IsEventHandled();
+    AttachVirtualCursorOverlay(Self, Target, Self->SimulatedPointerPosition);
+    return bHandled;
+  }
+
+  bool DispatchVirtualMouseUp(UMcpAutomationBridgeSubsystem *Self,
+                              const FMcpResolvedVirtualInputTarget &Target,
+                              const FVector2D &ClientPosition,
+                              const FKey &MouseButton)
+  {
+    const FVector2D ClampedPosition = ClampClientPositionToWindow(Target, ClientPosition);
+    DispatchVirtualMouseMove(Self, Target, ClampedPosition);
+    const FVector2D ScreenPosition = ClientPositionToScreen(Target, Self->SimulatedPointerPosition);
+    TSet<FString> PressedButtonsAfterRelease = Self->SimulatedPressedMouseButtons;
+    PressedButtonsAfterRelease.Remove(MouseButton.GetFName().ToString());
+    const TSet<FKey> PressedButtonKeysAfterRelease = ConvertPressedButtonNamesToKeys(PressedButtonsAfterRelease);
+    const FPointerEvent MouseUpEvent = BuildMouseButtonEvent(ScreenPosition, ScreenPosition, PressedButtonKeysAfterRelease, MouseButton, BuildModifierKeyState(Self->SimulatedPressedModifierKeys), 0.0f);
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    const bool bHandled = WidgetPath.IsValid() && SlateApp.RoutePointerUpEvent(WidgetPath, MouseUpEvent).IsEventHandled();
+    Self->SimulatedPressedMouseButtons = MoveTemp(PressedButtonsAfterRelease);
+    AttachVirtualCursorOverlay(Self, Target, Self->SimulatedPointerPosition);
+    return bHandled;
+  }
+
+  bool DispatchVirtualMouseWheel(UMcpAutomationBridgeSubsystem *Self,
+                                 const FMcpResolvedVirtualInputTarget &Target,
+                                 const FVector2D &ClientPosition,
+                                 float WheelDelta)
+  {
+    const FVector2D ClampedPosition = ClampClientPositionToWindow(Target, ClientPosition);
+    DispatchVirtualMouseMove(Self, Target, ClampedPosition);
+    const FVector2D ScreenPosition = ClientPositionToScreen(Target, Self->SimulatedPointerPosition);
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(Self->SimulatedPressedMouseButtons);
+    const FPointerEvent WheelEvent = BuildMouseButtonEvent(ScreenPosition, ScreenPosition, PressedButtons, EKeys::Invalid, BuildModifierKeyState(Self->SimulatedPressedModifierKeys), WheelDelta);
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    const bool bHandled = WidgetPath.IsValid() && SlateApp.RouteMouseWheelOrGestureEvent(WidgetPath, WheelEvent, nullptr).IsEventHandled();
+    AttachVirtualCursorOverlay(Self, Target, Self->SimulatedPointerPosition);
+    return bHandled;
+  }
+
+  bool TryGetPointerPositionFromPayload(const TSharedPtr<FJsonObject> &Payload, FVector2D &OutPosition)
+  {
+    if (!Payload.IsValid())
+    {
+      return false;
+    }
+
+    double X = 0.0;
+    double Y = 0.0;
+    if (Payload->TryGetNumberField(TEXT("x"), X) && Payload->TryGetNumberField(TEXT("y"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    return false;
+  }
+
+  bool TryGetPointObjectField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, FVector2D &OutPosition)
+  {
+    if (!Payload.IsValid())
+    {
+      return false;
+    }
+
+    const TSharedPtr<FJsonObject> *PointObject = nullptr;
+    if (!Payload->TryGetObjectField(FieldName, PointObject) || PointObject == nullptr || !PointObject->IsValid())
+    {
+      return false;
+    }
+
+    double X = 0.0;
+    double Y = 0.0;
+    if ((*PointObject)->TryGetNumberField(TEXT("x"), X) && (*PointObject)->TryGetNumberField(TEXT("y"), Y))
+    {
+      OutPosition = FVector2D(static_cast<float>(X), static_cast<float>(Y));
+      return true;
+    }
+
+    return false;
+  }
+
+  FKey ResolveMouseButtonKey(const FString &ButtonName)
+  {
+    const FString NormalizedButton = ButtonName.ToLower();
+    if (NormalizedButton == TEXT("right"))
+    {
+      return EKeys::RightMouseButton;
+    }
+    if (NormalizedButton == TEXT("middle"))
+    {
+      return EKeys::MiddleMouseButton;
+    }
+    return EKeys::LeftMouseButton;
+  }
+
+  bool TryResolveTextCharacterKey(const TCHAR Character, FKey &OutKey)
+  {
+    switch (Character)
+    {
+    case TEXT('0'):
+      OutKey = EKeys::Zero;
+      return true;
+    case TEXT('1'):
+      OutKey = EKeys::One;
+      return true;
+    case TEXT('2'):
+      OutKey = EKeys::Two;
+      return true;
+    case TEXT('3'):
+      OutKey = EKeys::Three;
+      return true;
+    case TEXT('4'):
+      OutKey = EKeys::Four;
+      return true;
+    case TEXT('5'):
+      OutKey = EKeys::Five;
+      return true;
+    case TEXT('6'):
+      OutKey = EKeys::Six;
+      return true;
+    case TEXT('7'):
+      OutKey = EKeys::Seven;
+      return true;
+    case TEXT('8'):
+      OutKey = EKeys::Eight;
+      return true;
+    case TEXT('9'):
+      OutKey = EKeys::Nine;
+      return true;
+    case TEXT(' '):
+      OutKey = EKeys::SpaceBar;
+      return true;
+    default:
+      break;
+    }
+
+    const TCHAR UpperCharacter = FChar::ToUpper(Character);
+    if (UpperCharacter >= TEXT('A') && UpperCharacter <= TEXT('Z'))
+    {
+      const FString KeyName(1, &UpperCharacter);
+      OutKey = FKey(*KeyName);
+      return OutKey.IsValid();
+    }
+
+    return false;
+  }
+
+  TSet<FKey> ConvertPressedButtonNamesToKeys(const TSet<FString> &PressedButtonNames)
+  {
+    TSet<FKey> PressedButtons;
+    for (const FString &ButtonName : PressedButtonNames)
+    {
+      const FKey Key(*ButtonName);
+      if (Key.IsValid())
+      {
+        PressedButtons.Add(Key);
+      }
+    }
+    return PressedButtons;
+  }
+
+  bool IsModifierKey(const FKey &Key)
+  {
+    return Key == EKeys::LeftShift || Key == EKeys::RightShift ||
+           Key == EKeys::LeftControl || Key == EKeys::RightControl ||
+           Key == EKeys::LeftAlt || Key == EKeys::RightAlt ||
+           Key == EKeys::LeftCommand || Key == EKeys::RightCommand;
+  }
+
+  void UpdatePressedModifierKeys(TSet<FString> &PressedModifierKeys, const FKey &Key, bool bPressed)
+  {
+    if (!IsModifierKey(Key))
+    {
+      return;
+    }
+
+    const FString KeyName = Key.GetFName().ToString();
+    if (bPressed)
+    {
+      PressedModifierKeys.Add(KeyName);
+    }
+    else
+    {
+      PressedModifierKeys.Remove(KeyName);
+    }
+  }
+
+  FModifierKeysState BuildModifierKeyState(const TSet<FString> &PressedModifierKeys)
+  {
+    return FModifierKeysState(
+        PressedModifierKeys.Contains(EKeys::LeftShift.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::RightShift.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::LeftControl.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::RightControl.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::LeftAlt.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::RightAlt.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::LeftCommand.GetFName().ToString()),
+        PressedModifierKeys.Contains(EKeys::RightCommand.GetFName().ToString()),
+        false);
+  }
+
+  void GetKeyAndCharCodes(const FKey &Key, bool &bHasKeyCode, uint32 &KeyCode,
+                          bool &bHasCharCode, uint32 &CharCode)
+  {
+    const uint32 *KeyCodePtr = nullptr;
+    const uint32 *CharCodePtr = nullptr;
+    FInputKeyManager::Get().GetCodesFromKey(Key, KeyCodePtr, CharCodePtr);
+
+    bHasKeyCode = KeyCodePtr != nullptr;
+    bHasCharCode = CharCodePtr != nullptr;
+    KeyCode = bHasKeyCode ? *KeyCodePtr : 0;
+    CharCode = bHasCharCode ? *CharCodePtr : 0;
+
+    if (!bHasCharCode)
+    {
+      if (Key == EKeys::Tab)
+      {
+        CharCode = '\t';
+        bHasCharCode = true;
+      }
+      else if (Key == EKeys::BackSpace)
+      {
+        CharCode = '\b';
+        bHasCharCode = true;
+      }
+      else if (Key == EKeys::Enter)
+      {
+        CharCode = '\n';
+        bHasCharCode = true;
+      }
+    }
+  }
+
+  FString DescribePressedKeys(const TSet<FString> &PressedKeys)
+  {
+    TArray<FString> Names;
+    Names.Reserve(PressedKeys.Num());
+    for (const FString &KeyName : PressedKeys)
+    {
+      Names.Add(KeyName);
+    }
+    Names.Sort();
+    return FString::Join(Names, TEXT(","));
+  }
+
+  FPointerEvent BuildMouseButtonEvent(const FVector2D &Position,
+                                      const FVector2D &LastPosition,
+                                      const TSet<FKey> &PressedButtons,
+                                      const FKey &EffectingButton,
+                                      const FModifierKeysState &ModifierKeys,
+                                      float WheelDelta = 0.0f)
+  {
+    const int32 SlateUserIndex = GetSimulatedSlateUserIndex();
+    return FPointerEvent(
+        GetSimulatedInputDeviceId(SlateUserIndex),
+        static_cast<uint32>(GMcpSimulatedPointerIndex),
+        Position,
+        LastPosition,
+        PressedButtons,
+        EffectingButton,
+        WheelDelta,
+        ModifierKeys,
+        SlateUserIndex);
+  }
+
+  FPointerEvent BuildMouseMoveEvent(const FVector2D &Position,
+                                    const FVector2D &LastPosition,
+                                    const TSet<FKey> &PressedButtons,
+                                    const FModifierKeysState &ModifierKeys)
+  {
+    const int32 SlateUserIndex = GetSimulatedSlateUserIndex();
+    return FPointerEvent(
+        static_cast<uint32>(SlateUserIndex),
+        static_cast<uint32>(GMcpSimulatedPointerIndex),
+        Position,
+        LastPosition,
+        Position - LastPosition,
+        PressedButtons,
+        ModifierKeys);
+  }
+
+  FVector2D GetCurrentSimulatedPosition(const FVector2D &StoredPosition, bool bHasStoredPosition)
+  {
+    if (bHasStoredPosition)
+    {
+      return StoredPosition;
+    }
+
+    return FSlateApplication::Get().GetCursorPos();
+  }
+
+  void StoreSimulatedPosition(FVector2D &StoredPosition, bool &bHasStoredPosition, const FVector2D &Position)
+  {
+    StoredPosition = Position;
+    bHasStoredPosition = true;
+  }
+
+  void ResetSimulatedInputState(FVector2D &StoredPosition, bool &bHasStoredPosition, TSet<FString> &PressedButtons, TSet<FString> &PressedModifierKeys)
+  {
+    PressedButtons.Reset();
+    PressedModifierKeys.Reset();
+    StoredPosition = FVector2D::ZeroVector;
+    bHasStoredPosition = false;
+    FSlateApplication::Get().ReleaseAllPointerCapture();
+  }
+
+  bool DispatchMouseMove(FVector2D &StoredPosition, bool &bHasStoredPosition, const TSet<FString> &PressedButtonNames, const TSet<FString> &PressedModifierKeys, const FVector2D &Position)
+  {
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FVector2D LastPosition = GetCurrentSimulatedPosition(StoredPosition, bHasStoredPosition);
+    SlateApp.SetCursorPos(Position);
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(PressedButtonNames);
+    const FPointerEvent MoveEvent = BuildMouseMoveEvent(Position, LastPosition, PressedButtons, BuildModifierKeyState(PressedModifierKeys));
+    const bool bHandled = SlateApp.ProcessMouseMoveEvent(MoveEvent, false);
+    StoreSimulatedPosition(StoredPosition, bHasStoredPosition, Position);
+    return bHandled;
+  }
+
+  bool DispatchMouseDown(FVector2D &StoredPosition, bool &bHasStoredPosition, TSet<FString> &PressedButtonNames, const TSet<FString> &PressedModifierKeys, const FVector2D &Position, const FKey &MouseButton)
+  {
+    DispatchMouseMove(StoredPosition, bHasStoredPosition, PressedButtonNames, PressedModifierKeys, Position);
+    PressedButtonNames.Add(MouseButton.GetFName().ToString());
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(PressedButtonNames);
+    const FPointerEvent MouseDownEvent = BuildMouseButtonEvent(Position, Position, PressedButtons, MouseButton, BuildModifierKeyState(PressedModifierKeys));
+    return FSlateApplication::Get().ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
+  }
+
+  bool DispatchMouseUp(FVector2D &StoredPosition, bool &bHasStoredPosition, TSet<FString> &PressedButtonNames, const TSet<FString> &PressedModifierKeys, const FVector2D &Position, const FKey &MouseButton)
+  {
+    DispatchMouseMove(StoredPosition, bHasStoredPosition, PressedButtonNames, PressedModifierKeys, Position);
+    TSet<FString> PressedButtonsAfterRelease = PressedButtonNames;
+    PressedButtonsAfterRelease.Remove(MouseButton.GetFName().ToString());
+    const TSet<FKey> PressedButtonKeysAfterRelease = ConvertPressedButtonNamesToKeys(PressedButtonsAfterRelease);
+    const FPointerEvent MouseUpEvent = BuildMouseButtonEvent(Position, Position, PressedButtonKeysAfterRelease, MouseButton, BuildModifierKeyState(PressedModifierKeys));
+    const bool bHandled = FSlateApplication::Get().ProcessMouseButtonUpEvent(MouseUpEvent);
+    PressedButtonNames = MoveTemp(PressedButtonsAfterRelease);
+    StoreSimulatedPosition(StoredPosition, bHasStoredPosition, Position);
+    return bHandled;
+  }
+
+  bool DispatchMouseWheel(FVector2D &StoredPosition, bool &bHasStoredPosition, const TSet<FString> &PressedButtonNames, const TSet<FString> &PressedModifierKeys, const FVector2D &Position, float WheelDelta)
+  {
+    DispatchMouseMove(StoredPosition, bHasStoredPosition, PressedButtonNames, PressedModifierKeys, Position);
+    const TSet<FKey> PressedButtons = ConvertPressedButtonNamesToKeys(PressedButtonNames);
+    const FPointerEvent WheelEvent = BuildMouseButtonEvent(Position, Position, PressedButtons, EKeys::Invalid, BuildModifierKeyState(PressedModifierKeys), WheelDelta);
+    return FSlateApplication::Get().ProcessMouseWheelOrGestureEvent(WheelEvent, nullptr);
+  }
+
+  FString SanitizeScreenshotFilename(const FString &RequestedFilename)
+  {
+    FString Filename = RequestedFilename;
+    if (Filename.IsEmpty())
+    {
+      Filename = FString::Printf(TEXT("Screenshot_%s"),
+                                 *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+    }
+
+    Filename = FPaths::GetCleanFilename(Filename);
+    if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) ||
+        Filename.Contains(TEXT("\\")))
+    {
+      Filename = FString::Printf(TEXT("Screenshot_%s"),
+                                 *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+    }
+
+    if (!Filename.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase))
+    {
+      Filename += TEXT(".png");
+    }
+
+    return Filename;
+  }
+
+  bool CompressBitmapToPng(const TArray<FColor> &Bitmap, const int32 Width,
+                           const int32 Height, TArray<uint8> &OutPngData)
+  {
+    OutPngData.Reset();
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    FImageUtils::ThumbnailCompressImageArray(Width, Height, Bitmap, OutPngData);
+#else
+    FImageUtils::CompressImageArray(Width, Height, Bitmap, OutPngData);
+#endif
+
+    if (OutPngData.Num() > 0)
+    {
+      return true;
+    }
+
+    IImageWrapperModule &ImageWrapperModule =
+        FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+    TSharedPtr<IImageWrapper> ImageWrapper =
+        ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+    if (!ImageWrapper.IsValid())
+    {
+      return false;
+    }
+
+    TArray<uint8> RawData;
+    RawData.SetNum(Width * Height * 4);
+    for (int32 Index = 0; Index < Bitmap.Num(); ++Index)
+    {
+      RawData[Index * 4 + 0] = Bitmap[Index].R;
+      RawData[Index * 4 + 1] = Bitmap[Index].G;
+      RawData[Index * 4 + 2] = Bitmap[Index].B;
+      RawData[Index * 4 + 3] = Bitmap[Index].A;
+    }
+
+    if (!ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), Width, Height,
+                              ERGBFormat::RGBA, 8))
+    {
+      return false;
+    }
+
+    OutPngData = ImageWrapper->GetCompressed(100);
+    return OutPngData.Num() > 0;
+  }
+
+  bool SaveBitmapToPngFile(const TArray<FColor> &Bitmap, const int32 Width,
+                           const int32 Height, const FString &FullPath,
+                           FString &OutError)
+  {
+    TArray<uint8> PngData;
+    if (!CompressBitmapToPng(Bitmap, Width, Height, PngData))
+    {
+      OutError = TEXT("Failed to compress screenshot as PNG");
+      return false;
+    }
+
+    IFileManager::Get().MakeDirectory(*FPaths::GetPath(FullPath), true);
+    if (!FFileHelper::SaveArrayToFile(PngData, *FullPath))
+    {
+      OutError = TEXT("Failed to save screenshot to disk");
+      return false;
+    }
+
+    return true;
+  }
+
+  bool CaptureWindowScreenshotToBitmap(const TSharedPtr<SWindow> &TargetWindow,
+                                       TArray<FColor> &OutImageData,
+                                       FIntPoint &OutSize,
+                                       FString &OutError)
+  {
+    OutSize = FIntPoint::ZeroValue;
+    OutImageData.Reset();
+
+    if (!FSlateApplication::IsInitialized())
+    {
+      OutError = TEXT("Slate application is not initialized");
+      return false;
+    }
+
+    if (!TargetWindow.IsValid())
+    {
+      OutError = TEXT("Screenshot target window is not valid");
+      return false;
+    }
+
+    FIntVector OutImageSize;
+    if (!FSlateApplication::Get().TakeScreenshot(TargetWindow.ToSharedRef(), OutImageData,
+                                                 OutImageSize))
+    {
+      OutError = TEXT("Failed to capture editor window screenshot");
+      return false;
+    }
+
+    if (OutImageData.Num() == 0 || OutImageSize.X <= 0 || OutImageSize.Y <= 0)
+    {
+      OutError = TEXT("Window screenshot capture returned no pixel data");
+      return false;
+    }
+
+    OutSize = FIntPoint(OutImageSize.X, OutImageSize.Y);
+    return true;
+  }
+
+  bool CaptureWindowScreenshotToFile(const TSharedPtr<SWindow> &TargetWindow,
+                                     const FString &FullPath,
+                                     FIntPoint &OutSize,
+                                     FString &OutError)
+  {
+    TArray<FColor> OutImageData;
+    if (!CaptureWindowScreenshotToBitmap(TargetWindow, OutImageData, OutSize,
+                                         OutError))
+    {
+      return false;
+    }
+
+    return SaveBitmapToPngFile(OutImageData, OutSize.X, OutSize.Y, FullPath,
+                               OutError);
+  }
+
+  void CollectVisibleChildWindows(const TSharedRef<SWindow> &CurrentWindow,
+                                  TArray<TSharedRef<SWindow>> &OutWindows)
+  {
+    const TArray<TSharedRef<SWindow>> &ChildWindows = CurrentWindow->GetChildWindows();
+    for (const TSharedRef<SWindow> &ChildWindow : ChildWindows)
+    {
+      if (ChildWindow->IsVisible() && !ChildWindow->IsWindowMinimized())
+      {
+        OutWindows.Add(ChildWindow);
+      }
+
+      CollectVisibleChildWindows(ChildWindow, OutWindows);
+    }
+  }
+
+  void BlendBitmapIntoCanvas(const TArray<FColor> &SourceBitmap,
+                             const int32 SourceWidth,
+                             const int32 SourceHeight,
+                             TArray<FColor> &CanvasBitmap,
+                             const int32 CanvasWidth,
+                             const int32 CanvasHeight,
+                             const int32 OffsetX,
+                             const int32 OffsetY)
+  {
+    if (SourceWidth <= 0 || SourceHeight <= 0 || CanvasWidth <= 0 || CanvasHeight <= 0)
+    {
+      return;
+    }
+
+    for (int32 SourceY = 0; SourceY < SourceHeight; ++SourceY)
+    {
+      const int32 DestY = OffsetY + SourceY;
+      if (DestY < 0 || DestY >= CanvasHeight)
+      {
+        continue;
+      }
+
+      for (int32 SourceX = 0; SourceX < SourceWidth; ++SourceX)
+      {
+        const int32 DestX = OffsetX + SourceX;
+        if (DestX < 0 || DestX >= CanvasWidth)
+        {
+          continue;
+        }
+
+        const FColor &SourcePixel = SourceBitmap[SourceY * SourceWidth + SourceX];
+        FColor &DestPixel = CanvasBitmap[DestY * CanvasWidth + DestX];
+
+        if (SourcePixel.A >= 255)
+        {
+          DestPixel = SourcePixel;
+          continue;
+        }
+
+        if (SourcePixel.A <= 0)
+        {
+          continue;
+        }
+
+        const uint32 SourceAlpha = static_cast<uint32>(SourcePixel.A);
+        const uint32 InverseAlpha = 255u - SourceAlpha;
+        DestPixel.R = static_cast<uint8>((static_cast<uint32>(SourcePixel.R) * SourceAlpha + static_cast<uint32>(DestPixel.R) * InverseAlpha) / 255u);
+        DestPixel.G = static_cast<uint8>((static_cast<uint32>(SourcePixel.G) * SourceAlpha + static_cast<uint32>(DestPixel.G) * InverseAlpha) / 255u);
+        DestPixel.B = static_cast<uint8>((static_cast<uint32>(SourcePixel.B) * SourceAlpha + static_cast<uint32>(DestPixel.B) * InverseAlpha) / 255u);
+        DestPixel.A = static_cast<uint8>(FMath::Max<uint32>(DestPixel.A, SourceAlpha));
+      }
+    }
+  }
+
+  bool CaptureWindowScreenshotIncludingChildWindowsToFile(
+      const TSharedPtr<SWindow> &TargetWindow,
+      const FString &FullPath,
+      FIntPoint &OutSize,
+      int32 &OutIncludedChildWindowCount,
+      FString &OutError)
+  {
+    OutSize = FIntPoint::ZeroValue;
+    OutIncludedChildWindowCount = 0;
+
+    TArray<FColor> RootBitmap;
+    FIntPoint RootSize;
+    if (!CaptureWindowScreenshotToBitmap(TargetWindow, RootBitmap, RootSize,
+                                         OutError))
+    {
+      return false;
+    }
+
+    const FSlateRect RootRect = TargetWindow->GetRectInScreen();
+    int32 UnionLeft = FMath::FloorToInt(RootRect.Left);
+    int32 UnionTop = FMath::FloorToInt(RootRect.Top);
+    int32 UnionRight = UnionLeft + RootSize.X;
+    int32 UnionBottom = UnionTop + RootSize.Y;
+
+    struct FMcpChildWindowBitmap
+    {
+      TArray<FColor> Bitmap;
+      FIntPoint Size = FIntPoint::ZeroValue;
+      FSlateRect Rect;
+    };
+
+    TArray<FMcpChildWindowBitmap> ChildBitmaps;
+    if (TargetWindow.IsValid())
+    {
+      TArray<TSharedRef<SWindow>> ChildWindows;
+      CollectVisibleChildWindows(TargetWindow.ToSharedRef(), ChildWindows);
+      for (const TSharedRef<SWindow> &ChildWindow : ChildWindows)
+      {
+        TArray<FColor> ChildBitmap;
+        FIntPoint ChildSize;
+        FString ChildError;
+        if (!CaptureWindowScreenshotToBitmap(ChildWindow, ChildBitmap, ChildSize,
+                                             ChildError))
+        {
+          OutError = ChildError;
+          return false;
+        }
+
+        const FSlateRect ChildRect = ChildWindow->GetRectInScreen();
+        UnionLeft = FMath::Min(UnionLeft, FMath::FloorToInt(ChildRect.Left));
+        UnionTop = FMath::Min(UnionTop, FMath::FloorToInt(ChildRect.Top));
+        UnionRight = FMath::Max(UnionRight, FMath::FloorToInt(ChildRect.Left) + ChildSize.X);
+        UnionBottom = FMath::Max(UnionBottom, FMath::FloorToInt(ChildRect.Top) + ChildSize.Y);
+
+        FMcpChildWindowBitmap &StoredChild = ChildBitmaps.AddDefaulted_GetRef();
+        StoredChild.Bitmap = MoveTemp(ChildBitmap);
+        StoredChild.Size = ChildSize;
+        StoredChild.Rect = ChildRect;
+      }
+    }
+
+    const int32 CanvasWidth = FMath::Max(1, UnionRight - UnionLeft);
+    const int32 CanvasHeight = FMath::Max(1, UnionBottom - UnionTop);
+    TArray<FColor> CanvasBitmap;
+    CanvasBitmap.Init(FColor(0, 0, 0, 0), CanvasWidth * CanvasHeight);
+
+    BlendBitmapIntoCanvas(RootBitmap, RootSize.X, RootSize.Y, CanvasBitmap,
+                          CanvasWidth, CanvasHeight,
+                          FMath::FloorToInt(RootRect.Left) - UnionLeft,
+                          FMath::FloorToInt(RootRect.Top) - UnionTop);
+
+    for (const FMcpChildWindowBitmap &ChildBitmap : ChildBitmaps)
+    {
+      BlendBitmapIntoCanvas(ChildBitmap.Bitmap, ChildBitmap.Size.X,
+                            ChildBitmap.Size.Y, CanvasBitmap, CanvasWidth,
+                            CanvasHeight,
+                            FMath::FloorToInt(ChildBitmap.Rect.Left) - UnionLeft,
+                            FMath::FloorToInt(ChildBitmap.Rect.Top) - UnionTop);
+    }
+
+    if (!SaveBitmapToPngFile(CanvasBitmap, CanvasWidth, CanvasHeight, FullPath,
+                             OutError))
+    {
+      return false;
+    }
+
+    OutIncludedChildWindowCount = ChildBitmaps.Num();
+    OutSize = FIntPoint(CanvasWidth, CanvasHeight);
+    return true;
+  }
+
+  FString BuildSimulatedInputScreenshotFilename(const FString &RequestId,
+                                                const FString &InputType,
+                                                const FString &Phase)
+  {
+    FString SanitizedRequestId = RequestId;
+    SanitizedRequestId.ReplaceInline(TEXT("-"), TEXT(""));
+    if (SanitizedRequestId.IsEmpty())
+    {
+      SanitizedRequestId = FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S_%s"));
+    }
+
+    FString SanitizedInputType = InputType;
+    SanitizedInputType.ReplaceInline(TEXT(" "), TEXT("_"));
+    SanitizedInputType.ReplaceInline(TEXT("/"), TEXT("_"));
+    SanitizedInputType.ReplaceInline(TEXT("\\"), TEXT("_"));
+
+    return SanitizeScreenshotFilename(FString::Printf(
+        TEXT("SimInput_%s_%s_%s"),
+        *SanitizedInputType,
+        *Phase,
+        *SanitizedRequestId.Left(12)));
+  }
+
+  TSharedPtr<SWindow> FindVisibleWindowByTitle(const FString &RequestedTitle)
+  {
+    if (!FSlateApplication::IsInitialized())
+    {
+      return nullptr;
+    }
+
+    if (RequestedTitle.IsEmpty())
+    {
+      return FSlateApplication::Get().GetActiveTopLevelRegularWindow();
+    }
+
+    TArray<TSharedRef<SWindow>> OpenWindows;
+    FSlateApplication::Get().GetAllVisibleWindowsOrdered(OpenWindows);
+    for (const TSharedRef<SWindow> &Window : OpenWindows)
+    {
+      const FString Title = Window->GetTitle().ToString();
+      if (Title.Equals(RequestedTitle, ESearchCase::IgnoreCase) ||
+          Title.Contains(RequestedTitle, ESearchCase::IgnoreCase))
+      {
+        return Window;
+      }
+    }
+
+    return nullptr;
+  }
+
+  TSharedPtr<SWindow> ResolvePreferredScreenshotWindow(UMcpAutomationBridgeSubsystem *Self,
+                                                       const FString &RequestedTitle)
+  {
+    if (!RequestedTitle.IsEmpty())
+    {
+      return FindVisibleWindowByTitle(RequestedTitle);
+    }
+
+    if (Self != nullptr && Self->SimulatedTargetWindow.IsValid())
+    {
+      return Self->SimulatedTargetWindow.Pin();
+    }
+
+    return FindVisibleWindowByTitle(FString());
+  }
+
+  TArray<TSharedPtr<FJsonValue>> BuildVisibleWindowTitleValues()
+  {
+    TArray<TSharedPtr<FJsonValue>> WindowValues;
+    if (!FSlateApplication::IsInitialized())
+    {
+      return WindowValues;
+    }
+
+    TArray<TSharedRef<SWindow>> OpenWindows;
+    FSlateApplication::Get().GetAllVisibleWindowsOrdered(OpenWindows);
+    for (const TSharedRef<SWindow> &Window : OpenWindows)
+    {
+      WindowValues.Add(
+          MakeShared<FJsonValueString>(Window->GetTitle().ToString()));
+    }
+
+    return WindowValues;
+  }
+
+} // namespace
+#endif
+
 // Helper class for capturing export output
 /* UE5.6: Use built-in FStringOutputDevice from UnrealString.h */
 
@@ -154,20 +1391,24 @@
 // (ExtractVectorField and ExtractRotatorField moved to
 // McpAutomationBridgeHelpers.h)
 
-AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
+AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly)
+{
 #if WITH_EDITOR
   if (Target.IsEmpty() || !GEditor)
     return nullptr;
 
   // Priority: PIE World if active
-  if (GEditor->PlayWorld) {
-    for (TActorIterator<AActor> It(GEditor->PlayWorld); It; ++It) {
+  if (GEditor->PlayWorld)
+  {
+    for (TActorIterator<AActor> It(GEditor->PlayWorld); It; ++It)
+    {
       AActor *A = *It;
       if (!A)
         continue;
       if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
           A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-          A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
+          A->GetPathName().Equals(Target, ESearchCase::IgnoreCase))
+      {
         return A;
       }
     }
@@ -186,32 +1427,40 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
   AActor *ExactMatch = nullptr;
   TArray<AActor *> FuzzyMatches;
 
-  for (AActor *A : AllActors) {
+  for (AActor *A : AllActors)
+  {
     if (!A)
       continue;
     if (A->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
         A->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
-        A->GetPathName().Equals(Target, ESearchCase::IgnoreCase)) {
+        A->GetPathName().Equals(Target, ESearchCase::IgnoreCase))
+    {
       ExactMatch = A;
       break;
     }
     // Collect fuzzy matches ONLY if exact matching is not required
     // CRITICAL FIX: Fuzzy matching can cause delete operations to delete wrong actors
     // (e.g., "TestActor_Copy" matches when searching for "TestActor")
-    if (!bExactMatchOnly && A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase)) {
+    if (!bExactMatchOnly && A->GetActorLabel().Contains(Target, ESearchCase::IgnoreCase))
+    {
       FuzzyMatches.Add(A);
     }
   }
 
-  if (ExactMatch) {
+  if (ExactMatch)
+  {
     return ExactMatch;
   }
 
   // If no exact match, check fuzzy matches ONLY if exact matching is not required
-  if (!bExactMatchOnly) {
-    if (FuzzyMatches.Num() == 1) {
+  if (!bExactMatchOnly)
+  {
+    if (FuzzyMatches.Num() == 1)
+    {
       return FuzzyMatches[0];
-    } else if (FuzzyMatches.Num() > 1) {
+    }
+    else if (FuzzyMatches.Num() > 1)
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("FindActorByName: Ambiguous match for '%s'. Found %d matches."),
              *Target, FuzzyMatches.Num());
@@ -219,8 +1468,10 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
   }
 
   // Fallback: try to load as asset if it looks like a path
-  if (Target.StartsWith(TEXT("/"))) {
-    if (UObject *Obj = UEditorAssetLibrary::LoadAsset(Target)) {
+  if (Target.StartsWith(TEXT("/")))
+  {
+    if (UObject *Obj = UEditorAssetLibrary::LoadAsset(Target))
+    {
       return Cast<AActor>(Obj);
     }
   }
@@ -230,7 +1481,8 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ClassPath;
   Payload->TryGetStringField(TEXT("classPath"), ClassPath);
@@ -250,8 +1502,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to
   // avoid LogEditorAssetSubsystem errors
   if ((ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/"))) &&
-      !ClassPath.StartsWith(TEXT("/Script/"))) {
-    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(ClassPath)) {
+      !ClassPath.StartsWith(TEXT("/Script/")))
+  {
+    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(ClassPath))
+    {
       if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
         ResolvedClass = BP->GeneratedClass;
       else if (UClass *C = Cast<UClass>(Loaded))
@@ -266,8 +1520,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     ResolvedClass = ResolveClassByName(ClassPath);
 
   // If explicit mesh path provided for a general spawn request
-  if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty()) {
-    if (UObject *MeshObj = UEditorAssetLibrary::LoadAsset(MeshPath)) {
+  if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty())
+  {
+    if (UObject *MeshObj = UEditorAssetLibrary::LoadAsset(MeshPath))
+    {
       ResolvedStaticMesh = Cast<UStaticMesh>(MeshObj);
       if (!ResolvedStaticMesh)
         ResolvedSkeletalMesh = Cast<USkeletalMesh>(MeshObj);
@@ -279,7 +1535,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
   bool bSpawnSkeletalMeshActor = (ResolvedSkeletalMesh != nullptr);
 
-  if (!bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor && ResolvedClass) {
+  if (!bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor && ResolvedClass)
+  {
     bSpawnStaticMeshActor =
         ResolvedClass->IsChildOf(AStaticMeshActor::StaticClass());
     if (!bSpawnStaticMeshActor)
@@ -289,13 +1546,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 
   // Explicitly use StaticMeshActor class if we have a mesh but no class, or if
   // we decided to spawn a static mesh actor
-  if (bSpawnStaticMeshActor && !ResolvedClass) {
+  if (bSpawnStaticMeshActor && !ResolvedClass)
+  {
     ResolvedClass = AStaticMeshActor::StaticClass();
-  } else if (bSpawnSkeletalMeshActor && !ResolvedClass) {
+  }
+  else if (bSpawnSkeletalMeshActor && !ResolvedClass)
+  {
     ResolvedClass = ASkeletalMeshActor::StaticClass();
   }
 
-  if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor) {
+  if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor)
+  {
     const FString ErrorMsg =
         FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
                              "using a plugin class."),
@@ -312,7 +1573,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   // Support PIE spawning
   UWorld *TargetWorld = (GEditor->PlayWorld) ? GEditor->PlayWorld : nullptr;
 
-  if (TargetWorld) {
+  if (TargetWorld)
+  {
     // PIE Path
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride =
@@ -328,13 +1590,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Spawned = TargetWorld->SpawnActor(ClassToSpawn, &Location, &Rotation,
                                       SpawnParams);
 
-    if (Spawned) {
-      if (bSpawnStaticMeshActor) {
+    if (Spawned)
+    {
+      if (bSpawnStaticMeshActor)
+      {
         if (AStaticMeshActor *StaticMeshActor =
-                Cast<AStaticMeshActor>(Spawned)) {
+                Cast<AStaticMeshActor>(Spawned))
+        {
           if (UStaticMeshComponent *MeshComponent =
-                  StaticMeshActor->GetStaticMeshComponent()) {
-            if (ResolvedStaticMesh) {
+                  StaticMeshActor->GetStaticMeshComponent())
+          {
+            if (ResolvedStaticMesh)
+            {
               MeshComponent->SetStaticMesh(ResolvedStaticMesh);
             }
             MeshComponent->SetMobility(EComponentMobility::Movable);
@@ -342,11 +1609,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
             // it doesn't hurt
           }
         }
-      } else if (bSpawnSkeletalMeshActor) {
-        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned)) {
+      }
+      else if (bSpawnSkeletalMeshActor)
+      {
+        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned))
+        {
           if (USkeletalMeshComponent *SkelComp =
-                  SkelActor->GetSkeletalMeshComponent()) {
-            if (ResolvedSkeletalMesh) {
+                  SkelActor->GetSkeletalMeshComponent())
+          {
+            if (ResolvedSkeletalMesh)
+            {
               SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
             }
             SkelComp->SetMobility(EComponentMobility::Movable);
@@ -354,20 +1626,27 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
         }
       }
     }
-  } else {
+  }
+  else
+  {
     // Editor Path
-    if (bSpawnStaticMeshActor) {
+    if (bSpawnStaticMeshActor)
+    {
       Spawned = ActorSS->SpawnActorFromClass(
           ResolvedClass ? ResolvedClass : AStaticMeshActor::StaticClass(),
           Location, Rotation);
-      if (Spawned) {
+      if (Spawned)
+      {
         Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
                                              ETeleportType::TeleportPhysics);
         if (AStaticMeshActor *StaticMeshActor =
-                Cast<AStaticMeshActor>(Spawned)) {
+                Cast<AStaticMeshActor>(Spawned))
+        {
           if (UStaticMeshComponent *MeshComponent =
-                  StaticMeshActor->GetStaticMeshComponent()) {
-            if (ResolvedStaticMesh) {
+                  StaticMeshActor->GetStaticMeshComponent())
+          {
+            if (ResolvedStaticMesh)
+            {
               MeshComponent->SetStaticMesh(ResolvedStaticMesh);
             }
             MeshComponent->SetMobility(EComponentMobility::Movable);
@@ -375,17 +1654,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
           }
         }
       }
-    } else if (bSpawnSkeletalMeshActor) {
+    }
+    else if (bSpawnSkeletalMeshActor)
+    {
       Spawned = ActorSS->SpawnActorFromClass(
           ResolvedClass ? ResolvedClass : ASkeletalMeshActor::StaticClass(),
           Location, Rotation);
-      if (Spawned) {
+      if (Spawned)
+      {
         Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
                                              ETeleportType::TeleportPhysics);
-        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned)) {
+        if (ASkeletalMeshActor *SkelActor = Cast<ASkeletalMeshActor>(Spawned))
+        {
           if (USkeletalMeshComponent *SkelComp =
-                  SkelActor->GetSkeletalMeshComponent()) {
-            if (ResolvedSkeletalMesh) {
+                  SkelActor->GetSkeletalMeshComponent())
+          {
+            if (ResolvedSkeletalMesh)
+            {
               SkelComp->SetSkeletalMesh(ResolvedSkeletalMesh);
             }
             SkelComp->SetMobility(EComponentMobility::Movable);
@@ -393,37 +1678,52 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
           }
         }
       }
-    } else {
+    }
+    else
+    {
       Spawned = ActorSS->SpawnActorFromClass(ResolvedClass, Location, Rotation);
-      if (Spawned) {
+      if (Spawned)
+      {
         Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
                                              ETeleportType::TeleportPhysics);
       }
     }
   }
 
-  if (!Spawned) {
+  if (!Spawned)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
                               TEXT("Failed to spawn actor"));
 
     return true;
   }
 
-  if (!ActorName.IsEmpty()) {
+  if (!ActorName.IsEmpty())
+  {
     Spawned->SetActorLabel(ActorName);
-  } else {
+  }
+  else
+  {
     // Auto-generate a friendly label from the mesh or class name
     FString BaseName;
-    if (ResolvedStaticMesh) {
+    if (ResolvedStaticMesh)
+    {
       BaseName = ResolvedStaticMesh->GetName();
-    } else if (ResolvedSkeletalMesh) {
+    }
+    else if (ResolvedSkeletalMesh)
+    {
       BaseName = ResolvedSkeletalMesh->GetName();
-    } else if (ResolvedClass) {
+    }
+    else if (ResolvedClass)
+    {
       BaseName = ResolvedClass->GetName();
-      if (BaseName.EndsWith(TEXT("_C"))) {
+      if (BaseName.EndsWith(TEXT("_C")))
+      {
         BaseName.RemoveFromEnd(TEXT("_C"));
       }
-    } else {
+    }
+    else
+    {
       BaseName = TEXT("Actor");
     }
     Spawned->SetActorLabel(BaseName);
@@ -432,17 +1732,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  
+
   // Actor object with id, name and path
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName()); // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
   Data->SetObjectField(TEXT("actor"), ActorObj);
-  
+
   // actorPath for convenience
   Data->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
-  
+
   // Provide the resolved class path useful for referencing
   if (ResolvedClass)
     Data->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
@@ -453,7 +1753,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedStaticMesh->GetPathName());
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
-  
+
   // Add verification data
   McpHandlerUtils::AddVerification(Data, Spawned);
 
@@ -470,11 +1770,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
-  if (BlueprintPath.IsEmpty()) {
+  if (BlueprintPath.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("Blueprint path required"), nullptr);
     return true;
@@ -493,17 +1795,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // so that short names and package paths behave consistently.
   FString NormalizedPath;
   FString LoadError;
-  if (!BlueprintPath.IsEmpty()) {
+  if (!BlueprintPath.IsEmpty())
+  {
     UBlueprint *BlueprintAsset =
         LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-    if (BlueprintAsset && BlueprintAsset->GeneratedClass) {
+    if (BlueprintAsset && BlueprintAsset->GeneratedClass)
+    {
       ResolvedClass = BlueprintAsset->GeneratedClass;
     }
   }
 
   if (!ResolvedClass && (BlueprintPath.StartsWith(TEXT("/")) ||
-                         BlueprintPath.Contains(TEXT("/")))) {
-    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(BlueprintPath)) {
+                         BlueprintPath.Contains(TEXT("/"))))
+  {
+    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(BlueprintPath))
+    {
       if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
         ResolvedClass = BP->GeneratedClass;
       else if (UClass *C = Cast<UClass>(Loaded))
@@ -513,7 +1819,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   if (!ResolvedClass)
     ResolvedClass = ResolveClassByName(BlueprintPath);
 
-  if (!ResolvedClass) {
+  if (!ResolvedClass)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
                               TEXT("Blueprint class not found"), nullptr);
     return true;
@@ -531,7 +1838,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   AActor *Spawned = nullptr;
   UWorld *TargetWorld = (GEditor->PlayWorld) ? GEditor->PlayWorld : nullptr;
 
-  if (TargetWorld) {
+  if (TargetWorld)
+  {
     // PIE Path
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride =
@@ -539,18 +1847,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     Spawned = TargetWorld->SpawnActor(ResolvedClass, &Location, &Rotation,
                                       SpawnParams);
     // Ensure physics/teleport if needed, though SpawnActor should handle it.
-  } else {
+  }
+  else
+  {
     // Editor Path
     Spawned = ActorSS->SpawnActorFromClass(ResolvedClass, Location, Rotation);
     // Explicitly set location and rotation in case SpawnActorFromClass didn't
-    // apply them correctly (legacy fix)
-    if (Spawned) {
+    // apply them correctly in editor builds.
+    if (Spawned)
+    {
       Spawned->SetActorLocationAndRotation(Location, Rotation, false, nullptr,
                                            ETeleportType::TeleportPhysics);
     }
   }
 
-  if (!Spawned) {
+  if (!Spawned)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SPAWN_FAILED"),
                               TEXT("Failed to spawn blueprint"), nullptr);
     return true;
@@ -562,21 +1874,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // Build response matching the outputWithActor schema:
   // { actor: { id, name, path }, actorPath, classPath }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  
+
   // Actor object with id, name and path
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
+  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName()); // Use path as unique ID
   ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
   Resp->SetObjectField(TEXT("actor"), ActorObj);
-  
+
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
-  
+
   // Add verification data
   McpHandlerUtils::AddVerification(Resp, Spawned);
-  
+
   UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
          TEXT("ControlActor: Spawned blueprint '%s'"),
          *Spawned->GetActorLabel());
@@ -590,13 +1902,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   TArray<FString> Targets;
   const TArray<TSharedPtr<FJsonValue>> *NamesArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("actorNames"), NamesArray) && NamesArray) {
-    for (const TSharedPtr<FJsonValue> &Entry : *NamesArray) {
-      if (Entry.IsValid() && Entry->Type == EJson::String) {
+  if (Payload->TryGetArrayField(TEXT("actorNames"), NamesArray) && NamesArray)
+  {
+    for (const TSharedPtr<FJsonValue> &Entry : *NamesArray)
+    {
+      if (Entry.IsValid() && Entry->Type == EJson::String)
+      {
         const FString Value = Entry->AsString().TrimStartAndEnd();
         if (!Value.IsEmpty())
           Targets.AddUnique(Value);
@@ -605,13 +1921,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   }
 
   FString SingleName;
-  if (Targets.Num() == 0) {
+  if (Targets.Num() == 0)
+  {
     Payload->TryGetStringField(TEXT("actorName"), SingleName);
     if (!SingleName.IsEmpty())
       Targets.AddUnique(SingleName);
   }
 
-  if (Targets.Num() == 0) {
+  if (Targets.Num() == 0)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName or actorNames required"));
     return true;
@@ -622,20 +1940,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   TArray<FString> Deleted;
   TArray<FString> Missing;
 
-  for (const FString &Name : Targets) {
+  for (const FString &Name : Targets)
+  {
     // CRITICAL FIX: Use exact match only for delete operations to prevent
     // fuzzy matching from deleting wrong actors (e.g., "TestActor_Copy" when
     // searching for "TestActor")
     AActor *Found = FindActorByName(Name, true);
-    if (!Found) {
+    if (!Found)
+    {
       Missing.Add(Name);
       continue;
     }
-    if (ActorSS->DestroyActor(Found)) {
+    if (ActorSS->DestroyActor(Found))
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
              TEXT("ControlActor: Deleted actor '%s'"), *Name);
       Deleted.Add(Name);
-    } else
+    }
+    else
       Missing.Add(Name);
   }
 
@@ -650,7 +1972,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     DeletedArray.Add(MakeShared<FJsonValueString>(Name));
   Resp->SetArrayField(TEXT("deleted"), DeletedArray);
 
-  if (Missing.Num() > 0) {
+  if (Missing.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> MissingArray;
     for (const FString &Name : Missing)
       MissingArray.Add(MakeShared<FJsonValueString>(Name));
@@ -659,10 +1982,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
 
   FString Message;
   FString ErrorCode;
-  if (!bAnyDeleted && Missing.Num() > 0) {
+  if (!bAnyDeleted && Missing.Num() > 0)
+  {
     Message = TEXT("Actors not found");
     ErrorCode = TEXT("NOT_FOUND");
-  } else {
+  }
+  else
+  {
     Message = bAllDeleted ? TEXT("Actors deleted")
                           : TEXT("Some actors could not be deleted");
     ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
@@ -672,9 +1998,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   Resp->SetBoolField(TEXT("existsAfter"), false);
   Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
 
-  if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted) {
+  if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, ErrorCode, Message);
-  } else {
+  }
+  else
+  {
     SendStandardSuccessResponse(this, Socket, RequestId, Message, Resp);
   }
   return true;
@@ -685,7 +2014,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
@@ -693,7 +2023,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
       ExtractVectorField(Payload, TEXT("force"), FVector::ZeroVector);
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -701,13 +2032,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
 
   UPrimitiveComponent *Prim =
       Found->FindComponentByClass<UPrimitiveComponent>();
-  if (!Prim) {
+  if (!Prim)
+  {
     if (UStaticMeshComponent *SMC =
             Found->FindComponentByClass<UStaticMeshComponent>())
       Prim = SMC;
   }
 
-  if (!Prim) {
+  if (!Prim)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_COMPONENT"),
                               TEXT("No component to apply force"), nullptr);
     return true;
@@ -717,20 +2050,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     Prim->SetMobility(EComponentMobility::Movable);
 
   // Ensure collision is enabled for physics
-  if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision) {
+  if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+  {
     Prim->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
   }
 
   // Check if collision geometry exists (common failure for empty
   // StaticMeshActors)
-  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(Prim)) {
-    if (!SMC->GetStaticMesh()) {
+  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(Prim))
+  {
+    if (!SMC->GetStaticMesh())
+    {
       SendStandardErrorResponse(
           this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
           TEXT("StaticMeshComponent has no StaticMesh assigned."), nullptr);
       return true;
     }
-    if (!SMC->GetStaticMesh()->GetBodySetup()) {
+    if (!SMC->GetStaticMesh()->GetBodySetup())
+    {
       SendStandardErrorResponse(
           this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
           TEXT("StaticMesh has no collision geometry (BodySetup is null)."),
@@ -739,7 +2076,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     }
   }
 
-  if (!Prim->IsSimulatingPhysics()) {
+  if (!Prim->IsSimulatingPhysics())
+  {
     Prim->SetSimulatePhysics(true);
     // Must recreate physics state for the body to be properly initialized in
     // Editor
@@ -762,11 +2100,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   Data->SetArrayField(TEXT("applied"), Applied);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
-  if (!bIsSimulating) {
+  if (!bIsSimulating)
+  {
     FString FailureReason = TEXT("Failed to enable physics simulation.");
-    if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision) {
+    if (Prim->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+    {
       FailureReason += TEXT(" Collision is disabled.");
-    } else if (Prim->Mobility != EComponentMobility::Movable) {
+    }
+    else if (Prim->Mobility != EComponentMobility::Movable)
+    {
       FailureReason += TEXT(" Component is not Movable.");
     }
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("PHYSICS_FAILED"),
@@ -788,18 +2130,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -833,7 +2178,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
-  auto MakeArray = [](const FVector &Vec) {
+  auto MakeArray = [](const FVector &Vec)
+  {
     TArray<TSharedPtr<FJsonValue>> Arr;
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
@@ -844,7 +2190,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   Data->SetArrayField(TEXT("location"), MakeArray(NewLoc));
   Data->SetArrayField(TEXT("scale"), MakeArray(NewScale));
 
-  if (!bLocMatch || !bScaleMatch) {
+  if (!bLocMatch || !bScaleMatch)
+  {
     SendStandardErrorResponse(this, Socket, RequestId,
                               TEXT("TRANSFORM_MISMATCH"),
                               TEXT("Failed to set transform exactly"), Data);
@@ -865,18 +2212,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"));
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"));
     return true;
@@ -889,7 +2239,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
-  auto MakeArray = [](const FVector &Vec) {
+  auto MakeArray = [](const FVector &Vec)
+  {
     TArray<TSharedPtr<FJsonValue>> Arr;
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
@@ -915,11 +2266,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -930,7 +2283,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -940,10 +2294,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   Found->SetActorHiddenInGame(!bVisible);
   Found->SetActorEnableCollision(bVisible);
 
-  for (UActorComponent *Comp : Found->GetComponents()) {
+  for (UActorComponent *Comp : Found->GetComponents())
+  {
     if (!Comp)
       continue;
-    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
+    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp))
+    {
       Prim->SetVisibility(bVisible, true);
       Prim->SetHiddenInGame(!bVisible);
     }
@@ -960,7 +2316,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   Data->SetBoolField(TEXT("visible"), !bIsHidden);
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
 
-  if (!bStateMatches) {
+  if (!bStateMatches)
+  {
     SendStandardErrorResponse(this, Socket, RequestId,
                               TEXT("VISIBILITY_MISMATCH"),
                               TEXT("Failed to set actor visibility"), Data);
@@ -982,11 +2339,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -994,7 +2353,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
 
   FString ComponentType;
   Payload->TryGetStringField(TEXT("componentType"), ComponentType);
-  if (ComponentType.IsEmpty()) {
+  if (ComponentType.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("componentType required"), nullptr);
     return true;
@@ -1004,7 +2364,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1012,7 +2373,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
 
   UClass *ComponentClass = ResolveClassByName(ComponentType);
   if (!ComponentClass ||
-      !ComponentClass->IsChildOf(UActorComponent::StaticClass())) {
+      !ComponentClass->IsChildOf(UActorComponent::StaticClass()))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
                               TEXT("Component class not found"), nullptr);
     return true;
@@ -1025,7 +2387,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   FName DesiredName = FName(*ComponentName);
   UActorComponent *NewComponent = NewObject<UActorComponent>(
       Found, ComponentClass, DesiredName, RF_Transactional);
-  if (!NewComponent) {
+  if (!NewComponent)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CREATE_COMPONENT_FAILED"),
                               TEXT("Failed to create component"), nullptr);
     return true;
@@ -1036,8 +2399,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   Found->AddInstanceComponent(NewComponent);
   NewComponent->OnComponentCreated();
 
-  if (USceneComponent *SceneComp = Cast<USceneComponent>(NewComponent)) {
-    if (Found->GetRootComponent() && !SceneComp->GetAttachParent()) {
+  if (USceneComponent *SceneComp = Cast<USceneComponent>(NewComponent))
+  {
+    if (Found->GetRootComponent() && !SceneComp->GetAttachParent())
+    {
       SceneComp->SetupAttachment(Found->GetRootComponent());
     }
   }
@@ -1045,19 +2410,25 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   // Force lights to be movable to ensure they work without baking (Issue #6
   // fix) We check for "LightComponent" class name to avoid dependency issues if
   // header is obscure, but ULightComponent is standard.
-  if (NewComponent->IsA(ULightComponent::StaticClass())) {
-    if (USceneComponent *SC = Cast<USceneComponent>(NewComponent)) {
+  if (NewComponent->IsA(ULightComponent::StaticClass()))
+  {
+    if (USceneComponent *SC = Cast<USceneComponent>(NewComponent))
+    {
       SC->SetMobility(EComponentMobility::Movable);
     }
   }
 
   // Special handling for StaticMeshComponent meshPath convenience
-  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent)) {
+  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent))
+  {
     FString MeshPath;
     if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) &&
-        !MeshPath.IsEmpty()) {
-      if (UObject *LoadedMesh = UEditorAssetLibrary::LoadAsset(MeshPath)) {
-        if (UStaticMesh *Mesh = Cast<UStaticMesh>(LoadedMesh)) {
+        !MeshPath.IsEmpty())
+    {
+      if (UObject *LoadedMesh = UEditorAssetLibrary::LoadAsset(MeshPath))
+      {
+        if (UStaticMesh *Mesh = Cast<UStaticMesh>(LoadedMesh))
+        {
           SMC->SetStaticMesh(Mesh);
         }
       }
@@ -1068,10 +2439,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   TArray<FString> PropertyWarnings;
   const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;
   if (Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) &&
-      PropertiesPtr && (*PropertiesPtr).IsValid()) {
-    for (const auto &Pair : (*PropertiesPtr)->Values) {
+      PropertiesPtr && (*PropertiesPtr).IsValid())
+  {
+    for (const auto &Pair : (*PropertiesPtr)->Values)
+    {
       FProperty *Property = ComponentClass->FindPropertyByName(*Pair.Key);
-      if (!Property) {
+      if (!Property)
+      {
         PropertyWarnings.Add(
             FString::Printf(TEXT("Property not found: %s"), *Pair.Key));
         continue;
@@ -1097,13 +2471,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   Resp->SetStringField(TEXT("componentName"), NewComponent->GetName());
   Resp->SetStringField(TEXT("componentPath"), NewComponent->GetPathName());
   Resp->SetStringField(TEXT("componentClass"), ComponentClass->GetPathName());
-  if (AppliedProperties.Num() > 0) {
+  if (AppliedProperties.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString &PropName : AppliedProperties)
       PropsArray.Add(MakeShared<FJsonValueString>(PropName));
     Resp->SetArrayField(TEXT("appliedProperties"), PropsArray);
   }
-  if (PropertyWarnings.Num() > 0) {
+  if (PropertyWarnings.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> WarnArray;
     for (const FString &Warning : PropertyWarnings)
       WarnArray.Add(MakeShared<FJsonValueString>(Warning));
@@ -1122,11 +2498,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -1134,7 +2512,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-  if (ComponentName.IsEmpty()) {
+  if (ComponentName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("componentName required"), nullptr);
     return true;
@@ -1142,14 +2521,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
   const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;
   if (!(Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) &&
-        PropertiesPtr && PropertiesPtr->IsValid())) {
+        PropertiesPtr && PropertiesPtr->IsValid()))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("properties object required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1158,7 +2539,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
   UActorComponent *TargetComponent = FindComponentByName(Found, ComponentName);
 
-  if (!TargetComponent) {
+  if (!TargetComponent)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("COMPONENT_NOT_FOUND"),
                               TEXT("Component not found"), nullptr);
     return true;
@@ -1175,31 +2557,40 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   // JSON casing
   const TSharedPtr<FJsonValue> *MobilityVal = nullptr;
   FString MobilityKey;
-  for (const auto &Pair : (*PropertiesPtr)->Values) {
-    if (Pair.Key.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase)) {
+  for (const auto &Pair : (*PropertiesPtr)->Values)
+  {
+    if (Pair.Key.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase))
+    {
       MobilityVal = &Pair.Value;
       MobilityKey = Pair.Key;
       break;
     }
   }
 
-  if (MobilityVal) {
-    if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent)) {
+  if (MobilityVal)
+  {
+    if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent))
+    {
       FString EnumVal;
-      if ((*MobilityVal)->TryGetString(EnumVal)) {
+      if ((*MobilityVal)->TryGetString(EnumVal))
+      {
         // Parse enum string
         int64 Val =
             StaticEnum<EComponentMobility::Type>()->GetValueByNameString(
                 EnumVal);
-        if (Val != INDEX_NONE) {
+        if (Val != INDEX_NONE)
+        {
           SC->SetMobility((EComponentMobility::Type)Val);
           AppliedProperties.Add(MobilityKey);
           UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
                  TEXT("Explicitly set Mobility to %s"), *EnumVal);
         }
-      } else {
+      }
+      else
+      {
         double Val;
-        if ((*MobilityVal)->TryGetNumber(Val)) {
+        if ((*MobilityVal)->TryGetNumber(Val))
+        {
           SC->SetMobility((EComponentMobility::Type)(int32)Val);
           AppliedProperties.Add(MobilityKey);
           UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -1209,18 +2600,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     }
   }
 
-  for (const auto &Pair : (*PropertiesPtr)->Values) {
+  for (const auto &Pair : (*PropertiesPtr)->Values)
+  {
     // Skip Mobility as we already handled it
     if (Pair.Key.Equals(TEXT("Mobility"), ESearchCase::IgnoreCase))
       continue;
 
     // Special handling for SimulatePhysics
     if (Pair.Key.Equals(TEXT("SimulatePhysics"), ESearchCase::IgnoreCase) ||
-        Pair.Key.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase)) {
+        Pair.Key.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase))
+    {
       if (UPrimitiveComponent *Prim =
-              Cast<UPrimitiveComponent>(TargetComponent)) {
+              Cast<UPrimitiveComponent>(TargetComponent))
+      {
         bool bVal = false;
-        if (Pair.Value->TryGetBool(bVal)) {
+        if (Pair.Value->TryGetBool(bVal))
+        {
           Prim->SetSimulatePhysics(bVal);
           AppliedProperties.Add(Pair.Key);
           UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -1232,7 +2627,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     }
 
     FProperty *Property = ComponentClass->FindPropertyByName(*Pair.Key);
-    if (!Property) {
+    if (!Property)
+    {
       PropertyWarnings.Add(
           FString::Printf(TEXT("Property not found: %s"), *Pair.Key));
       continue;
@@ -1247,14 +2643,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   }
 
   if (USceneComponent *SceneComponent =
-          Cast<USceneComponent>(TargetComponent)) {
+          Cast<USceneComponent>(TargetComponent))
+  {
     SceneComponent->MarkRenderStateDirty();
     SceneComponent->UpdateComponentToWorld();
   }
   TargetComponent->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  if (AppliedProperties.Num() > 0) {
+  if (AppliedProperties.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> PropsArray;
     for (const FString &PropName : AppliedProperties)
       PropsArray.Add(MakeShared<FJsonValueString>(PropName));
@@ -1277,17 +2675,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
 
   // Also accept "objectPath" as an alias, common in inspections
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("objectPath"), TargetName);
   }
 
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName or objectPath required"), nullptr);
     return true;
@@ -1295,24 +2696,30 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
 
   AActor *Found = FindActorByName(TargetName);
   // Fallback: Check if it's a Blueprint asset to inspect CDO components
-  if (!Found) {
-    if (UObject *Asset = UEditorAssetLibrary::LoadAsset(TargetName)) {
-      if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
-        if (BP->GeneratedClass) {
+  if (!Found)
+  {
+    if (UObject *Asset = UEditorAssetLibrary::LoadAsset(TargetName))
+    {
+      if (UBlueprint *BP = Cast<UBlueprint>(Asset))
+      {
+        if (BP->GeneratedClass)
+        {
           Found = Cast<AActor>(BP->GeneratedClass->GetDefaultObject());
         }
       }
     }
   }
 
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor or Blueprint not found"), nullptr);
     return true;
   }
 
   TArray<TSharedPtr<FJsonValue>> ComponentsArray;
-  for (UActorComponent *Comp : Found->GetComponents()) {
+  for (UActorComponent *Comp : Found->GetComponents())
+  {
     if (!Comp)
       continue;
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -1321,7 +2728,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
                                              ? Comp->GetClass()->GetPathName()
                                              : TEXT(""));
     Entry->SetStringField(TEXT("path"), Comp->GetPathName());
-    if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp)) {
+    if (USceneComponent *SceneComp = Cast<USceneComponent>(Comp))
+    {
       FVector Loc = SceneComp->GetRelativeLocation();
       FRotator Rot = SceneComp->GetRelativeRotation();
       FVector Scale = SceneComp->GetRelativeScale3D();
@@ -1350,12 +2758,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
-  
+
   // Add verification data
-  if (Found) {
+  if (Found)
+  {
     McpHandlerUtils::AddVerification(Data, Found);
   }
-  
+
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);
   return true;
@@ -1366,18 +2775,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1389,7 +2801,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   AActor *Duplicated =
       ActorSS->DuplicateActor(Found, Found->GetWorld(), Offset);
-  if (!Duplicated) {
+  if (!Duplicated)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("DUPLICATE_FAILED"),
                               TEXT("Failed to duplicate actor"), nullptr);
     return true;
@@ -1427,13 +2840,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ChildName;
   Payload->TryGetStringField(TEXT("childActor"), ChildName);
   FString ParentName;
   Payload->TryGetStringField(TEXT("parentActor"), ParentName);
-  if (ChildName.IsEmpty() || ParentName.IsEmpty()) {
+  if (ChildName.IsEmpty() || ParentName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("childActor and parentActor required"), nullptr);
     return true;
@@ -1441,13 +2856,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
 
   AActor *Child = FindActorByName(ChildName);
   AActor *Parent = FindActorByName(ParentName);
-  if (!Child || !Parent) {
+  if (!Child || !Parent)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Child or parent actor not found"), nullptr);
     return true;
   }
 
-  if (Child == Parent) {
+  if (Child == Parent)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CYCLE_DETECTED"),
                               TEXT("Cannot attach actor to itself"), nullptr);
     return true;
@@ -1455,7 +2872,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
 
   USceneComponent *ChildRoot = Child->GetRootComponent();
   USceneComponent *ParentRoot = Parent->GetRootComponent();
-  if (!ChildRoot || !ParentRoot) {
+  if (!ChildRoot || !ParentRoot)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ROOT_MISSING"),
                               TEXT("Actor missing root component"), nullptr);
     return true;
@@ -1472,7 +2890,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   // Verify attachment
   bool bAttached = false;
   if (Child->GetRootComponent() &&
-      Child->GetRootComponent()->GetAttachParent() == ParentRoot) {
+      Child->GetRootComponent()->GetAttachParent() == ParentRoot)
+  {
     bAttached = true;
   }
 
@@ -1481,7 +2900,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   Data->SetStringField(TEXT("parent"), Parent->GetActorLabel());
   Data->SetBoolField(TEXT("attached"), bAttached);
 
-  if (!bAttached) {
+  if (!bAttached)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ATTACH_FAILED"),
                               TEXT("Failed to attach actor"), Data);
     return true;
@@ -1502,25 +2922,29 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
   }
 
   USceneComponent *RootComp = Found->GetRootComponent();
-  if (!RootComp || !RootComp->GetAttachParent()) {
+  if (!RootComp || !RootComp->GetAttachParent())
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
@@ -1543,7 +2967,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
   Data->SetBoolField(TEXT("detached"), bDetached);
 
-  if (!bDetached) {
+  if (!bDetached)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("DETACH_FAILED"),
                               TEXT("Failed to detach actor"), Data);
     return true;
@@ -1563,18 +2988,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TagValue.IsEmpty()) {
+  if (TagValue.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("tag required"), nullptr);
     return true;
   }
 
   // Security: Validate tag format - reject path traversal attempts
-  if (TagValue.Contains(TEXT("..")) || TagValue.Contains(TEXT("\\")) || TagValue.Contains(TEXT("/"))) {
+  if (TagValue.Contains(TEXT("..")) || TagValue.Contains(TEXT("\\")) || TagValue.Contains(TEXT("/")))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               FString::Printf(TEXT("Invalid tag: '%s'. Path separators and traversal characters are not allowed."), *TagValue), nullptr);
     return true;
@@ -1593,37 +3021,45 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  
-  
+
   // Log total actors being searched
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
-  for (AActor *Actor : AllActors) {
+  for (AActor *Actor : AllActors)
+  {
     if (!Actor)
       continue;
     bool bMatches = false;
-    if (MatchType == TEXT("contains")) {
-      for (const FName &Existing : Actor->Tags) {
-        if (Existing.ToString().Contains(TagValue, ESearchCase::IgnoreCase)) {
+    if (MatchType == TEXT("contains"))
+    {
+      for (const FName &Existing : Actor->Tags)
+      {
+        if (Existing.ToString().Contains(TagValue, ESearchCase::IgnoreCase))
+        {
           bMatches = true;
           break;
         }
       }
-    } else {
+    }
+    else
+    {
       bMatches = Actor->ActorHasTag(TagName);
     }
 
     // Log actor tags for troubleshooting at verbose level
-    if (Actor->Tags.Num() > 0) {
+    if (Actor->Tags.Num() > 0)
+    {
       FString TagList;
-      for (const FName& T : Actor->Tags) {
+      for (const FName &T : Actor->Tags)
+      {
         TagList += T.ToString() + TEXT(", ");
       }
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
              TEXT("HandleControlActorFindByTag: Actor '%s' has tags: [%s] - match=%d"),
              *Actor->GetActorLabel(), *TagList, bMatches);
     }
-    if (bMatches) {
+    if (bMatches)
+    {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
       Entry->SetStringField(TEXT("path"), Actor->GetPathName());
@@ -1647,20 +3083,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TargetName.IsEmpty() || TagValue.IsEmpty()) {
+  if (TargetName.IsEmpty() || TagValue.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName and tag required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1693,18 +3132,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString Query;
   Payload->TryGetStringField(TEXT("name"), Query);
-  if (Query.IsEmpty()) {
+  if (Query.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("name required"), nullptr);
     return true;
   }
 
   // Security: Validate query format - reject path traversal attempts
-  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\")) || Query.Contains(TEXT("/"))) {
+  if (Query.Contains(TEXT("..")) || Query.Contains(TEXT("\\")) || Query.Contains(TEXT("/")))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               FString::Printf(TEXT("Invalid name query: '%s'. Path separators and traversal characters are not allowed."), *Query), nullptr);
     return true;
@@ -1714,7 +3156,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   const TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
   TArray<TSharedPtr<FJsonValue>> Matches;
-  for (AActor *Actor : AllActors) {
+  for (AActor *Actor : AllActors)
+  {
     if (!Actor)
       continue;
     const FString Label = Actor->GetActorLabel();
@@ -1723,7 +3166,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
     const bool bMatches = Label.Contains(Query, ESearchCase::IgnoreCase) ||
                           Name.Contains(Query, ESearchCase::IgnoreCase) ||
                           Path.Contains(Query, ESearchCase::IgnoreCase);
-    if (bMatches) {
+    if (bMatches)
+    {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("label"), Label);
       Entry->SetStringField(TEXT("name"), Name);
@@ -1749,11 +3193,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TagValue.IsEmpty()) {
+  if (TagValue.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("tag required"), nullptr);
     return true;
@@ -1765,10 +3211,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   const TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
   TArray<FString> Deleted;
 
-  for (AActor *Actor : AllActors) {
+  for (AActor *Actor : AllActors)
+  {
     if (!Actor)
       continue;
-    if (Actor->ActorHasTag(TagName)) {
+    if (Actor->ActorHasTag(TagName))
+    {
       const FString Label = Actor->GetActorLabel();
       if (ActorSS->DestroyActor(Actor))
         Deleted.Add(Label);
@@ -1797,11 +3245,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -1809,14 +3259,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
 
   const TSharedPtr<FJsonObject> *VariablesPtr = nullptr;
   if (!(Payload->TryGetObjectField(TEXT("variables"), VariablesPtr) &&
-        VariablesPtr && VariablesPtr->IsValid())) {
+        VariablesPtr && VariablesPtr->IsValid()))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("variables object required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1827,9 +3279,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   TArray<FString> Applied;
   TArray<FString> Warnings;
 
-  for (const auto &Pair : (*VariablesPtr)->Values) {
+  for (const auto &Pair : (*VariablesPtr)->Values)
+  {
     FProperty *Property = ActorClass->FindPropertyByName(*Pair.Key);
-    if (!Property) {
+    if (!Property)
+    {
       Warnings.Add(FString::Printf(TEXT("Property not found: %s"), *Pair.Key));
       continue;
     }
@@ -1846,7 +3300,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   Found->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  if (Applied.Num() > 0) {
+  if (Applied.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> AppliedArray;
     for (const FString &Name : Applied)
       AppliedArray.Add(MakeShared<FJsonValueString>(Name));
@@ -1863,11 +3318,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -1875,14 +3332,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
 
   FString SnapshotName;
   Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
-  if (SnapshotName.IsEmpty()) {
+  if (SnapshotName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("snapshotName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1905,11 +3364,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
@@ -1917,14 +3378,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
 
   FString SnapshotName;
   Payload->TryGetStringField(TEXT("snapshotName"), SnapshotName);
-  if (SnapshotName.IsEmpty()) {
+  if (SnapshotName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("snapshotName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1932,7 +3395,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
 
   const FString SnapshotKey =
       FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);
-  if (!CachedActorSnapshots.Contains(SnapshotKey)) {
+  if (!CachedActorSnapshots.Contains(SnapshotKey))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SNAPSHOT_NOT_FOUND"),
                               TEXT("Snapshot not found"), nullptr);
     return true;
@@ -1957,18 +3421,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -1992,18 +3459,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -2014,7 +3484,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
-  auto MakeArray = [](const FVector &Vec) {
+  auto MakeArray = [](const FVector &Vec)
+  {
     TArray<TSharedPtr<FJsonValue>> Arr;
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
@@ -2034,18 +3505,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -2060,13 +3534,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
                                           : TEXT(""));
 
   TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : Found->Tags) {
+  for (const FName &Tag : Found->Tags)
+  {
     TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
   }
   Data->SetArrayField(TEXT("tags"), TagsArray);
 
   const FTransform Current = Found->GetActorTransform();
-  auto MakeArray = [](const FVector &Vec) {
+  auto MakeArray = [](const FVector &Vec)
+  {
     TArray<TSharedPtr<FJsonValue>> Arr;
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
@@ -2085,27 +3561,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TargetName.IsEmpty() || TagValue.IsEmpty()) {
+  if (TargetName.IsEmpty() || TagValue.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName and tag required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
   }
 
   const FName TagName(*TagValue);
-  if (!Found->Tags.Contains(TagName)) {
+  if (!Found->Tags.Contains(TagName))
+  {
     // Idempotent success
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -2144,15 +3624,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ClassName;
   Payload->TryGetStringField(TEXT("className"), ClassName);
-  if (ClassName.IsEmpty()) {
+  if (ClassName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("class"), ClassName);
   }
 
-  if (ClassName.IsEmpty()) {
+  if (ClassName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("className or class is required"), nullptr);
     return true;
@@ -2161,22 +3644,25 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   // Security: Validate class name format - reject path traversal attempts
   // Valid formats: "/Script/Module.ClassName", "/Game/Path/ClassName.ClassName", "ClassName"
   // Invalid: Contains "..", "\" (Windows paths), or other traversal patterns
-  if (ClassName.Contains(TEXT("..")) || ClassName.Contains(TEXT("\\"))) {
+  if (ClassName.Contains(TEXT("..")) || ClassName.Contains(TEXT("\\")))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               FString::Printf(TEXT("Invalid class name format: '%s'. Path traversal characters are not allowed."), *ClassName), nullptr);
     return true;
   }
 
   // Additional security: Reject absolute filesystem paths
-  if (ClassName.StartsWith(TEXT("/")) && !ClassName.StartsWith(TEXT("/Script/")) && 
-      !ClassName.StartsWith(TEXT("/Game/")) && !ClassName.StartsWith(TEXT("/Engine/"))) {
+  if (ClassName.StartsWith(TEXT("/")) && !ClassName.StartsWith(TEXT("/Script/")) &&
+      !ClassName.StartsWith(TEXT("/Game/")) && !ClassName.StartsWith(TEXT("/Engine/")))
+  {
     // Could be a path traversal attempt disguised as a valid path
-    if (ClassName.Contains(TEXT("/etc/")) || ClassName.Contains(TEXT("/usr/")) || 
+    if (ClassName.Contains(TEXT("/etc/")) || ClassName.Contains(TEXT("/usr/")) ||
         ClassName.Contains(TEXT("/var/")) || ClassName.Contains(TEXT("/home/")) ||
         ClassName.Contains(TEXT("/root/")) || ClassName.Contains(TEXT("/tmp/")) ||
-        ClassName.Contains(TEXT("C:\\")) || ClassName.Contains(TEXT("D:\\"))) {
+        ClassName.Contains(TEXT("C:\\")) || ClassName.Contains(TEXT("D:\\")))
+    {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              FString::Printf(TEXT("Invalid class name format: '%s'. Filesystem paths are not allowed."), *ClassName), nullptr);
+                                FString::Printf(TEXT("Invalid class name format: '%s'. Filesystem paths are not allowed."), *ClassName), nullptr);
       return true;
     }
   }
@@ -2184,8 +3670,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
 
-  if (UWorld* World = GEditor->GetEditorWorldContext().World()) {
-    UClass* ClassToFind = nullptr;
+  if (UWorld *World = GEditor->GetEditorWorldContext().World())
+  {
+    UClass *ClassToFind = nullptr;
 
     // CRITICAL FIX: Use ResolveClassByName for proper engine class resolution
     // This handles: full paths, short names like "StaticMeshActor", and loads classes if needed
@@ -2193,16 +3680,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     // AStaticMeshActor, APawn, etc. that haven't been accessed yet
     ClassToFind = ResolveClassByName(ClassName);
 
-    if (ClassToFind) {
-      for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
-        if (AActor* Actor = *It) {
+    if (ClassToFind)
+    {
+      for (TActorIterator<AActor> It(World, ClassToFind); It; ++It)
+      {
+        if (AActor *Actor = *It)
+        {
           TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
           ActorObj->SetStringField(TEXT("name"), Actor->GetActorLabel());
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
           ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
         }
       }
-    } else {
+    }
+    else
+    {
       // Class not found - return empty result (this is valid for searches)
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleControlActorFindByClass: Class '%s' not found"), *ClassName);
@@ -2221,41 +3713,48 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
+  if (ActorName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("actor_name"), ActorName);
   }
-  
+
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-  if (ComponentName.IsEmpty()) {
+  if (ComponentName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("component_name"), ComponentName);
   }
-  
-  if (ActorName.IsEmpty()) {
+
+  if (ActorName.IsEmpty())
+  {
     SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
-  if (ComponentName.IsEmpty()) {
+
+  if (ComponentName.IsEmpty())
+  {
     SendAutomationError(Socket, RequestId, TEXT("componentName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
-  AActor* Actor = FindActorByName(ActorName);
-  if (!Actor) {
-    SendAutomationError(Socket, RequestId, 
+
+  AActor *Actor = FindActorByName(ActorName);
+  if (!Actor)
+  {
+    SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Actor not found: %s"), *ActorName),
                         TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
-  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
-  if (Component) {
+  UActorComponent *Component = FindComponentByName(Actor, ComponentName);
+  if (Component)
+  {
     Component->DestroyComponent();
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("actorName"), ActorName);
@@ -2268,7 +3767,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Component removed"), Data);
     return true;
   }
-  
+
   SendAutomationError(Socket, RequestId,
                       FString::Printf(TEXT("Component not found: %s"), *ComponentName),
                       TEXT("COMPONENT_NOT_FOUND"));
@@ -2280,57 +3779,65 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName, ComponentName, PropertyName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
   Payload->TryGetStringField(TEXT("propertyName"), PropertyName);
-  
-  if (ActorName.IsEmpty() || ComponentName.IsEmpty() || PropertyName.IsEmpty()) {
+
+  if (ActorName.IsEmpty() || ComponentName.IsEmpty() || PropertyName.IsEmpty())
+  {
     SendAutomationError(Socket, RequestId, TEXT("actorName, componentName, and propertyName are required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
-  AActor* Actor = FindActorByName(ActorName);
-  if (!Actor) {
+
+  AActor *Actor = FindActorByName(ActorName);
+  if (!Actor)
+  {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // CRITICAL FIX: Use FindComponentByName helper which supports fuzzy matching
   // This handles cases where component names have numeric suffixes (e.g., "StaticMeshComponent0")
-  UActorComponent* Component = FindComponentByName(Actor, ComponentName);
-  if (!Component) {
-    SendAutomationError(Socket, RequestId, 
-        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName), 
-        TEXT("COMPONENT_NOT_FOUND"));
+  UActorComponent *Component = FindComponentByName(Actor, ComponentName);
+  if (!Component)
+  {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Component not found: %s on actor: %s"), *ComponentName, *ActorName),
+                        TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
-  
+
   // Get property using reflection
-  FProperty* Property = Component->GetClass()->FindPropertyByName(*PropertyName);
-  if (!Property) {
-    SendAutomationError(Socket, RequestId, 
-        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName), 
-        TEXT("PROPERTY_NOT_FOUND"));
+  FProperty *Property = Component->GetClass()->FindPropertyByName(*PropertyName);
+  if (!Property)
+  {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName),
+                        TEXT("PROPERTY_NOT_FOUND"));
     return true;
   }
-  
+
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetStringField(TEXT("componentName"), ComponentName);
   Data->SetStringField(TEXT("propertyName"), PropertyName);
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
-  
+
   // Extract property value using the existing helper function
   TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(Component, Property);
-  if (PropertyValue.IsValid()) {
+  if (PropertyValue.IsValid())
+  {
     Data->SetField(TEXT("value"), PropertyValue);
-  } else {
+  }
+  else
+  {
     Data->SetStringField(TEXT("value"), TEXT("<unsupported property type>"));
   }
-  
+
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
   return true;
 #else
@@ -2340,44 +3847,56 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName;
   bool bCollisionEnabled = true;
-  
+
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
+  if (ActorName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("actor_name"), ActorName);
   }
-  
-  if (Payload->HasField(TEXT("collisionEnabled"))) {
+
+  if (Payload->HasField(TEXT("collisionEnabled")))
+  {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collisionEnabled"), true);
-  } else if (Payload->HasField(TEXT("collision_enabled"))) {
+  }
+  else if (Payload->HasField(TEXT("collision_enabled")))
+  {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collision_enabled"), true);
   }
-  
-  if (ActorName.IsEmpty()) {
+
+  if (ActorName.IsEmpty())
+  {
     SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
-  AActor* Actor = FindActorByName(ActorName);
-  if (!Actor) {
+
+  AActor *Actor = FindActorByName(ActorName);
+  if (!Actor)
+  {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // Set collision on root component
-  if (USceneComponent* RootComp = Actor->GetRootComponent()) {
-    if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(RootComp)) {
-      if (bCollisionEnabled) {
+  if (USceneComponent *RootComp = Actor->GetRootComponent())
+  {
+    if (UPrimitiveComponent *PrimComp = Cast<UPrimitiveComponent>(RootComp))
+    {
+      if (bCollisionEnabled)
+      {
         PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-      } else {
+      }
+      else
+      {
         PrimComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
       }
     }
   }
-  
+
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
@@ -2390,51 +3909,58 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName, FunctionName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("functionName"), FunctionName);
-  
-  if (ActorName.IsEmpty() || FunctionName.IsEmpty()) {
+
+  if (ActorName.IsEmpty() || FunctionName.IsEmpty())
+  {
     SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAM"));
     return true;
   }
-  
-  AActor* Actor = FindActorByName(ActorName);
-  if (!Actor) {
+
+  AActor *Actor = FindActorByName(ActorName);
+  if (!Actor)
+  {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
-  
+
   // Find and call the function
-  UFunction* Function = Actor->FindFunction(*FunctionName);
-  if (Function) {
+  UFunction *Function = Actor->FindFunction(*FunctionName);
+  if (Function)
+  {
     // Check if function has parameters - passing nullptr to a function expecting
     // parameters can cause crashes or undefined behavior
-    if (Function->ParmsSize > 0) {
+    if (Function->ParmsSize > 0)
+    {
       // Function has parameters - we need to provide a buffer
       // Allocate zeroed memory for parameters
-      void* ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
+      void *ParmsBuffer = FMemory::Malloc(Function->ParmsSize, 16);
       FMemory::Memzero(ParmsBuffer, Function->ParmsSize);
-      
+
       // Call with parameter buffer
       Actor->ProcessEvent(Function, ParmsBuffer);
-      
+
       // Free the buffer
       FMemory::Free(ParmsBuffer);
-    } else {
+    }
+    else
+    {
       // No parameters, safe to pass nullptr
       Actor->ProcessEvent(Function, nullptr);
     }
-    
+
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("actorName"), ActorName);
     Data->SetStringField(TEXT("functionName"), FunctionName);
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
     return true;
   }
-  
+
   SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found: %s"), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
   return true;
 #else
@@ -2445,12 +3971,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
   const FString Lower = Action.ToLower();
   if (!Lower.Equals(TEXT("control_actor"), ESearchCase::IgnoreCase) &&
       !Lower.StartsWith(TEXT("control_actor")))
     return false;
-  if (!Payload.IsValid()) {
+  if (!Payload.IsValid())
+  {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("control_actor payload missing."),
                         TEXT("INVALID_PAYLOAD"));
@@ -2466,12 +3994,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
          *RequestId);
 
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
-  if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+  if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+  {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"),
                               TEXT("EditorActorSubsystem not available"), nullptr);
     return true;
@@ -2578,9 +4108,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (GEditor->PlayWorld) {
+  if (GEditor->PlayWorld)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyPlaying"), true);
@@ -2598,7 +4130,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
 #if MCP_HAS_LEVEL_EDITOR_MODULE
   if (FLevelEditorModule *LevelEditorModule =
           FModuleManager::GetModulePtr<FLevelEditorModule>(
-              TEXT("LevelEditor"))) {
+              TEXT("LevelEditor")))
+  {
     TSharedPtr<IAssetViewport> DestinationViewport =
         LevelEditorModule->GetFirstActiveViewport();
     if (DestinationViewport.IsValid())
@@ -2619,9 +4152,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor->PlayWorld) {
+  if (!GEditor->PlayWorld)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyStopped"), true);
@@ -2643,9 +4178,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor->PlayWorld) {
+  if (!GEditor->PlayWorld)
+  {
     TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetBoolField(TEXT("notInPIE"), true);
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
@@ -2656,7 +4193,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
   // Use Eject console command instead of RequestEndPlayMap
   // This ejects the player from the possessed pawn without stopping PIE
   GEditor->Exec(GEditor->PlayWorld, TEXT("Eject"));
-  
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("ejected"), true);
@@ -2670,7 +4207,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
@@ -2679,37 +4217,43 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
   if (ActorName.IsEmpty())
     Payload->TryGetStringField(TEXT("objectPath"), ActorName);
 
-  if (ActorName.IsEmpty()) {
+  if (ActorName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(ActorName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr);
     return true;
   }
 
-  if (GEditor) {
+  if (GEditor)
+  {
     GEditor->SelectNone(true, true, false);
     GEditor->SelectActor(Found, true, true, true);
     // 'POSSESS' command works on selected actor in PIE
-    if (GEditor->PlayWorld) {
+    if (GEditor->PlayWorld)
+    {
       GEditor->Exec(GEditor->PlayWorld, TEXT("POSSESS"));
       SendAutomationResponse(Socket, RequestId, true, TEXT("Possessed actor"),
                              nullptr);
-    } else {
+    }
+    else
+    {
       // If not in PIE, we can't possess
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
-                              TEXT("Cannot possess actor while not in PIE"), nullptr);
+                                TEXT("Cannot possess actor while not in PIE"), nullptr);
     }
     return true;
   }
 
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+                            TEXT("Editor not available"), nullptr);
   return true;
 #else
   return false;
@@ -2718,23 +4262,28 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
+  if (ActorName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   if (UEditorActorSubsystem *ActorSS =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
+          GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
+  {
     TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
-    for (AActor *Actor : Actors) {
+    for (AActor *Actor : Actors)
+    {
       if (!Actor)
         continue;
-      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)) {
+      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+      {
         GEditor->SelectNone(true, true, false);
         GEditor->SelectActor(Actor, true, true, true);
         GEditor->Exec(nullptr, TEXT("EDITORTEMPVIEWPORT"));
@@ -2757,7 +4306,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   const TSharedPtr<FJsonObject> *Loc = nullptr;
   FVector Location(0, 0, 0);
@@ -2771,7 +4321,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
 
 #if defined(MCP_HAS_UNREALEDITOR_SUBSYSTEM)
   if (UUnrealEditorSubsystem *UES =
-          GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>()) {
+          GEditor->GetEditorSubsystem<UUnrealEditorSubsystem>())
+  {
     UES->SetLevelViewportCameraInfo(Location, Rotation);
 #if defined(MCP_HAS_LEVELEDITOR_SUBSYSTEM)
     if (ULevelEditorSubsystem *LES =
@@ -2789,7 +4340,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
           GEditor->GetActiveViewport()
               ? (FEditorViewportClient *)GEditor->GetActiveViewport()
                     ->GetClient()
-              : nullptr) {
+              : nullptr)
+  {
     ViewportClient->SetViewLocation(Location);
     ViewportClient->SetViewRotation(Rotation);
     ViewportClient->Invalidate();
@@ -2807,7 +4359,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString Mode;
   Payload->TryGetStringField(TEXT("viewMode"), Mode);
@@ -2837,7 +4390,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     Chosen = Mode;
 
   const FString Cmd = FString::Printf(TEXT("viewmode %s"), *Chosen);
-  if (GEditor->Exec(nullptr, *Cmd)) {
+  if (GEditor->Exec(nullptr, *Cmd))
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("viewMode"), Chosen);
@@ -2846,7 +4400,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     return true;
   }
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("EXEC_FAILED"),
-                              TEXT("View mode command failed"), nullptr);
+                            TEXT("View mode command failed"), nullptr);
   return true;
 #else
   return false;
@@ -2856,12 +4410,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
   const FString Lower = Action.ToLower();
   if (!Lower.Equals(TEXT("control_editor"), ESearchCase::IgnoreCase) &&
       !Lower.StartsWith(TEXT("control_editor")))
     return false;
-  if (!Payload.IsValid()) {
+  if (!Payload.IsValid())
+  {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("control_editor payload missing."),
                         TEXT("INVALID_PAYLOAD"));
@@ -2873,7 +4429,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   const FString LowerSub = SubAction.ToLower();
 
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -2960,17 +4517,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
+  if (AssetPath.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("assetPath required"), nullptr);
     return true;
   }
 
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -2978,20 +4538,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
 
   UAssetEditorSubsystem *AssetEditorSS =
       GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-  if (!AssetEditorSS) {
+  if (!AssetEditorSS)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
                               TEXT("AssetEditorSubsystem not available"), nullptr);
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
                               TEXT("Asset not found"), nullptr);
     return true;
   }
 
   UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  if (!Asset) {
+  if (!Asset)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
                               TEXT("Failed to load asset"), nullptr);
     return true;
@@ -3003,10 +4566,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
-  if (bOpened) {
+  if (bOpened)
+  {
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset opened"), Resp,
                            FString());
-  } else {
+  }
+  else
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"),
                               TEXT("Failed to open asset editor"), Resp);
   }
@@ -3018,85 +4584,165 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
-  // Get optional filename from payload
   FString Filename;
   Payload->TryGetStringField(TEXT("filename"), Filename);
-  if (Filename.IsEmpty()) {
-    // Generate default filename with timestamp
-    Filename = FString::Printf(TEXT("Screenshot_%s"),
-        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
-  }
+  Filename = SanitizeScreenshotFilename(Filename);
 
-  // SECURITY: Sanitize filename to prevent path traversal
-  // Remove any path components and keep only the base filename
-  Filename = FPaths::GetCleanFilename(Filename);
-  
-  // Validate filename doesn't contain suspicious patterns
-  if (Filename.Contains(TEXT("..")) || Filename.Contains(TEXT("/")) || Filename.Contains(TEXT("\\"))) {
-    // Reject suspicious filename and use default
-    Filename = FString::Printf(TEXT("Screenshot_%s"),
-        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
-  }
-
-  // Ensure filename ends with .png
-  if (!Filename.EndsWith(TEXT(".png"))) {
-    Filename += TEXT(".png");
-  }
-
-  // Build the full path - save to project's Saved/Screenshots folder
   const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
   IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
   const FString FullPath = ScreenshotDir / Filename;
 
-  // Get the active viewport
-  FViewport* Viewport = GEditor->GetActiveViewport();
-  if (!Viewport) {
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  FString TargetWindowName;
+  Payload->TryGetStringField(TEXT("name"), TargetWindowName);
+  FString Mode;
+  Payload->TryGetStringField(TEXT("mode"), Mode);
+  const bool bIncludeMenus =
+      !Payload->HasField(TEXT("includeMenus"))
+          ? true
+          : GetJsonBoolField(Payload, TEXT("includeMenus"), true);
+  const bool bCaptureEditorWindow =
+      !TargetWindowName.IsEmpty() ||
+      Mode.Equals(TEXT("editor"), ESearchCase::IgnoreCase) ||
+      Mode.Equals(TEXT("window"), ESearchCase::IgnoreCase) ||
+      Mode.Equals(TEXT("ui"), ESearchCase::IgnoreCase);
+
+  Resp->SetStringField(TEXT("requestedCaptureMode"),
+                       Mode.IsEmpty() ? TEXT("viewport") : Mode);
+  if (!TargetWindowName.IsEmpty())
+  {
+    Resp->SetStringField(TEXT("requestedWindowTitle"), TargetWindowName);
+  }
+
+  if (bCaptureEditorWindow)
+  {
+    if (!FSlateApplication::IsInitialized())
+    {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("SLATE_NOT_AVAILABLE"),
+                                TEXT("Slate application is not initialized"), nullptr);
+      return true;
+    }
+
+    const TSharedPtr<SWindow> TargetWindow = ResolvePreferredScreenshotWindow(this, TargetWindowName);
+    if (!TargetWindow.IsValid())
+    {
+      TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
+      ErrorDetails->SetStringField(TEXT("requestedWindowTitle"), TargetWindowName);
+      ErrorDetails->SetArrayField(TEXT("visibleWindowTitles"),
+                                  BuildVisibleWindowTitleValues());
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("WINDOW_NOT_FOUND"),
+                                TEXT("No visible editor window matched the requested target"), ErrorDetails);
+      return true;
+    }
+
+    FIntPoint OutImageSize;
+    int32 IncludedMenuWindowCount = 0;
+    FString SaveError;
+    if (bIncludeMenus)
+    {
+      if (!CaptureWindowScreenshotIncludingChildWindowsToFile(
+              TargetWindow, FullPath, OutImageSize, IncludedMenuWindowCount,
+              SaveError))
+      {
+        SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), SaveError,
+                                  nullptr);
+        return true;
+      }
+    }
+    else if (!CaptureWindowScreenshotToFile(TargetWindow, FullPath, OutImageSize,
+                                            SaveError))
+    {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), SaveError,
+                                nullptr);
+      return true;
+    }
+
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("filename"), Filename);
+    Resp->SetStringField(TEXT("path"), FullPath);
+    Resp->SetStringField(TEXT("captureTarget"), TEXT("editor_window"));
+    Resp->SetStringField(TEXT("windowTitle"), TargetWindow->GetTitle().ToString());
+    Resp->SetStringField(TEXT("captureMode"), TEXT("editor_window"));
+    Resp->SetBoolField(TEXT("includeMenus"), bIncludeMenus);
+    Resp->SetNumberField(TEXT("includedMenuWindowCount"), IncludedMenuWindowCount);
+    Resp->SetNumberField(TEXT("width"), OutImageSize.X);
+    Resp->SetNumberField(TEXT("height"), OutImageSize.Y);
+    Resp->SetStringField(TEXT("message"), TEXT("Editor window screenshot captured"));
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Editor window screenshot captured"), Resp, FString());
+    return true;
+  }
+
+  FViewport *Viewport = GEditor->GetActiveViewport();
+  if (!Viewport)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
                               TEXT("No active viewport available"), nullptr);
     return true;
   }
 
-  // Request a screenshot
-  bool bCaptured = false;
-  FScreenshotRequest::RequestScreenshot(FullPath, false, false);
-  
-  // Since screenshot is async, we respond with the expected path
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  TArray<FColor> Bitmap;
+  const FIntPoint Size = Viewport->GetSizeXY();
+  if (!Viewport->ReadPixels(Bitmap) || Bitmap.Num() == 0)
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
+                              TEXT("Failed to read active viewport pixels"), nullptr);
+    return true;
+  }
+
+  FString SaveError;
+  if (!SaveBitmapToPngFile(Bitmap, Size.X, Size.Y, FullPath, SaveError))
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"), SaveError,
+                              nullptr);
+    return true;
+  }
+
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("path"), FullPath);
-  Resp->SetStringField(TEXT("message"), TEXT("Screenshot request submitted"));
-  
+  Resp->SetStringField(TEXT("captureTarget"), TEXT("viewport"));
+  Resp->SetStringField(TEXT("captureMode"), TEXT("viewport"));
+  Resp->SetNumberField(TEXT("width"), Size.X);
+  Resp->SetNumberField(TEXT("height"), Size.Y);
+  Resp->SetStringField(TEXT("message"), TEXT("Viewport screenshot captured"));
+
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Screenshot requested"), Resp, FString());
+                         TEXT("Viewport screenshot captured"), Resp, FString());
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Screenshot requires editor build."), nullptr);
+                            TEXT("Screenshot requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
-  if (!GEditor->PlayWorld) {
+  if (!GEditor->PlayWorld)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to pause"), nullptr);
     return true;
@@ -3115,23 +4761,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Pause requires editor build."), nullptr);
+                            TEXT("Pause requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
-  if (!GEditor->PlayWorld) {
+  if (!GEditor->PlayWorld)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to resume"), nullptr);
     return true;
@@ -3150,16 +4799,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Resume requires editor build."), nullptr);
+                            TEXT("Resume requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3167,22 +4818,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
 
   FString Command;
   Payload->TryGetStringField(TEXT("command"), Command);
-  if (Command.IsEmpty()) {
+  if (Command.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("command parameter is required"), nullptr);
     return true;
   }
 
-  // Execute the console command in editor context
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
-    return true;
-  }
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  UWorld *World = GEditor->GetEditorWorldContext().World();
   GEditor->Exec(World, *Command);
 
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("command"), Command);
   Resp->SetStringField(TEXT("message"), TEXT("Console command executed"));
@@ -3192,23 +4838,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Console command requires editor build."), nullptr);
+                            TEXT("Console command requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Check if we're in PIE
-  if (!GEditor->PlayWorld) {
+  if (!GEditor->PlayWorld)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to step"), nullptr);
     return true;
@@ -3227,16 +4876,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Step frame requires editor build."), nullptr);
+                            TEXT("Step frame requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3246,18 +4897,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   // Accept both 'name' and 'filename' fields for flexibility
   // TS handler sends 'filename', so we check that first
   Payload->TryGetStringField(TEXT("filename"), RecordingName);
-  if (RecordingName.IsEmpty()) {
+  if (RecordingName.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("name"), RecordingName);
   }
-  if (RecordingName.IsEmpty()) {
+  if (RecordingName.IsEmpty())
+  {
     RecordingName = FString::Printf(TEXT("Recording_%s"),
-        *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
+                                    *FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S")));
   }
 
   // Use console command to start demo recording
   // UE 5.7: TObjectPtr requires explicit cast to UWorld*
-  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
-  if (World) {
+  UWorld *World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+  if (World)
+  {
     FString Command = FString::Printf(TEXT("DemoRec %s"), *RecordingName);
     GEditor->Exec(World, *Command);
   }
@@ -3272,16 +4926,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Recording requires editor build."), nullptr);
+                            TEXT("Recording requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3289,8 +4945,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
 
   // Use console command to stop demo recording
   // UE 5.7: TObjectPtr requires explicit cast to UWorld*
-  UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
-  if (World) {
+  UWorld *World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
+  if (World)
+  {
     GEditor->Exec(World, TEXT("DemoStop"));
   }
 
@@ -3303,16 +4960,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Recording requires editor build."), nullptr);
+                            TEXT("Recording requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3326,7 +4985,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
 
   // Use console command to set bookmark
   FString Command = FString::Printf(TEXT("SetBookmark %d"), BookmarkIndex);
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -3339,16 +4998,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Bookmarks require editor build."), nullptr);
+                            TEXT("Bookmarks require editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3362,7 +5023,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
 
   // Use console command to jump to bookmark
   FString Command = FString::Printf(TEXT("JumpToBookmark %d"), BookmarkIndex);
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -3375,16 +5036,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Bookmarks require editor build."), nullptr);
+                            TEXT("Bookmarks require editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3394,32 +5057,46 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   TArray<FString> FailedSettings;
 
   // Get preferences object from payload
-  const TSharedPtr<FJsonObject>* PrefsPtr = nullptr;
-  if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid()) {
-    for (const auto& Pair : (*PrefsPtr)->Values) {
+  const TSharedPtr<FJsonObject> *PrefsPtr = nullptr;
+  if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid())
+  {
+    for (const auto &Pair : (*PrefsPtr)->Values)
+    {
       // Try to set via console variable first
-      IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(*Pair.Key);
-      if (CVar) {
+      IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(*Pair.Key);
+      if (CVar)
+      {
         FString Value;
-        if (Pair.Value->TryGetString(Value)) {
+        if (Pair.Value->TryGetString(Value))
+        {
           CVar->Set(*Value);
           AppliedSettings.Add(Pair.Key);
-        } else {
+        }
+        else
+        {
           double NumVal;
-          if (Pair.Value->TryGetNumber(NumVal)) {
+          if (Pair.Value->TryGetNumber(NumVal))
+          {
             CVar->Set((float)NumVal);
             AppliedSettings.Add(Pair.Key);
-          } else {
+          }
+          else
+          {
             bool BoolVal;
-            if (Pair.Value->TryGetBool(BoolVal)) {
+            if (Pair.Value->TryGetBool(BoolVal))
+            {
               CVar->Set(BoolVal ? 1 : 0);
               AppliedSettings.Add(Pair.Key);
-            } else {
+            }
+            else
+            {
               FailedSettings.Add(Pair.Key);
             }
           }
         }
-      } else {
+      }
+      else
+      {
         FailedSettings.Add(Pair.Key);
       }
     }
@@ -3429,16 +5106,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   Resp->SetBoolField(TEXT("success"), FailedSettings.Num() == 0);
   Resp->SetNumberField(TEXT("appliedCount"), AppliedSettings.Num());
 
-  if (AppliedSettings.Num() > 0) {
+  if (AppliedSettings.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> AppliedArray;
-    for (const FString& Name : AppliedSettings)
+    for (const FString &Name : AppliedSettings)
       AppliedArray.Add(MakeShared<FJsonValueString>(Name));
     Resp->SetArrayField(TEXT("applied"), AppliedArray);
   }
 
-  if (FailedSettings.Num() > 0) {
+  if (FailedSettings.Num() > 0)
+  {
     TArray<TSharedPtr<FJsonValue>> FailedArray;
-    for (const FString& Name : FailedSettings)
+    for (const FString &Name : FailedSettings)
       FailedArray.Add(MakeShared<FJsonValueString>(Name));
     Resp->SetArrayField(TEXT("failed"), FailedArray);
   }
@@ -3448,16 +5127,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Preferences require editor build."), nullptr);
+                            TEXT("Preferences require editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3468,13 +5149,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
 
 #if MCP_HAS_LEVEL_EDITOR_MODULE
   // Get the level editor module and active viewport
-  FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+  FLevelEditorModule &LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
   TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
-  
-  if (ActiveViewport.IsValid()) {
-    FEditorViewportClient& ViewportClient = ActiveViewport->GetAssetViewportClient();
+
+  if (ActiveViewport.IsValid())
+  {
+    FEditorViewportClient &ViewportClient = ActiveViewport->GetAssetViewportClient();
     ViewportClient.SetRealtime(bRealtime);
-    
+
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("realtime"), bRealtime);
@@ -3488,7 +5170,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
 
   // Fallback: use console command
   FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
-  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   GEditor->Exec(World, *Command);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -3501,16 +5183,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Viewport realtime requires editor build."), nullptr);
+                            TEXT("Viewport realtime requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3524,22 +5208,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   // and will always be present in the payload. Only use type/inputType/inputAction for input type.
   FString InputType;
   Payload->TryGetStringField(TEXT("type"), InputType);
-  if (InputType.IsEmpty()) {
+  if (InputType.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("inputType"), InputType);
   }
-  if (InputType.IsEmpty()) {
+  if (InputType.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("inputAction"), InputType);
   }
-  
+
   // Map action values to C++ expected type values
   InputType = InputType.ToLower();
-  if (InputType == TEXT("pressed") || InputType == TEXT("down")) {
+  if (InputType == TEXT("pressed") || InputType == TEXT("down"))
+  {
     InputType = TEXT("key_down");
-  } else if (InputType == TEXT("released") || InputType == TEXT("up")) {
+  }
+  else if (InputType == TEXT("released") || InputType == TEXT("up"))
+  {
     InputType = TEXT("key_up");
-  } else if (InputType == TEXT("click")) {
+  }
+  else if (InputType == TEXT("click"))
+  {
     InputType = TEXT("mouse_click");
-  } else if (InputType == TEXT("move")) {
+  }
+  else if (InputType == TEXT("move"))
+  {
     InputType = TEXT("mouse_move");
   }
 
@@ -3548,136 +5241,554 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
 
   bool bSuccess = false;
   FString Message;
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  bool bAttemptedVirtualTarget = false;
+  FMcpResolvedVirtualInputTarget VirtualTarget;
+  FString VirtualTargetError;
+  const bool bHasVirtualTarget = ResolveVirtualInputTarget(this, Payload, bAttemptedVirtualTarget, VirtualTarget, VirtualTargetError);
+  bool bCaptureScreenshots = true;
+  Payload->TryGetBoolField(TEXT("captureScreenshots"), bCaptureScreenshots);
 
-  if (InputType == TEXT("key_down") || InputType == TEXT("keydown")) {
-    if (!Key.IsEmpty()) {
+  auto SetInputStateFields = [Resp](const FString &PressedButtons, const FString &PressedModifierKeys)
+  {
+    Resp->SetStringField(TEXT("pressedButtons"), PressedButtons);
+    Resp->SetStringField(TEXT("pressedModifierKeys"), PressedModifierKeys);
+  };
+
+  auto SetTargetResponseFields = [Resp](const FMcpResolvedVirtualInputTarget &Target)
+  {
+    if (!Target.TabId.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("tabId"), Target.TabId);
+    }
+    if (!Target.WindowTitle.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("windowTitle"), Target.WindowTitle);
+    }
+  };
+
+  auto SetTargetWidgetPathFields = [Resp](const FMcpResolvedVirtualInputTarget &Target, const FVector2D &Position)
+  {
+    const FVector2D ScreenPosition = ClientPositionToScreen(Target, Position);
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    Resp->SetBoolField(TEXT("targetWidgetPathValid"), WidgetPath.IsValid());
+    if (WidgetPath.IsValid())
+    {
+      Resp->SetStringField(TEXT("targetWidgetPath"), WidgetPath.ToString());
+      Resp->SetNumberField(TEXT("targetWidgetPathDepth"), WidgetPath.Widgets.Num());
+      if (WidgetPath.Widgets.Num() > 0)
+      {
+        const FArrangedWidget &LeafArrangedWidget = WidgetPath.Widgets.Last();
+        const TSharedRef<SWidget> &LeafWidget = LeafArrangedWidget.Widget;
+        const FVector2D LeafAbsolutePosition = LeafArrangedWidget.Geometry.GetAbsolutePosition();
+        const FVector2D LeafAbsoluteSize = LeafArrangedWidget.Geometry.GetAbsoluteSize();
+        const FVector2D LeafLocalPosition = LeafArrangedWidget.Geometry.AbsoluteToLocal(ScreenPosition);
+        Resp->SetStringField(TEXT("targetLeafWidgetType"), LeafWidget->GetTypeAsString());
+        Resp->SetNumberField(TEXT("targetLeafAbsoluteX"), LeafAbsolutePosition.X);
+        Resp->SetNumberField(TEXT("targetLeafAbsoluteY"), LeafAbsolutePosition.Y);
+        Resp->SetNumberField(TEXT("targetLeafWidth"), LeafAbsoluteSize.X);
+        Resp->SetNumberField(TEXT("targetLeafHeight"), LeafAbsoluteSize.Y);
+        Resp->SetNumberField(TEXT("targetLeafLocalX"), LeafLocalPosition.X);
+        Resp->SetNumberField(TEXT("targetLeafLocalY"), LeafLocalPosition.Y);
+      }
+    }
+  };
+
+  auto SetPointerResponseFields = [&SetInputStateFields, &SetTargetResponseFields, &SetTargetWidgetPathFields, Resp](const FVector2D &Position, const FString &ButtonName, const FString &PressedButtons, const FString &PressedModifierKeys, const FMcpResolvedVirtualInputTarget *Target = nullptr)
+  {
+    if (Target != nullptr)
+    {
+      const FVector2D ScreenPosition = ClientPositionToScreen(*Target, Position);
+      Resp->SetNumberField(TEXT("x"), Position.X);
+      Resp->SetNumberField(TEXT("y"), Position.Y);
+      Resp->SetNumberField(TEXT("clientX"), Position.X);
+      Resp->SetNumberField(TEXT("clientY"), Position.Y);
+      Resp->SetNumberField(TEXT("screenX"), ScreenPosition.X);
+      Resp->SetNumberField(TEXT("screenY"), ScreenPosition.Y);
+      Resp->SetBoolField(TEXT("virtualCursorVisible"), true);
+      SetTargetResponseFields(*Target);
+      SetTargetWidgetPathFields(*Target, Position);
+    }
+    else
+    {
+      Resp->SetNumberField(TEXT("x"), Position.X);
+      Resp->SetNumberField(TEXT("y"), Position.Y);
+    }
+    if (!ButtonName.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("button"), ButtonName);
+    }
+    SetInputStateFields(PressedButtons, PressedModifierKeys);
+  };
+
+  auto CaptureMouseScreenshot = [Resp, &RequestId, &InputType, &bCaptureScreenshots, bHasVirtualTarget, &VirtualTarget](const TCHAR *Stage)
+  {
+    if (!bCaptureScreenshots || !InputType.StartsWith(TEXT("mouse_")))
+    {
+      return;
+    }
+
+    const TSharedPtr<SWindow> TargetWindow = bHasVirtualTarget ? VirtualTarget.Window : FindVisibleWindowByTitle(FString());
+    if (!TargetWindow.IsValid())
+    {
+      Resp->SetStringField(FString::Printf(TEXT("%sScreenshotError"), Stage), TEXT("No visible target window was available for screenshot capture"));
+      return;
+    }
+
+    const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
+    IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
+
+    const FString Filename = BuildSimulatedInputScreenshotFilename(RequestId, InputType, Stage);
+    const FString FullPath = ScreenshotDir / Filename;
+    FIntPoint ScreenshotSize;
+    FString CaptureError;
+    if (!CaptureWindowScreenshotToFile(TargetWindow, FullPath, ScreenshotSize, CaptureError))
+    {
+      Resp->SetStringField(FString::Printf(TEXT("%sScreenshotError"), Stage), CaptureError);
+      return;
+    }
+
+    Resp->SetStringField(FString::Printf(TEXT("%sScreenshotPath"), Stage), FullPath);
+    Resp->SetStringField(FString::Printf(TEXT("%sScreenshotFilename"), Stage), Filename);
+    Resp->SetNumberField(FString::Printf(TEXT("%sScreenshotWidth"), Stage), ScreenshotSize.X);
+    Resp->SetNumberField(FString::Printf(TEXT("%sScreenshotHeight"), Stage), ScreenshotSize.Y);
+  };
+
+  ON_SCOPE_EXIT
+  {
+    if (!bSuccess)
+    {
+      ResetVirtualInputState(this);
+    }
+  };
+
+  if (InputType == TEXT("reset_input") || InputType == TEXT("reset") || InputType == TEXT("clear"))
+  {
+    ResetVirtualInputState(this);
+    bSuccess = true;
+    Message = TEXT("Simulated input state reset");
+    Resp->SetBoolField(TEXT("virtualCursorVisible"), false);
+    SetInputStateFields(TEXT(""), TEXT(""));
+  }
+  else if (bAttemptedVirtualTarget && !bHasVirtualTarget)
+  {
+    Message = VirtualTargetError;
+  }
+  else if (InputType == TEXT("key_down") || InputType == TEXT("keydown"))
+  {
+    if (!Key.IsEmpty())
+    {
       FKey InputKey(*Key);
-      if (InputKey.IsValid()) {
-        FSlateApplication& SlateApp = FSlateApplication::Get();
-        FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
+      if (InputKey.IsValid())
+      {
+        FSlateApplication &SlateApp = FSlateApplication::Get();
+        const uint32 KeyboardUserIndex = SlateApp.GetUserIndexForKeyboard();
+        const FModifierKeysState ModifierKeys = BuildModifierKeyState(SimulatedPressedModifierKeys);
+        bool bHasKeyCode = false;
+        bool bHasCharCode = false;
+        uint32 KeyCode = 0;
+        uint32 CharCode = 0;
+        GetKeyAndCharCodes(InputKey, bHasKeyCode, KeyCode, bHasCharCode, CharCode);
+        if (bHasVirtualTarget)
+        {
+          SetTargetResponseFields(VirtualTarget);
+          if (bSimulatedPointerPositionValid)
+          {
+            FocusVirtualTargetAtPosition(VirtualTarget, ClientPositionToScreen(VirtualTarget, SimulatedPointerPosition));
+            AttachVirtualCursorOverlay(this, VirtualTarget, SimulatedPointerPosition);
+          }
+        }
+        FKeyEvent KeyEvent(InputKey, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
         SlateApp.ProcessKeyDownEvent(KeyEvent);
+        UpdatePressedModifierKeys(SimulatedPressedModifierKeys, InputKey, true);
         bSuccess = true;
         Message = FString::Printf(TEXT("Key down: %s"), *Key);
-      } else {
+        SetInputStateFields(DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys));
+      }
+      else
+      {
         Message = FString::Printf(TEXT("Invalid key: %s"), *Key);
       }
-    } else {
+    }
+    else
+    {
       Message = TEXT("Key parameter required for key_down");
     }
-  } else if (InputType == TEXT("key_up") || InputType == TEXT("keyup")) {
-    if (!Key.IsEmpty()) {
+  }
+  else if (InputType == TEXT("key_up") || InputType == TEXT("keyup"))
+  {
+    if (!Key.IsEmpty())
+    {
       FKey InputKey(*Key);
-      if (InputKey.IsValid()) {
-        FSlateApplication& SlateApp = FSlateApplication::Get();
-        FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);
+      if (InputKey.IsValid())
+      {
+        FSlateApplication &SlateApp = FSlateApplication::Get();
+        const uint32 KeyboardUserIndex = SlateApp.GetUserIndexForKeyboard();
+        const FModifierKeysState ModifierKeys = BuildModifierKeyState(SimulatedPressedModifierKeys);
+        bool bHasKeyCode = false;
+        bool bHasCharCode = false;
+        uint32 KeyCode = 0;
+        uint32 CharCode = 0;
+        GetKeyAndCharCodes(InputKey, bHasKeyCode, KeyCode, bHasCharCode, CharCode);
+        if (bHasVirtualTarget)
+        {
+          SetTargetResponseFields(VirtualTarget);
+          if (bSimulatedPointerPositionValid)
+          {
+            FocusVirtualTargetAtPosition(VirtualTarget, ClientPositionToScreen(VirtualTarget, SimulatedPointerPosition));
+            AttachVirtualCursorOverlay(this, VirtualTarget, SimulatedPointerPosition);
+          }
+        }
+        FKeyEvent KeyEvent(InputKey, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
         SlateApp.ProcessKeyUpEvent(KeyEvent);
+        UpdatePressedModifierKeys(SimulatedPressedModifierKeys, InputKey, false);
         bSuccess = true;
         Message = FString::Printf(TEXT("Key up: %s"), *Key);
-      } else {
+        SetInputStateFields(DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys));
+      }
+      else
+      {
         Message = FString::Printf(TEXT("Invalid key: %s"), *Key);
       }
-    } else {
+    }
+    else
+    {
       Message = TEXT("Key parameter required for key_up");
     }
-  } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
-    double X = 0, Y = 0;
-    Payload->TryGetNumberField(TEXT("x"), X);
-    Payload->TryGetNumberField(TEXT("y"), Y);
+  }
+  else if (InputType == TEXT("text_input") || InputType == TEXT("text"))
+  {
+    FString Text;
+    Payload->TryGetStringField(TEXT("text"), Text);
+    if (Text.IsEmpty())
+    {
+      Message = TEXT("text parameter required for text_input");
+    }
+    else
+    {
+      FSlateApplication &SlateApp = FSlateApplication::Get();
+      const uint32 KeyboardUserIndex = SlateApp.GetUserIndexForKeyboard();
+      const FModifierKeysState ModifierKeys = BuildModifierKeyState(SimulatedPressedModifierKeys);
+      if (bHasVirtualTarget)
+      {
+        SetTargetResponseFields(VirtualTarget);
+        if (bSimulatedPointerPositionValid)
+        {
+          FocusVirtualTargetAtPosition(VirtualTarget, ClientPositionToScreen(VirtualTarget, SimulatedPointerPosition));
+          AttachVirtualCursorOverlay(this, VirtualTarget, SimulatedPointerPosition);
+        }
+      }
+      for (int32 CharacterIndex = 0; CharacterIndex < Text.Len(); ++CharacterIndex)
+      {
+        const TCHAR Character = Text[CharacterIndex];
+        FKey CharacterKey;
+        if (TryResolveTextCharacterKey(Character, CharacterKey))
+        {
+          bool bHasKeyCode = false;
+          bool bHasCharCode = false;
+          uint32 KeyCode = 0;
+          uint32 CharCode = 0;
+          GetKeyAndCharCodes(CharacterKey, bHasKeyCode, KeyCode, bHasCharCode, CharCode);
+          FKeyEvent CharacterKeyDownEvent(CharacterKey, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
+          SlateApp.ProcessKeyDownEvent(CharacterKeyDownEvent);
+        }
 
-    FString Button = TEXT("left");
-    Payload->TryGetStringField(TEXT("button"), Button);
+        const FCharacterEvent CharacterEvent(Character, ModifierKeys, KeyboardUserIndex, false);
+        SlateApp.ProcessKeyCharEvent(CharacterEvent);
 
-    // UE 5.7: EKeys::Type is deprecated, use FKey directly
-    FKey MouseButtonKey = EKeys::LeftMouseButton;
-    if (Button.ToLower() == TEXT("right")) MouseButtonKey = EKeys::RightMouseButton;
-    else if (Button.ToLower() == TEXT("middle")) MouseButtonKey = EKeys::MiddleMouseButton;
+        if (CharacterKey.IsValid())
+        {
+          bool bHasKeyCode = false;
+          bool bHasCharCode = false;
+          uint32 KeyCode = 0;
+          uint32 CharCode = 0;
+          GetKeyAndCharCodes(CharacterKey, bHasKeyCode, KeyCode, bHasCharCode, CharCode);
+          FKeyEvent CharacterKeyUpEvent(CharacterKey, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
+          SlateApp.ProcessKeyUpEvent(CharacterKeyUpEvent);
+        }
+      }
 
-    FSlateApplication& SlateApp = FSlateApplication::Get();
-    FVector2D Position((float)X, (float)Y);
-    
-    // UE 5.7: FPointerEvent constructor signature changed
-    // FPointerEvent(uint32 InPointerIndex, ScreenSpacePosition, LastScreenSpacePosition, Delta, PressedButtons, ModifierKeys)
-    TSet<FKey> PressedButtons;
-    PressedButtons.Add(MouseButtonKey);
-    
-    // Simulate mouse down then up for a click
-    FPointerEvent MouseDownEvent(
-        0,  // PointerIndex
-        Position,  // ScreenSpacePosition
-        Position,  // LastScreenSpacePosition
-        FVector2D(0.0f, 0.0f),  // Delta
-        PressedButtons,
-        FModifierKeysState()
-    );
-    SlateApp.ProcessMouseButtonDownEvent(nullptr, MouseDownEvent);
-    
-    TSet<FKey> ReleasedButtons;  // Empty set for mouse up
-    FPointerEvent MouseUpEvent(
-        0,  // PointerIndex
-        Position,  // ScreenSpacePosition
-        Position,  // LastScreenSpacePosition
-        FVector2D(0.0f, 0.0f),  // Delta
-        ReleasedButtons,
-        FModifierKeysState()
-    );
-    SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
-    
+      bool bSubmit = false;
+      Payload->TryGetBoolField(TEXT("submit"), bSubmit);
+      if (bSubmit)
+      {
+        bool bHasKeyCode = false;
+        bool bHasCharCode = false;
+        uint32 KeyCode = 0;
+        uint32 CharCode = 0;
+        GetKeyAndCharCodes(EKeys::Enter, bHasKeyCode, KeyCode, bHasCharCode, CharCode);
+        FKeyEvent EnterDownEvent(EKeys::Enter, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
+        SlateApp.ProcessKeyDownEvent(EnterDownEvent);
+        FKeyEvent EnterUpEvent(EKeys::Enter, ModifierKeys, KeyboardUserIndex, false, CharCode, KeyCode);
+        SlateApp.ProcessKeyUpEvent(EnterUpEvent);
+      }
+
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Text input sent: %s"), *Text);
+      Resp->SetStringField(TEXT("text"), Text);
+      Resp->SetBoolField(TEXT("submit"), bSubmit);
+      SetInputStateFields(DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys));
+    }
+  }
+  else if (InputType == TEXT("mouse_down"))
+  {
+    FVector2D Position = GetCurrentSimulatedPosition(SimulatedPointerPosition, bSimulatedPointerPositionValid);
+    const bool bHasPosition = bHasVirtualTarget ? TryGetRelativePointerPositionFromPayload(Payload, Position) : TryGetPointerPositionFromPayload(Payload, Position);
+    if (!bHasPosition && !bSimulatedPointerPositionValid)
+    {
+      Message = bHasVirtualTarget ? TEXT("clientX and clientY parameters are required for the first targeted mouse_down request") : TEXT("x and y parameters are required for the first mouse_down request");
+    }
+    else
+    {
+      FString ButtonName = TEXT("left");
+      Payload->TryGetStringField(TEXT("button"), ButtonName);
+      const FKey MouseButtonKey = ResolveMouseButtonKey(ButtonName);
+      CaptureMouseScreenshot(TEXT("before"));
+      const bool bHandled = bHasVirtualTarget ? DispatchVirtualMouseDown(this, VirtualTarget, Position, MouseButtonKey) : DispatchMouseDown(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position, MouseButtonKey);
+      bSuccess = true;
+      Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse button %s down at client (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse button %s down at (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)"));
+      SetPointerResponseFields(Position, ButtonName, DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+      CaptureMouseScreenshot(TEXT("after"));
+    }
+  }
+  else if (InputType == TEXT("mouse_up"))
+  {
+    FVector2D Position = GetCurrentSimulatedPosition(SimulatedPointerPosition, bSimulatedPointerPositionValid);
+    if (bHasVirtualTarget)
+    {
+      TryGetRelativePointerPositionFromPayload(Payload, Position);
+    }
+    else
+    {
+      TryGetPointerPositionFromPayload(Payload, Position);
+    }
+
+    FString ButtonName = TEXT("left");
+    Payload->TryGetStringField(TEXT("button"), ButtonName);
+    const FKey MouseButtonKey = ResolveMouseButtonKey(ButtonName);
+    CaptureMouseScreenshot(TEXT("before"));
+    const bool bHandled = bHasVirtualTarget ? DispatchVirtualMouseUp(this, VirtualTarget, Position, MouseButtonKey) : DispatchMouseUp(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position, MouseButtonKey);
     bSuccess = true;
-    Message = FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y);
-  } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
-    double X = 0, Y = 0;
-    Payload->TryGetNumberField(TEXT("x"), X);
-    Payload->TryGetNumberField(TEXT("y"), Y);
+    Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse button %s up at client (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse button %s up at (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)"));
+    SetPointerResponseFields(Position, ButtonName, DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+    CaptureMouseScreenshot(TEXT("after"));
+  }
+  else if (InputType == TEXT("mouse_click") || InputType == TEXT("click"))
+  {
+    FVector2D Position = GetCurrentSimulatedPosition(SimulatedPointerPosition, bSimulatedPointerPositionValid);
+    const bool bHasPosition = bHasVirtualTarget ? TryGetRelativePointerPositionFromPayload(Payload, Position) : TryGetPointerPositionFromPayload(Payload, Position);
+    if (!bHasPosition && !bSimulatedPointerPositionValid)
+    {
+      Message = bHasVirtualTarget ? TEXT("clientX and clientY parameters are required for the first targeted mouse_click request") : TEXT("x and y parameters are required for the first mouse_click request");
+    }
+    else
+    {
+      FString ButtonName = TEXT("left");
+      Payload->TryGetStringField(TEXT("button"), ButtonName);
+      const FKey MouseButtonKey = ResolveMouseButtonKey(ButtonName);
 
-    FSlateApplication& SlateApp = FSlateApplication::Get();
-    FVector2D Position((float)X, (float)Y);
-    SlateApp.SetCursorPos(Position);
-    
-    bSuccess = true;
-    Message = FString::Printf(TEXT("Mouse moved to (%f, %f)"), X, Y);
-  } else {
-    Message = FString::Printf(TEXT("Unknown input type: %s. Supported: key_down, key_up, mouse_click, mouse_move"), *InputType);
+      double HoldDurationMs = 0.0;
+      Payload->TryGetNumberField(TEXT("holdDurationMs"), HoldDurationMs);
+
+      CaptureMouseScreenshot(TEXT("before"));
+      const bool bDownHandled = bHasVirtualTarget ? DispatchVirtualMouseDown(this, VirtualTarget, Position, MouseButtonKey) : DispatchMouseDown(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position, MouseButtonKey);
+      if (HoldDurationMs > 0.0)
+      {
+        FPlatformProcess::SleepNoStats(static_cast<float>(HoldDurationMs / 1000.0));
+      }
+      const bool bUpHandled = bHasVirtualTarget ? DispatchVirtualMouseUp(this, VirtualTarget, Position, MouseButtonKey) : DispatchMouseUp(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position, MouseButtonKey);
+      bSuccess = true;
+      Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse click with %s button at client (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, (bDownHandled || bUpHandled) ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse click with %s button at (%0.2f, %0.2f)%s"), *ButtonName, Position.X, Position.Y, (bDownHandled || bUpHandled) ? TEXT("") : TEXT(" (unhandled)"));
+      Resp->SetNumberField(TEXT("holdDurationMs"), HoldDurationMs);
+      SetPointerResponseFields(Position, ButtonName, DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+      CaptureMouseScreenshot(TEXT("after"));
+    }
+  }
+  else if (InputType == TEXT("mouse_move") || InputType == TEXT("move"))
+  {
+    FVector2D Position = GetCurrentSimulatedPosition(SimulatedPointerPosition, bSimulatedPointerPositionValid);
+    const bool bHasPosition = bHasVirtualTarget ? TryGetRelativePointerPositionFromPayload(Payload, Position) : TryGetPointerPositionFromPayload(Payload, Position);
+    if (!bHasPosition)
+    {
+      Message = bHasVirtualTarget ? TEXT("clientX and clientY parameters are required for targeted mouse_move") : TEXT("x and y parameters are required for mouse_move");
+    }
+    else
+    {
+      CaptureMouseScreenshot(TEXT("before"));
+      const bool bHandled = bHasVirtualTarget ? DispatchVirtualMouseMove(this, VirtualTarget, Position) : DispatchMouseMove(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position);
+      bSuccess = true;
+      Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse moved to client (%0.2f, %0.2f)%s"), Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse moved to (%0.2f, %0.2f)%s"), Position.X, Position.Y, bHandled ? TEXT("") : TEXT(" (unhandled)"));
+      SetPointerResponseFields(Position, FString(), DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+      CaptureMouseScreenshot(TEXT("after"));
+    }
+  }
+  else if (InputType == TEXT("mouse_wheel") || InputType == TEXT("wheel") || InputType == TEXT("scroll"))
+  {
+    FVector2D Position = GetCurrentSimulatedPosition(SimulatedPointerPosition, bSimulatedPointerPositionValid);
+    const bool bHasPosition = bHasVirtualTarget ? TryGetRelativePointerPositionFromPayload(Payload, Position) : TryGetPointerPositionFromPayload(Payload, Position);
+    if (!bHasPosition && !bSimulatedPointerPositionValid)
+    {
+      Message = bHasVirtualTarget ? TEXT("clientX and clientY parameters are required for the first targeted mouse_wheel request") : TEXT("x and y parameters are required for the first mouse_wheel request");
+    }
+    else
+    {
+      double WheelSteps = 0.0;
+      double PreciseDelta = 0.0;
+      const bool bHasWheelSteps = Payload->TryGetNumberField(TEXT("wheelSteps"), WheelSteps);
+      const bool bHasPreciseDelta = Payload->TryGetNumberField(TEXT("preciseDelta"), PreciseDelta);
+      const float WheelDelta = static_cast<float>(bHasPreciseDelta ? PreciseDelta : WheelSteps);
+
+      if (!bHasWheelSteps && !bHasPreciseDelta)
+      {
+        Message = TEXT("mouse_wheel requires wheelSteps or preciseDelta");
+      }
+      else if (FMath::IsNearlyZero(WheelDelta))
+      {
+        Message = TEXT("mouse_wheel delta cannot be zero");
+      }
+      else
+      {
+        CaptureMouseScreenshot(TEXT("before"));
+        const bool bHandled = bHasVirtualTarget ? DispatchVirtualMouseWheel(this, VirtualTarget, Position, WheelDelta) : DispatchMouseWheel(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, Position, WheelDelta);
+        bSuccess = true;
+        Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse wheel at client (%0.2f, %0.2f) delta=%0.2f%s"), Position.X, Position.Y, WheelDelta, bHandled ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse wheel at (%0.2f, %0.2f) delta=%0.2f%s"), Position.X, Position.Y, WheelDelta, bHandled ? TEXT("") : TEXT(" (unhandled)"));
+        Resp->SetNumberField(TEXT("wheelSteps"), WheelSteps);
+        if (bHasPreciseDelta)
+        {
+          Resp->SetNumberField(TEXT("preciseDelta"), PreciseDelta);
+        }
+        SetPointerResponseFields(Position, FString(), DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+        CaptureMouseScreenshot(TEXT("after"));
+      }
+    }
+  }
+  else if (InputType == TEXT("mouse_drag") || InputType == TEXT("drag"))
+  {
+    FVector2D StartPosition = FVector2D::ZeroVector;
+    FVector2D EndPosition = FVector2D::ZeroVector;
+    const bool bHasStart = bHasVirtualTarget ? TryGetRelativePointObjectField(Payload, TEXT("start"), StartPosition) : TryGetPointObjectField(Payload, TEXT("start"), StartPosition);
+    const bool bHasEnd = bHasVirtualTarget ? TryGetRelativePointObjectField(Payload, TEXT("end"), EndPosition) : TryGetPointObjectField(Payload, TEXT("end"), EndPosition);
+    if (!bHasStart || !bHasEnd)
+    {
+      Message = bHasVirtualTarget ? TEXT("mouse_drag requires start and end client points for targeted input") : TEXT("mouse_drag requires start{x,y} and end{x,y}");
+    }
+    else
+    {
+      FString ButtonName = TEXT("left");
+      Payload->TryGetStringField(TEXT("button"), ButtonName);
+      const FKey MouseButtonKey = ResolveMouseButtonKey(ButtonName);
+
+      double DurationMs = 0.0;
+      Payload->TryGetNumberField(TEXT("durationMs"), DurationMs);
+      if (DurationMs < 0.0)
+      {
+        DurationMs = 0.0;
+      }
+
+      double HoldBeforeMoveMs = 0.0;
+      Payload->TryGetNumberField(TEXT("holdBeforeMoveMs"), HoldBeforeMoveMs);
+      double HoldAfterMoveMs = 0.0;
+      Payload->TryGetNumberField(TEXT("holdAfterMoveMs"), HoldAfterMoveMs);
+
+      double StepCountValue = 0.0;
+      const bool bHasStepCount = Payload->TryGetNumberField(TEXT("steps"), StepCountValue);
+      const int32 StepCount = bHasStepCount ? FMath::Clamp(FMath::RoundToInt(static_cast<float>(StepCountValue)), 1, 240) : FMath::Clamp(FMath::CeilToInt(static_cast<float>(DurationMs / 16.0)), 1, 120);
+
+      CaptureMouseScreenshot(TEXT("before"));
+      const bool bDownHandled = bHasVirtualTarget ? DispatchVirtualMouseDown(this, VirtualTarget, StartPosition, MouseButtonKey) : DispatchMouseDown(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, StartPosition, MouseButtonKey);
+      if (HoldBeforeMoveMs > 0.0)
+      {
+        FPlatformProcess::SleepNoStats(static_cast<float>(HoldBeforeMoveMs / 1000.0));
+      }
+
+      const float StepDurationSeconds = StepCount > 0 ? static_cast<float>((DurationMs / StepCount) / 1000.0) : 0.0f;
+      for (int32 StepIndex = 1; StepIndex <= StepCount; ++StepIndex)
+      {
+        const float Alpha = static_cast<float>(StepIndex) / static_cast<float>(StepCount);
+        const FVector2D IntermediatePosition = FMath::Lerp(StartPosition, EndPosition, Alpha);
+        if (bHasVirtualTarget)
+        {
+          DispatchVirtualMouseMove(this, VirtualTarget, IntermediatePosition);
+        }
+        else
+        {
+          DispatchMouseMove(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, IntermediatePosition);
+        }
+        if (StepDurationSeconds > 0.0f && StepIndex < StepCount)
+        {
+          FPlatformProcess::SleepNoStats(StepDurationSeconds);
+        }
+      }
+
+      if (HoldAfterMoveMs > 0.0)
+      {
+        FPlatformProcess::SleepNoStats(static_cast<float>(HoldAfterMoveMs / 1000.0));
+      }
+
+      const bool bUpHandled = bHasVirtualTarget ? DispatchVirtualMouseUp(this, VirtualTarget, EndPosition, MouseButtonKey) : DispatchMouseUp(SimulatedPointerPosition, bSimulatedPointerPositionValid, SimulatedPressedMouseButtons, SimulatedPressedModifierKeys, EndPosition, MouseButtonKey);
+      bSuccess = true;
+      Message = bHasVirtualTarget ? FString::Printf(TEXT("Virtual mouse drag with %s button from client (%0.2f, %0.2f) to (%0.2f, %0.2f)%s"), *ButtonName, StartPosition.X, StartPosition.Y, EndPosition.X, EndPosition.Y, (bDownHandled || bUpHandled) ? TEXT("") : TEXT(" (unhandled)")) : FString::Printf(TEXT("Mouse drag with %s button from (%0.2f, %0.2f) to (%0.2f, %0.2f)%s"), *ButtonName, StartPosition.X, StartPosition.Y, EndPosition.X, EndPosition.Y, (bDownHandled || bUpHandled) ? TEXT("") : TEXT(" (unhandled)"));
+      Resp->SetNumberField(TEXT("durationMs"), DurationMs);
+      Resp->SetNumberField(TEXT("steps"), StepCount);
+      Resp->SetNumberField(TEXT("holdBeforeMoveMs"), HoldBeforeMoveMs);
+      Resp->SetNumberField(TEXT("holdAfterMoveMs"), HoldAfterMoveMs);
+      Resp->SetNumberField(TEXT("startX"), StartPosition.X);
+      Resp->SetNumberField(TEXT("startY"), StartPosition.Y);
+      SetPointerResponseFields(EndPosition, ButtonName, DescribePressedKeys(SimulatedPressedMouseButtons), DescribePressedKeys(SimulatedPressedModifierKeys), bHasVirtualTarget ? &VirtualTarget : nullptr);
+      CaptureMouseScreenshot(TEXT("after"));
+    }
+  }
+  else
+  {
+    Message = FString::Printf(TEXT("Unknown input type: %s. Supported: reset_input, key_down, key_up, text_input, mouse_down, mouse_up, mouse_click, mouse_move, mouse_wheel, mouse_drag"), *InputType);
   }
 
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetStringField(TEXT("type"), InputType);
   Resp->SetStringField(TEXT("message"), Message);
+  SetFocusedWidgetResponseFields(Resp);
 
-  if (bSuccess) {
+  if (bSuccess)
+  {
     SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
-  } else {
+  }
+  else
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INPUT_FAILED"), Message, Resp);
   }
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Simulate input requires editor build."), nullptr);
+                            TEXT("Simulate input requires editor build."), nullptr);
   return true;
 #endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
+  if (AssetPath.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("assetPath required"), nullptr);
     return true;
   }
 
-  UAssetEditorSubsystem* AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-  if (!AssetEditorSS) {
+  UAssetEditorSubsystem *AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+  if (!AssetEditorSS)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
                               TEXT("AssetEditorSubsystem unavailable"), nullptr);
     return true;
   }
 
-  UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  if (!Asset) {
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  if (!Asset)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
                               TEXT("Failed to load asset"), nullptr);
     return true;
@@ -3697,35 +5808,42 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   // Save all dirty packages using FEditorFileUtils
-  TArray<UPackage*> DirtyPackages;
+  TArray<UPackage *> DirtyPackages;
   FEditorFileUtils::GetDirtyWorldPackages(DirtyPackages);
   FEditorFileUtils::GetDirtyContentPackages(DirtyPackages);
 
   bool bSuccess = true;
   int32 SavedCount = 0;
   int32 SkippedCount = 0;
-  
-  for (UPackage* Package : DirtyPackages) {
-    if (Package) {
+
+  for (UPackage *Package : DirtyPackages)
+  {
+    if (Package)
+    {
       FString PackagePath = Package->GetPathName();
-      
+
       // Skip transient/temporary packages that cannot be saved
       // These include /Temp/ paths and packages with RF_Transient flag
-      if (PackagePath.StartsWith(TEXT("/Temp/")) || 
+      if (PackagePath.StartsWith(TEXT("/Temp/")) ||
           PackagePath.StartsWith(TEXT("/Transient/")) ||
-          Package->HasAnyFlags(RF_Transient)) {
+          Package->HasAnyFlags(RF_Transient))
+      {
         SkippedCount++;
         UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
                TEXT("HandleControlEditorSaveAll: Skipping transient package: %s"), *PackagePath);
         continue;
       }
-      
-      if (UEditorAssetLibrary::SaveAsset(PackagePath, false)) {
+
+      if (UEditorAssetLibrary::SaveAsset(PackagePath, false))
+      {
         SavedCount++;
-      } else {
+      }
+      else
+      {
         bSuccess = false;
       }
     }
@@ -3736,16 +5854,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetNumberField(TEXT("savedCount"), SavedCount);
   Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
   Resp->SetNumberField(TEXT("totalDirty"), DirtyPackages.Num());
-  
+
   // Only report outer success if the operation actually succeeded
-  if (bSuccess || DirtyPackages.Num() == 0) {
-    SendAutomationResponse(Socket, RequestId, true, 
-                           FString::Printf(TEXT("Saved %d of %d dirty assets (skipped %d transient)"), SavedCount, DirtyPackages.Num() - SkippedCount, SkippedCount), 
+  if (bSuccess || DirtyPackages.Num() == 0)
+  {
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Saved %d of %d dirty assets (skipped %d transient)"), SavedCount, DirtyPackages.Num() - SkippedCount, SkippedCount),
                            Resp, FString());
-  } else {
+  }
+  else
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),
-                              FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."), 
-                                              SavedCount, DirtyPackages.Num() - SkippedCount), 
+                              FString::Printf(TEXT("Failed to save all assets. Saved %d of %d dirty assets."),
+                                              SavedCount, DirtyPackages.Num() - SkippedCount),
                               Resp);
   }
   return true;
@@ -3756,9 +5877,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3779,9 +5902,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3802,11 +5927,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
-  if (Mode.IsEmpty()) {
+  if (Mode.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("mode required"), nullptr);
     return true;
@@ -3819,7 +5946,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("mode"), Mode);
-  SendAutomationResponse(Socket, RequestId, true, 
+  SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Editor mode set to %s"), *Mode), Resp, FString());
   return true;
 #else
@@ -3829,17 +5956,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
-  UWorld* World = GEditor->GetEditorWorldContext().World();
+  UWorld *World = GEditor->GetEditorWorldContext().World();
   TArray<FString> StatsShown;
-  if (World) {
+  if (World)
+  {
     GEditor->Exec(World, TEXT("Stat FPS"));
     StatsShown.Add(TEXT("FPS"));
     GEditor->Exec(World, TEXT("Stat Unit"));
@@ -3849,7 +5979,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), TEXT("showStats"));
   TArray<TSharedPtr<FJsonValue>> StatsArray;
-  for (const FString& Stat : StatsShown) {
+  for (const FString &Stat : StatsShown)
+  {
     StatsArray.Add(MakeShared<FJsonValueString>(Stat));
   }
   Resp->SetArrayField(TEXT("statsShown"), StatsArray);
@@ -3862,16 +5993,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
-  UWorld* World = GEditor->GetEditorWorldContext().World();
-  if (World) {
+  UWorld *World = GEditor->GetEditorWorldContext().World();
+  if (World)
+  {
     GEditor->Exec(World, TEXT("Stat None"));
   }
 
@@ -3887,25 +6021,27 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
   }
 
   // Toggle game view via console command
-  GEditor->Exec(GEditor->GetEditorWorldContext().World(), 
+  GEditor->Exec(GEditor->GetEditorWorldContext().World(),
                 bEnabled ? TEXT("ToggleGameView 1") : TEXT("ToggleGameView 0"));
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("gameViewEnabled"), bEnabled);
-  SendAutomationResponse(Socket, RequestId, true, 
-                         FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")), 
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")),
                          Resp, FString());
   return true;
 #else
@@ -3915,14 +6051,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
   // Toggle immersive mode - this is viewport-specific
-  if (GEditor && GEditor->GetActiveViewport()) {
-    FViewport* Viewport = GEditor->GetActiveViewport();
-    if (Viewport) {
+  if (GEditor && GEditor->GetActiveViewport())
+  {
+    FViewport *Viewport = GEditor->GetActiveViewport();
+    if (Viewport)
+    {
       // Immersive mode toggle via console
       GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("ToggleImmersive"));
     }
@@ -3940,17 +6079,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   double DeltaTime = 0.01667; // Default ~60fps
-  if (Payload->HasField(TEXT("deltaTime"))) {
+  if (Payload->HasField(TEXT("deltaTime")))
+  {
     TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("deltaTime"));
-    if (Value.IsValid() && Value->Type == EJson::Number) {
+    if (Value.IsValid() && Value->Type == EJson::Number)
+    {
       DeltaTime = Value->AsNumber();
     }
   }
 
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -3963,7 +6106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("fixedDeltaTime"), DeltaTime);
-  SendAutomationResponse(Socket, RequestId, true, 
+  SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Fixed delta time set to %f"), DeltaTime), Resp, FString());
   return true;
 #else
@@ -3973,35 +6116,42 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString LevelPath;
   // Accept multiple parameter names for flexibility
   // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-  if (LevelPath.IsEmpty()) {
+  if (LevelPath.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("path"), LevelPath);
   }
-  if (LevelPath.IsEmpty()) {
+  if (LevelPath.IsEmpty())
+  {
     Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
   }
-  if (LevelPath.IsEmpty()) {
+  if (LevelPath.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("levelPath, path, or assetPath required"), nullptr);
     return true;
   }
 
   // Normalize the level path
-  if (!LevelPath.StartsWith(TEXT("/Game/")) && !LevelPath.StartsWith(TEXT("/Engine/"))) {
+  if (!LevelPath.StartsWith(TEXT("/Game/")) && !LevelPath.StartsWith(TEXT("/Engine/")))
+  {
     LevelPath = FString::Printf(TEXT("/Game/%s"), *LevelPath);
   }
 
   // Remove map suffix if present
-  if (LevelPath.EndsWith(TEXT(".umap"))) {
+  if (LevelPath.EndsWith(TEXT(".umap")))
+  {
     LevelPath.LeftChopInline(5);
   }
 
-  if (!GEditor) {
+  if (!GEditor)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
     return true;
@@ -4009,47 +6159,53 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
 
   // Use FEditorFileUtils to load the map
   FString MapPath = LevelPath + TEXT(".umap");
-  
+
   // CRITICAL FIX: Unreal stores levels in TWO possible path patterns:
   // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
-  // 2. Flat (legacy): /Game/Path/LevelName.umap
+  // 2. Flat: /Game/Path/LevelName.umap
   // We must check BOTH paths before returning FILE_NOT_FOUND.
-  
+
   // Build both possible paths
   FString FlatMapPath = LevelPath + TEXT(".umap");
   // Check if path is /Engine/ or /Game/ and extract accordingly
   int32 PrefixLen = 6; // Default: "/Game/" is 6 chars
   FString ContentDir = FPaths::ProjectContentDir();
-  if (LevelPath.StartsWith(TEXT("/Engine/"))) {
+  if (LevelPath.StartsWith(TEXT("/Engine/")))
+  {
     PrefixLen = 8; // "/Engine/" is 8 chars
     ContentDir = FPaths::EngineContentDir();
   }
   FString FullFlatMapPath = ContentDir + FlatMapPath.Mid(PrefixLen);
   FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
-  
+
   // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
   FString LevelName = FPaths::GetBaseFilename(LevelPath);
   FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
   FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
   FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
-  
+
   // Check which path exists
   FString MapPathToLoad;
   FString FullMapPath;
-  
+
   // Prefer folder-based path (Unreal's standard) if it exists
-  if (FPaths::FileExists(FullFolderMapPath)) {
+  if (FPaths::FileExists(FullFolderMapPath))
+  {
     MapPathToLoad = FolderMapPath;
     FullMapPath = FullFolderMapPath;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("OpenLevel: Found level at folder-based path: %s"), *FullFolderMapPath);
-  } else if (FPaths::FileExists(FullFlatMapPath)) {
-    // Fallback to flat path (legacy format)
+  }
+  else if (FPaths::FileExists(FullFlatMapPath))
+  {
+    // Fallback to flat path format.
     MapPathToLoad = FlatMapPath;
     FullMapPath = FullFlatMapPath;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
-  } else {
+  }
+  else
+  {
     // Neither path exists - return detailed error
     TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
@@ -4057,24 +6213,27 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
     ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
-                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"), 
-                                            *FullFolderMapPath, *FullFlatMapPath), 
+                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
+                                              *FullFolderMapPath, *FullFlatMapPath),
                               ErrorDetails);
     return true;
   }
-  
+
   bool bOpened = McpSafeLoadMap(MapPathToLoad);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bOpened);
   Resp->SetStringField(TEXT("levelPath"), LevelPath);
   Resp->SetStringField(TEXT("loadedPath"), MapPathToLoad);
-  
-  if (bOpened) {
+
+  if (bOpened)
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("OpenLevel: Successfully opened level: %s"), *MapPathToLoad);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Level opened"), Resp, FString());
-  } else {
+  }
+  else
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("OPEN_FAILED"), TEXT("Failed to open level"), Resp);
   }
   return true;
@@ -4085,14 +6244,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString Filter;
   Payload->TryGetStringField(TEXT("filter"), Filter);
 
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  if (!ActorSS) {
+  if (!ActorSS)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SUBSYSTEM_MISSING"),
                               TEXT("EditorActorSubsystem unavailable"), nullptr);
     return true;
@@ -4101,7 +6262,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   const TArray<AActor *> &AllActors = ActorSS->GetAllLevelActors();
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
 
-  for (AActor *Actor : AllActors) {
+  for (AActor *Actor : AllActors)
+  {
     if (!Actor)
       continue;
     const FString Label = Actor->GetActorLabel();
@@ -4134,18 +6296,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
 #if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
+  if (TargetName.IsEmpty())
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("actorName required"), nullptr);
     return true;
   }
 
   AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
+  if (!Found)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
                               TEXT("Actor not found"), nullptr);
     return true;
@@ -4161,12 +6326,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
                                           : TEXT(""));
 
   TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : Found->Tags) {
+  for (const FName &Tag : Found->Tags)
+  {
     TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
   }
   Data->SetArrayField(TEXT("tags"), TagsArray);
 
-  auto MakeArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
+  auto MakeArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>>
+  {
     TArray<TSharedPtr<FJsonValue>> Arr;
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
     Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));

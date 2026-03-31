@@ -11,17 +11,17 @@
 UENUM()
 enum class EMcpLogVerbosity : uint8
 {
-    NoLogging     UMETA(DisplayName = "No Logging"),
-    Fatal         UMETA(DisplayName = "Fatal"),
-    Error         UMETA(DisplayName = "Error"),
-    Warning       UMETA(DisplayName = "Warning"),
-    Display       UMETA(DisplayName = "Display"),
-    Log           UMETA(DisplayName = "Log"),
-    Verbose       UMETA(DisplayName = "Verbose"),
-    VeryVerbose   UMETA(DisplayName = "VeryVerbose")
+    NoLogging UMETA(DisplayName = "No Logging"),
+    Fatal UMETA(DisplayName = "Fatal"),
+    Error UMETA(DisplayName = "Error"),
+    Warning UMETA(DisplayName = "Warning"),
+    Display UMETA(DisplayName = "Display"),
+    Log UMETA(DisplayName = "Log"),
+    Verbose UMETA(DisplayName = "Verbose"),
+    VeryVerbose UMETA(DisplayName = "VeryVerbose")
 };
 
-UCLASS(config=Game, defaultconfig, meta = (DisplayName = "MCP Automation Bridge"))
+UCLASS(config = Game, defaultconfig, meta = (DisplayName = "MCP Automation Bridge"))
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSettings : public UDeveloperSettings
 {
     GENERATED_BODY()
@@ -131,12 +131,24 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
     float TickerIntervalSeconds;
 
+    /** Optional project-owned roots that contain JSON UI tool definitions discoverable by manage_ui. */
+    UPROPERTY(config, EditAnywhere, Category = "UI Discovery")
+    TArray<FString> UiDefinitionRoots;
+
+    /** Known ToolMenus menu names that the bridge should report through generic UI discovery. */
+    UPROPERTY(config, EditAnywhere, Category = "UI Discovery")
+    TArray<FString> KnownToolMenuNames;
+
+    /** Optional prefix used when a discovered JSON tool does not define an explicit tab id. */
+    UPROPERTY(config, EditAnywhere, Category = "UI Discovery")
+    FString JsonToolTabIdPrefix;
+
     virtual FName GetCategoryName() const override { return FName(TEXT("Plugins")); }
     virtual FText GetSectionText() const override;
 
 #if WITH_EDITOR
     // Persist changed properties immediately when edited in Project Settings
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
+    virtual void PostEditChangeProperty(FPropertyChangedEvent &PropertyChangedEvent) override
     {
         Super::PostEditChangeProperty(PropertyChangedEvent);
         SaveConfig();

@@ -18,6 +18,7 @@ src/wasm/pkg/
 # Unreal Plugin build artifacts
 Plugins/**/Binaries/
 Plugins/**/Intermediate/
+Saved/
 
 # Environment files (keep .env.production as reference)
 .env

@@ -42,35 +42,35 @@ public class McpAutomationBridge : ModuleRules
         // This trades slightly longer compile times for reliable builds without
         // requiring system paging file modifications.
         // ============================================================================
-        
+
         // ============================================================================
         // DYNAMIC MEMORY-BASED BUILD CONFIGURATION
         // ============================================================================
         // Automatically adjust build parallelism based on ACTUAL available system memory
         // to prevent "compiler is out of heap space" errors (C1060)
-        
+
         long AvailableMemoryMB = GetActualAvailableMemoryMB();
         long TotalMemoryMB = GetTotalPhysicalMemoryMB();
-        
+
         // UBT already handles parallelism based on 1.5GB/action globally
         // Our job is to prevent HUGE compilation units that exceed heap space
-        
+
         // IMPORTANT: Unity builds combine many .cpp files into one compilation unit
         // This causes each compiler process to need 3-6GB+ heap space instead of 1.5GB
         // For a module with 50+ handler files, unity builds cause heap exhaustion
         // even with plenty of RAM, because Windows page file space is limited
-        
+
         Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
-        
+
         // Disable PCH to prevent virtual memory exhaustion
         PCHUsage = PCHUsageMode.NoPCHs;
-        
+
         // Unity builds enabled - combine files for faster compilation
         // Note: If you get "compiler out of heap space" errors, install BuildConfiguration.xml
         // from plugins/McpAutomationBridge/Config/BuildConfiguration.xml to %AppData%\Unreal Engine\UnrealBuildTool\
         bUseUnity = true;
         Console.WriteLine("McpAutomationBridge: Unity builds enabled");
-        
+
         // UE 5.0-5.2 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
         // The __has_feature macro is a Clang-specific feature detection mechanism
         // that MSVC doesn't understand, causing C4668 and C4067 warnings
@@ -86,19 +86,19 @@ public class McpAutomationBridge : ModuleRules
             }
         }
 
-PublicDependencyModuleNames.AddRange(new string[]
-        {
+        PublicDependencyModuleNames.AddRange(new string[]
+                {
             "Core","CoreUObject","Engine","Json","JsonUtilities",
             "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags",
             "AIModule",  // Required for UEnvQueryTest_Distance and other EQS classes
             "Landscape"  // Required for FGrassVariety and other landscape classes
-        });
+                });
 
         if (Target.bBuildEditor)
         {
             // Editor-only Public Dependencies (required for all editor builds)
-            PublicDependencyModuleNames.AddRange(new string[] 
-            { 
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
                 "Sequencer", "MovieSceneTools", "Niagara", "UnrealEd",
                 "WorldPartitionEditor", "DataLayerEditor",
                 "MaterialEditor"  // UMaterialExpressionRotator and other material expressions
@@ -110,7 +110,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 "ApplicationCore","Slate","SlateCore","Projects","InputCore","DeveloperSettings","Settings","EngineSettings",
                 "Sockets","Networking","EditorSubsystem","EditorScriptingUtilities","BlueprintGraph","SSL",
                 "Kismet","KismetCompiler","AssetRegistry","AssetTools","SourceControl",
-                "AudioEditor", "AudioMixer"
+                "AudioEditor", "AudioMixer", "Blutility"
                 // Optional plugins are handled by AddOptionalDynamicModule() below with delay-load
             });
 
@@ -208,7 +208,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             // 1. SubobjectData Detection
             // UE 5.7 renamed/moved this to SubobjectDataInterface in Editor/
             bool bHasSubobjectDataInterface = Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface"));
-            
+
             if (bHasSubobjectDataInterface)
             {
                 PrivateDependencyModuleNames.Add("SubobjectDataInterface");
@@ -246,7 +246,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                     }
                 }
             }
-            catch {}
+            catch { }
 
             PublicDefinitions.Add(bHasWPForEach ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
 
@@ -293,7 +293,7 @@ PublicDependencyModuleNames.AddRange(new string[]
         try
         {
             if (string.IsNullOrEmpty(EngineDir)) return false;
-            
+
             // Check Runtime module
             string RuntimeDir = Path.Combine(EngineDir, "Source", "Runtime", "SubobjectData");
             if (Directory.Exists(RuntimeDir)) return true;
@@ -322,7 +322,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 if (SearchDirectoryBounded(PluginsDir, "SubobjectData", 3)) return true;
             }
         }
-        catch {}
+        catch { }
         return false;
     }
 
@@ -340,10 +340,10 @@ PublicDependencyModuleNames.AddRange(new string[]
             DirectoryInfo Dir = new DirectoryInfo(ModuleDir);
             while (Dir != null)
             {
-                if (Dir.GetFiles("*.uproject").Length > 0) 
-                { 
-                    ProjectRoot = Dir.FullName; 
-                    break; 
+                if (Dir.GetFiles("*.uproject").Length > 0)
+                {
+                    ProjectRoot = Dir.FullName;
+                    break;
                 }
                 Dir = Dir.Parent;
             }
@@ -358,7 +358,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 }
             }
         }
-        catch {}
+        catch { }
         return false;
     }
 
@@ -372,7 +372,7 @@ PublicDependencyModuleNames.AddRange(new string[]
     private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)
     {
         if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
-        
+
         try
         {
             foreach (string subDir in Directory.GetDirectories(rootDir))
@@ -380,7 +380,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 string dirName = Path.GetFileName(subDir);
                 if (string.Equals(dirName, targetName, StringComparison.OrdinalIgnoreCase))
                     return true;
-                
+
                 if (maxDepth > 0 && SearchDirectoryBounded(subDir, targetName, maxDepth - 1))
                     return true;
             }
@@ -403,7 +403,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             {
                 var memStatus = new MEMORYSTATUSEX();
                 memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
-                
+
                 if (GlobalMemoryStatusEx(ref memStatus))
                 {
                     // Return available physical memory in MB
@@ -415,7 +415,7 @@ PublicDependencyModuleNames.AddRange(new string[]
         {
             // Fall through to heuristics
         }
-        
+
         // Fallback: Check for environment variable hint
         string MemoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
         if (!string.IsNullOrEmpty(MemoryHint))
@@ -426,7 +426,7 @@ PublicDependencyModuleNames.AddRange(new string[]
                 return HintValue;
             }
         }
-        
+
         // Conservative fallback - assume 4GB available
         return 4096;
     }
@@ -443,7 +443,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             {
                 var memStatus = new MEMORYSTATUSEX();
                 memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
-                
+
                 if (GlobalMemoryStatusEx(ref memStatus))
                 {
                     return (long)(memStatus.ullTotalPhys / (1024 * 1024));
@@ -451,7 +451,7 @@ PublicDependencyModuleNames.AddRange(new string[]
             }
         }
         catch { }
-        
+
         return 8192; // Conservative fallback
     }
 
