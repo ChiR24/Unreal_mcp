@@ -10,7 +10,7 @@ import { consolidatedToolDefinitions, type ToolDefinition } from './consolidated
 
 const log = new Logger('DynamicToolManager');
 
-export type ToolCategory = 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
+export type ToolCategory = 'core' | 'world' | 'authoring' | 'gameplay' | 'utility' | 'all';
 
 interface ToolState {
   name: string;
@@ -187,6 +187,24 @@ class DynamicToolManager {
     this.ensureInitialized();
     const enabled: string[] = [];
 
+    // Handle 'all' category - enable all categories
+    if (category === 'all') {
+      for (const catState of this.categoryStates.values()) {
+        catState.enabled = true;
+        catState.enabledCount = catState.toolCount;
+      }
+      for (const state of this.toolStates.values()) {
+        if (!state.enabled) {
+          state.enabled = true;
+          enabled.push(state.name);
+        }
+      }
+      if (enabled.length > 0) {
+        log.info(`Enabled all categories: ${enabled.length} tools`);
+      }
+      return { success: true, enabled, notFound: false };
+    }
+
     const catState = this.categoryStates.get(category);
     if (!catState) {
       return { success: false, enabled: [], notFound: true };
@@ -219,9 +237,43 @@ class DynamicToolManager {
     const disabled: string[] = [];
     const protected_: string[] = [];
 
+    // Tools that cannot be disabled (essential for operation)
+    const protectedTools = ['manage_tools', 'inspect'];
+
+    // Handle 'all' category - disable all non-protected tools
+    if (category === 'all') {
+      for (const catState of this.categoryStates.values()) {
+        if (catState.name === 'core') {
+          catState.enabled = true; // core stays enabled due to protected tools
+        } else {
+          catState.enabled = false;
+          catState.enabledCount = 0;
+        }
+      }
+      for (const state of this.toolStates.values()) {
+        if (protectedTools.includes(state.name)) {
+          protected_.push(state.name);
+        } else if (state.enabled) {
+          state.enabled = false;
+          disabled.push(state.name);
+        }
+      }
+      // Update core category enabled count for protected tools
+      const coreCatState = this.categoryStates.get('core');
+      if (coreCatState) {
+        coreCatState.enabledCount = protected_.filter(p => {
+          const toolState = this.toolStates.get(p);
+          return toolState?.category === 'core';
+        }).length;
+      }
+      if (disabled.length > 0) {
+        log.info(`Disabled all categories: ${disabled.length} tools`);
+      }
+      return { success: true, disabled, notFound: false, protected: protected_ };
+    }
+
     // Categories that cannot be fully disabled
     const protectedCategories: ToolCategory[] = ['core'];
-    const protectedTools = ['manage_tools', 'inspect'];
 
     const catState = this.categoryStates.get(category);
     if (!catState) {

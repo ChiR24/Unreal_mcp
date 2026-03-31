@@ -530,7 +530,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     FString WavePath;
     Payload->TryGetStringField(TEXT("wavePath"), WavePath);
 
+    USoundWave *Wave = nullptr;
+    if (!WavePath.IsEmpty()) {
+      Wave = LoadObject<USoundWave>(nullptr, *WavePath);
+    }
+
     USoundCueFactoryNew *Factory = NewObject<USoundCueFactoryNew>();
+    if (Wave) {
+      Factory->InitialSoundWaves.Add(Wave);
+    }
     FAssetToolsModule &AssetToolsModule =
         FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
     UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
@@ -545,40 +553,34 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     // Basic graph setup if wave provided
-    if (!WavePath.IsEmpty()) {
-      USoundWave *Wave = LoadObject<USoundWave>(nullptr, *WavePath);
-      if (Wave) {
-        USoundNodeWavePlayer *PlayerNode =
-            SoundCue->ConstructSoundNode<USoundNodeWavePlayer>();
-        PlayerNode->SetSoundWave(Wave);
+    if (Wave) {
+      USoundNode *LastNode = SoundCue->FirstNode;
 
-        USoundNode *LastNode = PlayerNode;
-
-        // Optional looping
+      if (LastNode) {
         bool bLooping = false;
         if (Payload->TryGetBoolField(TEXT("looping"), bLooping) && bLooping) {
           USoundNodeLooping *LoopNode =
               SoundCue->ConstructSoundNode<USoundNodeLooping>();
-          LoopNode->ChildNodes.Add(LastNode);
+          LoopNode->InsertChildNode(0);
+          LoopNode->ChildNodes[0] = LastNode;
           LastNode = LoopNode;
         }
 
-        // Optional modulation (volume/pitch)
         double Volume = 1.0;
         double Pitch = 1.0;
-        bool bHasVolume = Payload->TryGetNumberField(TEXT("volume"), Volume);
-        bool bHasPitch = Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+        const bool bHasVolume = Payload->TryGetNumberField(TEXT("volume"), Volume);
+        const bool bHasPitch = Payload->TryGetNumberField(TEXT("pitch"), Pitch);
 
         if (bHasVolume || bHasPitch) {
           USoundNodeModulator *ModNode =
               SoundCue->ConstructSoundNode<USoundNodeModulator>();
+          ModNode->InsertChildNode(0);
+          ModNode->ChildNodes[0] = LastNode;
           ModNode->PitchMin = ModNode->PitchMax = (float)Pitch;
           ModNode->VolumeMin = ModNode->VolumeMax = (float)Volume;
-          ModNode->ChildNodes.Add(LastNode);
           LastNode = ModNode;
         }
 
-        // Optional attenuation
         FString AttenuationPath;
         if (Payload->TryGetStringField(TEXT("attenuationPath"),
                                        AttenuationPath) &&
@@ -588,8 +590,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
           if (Attenuation) {
             USoundNodeAttenuation *AttenNode =
                 SoundCue->ConstructSoundNode<USoundNodeAttenuation>();
+            AttenNode->InsertChildNode(0);
+            AttenNode->ChildNodes[0] = LastNode;
             AttenNode->AttenuationSettings = Attenuation;
-            AttenNode->ChildNodes.Add(LastNode);
             LastNode = AttenNode;
           }
         }
@@ -628,6 +631,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     }
 
     FString PackagePath = TEXT("/Game/Audio/Classes");
+    if (Payload->HasField(TEXT("path"))) {
+      PackagePath = GetJsonStringField(Payload, TEXT("path"));
+    }
 
     USoundClassFactory *Factory = NewObject<USoundClassFactory>();
     FAssetToolsModule &AssetToolsModule =
@@ -699,6 +705,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       PackagePath = GetJsonStringField(Payload, TEXT("packagePath"));
     } else if (Payload->HasField(TEXT("savePath"))) {
       PackagePath = GetJsonStringField(Payload, TEXT("savePath"));
+    } else if (Payload->HasField(TEXT("path"))) {
+      PackagePath = GetJsonStringField(Payload, TEXT("path"));
     }
 
     USoundMixFactory *Factory = NewObject<USoundMixFactory>();
@@ -1258,8 +1266,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   else if (Lower == TEXT("set_sound_mix_class_override") ||
              Lower == TEXT("audio_set_sound_mix_class_override")) {
     FString MixName, ClassName;
-    Payload->TryGetStringField(TEXT("mixName"), MixName);
-    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
+    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) || MixName.IsEmpty()) {
+      if (!Payload->TryGetStringField(TEXT("mix"), MixName) || MixName.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("name"), MixName);
+      }
+    }
+    if (!Payload->TryGetStringField(TEXT("soundClassName"), ClassName) || ClassName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("soundClass"), ClassName);
+    }
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     USoundClass *Class = ResolveSoundClass(ClassName);
@@ -1309,8 +1323,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   else if (Lower == TEXT("clear_sound_mix_class_override") ||
              Lower == TEXT("audio_clear_sound_mix_class_override")) {
     FString MixName, ClassName;
-    Payload->TryGetStringField(TEXT("mixName"), MixName);
-    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
+    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) || MixName.IsEmpty()) {
+      if (!Payload->TryGetStringField(TEXT("mix"), MixName) || MixName.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("name"), MixName);
+      }
+    }
+    if (!Payload->TryGetStringField(TEXT("soundClassName"), ClassName) || ClassName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("soundClass"), ClassName);
+    }
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     USoundClass *Class = ResolveSoundClass(ClassName);
@@ -1348,7 +1368,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
   // -------------------------------------------------------------------------
   else if (Lower == TEXT("set_base_sound_mix")) {
     FString MixName;
-    Payload->TryGetStringField(TEXT("mixName"), MixName);
+    if (!Payload->TryGetStringField(TEXT("mixName"), MixName) || MixName.IsEmpty()) {
+      if (!Payload->TryGetStringField(TEXT("mix"), MixName) || MixName.IsEmpty()) {
+        Payload->TryGetStringField(TEXT("name"), MixName);
+      }
+    }
     USoundMix *Mix = ResolveSoundMix(MixName);
     if (!Mix) {
       SendAutomationError(RequestingSocket, RequestId, TEXT("Mix not found"),

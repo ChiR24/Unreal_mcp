@@ -62,7 +62,7 @@ export const coreToolDefinitions: ToolDefinition[] = [
           description: 'list_tools: show all tools with status. list_categories: show categories. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
         },
         tools: { type: 'array', items: commonSchemas.stringProp, description: 'Tool names to enable/disable' },
-        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility)' }
+        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility, all)' }
       },
       required: ['action']
     },

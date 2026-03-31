@@ -124,15 +124,15 @@ namespace McpSafeOperations
 #if WITH_EDITOR
 
 /**
- * Safe asset saving helper - marks package dirty and notifies asset registry.
+ * Safe asset saving helper - marks package dirty, registers the asset, and
+ * persists the owning package through the editor's save flow.
  * 
  * CRITICAL FOR UE 5.7+:
- * DO NOT use UEditorAssetLibrary::SaveAsset() - it triggers modal dialogs 
- * that crash D3D12RHI during automation. This helper marks dirty instead,
- * letting the editor save on shutdown or explicit user action.
+ * DO NOT use raw UPackage::SavePackage(). Use the editor-owned package save path
+ * so asset packages are persisted without manual package-file handling.
  *
- * @param Asset The UObject asset to mark dirty
- * @returns true if the asset was marked dirty successfully
+ * @param Asset The UObject asset to save
+ * @returns true if the asset package was saved successfully
  */
 inline bool McpSafeAssetSave(UObject* Asset)
 {
@@ -141,13 +141,29 @@ inline bool McpSafeAssetSave(UObject* Asset)
         return false;
     }
 
-    // UE 5.7+ Fix: Do not immediately save newly created assets to disk.
-    // Saving immediately causes bulkdata corruption and crashes.
-    // Instead, mark the package dirty and notify the asset registry.
     Asset->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(Asset);
-    
-    return true;
+
+#if MCP_HAS_PACKAGE_TOOLS
+    TArray<UObject*> ObjectsToSave;
+    ObjectsToSave.Add(Asset);
+
+    FlushRenderingCommands();
+
+    const bool bSaved = UPackageTools::SavePackagesForObjects(ObjectsToSave);
+    if (bSaved)
+    {
+        TArray<FString> PathsToScan;
+        PathsToScan.Add(FPaths::GetPath(Asset->GetOutermost()->GetName()));
+        FAssetRegistryModule& AssetRegistryModule =
+            FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+        AssetRegistryModule.Get().ScanPathsSynchronous(PathsToScan, false);
+    }
+
+    return bSaved;
+#else
+    return false;
+#endif
 }
 
 /**
@@ -544,8 +560,7 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
 }
 
 /**
- * Throttled wrapper around UEditorAssetLibrary::SaveLoadedAsset to avoid
- * rapid repeated SavePackage calls which can cause engine warnings.
+ * Throttled wrapper around McpSafeAssetSave to avoid rapid repeated save calls.
  *
  * @param Asset The asset to save
  * @param ThrottleSecondsOverride Override throttle time (default uses global setting)
@@ -559,9 +574,8 @@ inline bool SaveLoadedAssetThrottled(UObject* Asset, double ThrottleSecondsOverr
         return false;
     }
 
-    // Throttling parameters reserved for future implementation
-    // Currently delegates directly to McpSafeAssetSave for UE 5.7 compatibility
-    // TODO: Implement actual throttling with ThrottleSecondsOverride and bForce
+    // Throttling parameters reserved for future implementation.
+    // For now this always uses the real editor-owned save path.
     (void)ThrottleSecondsOverride; // Reserved for throttle duration override
     (void)bForce; // Reserved for forcing immediate save bypassing throttle
 
@@ -619,9 +633,18 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
         TEXT("McpPreClearBlueprintActionDatabase: Pre-clearing action database for '%s'"), 
         *Asset->GetName());
 
-    // Get the singleton and clear the entry BEFORE ForceDeleteObjects runs
-    FBlueprintActionDatabase& ActionDB = FBlueprintActionDatabase::Get();
-    ActionDB.ClearAssetActions(Asset);
+    // Clear the entry BEFORE ForceDeleteObjects runs, but do not instantiate the
+    // database during deletion if it was never initialized by the editor.
+    if (FBlueprintActionDatabase* ActionDB = FBlueprintActionDatabase::TryGet())
+    {
+        ActionDB->ClearAssetActions(Asset);
+    }
+    else
+    {
+        UE_LOG(LogMcpSafeOperations, Verbose,
+            TEXT("McpPreClearBlueprintActionDatabase: Action database not initialized for '%s'"),
+            *Asset->GetName());
+    }
 
     UE_LOG(LogMcpSafeOperations, Log, 
         TEXT("McpPreClearBlueprintActionDatabase: Pre-clear complete for '%s'"), 
@@ -760,6 +783,120 @@ inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const T
         Context);
     (void)BatchObjects; // Suppress unused parameter warning
     (void)Context;
+#endif
+}
+
+/**
+ * Unload any currently loaded packages for the given asset set using the engine's
+ * package-unload path instead of manually marking package contents as garbage.
+ *
+ * CRITICAL FOR UE 5.7+:
+ * Blueprint-family assets own generated classes, CDOs, dependency caches, editor
+ * state, and package-level object graphs. Calling MarkAsGarbage() directly on the
+ * package and its inners can leave GC walking invalid class/CDO state. The editor's
+ * unload flow performs the required Blueprint/world cleanup before CollectGarbage.
+ */
+inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, const TCHAR* LogContext)
+{
+    TArray<UPackage*> PackagesToUnload;
+    TArray<UObject*> LoadedObjectsForCompilation;
+    TSet<FName> SeenPackages;
+
+    for (const FAssetData& AssetData : Assets)
+    {
+        const FString PackagePath = AssetData.PackageName.ToString();
+        if (UPackage* Package = FindObject<UPackage>(nullptr, *PackagePath))
+        {
+            if (!SeenPackages.Contains(Package->GetFName()))
+            {
+                SeenPackages.Add(Package->GetFName());
+                PackagesToUnload.Add(Package);
+                UE_LOG(LogMcpSafeOperations, Log,
+                    TEXT("%s: Loaded package scheduled for unload: %s"),
+                    LogContext,
+                    *PackagePath);
+            }
+        }
+
+        const FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
+        if (!ObjectPath.IsEmpty())
+        {
+            if (UObject* ExistingObject = FindObject<UObject>(nullptr, *ObjectPath))
+            {
+                LoadedObjectsForCompilation.Add(ExistingObject);
+            }
+        }
+    }
+
+    if (PackagesToUnload.Num() == 0)
+    {
+        return true;
+    }
+
+    if (LoadedObjectsForCompilation.Num() > 0)
+    {
+        McpFinishCompilationForBatch(LoadedObjectsForCompilation, LogContext);
+    }
+
+    FlushRenderingCommands();
+    if (GEditor)
+    {
+        GEditor->ClearPreviewComponents();
+        GEditor->SelectNone(false, true, false);
+    }
+
+#if MCP_HAS_PACKAGE_TOOLS
+    bool bAllUnloaded = true;
+
+    for (UPackage* PackageToUnload : PackagesToUnload)
+    {
+        if (!PackageToUnload)
+        {
+            continue;
+        }
+
+        TArray<UPackage*> SinglePackage;
+        SinglePackage.Add(PackageToUnload);
+        TWeakObjectPtr<UPackage> WeakPackage = PackageToUnload;
+
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("%s: Unloading package individually: %s"),
+            LogContext,
+            *PackageToUnload->GetName());
+
+        UPackageTools::FUnloadPackageParams Params(SinglePackage);
+        Params.bUnloadDirtyPackages = true;
+        Params.bResetTransBuffer = true;
+
+        const bool bUnloadResult = UPackageTools::UnloadPackages(Params);
+        if (!Params.OutErrorMessage.IsEmpty())
+        {
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("%s: UnloadPackages reported for %s: %s"),
+                LogContext,
+                *PackageToUnload->GetName(),
+                *Params.OutErrorMessage.ToString());
+        }
+
+        FlushRenderingCommands();
+
+        if (!bUnloadResult || WeakPackage.IsValid())
+        {
+            bAllUnloaded = false;
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("%s: Package still loaded after individual unload attempt: %s"),
+                LogContext,
+                *PackageToUnload->GetName());
+        }
+    }
+
+    FlushRenderingCommands();
+    return bAllUnloaded;
+#else
+    UE_LOG(LogMcpSafeOperations, Error,
+        TEXT("%s: PackageTools not available; cannot safely unload loaded packages"),
+        LogContext);
+    return false;
 #endif
 }
 
@@ -1112,14 +1249,15 @@ inline bool IsMixedAnimationRigCluster(const TArray<FAssetData>& Assets)
  * CRITICAL FOR UE 5.7+: AnimBlueprints have cross-package references (linked anim graphs,
  * skeleton references, debug data) that cause 0xFFFFFFFFFFFFFFFF crashes when:
  * - ForceDeleteObjects tries to delete them while loaded
- * - UPackageTools::UnloadPackages tries to unload them (even worse - crashes earlier)
  * 
- * SOLUTION: Delete .uasset files DIRECTLY from disk without loading/unloading packages.
- * This avoids all cross-reference issues because we never touch the in-memory objects.
+ * SOLUTION: Only unload truly in-memory-only packages. For file-backed assets,
+ * use the engine-owned force-delete path in explicit order so Blueprint-generated
+ * classes/CDOs are torn down by ObjectTools instead of raw file deletion.
  */
 inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterAssets, bool bForce)
 {
     int32 DeletedCount = 0;
+    (void)bForce;
 
     // Sort all assets by priority
     TArray<FAssetData> OrderedAssets = ClusterAssets;
@@ -1136,7 +1274,7 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
     });
 
     UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("DeleteAnimationRigClusterOrdered: Deleting %d cluster assets via file-based deletion"),
+        TEXT("DeleteAnimationRigClusterOrdered: Deleting %d cluster assets via ordered engine-owned deletion"),
         OrderedAssets.Num());
 
     // STEP 1: Close ALL editors and clear preview state
@@ -1171,328 +1309,222 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
     FlushRenderingCommands();
     FPlatformProcess::Sleep(0.1f);
 
-    // STEP 2: Handle LOADED packages first - mark them for GC before file deletion
-    // CRITICAL: If packages are loaded in memory, we must release them properly
-    // before deleting files, otherwise we leave orphaned in-memory objects
-    TArray<UPackage*> LoadedPackagesToRelease;
-    TSet<FName> LoadedPackageNames;
-    TArray<UObject*> LoadedObjectsForCompilation;
-    
-    for (const FAssetData& AssetData : OrderedAssets)
-    {
-        FName PackageName = AssetData.PackageName;
-        UPackage* Package = FindObject<UPackage>(nullptr, *PackageName.ToString());
-        if (Package)
-        {
-            LoadedPackagesToRelease.Add(Package);
-            LoadedPackageNames.Add(PackageName);
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: Package is loaded: %s"),
-                *PackageName.ToString());
-        }
-
-        const FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
-        if (!ObjectPath.IsEmpty())
-        {
-            if (UObject* ExistingObject = FindObject<UObject>(nullptr, *ObjectPath))
-            {
-                LoadedObjectsForCompilation.Add(ExistingObject);
-            }
-        }
-    }
-
-    if (LoadedObjectsForCompilation.Num() > 0)
-    {
-        McpFinishCompilationForBatch(LoadedObjectsForCompilation, TEXT("special-delete"));
-    }
-
-    // Release loaded packages from root set so they can be GC'd
-    if (LoadedPackagesToRelease.Num() > 0)
-    {
-        UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("DeleteAnimationRigClusterOrdered: Releasing %d loaded packages from root set"),
-            LoadedPackagesToRelease.Num());
-
-        for (UPackage* Package : LoadedPackagesToRelease)
-        {
-            // Remove from root so it can be garbage collected
-            Package->RemoveFromRoot();
-            
-            // Mark the package as garbage - this tells the engine it should be cleaned up
-            Package->MarkAsGarbage();
-            
-            // Also mark any objects within the package
-            TArray<UObject*> ObjectsInPackage;
-            GetObjectsWithOuter(Package, ObjectsInPackage, false);
-            for (UObject* Obj : ObjectsInPackage)
-            {
-                Obj->RemoveFromRoot();
-                Obj->MarkAsGarbage();
-            }
-        }
-
-        // Force GC to clean up the released packages
-        FlushRenderingCommands();
-        if (GEditor)
-        {
-            GEditor->ForceGarbageCollection(true);
-        }
-        FlushRenderingCommands();
-        FPlatformProcess::Sleep(0.1f);
-
-        // Verify packages are gone
-        for (UPackage* Package : LoadedPackagesToRelease)
-        {
-            if (IsValid(Package))
-            {
-                UE_LOG(LogMcpSafeOperations, Warning,
-                    TEXT("DeleteAnimationRigClusterOrdered: Package still valid after GC: %s"),
-                    *Package->GetName());
-            }
-        }
-    }
-
-    // STEP 3: Delete ALL assets by FILE PATH (not by loading/unloading packages)
-    // This is the CRITICAL fix - we delete .uasset files directly from disk
-    // which avoids all cross-package reference crashes
-    FAssetRegistryModule& AssetRegistryModule = 
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-
-    // Track assets that need in-memory deletion (files don't exist on disk)
+    // STEP 2: Identify in-memory-only assets first. Those need package unload;
+    // file-backed assets stay on the engine-owned force-delete path and are NOT batch-unloaded.
     TArray<FAssetData> InMemoryOnlyAssets;
-    struct FPendingFileDeleteRetry
-    {
-        FAssetData AssetData;
-        FString PackagePath;
-        FString AbsolutePath;
-    };
-    TArray<FPendingFileDeleteRetry> PendingFileDeleteRetries;
-    TSet<FName> PendingRetryPackages;
+    TArray<FAssetData> FileBackedAssets;
 
     for (const FAssetData& AssetData : OrderedAssets)
     {
-        // Get the package name and convert to file path
-        FName PackageName = AssetData.PackageName;
-        FString PackagePath = PackageName.ToString();
-        
-        // Convert package path to actual file path
+        const FString PackagePath = AssetData.PackageName.ToString();
         FString AssetFilePath;
-        if (!FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilePath, FPackageName::GetAssetPackageExtension()))
+        bool bHasBackingFile = false;
+
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilePath, FPackageName::GetAssetPackageExtension()))
         {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("DeleteAnimationRigClusterOrdered: Could not convert package path to file: %s - treating as in-memory only"),
-                *PackagePath);
-            InMemoryOnlyAssets.Add(AssetData);
-            continue;
+            FString AbsolutePath = FPaths::IsRelative(AssetFilePath)
+                ? FPaths::ConvertRelativePathToFull(AssetFilePath)
+                : AssetFilePath;
+            FPaths::NormalizeFilename(AbsolutePath);
+            bHasBackingFile = IFileManager::Get().FileExists(*AbsolutePath);
         }
 
-        // Normalize the path - ensure it's absolute with correct platform separators
-        FString AbsolutePath;
-        if (FPaths::IsRelative(AssetFilePath))
+        if (!bHasBackingFile)
         {
-            AbsolutePath = FPaths::ConvertRelativePathToFull(AssetFilePath);
+            InMemoryOnlyAssets.Add(AssetData);
         }
         else
         {
-            AbsolutePath = AssetFilePath;
+            FileBackedAssets.Add(AssetData);
         }
-        
-        // Normalize path separators for the current platform
-        FPaths::NormalizeFilename(AbsolutePath);
-        
-        // Use IFileManager for more robust file operations
-        IFileManager& FileManager = IFileManager::Get();
-        
-        // Check if file exists
-        if (!FileManager.FileExists(*AbsolutePath))
-        {
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: File does not exist: %s - asset is in-memory only"),
-                *AbsolutePath);
-            InMemoryOnlyAssets.Add(AssetData);
-            continue;
-        }
+    }
 
+    if (InMemoryOnlyAssets.Num() > 0)
+    {
         UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("DeleteAnimationRigClusterOrdered: Deleting file: %s"),
-            *AbsolutePath);
+            TEXT("DeleteAnimationRigClusterOrdered: Unloading %d in-memory-only packages individually before delete"),
+            InMemoryOnlyAssets.Num());
 
-        // Delete the file directly
-        bool bFileDeleted = FileManager.Delete(*AbsolutePath, false, true, true);
-        
-        if (bFileDeleted)
+        if (!UnloadLoadedPackagesForAssets(InMemoryOnlyAssets, TEXT("DeleteAnimationRigClusterOrdered[InMemoryOnly]")))
+        {
+            UE_LOG(LogMcpSafeOperations, Error,
+                TEXT("DeleteAnimationRigClusterOrdered: Failed to unload one or more in-memory-only packages before delete"));
+            return INDEX_NONE;
+        }
+    }
+
+    // STEP 3: Count the in-memory-only assets that were successfully unloaded.
+    for (const FAssetData& AssetData : InMemoryOnlyAssets)
+    {
+        const FString PackagePath = AssetData.PackageName.ToString();
+        const FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
+        const bool bPackageStillLoaded = FindObject<UPackage>(nullptr, *PackagePath) != nullptr;
+        const bool bObjectStillLoaded = !ObjectPath.IsEmpty() && FindObject<UObject>(nullptr, *ObjectPath) != nullptr;
+
+        if (!bPackageStillLoaded && !bObjectStillLoaded)
         {
             ++DeletedCount;
             UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: Deleted file for %s (%s)"),
-                *AssetData.AssetName.ToString(),
-                *AssetData.AssetClassPath.ToString());
-
-            // Scan the path to update the asset registry
-            TArray<FString> ScanPaths;
-            ScanPaths.Add(FPaths::GetPath(PackagePath));
-            AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
+                TEXT("DeleteAnimationRigClusterOrdered: Unloaded in-memory-only asset package cleanly: %s"),
+                *PackagePath);
         }
         else
         {
             UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("DeleteAnimationRigClusterOrdered: Failed to delete file: %s - treating as in-memory"),
-                *AbsolutePath);
-            PendingFileDeleteRetries.Add({ AssetData, PackagePath, AbsolutePath });
-            PendingRetryPackages.Add(AssetData.PackageName);
-            InMemoryOnlyAssets.Add(AssetData);
+                TEXT("DeleteAnimationRigClusterOrdered: In-memory-only package still loaded after unload attempt: %s"),
+                *PackagePath);
         }
     }
 
-    // STEP 3b: Handle in-memory only assets (files never saved to disk)
-    // CRITICAL: For in-memory AnimBlueprints with cross-references, we CANNOT use ForceDeleteObjects.
-    // Instead, we mark them as garbage and let GC clean them up safely.
-    // This is slower but prevents the 0xFFFFFFFFFFFFFFFF crash.
-    if (InMemoryOnlyAssets.Num() > 0)
+    auto ForceDeleteBatch = [&](const TArray<FAssetData>& BatchAssets, const TCHAR* BatchLabel) -> bool
     {
-        UE_LOG(LogMcpSafeOperations, Warning,
-            TEXT("DeleteAnimationRigClusterOrdered: %d assets are in-memory only, marking for GC cleanup"),
-            InMemoryOnlyAssets.Num());
-
-        for (const FAssetData& AssetData : InMemoryOnlyAssets)
+        if (BatchAssets.Num() == 0)
         {
-            // Get the object without loading it (it should already be loaded if we found it)
-            FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
-            UObject* Asset = FindObject<UObject>(nullptr, *ObjectPath);
-            
-            if (!Asset)
+            return true;
+        }
+
+        auto ForceDeleteLoadedObjects = [&](TArray<UObject*>& ObjectsToDelete) -> bool
+        {
+            for (UObject* BatchObject : ObjectsToDelete)
             {
-                UE_LOG(LogMcpSafeOperations, Log,
-                    TEXT("DeleteAnimationRigClusterOrdered: In-memory asset already gone: %s"),
-                    *ObjectPath);
-                if (!PendingRetryPackages.Contains(AssetData.PackageName))
+                if (UAnimBlueprint* AnimBlueprint = Cast<UAnimBlueprint>(BatchObject))
                 {
-                    ++DeletedCount;
+                    McpQuiesceAnimBlueprintBeforeDelete(AnimBlueprint);
                 }
-                continue;
+            }
+
+            McpQuiesceBeforeBatchDelete(ObjectsToDelete);
+            for (UObject* BatchObject : ObjectsToDelete)
+            {
+                McpPreClearBlueprintActionDatabase(BatchObject);
             }
 
             UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: Marking in-memory asset for GC: %s"),
-                *Asset->GetName());
+                TEXT("DeleteAnimationRigClusterOrdered: Force deleting %d asset(s) via ObjectTools batch [%s]"),
+                ObjectsToDelete.Num(),
+                BatchLabel);
 
-            // Remove from root set
-            Asset->RemoveFromRoot();
-            
-            // Mark the asset as garbage - GC will clean it up
-            Asset->MarkAsGarbage();
-            
-            // Also handle the package and any objects within it
-            UPackage* Package = Asset->GetOutermost();
-            if (Package)
+            const int32 DeletedByEngine = ObjectTools::ForceDeleteObjects(ObjectsToDelete, false);
+            McpQuiesceAfterBatchDelete(ObjectsToDelete);
+
+            if (DeletedByEngine != ObjectsToDelete.Num())
             {
-                Package->RemoveFromRoot();
-                Package->MarkAsGarbage();
-                
-                // Mark all objects in the package
-                TArray<UObject*> ObjectsInPackage;
-                GetObjectsWithOuter(Package, ObjectsInPackage, false);
-                for (UObject* Obj : ObjectsInPackage)
+                UE_LOG(LogMcpSafeOperations, Error,
+                    TEXT("DeleteAnimationRigClusterOrdered: ObjectTools::ForceDeleteObjects batch [%s] deleted %d/%d asset(s)"),
+                    BatchLabel,
+                    DeletedByEngine,
+                    ObjectsToDelete.Num());
+                return false;
+            }
+
+            DeletedCount += DeletedByEngine;
+            return true;
+        };
+
+        const bool bDeleteAnimBlueprintsIndividually = FCString::Strcmp(BatchLabel, TEXT("AnimBlueprintFamily")) == 0;
+        if (bDeleteAnimBlueprintsIndividually)
+        {
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("DeleteAnimationRigClusterOrdered: Deleting %d AnimBlueprint asset(s) individually via engine-owned delete"),
+                BatchAssets.Num());
+
+            for (const FAssetData& BatchAsset : BatchAssets)
+            {
+                UObject* AssetObject = BatchAsset.GetAsset();
+                if (!AssetObject)
                 {
-                    if (Obj != Asset)
-                    {
-                        Obj->RemoveFromRoot();
-                        Obj->MarkAsGarbage();
-                    }
+                    UE_LOG(LogMcpSafeOperations, Error,
+                        TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"),
+                        *BatchAsset.GetObjectPathString());
+                    return false;
+                }
+
+                TArray<UObject*> SingleObjectToDelete;
+                SingleObjectToDelete.Add(AssetObject);
+                if (!ForceDeleteLoadedObjects(SingleObjectToDelete))
+                {
+                    return false;
                 }
             }
 
-            if (!PendingRetryPackages.Contains(AssetData.PackageName))
+            return true;
+        }
+
+        TArray<UObject*> ObjectsToDelete;
+        ObjectsToDelete.Reserve(BatchAssets.Num());
+
+        for (const FAssetData& BatchAsset : BatchAssets)
+        {
+            UObject* AssetObject = BatchAsset.GetAsset();
+            if (!AssetObject)
             {
-                ++DeletedCount;
+                UE_LOG(LogMcpSafeOperations, Error,
+                    TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"),
+                    *BatchAsset.GetObjectPathString());
+                return false;
             }
+
+            ObjectsToDelete.Add(AssetObject);
         }
 
-        // Single GC pass to clean up all marked objects
-        // GC properly handles cross-references between garbage objects
-        FlushRenderingCommands();
-        if (GEditor)
-        {
-            GEditor->ForceGarbageCollection(true);
-        }
-        FlushRenderingCommands();
-        FPlatformProcess::Sleep(0.05f);
-        
-        // Second GC pass to ensure everything is cleaned
-        if (GEditor)
-        {
-            GEditor->ForceGarbageCollection(true);
-        }
-        FlushRenderingCommands();
-    }
+        return ForceDeleteLoadedObjects(ObjectsToDelete);
+    };
 
-    // STEP 3c: Retry any file-backed deletes that were locked before GC cleanup.
-    if (PendingFileDeleteRetries.Num() > 0)
+    // STEP 4: Delete file-backed assets through the engine-owned force-delete path.
+    // IMPORTANT: Keep Blueprint families narrow. AnimBlueprints and ControlRigBlueprints
+    // must not be mixed in the same batch because their editor teardown graphs differ.
+    TArray<FAssetData> AnimBlueprintAssets;
+    TArray<FAssetData> ControlRigBlueprintAssets;
+    TArray<FAssetData> GenericBlueprintAssets;
+    TArray<FAssetData> OtherFileBackedAssets;
+
+    for (const FAssetData& AssetData : FileBackedAssets)
     {
-        IFileManager& FileManager = IFileManager::Get();
-        TArray<UObject*> RetryObjectsForCompilation;
-        for (const FPendingFileDeleteRetry& Retry : PendingFileDeleteRetries)
+        const FString ClassName = AssetData.AssetClassPath.ToString();
+        if (ClassName.Contains(TEXT("AnimBlueprint")))
         {
-            const FString ObjectPath = Retry.AssetData.GetSoftObjectPath().ToString();
-            if (!ObjectPath.IsEmpty())
-            {
-                if (UObject* ExistingObject = FindObject<UObject>(nullptr, *ObjectPath))
-                {
-                    RetryObjectsForCompilation.Add(ExistingObject);
-                }
-            }
+            AnimBlueprintAssets.Add(AssetData);
         }
-
-        if (RetryObjectsForCompilation.Num() > 0)
+        else if (ClassName.Contains(TEXT("ControlRigBlueprint")))
         {
-            McpFinishCompilationForBatch(RetryObjectsForCompilation, TEXT("retry-delete"));
-            FlushRenderingCommands();
-            if (GEditor)
-            {
-                GEditor->ForceGarbageCollection(true);
-            }
-            FlushRenderingCommands();
+            ControlRigBlueprintAssets.Add(AssetData);
         }
-
-        for (const FPendingFileDeleteRetry& Retry : PendingFileDeleteRetries)
+        else if (ClassName.Contains(TEXT("Blueprint")))
         {
-            const bool bExistsBeforeRetry = FileManager.FileExists(*Retry.AbsolutePath);
-            if (bExistsBeforeRetry)
-            {
-                UE_LOG(LogMcpSafeOperations, Log,
-                    TEXT("DeleteAnimationRigClusterOrdered: Retrying file delete after GC: %s"),
-                    *Retry.AbsolutePath);
-            }
-
-            const bool bDeletedOnRetry = bExistsBeforeRetry
-                ? FileManager.Delete(*Retry.AbsolutePath, false, true, true)
-                : true;
-            const bool bExistsAfterRetry = FileManager.FileExists(*Retry.AbsolutePath);
-
-            if (bDeletedOnRetry || !bExistsAfterRetry)
-            {
-                ++DeletedCount;
-                UE_LOG(LogMcpSafeOperations, Log,
-                    TEXT("DeleteAnimationRigClusterOrdered: Retry delete succeeded for %s (%s)"),
-                    *Retry.AssetData.AssetName.ToString(),
-                    *Retry.AssetData.AssetClassPath.ToString());
-
-                TArray<FString> ScanPaths;
-                ScanPaths.Add(FPaths::GetPath(Retry.PackagePath));
-                AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
-            }
-            else
-            {
-                UE_LOG(LogMcpSafeOperations, Warning,
-                    TEXT("DeleteAnimationRigClusterOrdered: Retry delete still failed for %s at %s"),
-                    *Retry.AssetData.AssetName.ToString(),
-                    *Retry.AbsolutePath);
-            }
+            GenericBlueprintAssets.Add(AssetData);
+        }
+        else
+        {
+            OtherFileBackedAssets.Add(AssetData);
         }
     }
 
-    // STEP 4: Final cleanup - GC to clean up any stale references
+    if (!ForceDeleteBatch(AnimBlueprintAssets, TEXT("AnimBlueprintFamily")))
+    {
+        return INDEX_NONE;
+    }
+
+    if (!ForceDeleteBatch(ControlRigBlueprintAssets, TEXT("ControlRigBlueprintFamily")))
+    {
+        return INDEX_NONE;
+    }
+
+    if (!ForceDeleteBatch(GenericBlueprintAssets, TEXT("GenericBlueprintFamily")))
+    {
+        return INDEX_NONE;
+    }
+
+    for (const FAssetData& AssetData : OtherFileBackedAssets)
+    {
+        TArray<FAssetData> SingleAssetBatch;
+        SingleAssetBatch.Add(AssetData);
+        if (!ForceDeleteBatch(SingleAssetBatch, TEXT("Singleton")))
+        {
+            return INDEX_NONE;
+        }
+    }
+
+    // STEP 5: Final cleanup - GC to clean up any stale references
     FlushRenderingCommands();
     if (GEditor)
     {
@@ -1501,7 +1533,7 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
     FlushRenderingCommands();
 
     UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("DeleteAnimationRigClusterOrdered: Deleted %d/%d cluster assets via file-based deletion"),
+        TEXT("DeleteAnimationRigClusterOrdered: Deleted %d/%d cluster assets via engine-owned ordered deletion"),
         DeletedCount, OrderedAssets.Num());
 
     return DeletedCount;
@@ -1509,9 +1541,10 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
 
 /**
  * Split a batch of asset data into file-backed loaded objects vs in-memory-only assets.
- * In-memory-only assets are marked for GC instead of being sent through ObjectTools delete flows.
+ * In-memory-only assets are unloaded through PackageTools instead of being manually
+ * marked for garbage collection.
  */
-inline void PrepareAssetBatchForDelete(
+inline bool PrepareAssetBatchForDelete(
     const TArray<FAssetData>& Assets,
     const TCHAR* LogContext,
     TArray<UObject*>& OutFileBackedObjects,
@@ -1521,15 +1554,10 @@ inline void PrepareAssetBatchForDelete(
     OutInMemoryOnlyCount = 0;
 
     IFileManager& FileManager = IFileManager::Get();
+    TArray<FAssetData> InMemoryOnlyAssets;
 
     for (const FAssetData& AssetData : Assets)
     {
-        UObject* Asset = AssetData.GetAsset();
-        if (!Asset)
-        {
-            continue;
-        }
-
         const FString PackagePath = AssetData.PackageName.ToString();
         FString AssetFilePath;
         bool bHasBackingFile = false;
@@ -1559,33 +1587,14 @@ inline void PrepareAssetBatchForDelete(
 
         if (!bHasBackingFile)
         {
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("%s: Marking in-memory asset for GC: %s (%s)"),
-                LogContext,
-                *AssetData.AssetName.ToString(),
-                *AssetData.AssetClassPath.ToString());
-
-            Asset->RemoveFromRoot();
-            Asset->MarkAsGarbage();
-
-            if (UPackage* Package = Asset->GetOutermost())
-            {
-                Package->RemoveFromRoot();
-                Package->MarkAsGarbage();
-
-                TArray<UObject*> ObjectsInPackage;
-                GetObjectsWithOuter(Package, ObjectsInPackage, false);
-                for (UObject* Obj : ObjectsInPackage)
-                {
-                    if (Obj != Asset)
-                    {
-                        Obj->RemoveFromRoot();
-                        Obj->MarkAsGarbage();
-                    }
-                }
-            }
-
+            InMemoryOnlyAssets.Add(AssetData);
             ++OutInMemoryOnlyCount;
+            continue;
+        }
+
+        UObject* Asset = AssetData.GetAsset();
+        if (!Asset)
+        {
             continue;
         }
 
@@ -1594,13 +1603,16 @@ inline void PrepareAssetBatchForDelete(
 
     if (OutInMemoryOnlyCount > 0)
     {
-        FlushRenderingCommands();
-        if (GEditor)
+        if (!UnloadLoadedPackagesForAssets(InMemoryOnlyAssets, LogContext))
         {
-            GEditor->ForceGarbageCollection(true);
+            UE_LOG(LogMcpSafeOperations, Error,
+                TEXT("%s: Failed to unload one or more in-memory-only packages before delete"),
+                LogContext);
+            return false;
         }
-        FlushRenderingCommands();
     }
+
+    return true;
 }
 
 /**
@@ -1691,23 +1703,16 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
+    if (!UnloadLoadedPackagesForAssets(WorldAssets, TEXT("DeleteWorldPackagesByPath")))
+    {
+        UE_LOG(LogMcpSafeOperations, Error,
+            TEXT("DeleteWorldPackagesByPath: Failed to unload one or more loaded world packages before file deletion"));
+        return INDEX_NONE;
+    }
+
     for (const FAssetData& AssetData : WorldAssets)
     {
         const FString PackagePath = AssetData.PackageName.ToString();
-
-        if (UPackage* LoadedPackage = FindObject<UPackage>(nullptr, *PackagePath))
-        {
-            LoadedPackage->RemoveFromRoot();
-            LoadedPackage->MarkAsGarbage();
-
-            TArray<UObject*> ObjectsInPackage;
-            GetObjectsWithOuter(LoadedPackage, ObjectsInPackage, false);
-            for (UObject* Obj : ObjectsInPackage)
-            {
-                Obj->RemoveFromRoot();
-                Obj->MarkAsGarbage();
-            }
-        }
 
         FString MapFilename;
         if (!FPackageName::TryConvertLongPackageNameToFilename(PackagePath, MapFilename, FPackageName::GetMapPackageExtension()))
@@ -1965,23 +1970,23 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
             DeletedRisky += OrderedClusterDeleted;
         }
 
-        // STEP 6b: Delete remaining risky special-delete assets using FILE-BASED deletion
-        // CRITICAL: Do NOT use ForceDeleteObjects for any animation-related assets
-        // They all have cross-package references that cause 0xFFFFFFFFFFFFFFFF crashes
+        // STEP 6b: Delete remaining risky special-delete assets using the same
+        // ordered engine-owned path, which now keeps file-backed assets on
+        // ObjectTools::ForceDeleteObjects and only unloads true in-memory packages.
         const int32 TotalRisky = GenericRiskyAssets.Num();
         
         if (TotalRisky > 0)
         {
             UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via file-based deletion"),
+                TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via ordered engine-owned deletion"),
                 TotalRisky);
             
-            // Use the same file-based deletion approach as the ordered cluster
+            // Use the same ordered engine-owned deletion approach as the mixed cluster
             const int32 GenericDeleted = DeleteAnimationRigClusterOrdered(GenericRiskyAssets, bForce);
             DeletedRisky += GenericDeleted;
             
             UE_LOG(LogMcpSafeOperations, Log, 
-                TEXT("McpSafeDeleteFolder: Deleted %d/%d remaining risky special-delete assets via file-based deletion"),
+                TEXT("McpSafeDeleteFolder: Deleted %d/%d remaining risky special-delete assets via ordered engine-owned deletion"),
                 GenericDeleted, TotalRisky);
         }
         
@@ -1994,11 +1999,14 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     {
         TArray<UObject*> SafeObjectsToDelete;
         int32 SafeInMemoryOnlyCount = 0;
-        PrepareAssetBatchForDelete(
+        if (!PrepareAssetBatchForDelete(
             SafeAssets,
             TEXT("McpSafeDeleteFolder[SafeAssets]"),
             SafeObjectsToDelete,
-            SafeInMemoryOnlyCount);
+            SafeInMemoryOnlyCount))
+        {
+            return false;
+        }
 
         if (SafeInMemoryOnlyCount > 0)
         {
@@ -2036,6 +2044,10 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
             WorldAssets.Num());
 
         const int32 DeletedWorlds = DeleteWorldPackagesByPath(WorldAssets);
+        if (DeletedWorlds == INDEX_NONE)
+        {
+            return false;
+        }
         UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpSafeDeleteFolder: Deleted %d/%d world assets via package/file path"),
             DeletedWorlds, WorldAssets.Num());

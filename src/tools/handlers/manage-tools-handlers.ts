@@ -133,7 +133,7 @@ export async function handleManageToolsTools(
           return ResponseFactory.error('No category specified.', 'MISSING_CATEGORY');
         }
 
-        const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
+        const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'];
         if (!validCategories.includes(category)) {
           return ResponseFactory.error(
             `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
@@ -161,7 +161,7 @@ export async function handleManageToolsTools(
           return ResponseFactory.error('No category specified.', 'MISSING_CATEGORY');
         }
 
-        const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility'];
+        const validCategories: ToolCategory[] = ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'];
         if (!validCategories.includes(category)) {
           return ResponseFactory.error(
             `Invalid category '${category}'. Valid: ${validCategories.join(', ')}`,
