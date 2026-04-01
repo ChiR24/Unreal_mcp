@@ -328,8 +328,16 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
     // ─── set_cvars ────────────────────────────────────────────────────────────
     if (Lower == TEXT("set_cvars"))
     {
+        if (!Payload.IsValid())
+        {
+            TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+            Err->SetStringField(TEXT("error"), TEXT("INVALID_PAYLOAD"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("set_cvars requires a valid payload"), Err, TEXT("INVALID_PAYLOAD"));
+            return true;
+        }
         int32 JobIndex = 0;
-        if (Payload.IsValid()) Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+        Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
 
         UMoviePipelineExecutorJob* Job = GetJobByIndex(Queue, JobIndex);
         if (!Job)
@@ -476,8 +484,16 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
     // ─── set_output_settings ──────────────────────────────────────────────────
     if (Lower == TEXT("set_output_settings"))
     {
+        if (!Payload.IsValid())
+        {
+            TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+            Err->SetStringField(TEXT("error"), TEXT("INVALID_PAYLOAD"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("set_output_settings requires a valid payload"), Err, TEXT("INVALID_PAYLOAD"));
+            return true;
+        }
         int32 JobIndex = 0;
-        if (Payload.IsValid()) Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+        Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
 
         UMoviePipelineExecutorJob* Job = GetJobByIndex(Queue, JobIndex);
         if (!Job)
@@ -610,7 +626,14 @@ bool UMcpAutomationBridgeSubsystem::HandleMrqAction(
     if (Lower == TEXT("delete_job"))
     {
         int32 JobIndex = 0;
-        if (Payload.IsValid()) Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex);
+        if (!Payload.IsValid() || !Payload->TryGetNumberField(TEXT("jobIndex"), JobIndex))
+        {
+            TSharedPtr<FJsonObject> Err = MakeShared<FJsonObject>();
+            Err->SetStringField(TEXT("error"), TEXT("MISSING_JOB_INDEX"));
+            SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("delete_job requires explicit jobIndex"), Err, TEXT("MISSING_JOB_INDEX"));
+            return true;
+        }
 
         UMoviePipelineExecutorJob* Job = GetJobByIndex(Queue, JobIndex);
         if (!Job)
