@@ -19,7 +19,6 @@
 //
 // Section 3: Preset Management
 //   - load_preset                  : Load a preset config asset
-//   - save_preset                  : Save config as preset asset
 //
 // Section 4: Render Execution
 //   - render                       : Execute the queue
