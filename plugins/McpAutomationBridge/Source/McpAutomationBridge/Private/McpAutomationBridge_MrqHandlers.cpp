@@ -46,12 +46,18 @@
 #endif
 
 // MRQ headers - guarded for optional availability
+// UE 5.2+ renamed MasterConfig → PrimaryConfig; handle both.
 #if __has_include("MoviePipelineQueueSubsystem.h")
 #define MCP_HAS_MRQ 1
 #include "MoviePipelineQueue.h"
 #include "MoviePipelineQueueSubsystem.h"
 #include "MoviePipelineExecutor.h"
+#if __has_include("MoviePipelinePrimaryConfig.h")
 #include "MoviePipelinePrimaryConfig.h"
+#elif __has_include("MoviePipelineMasterConfig.h")
+#include "MoviePipelineMasterConfig.h"
+using UMoviePipelinePrimaryConfig = UMoviePipelineMasterConfig;
+#endif
 #include "MoviePipelineSetting.h"
 #include "MoviePipelineOutputSetting.h"
 #include "MoviePipelineConsoleVariableSetting.h"
