@@ -54,6 +54,11 @@ export const EnvSchema = z.object({
 
   // Tool Categories (comma-separated: core,world,authoring,gameplay,utility,all)
   MCP_DEFAULT_CATEGORIES: z.string().default('core'),
+
+  // Additional UE content path prefixes (comma-separated)
+  // Plugins with CanContainContent in their .uplugin register mount points beyond /Game/.
+  // Example: /ProjectObject/,/ProjectAnimation/
+  MCP_ADDITIONAL_PATH_PREFIXES: z.string().default(''),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
@@ -75,3 +80,24 @@ try {
 }
 
 export { config };
+
+/**
+ * Parse MCP_ADDITIONAL_PATH_PREFIXES into a validated prefix array.
+ * Each prefix is normalized to start and end with /.
+ * Traversal patterns in configured values are silently dropped.
+ */
+export function getAdditionalPathPrefixes(): string[] {
+  const raw = config.MCP_ADDITIONAL_PATH_PREFIXES;
+  if (!raw || raw.trim() === '') return [];
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .map(s => {
+      let p = s.startsWith('/') ? s : `/${s}`;
+      if (!p.endsWith('/')) p += '/';
+      if (p === '/' || p.includes('..') || p.includes('//')) return '';
+      return p;
+    })
+    .filter(s => s.length > 0);
+}

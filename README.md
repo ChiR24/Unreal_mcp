@@ -202,6 +202,10 @@ LOG_LEVEL=info  # debug | info | warn | error
 # Optional
 MCP_AUTOMATION_REQUEST_TIMEOUT_MS=120000
 ASSET_LIST_TTL_MS=10000
+
+# Custom content mount points (comma-separated)
+# Plugins with CanContainContent register mount points beyond /Game/.
+# MCP_ADDITIONAL_PATH_PREFIXES=/ProjectObject/,/ProjectAnimation/
 ```
 
 ### LAN Access Configuration

@@ -1,5 +1,6 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, Vector3, Rotator } from '../../types/handler-types.js';
+import { getAdditionalPathPrefixes } from '../../config.js';
 
 /**
  * Validates that args is not null/undefined.
@@ -37,13 +38,17 @@ export function validateSecurityPatterns(args: Record<string, unknown>): string 
       // Additional check for paths starting with / (could be absolute system paths)
       // Allow /Game/, /Engine/, /Script/, /Temp/ as they are UE paths
       // Also allow exact matches like /Game, /Engine (without trailing slash)
+      // Additional prefixes can be configured via MCP_ADDITIONAL_PATH_PREFIXES
+      // for UE plugins with CanContainContent (e.g. /ProjectObject/, /ProjectAnimation/)
       if (key.toLowerCase().includes('path') && value.startsWith('/')) {
-        const allowedPrefixes = ['/Game/', '/Engine/', '/Script/', '/Temp/'];
-        const exactAllowed = ['/Game', '/Engine', '/Script', '/Temp'];
+        const additional = getAdditionalPathPrefixes();
+        const allowedPrefixes = ['/Game/', '/Engine/', '/Script/', '/Temp/', ...additional];
+        const exactAllowed = ['/Game', '/Engine', '/Script', '/Temp',
+          ...additional.map(p => p.replace(/\/$/, ''))];
         const isAllowed = allowedPrefixes.some(prefix => value.startsWith(prefix)) ||
                           exactAllowed.includes(value);
         if (!isAllowed) {
-          return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, and /Temp/ paths are allowed.`;
+          return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
         }
       }
     }
