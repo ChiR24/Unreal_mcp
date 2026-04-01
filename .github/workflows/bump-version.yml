@@ -78,9 +78,10 @@ jobs:
       - name: Calculate new version (auto-increment)
         if: inputs.auto_increment != ''
         id: calc_version
+        env:
+          INCREMENT: ${{ github.event.inputs.auto_increment }}
         run: |
           CURRENT="${{ steps.current_version.outputs.version }}"
-          INCREMENT="${{ github.event.inputs.auto_increment }}"
           
           echo "Current version: $CURRENT"
           echo "Increment type: $INCREMENT"
@@ -239,10 +240,12 @@ jobs:
           git diff
 
       - name: Commit changes
+        env:
+          CREATE_CHANGELOG: ${{ inputs.create_changelog }}
         run: |
           VERSION="${{ steps.final_version.outputs.version }}"
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             COMMIT_MESSAGE="chore(release): bump version to v$VERSION"
           else
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
@@ -250,7 +253,7 @@ jobs:
           
           git add package.json package-lock.json server.json src/index.ts
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
           fi
           
@@ -267,6 +270,8 @@ jobs:
           echo "✅ Pushed changes to $TARGET_BRANCH"
 
       - name: Create Release Summary
+        env:
+          CREATE_CHANGELOG: ${{ inputs.create_changelog }}
         run: |
           VERSION="${{ steps.final_version.outputs.version }}"
           CURRENT="${{ steps.current_version.outputs.version }}"
@@ -281,7 +286,7 @@ jobs:
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
           echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY
           fi
           
