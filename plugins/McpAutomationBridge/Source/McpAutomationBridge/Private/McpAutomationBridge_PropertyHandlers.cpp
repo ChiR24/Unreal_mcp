@@ -76,6 +76,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Animation/AnimInstance.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -2697,6 +2698,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
 // inspect_cdo - Blueprint Class Default Object Inspection
 // =============================================================================
 
+#if WITH_EDITOR
 namespace
 {
 
@@ -2820,6 +2822,7 @@ UActorComponent* FindCdoComponent(UObject* CDO, const FString& ComponentName)
 }
 
 } // anonymous namespace
+#endif // WITH_EDITOR
 
 bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     const FString& RequestId,
@@ -2838,7 +2841,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     }
 
     FString NormalizedPath, LoadError;
-    UBlueprint* Blueprint = McpAutomationBridgeHelpers::LoadBlueprintAsset(
+    UBlueprint* Blueprint = LoadBlueprintAsset(
         BlueprintPath, NormalizedPath, LoadError);
     if (!Blueprint)
     {
@@ -2970,7 +2973,10 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
             if (!Comp) continue;
             const FString CompName = Comp->GetName();
 
-            // Classify source: SCS (current or inherited) vs Native
+            // Classify source by matching CDO component object name against
+            // SCS variable names. This assumes compiled CDO component names
+            // align with Blueprint SCS variable names, which holds for standard
+            // Blueprint compilation across UE 5.0-5.7.
             const FString* ScsSource = ScsSourceMap.Find(CompName);
             const FString Source = ScsSource ? *ScsSource : TEXT("Native");
 
