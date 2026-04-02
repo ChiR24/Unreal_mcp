@@ -2801,22 +2801,42 @@ TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
     return SourceMap;
 }
 
-// Finds a component on the CDO actor by name (case-insensitive).
-// The CDO has effective overrides baked in after compilation,
-// so this always returns child-effective values.
-UActorComponent* FindCdoComponent(UObject* CDO, const FString& ComponentName)
+// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
+UActorComponent* FindCdoComponent(
+    UBlueprint* Blueprint,
+    UObject* CDO,
+    const FString& ComponentName)
 {
-    AActor* DefaultActor = Cast<AActor>(CDO);
-    if (!DefaultActor) return nullptr;
-
-    TInlineComponentArray<UActorComponent*> Components;
-    DefaultActor->GetComponents(Components);
-    for (UActorComponent* Comp : Components)
+    // Search native CDO components first (effective overrides)
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
     {
-        if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
+        TInlineComponentArray<UActorComponent*> Components;
+        DefaultActor->GetComponents(Components);
+        for (UActorComponent* Comp : Components)
         {
-            return Comp;
+            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
+            {
+                return Comp;
+            }
         }
+    }
+
+    // Search SCS node templates (BP-added components)
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (Node && Node->ComponentTemplate &&
+                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+                {
+                    return Node->ComponentTemplate;
+                }
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
     }
     return nullptr;
 }
@@ -2902,7 +2922,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     // --- Component filter mode: single component dump ---
     if (!ComponentNameFilter.IsEmpty())
     {
-        UActorComponent* FoundComp = FindCdoComponent(CDO, ComponentNameFilter);
+        UActorComponent* FoundComp = FindCdoComponent(Blueprint, CDO, ComponentNameFilter);
         if (!FoundComp)
         {
             SendAutomationError(RequestingSocket, RequestId,
@@ -2959,31 +2979,65 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         }
     }
 
-    // --- Components from CDO (effective values with overrides applied) ---
-    // SCS source map is used only for classification, not for property values.
+    // --- Components: hybrid CDO + SCS ---
+    // Native components (C++ constructor) live on the CDO with effective overrides.
+    // SCS components (Blueprint-added) only exist as templates on SCS nodes.
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+    TSet<FString> SeenNames;
     TMap<FString, FString> ScsSourceMap = BuildScsSourceMap(Blueprint);
 
+    // 1) Native CDO components (effective override values)
     if (AActor* DefaultActor = Cast<AActor>(CDO))
     {
-        TInlineComponentArray<UActorComponent*> AllComponents;
-        DefaultActor->GetComponents(AllComponents);
-        for (UActorComponent* Comp : AllComponents)
+        TInlineComponentArray<UActorComponent*> CdoComponents;
+        DefaultActor->GetComponents(CdoComponents);
+        for (UActorComponent* Comp : CdoComponents)
         {
             if (!Comp) continue;
             const FString CompName = Comp->GetName();
+            SeenNames.Add(CompName);
 
-            // Classify source by matching CDO component object name against
-            // SCS variable names. This assumes compiled CDO component names
-            // align with Blueprint SCS variable names, which holds for standard
-            // Blueprint compilation across UE 5.0-5.7.
-            const FString* ScsSource = ScsSourceMap.Find(CompName);
-            const FString Source = ScsSource ? *ScsSource : TEXT("Native");
+            const FString Source = ScsSourceMap.Contains(CompName)
+                ? TEXT("Native_Override") : TEXT("Native");
 
             ComponentsArray.Add(MakeShared<FJsonValueObject>(
                 BuildComponentSummary(Comp, CompName, Source,
                                       bDetailed, PropertyNameFilter)));
         }
+    }
+
+    // 2) SCS components (Blueprint-added) from SCS node templates.
+    //    Walk full parent chain for inherited BP components.
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (!Node || !Node->ComponentTemplate) continue;
+                const FString VarName = Node->GetVariableName().ToString();
+                if (SeenNames.Contains(VarName)) continue;
+                SeenNames.Add(VarName);
+
+                const FString Source = (Bp == Blueprint)
+                    ? TEXT("SCS") : TEXT("SCS_Inherited");
+
+                TSharedPtr<FJsonObject> CompObj = BuildComponentSummary(
+                    Node->ComponentTemplate, VarName, Source,
+                    bDetailed, PropertyNameFilter);
+
+                // Add parent attachment info from SCS node
+                if (Node->ParentComponentOrVariableName != NAME_None)
+                {
+                    CompObj->SetStringField(TEXT("attachParent"),
+                        Node->ParentComponentOrVariableName.ToString());
+                }
+
+                ComponentsArray.Add(MakeShared<FJsonValueObject>(CompObj));
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
     }
 
     Resp->SetArrayField(TEXT("components"), ComponentsArray);
