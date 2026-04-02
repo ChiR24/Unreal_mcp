@@ -78,9 +78,12 @@ jobs:
       - name: Calculate new version (auto-increment)
         if: inputs.auto_increment != ''
         id: calc_version
+        env:
+          CURRENT_VERSION: ${{ steps.current_version.outputs.version }}
+          AUTO_INCREMENT: ${{ github.event.inputs.auto_increment }}
         run: |
-          CURRENT="${{ steps.current_version.outputs.version }}"
-          INCREMENT="${{ github.event.inputs.auto_increment }}"
+          CURRENT="$CURRENT_VERSION"
+          INCREMENT="$AUTO_INCREMENT"
           
           echo "Current version: $CURRENT"
           echo "Increment type: $INCREMENT"
@@ -115,9 +118,10 @@ jobs:
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
           AUTO_INCREMENT: ${{ inputs.auto_increment }}
+          CALC_VERSION: ${{ steps.calc_version.outputs.version }}
         run: |
           if [ "$AUTO_INCREMENT" != "" ]; then
-            VERSION="${{ steps.calc_version.outputs.version }}"
+            VERSION="$CALC_VERSION"
           else
             VERSION="$INPUT_VERSION"
           fi
@@ -125,20 +129,26 @@ jobs:
           echo "Final npm version: $VERSION"
 
       - name: Update package.json
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
           npm version "$VERSION" --no-git-tag-version
           echo "✅ Updated package.json and package-lock.json to $VERSION"
 
       - name: Update server.json
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "✅ Updated server.json to $VERSION"
 
       - name: Update src/index.ts
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
           
           # Update only the DEFAULT_SERVER_VERSION fallback string (targeted replacement)
           perl -0777 -i -pe "s/(const DEFAULT_SERVER_VERSION[\\s\\S]*?:\\s*)'[^']+';/\${1}'$VERSION';/" src/index.ts
@@ -146,8 +156,9 @@ jobs:
           echo "✅ Updated src/index.ts DEFAULT_SERVER_VERSION fallback to $VERSION"
 
       - name: Verify no hardcoded npm versions remain
+        env:
+          OLD_VERSION: ${{ steps.current_version.outputs.version }}
         run: |
-          OLD_VERSION="${{ steps.current_version.outputs.version }}"
           
           # Search for remaining occurrences (excluding expected files)
           FOUND=$(grep -r "$OLD_VERSION" --include="*.json" --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.git 2>/dev/null | grep -v "CHANGELOG.md" | grep -v "package-lock.json" || true)
@@ -162,8 +173,10 @@ jobs:
 
       - name: Create CHANGELOG entry
         if: inputs.create_changelog == 'true'
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
           DATE=$(date +%Y-%m-%d)
           
           # Create new CHANGELOG entry
@@ -239,10 +252,13 @@ jobs:
           git diff
 
       - name: Commit changes
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+          CREATE_CHANGELOG: ${{ inputs.create_changelog }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             COMMIT_MESSAGE="chore(release): bump version to v$VERSION"
           else
             COMMIT_MESSAGE="chore: bump version to v$VERSION"
@@ -250,7 +266,7 @@ jobs:
           
           git add package.json package-lock.json server.json src/index.ts
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             git add CHANGELOG.md
           fi
           
@@ -267,9 +283,13 @@ jobs:
           echo "✅ Pushed changes to $TARGET_BRANCH"
 
       - name: Create Release Summary
+        env:
+          FINAL_VERSION: ${{ steps.final_version.outputs.version }}
+          CURRENT_VERSION: ${{ steps.current_version.outputs.version }}
+          CREATE_CHANGELOG: ${{ inputs.create_changelog }}
         run: |
-          VERSION="${{ steps.final_version.outputs.version }}"
-          CURRENT="${{ steps.current_version.outputs.version }}"
+          VERSION="$FINAL_VERSION"
+          CURRENT="$CURRENT_VERSION"
           
           echo "## ✅ Version Bump Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -281,7 +301,7 @@ jobs:
           echo "- \`server.json\` (2 occurrences)" >> $GITHUB_STEP_SUMMARY
           echo "- \`src/index.ts\`" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ inputs.create_changelog }}" == "true" ]; then
+          if [ "$CREATE_CHANGELOG" == "true" ]; then
             echo "- \`CHANGELOG.md\`" >> $GITHUB_STEP_SUMMARY
           fi
           
