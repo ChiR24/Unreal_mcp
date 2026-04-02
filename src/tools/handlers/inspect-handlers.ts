@@ -686,9 +686,9 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     case 'inspect_cdo': {
       const inspectArgs = args as InspectArgs;
       const res = await executeAutomationRequest(tools, 'inspect', {
-        action: 'inspect_cdo',
         ...normalizedArgs,
-        blueprintPath: inspectArgs.blueprintPath || inspectArgs.objectPath,
+        action: 'inspect_cdo',
+        blueprintPath: inspectArgs.blueprintPath || normalizedArgs.objectPath as string,
       });
       return cleanObject(res) as Record<string, unknown>;
     }

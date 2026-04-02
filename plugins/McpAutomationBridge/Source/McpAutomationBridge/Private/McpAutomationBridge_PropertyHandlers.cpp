@@ -2850,6 +2850,14 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("inspect_cdo: payload missing"),
+                            TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (BlueprintPath.IsEmpty())
