@@ -214,6 +214,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 | | `keyframe` | ✅ Native | Native keyframe manipulation |
 | **inspect** | `get_property` | ✅ Native | `FProperty` → JSON serialization |
 | | `set_property` | ✅ Native | JSON → `FProperty` typed marshaling |
+| | `inspect_cdo` | ✅ Native | Inspect any Blueprint CDO without spawning an actor. CDO properties via reflection; for Actor BPs enumerates CDO components with effective overrides. Supports detailed, componentName, propertyNames filters. |
 | | `list` | ✅ Native | Actor/asset listing via subsystems |
 | **manage_audio** | `create_sound_cue` | ✅ Native | Sound Cue asset creation |
 | | `play_sound_at_location` | ✅ Native | 3D spatial sound playback |

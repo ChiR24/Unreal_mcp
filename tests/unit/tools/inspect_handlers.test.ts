@@ -43,6 +43,103 @@ describe('Inspect Handlers', () => {
     expect(result).toEqual({ success: true, variables: [{ name: 'Strength_Min' }] });
   });
 
+  describe('inspect_cdo', () => {
+    it('routes inspect_cdo with blueprintPath to inspect automation', async () => {
+      mockExecuteAutomationRequest.mockResolvedValue({
+        success: true,
+        className: 'BP_Hero_C',
+        components: [{ name: 'CharacterMesh0', class: 'SkeletalMeshComponent' }]
+      });
+
+      const result = await handleInspectTools(
+        'inspect_cdo',
+        { blueprintPath: '/Game/Characters/BP_Hero' },
+        mockTools
+      );
+
+      const payload = mockExecuteAutomationRequest.mock.calls[0][2] as Record<string, unknown>;
+      expect(payload.action).toBe('inspect_cdo');
+      expect(payload.blueprintPath).toBe('/Game/Characters/BP_Hero');
+      expect(result).toEqual({
+        success: true,
+        className: 'BP_Hero_C',
+        components: [{ name: 'CharacterMesh0', class: 'SkeletalMeshComponent' }]
+      });
+    });
+
+    it('delegates to C++ when blueprintPath is missing', async () => {
+      mockExecuteAutomationRequest.mockResolvedValue({
+        success: false,
+        error: 'blueprintPath is required for inspect_cdo'
+      });
+
+      const result = await handleInspectTools(
+        'inspect_cdo',
+        {},
+        mockTools
+      );
+
+      expect(mockExecuteAutomationRequest).toHaveBeenCalled();
+      expect(result).toEqual({
+        success: false,
+        error: 'blueprintPath is required for inspect_cdo'
+      });
+    });
+
+    it('passes optional detailed and componentName params', async () => {
+      mockExecuteAutomationRequest.mockResolvedValue({ success: true });
+
+      await handleInspectTools(
+        'inspect_cdo',
+        { blueprintPath: '/Game/Characters/BP_Hero', detailed: true, componentName: 'CharacterMesh0' },
+        mockTools
+      );
+
+      const payload = mockExecuteAutomationRequest.mock.calls[0][2] as Record<string, unknown>;
+      expect(payload.action).toBe('inspect_cdo');
+      expect(payload.blueprintPath).toBe('/Game/Characters/BP_Hero');
+      expect(payload.detailed).toBe(true);
+      expect(payload.componentName).toBe('CharacterMesh0');
+    });
+
+    it('passes propertyNames array when provided', async () => {
+      mockExecuteAutomationRequest.mockResolvedValue({ success: true });
+
+      await handleInspectTools(
+        'inspect_cdo',
+        { blueprintPath: '/Game/Characters/BP_Hero', propertyNames: ['SkeletalMesh', 'AnimClass'] },
+        mockTools
+      );
+
+      const payload = mockExecuteAutomationRequest.mock.calls[0][2] as Record<string, unknown>;
+      expect(payload.action).toBe('inspect_cdo');
+      expect(payload.propertyNames).toEqual(['SkeletalMesh', 'AnimClass']);
+    });
+
+    it('falls back to objectPath when blueprintPath not provided', async () => {
+      mockExecuteAutomationRequest.mockResolvedValue({ success: true });
+
+      await handleInspectTools(
+        'inspect_cdo',
+        { objectPath: '/Game/Characters/BP_Hero' },
+        mockTools
+      );
+
+      const payload = mockExecuteAutomationRequest.mock.calls[0][2] as Record<string, unknown>;
+      expect(payload.action).toBe('inspect_cdo');
+      expect(payload.blueprintPath).toBe('/Game/Characters/BP_Hero');
+    });
+  });
+
+  it('inspect_cdo is in the tool schema action enum', async () => {
+    const { consolidatedToolDefinitions } = await import('../../../src/tools/consolidated-tool-definitions.js');
+    const inspectTool = consolidatedToolDefinitions.find((t: { name: string }) => t.name === 'inspect');
+    const actionEnum = (inspectTool?.inputSchema as Record<string, unknown> & {
+      properties: { action: { enum: string[] } }
+    })?.properties?.action?.enum;
+    expect(actionEnum).toContain('inspect_cdo');
+  });
+
   it('keeps inspect_object on the inspect automation path', async () => {
     mockExecuteAutomationRequest.mockResolvedValue({ success: true, objectPath: '/Game/Test/BP_Test' });
 
