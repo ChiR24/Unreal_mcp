@@ -481,9 +481,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
 
         // Add the trigger to the action
         InAction->Triggers.Add(NewTrigger);
-        
-        // Mark the package dirty to ensure changes are saved
-        InAction->MarkPackageDirty();
+
+        SaveLoadedAssetThrottled(InAction, -1.0, true);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
@@ -584,8 +583,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         // Add the modifier to the action
         InAction->Modifiers.Add(NewModifier);
         
-        // Mark the package dirty to ensure changes are saved
-        InAction->MarkPackageDirty();
+        SaveLoadedAssetThrottled(InAction, -1.0, true);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);

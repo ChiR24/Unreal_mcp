@@ -1131,123 +1131,116 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
-  // Dispatch to GameThread for async processing
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
-  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, RequestingSocket, 
-                                         SafeAssetPath, Width, Height, OutputPath]() {
-    UMcpAutomationBridgeSubsystem* Subsystem = WeakThis.Get();
-    if (!Subsystem) {
-      return;
-    }
+  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
+  // Wrapping ALL work (including fast existence checks) in AsyncTask(GameThread, ...)
+  // caused the queued lambda to sit behind the current dispatch cycle, so responses
+  // never reached the MCP server before the 30-second timeout (issues #138, #139).
+  // Execute synchronously instead.
+  SendProgressUpdate(RequestId, 0.0f,
+      FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
 
-    // CRITICAL: Send progress update before GPU-blocking operation
-    // This keeps the request alive and helps diagnose hangs
-    Subsystem->SendProgressUpdate(RequestId, 0.0f, 
-        FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Asset not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Asset not found"), nullptr,
-                             TEXT("ASSET_NOT_FOUND"));
-      return;
-    }
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  if (!Asset) {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Failed to load asset"), nullptr,
+                           TEXT("LOAD_FAILED"));
+    return true;
+  }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
-    if (!Asset) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to load asset"), nullptr,
-                             TEXT("LOAD_FAILED"));
-      return;
-    }
+  // Send progress update before GPU operation
+  SendProgressUpdate(RequestId, 50.0f,
+      TEXT("Rendering thumbnail (GPU operation)..."), true);
 
-    // Send progress update before GPU operation
-    Subsystem->SendProgressUpdate(RequestId, 50.0f, 
-        TEXT("Rendering thumbnail (GPU operation)..."), true);
+  FObjectThumbnail ObjectThumbnail;
+  ThumbnailTools::RenderThumbnail(
+      Asset, Width, Height,
+      ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
+      &ObjectThumbnail);
 
-    FObjectThumbnail ObjectThumbnail;
-    ThumbnailTools::RenderThumbnail(
-        Asset, Width, Height,
-        ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
-        &ObjectThumbnail);
+  bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
+                  ObjectThumbnail.GetImageHeight() > 0;
 
-    bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
-                    ObjectThumbnail.GetImageHeight() > 0;
+  if (bSuccess && !OutputPath.IsEmpty()) {
+    const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
 
-    if (bSuccess && !OutputPath.IsEmpty()) {
-      const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
+    if (ImageData.Num() > 0) {
+      TArray<FColor> ColorData;
+      ColorData.Reserve(Width * Height);
 
-      if (ImageData.Num() > 0) {
-        TArray<FColor> ColorData;
-        ColorData.Reserve(Width * Height);
-
-        // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
-        for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
-          FColor Color;
-          Color.B = ImageData[i + 0];
-          Color.G = ImageData[i + 1];
-          Color.R = ImageData[i + 2];
-          Color.A = ImageData[i + 3];
-          ColorData.Add(Color);
-        }
-
-        // SECURITY: Sanitize and validate the output path to prevent path traversal
-        FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
-        if (SafeOutputPath.IsEmpty()) {
-          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                             FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
-                                             nullptr, TEXT("SECURITY_VIOLATION"));
-          return;
-        }
-        
-        FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
-        AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
-        FPaths::NormalizeFilename(AbsolutePath);
-        
-        FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-        FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-        if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-          NormalizedProjectDir += TEXT("/");
-        }
-        
-        if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
-                                             nullptr, TEXT("SECURITY_VIOLATION"));
-          return;
-        }
-
-        TArray<uint8> CompressedData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
-                                                 CompressedData);
-#else
-        // UE 5.0: Use CompressImageArray instead
-        FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
-#endif
-        bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+      // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
+      for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
+        FColor Color;
+        Color.B = ImageData[i + 0];
+        Color.G = ImageData[i + 1];
+        Color.R = ImageData[i + 2];
+        Color.A = ImageData[i + 3];
+        ColorData.Add(Color);
       }
+
+      // SECURITY: Sanitize and validate the output path to prevent path traversal
+      FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
+      if (SafeOutputPath.IsEmpty()) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
+      AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+      FPaths::NormalizeFilename(AbsolutePath);
+
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      TArray<uint8> CompressedData;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
+                                               CompressedData);
+#else
+      // UE 5.0: Use CompressImageArray instead
+      FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+#endif
+      bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
     }
+  }
 
-    if (Asset->GetOutermost()) {
-      Asset->GetOutermost()->MarkPackageDirty();
-    }
+  if (Asset->GetOutermost()) {
+    Asset->GetOutermost()->MarkPackageDirty();
+  }
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), bSuccess);
-    Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
-    Result->SetNumberField(TEXT("width"), Width);
-    Result->SetNumberField(TEXT("height"), Height);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("success"), bSuccess);
+  Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+  Result->SetNumberField(TEXT("width"), Width);
+  Result->SetNumberField(TEXT("height"), Height);
 
-    if (!OutputPath.IsEmpty()) {
-      Result->SetStringField(TEXT("outputPath"), OutputPath);
-    }
+  if (!OutputPath.IsEmpty()) {
+    Result->SetStringField(TEXT("outputPath"), OutputPath);
+  }
 
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, bSuccess,
-        bSuccess ? TEXT("Thumbnail generated successfully")
-                 : TEXT("Thumbnail generation failed"),
-        Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
-  });
+  SendAutomationResponse(
+      RequestingSocket, RequestId, bSuccess,
+      bSuccess ? TEXT("Thumbnail generated successfully")
+               : TEXT("Thumbnail generation failed"),
+      Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
 
   return true;
 #else
@@ -3369,36 +3362,29 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return true;
   }
 
-  // Dispatch to Game Thread
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
-  TArray<FString> PathsCopy = Paths;
+  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
+  // Wrapping ALL work in AsyncTask(GameThread, ...) caused the queued lambda
+  // to sit behind the current dispatch cycle, so responses never reached the
+  // MCP server before the 30-second timeout. Execute synchronously instead.
+  int32 SuccessCount = 0;
+  TArray<FString> NotFoundPaths;
+  TArray<FString> NotMeshPaths;
 
-  AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
-                                        RequestingSocket, PathsCopy, NumLODs]() {
-    UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
-    if (!Subsystem)
-      return;
+  for (const FString &Path : Paths) {
+    SendProgressUpdate(RequestId, -1.0f,
+        FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
 
-    int32 SuccessCount = 0;
-    TArray<FString> NotFoundPaths;
-    TArray<FString> NotMeshPaths;
+    UObject *Obj = LoadObject<UObject>(nullptr, *Path);
 
-    for (const FString &Path : PathsCopy) {
-      // Send progress update to prevent timeout
-      Subsystem->SendProgressUpdate(RequestId, -1.0f, 
-          FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
-      
-      UObject *Obj = LoadObject<UObject>(nullptr, *Path);
-      
-      if (!Obj) {
-        NotFoundPaths.Add(Path);
-        continue;
-      }
-      
-      // Try Static Mesh
-      if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
+    if (!Obj) {
+      NotFoundPaths.Add(Path);
+      continue;
+    }
+
+    // Try Static Mesh
+    if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
 
         Mesh->Modify();
         Mesh->SetNumSourceModels(NumLODs);
@@ -3440,7 +3426,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     bool bSuccess = SuccessCount > 0;
     Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetNumberField(TEXT("processed"), SuccessCount);
-    Resp->SetNumberField(TEXT("requested"), PathsCopy.Num());
+    Resp->SetNumberField(TEXT("requested"), Paths.Num());
     Resp->SetNumberField(TEXT("lodCount"), NumLODs);
     
     // Add details about failures
@@ -3479,9 +3465,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
       ErrorCode = TEXT("LOD_GENERATION_FAILED");
     }
     
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
                                       Message, Resp, ErrorCode);
-  });
 
   return true;
 #else

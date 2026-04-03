@@ -61,6 +61,15 @@
 #include "TickTaskManagerInterface.h"  // Required for proper tick system cleanup
 #include "WorldPartition/WorldPartition.h"  // Required for World Partition detection
 
+// ScopedTransaction header location varies by UE version
+#if __has_include("ScopedTransaction.h")
+#include "ScopedTransaction.h"
+#elif __has_include("Misc/ScopedTransaction.h")
+#include "Misc/ScopedTransaction.h"
+#else
+#define MCP_NO_SCOPED_TRANSACTION 1
+#endif
+
 // Check for LevelEditorSubsystem
 #if defined(__has_include)
 #if __has_include("Subsystems/LevelEditorSubsystem.h")
@@ -550,6 +559,12 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       EffectiveAction = TEXT("rename_level");
     } else if (LowerSub == TEXT("duplicate") || LowerSub == TEXT("duplicate_level")) {
       EffectiveAction = TEXT("duplicate_level");
+    } else if (LowerSub == TEXT("get_summary")) {
+      EffectiveAction = TEXT("get_level_info");
+    } else if (LowerSub == TEXT("delete_levels")) {
+      EffectiveAction = TEXT("delete_level");
+    } else if (LowerSub == TEXT("unload") || LowerSub == TEXT("unload_level")) {
+      EffectiveAction = TEXT("stream_level");
     } else if (LowerSub == TEXT("get_level_info")) {
       EffectiveAction = TEXT("get_level_info");
     } else if (LowerSub == TEXT("set_level_world_settings")) {
@@ -785,15 +800,25 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   }
   if (EffectiveAction == TEXT("build_lighting") ||
       EffectiveAction == TEXT("bake_lightmap")) {
-    TSharedPtr<FJsonObject> P = McpHandlerUtils::CreateResultObject();
-    P->SetStringField(TEXT("functionName"), TEXT("BUILD_LIGHTING"));
+    // FEditorBuildUtils::EditorBuild is async — returns immediately while
+    // the lighting build runs in the background, avoiding 30s timeout.
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("buildStarted"), true);
     if (Payload.IsValid()) {
       FString Q;
       if (Payload->TryGetStringField(TEXT("quality"), Q) && !Q.IsEmpty())
-        P->SetStringField(TEXT("quality"), Q);
+        Result->SetStringField(TEXT("quality"), Q);
     }
-    return HandleExecuteEditorFunction(
-        RequestId, TEXT("execute_editor_function"), P, RequestingSocket);
+    FlushRenderingCommands();
+    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+      FEditorBuildUtils::EditorBuild(GEditor->GetEditorWorldContext().World(), FBuildOptions::BuildLighting);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Lighting build started (runs in background)"), Result);
+    } else {
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Lighting build requested (no active world)"), Result);
+    }
+    return true;
   }
   if (EffectiveAction == TEXT("create_new_level")) {
     FString LevelName;
@@ -1212,13 +1237,13 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
                                TEXT("Streaming command executed"), Result);
       } else {
         // Even if console command returns false, the operation may still be in progress
-        // Return "handled" status instead of error for streaming operations
+        // Remove HANDLED error code — success=true means no error occurred
         Result->SetStringField(TEXT("method"), TEXT("console_command_fallback"));
         Result->SetStringField(TEXT("command"), Cmd);
         Result->SetBoolField(TEXT("handled"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Streaming command submitted (level may not be in world yet)"), 
-                               Result, TEXT("HANDLED"));
+                               Result);
       }
     }
     return true;
@@ -1382,10 +1407,22 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
 
     UWorld *WorldToExport = nullptr;
     if (!LevelPath.IsEmpty()) {
-      // If levelPath provided, we should probably load it first? Or export from
-      // asset. Exporting unloaded level asset usually involves loading it. For
-      // now, if levelPath is current, use current. If not, error (or attempt
-      // load).
+      // CRITICAL FIX: Validate source level exists before export
+      if (!FPackageName::DoesPackageExist(LevelPath)) {
+        // Also check file on disk as fallback
+        FString Filename;
+        bool bFileFound = false;
+        if (FPackageName::TryConvertLongPackageNameToFilename(
+                LevelPath, Filename, FPackageName::GetMapPackageExtension())) {
+          bFileFound = IFileManager::Get().FileExists(*Filename);
+        }
+        if (!bFileFound) {
+          SendAutomationResponse(RequestingSocket, RequestId, false,
+                                 FString::Printf(TEXT("Source level not found: %s"), *LevelPath),
+                                 nullptr, TEXT("LEVEL_NOT_FOUND"));
+          return true;
+        }
+      }
       UWorld *Current = GEditor->GetEditorWorldContext().World();
       if (Current && (Current->GetOutermost()->GetName() == LevelPath ||
                       Current->GetPathName() == LevelPath)) {
@@ -1759,8 +1796,24 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       return true;
     }
 
-    // Use UEditorAssetLibrary to rename the level asset
-    bool bRenamed = UEditorAssetLibrary::RenameAsset(SourcePath, DestinationPath);
+    // Use DuplicateAsset + DeleteAsset to rename (avoids "Find/Replace"
+    // modal dialog that auto-cancels during automation)
+    // Wrap in a transaction for atomic undo/redo support
+    FScopedTransaction Transaction(FText::FromString(TEXT("Rename Level")));
+    
+    TObjectPtr<UObject> DuplicatedForRename = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);
+    bool bRenamed = (DuplicatedForRename != nullptr);
+    if (bRenamed) {
+      bRenamed = UEditorAssetLibrary::DeleteAsset(SourcePath);
+      if (!bRenamed) {
+        // Failed to delete original — clean up the duplicate to avoid leaving artifacts
+        UE_LOG(LogTemp, Warning, TEXT("rename_level: Failed to delete source '%s', cleaning up duplicate '%s'"), *SourcePath, *DestinationPath);
+        UEditorAssetLibrary::DeleteAsset(DestinationPath);
+        // Transaction will be canceled since we're returning false
+      }
+    } else {
+      UE_LOG(LogTemp, Warning, TEXT("rename_level: Failed to duplicate '%s' to '%s'"), *SourcePath, *DestinationPath);
+    }
     if (bRenamed) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("sourcePath"), SourcePath);
@@ -1816,6 +1869,28 @@ TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     }
     SourcePath = SanitizedSource;
     DestinationPath = SanitizedDest;
+
+    // Validate source exists before duplicating
+    if (!FPackageName::DoesPackageExist(SourcePath)) {
+      // Also verify on disk as fallback
+      FString Filename;
+      bool bFileFound = false;
+      if (FPackageName::TryConvertLongPackageNameToFilename(
+              SourcePath, Filename, FPackageName::GetMapPackageExtension())) {
+        bFileFound = IFileManager::Get().FileExists(*Filename);
+      }
+      if (!bFileFound) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Source level not found: %s"), *SourcePath),
+                               nullptr, TEXT("SOURCE_NOT_FOUND"));
+        return true;
+      }
+    }
+
+    // If destination already exists, delete it first so duplicate succeeds
+    if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
+      UEditorAssetLibrary::DeleteAsset(DestinationPath);
+    }
 
     // Use UEditorAssetLibrary to duplicate the level asset
     UObject* DuplicatedAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);

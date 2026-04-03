@@ -339,8 +339,27 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     Payload->TryGetStringField(TEXT("nodeType"), NodeType);
     float X = 0.0f;
     float Y = 0.0f;
-    Payload->TryGetNumberField(TEXT("x"), X);
-    Payload->TryGetNumberField(TEXT("y"), Y);
+    const bool bHasX = Payload->TryGetNumberField(TEXT("x"), X);
+    const bool bHasY = Payload->TryGetNumberField(TEXT("y"), Y);
+
+    // Reject calls where x/y are present but not valid numbers (e.g. boolean flags from bad input)
+    // TryGetNumberField returns false for booleans, strings, null, etc.
+    // Check specifically if field exists but as wrong type using HasField + wrong-type detection
+    if (Payload->HasField(TEXT("x")) && !bHasX) {
+      // x field is present but not a number - this is invalid input
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("Invalid value for 'x': expected number"),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (Payload->HasField(TEXT("y")) && !bHasY) {
+      SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("Invalid value for 'y': expected number"),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     // Check for explicit Node ID
     FString ProvidedNodeId;

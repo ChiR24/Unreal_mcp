@@ -2984,7 +2984,23 @@ Response->SetBoolField(TEXT("success"), true);
             TEXTURE_ERROR_RESPONSE(TEXT("Failed to create AO output texture"));
         }
         
-        // Lock output texture for writing
+        // CRITICAL: Apply texture property changes BEFORE writing pixel data.
+        // PostEditChange notifies the compile manager — calling it after data writes
+        // triggers nested compilation registration, causing a fatal error in UE 5.7+
+        // (see create_normal_from_height for the same proven pattern)
+        AOTexture->PreEditChange(nullptr);
+        AOTexture->SRGB = false;
+        AOTexture->CompressionSettings = TC_Grayscale;
+        AOTexture->CompressionNone = true;
+        AOTexture->NeverStream = true;
+        AOTexture->MipGenSettings = TMGS_FromTextureGroup;
+        AOTexture->LODGroup = TEXTUREGROUP_World;
+        AOTexture->PostEditChange();
+        
+        // Rebuild resource so pixel data writes target the correct format
+        AOTexture->UpdateResource();
+        
+        // Lock output texture for writing — must come AFTER PostEditChange
         uint8* AOData = AOTexture->Source.LockMip(0);
         if (!AOData)
         {
@@ -3053,19 +3069,6 @@ Response->SetBoolField(TEXT("success"), true);
         }
         
         AOTexture->Source.UnlockMip(0);
-        
-        // CRITICAL: Use PreEditChange/PostEditChange lifecycle for texture property modifications
-        // This prevents TextureCompiler fatal error when setting CompressionSettings
-        // Must be called BEFORE UpdateResource to avoid "Registering a texture to the compile manager
-        // from inside a texture postcompilation" fatal error
-        AOTexture->PreEditChange(nullptr);
-        // Set texture properties for AO
-        AOTexture->SRGB = false;
-        AOTexture->CompressionSettings = TC_Grayscale;
-        AOTexture->MipGenSettings = TMGS_FromTextureGroup;
-        AOTexture->LODGroup = TEXTUREGROUP_World;
-        AOTexture->PostEditChange();
-        
         AOTexture->UpdateResource();
         
         if (bSave)

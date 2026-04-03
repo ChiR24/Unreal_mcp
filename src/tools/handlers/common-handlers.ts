@@ -94,6 +94,22 @@ export function requireNonEmptyString(value: unknown, field: string, message?: s
 }
 
 /**
+ * Validates that a value is a valid asset name (not a path).
+ * Asset names should not contain path separators (/ or \) or start with /.
+ * This prevents accidental passing of paths like "/Game/Items/SomeAsset" as names.
+ */
+export function requireAssetName(value: unknown, field: string, message?: string): string {
+  const strValue = requireNonEmptyString(value, field, message);
+  
+  // Check if the value looks like a path (contains / or \ or starts with /)
+  if (strValue.includes('/') || strValue.includes('\\')) {
+    throw new Error(message ?? `Invalid ${field}: '${strValue}' appears to be a path, not an asset name. Asset names should not contain '/' or '\\' characters. If you meant to specify a path, use the appropriate path parameter instead.`);
+  }
+  
+  return strValue;
+}
+
+/**
  * Execute a request via the automation bridge.
  */
 export async function executeAutomationRequest(

@@ -15,7 +15,7 @@
 import { ITools } from '../../types/tool-interfaces.js';
 import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
-import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
+import { requireNonEmptyString, requireAssetName, executeAutomationRequest } from './common-handlers.js';
 
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
@@ -51,11 +51,11 @@ export async function handleInventoryTools(
     // 17.1 Data Assets (4 actions)
     // =========================================================================
 
-    case 'create_item_data_asset': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Optional: parentClass, folder
-      return sendRequest('create_item_data_asset');
-    }
+  case 'create_item_data_asset': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    // Optional: parentClass, folder
+    return sendRequest('create_item_data_asset');
+  }
 
     case 'set_item_properties': {
       requireNonEmptyString(argsRecord.itemPath, 'itemPath', 'Missing required parameter: itemPath');
@@ -63,11 +63,11 @@ export async function handleInventoryTools(
       return sendRequest('set_item_properties');
     }
 
-    case 'create_item_category': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Optional: parentCategory, description, icon
-      return sendRequest('create_item_category');
-    }
+  case 'create_item_category': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    // Optional: parentCategory, description, icon
+    return sendRequest('create_item_category');
+  }
 
     case 'assign_item_category': {
       requireNonEmptyString(argsRecord.itemPath, 'itemPath', 'Missing required parameter: itemPath');
@@ -113,11 +113,11 @@ export async function handleInventoryTools(
     // 17.3 Pickups (4 actions)
     // =========================================================================
 
-    case 'create_pickup_actor': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Optional: meshPath, itemDataPath, interactionRadius
-      return sendRequest('create_pickup_actor');
-    }
+  case 'create_pickup_actor': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    // Optional: meshPath, itemDataPath, interactionRadius
+    return sendRequest('create_pickup_actor');
+  }
 
     case 'configure_pickup_interaction': {
       requireNonEmptyString(argsRecord.pickupPath, 'pickupPath', 'Missing required parameter: pickupPath');
@@ -175,11 +175,11 @@ export async function handleInventoryTools(
     // 17.5 Loot System (4 actions)
     // =========================================================================
 
-    case 'create_loot_table': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Optional: folder, description
-      return sendRequest('create_loot_table');
-    }
+  case 'create_loot_table': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    // Optional: folder, description
+    return sendRequest('create_loot_table');
+  }
 
     case 'add_loot_entry': {
       requireNonEmptyString(argsRecord.lootTablePath, 'lootTablePath', 'Missing required parameter: lootTablePath');
@@ -205,12 +205,12 @@ export async function handleInventoryTools(
     // 17.6 Crafting System (4 actions)
     // =========================================================================
 
-    case 'create_crafting_recipe': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      requireNonEmptyString(argsRecord.outputItemPath, 'outputItemPath', 'Missing required parameter: outputItemPath');
-      // Accepts: ingredients (array of {itemPath, quantity}), outputQuantity, craftTime
-      return sendRequest('create_crafting_recipe');
-    }
+  case 'create_crafting_recipe': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    requireNonEmptyString(argsRecord.outputItemPath, 'outputItemPath', 'Missing required parameter: outputItemPath');
+    // Accepts: ingredients (array of {itemPath, quantity}), outputQuantity, craftTime
+    return sendRequest('create_crafting_recipe');
+  }
 
     case 'configure_recipe_requirements': {
       requireNonEmptyString(argsRecord.recipePath, 'recipePath', 'Missing required parameter: recipePath');
@@ -218,11 +218,11 @@ export async function handleInventoryTools(
       return sendRequest('configure_recipe_requirements');
     }
 
-    case 'create_crafting_station': {
-      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
-      // Optional: meshPath, recipes (array), stationType
-      return sendRequest('create_crafting_station');
-    }
+  case 'create_crafting_station': {
+    requireAssetName(argsRecord.name, 'name', 'Missing required parameter: name');
+    // Optional: meshPath, recipes (array), stationType
+    return sendRequest('create_crafting_station');
+  }
 
     case 'add_crafting_component': {
       requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');

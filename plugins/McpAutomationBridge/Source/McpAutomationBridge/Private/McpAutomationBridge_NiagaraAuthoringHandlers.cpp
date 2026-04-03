@@ -1900,6 +1900,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        // Guard against non-existent assets to prevent LoadObject hangs
+        if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+
         UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
@@ -2046,24 +2053,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
+        // Guard against non-existent assets to prevent LoadObject hangs
         FString TargetPath = AssetPath.IsEmpty() ? SystemPath : AssetPath;
-
-        // Guard against extremely long paths that could cause hangs
-        // UE path limit is typically 256 characters for asset names, 512 for full paths
-        if (TargetPath.Len() > 512)
+        if (!UEditorAssetLibrary::DoesAssetExist(TargetPath))
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("Path too long (%d chars). Maximum allowed is 512 characters."), TargetPath.Len()), 
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        // Basic path format validation
-        if (!TargetPath.StartsWith(TEXT("/")) || TargetPath.Contains(TEXT("..")))
-        {
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("Invalid path format. Path must start with '/' and not contain '..'."), 
-                TEXT("INVALID_ARGUMENT"));
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Niagara asset not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -2170,6 +2164,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         if (SystemPath.IsEmpty())
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Missing 'systemPath'."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // Guard against non-existent assets to prevent LoadObject hangs
+        if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 

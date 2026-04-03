@@ -180,6 +180,17 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(
                 if (FPackageName::TryConvertLongPackageNameToFilename(
                     NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
                 {
+                    // CRITICAL FIX: Validate file exists BEFORE attempting load
+                    // McpSafeLoadMap silently creates empty worlds for non-existent paths
+                    // which causes confusing NOT_PARTITIONED errors instead of clear file-not-found
+                    FString FullPath = FPaths::ConvertRelativePathToFull(Filename);
+                    if (!IFileManager::Get().FileExists(*FullPath))
+                    {
+                        SendAutomationError(RequestingSocket, RequestId, 
+                            FString::Printf(TEXT("Level file not found: %s"), *FullPath), 
+                            TEXT("LEVEL_NOT_FOUND"));
+                        return true;
+                    }
                     FlushRenderingCommands();
                     if (!McpSafeLoadMap(NormalizedLevelPath))
                     {
@@ -206,6 +217,15 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(
             if (FPackageName::TryConvertLongPackageNameToFilename(
                 NormalizedLevelPath, Filename, FPackageName::GetMapPackageExtension()))
             {
+                // CRITICAL FIX: Validate file exists BEFORE attempting load
+                FString FullPath = FPaths::ConvertRelativePathToFull(Filename);
+                if (!IFileManager::Get().FileExists(*FullPath))
+                {
+                    SendAutomationError(RequestingSocket, RequestId, 
+                        FString::Printf(TEXT("Level file not found: %s"), *FullPath), 
+                        TEXT("LEVEL_NOT_FOUND"));
+                    return true;
+                }
                 FlushRenderingCommands();
                 if (!McpSafeLoadMap(NormalizedLevelPath))
                 {
