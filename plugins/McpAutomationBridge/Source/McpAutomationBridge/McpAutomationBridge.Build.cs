@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using EpicGames.Core;
 
 public class McpAutomationBridge : ModuleRules
 {
@@ -52,6 +53,59 @@ public class McpAutomationBridge : ModuleRules
         long AvailableMemoryMB = GetActualAvailableMemoryMB();
         long TotalMemoryMB = GetTotalPhysicalMemoryMB();
         
+        // ============================================================================
+        // UE 5.0-5.2 + MSVC: Disable undefined-identifier-to-errors and define __has_feature macro
+        // ============================================================================
+        // UE 5.0's TargetRules.bUndefinedIdentifierErrors defaults to true, which causes
+        // UBT to add /we4668 to ALL C++ compilation commands (VCToolChain.cs:675).
+        // The UE 5.0 engine header ConcurrentLinearAllocator.h line 26 uses the Clang-only
+        // __has_feature macro. MSVC doesn't recognize it and emits C4668 (undefined macro
+        // in #if directive). With /we4668, this becomes a fatal error.
+        // We fix it at the root:
+        //   1. Set bUndefinedIdentifierErrors = false to remove /we4668
+        //   2. Add __has_feature(...)=0 to GlobalDefinitions so that the macro is defined
+        //      for ALL compilations (including SharedPCH), and discards its arguments.
+        // This propagates to GlobalCompileEnvironment and the SharedPCH compile command.
+        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion <= 2)
+        {
+            if (Target.Platform == UnrealTargetPlatform.Win64)
+            {
+                try
+                {
+                    var innerField = typeof(ReadOnlyTargetRules).GetField("Inner",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (innerField != null)
+                    {
+                        var targetRules = (TargetRules)innerField.GetValue(Target);
+                        if (targetRules != null)
+                        {
+#pragma warning disable 618  // bUndefinedIdentifierErrors is obsolete in UE5.5+, but we need it for older versions
+                            if (targetRules.bUndefinedIdentifierErrors)
+                            {
+                                targetRules.bUndefinedIdentifierErrors = false;
+                                Console.WriteLine("McpAutomationBridge: Disabled bUndefinedIdentifierErrors for UE 5.0-5.2 MSVC build");
+                            }
+#pragma warning restore 618
+
+                            // Add __has_feature macro to global definitions (affects all compilations, including SharedPCH)
+                            // Define as non-variadic macro that discards its argument, e.g., __has_feature(address_sanitizer) -> 0
+                            const string HasFeatureDefine = "__has_feature(x)=0";
+                            if (!targetRules.GlobalDefinitions.Contains(HasFeatureDefine))
+                            {
+                                targetRules.GlobalDefinitions.Add(HasFeatureDefine);
+                                Console.WriteLine("McpAutomationBridge: Added __has_feature(x)=0 to GlobalDefinitions");
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Non-fatal; may succeed via alternative mechanisms
+                }
+                Console.WriteLine(string.Format("McpAutomationBridge: Applied MSVC __has_feature compatibility for UE 5.{0}", Target.Version.MinorVersion));
+            }
+        }
+
         // UBT already handles parallelism based on 1.5GB/action globally
         // Our job is to prevent HUGE compilation units that exceed heap space
         
@@ -70,21 +124,6 @@ public class McpAutomationBridge : ModuleRules
         // from plugins/McpAutomationBridge/Config/BuildConfiguration.xml to %AppData%\Unreal Engine\UnrealBuildTool\
         bUseUnity = true;
         Console.WriteLine("McpAutomationBridge: Unity builds enabled");
-        
-        // UE 5.0-5.2 + MSVC: Suppress warnings from engine headers using Clang-only __has_feature macro
-        // The __has_feature macro is a Clang-specific feature detection mechanism
-        // that MSVC doesn't understand, causing C4668 and C4067 warnings
-        // Note: For full fix, also add GlobalDefinitions.Add("__has_feature(x)=0") in project's Target.cs
-        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion <= 2)
-        {
-            if (Target.Platform == UnrealTargetPlatform.Win64)
-            {
-                // C4668: '__has_feature' is not defined as a preprocessor macro
-                // C4067: unexpected tokens following preprocessor directive
-                PublicDefinitions.Add("__has_feature(x)=0");
-                Console.WriteLine(string.Format("McpAutomationBridge: Added MSVC warning suppression for UE 5.{0}", Target.Version.MinorVersion));
-            }
-        }
 
 PublicDependencyModuleNames.AddRange(new string[]
         {

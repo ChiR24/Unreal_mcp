@@ -362,25 +362,32 @@ namespace WidgetAuthoringHelpers
      */
     void RegisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     {
-        if (!WidgetBP || !Widget)
-        {
-            return;
-        }
+if (!WidgetBP || !Widget)
+{
+return;
+}
 
-        const FName WidgetFName = Widget->GetFName();
-        
-        // Only register if not already present
-        if (!WidgetBP->WidgetVariableNameToGuidMap.Contains(WidgetFName))
-        {
-            // Use deterministic GUID based on widget path for stability across saves
-            // This matches the engine's pattern in WidgetBlueprintCompiler.cpp line 774
-            FGuid WidgetGuid = FGuid::NewDeterministicGuid(Widget->GetPathName());
-            WidgetBP->WidgetVariableNameToGuidMap.Emplace(WidgetFName, WidgetGuid);
-            
-            UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s"), 
-                *WidgetFName.ToString(), *WidgetGuid.ToString());
-        }
-    }
+const FName WidgetFName = Widget->GetFName();
+
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+// Only register if not already present
+if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
+{
+// Use deterministic GUID based on widget path for stability across saves
+// This matches the engine's pattern in WidgetBlueprintCompiler.cpp line 774
+FGuid WidgetGuid = MCP_NEW_DETERMINISTIC_GUID(Widget->GetPathName());
+MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(WidgetFName, WidgetGuid);
+
+UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s"),
+*WidgetFName.ToString(), *WidgetGuid.ToString());
+}
+#else
+// UE 5.0: WidgetVariableNameToGuidMap doesn't exist, GUID tracking is handled differently
+// The NewVariables array on UBlueprint is used for variable tracking
+UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Widget '%s' registered (UE 5.0 mode)"),
+*WidgetFName.ToString());
+#endif
+}
 
     /**
      * CRITICAL: Unregister a widget from the WidgetVariableNameToGuidMap.
@@ -395,22 +402,28 @@ namespace WidgetAuthoringHelpers
      * @param WidgetBP The widget blueprint that owns the widget
      * @param Widget The widget being removed from the tree
      */
-    void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
-    {
-        if (!WidgetBP || !Widget)
-        {
-            return;
-        }
+void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
+{
+if (!WidgetBP || !Widget)
+{
+return;
+}
 
-        const FName WidgetFName = Widget->GetFName();
-        
-        if (WidgetBP->WidgetVariableNameToGuidMap.Contains(WidgetFName))
-        {
-            WidgetBP->WidgetVariableNameToGuidMap.Remove(WidgetFName);
-            UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"), 
-                *WidgetFName.ToString());
-        }
-    }
+const FName WidgetFName = Widget->GetFName();
+
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+if (MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
+{
+MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Remove(WidgetFName);
+UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"),
+*WidgetFName.ToString());
+}
+#else
+// UE 5.0: WidgetVariableNameToGuidMap doesn't exist
+UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Widget '%s' unregistered (UE 5.0 mode)"),
+*WidgetFName.ToString());
+#endif
+}
 
     /**
      * Recursively unregister a widget and all its children from the GUID map.
@@ -547,25 +560,31 @@ namespace WidgetAuthoringHelpers
      * @param WidgetBP The widget blueprint that owns the animation
      * @param Animation The newly created animation to register
      */
-    void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation)
-    {
-        if (!WidgetBP || !Animation)
-        {
-            return;
-        }
+void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation)
+{
+if (!WidgetBP || !Animation)
+{
+return;
+}
 
-        const FName AnimFName = Animation->GetFName();
-        
-        // Register in WidgetVariableNameToGuidMap if not present
-        if (!WidgetBP->WidgetVariableNameToGuidMap.Contains(AnimFName))
-        {
-            // Use deterministic GUID based on animation path for stability
-            FGuid AnimGuid = FGuid::NewDeterministicGuid(Animation->GetPathName());
-            WidgetBP->WidgetVariableNameToGuidMap.Emplace(AnimFName, AnimGuid);
-            
-            UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Registered animation '%s' with GUID %s"), 
-                *AnimFName.ToString(), *AnimGuid.ToString());
-        }
+const FName AnimFName = Animation->GetFName();
+
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+// Register in WidgetVariableNameToGuidMap if not present
+if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(AnimFName))
+{
+// Use deterministic GUID based on animation path for stability
+FGuid AnimGuid = MCP_NEW_DETERMINISTIC_GUID(Animation->GetPathName());
+MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(AnimFName, AnimGuid);
+
+UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Registered animation '%s' with GUID %s"),
+*AnimFName.ToString(), *AnimGuid.ToString());
+}
+#else
+// UE 5.0: WidgetVariableNameToGuidMap doesn't exist
+UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Animation '%s' registered (UE 5.0 mode)"),
+*AnimFName.ToString());
+#endif
         
         // Ensure animation is in the Animations array
         if (!WidgetBP->Animations.Contains(Animation))
@@ -689,14 +708,16 @@ namespace WidgetAuthoringHelpers
             }
         }
 
-        // Step 4: Clear the root widget pointer
-        WidgetTree->RootWidget = nullptr;
+// Step 4: Clear the root widget pointer
+WidgetTree->RootWidget = nullptr;
 
-        // Step 5: Clear the GUID map - we'll rebuild it from scratch
-        WidgetBP->WidgetVariableNameToGuidMap.Empty();
+// Step 5: Clear the GUID map - we'll rebuild it from scratch
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+WidgetBP->WidgetVariableNameToGuidMap.Empty();
+#endif
 
-        UE_LOG(LogTemp, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
-    }
+UE_LOG(LogTemp, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
+}
 }
 
 using namespace WidgetAuthoringHelpers;

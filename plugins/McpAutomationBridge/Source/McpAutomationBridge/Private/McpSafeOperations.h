@@ -19,6 +19,9 @@
 #include "Misc/ScopeLock.h"
 #include "Runtime/Launch/Resources/Version.h"
 
+// Include version compatibility macros FIRST before other engine includes
+#include "McpVersionCompatibility.h"
+
 #if WITH_EDITOR
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -754,13 +757,13 @@ inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const T
         TEXT("McpFinishCompilationForBatch: [%s] %d global compiling assets, %d objects in batch"), 
         Context, GlobalRemaining, BatchObjects.Num());
     
-    // STEP 1: Finish compilation for specific batch objects (tightest barrier)
-    // This is more targeted than FinishAllCompilation and prevents race conditions
-    // with the specific assets being deleted
-    if (BatchObjects.Num() > 0)
-    {
-        CompilingManager.FinishCompilationForObjects(BatchObjects);
-    }
+	// STEP 1: Finish compilation for specific batch objects (tightest barrier)
+	// This is more targeted than FinishAllCompilation and prevents race conditions
+	// with the specific assets being deleted
+	if (BatchObjects.Num() > 0)
+	{
+		MCP_FINISH_COMPILATION_FOR_OBJECTS(CompilingManager, BatchObjects);
+	}
     
     // STEP 2: Global compilation barrier (catches any dependencies)
     // After batch-specific finish, ensure nothing else is compiling that might
@@ -818,8 +821,8 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
             }
         }
 
-        const FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
-        if (!ObjectPath.IsEmpty())
+	const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(AssetData);
+	if (!ObjectPath.IsEmpty())
         {
             if (UObject* ExistingObject = FindObject<UObject>(nullptr, *ObjectPath))
             {
@@ -864,18 +867,18 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
             LogContext,
             *PackageToUnload->GetName());
 
-        UPackageTools::FUnloadPackageParams Params(SinglePackage);
-        Params.bUnloadDirtyPackages = true;
-        Params.bResetTransBuffer = true;
-
-        const bool bUnloadResult = UPackageTools::UnloadPackages(Params);
-        if (!Params.OutErrorMessage.IsEmpty())
+        // Simple overload works in all UE 5.x versions (5.0 through 5.7+).
+        // The FUnloadPackageParams struct is unreliable across versions and
+        // may cause compilation errors in UE 5.7+ where the struct is removed.
+        FText ErrorMessage;
+        const bool bUnloadResult = UPackageTools::UnloadPackages(SinglePackage, ErrorMessage, true);
+        if (!ErrorMessage.IsEmpty())
         {
             UE_LOG(LogMcpSafeOperations, Warning,
                 TEXT("%s: UnloadPackages reported for %s: %s"),
                 LogContext,
                 *PackageToUnload->GetName(),
-                *Params.OutErrorMessage.ToString());
+                *ErrorMessage.ToString());
         }
 
         FlushRenderingCommands();
@@ -1039,41 +1042,41 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
 
     // STEP 1: Close ALL editors for this AnimBlueprint
     // This includes Persona editors, animation graph editors, and any embedded toolkits
-    // Note: CloseAllEditorsForAsset should close Persona, but we force it explicitly
+// Note: CloseAllEditorsForAsset should close Persona, but we force it explicitly
 #if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
-    UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
-    if (AssetEditorSubsystem)
-    {
-        // Close editors multiple times to ensure nested/embedded editors are also closed
-        // Sometimes Persona editors can survive a single close call
-        for (int32 i = 0; i < 3; ++i)
-        {
-            AssetEditorSubsystem->CloseAllEditorsForAsset(AnimBlueprint);
-        }
-        
-        UE_LOG(LogMcpSafeOperations, Log, 
-            TEXT("McpQuiesceAnimBlueprintBeforeDelete: Closed all editors for '%s'"), 
-            *AnimBlueprint->GetName());
-    }
+UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+if (AssetEditorSubsystem)
+{
+// Close editors multiple times to ensure nested/embedded editors are also closed
+// Sometimes Persona editors can survive a single close call
+for (int32 i = 0; i < 3; ++i)
+{
+	AssetEditorSubsystem->CloseAllEditorsForAsset(AnimBlueprint);
+}
+
+UE_LOG(LogMcpSafeOperations, Log, 
+	TEXT("McpQuiesceAnimBlueprintBeforeDelete: Closed all editors for '%s'"), 
+	*AnimBlueprint->GetName());
+}
 #endif
 
-    // STEP 2: Clear editor selection if this AnimBlueprint is selected
-    // AnimBlueprints in selection can cause access violations during deletion
+// STEP 2: Clear editor selection if this AnimBlueprint is selected
+// AnimBlueprints in selection can cause access violations during deletion
 #if MCP_HAS_SELECTION
-    if (GEditor)
-    {
-        USelection* SelectedObjects = GEditor->GetSelectedObjects();
-        if (SelectedObjects && SelectedObjects->IsSelected(AnimBlueprint))
-        {
-            SelectedObjects->Deselect(AnimBlueprint);
-            UE_LOG(LogMcpSafeOperations, Log, 
-                TEXT("McpQuiesceAnimBlueprintBeforeDelete: Deselected AnimBlueprint '%s'"), 
-                *AnimBlueprint->GetName());
-        }
-        
-        // Also clear any subobject selections (anim graph nodes, etc.)
-        GEditor->SelectNone(false, true, false);
-    }
+if (GEditor)
+{
+USelection* SelectedObjects = GEditor->GetSelectedObjects();
+if (SelectedObjects && SelectedObjects->IsSelected(AnimBlueprint))
+{
+	SelectedObjects->Deselect(AnimBlueprint);
+	UE_LOG(LogMcpSafeOperations, Log, 
+		TEXT("McpQuiesceAnimBlueprintBeforeDelete: Deselected AnimBlueprint '%s'"), 
+		*AnimBlueprint->GetName());
+}
+
+// Also clear any subobject selections (anim graph nodes, etc.)
+GEditor->SelectNone(false, true, false);
+}
 #endif
 
     // STEP 3: Flush rendering commands and wait for editor state to settle.
@@ -1100,7 +1103,7 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
  */
 inline bool IsAnimBlueprintAsset(const FAssetData& AssetData)
 {
-    FString ClassName = AssetData.AssetClassPath.ToString();
+    FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
     return ClassName.Contains(TEXT("AnimBlueprint"));
 }
 
@@ -1115,7 +1118,7 @@ inline bool IsAnimBlueprintAsset(const FAssetData& AssetData)
  */
 inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)
 {
-    FString ClassName = AssetData.AssetClassPath.ToString();
+    FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
     // Match any Blueprint-derived type
     return ClassName.Contains(TEXT("Blueprint")) ||
            ClassName.Contains(TEXT("WidgetBlueprint")) ||
@@ -1135,7 +1138,7 @@ inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)
  */
 inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
 {
-    FString ClassName = AssetData.AssetClassPath.ToString();
+    FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
     
     // Animation assets that commonly crash on force-delete
     // These have complex compilation/render state that must be quiesced first
@@ -1179,7 +1182,7 @@ inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
  */
 inline int32 GetAnimationRigClusterDeletePriority(const FAssetData& AssetData)
 {
-    const FString ClassName = AssetData.AssetClassPath.ToString();
+    const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
 
     if (ClassName.Contains(TEXT("AnimBlueprint")))
     {
@@ -1353,13 +1356,13 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         }
     }
 
-    // STEP 3: Count the in-memory-only assets that were successfully unloaded.
-    for (const FAssetData& AssetData : InMemoryOnlyAssets)
-    {
-        const FString PackagePath = AssetData.PackageName.ToString();
-        const FString ObjectPath = AssetData.GetSoftObjectPath().ToString();
-        const bool bPackageStillLoaded = FindObject<UPackage>(nullptr, *PackagePath) != nullptr;
-        const bool bObjectStillLoaded = !ObjectPath.IsEmpty() && FindObject<UObject>(nullptr, *ObjectPath) != nullptr;
+// STEP 3: Count the in-memory-only assets that were successfully unloaded.
+for (const FAssetData& AssetData : InMemoryOnlyAssets)
+{
+const FString PackagePath = AssetData.PackageName.ToString();
+const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(AssetData);
+const bool bPackageStillLoaded = FindObject<UPackage>(nullptr, *PackagePath) != nullptr;
+const bool bObjectStillLoaded = !ObjectPath.IsEmpty() && FindObject<UObject>(nullptr, *ObjectPath) != nullptr;
 
         if (!bPackageStillLoaded && !bObjectStillLoaded)
         {
@@ -1428,68 +1431,64 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
                 TEXT("DeleteAnimationRigClusterOrdered: Deleting %d AnimBlueprint asset(s) individually via engine-owned delete"),
                 BatchAssets.Num());
 
-            for (const FAssetData& BatchAsset : BatchAssets)
-            {
-                UObject* AssetObject = BatchAsset.GetAsset();
-                if (!AssetObject)
-                {
-                    UE_LOG(LogMcpSafeOperations, Error,
-                        TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"),
-                        *BatchAsset.GetObjectPathString());
-                    return false;
-                }
+for (const FAssetData& BatchAsset : BatchAssets)
+{
+UObject* AssetObject = BatchAsset.GetAsset();
+if (!AssetObject)
+{
+UE_LOG(LogMcpSafeOperations, Error, TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"), *MCP_ASSET_DATA_GET_OBJECT_PATH(BatchAsset));
+return false;
+}
 
-                TArray<UObject*> SingleObjectToDelete;
-                SingleObjectToDelete.Add(AssetObject);
-                if (!ForceDeleteLoadedObjects(SingleObjectToDelete))
-                {
-                    return false;
-                }
-            }
+TArray<UObject*> SingleObjectToDelete;
+SingleObjectToDelete.Add(AssetObject);
+if (!ForceDeleteLoadedObjects(SingleObjectToDelete))
+{
+return false;
+}
+}
 
-            return true;
-        }
+return true;
+}
 
-        TArray<UObject*> ObjectsToDelete;
-        ObjectsToDelete.Reserve(BatchAssets.Num());
+TArray<UObject*> ObjectsToDelete;
+ObjectsToDelete.Reserve(BatchAssets.Num());
 
-        for (const FAssetData& BatchAsset : BatchAssets)
-        {
-            UObject* AssetObject = BatchAsset.GetAsset();
-            if (!AssetObject)
-            {
-                UE_LOG(LogMcpSafeOperations, Error,
-                    TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"),
-                    *BatchAsset.GetObjectPathString());
-                return false;
-            }
+for (const FAssetData& BatchAsset : BatchAssets)
+{
+UObject* AssetObject = BatchAsset.GetAsset();
+if (!AssetObject)
+{
+UE_LOG(LogMcpSafeOperations, Error, TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"), *MCP_ASSET_DATA_GET_OBJECT_PATH(BatchAsset));
+return false;
+}
 
-            ObjectsToDelete.Add(AssetObject);
-        }
+ObjectsToDelete.Add(AssetObject);
+}
 
-        return ForceDeleteLoadedObjects(ObjectsToDelete);
-    };
+return ForceDeleteLoadedObjects(ObjectsToDelete);
+};
 
-    // STEP 4: Delete file-backed assets through the engine-owned force-delete path.
-    // IMPORTANT: Keep Blueprint families narrow. AnimBlueprints and ControlRigBlueprints
-    // must not be mixed in the same batch because their editor teardown graphs differ.
-    TArray<FAssetData> AnimBlueprintAssets;
-    TArray<FAssetData> ControlRigBlueprintAssets;
-    TArray<FAssetData> GenericBlueprintAssets;
-    TArray<FAssetData> OtherFileBackedAssets;
+// STEP 4: Delete file-backed assets through the engine-owned force-delete path.
+// IMPORTANT: Keep Blueprint families narrow. AnimBlueprints and ControlRigBlueprints
+// must not be mixed in the same batch because their editor teardown graphs differ.
+TArray<FAssetData> AnimBlueprintAssets;
+TArray<FAssetData> ControlRigBlueprintAssets;
+TArray<FAssetData> GenericBlueprintAssets;
+TArray<FAssetData> OtherFileBackedAssets;
 
-    for (const FAssetData& AssetData : FileBackedAssets)
-    {
-        const FString ClassName = AssetData.AssetClassPath.ToString();
-        if (ClassName.Contains(TEXT("AnimBlueprint")))
-        {
-            AnimBlueprintAssets.Add(AssetData);
-        }
-        else if (ClassName.Contains(TEXT("ControlRigBlueprint")))
-        {
-            ControlRigBlueprintAssets.Add(AssetData);
-        }
-        else if (ClassName.Contains(TEXT("Blueprint")))
+for (const FAssetData& AssetData : FileBackedAssets)
+{
+const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
+if (ClassName.Contains(TEXT("AnimBlueprint")))
+{
+AnimBlueprintAssets.Add(AssetData);
+}
+else if (ClassName.Contains(TEXT("ControlRigBlueprint")))
+{
+ControlRigBlueprintAssets.Add(AssetData);
+}
+else if (ClassName.Contains(TEXT("Blueprint")))
         {
             GenericBlueprintAssets.Add(AssetData);
         }
@@ -1561,10 +1560,10 @@ inline bool PrepareAssetBatchForDelete(
         const FString PackagePath = AssetData.PackageName.ToString();
         FString AssetFilePath;
         bool bHasBackingFile = false;
-        const FString ClassName = AssetData.AssetClassPath.ToString();
-        const bool bIsWorldAsset = ClassName.Contains(TEXT("World")) ||
-            ClassName.Contains(TEXT("Map")) ||
-            ClassName.Contains(TEXT("Level"));
+const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
+const bool bIsWorldAsset = ClassName.Contains(TEXT("World")) ||
+                           ClassName.Contains(TEXT("Map")) ||
+                           ClassName.Contains(TEXT("Level"));
         const FString PackageExtension = bIsWorldAsset
             ? FPackageName::GetMapPackageExtension()
             : FPackageName::GetAssetPackageExtension();
@@ -1646,32 +1645,32 @@ inline bool IsRiskyAssetClassForDelete(const FString& AssetPath)
     // UE 5.0: GetAssetByObjectPath takes FName
     FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
 #endif
-    if (AssetData.IsValid())
-    {
-        FString ClassName = AssetData.AssetClassPath.ToString();
-        for (const FString& RiskyClass : RiskyClasses)
-        {
-            if (ClassName.Contains(RiskyClass))
-            {
-                return true;
-            }
-        }
-    }
-    
-    return false;
+if (AssetData.IsValid())
+{
+FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
+for (const FString& RiskyClass : RiskyClasses)
+{
+if (ClassName.Contains(RiskyClass))
+{
+return true;
+}
+}
+}
+
+return false;
 }
 
 /**
- * Check if an asset is a world/map asset using ONLY registry metadata.
- * CRITICAL: Do NOT call GetClass() or GetAsset() here as they can load packages.
- */
+* Check if an asset is a world/map asset using ONLY registry metadata.
+* CRITICAL: Do NOT call GetClass() or GetAsset() here as they can load packages.
+*/
 inline bool IsWorldAsset(const FAssetData& AssetData)
 {
-    FString ClassName = AssetData.AssetClassPath.ToString();
-    // Check for World, Map, Level asset types using string matching only
-    return ClassName.Contains(TEXT("World")) || 
-           ClassName.Contains(TEXT("Map")) ||
-           ClassName.Contains(TEXT("Level"));
+FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
+// Check for World, Map, Level asset types using string matching only
+return ClassName.Contains(TEXT("World")) ||
+       ClassName.Contains(TEXT("Map")) ||
+       ClassName.Contains(TEXT("Level"));
 }
 
 /**
@@ -1832,22 +1831,22 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     TArray<FAssetData> WorldAssets;
     TArray<FAssetData> OtherAssets;
     
-    for (const FAssetData& AssetData : AllAssets)
-    {
-        if (IsWorldAsset(AssetData))
-        {
-            WorldAssets.Add(AssetData);
-            UE_LOG(LogMcpSafeOperations, Log, TEXT("  World asset: %s (%s)"), 
-                *AssetData.AssetName.ToString(), *AssetData.AssetClassPath.ToString());
-        }
-        else
-        {
-            OtherAssets.Add(AssetData);
-        }
-    }
-    
-    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: %d world assets, %d other assets"), 
-        WorldAssets.Num(), OtherAssets.Num());
+for (const FAssetData& AssetData : AllAssets)
+{
+if (IsWorldAsset(AssetData))
+{
+WorldAssets.Add(AssetData);
+UE_LOG(LogMcpSafeOperations, Log, TEXT(" World asset: %s (%s)"), 
+*AssetData.AssetName.ToString(), *MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
+}
+else
+{
+OtherAssets.Add(AssetData);
+}
+}
+
+UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: %d world assets, %d other assets"),
+WorldAssets.Num(), OtherAssets.Num());
     
     // STEP 3: If folder contains world assets, switch to a known engine map using the
     // safe map-transition helper. Raw NewBlankMap triggers TickTaskManager assertions in UE 5.7.
@@ -1910,23 +1909,23 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     TArray<FAssetData> RiskyAnimationAssets;
     TArray<FAssetData> SafeAssets;
     
-    for (const FAssetData& AssetData : OtherAssets)
-    {
-        if (IsRiskyAnimationAsset(AssetData) || IsAnyBlueprintAsset(AssetData))
-        {
-            RiskyAnimationAssets.Add(AssetData);
-            UE_LOG(LogMcpSafeOperations, Log, TEXT("  Risky special-delete asset: %s (%s)"), 
-                *AssetData.AssetName.ToString(), *AssetData.AssetClassPath.ToString());
-        }
-        else
-        {
-            SafeAssets.Add(AssetData);
-        }
-    }
-    
-    UE_LOG(LogMcpSafeOperations, Log, 
-        TEXT("McpSafeDeleteFolder: Partitioned: %d risky special-delete, %d safe, %d world"), 
-        RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
+for (const FAssetData& AssetData : OtherAssets)
+{
+if (IsRiskyAnimationAsset(AssetData) || IsAnyBlueprintAsset(AssetData))
+{
+RiskyAnimationAssets.Add(AssetData);
+UE_LOG(LogMcpSafeOperations, Log, TEXT(" Risky special-delete asset: %s (%s)"), 
+*AssetData.AssetName.ToString(), *MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
+}
+else
+{
+SafeAssets.Add(AssetData);
+}
+}
+
+UE_LOG(LogMcpSafeOperations, Log,
+TEXT("McpSafeDeleteFolder: Partitioned: %d risky special-delete, %d safe, %d world"),
+RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
     
     // STEP 6: Delete RISKY ANIMATION ASSETS.
     // CRITICAL FOR UE 5.7+: The remaining crash is isolated to a mixed cluster of
@@ -2135,13 +2134,12 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
             TEXT("McpSafeDeleteFolder: Directory still exists after deletion attempt (remainingAssets=%d remainingSubPaths=%d existsOnDisk=%d)"),
             RemainingAssets.Num(), RemainingSubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
 
-        for (const FAssetData& RemainingAsset : RemainingAssets)
-        {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("McpSafeDeleteFolder: Remaining asset: %s (%s)"),
-                *RemainingAsset.GetSoftObjectPath().ToString(),
-                *RemainingAsset.AssetClassPath.ToString());
-        }
+for (const FAssetData& RemainingAsset : RemainingAssets)
+{
+UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeDeleteFolder: Remaining asset: %s (%s)"), 
+*MCP_ASSET_DATA_GET_SOFT_PATH(RemainingAsset), 
+*MCP_ASSET_DATA_GET_CLASS_PATH(RemainingAsset));
+}
 
         for (const FString& RemainingSubPath : RemainingSubPaths)
         {
