@@ -686,6 +686,15 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       }
       return cleanObject(res);
     }
+    case 'inspect_cdo': {
+      const inspectArgs = args as InspectArgs;
+      const res = await executeAutomationRequest(tools, 'inspect', {
+        ...normalizedArgs,
+        action: 'inspect_cdo',
+        blueprintPath: inspectArgs.blueprintPath || normalizedArgs.objectPath as string,
+      });
+      return cleanObject(res) as Record<string, unknown>;
+    }
     // Global actions that don't require objectPath
     case 'get_project_settings': {
       const res = await executeAutomationRequest(tools, 'inspect', {

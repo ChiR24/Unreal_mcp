@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `MCP_ADDITIONAL_PATH_PREFIXES` environment variable to whitelist custom UE content mount points (plugins with `CanContainContent`). Default is empty (no change to existing behavior). Enables projects with modular plugin architecture to access Blueprint assets at custom mount points like `/ProjectObject/`, `/ProjectAnimation/`, etc.
+- **`inspect_cdo` sub-action** for the `inspect` tool - inspect any Blueprint's Class Default Object without spawning an actor. Reads CDO property values via reflection. For Actor BPs, enumerates all components: native CDO components with effective override values, plus Blueprint SCS components from node templates (full parent chain). Includes parent attachment info for SCS components. Source classified as Native, SCS, or SCS_Inherited. Key fields (mesh, animClass, transform) included in summary; full property export via detailed or propertyNames filter.
 
 ---
 

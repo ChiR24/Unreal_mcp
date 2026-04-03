@@ -221,6 +221,8 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
 | `inspect_object` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectAction` | |
+| `inspect_class` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleInspectAction` | Global action, no objectPath required |
+| `inspect_cdo` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectCdoAction` | Inspect any Blueprint CDO without spawning an actor. CDO properties via reflection; for Actor BPs enumerates CDO components with effective overrides. |
 | `set_property` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleSetObjectProperty` | |
 | `get_property` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleGetObjectProperty` | |
 | `get_components` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
