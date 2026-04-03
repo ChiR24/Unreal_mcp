@@ -157,7 +157,8 @@ function findUbtExecutable(): string {
               `UE${major}${minor}_ENGINE_PATH`,
             ];
             for (const key of versionedEnvVars) {
-              if (process.env[key]) searchRoots.push(process.env[key]!);
+              const value = process.env[key];
+              if (value) searchRoots.push(value);
             }
 
             // Standard Epic Launcher (Windows)
