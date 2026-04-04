@@ -48,12 +48,15 @@
 // Include version compatibility FIRST
 #include "McpVersionCompatibility.h"
 
+#include <functional>
+
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
+#include "Misc/DefaultValueHelper.h"
 
 #if WITH_EDITOR
 // Graph Framework
@@ -717,10 +720,273 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         NodeType == TEXT("K2Node_CustomEvent")) {
       FString EventName;
       Payload->TryGetStringField(TEXT("eventName"), EventName);
-      FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*TargetGraph);
-      UK2Node_CustomEvent *EventNode = NodeCreator.CreateNode(false);
-      EventNode->CustomFunctionName = FName(*EventName);
-      FinalizeAndReport(NodeCreator, EventNode);
+      
+      // Helper lambda to convert a type string into an FEdGraphPinType
+      auto ResolvePinType = [&](const FString& TypeStr) -> FEdGraphPinType {
+        FEdGraphPinType PinType;
+        FString CleanType = TypeStr;
+        CleanType.TrimStartAndEndInline();
+        CleanType.RemoveFromEnd(TEXT("*"));
+
+        // Built‑in types
+        if (CleanType.Equals(TEXT("float"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Float;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("double"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+          PinType.PinSubCategory = NAME_Double;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("int"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("int32"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("int64"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Int64;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("bool"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("string"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FString"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_String;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("name"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FName"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("text"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FText"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Text;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("byte"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("uint8"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("object"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("class"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Class;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("softobject"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("softclass"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("interface"), ESearchCase::IgnoreCase)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Interface;
+          return PinType;
+        }
+
+        // Structs (FVector, etc.) – strip leading 'F' and search
+        FString StructName = CleanType;
+        if (StructName.StartsWith(TEXT("F"))) {
+          StructName = StructName.Mid(1);
+        }
+        if (UScriptStruct* Struct = FindObject<UScriptStruct>(nullptr, *StructName)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+          PinType.PinSubCategoryObject = Struct;
+          return PinType;
+        }
+        if (UScriptStruct* Struct = FindObject<UScriptStruct>(nullptr, *CleanType)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+          PinType.PinSubCategoryObject = Struct;
+          return PinType;
+        }
+
+        // Enums
+        if (UEnum* Enum = FindObject<UEnum>(nullptr, *CleanType)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+          PinType.PinSubCategoryObject = Enum;
+          return PinType;
+        }
+
+        // UObject derived classes
+        if (UClass* Class = ResolveUClass(CleanType)) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+          PinType.PinSubCategoryObject = Class;
+          return PinType;
+        }
+
+        // Containers (fallback to wildcard)
+        if (CleanType.StartsWith(TEXT("array<")) ||
+            CleanType.StartsWith(TEXT("set<")) ||
+            CleanType.StartsWith(TEXT("map<"))) {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
+          if (CleanType.StartsWith(TEXT("array<"))) PinType.ContainerType = EPinContainerType::Array;
+          else if (CleanType.StartsWith(TEXT("set<"))) PinType.ContainerType = EPinContainerType::Set;
+          else PinType.ContainerType = EPinContainerType::Map;
+          return PinType;
+        }
+
+        // Unknown fallback
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
+        return PinType;
+      };
+
+      const TArray<TSharedPtr<FJsonValue>>* ParamsArray = nullptr;
+      const bool bHasParams = Payload->TryGetArrayField(TEXT("parameters"), ParamsArray) && ParamsArray->Num() > 0;
+
+      // No parameters → simple custom event
+      if (!bHasParams) {
+        FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*TargetGraph);
+        UK2Node_CustomEvent* EventNode = NodeCreator.CreateNode(false);
+        EventNode->CustomFunctionName = FName(*EventName);
+        FinalizeAndReport(NodeCreator, EventNode);
+        return true;
+      }
+
+      // --- With parameters: use engine's UK2Node_CustomEvent::CreateFromFunction ---
+      // Remove any existing custom event with the same name to avoid conflicts.
+      // Must also remove the stale UFunction and its associated graph, otherwise the compiler
+      // will see two functions with the same name and the new node will remain out-of-date.
+      TArray<UK2Node_CustomEvent*> ExistingEvents;
+      FBlueprintEditorUtils::GetAllNodesOfClass<UK2Node_CustomEvent>(Blueprint, ExistingEvents);
+      for (UK2Node_CustomEvent* Existing : ExistingEvents) {
+        if (Existing && Existing->CustomFunctionName.ToString() == EventName) {
+          FName FuncName = Existing->CustomFunctionName;
+          // 1. Remove the function graph associated with this custom event
+          UEdGraph* FuncGraph = nullptr;
+          for (UEdGraph* Graph : Blueprint->FunctionGraphs)
+          {
+            if (Graph && Graph->GetFName() == FuncName)
+            {
+              FuncGraph = Graph;
+              break;
+            }
+          }
+          if (FuncGraph)
+          {
+            FBlueprintEditorUtils::RemoveGraph(Blueprint, FuncGraph, EGraphRemoveFlags::Default);
+          }
+          // 2. Remove the node from the graph
+          FBlueprintEditorUtils::RemoveNode(Blueprint, Existing, true);
+        }
+      }
+
+      // Create a unique temporary function name
+      FName TempFuncName = MakeUniqueObjectName(Blueprint->GeneratedClass, UFunction::StaticClass(), FName(*FString::Printf(TEXT("__TempCustomEventFunc_%s"), *EventName)));
+
+      // Create the temporary UFunction
+      UFunction* TempFunc = NewObject<UFunction>(Blueprint->GeneratedClass, TempFuncName, RF_Public);
+      TempFunc->FunctionFlags = FUNC_Public | FUNC_BlueprintCallable;
+
+      // Build parameter properties
+      TArray<FProperty*> Params;
+      for (const auto& ParamValue : *ParamsArray) {
+        const TSharedPtr<FJsonObject>& ParamObj = ParamValue->AsObject();
+        if (!ParamObj.IsValid()) continue;
+
+        FString ParamName = ParamObj->GetStringField(TEXT("name"));
+        FString ParamType = ParamObj->GetStringField(TEXT("type"));
+        FEdGraphPinType PinType = ResolvePinType(ParamType);
+
+        FProperty* Prop = nullptr;
+
+        // Map PinType to FProperty subclass
+        if (PinType.PinCategory == UEdGraphSchema_K2::PC_Float) {
+          Prop = new FFloatProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int) {
+          Prop = new FIntProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int64) {
+          Prop = new FInt64Property(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Boolean) {
+          FBoolProperty* BoolProp = new FBoolProperty(TempFunc, FName(*ParamName), RF_Public);
+          BoolProp->SetBoolSize(sizeof(bool), true);
+          Prop = BoolProp;
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_String) {
+          Prop = new FStrProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Name) {
+          Prop = new FNameProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Text) {
+          Prop = new FTextProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Byte && PinType.PinSubCategoryObject.IsValid()) {
+          FByteProperty* ByteProp = new FByteProperty(TempFunc, FName(*ParamName), RF_Public);
+          ByteProp->Enum = Cast<UEnum>(PinType.PinSubCategoryObject);
+          Prop = ByteProp;
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Struct && PinType.PinSubCategoryObject.IsValid()) {
+          FStructProperty* StructProp = new FStructProperty(TempFunc, FName(*ParamName), RF_Public);
+          StructProp->Struct = Cast<UScriptStruct>(PinType.PinSubCategoryObject);
+          Prop = StructProp;
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Object && PinType.PinSubCategoryObject.IsValid()) {
+          FObjectProperty* ObjProp = new FObjectProperty(TempFunc, FName(*ParamName), RF_Public);
+          ObjProp->PropertyClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = ObjProp;
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Class && PinType.PinSubCategoryObject.IsValid()) {
+          FClassProperty* ClassProp = new FClassProperty(TempFunc, FName(*ParamName), RF_Public);
+          ClassProp->PropertyClass = UClass::StaticClass();
+          ClassProp->MetaClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = ClassProp;
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject && PinType.PinSubCategoryObject.IsValid()) {
+          FSoftObjectProperty* SoftProp = new FSoftObjectProperty(TempFunc, FName(*ParamName), RF_Public);
+          SoftProp->PropertyClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = SoftProp;
+        } else {
+          // Fallback: wildcard -> Int
+          Prop = new FIntProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+
+        if (Prop) {
+          Prop->SetFlags(RF_Public);
+          Prop->PropertyFlags |= CPF_Parm;
+          Params.Add(Prop);
+        }
+      }
+
+      // Link properties into the function
+      if (Params.Num() > 0) {
+        TempFunc->ChildProperties = Params[0];
+        for (int32 i = 0; i < Params.Num() - 1; ++i) {
+          Params[i]->Next = Params[i + 1];
+        }
+      }
+      TempFunc->Bind();   // Finalize function signature
+
+      // Create the custom event node using the engine's official API
+      FVector2D NodePos(X, Y);
+      UK2Node_CustomEvent* EventNode = UK2Node_CustomEvent::CreateFromFunction(
+          NodePos, TargetGraph, EventName, TempFunc, false);
+
+      if (!EventNode) {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Failed to create custom event from function."), TEXT("INTERNAL_ERROR"));
+        return true;
+      }
+
+      // Ensure the node is fully initialized with a stable GUID
+      // CreateFromFunction does NOT call PostPlacedNewNode or CreateNewGuid
+      EventNode->CreateNewGuid();
+      EventNode->PostPlacedNewNode();
+
+      // Clean up the temporary function
+      TempFunc->MarkAsGarbage();
+
+      // Mark blueprint as structurally modified, compile, and save
+      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+      FKismetEditorUtilities::CompileBlueprint(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint);
+
+      // Report success
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), EventNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), EventNode->GetName());
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+          TEXT("Custom event with parameters created using engine API."), Result);
       return true;
     }
 
