@@ -1130,20 +1130,48 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    // Handle PinName in format "NodeName.PinName"
-    FString FromPinClean = FromPinName;
-    if (FromPinName.Contains(TEXT("."))) {
-      FromPinName.Split(TEXT("."), nullptr, &FromPinClean);
+    // Ensure nodes have allocated pins (some node types may not have pins yet)
+    if (FromNode->Pins.Num() == 0) {
+      UE_LOG(LogTemp, Warning, TEXT("connect_pins: FromNode '%s' has no pins, calling AllocateDefaultPins"), *FromNode->GetName());
+      FromNode->AllocateDefaultPins();
     }
-    FString ToPinClean = ToPinName;
-    if (ToPinName.Contains(TEXT("."))) {
-      ToPinName.Split(TEXT("."), nullptr, &ToPinClean);
+    if (ToNode->Pins.Num() == 0) {
+      UE_LOG(LogTemp, Warning, TEXT("connect_pins: ToNode '%s' has no pins, calling AllocateDefaultPins"), *ToNode->GetName());
+      ToNode->AllocateDefaultPins();
     }
 
-    UEdGraphPin *FromPin = FromNode->FindPin(*FromPinClean);
-    UEdGraphPin *ToPin = ToNode->FindPin(*ToPinClean);
+    // Handle PinName in format "NodeName.PinName"
+    FString FromPinClean;
+    if (!FromPinName.Split(TEXT("."), nullptr, &FromPinClean)) {
+      FromPinClean = FromPinName;
+    }
+    FString ToPinClean;
+    if (!ToPinName.Split(TEXT("."), nullptr, &ToPinClean)) {
+      ToPinClean = ToPinName;
+    }
+
+    // Try exact match first, then case-insensitive
+    auto FindPinCaseInsensitive = [](UEdGraphNode* Node, const FString& PinName) -> UEdGraphPin* {
+      UEdGraphPin* Pin = Node->FindPin(*PinName);
+      if (Pin) return Pin;
+      for (UEdGraphPin* P : Node->Pins) {
+        if (P->PinName.ToString().Equals(PinName, ESearchCase::IgnoreCase)) {
+          return P;
+        }
+      }
+      return nullptr;
+    };
+
+    UEdGraphPin *FromPin = FindPinCaseInsensitive(FromNode, FromPinClean);
+    UEdGraphPin *ToPin = FindPinCaseInsensitive(ToNode, ToPinClean);
 
     if (!FromPin || !ToPin) {
+      // Log the available pins for debugging
+      FString FromPinsList, ToPinsList;
+      for (UEdGraphPin* P : FromNode->Pins) FromPinsList += P->PinName.ToString() + TEXT(", ");
+      for (UEdGraphPin* P : ToNode->Pins) ToPinsList += P->PinName.ToString() + TEXT(", ");
+      UE_LOG(LogTemp, Warning, TEXT("connect_pins: FromNode '%s' pins: %s"), *FromNode->GetName(), *FromPinsList);
+      UE_LOG(LogTemp, Warning, TEXT("connect_pins: ToNode '%s' pins: %s"), *ToNode->GetName(), *ToPinsList);
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Could not find source or target pin."),
                           TEXT("PIN_NOT_FOUND"));
