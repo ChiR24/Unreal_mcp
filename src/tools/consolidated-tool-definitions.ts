@@ -4717,5 +4717,87 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         error: commonSchemas.stringProp
       }
     }
+  },
+  {
+    name: 'manage_mrq',
+    category: 'authoring',
+    description: 'Movie Render Queue (MRQ) management. Read/write render queue jobs, CVar overrides, output settings, presets, and trigger renders. Actions: get_queue, get_job_config, get_cvars, set_cvars, get_output_settings, set_output_settings, create_job, delete_job, render, get_render_status, load_preset.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: [
+            'get_queue', 'get_job_config', 'get_cvars', 'set_cvars',
+            'get_output_settings', 'set_output_settings',
+            'create_job', 'delete_job', 'render', 'get_render_status',
+            'load_preset'
+          ],
+          description: 'MRQ action to perform'
+        },
+        jobIndex: { type: 'number', description: 'Job index in the queue (default 0)' },
+        map: { type: 'string', description: 'Map path for create_job (e.g., /Game/Maps/MyLevel.MyLevel)' },
+        sequence: { type: 'string', description: 'Level sequence path for create_job' },
+        jobName: { type: 'string', description: 'Job name for create_job' },
+        set: { type: 'object', description: 'CVar overrides to set (key: cvar name, value: float). Used with set_cvars.' },
+        cvars: { type: 'object', description: 'Alias for set — CVar overrides as { name: value } pairs' },
+        remove: { type: 'array', items: { type: 'string' }, description: 'CVar names to remove. Used with set_cvars.' },
+        startCommands: { type: 'array', items: { type: 'string' }, description: 'Console commands to run before render' },
+        endCommands: { type: 'array', items: { type: 'string' }, description: 'Console commands to run after render' },
+        outputDirectory: { type: 'string', description: 'Output directory path for set_output_settings' },
+        resolutionX: { type: 'number', description: 'Output width for set_output_settings' },
+        resolutionY: { type: 'number', description: 'Output height for set_output_settings' },
+        fileNameFormat: { type: 'string', description: 'Filename format with tokens like {sequence_name}, {frame_number}' },
+        overrideExisting: { type: 'boolean', description: 'Overwrite existing output files' },
+        zeroPadFrameNumbers: { type: 'number', description: 'Number of digits for zero-padded frame numbers (default 4)' },
+        frameNumberOffset: { type: 'number', description: 'Offset added to frame numbers in output filenames' },
+        handleFrameCount: { type: 'number', description: 'Number of extra frames to render before/after sequence range' },
+        useCustomFrameRate: { type: 'boolean', description: 'Use a custom frame rate for output' },
+        useCustomPlaybackRange: { type: 'boolean', description: 'Use custom start/end frames instead of sequence range' },
+        customStartFrame: { type: 'number', description: 'Custom start frame (requires useCustomPlaybackRange)' },
+        customEndFrame: { type: 'number', description: 'Custom end frame (requires useCustomPlaybackRange)' },
+        presetPath: { type: 'string', description: 'Asset path to MRQ preset config for load_preset' }
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: commonSchemas.stringProp,
+        error: commonSchemas.stringProp,
+        result: {
+          type: 'object',
+          description: 'Action-specific result object',
+          properties: {
+            jobs: { type: 'array', description: 'Array of job objects (get_queue)' },
+            jobCount: { type: 'number' },
+            isRendering: { type: 'boolean' },
+            jobIndex: { type: 'number' },
+            jobName: commonSchemas.stringProp,
+            consoleVariables: { type: 'object', description: 'CVar name→value pairs' },
+            startConsoleCommands: { type: 'array', items: { type: 'string' } },
+            endConsoleCommands: { type: 'array', items: { type: 'string' } },
+            totalCVars: { type: 'number' },
+            outputDirectory: commonSchemas.stringProp,
+            resolutionX: { type: 'number' },
+            resolutionY: { type: 'number' },
+            fileNameFormat: commonSchemas.stringProp,
+            overrideExisting: { type: 'boolean' },
+            zeroPadFrameNumbers: { type: 'number' },
+            frameNumberOffset: { type: 'number' },
+            handleFrameCount: { type: 'number' },
+            useCustomFrameRate: { type: 'boolean' },
+            useCustomPlaybackRange: { type: 'boolean' },
+            customStartFrame: { type: 'number' },
+            customEndFrame: { type: 'number' },
+            remainingJobs: { type: 'number' },
+            renderStarted: { type: 'boolean' },
+            presetPath: commonSchemas.stringProp,
+            settingCount: { type: 'number' }
+          }
+        }
+      }
+    }
   }
 ];
