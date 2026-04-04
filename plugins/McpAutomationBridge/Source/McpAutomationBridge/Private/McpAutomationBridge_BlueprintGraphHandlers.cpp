@@ -1130,6 +1130,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
+    // Mark nodes for modification BEFORE any mutations so undo captures AllocateDefaultPins as well
+    FromNode->Modify();
+    ToNode->Modify();
+
     // Ensure nodes have allocated pins (some node types may not have pins yet)
     if (FromNode->Pins.Num() == 0) {
       UE_LOG(LogTemp, Warning, TEXT("connect_pins: FromNode '%s' has no pins, calling AllocateDefaultPins"), *FromNode->GetName());
@@ -1150,11 +1154,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       ToPinClean = ToPinName;
     }
 
-    // Try exact match first, then case-insensitive
+    // Try exact match first, then case-insensitive, skipping any null pins
     auto FindPinCaseInsensitive = [](UEdGraphNode* Node, const FString& PinName) -> UEdGraphPin* {
       UEdGraphPin* Pin = Node->FindPin(*PinName);
       if (Pin) return Pin;
       for (UEdGraphPin* P : Node->Pins) {
+        if (!P) continue;
         if (P->PinName.ToString().Equals(PinName, ESearchCase::IgnoreCase)) {
           return P;
         }
@@ -1166,10 +1171,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     UEdGraphPin *ToPin = FindPinCaseInsensitive(ToNode, ToPinClean);
 
     if (!FromPin || !ToPin) {
-      // Log the available pins for debugging
+      // Log the available pins for debugging, skipping null pins
       FString FromPinsList, ToPinsList;
-      for (UEdGraphPin* P : FromNode->Pins) FromPinsList += P->PinName.ToString() + TEXT(", ");
-      for (UEdGraphPin* P : ToNode->Pins) ToPinsList += P->PinName.ToString() + TEXT(", ");
+      for (UEdGraphPin* P : FromNode->Pins) {
+        if (P) FromPinsList += P->PinName.ToString() + TEXT(", ");
+      }
+      for (UEdGraphPin* P : ToNode->Pins) {
+        if (P) ToPinsList += P->PinName.ToString() + TEXT(", ");
+      }
       UE_LOG(LogTemp, Warning, TEXT("connect_pins: FromNode '%s' pins: %s"), *FromNode->GetName(), *FromPinsList);
       UE_LOG(LogTemp, Warning, TEXT("connect_pins: ToNode '%s' pins: %s"), *ToNode->GetName(), *ToPinsList);
       SendAutomationError(RequestingSocket, RequestId,
@@ -1177,9 +1186,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
                           TEXT("PIN_NOT_FOUND"));
       return true;
     }
-
-    FromNode->Modify();
-    ToNode->Modify();
 
     if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin)) {
       FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
