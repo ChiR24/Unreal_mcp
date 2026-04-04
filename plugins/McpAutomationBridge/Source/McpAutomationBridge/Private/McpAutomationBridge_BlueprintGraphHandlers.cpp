@@ -48,15 +48,12 @@
 // Include version compatibility FIRST
 #include "McpVersionCompatibility.h"
 
-#include <functional>
-
 #include "McpAutomationBridgeGlobals.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeHelpers.h"
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/ScopeExit.h"
-#include "Misc/DefaultValueHelper.h"
 
 #if WITH_EDITOR
 // Graph Framework
@@ -792,17 +789,45 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
           return PinType;
         }
 
-        // Structs (FVector, etc.) – strip leading 'F' and search
-        FString StructName = CleanType;
-        if (StructName.StartsWith(TEXT("F"))) {
-          StructName = StructName.Mid(1);
+        // Structs (FVector, etc.) – try qualified path first, then short name, then iterate
+        UScriptStruct* Struct = nullptr;
+        
+        // 1) Try full path (e.g., /Script/CoreUObject.Vector)
+        if (CleanType.Contains(TEXT("/Script/")))
+        {
+          Struct = LoadObject<UScriptStruct>(nullptr, *CleanType);
         }
-        if (UScriptStruct* Struct = FindObject<UScriptStruct>(nullptr, *StructName)) {
-          PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-          PinType.PinSubCategoryObject = Struct;
-          return PinType;
+        
+        // 2) Try short name with optional leading 'F'
+        if (!Struct)
+        {
+          FString StructName = CleanType;
+          if (StructName.StartsWith(TEXT("F")))
+          {
+            StructName = StructName.Mid(1);
+          }
+          Struct = FindObject<UScriptStruct>(nullptr, *StructName);
+          if (!Struct)
+          {
+            Struct = FindObject<UScriptStruct>(nullptr, *CleanType);
+          }
         }
-        if (UScriptStruct* Struct = FindObject<UScriptStruct>(nullptr, *CleanType)) {
+        
+        // 3) Fallback: iterate over all structs and match by name (case-insensitive)
+        if (!Struct)
+        {
+          for (TObjectIterator<UScriptStruct> It; It; ++It)
+          {
+            if (It->GetName().Equals(CleanType, ESearchCase::IgnoreCase))
+            {
+              Struct = *It;
+              break;
+            }
+          }
+        }
+        
+        if (Struct)
+        {
           PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
           PinType.PinSubCategoryObject = Struct;
           return PinType;
@@ -878,6 +903,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         }
       }
 
+      // Ensure the blueprint has a GeneratedClass (must be compiled)
+      if (!Blueprint->GeneratedClass)
+      {
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("Blueprint has no GeneratedClass. Compile it first."), TEXT("INVALID_STATE"));
+        return true;
+      }
+
       // Create a unique temporary function name
       FName TempFuncName = MakeUniqueObjectName(Blueprint->GeneratedClass, UFunction::StaticClass(), FName(*FString::Printf(TEXT("__TempCustomEventFunc_%s"), *EventName)));
 
@@ -891,8 +924,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         const TSharedPtr<FJsonObject>& ParamObj = ParamValue->AsObject();
         if (!ParamObj.IsValid()) continue;
 
-        FString ParamName = ParamObj->GetStringField(TEXT("name"));
-        FString ParamType = ParamObj->GetStringField(TEXT("type"));
+        FString ParamName, ParamType;
+        if (!ParamObj->TryGetStringField(TEXT("name"), ParamName) ||
+            !ParamObj->TryGetStringField(TEXT("type"), ParamType))
+        {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Missing 'name' or 'type' in parameter definition."), TEXT("INVALID_PARAMETER"));
+          return true;
+        }
         FEdGraphPinType PinType = ResolvePinType(ParamType);
 
         FProperty* Prop = nullptr;
@@ -900,13 +939,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         // Map PinType to FProperty subclass
         if (PinType.PinCategory == UEdGraphSchema_K2::PC_Float) {
           Prop = new FFloatProperty(TempFunc, FName(*ParamName), RF_Public);
+        } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Real) {
+          // double precision float
+          Prop = new FDoubleProperty(TempFunc, FName(*ParamName), RF_Public);
         } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int) {
           Prop = new FIntProperty(TempFunc, FName(*ParamName), RF_Public);
         } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int64) {
           Prop = new FInt64Property(TempFunc, FName(*ParamName), RF_Public);
         } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Boolean) {
           FBoolProperty* BoolProp = new FBoolProperty(TempFunc, FName(*ParamName), RF_Public);
-          BoolProp->SetBoolSize(sizeof(bool), true);
+          BoolProp->SetBoolSize(0, true);  // 0 = single bit, not byte size
           Prop = BoolProp;
         } else if (PinType.PinCategory == UEdGraphSchema_K2::PC_String) {
           Prop = new FStrProperty(TempFunc, FName(*ParamName), RF_Public);
@@ -936,8 +978,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
           SoftProp->PropertyClass = Cast<UClass>(PinType.PinSubCategoryObject);
           Prop = SoftProp;
         } else {
-          // Fallback: wildcard -> Int
-          Prop = new FIntProperty(TempFunc, FName(*ParamName), RF_Public);
+          // Unknown type: log warning and skip this parameter
+          UE_LOG(LogTemp, Warning, TEXT("Unsupported parameter type '%s' for parameter '%s' – skipping"), *ParamType, *ParamName);
+          continue;
         }
 
         if (Prop) {
