@@ -4,6 +4,43 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ---
 
+## [0.1.4] - 2026-04-03
+
+### Security
+- Command injection fixes in bump-version action and editor tools with mixed-context sanitization (#327, #322)
+- Path traversal fixes in `export_level` action and screenshot filenames (#305)
+- Replaced synchronous file operations with async to prevent blocking (#318)
+
+### Added
+- Custom content mount points via `MCP_ADDITIONAL_PATH_PREFIXES` environment variable (#326)
+- New `manage_project_settings` tool for runtime project configuration
+- Audio authoring capabilities: sound wave creation, sound cues, MetaSounds, attenuation settings
+- Success flags in audio asset creation responses
+- Optional plugin dependencies: IKRig, ChaosVehiclesPlugin, AnimationData
+
+### Fixed
+- UE 5.0 API incompatibilities in IK Rig and widget authoring
+- Crash when deleting animation/rig assets on UE 5.7+ (9ea2db4)
+- Folder deletion crashes with safe deletion implementation (f0f4e44, ed56353)
+- Widget creation crash (#306)
+- Asset loading reliability for newly created AI assets (bb5e3bb)
+- Asset query parameter bugs and expanded classNames support (#311)
+- Replaced custom asset directory checks with `UEditorAssetLibrary` to avoid stale cache
+- Fixed searchText filtering in `search_assets` action (4b1cb0e)
+- Unified pin serialization across blueprint graph handlers (#309, 10f8f2b)
+- Actor lookup to match subsystem behavior (checks both label and name)
+- Console command settings delegated to C++ handler for performance
+- Delay-load for optional plugin modules to prevent missing dependency errors (#317)
+- IK retargeter initialization using controller API (UE 5.7+) with backward compatibility
+- Rate limiting defaults and missing GraphQL heading in docs (d023284)
+- `get_ai_info` schema alignment (#310)
+
+### Dependencies
+- `github/codeql-action` 4.33.0 → 4.34.1
+- `picomatch` 4.0.3 → 4.0.4
+
+---
+
 ## [0.1.3] - 2026-03-21
 
 ### Security
