@@ -184,6 +184,22 @@ namespace McpHandlerUtils
     }
 
     /**
+     * Extract an optional float/double field with default value.
+     */
+    inline double GetOptionalFloat(
+        const TSharedPtr<FJsonObject>& Payload,
+        const FString& FieldName,
+        double DefaultValue = 0.0)
+    {
+        double Value = DefaultValue;
+        if (Payload.IsValid())
+        {
+            Payload->TryGetNumberField(FieldName, Value);
+        }
+        return Value;
+    }
+
+    /**
      * Extract a required float/double field with validation.
      */
     inline bool TryGetRequiredFloat(

@@ -305,8 +305,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Cues")));
         FString WavePath = McpHandlerUtils::GetOptionalString(Params, TEXT("wavePath"), TEXT(""));
         bool bLooping = McpHandlerUtils::GetOptionalBool(Params, TEXT("looping"), false);
-        float Volume = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("volume"), 1.0));
-        float Pitch = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("pitch"), 1.0));
+        float Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
+        float Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
         
         if (Name.IsEmpty())
@@ -423,8 +423,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         else if (NodeTypeLower == TEXT("modulator"))
         {
             USoundNodeModulator* Mod = Cue->ConstructSoundNode<USoundNodeModulator>();
-            Mod->VolumeMin = Mod->VolumeMax = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("volume"), 1.0));
-            Mod->PitchMin = Mod->PitchMax = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("pitch"), 1.0));
+            Mod->VolumeMin = Mod->VolumeMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
+            Mod->PitchMin = Mod->PitchMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
             NewNode = Mod;
         }
         else if (NodeTypeLower == TEXT("looping"))
@@ -455,7 +455,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         else if (NodeTypeLower == TEXT("delay"))
         {
             USoundNodeDelay* Delay = Cue->ConstructSoundNode<USoundNodeDelay>();
-            Delay->DelayMin = Delay->DelayMax = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("delay"), 0.0));
+            Delay->DelayMin = Delay->DelayMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("delay"), 0.0));
             NewNode = Delay;
         }
         else if (NodeTypeLower == TEXT("switch"))
@@ -1079,7 +1079,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         if (Params->HasField(TEXT("floatValue")))
         {
-            float Value = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("floatValue"), 0.0));
+            float Value = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0));
             // UE 5.7+: Use Literal.Set() directly instead of SetFromLiteral(FLiteralFloat())
             Literal.Set(Value);
         }
@@ -1168,8 +1168,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         }
         
         // Set initial properties if provided
-        NewClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("volume"), 1.0));
-        NewClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("pitch"), 1.0));
+        NewClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
+        NewClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
         
         SaveAudioAsset(NewClass, bSave);
         
@@ -1192,24 +1192,24 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         if (Params->HasField(TEXT("volume")))
         {
-            SoundClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("volume"), 1.0));
+            SoundClass->Properties.Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
         }
         if (Params->HasField(TEXT("pitch")))
         {
-            SoundClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("pitch"), 1.0));
+            SoundClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
         }
         if (Params->HasField(TEXT("lowPassFilterFrequency")))
         {
-            SoundClass->Properties.LowPassFilterFrequency = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("lowPassFilterFrequency"), 20000.0));
+            SoundClass->Properties.LowPassFilterFrequency = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lowPassFilterFrequency"), 20000.0));
         }
         // Note: StereoBleed property removed in UE 5.7
         if (Params->HasField(TEXT("lfeBleed")))
         {
-            SoundClass->Properties.LFEBleed = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("lfeBleed"), 0.5));
+            SoundClass->Properties.LFEBleed = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lfeBleed"), 0.5));
         }
         if (Params->HasField(TEXT("voiceCenterChannelVolume")))
         {
-            SoundClass->Properties.VoiceCenterChannelVolume = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("voiceCenterChannelVolume"), 0.0));
+            SoundClass->Properties.VoiceCenterChannelVolume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("voiceCenterChannelVolume"), 0.0));
         }
         
         SaveAudioAsset(SoundClass, bSave);
@@ -1290,10 +1290,10 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
     {
         FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
         FString SoundClassPath = McpHandlerUtils::GetOptionalString(Params, TEXT("soundClassPath"), TEXT(""));
-        float VolumeAdjust = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("volumeAdjuster"), 1.0));
-        float PitchAdjust = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("pitchAdjuster"), 1.0));
-        float FadeInTime = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("fadeInTime"), 0.0));
-        float FadeOutTime = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("fadeOutTime"), 0.0));
+        float VolumeAdjust = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volumeAdjuster"), 1.0));
+        float PitchAdjust = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitchAdjuster"), 1.0));
+        float FadeInTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("fadeInTime"), 0.0));
+        float FadeOutTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("fadeOutTime"), 0.0));
         bool bApplyToChildren = McpHandlerUtils::GetOptionalBool(Params, TEXT("applyToChildren"), true);
         bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
         
@@ -1342,7 +1342,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         if (Params->HasField(TEXT("eqPriority")))
         {
-            Mix->EQPriority = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("eqPriority"), 1.0));
+            Mix->EQPriority = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("eqPriority"), 1.0));
         }
         
         // EQ settings object - 4 bands available
@@ -1410,35 +1410,35 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
             // Accept flat parameters for simpler API usage
             if (Params->HasField(TEXT("lowFrequency")))
             {
-                Mix->EQSettings.FrequencyCenter0 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("lowFrequency"), 600.0));
+                Mix->EQSettings.FrequencyCenter0 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lowFrequency"), 600.0));
             }
             if (Params->HasField(TEXT("lowGain")))
             {
-                Mix->EQSettings.Gain0 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("lowGain"), 1.0));
+                Mix->EQSettings.Gain0 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lowGain"), 1.0));
             }
             if (Params->HasField(TEXT("midFrequency")))
             {
-                Mix->EQSettings.FrequencyCenter1 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("midFrequency"), 1000.0));
+                Mix->EQSettings.FrequencyCenter1 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("midFrequency"), 1000.0));
             }
             if (Params->HasField(TEXT("midGain")))
             {
-                Mix->EQSettings.Gain1 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("midGain"), 1.0));
+                Mix->EQSettings.Gain1 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("midGain"), 1.0));
             }
             if (Params->HasField(TEXT("highMidFrequency")))
             {
-                Mix->EQSettings.FrequencyCenter2 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("highMidFrequency"), 2000.0));
+                Mix->EQSettings.FrequencyCenter2 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highMidFrequency"), 2000.0));
             }
             if (Params->HasField(TEXT("highMidGain")))
             {
-                Mix->EQSettings.Gain2 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("highMidGain"), 1.0));
+                Mix->EQSettings.Gain2 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highMidGain"), 1.0));
             }
             if (Params->HasField(TEXT("highFrequency")))
             {
-                Mix->EQSettings.FrequencyCenter3 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("highFrequency"), 10000.0));
+                Mix->EQSettings.FrequencyCenter3 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highFrequency"), 10000.0));
             }
             if (Params->HasField(TEXT("highGain")))
             {
-                Mix->EQSettings.Gain3 = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("highGain"), 1.0));
+                Mix->EQSettings.Gain3 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highGain"), 1.0));
             }
         }
         
@@ -1519,11 +1519,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         // Set basic attenuation properties
         if (Params->HasField(TEXT("innerRadius")))
         {
-            NewAtten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("innerRadius"), 400.0));
+            NewAtten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("innerRadius"), 400.0));
         }
         if (Params->HasField(TEXT("falloffDistance")))
         {
-            NewAtten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("falloffDistance"), 3600.0));
+            NewAtten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("falloffDistance"), 3600.0));
         }
         
         SaveAudioAsset(NewAtten, bSave);
@@ -1549,11 +1549,11 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         // Configure distance attenuation
         if (Params->HasField(TEXT("innerRadius")))
         {
-            Atten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("innerRadius"), 400.0));
+            Atten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("innerRadius"), 400.0));
         }
         if (Params->HasField(TEXT("falloffDistance")))
         {
-            Atten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("falloffDistance"), 3600.0));
+            Atten->Attenuation.FalloffDistance = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("falloffDistance"), 3600.0));
         }
         
         FString FunctionType = McpHandlerUtils::GetOptionalString(Params, TEXT("distanceAlgorithm"), TEXT("linear")).ToLower();
@@ -1629,15 +1629,15 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         if (Params->HasField(TEXT("occlusionLowPassFilterFrequency")))
         {
-            Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0));
+            Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0));
         }
         if (Params->HasField(TEXT("occlusionVolumeAttenuation")))
         {
-            Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("occlusionVolumeAttenuation"), 0.0));
+            Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("occlusionVolumeAttenuation"), 0.0));
         }
         if (Params->HasField(TEXT("occlusionInterpolationTime")))
         {
-            Atten->Attenuation.OcclusionInterpolationTime = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("occlusionInterpolationTime"), 0.5));
+            Atten->Attenuation.OcclusionInterpolationTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("occlusionInterpolationTime"), 0.5));
         }
         
         SaveAudioAsset(Atten, bSave);
@@ -1662,19 +1662,19 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         
         if (Params->HasField(TEXT("reverbWetLevelMin")))
         {
-            Atten->Attenuation.ReverbWetLevelMin = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("reverbWetLevelMin"), 0.3));
+            Atten->Attenuation.ReverbWetLevelMin = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbWetLevelMin"), 0.3));
         }
         if (Params->HasField(TEXT("reverbWetLevelMax")))
         {
-            Atten->Attenuation.ReverbWetLevelMax = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("reverbWetLevelMax"), 0.95));
+            Atten->Attenuation.ReverbWetLevelMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbWetLevelMax"), 0.95));
         }
         if (Params->HasField(TEXT("reverbDistanceMin")))
         {
-            Atten->Attenuation.ReverbDistanceMin = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("reverbDistanceMin"), 0.0));
+            Atten->Attenuation.ReverbDistanceMin = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbDistanceMin"), 0.0));
         }
         if (Params->HasField(TEXT("reverbDistanceMax")))
         {
-            Atten->Attenuation.ReverbDistanceMax = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("reverbDistanceMax"), 0.0));
+            Atten->Attenuation.ReverbDistanceMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("reverbDistanceMax"), 0.0));
         }
         
         SaveAudioAsset(Atten, bSave);
@@ -1943,27 +1943,27 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
         // Set reverb properties if provided
         if (Params->HasField(TEXT("density")))
         {
-            NewEffect->Density = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("density"), 1.0));
+            NewEffect->Density = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("density"), 1.0));
         }
         if (Params->HasField(TEXT("diffusion")))
         {
-            NewEffect->Diffusion = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("diffusion"), 1.0));
+            NewEffect->Diffusion = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("diffusion"), 1.0));
         }
         if (Params->HasField(TEXT("gain")))
         {
-            NewEffect->Gain = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("gain"), 0.32));
+            NewEffect->Gain = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("gain"), 0.32));
         }
         if (Params->HasField(TEXT("gainHF")))
         {
-            NewEffect->GainHF = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("gainHF"), 0.89));
+            NewEffect->GainHF = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("gainHF"), 0.89));
         }
         if (Params->HasField(TEXT("decayTime")))
         {
-            NewEffect->DecayTime = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("decayTime"), 1.49));
+            NewEffect->DecayTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("decayTime"), 1.49));
         }
         if (Params->HasField(TEXT("decayHFRatio")))
         {
-            NewEffect->DecayHFRatio = static_cast<float>(McpHandlerUtils::GetOptionalInt(Params, TEXT("decayHFRatio"), 0.83));
+            NewEffect->DecayHFRatio = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("decayHFRatio"), 0.83));
         }
         
         SaveAudioAsset(NewEffect, bSave);
