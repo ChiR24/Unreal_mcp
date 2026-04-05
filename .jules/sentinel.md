@@ -68,7 +68,7 @@
 **Learning:** Double-encoding (using a sanitized value in a JSON payload) can corrupt standard paths/arguments because JSON natively escapes values. Conversely, using a raw value for a shell or console command interpolation leads to injection attacks.
 **Prevention:** Maintain strict context separation for inputs. Keep the raw string for data passed via JSON (which handles its own encoding/escaping), and explicitly apply `sanitizeCommandArgument` *only* to the variable explicitly interpolated into a console or shell command. Always check that the sanitizer result is not empty, and return the sanitized string in responses so that clients know exactly what was executed.
 
-## 2024-03-28 - [Command Injection in GitHub Actions via Tag Name Interpolation]
+## 2026-03-28 - [Command Injection in GitHub Actions via Tag Name Interpolation]
 **Vulnerability:** GitHub Actions workflows (`release.yml`, `publish-mcp.yml`) used direct string interpolation (`${{ ... }}`) for tag names and event names (e.g., `${{ steps.version.outputs.version }}`, `${{ github.ref }}`) directly inside `run:` blocks. This allows command injection if a malicious tag name containing shell metacharacters is pushed, as the string is evaluated as code.
 **Learning:** Contexts like `github.ref` and outputs derived from them are user-controlled data and can contain arbitrary strings. Direct interpolation of these values into shell scripts is unsafe.
 **Prevention:** Always pass user-controlled inputs and step outputs through the `env:` context. Never use direct string interpolation (`${{ ... }}`) inside `run:` script blocks.
