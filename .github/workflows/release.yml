@@ -42,9 +42,10 @@ jobs:
 
       - name: Extract changelog for this version
         id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          
           CHANGELOG=$(awk -v ver="$VERSION" '
             $0 ~ "## .*\\[" ver "\\]" { found=1; next }
             found && /^## .*\[/ { exit }
@@ -52,7 +53,7 @@ jobs:
           ' CHANGELOG.md)
           
           if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="Release ${{ steps.version.outputs.tag }}"
+            CHANGELOG="Release $TAG"
           fi
           
           echo "$CHANGELOG" > release_notes.md
@@ -60,18 +61,20 @@ jobs:
           cat release_notes.md
 
       - name: Create dist archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p release-artifacts
           
           # Pre-built archive (ready to run)
-          tar -czvf release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}.tar.gz \
+          tar -czvf release-artifacts/unreal-engine-mcp-server-${VERSION}.tar.gz \
             dist/ \
             package.json \
             README.md \
             CHANGELOG.md \
             LICENSE
           
-          zip -r release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}.zip \
+          zip -r release-artifacts/unreal-engine-mcp-server-${VERSION}.zip \
             dist/ \
             package.json \
             README.md \
@@ -83,7 +86,7 @@ jobs:
           [ -d "wasm" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS wasm/"
           [ -f "server.json" ] && OPTIONAL_PATHS="$OPTIONAL_PATHS server.json"
           
-          tar -czvf release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}-source.tar.gz \
+          tar -czvf release-artifacts/unreal-engine-mcp-server-${VERSION}-source.tar.gz \
             dist/ \
             src/ \
             package.json \
@@ -95,7 +98,7 @@ jobs:
             LICENSE \
             $OPTIONAL_PATHS
           
-          zip -r release-artifacts/unreal-engine-mcp-server-${{ steps.version.outputs.version }}-source.zip \
+          zip -r release-artifacts/unreal-engine-mcp-server-${VERSION}-source.zip \
             dist/ \
             src/ \
             package.json \
@@ -108,12 +111,14 @@ jobs:
             $OPTIONAL_PATHS
 
       - name: Create Plugin archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           if [ -d "plugins/McpAutomationBridge" ]; then
-            tar -czvf release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.tar.gz \
+            tar -czvf release-artifacts/McpAutomationBridge-plugin-${VERSION}.tar.gz \
               plugins/McpAutomationBridge/
             
-            zip -r release-artifacts/McpAutomationBridge-plugin-${{ steps.version.outputs.version }}.zip \
+            zip -r release-artifacts/McpAutomationBridge-plugin-${VERSION}.zip \
               plugins/McpAutomationBridge/
             
             echo "Plugin archive created"
@@ -134,10 +139,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Summary
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** $TAG" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts:" >> $GITHUB_STEP_SUMMARY
           ls -la release-artifacts/ >> $GITHUB_STEP_SUMMARY
