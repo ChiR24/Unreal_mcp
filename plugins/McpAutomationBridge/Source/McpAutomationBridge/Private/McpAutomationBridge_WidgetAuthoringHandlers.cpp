@@ -136,6 +136,14 @@
 // Editor Utilities
 #include "EditorAssetLibrary.h"
 
+// Notification System (SNotificationList.h must come before NotificationManager.h for FNotificationInfo)
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Framework/Notifications/NotificationManager.h"
+
+// Asset Editor Subsystem
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "Editor.h"
+
 // Internationalization
 #include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
@@ -973,17 +981,24 @@ namespace WidgetAuthoringHelpers
 
         const FName WidgetFName = Widget->GetFName();
 
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
         // Only register if not already present
-        if (!WidgetBP->WidgetVariableNameToGuidMap.Contains(WidgetFName))
+        if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
         {
             // Use deterministic GUID based on widget path for stability across saves
             // This matches the engine's pattern in WidgetBlueprintCompiler.cpp line 774
-            FGuid WidgetGuid = FGuid::NewDeterministicGuid(Widget->GetPathName());
-            WidgetBP->WidgetVariableNameToGuidMap.Emplace(WidgetFName, WidgetGuid);
+            FGuid WidgetGuid = MCP_NEW_DETERMINISTIC_GUID(Widget->GetPathName());
+            MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(WidgetFName, WidgetGuid);
 
             UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s"),
                    *WidgetFName.ToString(), *WidgetGuid.ToString());
         }
+#else
+        // UE 5.0: WidgetVariableNameToGuidMap doesn't exist, GUID tracking is handled differently.
+        UE_LOG(LogTemp, Verbose,
+               TEXT("RegisterWidgetGuid: Widget '%s' registered (UE 5.0 mode)"),
+               *WidgetFName.ToString());
+#endif
     }
 
     /**
@@ -1008,12 +1023,18 @@ namespace WidgetAuthoringHelpers
 
         const FName WidgetFName = Widget->GetFName();
 
-        if (WidgetBP->WidgetVariableNameToGuidMap.Contains(WidgetFName))
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
+        if (MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
         {
-            WidgetBP->WidgetVariableNameToGuidMap.Remove(WidgetFName);
+            MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Remove(WidgetFName);
             UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"),
                    *WidgetFName.ToString());
         }
+#else
+        UE_LOG(LogTemp, Verbose,
+               TEXT("UnregisterWidgetGuid: Widget '%s' unregistered (UE 5.0 mode)"),
+               *WidgetFName.ToString());
+#endif
     }
 
     /**
@@ -1167,16 +1188,22 @@ namespace WidgetAuthoringHelpers
 
         const FName AnimFName = Animation->GetFName();
 
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
         // Register in WidgetVariableNameToGuidMap if not present
-        if (!WidgetBP->WidgetVariableNameToGuidMap.Contains(AnimFName))
+        if (!MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(AnimFName))
         {
             // Use deterministic GUID based on animation path for stability
-            FGuid AnimGuid = FGuid::NewDeterministicGuid(Animation->GetPathName());
-            WidgetBP->WidgetVariableNameToGuidMap.Emplace(AnimFName, AnimGuid);
+            FGuid AnimGuid = MCP_NEW_DETERMINISTIC_GUID(Animation->GetPathName());
+            MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(AnimFName, AnimGuid);
 
             UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Registered animation '%s' with GUID %s"),
                    *AnimFName.ToString(), *AnimGuid.ToString());
         }
+#else
+        UE_LOG(LogTemp, Verbose,
+               TEXT("RegisterAnimationGuid: Animation '%s' registered (UE 5.0 mode)"),
+               *AnimFName.ToString());
+#endif
 
         // Ensure animation is in the Animations array
         if (!WidgetBP->Animations.Contains(Animation))
@@ -1303,8 +1330,10 @@ namespace WidgetAuthoringHelpers
         // Step 4: Clear the root widget pointer
         WidgetTree->RootWidget = nullptr;
 
-        // Step 5: Clear the GUID map - we'll rebuild it from scratch
+// Step 5: Clear the GUID map - we'll rebuild it from scratch
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
         WidgetBP->WidgetVariableNameToGuidMap.Empty();
+#endif
 
         UE_LOG(LogTemp, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
     }
@@ -1921,7 +1950,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     // 19.1 Widget Creation
     // =========================================================================
 
-    if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase))
+    // Accept both 'create_widget_blueprint' and 'create_widget' for flexibility
+    if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase) ||
+        SubAction.Equals(TEXT("create_widget"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"));
         if (Name.IsEmpty())
@@ -2032,6 +2063,82 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                FString::Printf(TEXT("Created widget blueprint: %s"), *Name), ResultJson);
+        return true;
+    }
+
+    // =========================================================================
+    // show_widget: Show a widget in viewport or display notification
+    // =========================================================================
+    if (SubAction.Equals(TEXT("show_widget"), ESearchCase::IgnoreCase))
+    {
+        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        FString WidgetId = GetJsonStringField(Payload, TEXT("widgetId"));
+        FString Message = GetJsonStringField(Payload, TEXT("message"));
+
+        // Handle notification widget specially
+        if (WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase))
+        {
+            FString NotificationText = Message.IsEmpty() ? TEXT("Notification") : Message;
+
+            // Use notification system
+            FNotificationInfo Info(FText::FromString(NotificationText));
+            Info.ExpireDuration = 3.0f;
+            Info.bUseLargeFont = true;
+
+            FSlateNotificationManager::Get().AddNotification(Info);
+
+            ResultJson->SetBoolField(TEXT("success"), true);
+            ResultJson->SetStringField(TEXT("message"), TEXT("Notification shown"));
+            ResultJson->SetStringField(TEXT("widgetId"), WidgetId);
+
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Notification shown"), ResultJson);
+            return true;
+        }
+
+        // For regular widgets, we need a path
+        FString EffectivePath = WidgetPath.IsEmpty() ? GetJsonStringField(Payload, TEXT("name")) : WidgetPath;
+        if (EffectivePath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                TEXT("Missing required parameter: widgetPath or name"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
+        // SECURITY: Validate widget path
+        FString SanitizedPath = SanitizeProjectRelativePath(EffectivePath);
+        if (SanitizedPath.IsEmpty())
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                TEXT("Invalid widgetPath: path traversal or invalid characters detected"),
+                                TEXT("SECURITY_VIOLATION"));
+            return true;
+        }
+        EffectivePath = SanitizedPath;
+
+        // Load the widget blueprint
+        UWidgetBlueprint *WidgetBP = LoadWidgetBlueprint(EffectivePath);
+        if (!WidgetBP)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Widget blueprint not found: %s"), *EffectivePath),
+                                TEXT("NOT_FOUND"));
+            return true;
+        }
+
+        // Note: Actually showing the widget in viewport requires PIE (Play In Editor)
+        // In editor mode, we can open the widget designer instead
+        if (GEditor)
+        {
+            // Open the widget blueprint in the editor
+            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(WidgetBP);
+        }
+
+        ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Widget opened: %s"), *EffectivePath));
+        ResultJson->SetStringField(TEXT("widgetPath"), EffectivePath);
+
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               FString::Printf(TEXT("Widget opened: %s"), *EffectivePath), ResultJson);
         return true;
     }
 

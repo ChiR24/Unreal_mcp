@@ -76,6 +76,6 @@ npm run test:smoke   # Mock mode smoke test
 ```
 
 ## NOTES
-- **Engine Reference**: Check engine code at `X:\Unreal_Engine\UE_5.7\Engine`, `UE_5.6`, `UE_5.3`.
+- **Engine Reference**: Check engine code at `X:\Unreal_Engine\UE_5.7\Engine`, `UE_5.6`, `UE_5.5`, `UE_5.4`, `UE_5.3`, `UE_5.2`, `UE_5.1`, `UE_5.0`.
 - **Version Files**: Version in `package.json`, `server.json`, `src/index.ts`.
 - **Test Patterns**: Integration tests use pipe-separated expectations (`success|error|timeout`).

@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **`inspect_cdo` sub-action** for the `inspect` tool – inspect any Blueprint's Class Default Object without spawning an actor. Reads CDO property values via reflection. For Actor BPs, enumerates all components: native CDO components with effective override values, plus Blueprint SCS components from node templates (full parent chain). Includes parent attachment info for SCS components. Source classified as Native, SCS, or SCS_Inherited. Key fields (mesh, animClass, transform) included in summary; full property export via detailed or propertyNames filter.
+
+---
+
+## 🏷️ [0.5.21] - 2026-04-03
+
+> [!IMPORTANT]
+> ### 🔒 Security, New Features & Major Crash Fixes
+> This release adds custom content mount points, full audio authoring, project settings management, vehicle physics configuration, blend tree/procedural animation/state machine creation, sequencer improvements, and critical crash prevention for deleting animation/IK assets and folders.
+
+<details>
+<summary><b>🛡️ Security</b></summary>
+
+- **Command Injection in bump-version action** – Sanitized `release-type` input ([#327](https://github.com/ChiR24/Unreal_mcp/pull/327))
+- **Command Injection in editor console commands** – Mixed-context sanitization for `start_recording`, `set_camera_fov`, `set_game_speed` ([#322](https://github.com/ChiR24/Unreal_mcp/pull/322))
+- **Path Traversal in `export_level`** – Added path validation ([#305](https://github.com/ChiR24/Unreal_mcp/pull/305))
+- **Path Traversal in screenshot filename** – Sanitized filenames, blocked traversal patterns ([#314](https://github.com/ChiR24/Unreal_mcp/pull/314))
+- **Synchronous fs Hardening** – Replaced blocking `fs.existsSync` / `fs.readdirSync` with async versions ([#318](https://github.com/ChiR24/Unreal_mcp/pull/318))
+
+</details>
+
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **Custom Content Mount Points** – `MCP_ADDITIONAL_PATH_PREFIXES` to whitelist plugin mount points (`/ProjectObject/`, etc.) ([#326](https://github.com/ChiR24/Unreal_mcp/pull/326) – thanks @6r0m)
+- **Full Audio Authoring** – Create sound waves, sound cues, sound classes, sound mixes, attenuation settings; success flags in responses.
+- **Project Settings Management** – New `manage_project_settings` tool (get/set project settings via config).
+- **Animation Authoring** – `create_blend_tree`, `create_procedural_anim`, `create_state_machine` (C++ implementations, not console commands).
+- **Vehicle Physics Configuration** – `configure_vehicle` with wheels, engine, transmission, mass, drag coefficient.
+- **Sequencer** – `set_tick_resolution`, `set_view_range` actions.
+- **Widget Authoring** – New template widgets: main menu, pause menu, HUD, crosshair, ammo counter, health bar, compass, interaction prompt, objective tracker, damage indicator, inventory grid, dialog box, radial menu, credits scroll, shop UI, quest tracker.
+- **Runtime Module Checks** – Verify GameplayAbilities, EnhancedInput, BehaviorTreeEditor, LevelSequenceEditor, NiagaraEditor, StateTree, SmartObjects, MassEntity are loaded before use (clear error messages when plugins missing).
+
+</details>
+
+<details>
+<summary><b>🛠️ Fixed</b></summary>
+
+#### Crash Prevention (UE 5.7+)
+
+- **Animation/Rig asset deletion** – Completely rewrote `McpSafeDeleteFolder` and added `DeleteAnimationRigClusterOrdered` to prevent 0xFFFFFFFFFFFFFFFF crashes when deleting AnimBlueprints, IKRigs, IKRetargeters, ControlRigBlueprints, and AnimSequences.
+- **Folder deletion** – Replaced `UEditorAssetLibrary::DeleteDirectory` with `McpSafeDeleteFolder` (proper world switching, package unloading, compilation quiesce).
+- **Blueprint creation** – Added pre‑creation checks in `CreateControlRigBlueprint` and widget blueprint creation to prevent engine assertion failures.
+- **Widget creation** – Fixed widget crash ([#306](https://github.com/ChiR24/Unreal_mcp/pull/306)) by adding GUID registration (`RegisterWidgetGuid`) and safe tree replacement (`SafeAddWidgetToTree`).
+- **AnimNotify/NotifyState** – Added abstract class validation and track existence checks.
+
+#### Asset & Path Handling
+
+- Improved asset loading reliability for newly created AI assets (removed stale `DoesAssetExist` checks).
+- Resolved asset query parameter bugs and expanded `classNames` support ([#311](https://github.com/ChiR24/Unreal_mcp/pull/311)).
+- Replaced custom asset directory checks with `UEditorAssetLibrary` to avoid stale cache issues.
+- Fixed `searchText` filtering in `search_assets` action ([#308](https://github.com/ChiR24/Unreal_mcp/pull/308)).
+- Added `offset` pagination to asset search.
+
+#### Blueprint & Graph Editing
+
+- Unified pin serialization across blueprint graph handlers ([#309](https://github.com/ChiR24/Unreal_mcp/pull/309)) – linked pins returned as objects with `nodeId` and `pinName`.
+- Improved actor lookup to match subsystem behavior (checks both label and name).
+- Aligned `get_ai_info` output with TypeScript schema ([#310](https://github.com/ChiR24/Unreal_mcp/pull/310)).
+
+#### Performance & Console
+
+- Delegated console command settings to C++ handler for better performance.
+- Ensured successful execution of console commands (check `GEngine->Exec` return value).
+- Added validation for required session parameters (interfaceType, controllerId, playerIndex, etc.).
+- Removed redundant `AsyncTask` wrappers in `generate_thumbnail` and `generate_lods` (fixed 30‑second timeout).
+
+#### Level Operations
+
+- **`rename_level`** – Now uses `DuplicateAsset` + `DeleteAsset` to avoid modal “Find/Replace” dialog.
+- **`duplicate_level`** – Validates source existence and deletes destination if already present.
+- **`export_level`** – Added source level existence check before export.
+
+#### Voice Chat & Sessions
+
+- Improved `mute_player` – falls back to `BlockPlayers` when voice server not connected.
+- Added validation for required parameters in all session actions.
+
+#### Plugin Stability
+
+- Used delay‑load for optional plugin modules to prevent missing dependency errors ([#317](https://github.com/ChiR24/Unreal_mcp/pull/317)).
+- Refactored IK retargeter initialization using controller API (UE 5.7+) with backward compatibility fallback.
+- Enhanced actor and component stability across subsystems.
+
+#### Documentation
+
+- Fixed rate limiting defaults and missing GraphQL heading ([#307](https://github.com/ChiR24/Unreal_mcp/pull/307)).
+
+</details>
+
+<details>
+<summary><b>🔄 Dependencies</b></summary>
+
+| Package | Update | PR |
+|---------|--------|-----|
+| `picomatch` | 4.0.3 → 4.0.4 | [#316](https://github.com/ChiR24/Unreal_mcp/pull/316) |
+| Dependencies group | 9 updates | [#320](https://github.com/ChiR24/Unreal_mcp/pull/320) |
+| `github/codeql-action` | 4.33.0 → 4.34.1 | [#319](https://github.com/ChiR24/Unreal_mcp/pull/319) |
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @google-labs-jules[bot] for all security fixes
+- @kalihman for asset query, searchText, docs, and blueprint graph fixes
+- @dependabot[bot] for dependency updates
+- @6r0m for custom content mount points (first contribution)
+
+</details>
+
+---
+
 ## 🏷️ [0.5.20] - 2026-03-21
 
 > [!IMPORTANT]

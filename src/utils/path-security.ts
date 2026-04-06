@@ -1,4 +1,28 @@
-export function sanitizePath(path: string, allowedRoots: string[] = ['/Game', '/Engine']): string {
+import { getAdditionalPathPrefixes } from '../config.js';
+
+export function sanitizePath(path: string, allowedRoots?: string[]): string {
+    // Default roots: all standard UE paths plus configured additional prefixes
+    const defaultRoots = ['/Game', '/Engine', '/Script', '/Temp'];
+    const sourceRoots = allowedRoots ?? [
+        ...defaultRoots,
+        ...getAdditionalPathPrefixes().map(p => p.replace(/\/$/, '')),
+    ];
+    // Normalize and validate all roots (including caller-supplied)
+    const normalizedRoots = [...new Set(
+        sourceRoots
+            .map(r => r.trim().replace(/\/+$/, ''))
+            .filter(r =>
+                r.length > 0 &&
+                r.startsWith('/') &&
+                r !== '/' &&
+                !r.includes('..') &&
+                !r.includes('//')
+            )
+    )];
+    if (normalizedRoots.length === 0) {
+        throw new Error('Invalid allowedRoots: no valid roots configured');
+    }
+    allowedRoots = normalizedRoots;
     if (!path || typeof path !== 'string') {
         throw new Error('Invalid path: must be a non-empty string');
     }

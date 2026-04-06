@@ -131,8 +131,12 @@
 #endif
 
 // Optional components check
-#if __has_include("Misc/ScopedTransaction.h")
+#if __has_include("ScopedTransaction.h")
+#include "ScopedTransaction.h"
+#elif __has_include("Misc/ScopedTransaction.h")
 #include "Misc/ScopedTransaction.h"
+#else
+#define MCP_NO_SCOPED_TRANSACTION 1
 #endif
 #if __has_include("Camera/CameraActor.h")
 #include "Camera/CameraActor.h"

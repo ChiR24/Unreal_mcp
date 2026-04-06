@@ -39,8 +39,11 @@ jobs:
 
       - name: Extract version from tag
         id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
         run: |
-          if [[ ${{ github.event_name }} == "push" && ${{ github.ref }} == refs/tags/* ]]; then
+          if [[ "$EVENT_NAME" == "push" && "$REF_NAME" == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
           else
             VERSION=$(node -p "require('./package.json').version")
@@ -49,8 +52,9 @@ jobs:
           echo "Publishing version: $VERSION"
 
       - name: Update server.json version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
           jq --arg v "$VERSION" '.version = $v | .packages[] |= if .registryType == "npm" then .version = $v else . end' server.json > tmp && mv tmp server.json
           echo "Updated server.json:"
           cat server.json

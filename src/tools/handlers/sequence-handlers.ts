@@ -545,23 +545,52 @@ export async function handleSequenceTools(action: string, args: Record<string, u
       });
       return cleanObject(res);
     }
-    case 'set_work_range': {
-      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
-      const start = Number(args.start);
-      const end = Number(args.end);
-      // Validate start/end are numbers
-      if (!Number.isFinite(start)) throw new Error('Invalid start: must be a number');
-      if (!Number.isFinite(end)) throw new Error('Invalid end: must be a number');
+	case 'set_work_range': {
+		const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+		const start = Number(args.start);
+		const end = Number(args.end);
+		// Validate start/end are numbers
+		if (!Number.isFinite(start)) throw new Error('Invalid start: must be a number');
+		if (!Number.isFinite(end)) throw new Error('Invalid end: must be a number');
 
-      const res = await executeAutomationRequest(tools, 'manage_sequence', {
-        ...args,
-        path,
-        start,
-        end,
-        subAction: 'set_work_range'
-      });
-      return cleanObject(res);
-    }
+		const res = await executeAutomationRequest(tools, 'manage_sequence', {
+			...args,
+			path,
+			start,
+			end,
+			subAction: 'set_work_range'
+		});
+		return cleanObject(res);
+	}
+	case 'set_tick_resolution': {
+		const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+		const resolution = args.resolution;
+		if (resolution === undefined || resolution === null) {
+			throw new Error('Missing required parameter: resolution');
+		}
+
+		const res = await executeAutomationRequest(tools, 'manage_sequence', {
+			...args,
+			path,
+			resolution,
+			subAction: 'set_tick_resolution'
+		});
+		return cleanObject(res);
+	}
+	case 'set_view_range': {
+		const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+		const start = args.start !== undefined ? Number(args.start) : undefined;
+		const end = args.end !== undefined ? Number(args.end) : undefined;
+
+		const res = await executeAutomationRequest(tools, 'manage_sequence', {
+			...args,
+			path,
+			start,
+			end,
+			subAction: 'set_view_range'
+		});
+		return cleanObject(res);
+	}
     default:
       // Ensure subAction is set for compatibility with C++ handler expectations
       if (args.action && !args.subAction) {

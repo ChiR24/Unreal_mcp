@@ -43,8 +43,10 @@ jobs:
 
       - name: 'Determine size label'
         id: 'size_label'
+        env:
+          TOTAL_CHANGES: ${{ steps.diff_stats.outputs.total_changes }}
         run: |
-          TOTAL=${{ steps.diff_stats.outputs.total_changes }}
+          TOTAL=$TOTAL_CHANGES
           
           if [ $TOTAL -lt 10 ]; then
             echo "size_label=size/xs" >> $GITHUB_OUTPUT

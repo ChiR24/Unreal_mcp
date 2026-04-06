@@ -1,7 +1,7 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { HandlerArgs, SystemArgs } from '../../types/handler-types.js';
-import { executeAutomationRequest } from './common-handlers.js';
+import { executeAutomationRequest, validateArgsSecurity } from './common-handlers.js';
 
 /** Response from various operations */
 interface OperationResponse {
@@ -23,6 +23,10 @@ interface AssetValidationResult {
 }
 
 export async function handleSystemTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
+  // Security validation: Check all arguments for path traversal before processing
+  // This catches malicious parameters even if they're not used by the specific action
+  validateArgsSecurity(args);
+  
   const argsTyped = args as SystemArgs;
   const sysAction = String(action || '').toLowerCase();
   
@@ -147,7 +151,8 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           action: 'create_widget',
           name: effectiveName,
           type: widgetType,
-          savePath: effectivePath
+          savePath: effectivePath,
+          folder: effectivePath  // C++ expects 'folder' but TS uses 'savePath' - send both for compatibility
         }) as Record<string, unknown>;
 
 
@@ -180,9 +185,11 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
           : undefined;
 
         try {
+          // Route through manage_widget_authoring show_widget which handles notifications
           const res = await executeAutomationRequest(tools, 'manage_widget_authoring', {
-            action: 'show_notification',
-            text,
+            action: 'show_widget',
+            widgetId: 'notification',
+            message: text,
             duration
           }) as OperationResponse;
           const ok = res && res.success !== false;
@@ -614,12 +621,15 @@ export async function handleSystemTools(action: string, args: HandlerArgs, tools
       const height = Number.isFinite(Number(argsRecord.height)) ? Number(argsRecord.height) : (parsed.height ?? NaN);
 
       const windowed = argsRecord.windowed === true || argsTyped.enabled === false;
+      const fullscreen = argsTyped.enabled === true;
       const suffix = windowed ? 'w' : 'f';
 
       if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         // If only toggling mode and no resolution provided, attempt a mode toggle.
         if (typeof argsRecord.windowed === 'boolean' || typeof argsTyped.enabled === 'boolean') {
-          await executeAutomationRequest(tools, 'console_command', { command: `r.FullScreenMode ${windowed ? 1 : 0}` });
+          // fullscreen=true sets fullscreen, windowed=true sets windowed
+          const modeValue = windowed ? 1 : (fullscreen ? 0 : 1);
+          await executeAutomationRequest(tools, 'console_command', { command: `r.FullScreenMode ${modeValue}` });
           return {
             success: true,
             message: `Fullscreen mode toggled (${windowed ? 'windowed' : 'fullscreen'})`,

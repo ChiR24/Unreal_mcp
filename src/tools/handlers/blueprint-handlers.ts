@@ -348,6 +348,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         memberClass: resolvedMemberClass,
         posX: argsRecord.posX as number | undefined,
         posY: argsRecord.posY as number | undefined,
+        parameters: argsRecord.parameters as { name: string; type: string }[] | undefined,
         timeoutMs: argsRecord.timeoutMs as number | undefined
       }) as Record<string, unknown>;
       return cleanObject(res);

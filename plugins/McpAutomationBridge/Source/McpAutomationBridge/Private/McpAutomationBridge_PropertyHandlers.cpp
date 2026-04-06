@@ -73,6 +73,14 @@
 #include "Editor.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/SkeletalMesh.h"
 #endif
 
 // =============================================================================
@@ -2683,5 +2691,373 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetDependencies(
                       TEXT("get_asset_dependencies requires editor build."),
                       TEXT("NOT_IMPLEMENTED"));
   return true;
+#endif
+}
+
+// =============================================================================
+// inspect_cdo - Blueprint Class Default Object Inspection
+// =============================================================================
+
+#if WITH_EDITOR
+namespace
+{
+
+// Builds a JSON summary for a single component template.
+// Summary mode: name, class, source, transform, and key asset fields.
+// Detailed mode or propertyNames filter: adds full/selective property export.
+TSharedPtr<FJsonObject> BuildComponentSummary(
+    UActorComponent* Template,
+    const FString& DisplayName,
+    const FString& Source,
+    bool bDetailed,
+    const TArray<FName>& PropertyFilter)
+{
+    TSharedPtr<FJsonObject> CompObj = McpHandlerUtils::CreateResultObject();
+    CompObj->SetStringField(TEXT("name"), DisplayName);
+    CompObj->SetStringField(TEXT("class"), Template->GetClass()->GetName());
+    CompObj->SetStringField(TEXT("source"), Source);
+
+    // Transform via existing repo helpers
+    if (USceneComponent* SceneComp = Cast<USceneComponent>(Template))
+    {
+        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
+        TransformObj->SetObjectField(TEXT("location"),
+            McpHandlerUtils::VectorToJson(SceneComp->GetRelativeLocation()));
+        TransformObj->SetObjectField(TEXT("rotation"),
+            McpHandlerUtils::RotatorToJson(SceneComp->GetRelativeRotation()));
+        TransformObj->SetObjectField(TEXT("scale"),
+            McpHandlerUtils::VectorToJson(SceneComp->GetRelativeScale3D()));
+        CompObj->SetObjectField(TEXT("transform"), TransformObj);
+    }
+
+    // Key asset fields for common mesh component types
+    if (USkeletalMeshComponent* SkelComp = Cast<USkeletalMeshComponent>(Template))
+    {
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+        USkeletalMesh* Mesh = SkelComp->GetSkeletalMeshAsset();
+#else
+        USkeletalMesh* Mesh = SkelComp->SkeletalMesh;
+#endif
+        CompObj->SetStringField(TEXT("skeletalMesh"),
+            Mesh ? Mesh->GetPathName() : TEXT("None"));
+        CompObj->SetStringField(TEXT("animClass"),
+            SkelComp->AnimClass ? SkelComp->AnimClass->GetPathName() : TEXT("None"));
+    }
+
+    if (UStaticMeshComponent* StaticComp = Cast<UStaticMeshComponent>(Template))
+    {
+        CompObj->SetStringField(TEXT("staticMesh"),
+            StaticComp->GetStaticMesh()
+                ? StaticComp->GetStaticMesh()->GetPathName()
+                : TEXT("None"));
+    }
+
+    // Full/selective property export only when requested
+    if (PropertyFilter.Num() > 0)
+    {
+        TSharedPtr<FJsonObject> Props =
+            McpPropertyReflection::ExportPropertiesToJson(Template, PropertyFilter);
+        if (Props.IsValid())
+        {
+            CompObj->SetObjectField(TEXT("properties"), Props);
+        }
+    }
+    else if (bDetailed)
+    {
+        TSharedPtr<FJsonObject> Props =
+            McpPropertyReflection::ExportObjectToJson(Template, false);
+        if (Props.IsValid())
+        {
+            CompObj->SetObjectField(TEXT("properties"), Props);
+        }
+    }
+
+    return CompObj;
+}
+
+// Builds a set of SCS variable names for source classification.
+// Returns a map: variable name -> source label ("SCS" or "SCS_Inherited").
+TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
+{
+    TMap<FString, FString> SourceMap;
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (!Node) continue;
+                const FString VarName = Node->GetVariableName().ToString();
+                if (!SourceMap.Contains(VarName))
+                {
+                    SourceMap.Add(VarName,
+                        (Bp == Blueprint) ? TEXT("SCS") : TEXT("SCS_Inherited"));
+                }
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+    return SourceMap;
+}
+
+// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
+UActorComponent* FindCdoComponent(
+    UBlueprint* Blueprint,
+    UObject* CDO,
+    const FString& ComponentName)
+{
+    // Search native CDO components first (effective overrides)
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    {
+        TInlineComponentArray<UActorComponent*> Components;
+        DefaultActor->GetComponents(Components);
+        for (UActorComponent* Comp : Components)
+        {
+            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
+            {
+                return Comp;
+            }
+        }
+    }
+
+    // Search SCS node templates (BP-added components)
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (Node && Node->ComponentTemplate &&
+                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+                {
+                    return Node->ComponentTemplate;
+                }
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+    return nullptr;
+}
+
+} // anonymous namespace
+#endif // WITH_EDITOR
+
+bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+#if WITH_EDITOR
+    if (!Payload.IsValid())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("inspect_cdo: payload missing"),
+                            TEXT("INVALID_PAYLOAD"));
+        return true;
+    }
+
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (BlueprintPath.IsEmpty())
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("blueprintPath is required for inspect_cdo"),
+                            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    FString NormalizedPath, LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(
+        BlueprintPath, NormalizedPath, LoadError);
+    if (!Blueprint)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Blueprint not found: %s (%s)"),
+                                            *BlueprintPath, *LoadError),
+                            TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+
+    UClass* GeneratedClass = Blueprint->GeneratedClass;
+    if (!GeneratedClass)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+                            TEXT("CDO_NOT_FOUND"));
+        return true;
+    }
+
+    UObject* CDO = GeneratedClass->GetDefaultObject();
+    if (!CDO)
+    {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to get Class Default Object"),
+                            TEXT("CDO_NOT_FOUND"));
+        return true;
+    }
+
+    // Parse optional params
+    FString ComponentNameFilter;
+    Payload->TryGetStringField(TEXT("componentName"), ComponentNameFilter);
+    bool bDetailed = false;
+    Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
+
+    TArray<FName> PropertyNameFilter;
+    const TArray<TSharedPtr<FJsonValue>>* PropNamesArr = nullptr;
+    if (Payload->TryGetArrayField(TEXT("propertyNames"), PropNamesArr) && PropNamesArr)
+    {
+        for (const auto& Val : *PropNamesArr)
+        {
+            FString S;
+            if (Val->TryGetString(S))
+            {
+                PropertyNameFilter.Add(FName(*S));
+            }
+        }
+    }
+
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetStringField(TEXT("blueprintPath"), NormalizedPath);
+    Resp->SetStringField(TEXT("className"), GeneratedClass->GetName());
+    Resp->SetStringField(TEXT("classPath"), GeneratedClass->GetPathName());
+    Resp->SetStringField(TEXT("parentClass"),
+        GeneratedClass->GetSuperClass()
+            ? GeneratedClass->GetSuperClass()->GetName()
+            : TEXT("None"));
+
+    // --- Component filter mode: single component dump ---
+    if (!ComponentNameFilter.IsEmpty())
+    {
+        UActorComponent* FoundComp = FindCdoComponent(Blueprint, CDO, ComponentNameFilter);
+        if (!FoundComp)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Component not found: %s"),
+                                                *ComponentNameFilter),
+                                TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
+
+        TSharedPtr<FJsonObject> CompJson;
+        if (PropertyNameFilter.Num() > 0)
+        {
+            CompJson = McpPropertyReflection::ExportPropertiesToJson(
+                FoundComp, PropertyNameFilter);
+        }
+        else
+        {
+            CompJson = McpPropertyReflection::ExportObjectToJson(
+                FoundComp, false);
+        }
+
+        // Return both the lookup name and the internal object name
+        Resp->SetStringField(TEXT("componentName"), ComponentNameFilter);
+        Resp->SetStringField(TEXT("templateObjectName"), FoundComp->GetName());
+        Resp->SetStringField(TEXT("componentClass"),
+            FoundComp->GetClass()->GetName());
+        if (CompJson.IsValid())
+        {
+            Resp->SetObjectField(TEXT("properties"), CompJson);
+        }
+        Resp->SetBoolField(TEXT("success"), true);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               TEXT("CDO component inspected"), Resp, FString());
+        return true;
+    }
+
+    // --- CDO properties (only when detailed or propertyNames given) ---
+    if (PropertyNameFilter.Num() > 0)
+    {
+        TSharedPtr<FJsonObject> CdoProps =
+            McpPropertyReflection::ExportPropertiesToJson(CDO, PropertyNameFilter);
+        if (CdoProps.IsValid())
+        {
+            Resp->SetObjectField(TEXT("cdoProperties"), CdoProps);
+        }
+    }
+    else if (bDetailed)
+    {
+        TSharedPtr<FJsonObject> CdoProps =
+            McpPropertyReflection::ExportObjectToJson(CDO, false);
+        if (CdoProps.IsValid())
+        {
+            Resp->SetObjectField(TEXT("cdoProperties"), CdoProps);
+        }
+    }
+
+    // --- Components: hybrid CDO + SCS ---
+    // Native components (C++ constructor) live on the CDO with effective overrides.
+    // SCS components (Blueprint-added) only exist as templates on SCS nodes.
+    TArray<TSharedPtr<FJsonValue>> ComponentsArray;
+    TSet<FString> SeenNames;
+    TMap<FString, FString> ScsSourceMap = BuildScsSourceMap(Blueprint);
+
+    // 1) Native CDO components (effective override values)
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    {
+        TInlineComponentArray<UActorComponent*> CdoComponents;
+        DefaultActor->GetComponents(CdoComponents);
+        for (UActorComponent* Comp : CdoComponents)
+        {
+            if (!Comp) continue;
+            const FString CompName = Comp->GetName();
+            SeenNames.Add(CompName);
+
+            const FString Source = ScsSourceMap.Contains(CompName)
+                ? TEXT("Native_Override") : TEXT("Native");
+
+            ComponentsArray.Add(MakeShared<FJsonValueObject>(
+                BuildComponentSummary(Comp, CompName, Source,
+                                      bDetailed, PropertyNameFilter)));
+        }
+    }
+
+    // 2) SCS components (Blueprint-added) from SCS node templates.
+    //    Walk full parent chain for inherited BP components.
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (!Node || !Node->ComponentTemplate) continue;
+                const FString VarName = Node->GetVariableName().ToString();
+                if (SeenNames.Contains(VarName)) continue;
+                SeenNames.Add(VarName);
+
+                const FString Source = (Bp == Blueprint)
+                    ? TEXT("SCS") : TEXT("SCS_Inherited");
+
+                TSharedPtr<FJsonObject> CompObj = BuildComponentSummary(
+                    Node->ComponentTemplate, VarName, Source,
+                    bDetailed, PropertyNameFilter);
+
+                // Add parent attachment info from SCS node
+                if (Node->ParentComponentOrVariableName != NAME_None)
+                {
+                    CompObj->SetStringField(TEXT("attachParent"),
+                        Node->ParentComponentOrVariableName.ToString());
+                }
+
+                ComponentsArray.Add(MakeShared<FJsonValueObject>(CompObj));
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+
+    Resp->SetArrayField(TEXT("components"), ComponentsArray);
+    Resp->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
+    Resp->SetBoolField(TEXT("success"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("CDO inspection completed"), Resp, FString());
+    return true;
+#else
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("inspect_cdo requires editor build."),
+                        TEXT("NOT_IMPLEMENTED"));
+    return true;
 #endif
 }

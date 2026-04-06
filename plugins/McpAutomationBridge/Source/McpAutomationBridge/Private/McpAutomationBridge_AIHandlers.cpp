@@ -37,6 +37,16 @@
 // - SavePackageHelperAI for safe asset saving (avoids FullyLoad on new packages)
 // - Uses MCP_HAS_* macros for feature detection
 //
+// ASSET EXISTENCE CHECK PATTERN:
+// - For operations on newly created assets (assign_behavior_tree, assign_blackboard):
+//   DoesAssetExist is SKIPPED because newly created assets may not be indexed yet.
+//   LoadObject null-check is sufficient.
+// - For operations on existing assets (add_blackboard_key, add_composite_node):
+//   DoesAssetExist IS used to fail fast for typo/wrong-path cases.
+// - This differs from NiagaraAuthoringHandlers which always uses DoesAssetExist
+//   because Niagara assets are never created and immediately modified in the same
+//   operation sequence.
+//
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 // =============================================================================
 
@@ -611,27 +621,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
         FString BehaviorTreePath = GetStringFieldAI(Payload, TEXT("behaviorTreePath"));
 
-        // CRITICAL: Explicitly check if assets exist before LoadObject
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
+        // indexed in the asset registry. Rely on LoadObject null-check instead.
+        UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+        if (!ControllerBP)
         {
             SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        if (!UEditorAssetLibrary::DoesAssetExist(BehaviorTreePath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Behavior Tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
-        if (!Controller)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath),
-                                TEXT("NOT_FOUND"));
+                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -639,22 +635,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         if (!BT)
         {
             SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Behavior Tree not found: %s"), *BehaviorTreePath),
-                                TEXT("NOT_FOUND"));
+                FString::Printf(TEXT("Behavior tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
             return true;
         }
 
         // Set default BehaviorTree property on the generated class CDO using reflection
-        if (Controller->GeneratedClass)
+        if (ControllerBP->GeneratedClass)
         {
-            if (AAIController* CDO = Cast<AAIController>(Controller->GeneratedClass->GetDefaultObject()))
+            if (AAIController* CDO = Cast<AAIController>(ControllerBP->GeneratedClass->GetDefaultObject()))
             {
                 // Use reflection to find and set BehaviorTree-related properties
                 // Look for common property names used in AI Controller blueprints
                 bool bPropertySet = false;
                 
                 // Try to find a UBehaviorTree* property on the CDO
-                for (TFieldIterator<FObjectProperty> PropIt(Controller->GeneratedClass); PropIt; ++PropIt)
+                for (TFieldIterator<FObjectProperty> PropIt(ControllerBP->GeneratedClass); PropIt; ++PropIt)
                 {
                     FObjectProperty* ObjProp = *PropIt;
                     if (ObjProp && ObjProp->PropertyClass && ObjProp->PropertyClass->IsChildOf(UBehaviorTree::StaticClass()))
@@ -676,10 +671,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                     PinType.PinSubCategoryObject = UBehaviorTree::StaticClass();
                     
                     const FName VarName = TEXT("DefaultBehaviorTree");
-                    if (FBlueprintEditorUtils::AddMemberVariable(Controller, VarName, PinType))
+                    if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
                     {
                         // Set the default value for the variable
-                        FProperty* NewProp = Controller->GeneratedClass->FindPropertyByName(VarName);
+                        FProperty* NewProp = ControllerBP->GeneratedClass->FindPropertyByName(VarName);
                         if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
                         {
                             ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BT);
@@ -696,11 +691,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Controller);
-        McpSafeAssetSave(Controller);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
+        McpSafeAssetSave(ControllerBP);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
-        McpHandlerUtils::AddVerification(Result, Controller);
+        McpHandlerUtils::AddVerification(Result, ControllerBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree reference set"), Result);
         return true;
     }
@@ -710,27 +705,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         FString ControllerPath = GetStringFieldAI(Payload, TEXT("controllerPath"));
         FString BlackboardPath = GetStringFieldAI(Payload, TEXT("blackboardPath"));
 
-        // CRITICAL: Explicitly check if assets exist before LoadObject
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
+        // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
+        // indexed in the asset registry. Rely on LoadObject null-check instead.
+        UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+        if (!ControllerBP)
         {
             SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
-        if (!Controller)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath),
-                                TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -738,22 +719,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         if (!BB)
         {
             SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath),
-                                TEXT("NOT_FOUND"));
+                FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
             return true;
         }
 
         // Set default Blackboard property on the generated class CDO using reflection
-        // The Blueprint can call UseBlackboard() in BeginPlay with this asset reference
-        if (Controller->GeneratedClass)
+        if (ControllerBP->GeneratedClass)
         {
-            if (AAIController* CDO = Cast<AAIController>(Controller->GeneratedClass->GetDefaultObject()))
+            if (AAIController* CDO = Cast<AAIController>(ControllerBP->GeneratedClass->GetDefaultObject()))
             {
                 // Use reflection to find and set Blackboard-related properties
                 bool bPropertySet = false;
                 
                 // Try to find a UBlackboardData* property on the CDO
-                for (TFieldIterator<FObjectProperty> PropIt(Controller->GeneratedClass); PropIt; ++PropIt)
+                for (TFieldIterator<FObjectProperty> PropIt(ControllerBP->GeneratedClass); PropIt; ++PropIt)
                 {
                     FObjectProperty* ObjProp = *PropIt;
                     if (ObjProp && ObjProp->PropertyClass && ObjProp->PropertyClass->IsChildOf(UBlackboardData::StaticClass()))
@@ -775,10 +754,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
                     PinType.PinSubCategoryObject = UBlackboardData::StaticClass();
                     
                     const FName VarName = TEXT("DefaultBlackboard");
-                    if (FBlueprintEditorUtils::AddMemberVariable(Controller, VarName, PinType))
+                    if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
                     {
                         // Set the default value for the variable
-                        FProperty* NewProp = Controller->GeneratedClass->FindPropertyByName(VarName);
+                        FProperty* NewProp = ControllerBP->GeneratedClass->FindPropertyByName(VarName);
                         if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
                         {
                             ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BB);
@@ -795,18 +774,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Controller);
-        bool bSaved = McpSafeAssetSave(Controller);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
+        bool bSaved = McpSafeAssetSave(ControllerBP);
         Result->SetBoolField(TEXT("saved"), bSaved);
         Result->SetStringField(TEXT("controllerPath"), ControllerPath);
         Result->SetStringField(TEXT("blackboardPath"), BlackboardPath);
-        McpHandlerUtils::AddVerification(Result, Controller);
+        McpHandlerUtils::AddVerification(Result, ControllerBP);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard reference set"), Result);
         return true;
     }
-
-    // =========================================================================
-    // 16.2 Blackboard (3 actions)
     // =========================================================================
 
     if (SubAction == TEXT("create_blackboard_asset"))
@@ -1068,16 +1044,40 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // Map task type strings to actual UE classes via template or runtime lookup
+        // Support both short names ("MoveTo") and full class names ("MoveToTask")
         UBTTaskNode* NewTask = nullptr;
-        if (TaskType.Equals(TEXT("MoveTo"), ESearchCase::IgnoreCase))
+        UClass* TaskClass = nullptr;
+        
+        // Template-based classes: use StaticClass() for known task types
+        if (TaskType.Equals(TEXT("MoveTo"), ESearchCase::IgnoreCase) ||
+            TaskType.Equals(TEXT("MoveToTask"), ESearchCase::IgnoreCase))
         {
             NewTask = NewObject<UBTTask_MoveTo>(BT);
         }
-        else if (TaskType.Equals(TEXT("Wait"), ESearchCase::IgnoreCase))
+        else if (TaskType.Equals(TEXT("Wait"), ESearchCase::IgnoreCase) ||
+                 TaskType.Equals(TEXT("WaitTask"), ESearchCase::IgnoreCase))
         {
             NewTask = NewObject<UBTTask_Wait>(BT);
         }
-        // Add more task types as needed
+        else
+        {
+            // Fallback: try runtime class lookup
+            TaskClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.%s"), *TaskType));
+            if (!TaskClass)
+            {
+                // Try with "BTTask_" prefix
+                TaskClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.BTTask_%s"), *TaskType));
+            }
+            if (TaskClass)
+            {
+                UObject* TaskObj = NewObject<UObject>(BT, TaskClass);
+                if (TaskObj && TaskObj->GetClass()->IsChildOf(UBTTaskNode::StaticClass()))
+                {
+                    NewTask = static_cast<UBTTaskNode*>(TaskObj);
+                }
+            }
+        }
 
         if (NewTask)
         {
@@ -1112,15 +1112,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
         }
 
         UBTDecorator* NewDecorator = nullptr;
-        if (DecoratorType.Equals(TEXT("Blackboard"), ESearchCase::IgnoreCase))
+        // Support both short names and full class names
+        if (DecoratorType.Equals(TEXT("Blackboard"), ESearchCase::IgnoreCase) ||
+            DecoratorType.Equals(TEXT("BlackboardDecorator"), ESearchCase::IgnoreCase))
         {
             NewDecorator = NewObject<UBTDecorator_Blackboard>(BT);
         }
-        else if (DecoratorType.Equals(TEXT("Cooldown"), ESearchCase::IgnoreCase))
+        else if (DecoratorType.Equals(TEXT("Cooldown"), ESearchCase::IgnoreCase) ||
+                 DecoratorType.Equals(TEXT("CooldownDecorator"), ESearchCase::IgnoreCase))
         {
             NewDecorator = NewObject<UBTDecorator_Cooldown>(BT);
         }
-        else if (DecoratorType.Equals(TEXT("Loop"), ESearchCase::IgnoreCase))
+        else if (DecoratorType.Equals(TEXT("Loop"), ESearchCase::IgnoreCase) ||
+                 DecoratorType.Equals(TEXT("LoopDecorator"), ESearchCase::IgnoreCase))
         {
             NewDecorator = NewObject<UBTDecorator_Loop>(BT);
         }
@@ -1239,18 +1243,40 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
+        // Map generator type strings to actual UE classes via template or runtime lookup
         UEnvQueryGenerator* NewGenerator = nullptr;
-        if (GeneratorType.Equals(TEXT("ActorsOfClass"), ESearchCase::IgnoreCase))
+        UClass* GeneratorClass = nullptr;
+        if (GeneratorType.Equals(TEXT("ActorsOfClass"), ESearchCase::IgnoreCase) ||
+            GeneratorType.Equals(TEXT("EnvQueryGenerator_ActorsOfClass"), ESearchCase::IgnoreCase))
         {
             NewGenerator = NewObject<UEnvQueryGenerator_ActorsOfClass>(Query);
         }
-        else if (GeneratorType.Equals(TEXT("OnCircle"), ESearchCase::IgnoreCase))
+        else if (GeneratorType.Equals(TEXT("OnCircle"), ESearchCase::IgnoreCase) ||
+                 GeneratorType.Equals(TEXT("EnvQueryGenerator_OnCircle"), ESearchCase::IgnoreCase))
         {
             NewGenerator = NewObject<UEnvQueryGenerator_OnCircle>(Query);
         }
-        else if (GeneratorType.Equals(TEXT("SimpleGrid"), ESearchCase::IgnoreCase))
+        else if (GeneratorType.Equals(TEXT("SimpleGrid"), ESearchCase::IgnoreCase) ||
+                 GeneratorType.Equals(TEXT("EnvQueryGenerator_SimpleGrid"), ESearchCase::IgnoreCase))
         {
             NewGenerator = NewObject<UEnvQueryGenerator_SimpleGrid>(Query);
+        }
+        else
+        {
+            // Fallback: try runtime class lookup with full class name
+            GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.%s"), *GeneratorType));
+            if (!GeneratorClass)
+            {
+                GeneratorClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/AIModule.EnvQueryGenerator_%s"), *GeneratorType));
+            }
+            if (GeneratorClass)
+            {
+                UObject* GenObj = NewObject<UObject>(Query, GeneratorClass);
+                if (GenObj && GenObj->GetClass()->IsChildOf(UEnvQueryGenerator::StaticClass()))
+                {
+                    NewGenerator = static_cast<UEnvQueryGenerator*>(GenObj);
+                }
+            }
         }
 
         if (NewGenerator)
@@ -3361,15 +3387,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             FocusActorName = GetStringFieldAI(Payload, TEXT("targetActor"));
         }
 
-        // CRITICAL: Explicitly check if asset exists before LoadObject
-        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
+        // Load the blueprint - LoadObject handles path resolution
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
@@ -3405,23 +3423,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        // CRITICAL: Explicitly check if asset exists before LoadObject
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
+        // Load blueprint - rely on LoadObject without DoesAssetExist pre-check
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Remove or reset the FocusActor variable
         FBlueprintEditorUtils::RemoveMemberVariable(ControllerBP, TEXT("FocusActor"));
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(ControllerBP);
@@ -3629,21 +3633,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        // CRITICAL: Explicitly check if assets exist before LoadObject
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        if (!UEditorAssetLibrary::DoesAssetExist(BTPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Behavior tree not found: %s"), *BTPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
+        // Load assets directly - DoesAssetExist pre-check can fail on newly created assets
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
@@ -3687,19 +3677,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAIAction(
             return true;
         }
 
-        // CRITICAL: Explicitly check if asset exists before LoadObject
-        if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
         UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
         if (!ControllerBP)
         {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
+            TSharedPtr<FJsonObject> StopResult = McpHandlerUtils::CreateResultObject();
+            StopResult->SetStringField(TEXT("controllerPath"), ControllerPath);
+            StopResult->SetBoolField(TEXT("stopped"), false);
+            SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior tree stopped (controller not found)"), StopResult);
             return true;
         }
 

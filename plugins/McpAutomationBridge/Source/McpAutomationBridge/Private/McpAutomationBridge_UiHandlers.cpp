@@ -78,6 +78,7 @@
 #include "Framework/Commands/UIAction.h"
 #include "Framework/Docking/TabManager.h"
 #include "HAL/FileManager.h"
+#include "Misc/ConfigCacheIni.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "ImageUtils.h"
@@ -3722,6 +3723,97 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     {
       Message = FString::Printf(TEXT("Widget '%s' not found"), *Key);
       ErrorCode = TEXT("WIDGET_NOT_FOUND");
+    }
+  }
+  // ===========================================================================
+  // SubAction: get_project_settings
+  // ===========================================================================
+  else if (LowerSub == TEXT("get_project_settings"))
+  {
+    FString Section;
+    Payload->TryGetStringField(TEXT("section"), Section);
+    Payload->TryGetStringField(TEXT("category"), Section);
+
+    TSharedPtr<FJsonObject> SettingsObj = MakeShared<FJsonObject>();
+
+    // Get common project settings
+    if (GEngine)
+    {
+      // Engine settings
+      SettingsObj->SetStringField(TEXT("engineVersion"), FString::Printf(TEXT("%d.%d"), ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION));
+
+      // Project name
+      FString ProjectName = FApp::GetProjectName();
+      SettingsObj->SetStringField(TEXT("projectName"), ProjectName);
+
+      // Project directory
+      FString ProjectDir = FPaths::ProjectDir();
+      SettingsObj->SetStringField(TEXT("projectDir"), ProjectDir);
+
+      // Game engine settings via config
+      FString ResolutionX, ResolutionY;
+      GConfig->GetString(TEXT("/Script/Engine.GameUserSettings"), TEXT("ResolutionSizeX"), ResolutionX, GGameUserSettingsIni);
+      GConfig->GetString(TEXT("/Script/Engine.GameUserSettings"), TEXT("ResolutionSizeY"), ResolutionY, GGameUserSettingsIni);
+      if (!ResolutionX.IsEmpty() && !ResolutionY.IsEmpty())
+      {
+        TSharedPtr<FJsonObject> ResObj = MakeShared<FJsonObject>();
+        ResObj->SetStringField(TEXT("width"), ResolutionX);
+        ResObj->SetStringField(TEXT("height"), ResolutionY);
+        SettingsObj->SetObjectField(TEXT("resolution"), ResObj);
+      }
+
+      // Fullscreen mode
+      FString FullscreenMode;
+      GConfig->GetString(TEXT("/Script/Engine.GameUserSettings"), TEXT("LastConfirmedFullscreenMode"), FullscreenMode, GGameUserSettingsIni);
+      if (!FullscreenMode.IsEmpty())
+      {
+        SettingsObj->SetStringField(TEXT("fullscreenMode"), FullscreenMode);
+      }
+    }
+
+    Resp->SetObjectField(TEXT("settings"), SettingsObj);
+    bSuccess = true;
+    Message = TEXT("Project settings retrieved");
+  }
+  // ===========================================================================
+  // SubAction: set_project_setting
+  // ===========================================================================
+  else if (LowerSub == TEXT("set_project_setting"))
+  {
+    FString Section, Key, Value;
+    Payload->TryGetStringField(TEXT("section"), Section);
+    Payload->TryGetStringField(TEXT("key"), Key);
+    Payload->TryGetStringField(TEXT("value"), Value);
+
+    if (Section.IsEmpty() || Key.IsEmpty())
+    {
+      Message = TEXT("section and key are required for set_project_setting");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      // Try to set the config value
+      // First, normalize section format (ensure it starts with /Script/ if it looks like a UE section)
+      FString NormalizedSection = Section;
+      if (!NormalizedSection.StartsWith(TEXT("/")) && !NormalizedSection.StartsWith(TEXT("[")))
+      {
+        NormalizedSection = FString::Printf(TEXT("/Script/%s"), *Section);
+      }
+
+      // Set the value in the appropriate config file
+      // For project settings, use DefaultEngine.ini
+      FString ConfigFile = FPaths::ProjectConfigDir() / TEXT("DefaultEngine.ini");
+
+      // Use GConfig to set the value
+      GConfig->SetString(*NormalizedSection, *Key, *Value, ConfigFile);
+      GConfig->Flush(false, ConfigFile);
+
+      Resp->SetStringField(TEXT("section"), NormalizedSection);
+      Resp->SetStringField(TEXT("key"), Key);
+      Resp->SetStringField(TEXT("value"), Value);
+      bSuccess = true;
+      Message = FString::Printf(TEXT("Set %s.%s = %s"), *NormalizedSection, *Key, *Value);
     }
   }
   // ===========================================================================

@@ -348,7 +348,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
                 GEngine->Exec(World, TEXT("r.Lumen.Scene.Recapture"));
 
                 TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-                Result->SetStringField(TEXT("action"), TEXT("lumen_update_scene"));
+                Result->SetStringField(TEXT("action"), TEXT("manage_render"));
+                Result->SetStringField(TEXT("subAction"), TEXT("lumen_update_scene"));
                 Result->SetStringField(TEXT("command"), TEXT("r.Lumen.Scene.Recapture"));
                 Result->SetBoolField(TEXT("executed"), true);
 

@@ -3,6 +3,7 @@
  */
 
 import { toRotTuple, toVec3Tuple } from './normalize.js';
+import { getAdditionalPathPrefixes } from '../config.js';
 
 /**
  * Maximum path length allowed in Unreal Engine
@@ -155,15 +156,17 @@ export function sanitizePath(path: string): string {
     return '/Game';
   }
 
-  // Ensure the first segment is a valid root (Game, Engine, Script, Temp)
-  const ROOTS = new Set(['Game', 'Engine', 'Script', 'Temp']);
+  // Ensure the first segment is a valid root (Game, Engine, Script, Temp, or configured extras)
+  const additionalRoots = getAdditionalPathPrefixes()
+    .map(p => p.replace(/^\//, '').replace(/\/$/, ''));
+  const ROOTS = new Set(['Game', 'Engine', 'Script', 'Temp', ...additionalRoots]);
   if (!ROOTS.has(segments[0])) {
     segments = ['Game', ...segments];
   }
 
   const sanitizedSegments = segments.map(segment => {
-    // Don't sanitize Game, Engine, or other root folders
-    if (['Game', 'Engine', 'Script', 'Temp'].includes(segment)) {
+    // Don't sanitize root folders
+    if (ROOTS.has(segment)) {
       return segment;
     }
     return sanitizeAssetName(segment);

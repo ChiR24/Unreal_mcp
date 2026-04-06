@@ -1436,7 +1436,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("list_objects")) ||
         LowerSubAction.Equals(TEXT("find_by_class")) ||
         LowerSubAction.Equals(TEXT("find_by_tag")) ||
-        LowerSubAction.Equals(TEXT("inspect_class"));
+        LowerSubAction.Equals(TEXT("inspect_class")) ||
+        LowerSubAction.Equals(TEXT("inspect_cdo"));
 
     // Actor actions (delegated to HandleControlActorAction)
     const bool bIsActorAction =
@@ -1753,6 +1754,13 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                                     TEXT("INVALID_ARGUMENT"));
             }
             return true;
+        }
+        // ---------------------------------------------------------------------
+        // inspect_cdo - delegated to HandleInspectCdoAction (PropertyHandlers)
+        // ---------------------------------------------------------------------
+        else if (LowerSubAction.Equals(TEXT("inspect_cdo")))
+        {
+            return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
         }
 
         // Fallback for unimplemented global actions

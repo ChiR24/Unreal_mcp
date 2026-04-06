@@ -317,7 +317,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'list_tools: show all tools with status. list_categories: show categories. enable/disable_tools: toggle specific tools. enable/disable_category: toggle category. get_status: current state. reset: restore defaults.'
         },
         tools: { type: 'array', items: commonSchemas.stringProp, description: 'Tool names to enable/disable' },
-        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility)' }
+        category: { type: 'string', description: 'Category name to enable/disable (core, world, authoring, gameplay, utility, all)' }
       },
       required: ['action']
     },
@@ -357,6 +357,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         recursivePaths: commonSchemas.booleanProp,
         recursiveClasses: commonSchemas.booleanProp,
         limit: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
         sourcePath: commonSchemas.sourcePath,
         destinationPath: commonSchemas.destinationPath,
         assetPaths: commonSchemas.arrayOfStrings,
@@ -441,7 +442,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         paths: commonSchemas.arrayOfStrings,
         path: commonSchemas.stringProp,
         nodeId: commonSchemas.nodeId,
-        details: commonSchemas.objectProp
+        details: commonSchemas.objectProp,
+        totalCount: commonSchemas.numberProp,
+        offset: commonSchemas.numberProp,
+        limit: commonSchemas.numberProp
       }
     }
   },
@@ -1260,7 +1264,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'inspect',
     category: 'core',
-    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info.',
+    description: 'Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, list_objects, find_by_class, find_by_tag.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1271,7 +1275,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'get_texture_details', 'get_material_details', 'get_level_details', 'get_component_details',
             'set_property', 'get_property',
             'get_components', 'get_component_property', 'set_component_property',
-            'inspect_class', 'list_objects',
+            'inspect_class', 'inspect_cdo', 'list_objects',
             'get_metadata', 'add_tag', 'find_by_tag',
             'create_snapshot', 'restore_snapshot', 'export', 'delete_object', 'find_by_class', 'get_bounding_box',
             'get_project_settings', 'get_world_settings', 'get_viewport_info', 'get_selected_actors',
@@ -1293,7 +1297,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         snapshotName: commonSchemas.stringProp,
         destinationPath: commonSchemas.destinationPath,
         outputPath: commonSchemas.outputPath,
-        format: commonSchemas.stringProp
+        format: commonSchemas.stringProp,
+        blueprintPath: commonSchemas.blueprintPath,
+        detailed: commonSchemas.booleanProp,
+        propertyNames: commonSchemas.arrayOfStrings
       },
       required: ['action']
     },
@@ -1301,7 +1308,18 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       type: 'object',
       properties: {
         ...commonSchemas.outputBase,
-        value: commonSchemas.value
+        value: commonSchemas.value,
+        blueprintPath: commonSchemas.blueprintPath,
+        className: commonSchemas.stringProp,
+        classPath: commonSchemas.stringProp,
+        parentClass: commonSchemas.stringProp,
+        cdoProperties: commonSchemas.objectProp,
+        components: commonSchemas.arrayOfObjects,
+        componentCount: commonSchemas.numberProp,
+        componentName: commonSchemas.componentName,
+        templateObjectName: commonSchemas.stringProp,
+        componentClass: commonSchemas.stringProp,
+        properties: commonSchemas.objectProp
       }
     }
   },

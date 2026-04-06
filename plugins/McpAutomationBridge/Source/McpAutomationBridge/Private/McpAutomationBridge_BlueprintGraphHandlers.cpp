@@ -877,10 +877,376 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     {
       FString EventName;
       Payload->TryGetStringField(TEXT("eventName"), EventName);
-      FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*TargetGraph);
-      UK2Node_CustomEvent *EventNode = NodeCreator.CreateNode(false);
-      EventNode->CustomFunctionName = FName(*EventName);
-      FinalizeAndReport(NodeCreator, EventNode);
+
+      // Helper lambda to convert a type string into an FEdGraphPinType
+      auto ResolvePinType = [&](const FString &TypeStr) -> FEdGraphPinType
+      {
+        FEdGraphPinType PinType;
+        FString CleanType = TypeStr;
+        CleanType.TrimStartAndEndInline();
+        CleanType.RemoveFromEnd(TEXT("*"));
+
+        // Built‑in types
+        if (CleanType.Equals(TEXT("float"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Float;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("double"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+          PinType.PinSubCategory = NAME_Double;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("int"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("int32"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("int64"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Int64;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("bool"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("string"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FString"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_String;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("name"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FName"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("text"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("FText"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Text;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("byte"), ESearchCase::IgnoreCase) ||
+            CleanType.Equals(TEXT("uint8"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("object"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("class"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Class;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("softobject"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("softclass"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
+          return PinType;
+        }
+        if (CleanType.Equals(TEXT("interface"), ESearchCase::IgnoreCase))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Interface;
+          return PinType;
+        }
+
+        // Structs (FVector, etc.) – try qualified path first, then short name, then iterate
+        UScriptStruct *Struct = nullptr;
+
+        // 1) Try full path (e.g., /Script/CoreUObject.Vector)
+        if (CleanType.Contains(TEXT("/Script/")))
+        {
+          Struct = LoadObject<UScriptStruct>(nullptr, *CleanType);
+        }
+
+        // 2) Try short name with optional leading 'F'
+        if (!Struct)
+        {
+          FString StructName = CleanType;
+          if (StructName.StartsWith(TEXT("F")))
+          {
+            StructName = StructName.Mid(1);
+          }
+          Struct = FindObject<UScriptStruct>(nullptr, *StructName);
+          if (!Struct)
+          {
+            Struct = FindObject<UScriptStruct>(nullptr, *CleanType);
+          }
+        }
+
+        // 3) Fallback: iterate over all structs and match by name (case-insensitive)
+        if (!Struct)
+        {
+          for (TObjectIterator<UScriptStruct> It; It; ++It)
+          {
+            if (It->GetName().Equals(CleanType, ESearchCase::IgnoreCase))
+            {
+              Struct = *It;
+              break;
+            }
+          }
+        }
+
+        if (Struct)
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
+          PinType.PinSubCategoryObject = Struct;
+          return PinType;
+        }
+
+        // Enums
+        if (UEnum *Enum = FindObject<UEnum>(nullptr, *CleanType))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Byte;
+          PinType.PinSubCategoryObject = Enum;
+          return PinType;
+        }
+
+        // UObject derived classes
+        if (UClass *Class = ResolveUClass(CleanType))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+          PinType.PinSubCategoryObject = Class;
+          return PinType;
+        }
+
+        // Containers (fallback to wildcard)
+        if (CleanType.StartsWith(TEXT("array<")) ||
+            CleanType.StartsWith(TEXT("set<")) ||
+            CleanType.StartsWith(TEXT("map<")))
+        {
+          PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
+          if (CleanType.StartsWith(TEXT("array<")))
+            PinType.ContainerType = EPinContainerType::Array;
+          else if (CleanType.StartsWith(TEXT("set<")))
+            PinType.ContainerType = EPinContainerType::Set;
+          else
+            PinType.ContainerType = EPinContainerType::Map;
+          return PinType;
+        }
+
+        // Unknown fallback
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
+        return PinType;
+      };
+
+      const TArray<TSharedPtr<FJsonValue>> *ParamsArray = nullptr;
+      const bool bHasParams = Payload->TryGetArrayField(TEXT("parameters"), ParamsArray) && ParamsArray->Num() > 0;
+
+      // No parameters → simple custom event
+      if (!bHasParams)
+      {
+        FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(*TargetGraph);
+        UK2Node_CustomEvent *EventNode = NodeCreator.CreateNode(false);
+        EventNode->CustomFunctionName = FName(*EventName);
+        FinalizeAndReport(NodeCreator, EventNode);
+        return true;
+      }
+
+      // --- With parameters: use engine's UK2Node_CustomEvent::CreateFromFunction ---
+      // Remove any existing custom event with the same name to avoid conflicts.
+      // Must also remove the stale UFunction and its associated graph, otherwise the compiler
+      // will see two functions with the same name and the new node will remain out-of-date.
+      TArray<UK2Node_CustomEvent *> ExistingEvents;
+      FBlueprintEditorUtils::GetAllNodesOfClass<UK2Node_CustomEvent>(Blueprint, ExistingEvents);
+      for (UK2Node_CustomEvent *Existing : ExistingEvents)
+      {
+        if (Existing && Existing->CustomFunctionName.ToString() == EventName)
+        {
+          FName FuncName = Existing->CustomFunctionName;
+          // 1. Remove the function graph associated with this custom event
+          UEdGraph *FuncGraph = nullptr;
+          for (UEdGraph *Graph : Blueprint->FunctionGraphs)
+          {
+            if (Graph && Graph->GetFName() == FuncName)
+            {
+              FuncGraph = Graph;
+              break;
+            }
+          }
+          if (FuncGraph)
+          {
+            FBlueprintEditorUtils::RemoveGraph(Blueprint, FuncGraph, EGraphRemoveFlags::Default);
+          }
+          // 2. Remove the node from the graph
+          FBlueprintEditorUtils::RemoveNode(Blueprint, Existing, true);
+        }
+      }
+
+      // Ensure the blueprint has a GeneratedClass (must be compiled)
+      if (!Blueprint->GeneratedClass)
+      {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Blueprint has no GeneratedClass. Compile it first."), TEXT("INVALID_STATE"));
+        return true;
+      }
+
+      // Create a unique temporary function name
+      FName TempFuncName = MakeUniqueObjectName(Blueprint->GeneratedClass, UFunction::StaticClass(), FName(*FString::Printf(TEXT("__TempCustomEventFunc_%s"), *EventName)));
+
+      // Create the temporary UFunction
+      UFunction *TempFunc = NewObject<UFunction>(Blueprint->GeneratedClass, TempFuncName, RF_Public);
+      TempFunc->FunctionFlags = FUNC_Public | FUNC_BlueprintCallable;
+
+      // Build parameter properties
+      TArray<FProperty *> Params;
+      for (const auto &ParamValue : *ParamsArray)
+      {
+        const TSharedPtr<FJsonObject> &ParamObj = ParamValue->AsObject();
+        if (!ParamObj.IsValid())
+          continue;
+
+        FString ParamName, ParamType;
+        if (!ParamObj->TryGetStringField(TEXT("name"), ParamName) ||
+            !ParamObj->TryGetStringField(TEXT("type"), ParamType))
+        {
+          SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("Missing 'name' or 'type' in parameter definition."), TEXT("INVALID_PARAMETER"));
+          return true;
+        }
+        FEdGraphPinType PinType = ResolvePinType(ParamType);
+
+        FProperty *Prop = nullptr;
+
+        // Map PinType to FProperty subclass
+        if (PinType.PinCategory == UEdGraphSchema_K2::PC_Float)
+        {
+          Prop = new FFloatProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Real)
+        {
+          // double precision float
+          Prop = new FDoubleProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int)
+        {
+          Prop = new FIntProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Int64)
+        {
+          Prop = new FInt64Property(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Boolean)
+        {
+          FBoolProperty *BoolProp = new FBoolProperty(TempFunc, FName(*ParamName), RF_Public);
+          BoolProp->SetBoolSize(0, true); // 0 = single bit, not byte size
+          Prop = BoolProp;
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_String)
+        {
+          Prop = new FStrProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Name)
+        {
+          Prop = new FNameProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Text)
+        {
+          Prop = new FTextProperty(TempFunc, FName(*ParamName), RF_Public);
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Byte && PinType.PinSubCategoryObject.IsValid())
+        {
+          FByteProperty *ByteProp = new FByteProperty(TempFunc, FName(*ParamName), RF_Public);
+          ByteProp->Enum = Cast<UEnum>(PinType.PinSubCategoryObject);
+          Prop = ByteProp;
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Struct && PinType.PinSubCategoryObject.IsValid())
+        {
+          FStructProperty *StructProp = new FStructProperty(TempFunc, FName(*ParamName), RF_Public);
+          StructProp->Struct = Cast<UScriptStruct>(PinType.PinSubCategoryObject);
+          Prop = StructProp;
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Object && PinType.PinSubCategoryObject.IsValid())
+        {
+          FObjectProperty *ObjProp = new FObjectProperty(TempFunc, FName(*ParamName), RF_Public);
+          ObjProp->PropertyClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = ObjProp;
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_Class && PinType.PinSubCategoryObject.IsValid())
+        {
+          FClassProperty *ClassProp = new FClassProperty(TempFunc, FName(*ParamName), RF_Public);
+          ClassProp->PropertyClass = UClass::StaticClass();
+          ClassProp->MetaClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = ClassProp;
+        }
+        else if (PinType.PinCategory == UEdGraphSchema_K2::PC_SoftObject && PinType.PinSubCategoryObject.IsValid())
+        {
+          FSoftObjectProperty *SoftProp = new FSoftObjectProperty(TempFunc, FName(*ParamName), RF_Public);
+          SoftProp->PropertyClass = Cast<UClass>(PinType.PinSubCategoryObject);
+          Prop = SoftProp;
+        }
+        else
+        {
+          // Unknown type: log warning and skip this parameter
+          UE_LOG(LogTemp, Warning, TEXT("Unsupported parameter type '%s' for parameter '%s' – skipping"), *ParamType, *ParamName);
+          continue;
+        }
+
+        if (Prop)
+        {
+          Prop->SetFlags(RF_Public);
+          Prop->PropertyFlags |= CPF_Parm;
+          Params.Add(Prop);
+        }
+      }
+
+      // Link properties into the function
+      if (Params.Num() > 0)
+      {
+        TempFunc->ChildProperties = Params[0];
+        for (int32 i = 0; i < Params.Num() - 1; ++i)
+        {
+          Params[i]->Next = Params[i + 1];
+        }
+      }
+      TempFunc->Bind(); // Finalize function signature
+
+      // Create the custom event node using the engine's official API
+      FVector2D NodePos(X, Y);
+      UK2Node_CustomEvent *EventNode = UK2Node_CustomEvent::CreateFromFunction(
+          NodePos, TargetGraph, EventName, TempFunc, false);
+
+      if (!EventNode)
+      {
+        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Failed to create custom event from function."), TEXT("INTERNAL_ERROR"));
+        return true;
+      }
+
+      // Ensure the node is fully initialized with a stable GUID
+      // CreateFromFunction does NOT call PostPlacedNewNode or CreateNewGuid
+      EventNode->CreateNewGuid();
+      EventNode->PostPlacedNewNode();
+
+      // Clean up the temporary function
+      TempFunc->MarkAsGarbage();
+
+      // Mark blueprint as structurally modified, compile, and save
+      FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+      FKismetEditorUtilities::CompileBlueprint(Blueprint);
+      SaveLoadedAssetThrottled(Blueprint);
+
+      // Report success
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("nodeId"), EventNode->NodeGuid.ToString());
+      Result->SetStringField(TEXT("nodeName"), EventNode->GetName());
+      McpHandlerUtils::AddVerification(Result, Blueprint);
+      SendAutomationResponse(RequestingSocket, RequestId, true,
+                             TEXT("Custom event with parameters created using engine API."), Result);
       return true;
     }
 
@@ -994,31 +1360,87 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return true;
     }
 
-    // Handle PinName in format "NodeName.PinName"
-    FString FromPinClean = FromPinName;
-    if (FromPinName.Contains(TEXT(".")))
+    // Mark nodes for modification BEFORE any mutations so undo captures AllocateDefaultPins as well
+    FromNode->Modify();
+    ToNode->Modify();
+
+    // Ensure nodes have allocated pins (some node types may not have pins yet)
+    if (FromNode->Pins.Num() == 0)
     {
-      FromPinName.Split(TEXT("."), nullptr, &FromPinClean);
+      UE_LOG(LogTemp, Warning,
+             TEXT("connect_pins: FromNode '%s' has no pins, calling AllocateDefaultPins"),
+             *FromNode->GetName());
+      FromNode->AllocateDefaultPins();
     }
-    FString ToPinClean = ToPinName;
-    if (ToPinName.Contains(TEXT(".")))
+    if (ToNode->Pins.Num() == 0)
     {
-      ToPinName.Split(TEXT("."), nullptr, &ToPinClean);
+      UE_LOG(LogTemp, Warning,
+             TEXT("connect_pins: ToNode '%s' has no pins, calling AllocateDefaultPins"),
+             *ToNode->GetName());
+      ToNode->AllocateDefaultPins();
     }
 
-    UEdGraphPin *FromPin = FromNode->FindPin(*FromPinClean);
-    UEdGraphPin *ToPin = ToNode->FindPin(*ToPinClean);
+    // Handle PinName in format "NodeName.PinName"
+    FString FromPinClean;
+    if (!FromPinName.Split(TEXT("."), nullptr, &FromPinClean))
+    {
+      FromPinClean = FromPinName;
+    }
+    FString ToPinClean;
+    if (!ToPinName.Split(TEXT("."), nullptr, &ToPinClean))
+    {
+      ToPinClean = ToPinName;
+    }
+
+    // Try exact match first, then case-insensitive, skipping any null pins
+    auto FindPinCaseInsensitive = [](UEdGraphNode *Node, const FString &PinName) -> UEdGraphPin *
+    {
+      UEdGraphPin *Pin = Node->FindPin(*PinName);
+      if (Pin)
+        return Pin;
+      for (UEdGraphPin *P : Node->Pins)
+      {
+        if (!P)
+          continue;
+        if (P->PinName.ToString().Equals(PinName, ESearchCase::IgnoreCase))
+        {
+          return P;
+        }
+      }
+      return nullptr;
+    };
+
+    UEdGraphPin *FromPin = FindPinCaseInsensitive(FromNode, FromPinClean);
+    UEdGraphPin *ToPin = FindPinCaseInsensitive(ToNode, ToPinClean);
 
     if (!FromPin || !ToPin)
     {
+      // Log the available pins for debugging, skipping null pins
+      FString FromPinsList, ToPinsList;
+      for (UEdGraphPin *P : FromNode->Pins)
+      {
+        if (P)
+        {
+          FromPinsList += P->PinName.ToString() + TEXT(", ");
+        }
+      }
+      for (UEdGraphPin *P : ToNode->Pins)
+      {
+        if (P)
+        {
+          ToPinsList += P->PinName.ToString() + TEXT(", ");
+        }
+      }
+      UE_LOG(LogTemp, Warning,
+             TEXT("connect_pins: FromNode '%s' pins: %s"),
+             *FromNode->GetName(), *FromPinsList);
+      UE_LOG(LogTemp, Warning, TEXT("connect_pins: ToNode '%s' pins: %s"),
+             *ToNode->GetName(), *ToPinsList);
       SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Could not find source or target pin."),
                           TEXT("PIN_NOT_FOUND"));
       return true;
     }
-
-    FromNode->Modify();
-    ToNode->Modify();
 
     if (TargetGraph->GetSchema()->TryCreateConnection(FromPin, ToPin))
     {

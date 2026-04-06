@@ -7,7 +7,7 @@ import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs, AudioArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString } from './common-handlers.js';
 import { executeAutomationRequest } from './common-handlers.js';
-import { toNumber, toBoolean, toString, toVec3Array, toRotArray, validateAudioParams } from '../../utils/type-coercion.js';
+import { toNumber, toBoolean, toString as toStringValue, toVec3Array, toRotArray, validateAudioParams } from '../../utils/type-coercion.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 /**
  * Create sound cue
@@ -18,23 +18,57 @@ async function createSoundCue(tools: ITools, args: AudioArgs): Promise<Record<st
 
   const name = args.name ?? '';
   const wavePath = args.wavePath ?? args.soundPath ?? '';
-  const savePath = toString(args.savePath ?? args.path) || '/Game/Audio/Cues';
-  const { volume, pitch } = validateAudioParams(
-    toNumber(args.settings?.volume),
-    toNumber(args.settings?.pitch)
-  );
+  const savePath = toStringValue(args.savePath ?? args.path) || '/Game/Audio/Cues';
+  const explicitVolume = toNumber(args.settings?.volume);
+  const explicitPitch = toNumber(args.settings?.pitch);
+  const validatedAudio = validateAudioParams(explicitVolume, explicitPitch);
 
   const payload = {
     name,
     packagePath: savePath,
     wavePath,
-    attenuationPath: toString(args.settings?.attenuationSettings),
-    volume,
-    pitch,
+    attenuationPath: toStringValue(args.settings?.attenuationSettings),
+    volume: explicitVolume === undefined ? undefined : validatedAudio.volume,
+    pitch: explicitPitch === undefined ? undefined : validatedAudio.pitch,
     looping: toBoolean(args.settings?.looping)
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.CREATE_SOUND_CUE, payload)) as Record<string, unknown>;
+}
+
+async function setSoundMixClassOverride(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  const mixName = toStringValue(args.mixName ?? args.mix ?? args.name);
+  const soundClassName = toStringValue(args.soundClassName ?? args.soundClass);
+
+  const payload = {
+    ...args,
+    mixName,
+    soundClassName
+  };
+
+  return (await executeAutomationRequest(tools, TOOL_ACTIONS.SET_SOUND_MIX_CLASS_OVERRIDE, payload as HandlerArgs)) as Record<string, unknown>;
+}
+
+async function clearSoundMixClassOverride(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  const mixName = toStringValue(args.mixName ?? args.mix ?? args.name);
+  const soundClassName = toStringValue(args.soundClassName ?? args.soundClass);
+
+  const payload = {
+    ...args,
+    mixName,
+    soundClassName
+  };
+
+  return (await executeAutomationRequest(tools, TOOL_ACTIONS.CLEAR_SOUND_MIX_CLASS_OVERRIDE, payload as HandlerArgs)) as Record<string, unknown>;
+}
+
+async function setBaseSoundMix(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
+  const payload = {
+    ...args,
+    mixName: toStringValue(args.mixName ?? args.mix ?? args.name)
+  };
+
+  return (await executeAutomationRequest(tools, TOOL_ACTIONS.SET_BASE_SOUND_MIX, payload as HandlerArgs)) as Record<string, unknown>;
 }
 
 /**
@@ -55,8 +89,8 @@ async function playSoundAtLocation(tools: ITools, args: AudioArgs): Promise<Reco
     volume,
     pitch,
     startTime: toNumber(args.startTime) ?? 0.0,
-    attenuationPath: toString(args.attenuationPath),
-    concurrencyPath: toString(args.concurrencyPath)
+    attenuationPath: toStringValue(args.attenuationPath),
+    concurrencyPath: toStringValue(args.concurrencyPath)
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.PLAY_SOUND_AT_LOCATION, payload)) as Record<string, unknown>;
@@ -107,8 +141,8 @@ async function setSoundAttenuation(tools: ITools, args: AudioArgs): Promise<Reco
     name: args.name ?? '',
     innerRadius: toNumber(args.innerRadius),
     falloffDistance: toNumber(args.falloffDistance),
-    attenuationShape: toString(args.attenuationShape),
-    falloffMode: toString(args.falloffMode)
+    attenuationShape: toStringValue(args.attenuationShape),
+    falloffMode: toStringValue(args.falloffMode)
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.SET_SOUND_ATTENUATION, payload)) as Record<string, unknown>;
@@ -122,8 +156,8 @@ async function createSoundClass(tools: ITools, args: AudioArgs): Promise<Record<
 
   const payload = {
     name: args.name ?? '',
-    path: toString(args.path) || '/Game/Audio/Classes',
-    parentClass: toString(args.parentClass),
+    path: toStringValue(args.path) || '/Game/Audio/Classes',
+    parentClass: toStringValue(args.parentClass),
     properties: args.properties
   };
 
@@ -138,7 +172,7 @@ async function createSoundMix(tools: ITools, args: AudioArgs): Promise<Record<st
 
   const payload = {
     name: args.name ?? '',
-    path: toString(args.path) || '/Game/Audio/Mixes',
+    path: toStringValue(args.path) || '/Game/Audio/Mixes',
     classAdjusters: args.classAdjusters
   };
 
@@ -183,8 +217,8 @@ async function createAmbientSound(tools: ITools, args: AudioArgs): Promise<Recor
     volume: toNumber(args.volume) ?? 1.0,
     pitch: toNumber(args.pitch) ?? 1.0,
     startTime: toNumber(args.startTime) ?? 0.0,
-    attenuationPath: toString(args.attenuationPath),
-    concurrencyPath: toString(args.concurrencyPath)
+    attenuationPath: toStringValue(args.attenuationPath),
+    concurrencyPath: toStringValue(args.concurrencyPath)
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.CREATE_AMBIENT_SOUND, payload)) as Record<string, unknown>;
@@ -200,7 +234,7 @@ async function createReverbZone(tools: ITools, args: AudioArgs): Promise<Record<
     name: args.name ?? '',
     location: toVec3Array(args.location) ?? [0, 0, 0],
     size: toVec3Array(args.size) ?? [0, 0, 0],
-    reverbEffect: toString(args.reverbEffect),
+    reverbEffect: toStringValue(args.reverbEffect),
     volume: toNumber(args.volume),
     fadeTime: toNumber(args.fadeTime)
   };
@@ -220,7 +254,7 @@ async function enableAudioAnalysis(tools: ITools, args: AudioArgs): Promise<Reco
 
   const payload = {
     enable,
-    analysisType: toString(args.analysisType) || 'FFT', // FFT, Amplitude, Frequency
+    analysisType: toStringValue(args.analysisType) || 'FFT', // FFT, Amplitude, Frequency
     windowSize: toNumber(args.windowSize) ?? 1024,
   };
 
@@ -237,7 +271,7 @@ async function fadeSound(tools: ITools, args: AudioArgs): Promise<Record<string,
     soundName: args.soundName ?? '',
     targetVolume: toNumber(args.targetVolume),
     fadeTime: toNumber(args.fadeTime),
-    fadeType: toString(args.fadeType) || 'FadeTo'
+    fadeType: toStringValue(args.fadeType) || 'FadeTo'
   };
 
   return (await executeAutomationRequest(tools, TOOL_ACTIONS.FADE_SOUND, payload)) as Record<string, unknown>;
@@ -248,7 +282,7 @@ async function fadeSound(tools: ITools, args: AudioArgs): Promise<Record<string,
  */
 async function setDopplerEffect(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
   const payload = {
-    soundPath: toString(args.soundPath), // Optional - applies to attenuation settings
+    soundPath: toStringValue(args.soundPath), // Optional - applies to attenuation settings
     dopplerIntensity: toNumber(args.dopplerIntensity) ?? 1.0,
     velocityScale: toNumber(args.velocityScale) ?? 1.0,
     save: toBoolean(args.save) ?? true,
@@ -262,7 +296,7 @@ async function setDopplerEffect(tools: ITools, args: AudioArgs): Promise<Record<
  */
 async function setAudioOcclusion(tools: ITools, args: AudioArgs): Promise<Record<string, unknown>> {
   const payload = {
-    soundPath: toString(args.soundPath),
+    soundPath: toStringValue(args.soundPath),
     enable: toBoolean(args.enable) ?? true,
     occlusionVolumeScale: toNumber(args.occlusionVolumeScale) ?? 0.5,
     occlusionFilterScale: toNumber(args.occlusionFilterScale) ?? 0.5,
@@ -338,13 +372,13 @@ export async function handleAudioTools(
       return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.PLAY_SOUND_ATTACHED, argsRecord)) as Record<string, unknown>;
 
     case 'set_sound_mix_class_override':
-      return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.SET_SOUND_MIX_CLASS_OVERRIDE, argsRecord)) as Record<string, unknown>;
+      return cleanObject(await setSoundMixClassOverride(tools, argsTyped)) as Record<string, unknown>;
 
     case 'clear_sound_mix_class_override':
-      return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.CLEAR_SOUND_MIX_CLASS_OVERRIDE, argsRecord)) as Record<string, unknown>;
+      return cleanObject(await clearSoundMixClassOverride(tools, argsTyped)) as Record<string, unknown>;
 
     case 'set_base_sound_mix':
-      return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.SET_BASE_SOUND_MIX, argsRecord)) as Record<string, unknown>;
+      return cleanObject(await setBaseSoundMix(tools, argsTyped)) as Record<string, unknown>;
 
     case 'prime_sound':
       return cleanObject(await executeAutomationRequest(tools, TOOL_ACTIONS.PRIME_SOUND, argsRecord)) as Record<string, unknown>;

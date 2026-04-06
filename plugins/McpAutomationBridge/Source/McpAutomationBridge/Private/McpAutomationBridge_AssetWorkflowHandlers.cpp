@@ -47,6 +47,7 @@
 #include "Misc/Paths.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
+#include "McpSafeOperations.h"
 
 // -----------------------------------------------------------------------------
 // MCP Handler Utilities (centralized JSON/Asset helpers)
@@ -283,7 +284,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleRenameAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("move"))
     return HandleMoveAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") || Lower == TEXT("delete_assets"))
+  if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") ||
+      Lower == TEXT("delete_assets"))
     return HandleDeleteAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_folder"))
     return HandleCreateFolder(RequestId, Payload, RequestingSocket);
@@ -307,8 +309,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleListAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("generate_report"))
     return HandleGenerateReport(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail"))
-    return HandleGenerateThumbnail(RequestId, Action, Payload, RequestingSocket);
+  if (Lower == TEXT("create_thumbnail") ||
+      Lower == TEXT("generate_thumbnail"))
+    return HandleGenerateThumbnail(RequestId, Action, Payload,
+                                   RequestingSocket);
   if (Lower == TEXT("add_material_parameter"))
     return HandleAddMaterialParameter(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_instances"))
@@ -328,23 +332,30 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("fixup_redirectors"))
     return HandleFixupRedirectors(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_rename"))
-    return HandleBulkRenameAssets(RequestId, Action, Payload, RequestingSocket);
+    return HandleBulkRenameAssets(RequestId, Action, Payload,
+                                  RequestingSocket);
   if (Lower == TEXT("bulk_delete"))
-    return HandleBulkDeleteAssets(RequestId, Action, Payload, RequestingSocket);
+    return HandleBulkDeleteAssets(RequestId, Action, Payload,
+                                  RequestingSocket);
   if (Lower == TEXT("generate_lods"))
     return HandleGenerateLODs(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
-    return HandleNaniteRebuildMesh(RequestId, Action, Payload, RequestingSocket);
+    return HandleNaniteRebuildMesh(RequestId, Action, Payload,
+                                   RequestingSocket);
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))
-    return HandleSourceControlCheckout(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlCheckout(RequestId, Action, Payload,
+                                       RequestingSocket);
   if (Lower == TEXT("source_control_submit"))
-    return HandleSourceControlSubmit(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlSubmit(RequestId, Action, Payload,
+                                     RequestingSocket);
   if (Lower == TEXT("get_source_control_state"))
-    return HandleGetSourceControlState(RequestId, Action, Payload, RequestingSocket);
+    return HandleGetSourceControlState(RequestId, Action, Payload,
+                                       RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
-    return HandleSourceControlEnable(RequestId, Action, Payload, RequestingSocket);
+    return HandleSourceControlEnable(RequestId, Action, Payload,
+                                     RequestingSocket);
 
   // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))
@@ -356,13 +367,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("add_material_node"))
     return HandleAddMaterialNode(RequestId, Action, Payload, RequestingSocket);
   if (Lower == TEXT("connect_material_pins"))
-    return HandleConnectMaterialPins(RequestId, Action, Payload, RequestingSocket);
+    return HandleConnectMaterialPins(RequestId, Action, Payload,
+                                     RequestingSocket);
   if (Lower == TEXT("remove_material_node"))
-    return HandleRemoveMaterialNode(RequestId, Action, Payload, RequestingSocket);
+    return HandleRemoveMaterialNode(RequestId, Action, Payload,
+                                    RequestingSocket);
   if (Lower == TEXT("break_material_connections"))
-    return HandleBreakMaterialConnections(RequestId, Action, Payload, RequestingSocket);
+    return HandleBreakMaterialConnections(RequestId, Action, Payload,
+                                          RequestingSocket);
   if (Lower == TEXT("get_material_node_details"))
-    return HandleGetMaterialNodeDetails(RequestId, Action, Payload, RequestingSocket);
+    return HandleGetMaterialNodeDetails(RequestId, Action, Payload,
+                                        RequestingSocket);
   if (Lower == TEXT("rebuild_material"))
     return HandleRebuildMaterial(RequestId, Action, Payload, RequestingSocket);
 
@@ -1317,9 +1332,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty())
   {
-    SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *AssetPath),
-                        TEXT("SECURITY_VIOLATION"));
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"),
+                        *AssetPath),
+        TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
@@ -1335,123 +1352,131 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
 
-  // Dispatch to GameThread for async processing
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
-  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, RequestingSocket,
-                                        SafeAssetPath, Width, Height, OutputPath]()
-            {
-    UMcpAutomationBridgeSubsystem* Subsystem = WeakThis.Get();
-    if (!Subsystem) {
-      return;
-    }
+  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
+  // Wrapping ALL work (including fast existence checks) in AsyncTask(GameThread, ...)
+  // caused the queued lambda to sit behind the current dispatch cycle, so responses
+  // never reached the MCP server before the 30-second timeout (issues #138, #139).
+  // Execute synchronously instead.
+  SendProgressUpdate(
+      RequestId, 0.0f,
+      FString::Printf(TEXT("Starting thumbnail generation for: %s"),
+                      *SafeAssetPath),
+      true);
 
-    // CRITICAL: Send progress update before GPU-blocking operation
-    // This keeps the request alive and helps diagnose hangs
-    Subsystem->SendProgressUpdate(RequestId, 0.0f, 
-        FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath))
+  {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Asset not found"), nullptr,
+                           TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Asset not found"), nullptr,
-                             TEXT("ASSET_NOT_FOUND"));
-      return;
-    }
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  if (!Asset)
+  {
+    SendAutomationResponse(RequestingSocket, RequestId, false,
+                           TEXT("Failed to load asset"), nullptr,
+                           TEXT("LOAD_FAILED"));
+    return true;
+  }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
-    if (!Asset) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to load asset"), nullptr,
-                             TEXT("LOAD_FAILED"));
-      return;
-    }
+  SendProgressUpdate(RequestId, 50.0f,
+                     TEXT("Rendering thumbnail (GPU operation)..."), true);
 
-    // Send progress update before GPU operation
-    Subsystem->SendProgressUpdate(RequestId, 50.0f, 
-        TEXT("Rendering thumbnail (GPU operation)..."), true);
+  FObjectThumbnail ObjectThumbnail;
+  ThumbnailTools::RenderThumbnail(
+      Asset, Width, Height,
+      ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
+      &ObjectThumbnail);
 
-    FObjectThumbnail ObjectThumbnail;
-    ThumbnailTools::RenderThumbnail(
-        Asset, Width, Height,
-        ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, nullptr,
-        &ObjectThumbnail);
+  bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
+                  ObjectThumbnail.GetImageHeight() > 0;
 
-    bool bSuccess = ObjectThumbnail.GetImageWidth() > 0 &&
-                    ObjectThumbnail.GetImageHeight() > 0;
+  if (bSuccess && !OutputPath.IsEmpty())
+  {
+    const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
 
-    if (bSuccess && !OutputPath.IsEmpty()) {
-      const TArray<uint8> &ImageData = ObjectThumbnail.GetUncompressedImageData();
+    if (ImageData.Num() > 0)
+    {
+      TArray<FColor> ColorData;
+      ColorData.Reserve(Width * Height);
 
-      if (ImageData.Num() > 0) {
-        TArray<FColor> ColorData;
-        ColorData.Reserve(Width * Height);
-
-        // Fixed: Ensure we don't read out of bounds if ImageData length isn't a multiple of 4
-        for (int32 i = 0; i + 3 < ImageData.Num(); i += 4) {
-          FColor Color;
-          Color.B = ImageData[i + 0];
-          Color.G = ImageData[i + 1];
-          Color.R = ImageData[i + 2];
-          Color.A = ImageData[i + 3];
-          ColorData.Add(Color);
-        }
-
-        // SECURITY: Sanitize and validate the output path to prevent path traversal
-        FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
-        if (SafeOutputPath.IsEmpty()) {
-          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                             FString::Printf(TEXT("Invalid or unsafe output path: %s"), *OutputPath),
-                                             nullptr, TEXT("SECURITY_VIOLATION"));
-          return;
-        }
-        
-        FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
-        AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
-        FPaths::NormalizeFilename(AbsolutePath);
-        
-        FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-        FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-        if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-          NormalizedProjectDir += TEXT("/");
-        }
-        
-        if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-          Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                             FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
-                                             nullptr, TEXT("SECURITY_VIOLATION"));
-          return;
-        }
-
-        TArray<uint8> CompressedData;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
-                                                 CompressedData);
-#else
-        // UE 5.0: Use CompressImageArray instead
-        FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
-#endif
-        bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
+      for (int32 i = 0; i + 3 < ImageData.Num(); i += 4)
+      {
+        FColor Color;
+        Color.B = ImageData[i + 0];
+        Color.G = ImageData[i + 1];
+        Color.R = ImageData[i + 2];
+        Color.A = ImageData[i + 3];
+        ColorData.Add(Color);
       }
+
+      FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
+      if (SafeOutputPath.IsEmpty())
+      {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe output path: %s"),
+                            *OutputPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
+      AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
+      FPaths::NormalizeFilename(AbsolutePath);
+
+      FString NormalizedProjectDir =
+          FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/")))
+      {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!AbsolutePath.StartsWith(NormalizedProjectDir,
+                                   ESearchCase::IgnoreCase))
+      {
+        SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Output path escapes project directory: %s"),
+                            *OutputPath),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      TArray<uint8> CompressedData;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      FImageUtils::ThumbnailCompressImageArray(Width, Height, ColorData,
+                                               CompressedData);
+#else
+      FImageUtils::CompressImageArray(Width, Height, ColorData, CompressedData);
+#endif
+      bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *AbsolutePath);
     }
+  }
 
-    if (Asset->GetOutermost()) {
-      Asset->GetOutermost()->MarkPackageDirty();
-    }
+  if (Asset->GetOutermost())
+  {
+    Asset->GetOutermost()->MarkPackageDirty();
+  }
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), bSuccess);
-    Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
-    Result->SetNumberField(TEXT("width"), Width);
-    Result->SetNumberField(TEXT("height"), Height);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("success"), bSuccess);
+  Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
+  Result->SetNumberField(TEXT("width"), Width);
+  Result->SetNumberField(TEXT("height"), Height);
 
-    if (!OutputPath.IsEmpty()) {
-      Result->SetStringField(TEXT("outputPath"), OutputPath);
-    }
+  if (!OutputPath.IsEmpty())
+  {
+    Result->SetStringField(TEXT("outputPath"), OutputPath);
+  }
 
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, bSuccess,
-        bSuccess ? TEXT("Thumbnail generated successfully")
-                 : TEXT("Thumbnail generation failed"),
-        Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED")); });
+  SendAutomationResponse(
+      RequestingSocket, RequestId, bSuccess,
+      bSuccess ? TEXT("Thumbnail generated successfully")
+               : TEXT("Thumbnail generation failed"),
+      Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
 
   return true;
 #else
@@ -2116,8 +2141,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     // Check if it's a directory first (folder path)
     if (UEditorAssetLibrary::DoesDirectoryExist(Path))
     {
-      // Directory exists - attempt to delete it
-      if (UEditorAssetLibrary::DeleteDirectory(Path))
+      // Directory exists - use safe folder deletion with proper cleanup
+      // CRITICAL for UE 5.7+: Use McpSafeDeleteFolder instead of UEditorAssetLibrary::DeleteDirectory
+      // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
+      // AnimBlueprints, IKRigs, IKRetargeters, etc.
+      if (McpSafeOperations::McpSafeDeleteFolder(Path, true))
       {
         // Verify the directory was actually deleted
         if (!UEditorAssetLibrary::DoesDirectoryExist(Path))
@@ -2275,7 +2303,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
-    // Add verification data
     VerifyAssetExists(Resp, SafePath);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"),
                            Resp, FString());
@@ -2288,7 +2315,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
   }
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -2315,7 +2343,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  // Validate path
   if (!IsValidAssetPath(AssetPath))
   {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"),
@@ -2323,7 +2350,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
   {
     SendAutomationError(Socket, RequestId,
@@ -2336,7 +2362,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
   Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
 
   FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
   TArray<FName> Dependencies;
   UE::AssetRegistry::EDependencyCategory Category =
       UE::AssetRegistry::EDependencyCategory::Package;
@@ -2355,7 +2381,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
                          TEXT("Dependencies retrieved"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -2389,7 +2416,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
-  // Check if asset exists - return error for non-existent assets
   if (!UEditorAssetLibrary::DoesAssetExist(AssetPath))
   {
     SendAutomationError(Socket, RequestId,
@@ -2402,7 +2428,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   Payload->TryGetNumberField(TEXT("maxDepth"), MaxDepth);
 
   FAssetRegistryModule &AssetRegistryModule =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
   TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
@@ -2430,18 +2456,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     {
       FString DepStr = Dep.ToString();
       if (!DepStr.StartsWith(TEXT("/Game")))
-        continue; // Only graph Game assets for now
+      {
+        continue;
+      }
 
       DepArray.Add(MakeShared<FJsonValueString>(DepStr));
 
-      if (CurrentDepth < MaxDepth)
+      if (CurrentDepth < MaxDepth && !Visited.Contains(DepStr))
       {
-        if (!Visited.Contains(DepStr))
-        {
-          Visited.Add(DepStr);
-          Depths.Add(DepStr, CurrentDepth + 1);
-          Queue.Add(DepStr);
-        }
+        Visited.Add(DepStr);
+        Depths.Add(DepStr, CurrentDepth + 1);
+        Queue.Add(DepStr);
       }
     }
     GraphObj->SetArrayField(Current, DepArray);
@@ -2450,11 +2475,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("graph"), GraphObj);
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
-                         Resp, FString());
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Asset graph retrieved"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(RequestingSocket, RequestId,
+                      TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -3851,119 +3877,129 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return true;
   }
 
-  // Dispatch to Game Thread
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
-  TArray<FString> PathsCopy = Paths;
+  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
+  // Wrapping ALL work in AsyncTask(GameThread, ...) caused the queued lambda
+  // to sit behind the current dispatch cycle, so responses never reached the
+  // MCP server before the 30-second timeout. Execute synchronously instead.
 
-  AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, RequestId,
-                                        RequestingSocket, PathsCopy, NumLODs]()
-            {
-    UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
-    if (!Subsystem)
-      return;
+  int32 SuccessCount = 0;
+  TArray<FString> NotFoundPaths;
+  TArray<FString> NotMeshPaths;
 
-    int32 SuccessCount = 0;
-    TArray<FString> NotFoundPaths;
-    TArray<FString> NotMeshPaths;
+  for (const FString &Path : Paths)
+  {
+    SendProgressUpdate(RequestId, -1.0f,
+                       FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
 
-    for (const FString &Path : PathsCopy) {
-      // Send progress update to prevent timeout
-      Subsystem->SendProgressUpdate(RequestId, -1.0f, 
-          FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
-      
-      UObject *Obj = LoadObject<UObject>(nullptr, *Path);
-      
-      if (!Obj) {
-        NotFoundPaths.Add(Path);
-        continue;
-      }
-      
-      // Try Static Mesh
-      if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
+    UObject *Obj = LoadObject<UObject>(nullptr, *Path);
 
-        Mesh->Modify();
-        Mesh->SetNumSourceModels(NumLODs);
-
-        // Configure LOD reduction settings with progressive reduction
-        for (int32 LODIndex = 1; LODIndex < NumLODs; LODIndex++) {
-          FStaticMeshSourceModel &SourceModel = Mesh->GetSourceModel(LODIndex);
-          FMeshReductionSettings &ReductionSettings =
-              SourceModel.ReductionSettings;
-
-          // Progressive reduction: 50%, 25%, 12.5%...
-          float ReductionPercent =
-              1.0f / FMath::Pow(2.0f, static_cast<float>(LODIndex));
-          ReductionSettings.PercentTriangles = ReductionPercent;
-          ReductionSettings.PercentVertices = ReductionPercent;
-
-          // Enable reduction for this LOD level
-          SourceModel.BuildSettings.bRecomputeNormals = false;
-          SourceModel.BuildSettings.bRecomputeTangents = false;
-          SourceModel.BuildSettings.bUseMikkTSpace = true;
-        }
-
-        // Build the mesh with new LOD settings
-        Mesh->Build();
-        Mesh->PostEditChange();
-        McpSafeAssetSave(Mesh);
-
-        SuccessCount++;
-      } else {
-        // Asset exists but is not a static mesh
-        NotMeshPaths.Add(Path);
-      }
+    if (!Obj)
+    {
+      NotFoundPaths.Add(Path);
+      continue;
     }
 
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    
-    // CRITICAL FIX: Return proper success/failure based on actual results
-    // Previously always returned success=true even when 0 meshes processed
-    bool bSuccess = SuccessCount > 0;
-    Resp->SetBoolField(TEXT("success"), bSuccess);
-    Resp->SetNumberField(TEXT("processed"), SuccessCount);
-    Resp->SetNumberField(TEXT("requested"), PathsCopy.Num());
-    Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-    
-    // Add details about failures
-    if (NotFoundPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotFoundArray;
-      for (const FString& P : NotFoundPaths) {
-        NotFoundArray.Add(MakeShared<FJsonValueString>(P));
+    // Try Static Mesh
+    if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj))
+    {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+             TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
+
+      Mesh->Modify();
+      Mesh->SetNumSourceModels(NumLODs);
+
+      // Configure LOD reduction settings with progressive reduction
+      for (int32 LODIndex = 1; LODIndex < NumLODs; LODIndex++)
+      {
+        FStaticMeshSourceModel &SourceModel = Mesh->GetSourceModel(LODIndex);
+        FMeshReductionSettings &ReductionSettings =
+            SourceModel.ReductionSettings;
+
+        // Progressive reduction: 50%, 25%, 12.5%...
+        float ReductionPercent =
+            1.0f / FMath::Pow(2.0f, static_cast<float>(LODIndex));
+        ReductionSettings.PercentTriangles = ReductionPercent;
+        ReductionSettings.PercentVertices = ReductionPercent;
+
+        // Enable reduction for this LOD level
+        SourceModel.BuildSettings.bRecomputeNormals = false;
+        SourceModel.BuildSettings.bRecomputeTangents = false;
+        SourceModel.BuildSettings.bUseMikkTSpace = true;
       }
-      Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
-      Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+
+      // Build the mesh with new LOD settings
+      Mesh->Build();
+      Mesh->PostEditChange();
+      McpSafeAssetSave(Mesh);
+
+      SuccessCount++;
     }
-    
-    if (NotMeshPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotMeshArray;
-      for (const FString& P : NotMeshPaths) {
-        NotMeshArray.Add(MakeShared<FJsonValueString>(P));
-      }
-      Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
-      Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
+    else
+    {
+      // Asset exists but is not a static mesh
+      NotMeshPaths.Add(Path);
     }
-    
-    FString Message;
-    FString ErrorCode;
-    
-    if (bSuccess) {
-      Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
-    } else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0) {
-      Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
-      ErrorCode = TEXT("ASSET_NOT_FOUND");
-    } else if (NotMeshPaths.Num() > 0 && NotFoundPaths.Num() == 0) {
-      Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
-      ErrorCode = TEXT("INVALID_ASSET_TYPE");
-    } else {
-      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."), 
-                                NotFoundPaths.Num(), NotMeshPaths.Num());
-      ErrorCode = TEXT("LOD_GENERATION_FAILED");
+  }
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+
+  // CRITICAL FIX: Return proper success/failure based on actual results
+  // Previously always returned success=true even when 0 meshes processed
+  bool bSuccess = SuccessCount > 0;
+  Resp->SetBoolField(TEXT("success"), bSuccess);
+  Resp->SetNumberField(TEXT("processed"), SuccessCount);
+  Resp->SetNumberField(TEXT("requested"), Paths.Num());
+  Resp->SetNumberField(TEXT("lodCount"), NumLODs);
+
+  // Add details about failures
+  if (NotFoundPaths.Num() > 0)
+  {
+    TArray<TSharedPtr<FJsonValue>> NotFoundArray;
+    for (const FString &P : NotFoundPaths)
+    {
+      NotFoundArray.Add(MakeShared<FJsonValueString>(P));
     }
-    
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
-                                      Message, Resp, ErrorCode); });
+    Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
+    Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+  }
+
+  if (NotMeshPaths.Num() > 0)
+  {
+    TArray<TSharedPtr<FJsonValue>> NotMeshArray;
+    for (const FString &P : NotMeshPaths)
+    {
+      NotMeshArray.Add(MakeShared<FJsonValueString>(P));
+    }
+    Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
+    Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
+  }
+
+  FString Message;
+  FString ErrorCode;
+
+  if (bSuccess)
+  {
+    Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
+  }
+  else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0)
+  {
+    Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
+    ErrorCode = TEXT("ASSET_NOT_FOUND");
+  }
+  else if (NotMeshPaths.Num() > 0 && NotFoundPaths.Num() == 0)
+  {
+    Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
+    ErrorCode = TEXT("INVALID_ASSET_TYPE");
+  }
+  else
+  {
+    Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
+                              NotFoundPaths.Num(), NotMeshPaths.Num());
+    ErrorCode = TEXT("LOD_GENERATION_FAILED");
+  }
+
+  SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+                         Message, Resp, ErrorCode);
 
   return true;
 #else

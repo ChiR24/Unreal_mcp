@@ -236,7 +236,7 @@ function registerDefaultHandlers() {
     'add_montage_notify', 'set_blend_in', 'set_blend_out', 'link_sections',
     'create_blend_space_1d', 'create_blend_space_2d', 'add_blend_sample', 'set_axis_settings', 'set_interpolation_settings',
     'create_aim_offset', 'add_aim_offset_sample',
-    'create_anim_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
+    'create_anim_blueprint', 'create_animation_bp', 'create_animation_blueprint', 'add_state_machine', 'add_state', 'add_transition', 'set_transition_rules',
     'add_blend_node', 'add_cached_pose', 'add_slot_node', 'add_layered_blend_per_bone', 'set_anim_graph_node_value',
     'create_control_rig', 'add_control', 'add_rig_unit', 'connect_rig_elements', 'create_pose_library',
     'create_ik_rig', 'add_ik_chain', 'create_ik_retargeter', 'set_retarget_chain_mapping',
@@ -305,7 +305,7 @@ function registerDefaultHandlers() {
     if (action === 'subscribe' || action === 'unsubscribe') return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable'));
     if (action === 'spawn_category') return cleanObject(await executeAutomationRequest(tools, 'manage_debug', { ...args, subAction: action }, 'Bridge unavailable'));
     if (action === 'start_session') return cleanObject(await executeAutomationRequest(tools, 'manage_insights', { ...args, subAction: action }, 'Bridge unavailable'));
-    if (action === 'lumen_update_scene') return cleanObject(await executeAutomationRequest(tools, 'manage_render', { ...args, subAction: action }, 'Bridge unavailable'));
+    // Note: lumen_update_scene is now available directly via manage_render tool, not system_control
 
     return await handleSystemTools(action, args, tools);
   });

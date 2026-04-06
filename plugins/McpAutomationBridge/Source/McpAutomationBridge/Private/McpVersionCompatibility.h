@@ -17,6 +17,7 @@
 #pragma once
 
 #include "Runtime/Launch/Resources/Version.h"
+#include "Misc/Crc.h"
 
 // =============================================================================
 // Default Feature Detection
@@ -223,3 +224,105 @@
 
 // MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM is defined via build system or include probing
 // Used for SCS (Simple Construction Script) operations
+
+// =============================================================================
+// FAssetCompilingManager API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: Only FinishAllCompilation() exists (no object-specific compilation)
+// UE 5.1+: FinishCompilationForObjects(TArray<UObject*>) for selective compilation
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_HAS_FINISH_COMPILATION_FOR_OBJECTS 1
+#define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishCompilationForObjects(Objects)
+#else
+#define MCP_HAS_FINISH_COMPILATION_FOR_OBJECTS 0
+// UE 5.0: Fall back to global compilation finish
+#define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishAllCompilation()
+#endif
+
+// =============================================================================
+// UPackageTools API Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// We always use the simple overload UnloadPackages(TArray<UPackage*>, FText&, bool)
+// because it works reliably across all UE 5.x versions (5.0 through 5.7+).
+// The FUnloadPackageParams struct is version‑unstable and removed in 5.7+.
+#define MCP_HAS_UNLOAD_PACKAGE_PARAMS 0
+// MCP_UNLOAD_PACKAGE_PARAMS_TYPE is not defined because it is never used.
+
+// =============================================================================
+// UWidgetBlueprint API Compatibility (UE 5.0 vs 5.1 vs 5.2 vs 5.3+)
+// =============================================================================
+// UE 5.0: No WidgetVariableNameToGuidMap - use UBlueprint::NewVariables
+// UE 5.1: WidgetVariableNameToGuidMap exists
+// UE 5.2: WidgetVariableNameToGuidMap does NOT exist (or is private)
+// UE 5.3: WidgetVariableNameToGuidMap does NOT exist (not present in engine)
+// UE 5.4+: Unknown; assume fallback to NewVariables for safety
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 1
+    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (WidgetBP)->WidgetVariableNameToGuidMap
+#else
+    // UE 5.0, 5.2, 5.3+: WidgetVariableNameToGuidMap does not exist.
+    // The macro is never used because MCP_HAS_WIDGET_VARIABLE_GUID_MAP is 0,
+    // but we define it to a no-op to avoid "macro redefined" warnings.
+    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 0
+    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (void)(WidgetBP)
+#endif
+
+// =============================================================================
+// IKRig Editor API Compatibility (UE 5.0 vs 5.1 vs 5.2 vs 5.3+)
+// =============================================================================
+// UE 5.0: No CreateNewIKRigAsset, use NewObject; separate SetSourceIKRig/SetTargetIKRig
+// UE 5.1: CreateNewIKRigAsset exists; SetIKRig with enum
+// UE 5.2: CreateNewIKRigAsset DOES NOT exist (use NewObject); SetIKRig with enum exists
+// UE 5.3+: CreateNewIKRigAsset DOES NOT exist (factory has no static method); SetIKRig with enum exists
+
+// CreateNewIKRigAsset availability – only UE 5.1 has it
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 1
+#else
+    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 0
+#endif
+
+// SetIKRig with enum availability (all UE 5.1+)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 1
+    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
+#else
+    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 0
+    // UE 5.0: use separate methods
+    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
+    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
+#endif
+
+// CreateNewIKRigAsset macro (only when available)
+#if MCP_HAS_IKRIG_CREATE_NEW_ASSET
+    #define MCP_IKRIG_CREATE_NEW_ASSET(Path, Name) UIKRigDefinitionFactory::CreateNewIKRigAsset(Path, Name)
+#else
+    // No macro for creation – code will fall back to NewObject
+#endif
+
+// =============================================================================
+// Deterministic GUID generator (for widget/anim variable GUIDs)
+// =============================================================================
+#ifndef MCP_NEW_DETERMINISTIC_GUID
+    #define MCP_NEW_DETERMINISTIC_GUID(PathString) \
+        [Path = FString(PathString)]() -> FGuid \
+        { \
+            uint32 Hash = FCrc::StrCrc32(*Path); \
+            uint32 Hash2 = FCrc::StrCrc32(*FString::Printf(TEXT("%s_salt"), *Path)); \
+            return FGuid(Hash, Hash2, Hash, Hash2); \
+        }()
+#endif
+
+// =============================================================================
+// FAssetData Object Path Compatibility (UE 5.0 vs 5.1+)
+// =============================================================================
+// UE 5.0: ObjectPath member (FName), no GetObjectPathString()
+// UE 5.1+: GetObjectPathString() method
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).GetObjectPathString()
+#else
+#define MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData) (AssetData).ObjectPath.ToString()
+#endif

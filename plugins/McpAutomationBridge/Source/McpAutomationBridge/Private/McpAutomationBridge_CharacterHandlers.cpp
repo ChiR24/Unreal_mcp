@@ -779,10 +779,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
 
-            if (Payload->HasField(TEXT("walkSpeed")))
-                Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("walkSpeed"), 600.0));
-            if (Payload->HasField(TEXT("runSpeed")))
-                Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
+		// walkSpeed sets MaxWalkSpeed directly. runSpeed writes to MaxWalkSpeed
+		// in UE (no separate MaxRunSpeed field). If walkSpeed is also provided,
+		// walkSpeed takes priority and runSpeed is ignored in favor of
+		// configure_sprint variables (which set blueprint-level state vars).
+		if (Payload->HasField(TEXT("walkSpeed")))
+		{
+			Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("walkSpeed"), 600.0));
+			// Warn if runSpeed was also provided (it will be ignored)
+			if (Payload->HasField(TEXT("runSpeed")))
+			{
+				UE_LOG(LogMcpCharacterHandlers, Warning, TEXT("configure_movement_speeds: Both walkSpeed and runSpeed provided. runSpeed is ignored (both map to MaxWalkSpeed in UE). Use configure_sprint for run speed."));
+			}
+		}
+		else if (Payload->HasField(TEXT("runSpeed")))
+			Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
             if (Payload->HasField(TEXT("crouchSpeed")))
                 Movement->MaxWalkSpeedCrouched = static_cast<float>(GetNumberFieldChar(Payload, TEXT("crouchSpeed"), 300.0));
             if (Payload->HasField(TEXT("swimSpeed")))
@@ -1795,9 +1806,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
         if (CharCDO && CharCDO->GetCharacterMovement())
         {
             UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
+            // walkSpeed takes priority over runSpeed since both set MaxWalkSpeed in UE.
             if (Payload->HasField(TEXT("walkSpeed")))
                 Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("walkSpeed"), 600.0));
-            if (Payload->HasField(TEXT("runSpeed")))
+            else if (Payload->HasField(TEXT("runSpeed")))
                 Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
             if (Payload->HasField(TEXT("acceleration")))
                 Movement->MaxAcceleration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("acceleration"), 2048.0));

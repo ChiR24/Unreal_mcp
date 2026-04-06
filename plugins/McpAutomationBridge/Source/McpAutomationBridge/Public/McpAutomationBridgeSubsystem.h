@@ -658,6 +658,9 @@ private:
     bool HandleInspectAction(const FString &RequestId, const FString &Action,
                              const TSharedPtr<FJsonObject> &Payload,
                              TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    bool HandleInspectCdoAction(const FString &RequestId,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
     // 1. Editor Authoring & Graph Editing
     bool
