@@ -55,6 +55,8 @@ export interface AutomationBridgeStatus {
     host: string;
     port: number;
     configuredPorts: number[];
+    clientHost: string;
+    clientPort: number;
     listeningPorts: number[];
     connected: boolean;
     connectedAt: string | null;

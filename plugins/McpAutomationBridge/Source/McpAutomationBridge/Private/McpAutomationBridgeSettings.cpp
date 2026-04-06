@@ -19,7 +19,7 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     AutoReconnectDelay = 5.0f; // Seconds between automatic reconnect attempts when disabled/failed
     bAlwaysListen = true;      // Start a listening server by default in the Editor
     ListenHost = TEXT("127.0.0.1");
-    ListenPorts = TEXT("8090,8091");
+    ListenPorts = TEXT("8091,8090");
     bMultiListen = true;
     bRequireCapabilityToken = false;
     bAllowNonLoopback = false; // Security: default to loopback-only binding

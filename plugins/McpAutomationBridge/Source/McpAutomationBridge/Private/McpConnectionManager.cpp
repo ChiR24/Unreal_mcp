@@ -13,12 +13,14 @@
 // Reuse the log category from the subsystem for consistency
 // (It is declared extern in McpAutomationBridgeSubsystem.h)
 
-static inline FString SanitizeForLogConnMgr(const FString &In) {
+static inline FString SanitizeForLogConnMgr(const FString &In)
+{
   if (In.IsEmpty())
     return FString();
   FString Out;
   Out.Reserve(FMath::Min<int32>(In.Len(), 1024));
-  for (int32 i = 0; i < In.Len(); ++i) {
+  for (int32 i = 0; i < In.Len(); ++i)
+  {
     const TCHAR C = In[i];
     if (C >= 32 && C != 127)
       Out.AppendChar(C);
@@ -35,8 +37,10 @@ FMcpConnectionManager::FMcpConnectionManager() {}
 FMcpConnectionManager::~FMcpConnectionManager() { Stop(); }
 
 void FMcpConnectionManager::Initialize(
-    const UMcpAutomationBridgeSettings *Settings) {
-  if (Settings) {
+    const UMcpAutomationBridgeSettings *Settings)
+{
+  if (Settings)
+  {
     if (!Settings->ListenHost.IsEmpty())
       EnvListenHost = Settings->ListenHost;
     if (!Settings->ListenPorts.IsEmpty())
@@ -66,9 +70,11 @@ void FMcpConnectionManager::Initialize(
   // Allow environment variable overrides for rate limiting (useful for tests)
   // Set MCP_MAX_MESSAGES_PER_MINUTE=0 or MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=0 to disable
   FString EnvMaxMessages = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_MESSAGES_PER_MINUTE"));
-  if (!EnvMaxMessages.IsEmpty()) {
+  if (!EnvMaxMessages.IsEmpty())
+  {
     int32 ParsedValue = 0;
-    if (LexTryParseString(ParsedValue, *EnvMaxMessages)) {
+    if (LexTryParseString(ParsedValue, *EnvMaxMessages))
+    {
       MaxMessagesPerMinute = ParsedValue;
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
              TEXT("Rate limit override from env: MCP_MAX_MESSAGES_PER_MINUTE=%d"),
@@ -76,9 +82,11 @@ void FMcpConnectionManager::Initialize(
     }
   }
   FString EnvMaxAutomation = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE"));
-  if (!EnvMaxAutomation.IsEmpty()) {
+  if (!EnvMaxAutomation.IsEmpty())
+  {
     int32 ParsedValue = 0;
-    if (LexTryParseString(ParsedValue, *EnvMaxAutomation)) {
+    if (LexTryParseString(ParsedValue, *EnvMaxAutomation))
+    {
       MaxAutomationRequestsPerMinute = ParsedValue;
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
              TEXT("Rate limit override from env: MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=%d"),
@@ -87,17 +95,19 @@ void FMcpConnectionManager::Initialize(
   }
 }
 
-void FMcpConnectionManager::Start() {
-  if (!TickerHandle.IsValid()) {
+void FMcpConnectionManager::Start()
+{
+  if (!TickerHandle.IsValid())
+  {
     // We use a lambda for the ticker that holds a weak pointer to this manager
     TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
     const FTickerDelegate TickDelegate =
-        FTickerDelegate::CreateLambda([WeakSelf](float DeltaTime) -> bool {
+        FTickerDelegate::CreateLambda([WeakSelf](float DeltaTime) -> bool
+                                      {
           if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
             return StrongSelf->Tick(DeltaTime);
           }
-          return false;
-        });
+          return false; });
 
     const UMcpAutomationBridgeSettings *Settings =
         GetDefault<UMcpAutomationBridgeSettings>();
@@ -115,8 +125,10 @@ void FMcpConnectionManager::Start() {
   AttemptConnection();
 }
 
-void FMcpConnectionManager::Stop() {
-  if (TickerHandle.IsValid()) {
+void FMcpConnectionManager::Stop()
+{
+  if (TickerHandle.IsValid())
+  {
     FTSTicker::GetCoreTicker().RemoveTicker(TickerHandle);
     TickerHandle = FTSTicker::FDelegateHandle();
   }
@@ -126,8 +138,10 @@ void FMcpConnectionManager::Stop() {
   TimeUntilReconnect = 0.0f;
 
   // Close all active sockets
-  for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets) {
-    if (Socket.IsValid()) {
+  for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets)
+  {
+    if (Socket.IsValid())
+    {
       Socket->OnConnected().RemoveAll(this);
       Socket->OnConnectionError().RemoveAll(this);
       Socket->OnClosed().RemoveAll(this);
@@ -151,8 +165,10 @@ void FMcpConnectionManager::Stop() {
          TEXT("MCP connection manager stopped."));
 }
 
-bool FMcpConnectionManager::IsConnected() const {
-  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
+bool FMcpConnectionManager::IsConnected() const
+{
+  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+  {
     if (Sock.IsValid() && Sock->IsConnected())
       return true;
   }
@@ -160,17 +176,22 @@ bool FMcpConnectionManager::IsConnected() const {
 }
 
 void FMcpConnectionManager::SetOnMessageReceived(
-    FMcpMessageReceivedCallback InCallback) {
+    FMcpMessageReceivedCallback InCallback)
+{
   OnMessageReceived = InCallback;
 }
 
-bool FMcpConnectionManager::Tick(float DeltaTime) {
+bool FMcpConnectionManager::Tick(float DeltaTime)
+{
   // Handle reconnect countdown
-  if (bReconnectEnabled && TimeUntilReconnect > 0.0f) {
+  if (bReconnectEnabled && TimeUntilReconnect > 0.0f)
+  {
     TimeUntilReconnect -= DeltaTime;
-    if (TimeUntilReconnect <= 0.0f) {
+    if (TimeUntilReconnect <= 0.0f)
+    {
       TimeUntilReconnect = 0.0f;
-      if (bBridgeAvailable) {
+      if (bBridgeAvailable)
+      {
         AttemptConnection();
       }
     }
@@ -178,9 +199,11 @@ bool FMcpConnectionManager::Tick(float DeltaTime) {
 
   // Heartbeat monitoring
   if (bHeartbeatTrackingEnabled && HeartbeatTimeoutSeconds > 0.0f &&
-      LastHeartbeatTimestamp > 0.0) {
+      LastHeartbeatTimestamp > 0.0)
+  {
     const double Now = FPlatformTime::Seconds();
-    if ((Now - LastHeartbeatTimestamp) > HeartbeatTimeoutSeconds) {
+    if ((Now - LastHeartbeatTimestamp) > HeartbeatTimeoutSeconds)
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Heartbeat timed out; forcing reconnect."));
       ForceReconnect(TEXT("Heartbeat timeout"));
@@ -193,7 +216,8 @@ bool FMcpConnectionManager::Tick(float DeltaTime) {
   return true;
 }
 
-void FMcpConnectionManager::AttemptConnection() {
+void FMcpConnectionManager::AttemptConnection()
+{
   if (!bBridgeAvailable)
     return;
 
@@ -205,8 +229,10 @@ void FMcpConnectionManager::AttemptConnection() {
   if (!Settings)
     return;
 
-  auto IsAnyServerListening = [&]() -> bool {
-    for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
+  auto IsAnyServerListening = [&]() -> bool
+  {
+    for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+    {
       if (Sock.IsValid() && Sock->IsListening())
         return true;
     }
@@ -214,15 +240,17 @@ void FMcpConnectionManager::AttemptConnection() {
   };
 
   const bool bShouldListen = Settings->bAlwaysListen;
-  if (bShouldListen && !IsAnyServerListening()) {
+  if (bShouldListen && !IsAnyServerListening())
+  {
     const FString PortsStr =
         bEnvListenPortsSet ? EnvListenPorts : Settings->ListenPorts;
     TArray<FString> PortTokens;
-    if (!PortsStr.IsEmpty()) {
+    if (!PortsStr.IsEmpty())
+    {
       PortsStr.ParseIntoArray(PortTokens, TEXT(","), true);
     }
     if (PortTokens.Num() == 0)
-      PortTokens.Add(TEXT("8090"));
+      PortTokens.Add(TEXT("8091"));
     if (!Settings->bMultiListen && PortTokens.Num() > 0)
       PortTokens.SetNum(1);
 
@@ -230,7 +258,8 @@ void FMcpConnectionManager::AttemptConnection() {
         EnvListenHost.IsEmpty() ? Settings->ListenHost : EnvListenHost;
     TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
 
-    for (const FString &Token : PortTokens) {
+    for (const FString &Token : PortTokens)
+    {
       const FString Trimmed = Token.TrimStartAndEnd();
       if (Trimmed.IsEmpty())
         continue;
@@ -240,8 +269,10 @@ void FMcpConnectionManager::AttemptConnection() {
         continue;
 
       bool bAlready = false;
-      for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
-        if (Sock.IsValid() && Sock->IsListening() && Sock->GetPort() == Port) {
+      for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+      {
+        if (Sock.IsValid() && Sock->IsListening() && Sock->GetPort() == Port)
+        {
           bAlready = true;
           break;
         }
@@ -262,22 +293,28 @@ void FMcpConnectionManager::AttemptConnection() {
       ServerSocket->InitializeWeakSelf(ServerSocket);
 
       ServerSocket->OnConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleConnected(Sock);
             }
           });
 
       ServerSocket->OnClientConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> ClientSock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> ClientSock)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleClientConnected(ClientSock);
             }
           });
 
       ServerSocket->OnConnectionError().AddLambda(
-          [WeakSelf](const FString &Err) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+          [WeakSelf](const FString &Err)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleServerConnectionError(Err);
             }
           });
@@ -288,22 +325,27 @@ void FMcpConnectionManager::AttemptConnection() {
     }
   }
 
-  if (!EndpointUrl.IsEmpty()) {
+  if (!EndpointUrl.IsEmpty())
+  {
     bool bHasClientForEndpoint = false;
-    for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
+    for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+    {
       if (Sock.IsValid() && !Sock->IsListening() &&
-          Sock->GetPort() == ClientPort) {
+          Sock->GetPort() == ClientPort)
+      {
         bHasClientForEndpoint = true;
         break;
       }
     }
 
-    if (!bHasClientForEndpoint) {
+    if (!bHasClientForEndpoint)
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
              TEXT("AttemptConnection: creating client socket to %s"),
              *EndpointUrl);
       TMap<FString, FString> Headers;
-      if (!CapabilityToken.IsEmpty()) {
+      if (!CapabilityToken.IsEmpty())
+      {
         Headers.Add(TEXT("X-MCP-Capability-Token"), CapabilityToken);
       }
       TSharedPtr<FMcpBridgeWebSocket> ClientSocket =
@@ -316,21 +358,27 @@ void FMcpConnectionManager::AttemptConnection() {
       TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
 
       ClientSocket->OnConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleConnected(Sock);
             }
           });
       ClientSocket->OnConnectionError().AddLambda(
-          [WeakSelf, ClientSocket](const FString &Err) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+          [WeakSelf, ClientSocket](const FString &Err)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleConnectionError(ClientSocket, Err);
             }
           });
       ClientSocket->OnMessage().AddLambda(
           [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock,
-                     const FString &Message) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+                     const FString &Message)
+          {
+            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+            {
               StrongSelf->HandleMessage(Sock, Message);
             }
           });
@@ -342,12 +390,15 @@ void FMcpConnectionManager::AttemptConnection() {
 }
 
 void FMcpConnectionManager::ForceReconnect(const FString &Reason,
-                                           float ReconnectDelayOverride) {
+                                           float ReconnectDelayOverride)
+{
   UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("ForceReconnect: %s"),
          *Reason);
 
-  for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets) {
-    if (Socket.IsValid()) {
+  for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets)
+  {
+    if (Socket.IsValid())
+    {
       Socket->Close();
     }
   }
@@ -362,7 +413,8 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
   }
 
   bBridgeAvailable = false;
-  if (bReconnectEnabled) {
+  if (bReconnectEnabled)
+  {
     TimeUntilReconnect = (ReconnectDelayOverride >= 0.0f)
                              ? ReconnectDelayOverride
                              : AutoReconnectDelaySeconds;
@@ -373,14 +425,18 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
 }
 
 void FMcpConnectionManager::HandleConnected(
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
   if (!Socket.IsValid())
     return;
   const int32 Port = Socket->GetPort();
-  if (Socket->IsListening()) {
+  if (Socket->IsListening())
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("Automation bridge listening on port=%d"), Port);
-  } else if (Socket->IsConnected()) {
+  }
+  else if (Socket->IsConnected())
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("Automation bridge connected (socket port=%d)."), Port);
   }
@@ -388,7 +444,8 @@ void FMcpConnectionManager::HandleConnected(
 }
 
 void FMcpConnectionManager::HandleClientConnected(
-    TSharedPtr<FMcpBridgeWebSocket> ClientSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> ClientSocket)
+{
   if (!ClientSocket.IsValid())
     return;
   AuthenticatedSockets.Remove(ClientSocket.Get());
@@ -403,49 +460,58 @@ void FMcpConnectionManager::HandleClientConnected(
   TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
 
   ClientSocket->OnMessage().AddLambda(
-      [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock, const FString &Msg) {
+      [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock, const FString &Msg)
+      {
         if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
           StrongSelf->HandleMessage(Sock, Msg);
       });
 
   ClientSocket->OnClosed().AddLambda(
       [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock, int32 Code,
-                 const FString &Reason, bool bClean) {
+                 const FString &Reason, bool bClean)
+      {
         if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
           StrongSelf->HandleClosed(Sock, Code, Reason, bClean);
       });
 
   TWeakPtr<FMcpBridgeWebSocket> WeakSocket = ClientSocket;
   ClientSocket->OnConnectionError().AddLambda(
-      [WeakSelf, WeakSocket](const FString &Error) {
-        if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
+      [WeakSelf, WeakSocket](const FString &Error)
+      {
+        if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
+        {
           StrongSelf->HandleConnectionError(WeakSocket.Pin(), Error);
         }
       });
 
   ClientSocket->OnHeartbeat().AddLambda(
-      [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock) {
+      [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock)
+      {
         if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin())
           StrongSelf->HandleHeartbeat(Sock);
       });
 
-  if (!ActiveSockets.Contains(ClientSocket)) {
+  if (!ActiveSockets.Contains(ClientSocket))
+  {
     ActiveSockets.Add(ClientSocket);
   }
   bBridgeAvailable = true;
 
-  if (ClientSocket.IsValid()) {
+  if (ClientSocket.IsValid())
+  {
     ClientSocket->NotifyMessageHandlerRegistered();
   }
 }
 
 void FMcpConnectionManager::HandleConnectionError(
-    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Error) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Error)
+{
   const int32 Port = Socket.IsValid() ? Socket->GetPort() : -1;
   UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
          TEXT("Automation bridge socket error (port=%d): %s"), Port, *Error);
 
-  if (Socket.IsValid()) {
+  if (Socket.IsValid())
+  {
     AuthenticatedSockets.Remove(Socket.Get());
     {
       FScopeLock Lock(&RateLimitMutex);
@@ -459,17 +525,21 @@ void FMcpConnectionManager::HandleConnectionError(
     ActiveSockets.Remove(Socket);
   }
 
-  if (ActiveSockets.Num() == 0) {
-    if (bReconnectEnabled) {
+  if (ActiveSockets.Num() == 0)
+  {
+    if (bReconnectEnabled)
+    {
       TimeUntilReconnect = AutoReconnectDelaySeconds;
     }
   }
 }
 
-void FMcpConnectionManager::HandleServerConnectionError(const FString &Error) {
+void FMcpConnectionManager::HandleServerConnectionError(const FString &Error)
+{
   UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
          TEXT("Automation bridge server error: %s"), *Error);
-  if (bReconnectEnabled) {
+  if (bReconnectEnabled)
+  {
     TimeUntilReconnect = AutoReconnectDelaySeconds;
   }
 }
@@ -477,12 +547,14 @@ void FMcpConnectionManager::HandleServerConnectionError(const FString &Error) {
 void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
                                          int32 StatusCode,
                                          const FString &Reason,
-                                         bool bWasClean) {
+                                         bool bWasClean)
+{
   const int32 Port = Socket.IsValid() ? Socket->GetPort() : -1;
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Socket closed: port=%d code=%d reason=%s clean=%s"), Port,
          StatusCode, *Reason, bWasClean ? TEXT("true") : TEXT("false"));
-  if (Socket.IsValid()) {
+  if (Socket.IsValid())
+  {
     AuthenticatedSockets.Remove(Socket.Get());
     {
       FScopeLock Lock(&RateLimitMutex);
@@ -490,15 +562,18 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
     }
     ActiveSockets.Remove(Socket);
   }
-  if (ActiveSockets.Num() == 0 && bReconnectEnabled) {
+  if (ActiveSockets.Num() == 0 && bReconnectEnabled)
+  {
     TimeUntilReconnect = AutoReconnectDelaySeconds;
   }
 }
 
 void FMcpConnectionManager::HandleHeartbeat(
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
   LastHeartbeatTimestamp = FPlatformTime::Seconds();
-  if (!bHeartbeatTrackingEnabled) {
+  if (!bHeartbeatTrackingEnabled)
+  {
     bHeartbeatTrackingEnabled = true;
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Heartbeat tracking enabled."));
@@ -506,12 +581,14 @@ void FMcpConnectionManager::HandleHeartbeat(
 }
 
 void FMcpConnectionManager::HandleMessage(
-    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Message) {
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Message)
+{
   if (!Socket.IsValid())
     return;
   FMcpBridgeWebSocket *SocketPtr = Socket.Get();
   FString RateLimitReason;
-  if (!UpdateRateLimit(SocketPtr, true, false, RateLimitReason)) {
+  if (!UpdateRateLimit(SocketPtr, true, false, RateLimitReason))
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Rate limit exceeded for incoming messages: %s"),
            *RateLimitReason);
@@ -523,7 +600,8 @@ void FMcpConnectionManager::HandleMessage(
     const TSharedRef<TJsonWriter<>> Writer =
         TJsonWriterFactory<>::Create(&Serialized);
     FJsonSerializer::Serialize(Err, Writer);
-    if (Socket.IsValid() && Socket->IsConnected()) {
+    if (Socket.IsValid() && Socket->IsConnected())
+    {
       Socket->Send(Serialized);
       Socket->Close(4008, TEXT("Rate limit exceeded"));
     }
@@ -532,7 +610,8 @@ void FMcpConnectionManager::HandleMessage(
 
   TSharedPtr<FJsonObject> RootObj;
   TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Message);
-  if (!FJsonSerializer::Deserialize(Reader, RootObj) || !RootObj.IsValid()) {
+  if (!FJsonSerializer::Deserialize(Reader, RootObj) || !RootObj.IsValid())
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Failed to parse incoming automation message JSON: %s"),
            *SanitizeForLogConnMgr(Message));
@@ -540,15 +619,18 @@ void FMcpConnectionManager::HandleMessage(
   }
 
   FString Type;
-  if (!RootObj->TryGetStringField(TEXT("type"), Type)) {
+  if (!RootObj->TryGetStringField(TEXT("type"), Type))
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Incoming message missing 'type' field: %s"),
            *SanitizeForLogConnMgr(Message));
     return;
   }
 
-  if (Type.Equals(TEXT("automation_request"), ESearchCase::IgnoreCase)) {
-    if (!UpdateRateLimit(SocketPtr, false, true, RateLimitReason)) {
+  if (Type.Equals(TEXT("automation_request"), ESearchCase::IgnoreCase))
+  {
+    if (!UpdateRateLimit(SocketPtr, false, true, RateLimitReason))
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Rate limit exceeded for automation requests: %s"),
              *RateLimitReason);
@@ -560,7 +642,8 @@ void FMcpConnectionManager::HandleMessage(
       const TSharedRef<TJsonWriter<>> Writer =
           TJsonWriterFactory<>::Create(&Serialized);
       FJsonSerializer::Serialize(Err, Writer);
-      if (Socket.IsValid() && Socket->IsConnected()) {
+      if (Socket.IsValid() && Socket->IsConnected())
+      {
         Socket->Send(Serialized);
         Socket->Close(4008, TEXT("Rate limit exceeded"));
       }
@@ -574,28 +657,34 @@ void FMcpConnectionManager::HandleMessage(
     TSharedPtr<FJsonObject> Payload = nullptr;
     const TSharedPtr<FJsonValue> *PayloadVal =
         RootObj->Values.Find(TEXT("payload"));
-    if (PayloadVal && (*PayloadVal)->Type == EJson::Object) {
+    if (PayloadVal && (*PayloadVal)->Type == EJson::Object)
+    {
       Payload = (*PayloadVal)->AsObject();
-    } else if (PayloadVal) {
+    }
+    else if (PayloadVal)
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request payload must be a JSON object."));
       return;
     }
 
-    if (RequestId.IsEmpty() || Action.IsEmpty()) {
+    if (RequestId.IsEmpty() || Action.IsEmpty())
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request missing requestId or action: %s"),
              *SanitizeForLogConnMgr(Message));
       return;
     }
 
-    if (RequestId.Len() > 128 || Action.Len() > 128) {
+    if (RequestId.Len() > 128 || Action.Len() > 128)
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request fields exceed expected size."));
       return;
     }
 
-    if (!SocketPtr || !AuthenticatedSockets.Contains(SocketPtr)) {
+    if (!SocketPtr || !AuthenticatedSockets.Contains(SocketPtr))
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Automation request received before bridge_hello handshake."));
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
@@ -605,7 +694,8 @@ void FMcpConnectionManager::HandleMessage(
       const TSharedRef<TJsonWriter<>> Writer =
           TJsonWriterFactory<>::Create(&Serialized);
       FJsonSerializer::Serialize(Err, Writer);
-      if (Socket.IsValid() && Socket->IsConnected()) {
+      if (Socket.IsValid() && Socket->IsConnected())
+      {
         Socket->Send(Serialized);
         Socket->Close(4004, TEXT("Handshake required"));
       }
@@ -616,20 +706,31 @@ void FMcpConnectionManager::HandleMessage(
     const bool bSkipLogging = Action.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
 
     // Log incoming request: action + filtered payload (exclude type/requestId)
-    if (!bSkipLogging) {
+    if (!bSkipLogging)
+    {
       FString PayloadPreview;
-      if (Payload.IsValid()) {
+      if (Payload.IsValid())
+      {
         TArray<FString> Parts;
-        for (auto& Pair : Payload->Values) {
-          if (Pair.Key != TEXT("type") && Pair.Key != TEXT("requestId")) {
+        for (auto &Pair : Payload->Values)
+        {
+          if (Pair.Key != TEXT("type") && Pair.Key != TEXT("requestId"))
+          {
             FString Val;
-            if (Pair.Value->Type == EJson::String) {
+            if (Pair.Value->Type == EJson::String)
+            {
               Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(50));
-            } else if (Pair.Value->Type == EJson::Boolean) {
+            }
+            else if (Pair.Value->Type == EJson::Boolean)
+            {
               Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
-            } else if (Pair.Value->Type == EJson::Number) {
+            }
+            else if (Pair.Value->Type == EJson::Number)
+            {
               Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
-            } else {
+            }
+            else
+            {
               Val = TEXT("...");
             }
             Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
@@ -650,20 +751,24 @@ void FMcpConnectionManager::HandleMessage(
     }
 
     // Dispatch to subsystem via callback
-    if (OnMessageReceived.IsBound()) {
+    if (OnMessageReceived.IsBound())
+    {
       OnMessageReceived.Execute(RequestId, Action, Payload, Socket);
     }
     return;
   }
 
-  if (Type.Equals(TEXT("bridge_hello"), ESearchCase::IgnoreCase)) {
+  if (Type.Equals(TEXT("bridge_hello"), ESearchCase::IgnoreCase))
+  {
     FString ReceivedToken;
     RootObj->TryGetStringField(TEXT("capabilityToken"), ReceivedToken);
     if (bRequireCapabilityToken &&
-        (ReceivedToken.IsEmpty() || ReceivedToken != CapabilityToken)) {
+        (ReceivedToken.IsEmpty() || ReceivedToken != CapabilityToken))
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
-      if (SocketPtr) {
+      if (SocketPtr)
+      {
         AuthenticatedSockets.Remove(SocketPtr);
       }
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
@@ -673,14 +778,16 @@ void FMcpConnectionManager::HandleMessage(
       const TSharedRef<TJsonWriter<>> Writer =
           TJsonWriterFactory<>::Create(&Serialized);
       FJsonSerializer::Serialize(Err, Writer);
-      if (Socket.IsValid() && Socket->IsConnected()) {
+      if (Socket.IsValid() && Socket->IsConnected())
+      {
         Socket->Send(Serialized);
         Socket->Close(4005, TEXT("Invalid capability token"));
       }
       return;
     }
 
-    if (SocketPtr) {
+    if (SocketPtr)
+    {
       AuthenticatedSockets.Add(SocketPtr);
     }
 
@@ -722,47 +829,56 @@ void FMcpConnectionManager::HandleMessage(
   }
 }
 
-bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr,
-                                           bool bIncrementMessage,
-                                           bool bIncrementAutomation,
-                                           FString& OutReason) {
-  if (!SocketPtr) {
+bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket *SocketPtr,
+                                            bool bIncrementMessage,
+                                            bool bIncrementAutomation,
+                                            FString &OutReason)
+{
+  if (!SocketPtr)
+  {
     return true;
   }
 
-  if (MaxMessagesPerMinute <= 0 && MaxAutomationRequestsPerMinute <= 0) {
+  if (MaxMessagesPerMinute <= 0 && MaxAutomationRequestsPerMinute <= 0)
+  {
     return true;
   }
 
   FScopeLock Lock(&RateLimitMutex);
 
   const double NowSeconds = FPlatformTime::Seconds();
-  FSocketRateState& State = SocketRateLimits.FindOrAdd(SocketPtr);
-  if (State.WindowStartSeconds <= 0.0) {
+  FSocketRateState &State = SocketRateLimits.FindOrAdd(SocketPtr);
+  if (State.WindowStartSeconds <= 0.0)
+  {
     State.WindowStartSeconds = NowSeconds;
   }
 
-  if ((NowSeconds - State.WindowStartSeconds) >= 60.0) {
+  if ((NowSeconds - State.WindowStartSeconds) >= 60.0)
+  {
     State.WindowStartSeconds = NowSeconds;
     State.MessageCount = 0;
     State.AutomationRequestCount = 0;
   }
 
-  if (bIncrementMessage) {
+  if (bIncrementMessage)
+  {
     ++State.MessageCount;
   }
-  if (bIncrementAutomation) {
+  if (bIncrementAutomation)
+  {
     ++State.AutomationRequestCount;
   }
 
-  if (MaxMessagesPerMinute > 0 && State.MessageCount >= MaxMessagesPerMinute) {
+  if (MaxMessagesPerMinute > 0 && State.MessageCount >= MaxMessagesPerMinute)
+  {
     OutReason = FString::Printf(TEXT("message rate %d/%d per minute"),
                                 State.MessageCount, MaxMessagesPerMinute);
     return false;
   }
 
   if (bIncrementAutomation && MaxAutomationRequestsPerMinute > 0 &&
-      State.AutomationRequestCount >= MaxAutomationRequestsPerMinute) {
+      State.AutomationRequestCount >= MaxAutomationRequestsPerMinute)
+  {
     OutReason = FString::Printf(TEXT("automation request rate %d/%d per minute"),
                                 State.AutomationRequestCount,
                                 MaxAutomationRequestsPerMinute);
@@ -772,14 +888,17 @@ bool FMcpConnectionManager::UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr,
   return true;
 }
 
-bool FMcpConnectionManager::SendRawMessage(const FString &Message) {
+bool FMcpConnectionManager::SendRawMessage(const FString &Message)
+{
   if (Message.IsEmpty())
     return false;
   bool bSent = false;
-  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
+  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+  {
     if (!Sock.IsValid() || !Sock->IsConnected())
       continue;
-    if (Sock->Send(Message)) {
+    if (Sock->Send(Message))
+    {
       bSent = true;
       break;
     }
@@ -788,7 +907,8 @@ bool FMcpConnectionManager::SendRawMessage(const FString &Message) {
 }
 
 void FMcpConnectionManager::SendControlMessage(
-    const TSharedPtr<FJsonObject> &Message) {
+    const TSharedPtr<FJsonObject> &Message)
+{
   if (!Message.IsValid())
     return;
   FString Serialized;
@@ -801,7 +921,8 @@ void FMcpConnectionManager::SendControlMessage(
 void FMcpConnectionManager::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     bool bSuccess, const FString &Message,
-    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
+    const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode)
+{
   TSharedRef<FJsonObject> Response = MakeShared<FJsonObject>();
   Response->SetStringField(TEXT("type"), TEXT("automation_response"));
   Response->SetStringField(TEXT("requestId"), RequestId);
@@ -820,7 +941,8 @@ void FMcpConnectionManager::SendAutomationResponse(
 
   // Get action from telemetry for better logging context
   FString ActionName = TEXT("unknown");
-  if (FAutomationRequestTelemetry* Entry = ActiveRequestTelemetry.Find(RequestId)) {
+  if (FAutomationRequestTelemetry *Entry = ActiveRequestTelemetry.Find(RequestId))
+  {
     ActionName = Entry->Action;
   }
 
@@ -828,23 +950,37 @@ void FMcpConnectionManager::SendAutomationResponse(
   const bool bSkipLogging = ActionName.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
 
   // Log result with actual values for verification
-  if (!bSkipLogging) {
+  if (!bSkipLogging)
+  {
     FString ResultPreview;
-    if (Result.IsValid() && Result->Values.Num() > 0) {
+    if (Result.IsValid() && Result->Values.Num() > 0)
+    {
       TArray<FString> Parts;
-      for (auto& Pair : Result->Values) {
+      for (auto &Pair : Result->Values)
+      {
         FString Val;
-        if (Pair.Value->Type == EJson::String) {
+        if (Pair.Value->Type == EJson::String)
+        {
           Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(40));
-        } else if (Pair.Value->Type == EJson::Boolean) {
+        }
+        else if (Pair.Value->Type == EJson::Boolean)
+        {
           Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
-        } else if (Pair.Value->Type == EJson::Number) {
+        }
+        else if (Pair.Value->Type == EJson::Number)
+        {
           Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
-        } else if (Pair.Value->Type == EJson::Array) {
+        }
+        else if (Pair.Value->Type == EJson::Array)
+        {
           Val = FString::Printf(TEXT("[%d]"), Pair.Value->AsArray().Num());
-        } else if (Pair.Value->Type == EJson::Object) {
+        }
+        else if (Pair.Value->Type == EJson::Object)
+        {
           Val = TEXT("{...}");
-        } else {
+        }
+        else
+        {
           Val = TEXT("?");
         }
         Parts.Add(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Val));
@@ -869,35 +1005,44 @@ void FMcpConnectionManager::SendAutomationResponse(
   {
     FScopeLock Lock(&PendingRequestsMutex);
     if (TSharedPtr<FMcpBridgeWebSocket> *Found =
-            PendingRequestsToSockets.Find(RequestId)) {
+            PendingRequestsToSockets.Find(RequestId))
+    {
       MappedSocket = *Found;
     }
   }
 
-  for (int Attempt = 1; Attempt <= MaxAttempts && !bSent; ++Attempt) {
-    if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
-      if (TargetSocket->Send(Serialized)) {
+  for (int Attempt = 1; Attempt <= MaxAttempts && !bSent; ++Attempt)
+  {
+    if (TargetSocket.IsValid() && TargetSocket->IsConnected())
+    {
+      if (TargetSocket->Send(Serialized))
+      {
         bSent = true;
         break;
       }
     }
 
-    if (!bSent && MappedSocket.IsValid() && MappedSocket->IsConnected()) {
-      if (MappedSocket->Send(Serialized)) {
+    if (!bSent && MappedSocket.IsValid() && MappedSocket->IsConnected())
+    {
+      if (MappedSocket->Send(Serialized))
+      {
         bSent = true;
         break;
       }
     }
 
-    if (!bSent) {
-      for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
+    if (!bSent)
+    {
+      for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets)
+      {
         if (!Sock.IsValid() || !Sock->IsConnected())
           continue;
         if (Sock == TargetSocket)
           continue;
         if (MappedSocket == Sock)
           continue;
-        if (Sock->Send(Serialized)) {
+        if (Sock->Send(Serialized))
+        {
           bSent = true;
           break;
         }
@@ -905,7 +1050,8 @@ void FMcpConnectionManager::SendAutomationResponse(
     }
   }
 
-  if (!bSent) {
+  if (!bSent)
+  {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Failed to deliver automation_response for RequestId=%s"),
            *RequestId);
@@ -935,49 +1081,57 @@ void FMcpConnectionManager::SendAutomationResponse(
 }
 
 void FMcpConnectionManager::SendProgressUpdate(
-    const FString& RequestId, float Percent, const FString& Message, bool bStillWorking) {
+    const FString &RequestId, float Percent, const FString &Message, bool bStillWorking)
+{
   TSharedRef<FJsonObject> Update = MakeShared<FJsonObject>();
   Update->SetStringField(TEXT("type"), TEXT("progress_update"));
   Update->SetStringField(TEXT("requestId"), RequestId);
-  
-  if (Percent >= 0.0f) {
+
+  if (Percent >= 0.0f)
+  {
     Update->SetNumberField(TEXT("percent"), Percent);
   }
-  
-  if (!Message.IsEmpty()) {
+
+  if (!Message.IsEmpty())
+  {
     Update->SetStringField(TEXT("message"), Message);
   }
-  
+
   Update->SetBoolField(TEXT("stillWorking"), bStillWorking);
-  
+
   // Add timestamp in ISO format
   const FDateTime Now = FDateTime::UtcNow();
   const FString Timestamp = FString::Printf(TEXT("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ"),
-    Now.GetYear(), Now.GetMonth(), Now.GetDay(),
-    Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
-    Now.GetMillisecond());
+                                            Now.GetYear(), Now.GetMonth(), Now.GetDay(),
+                                            Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
+                                            Now.GetMillisecond());
   Update->SetStringField(TEXT("timestamp"), Timestamp);
-  
+
   FString Serialized;
   const TSharedRef<TJsonWriter<>> Writer =
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Update, Writer);
-  
+
   // Find the socket for this request and send the progress update
   TSharedPtr<FMcpBridgeWebSocket> TargetSocket;
   {
     FScopeLock Lock(&PendingRequestsMutex);
-    if (TSharedPtr<FMcpBridgeWebSocket>* Found = PendingRequestsToSockets.Find(RequestId)) {
+    if (TSharedPtr<FMcpBridgeWebSocket> *Found = PendingRequestsToSockets.Find(RequestId))
+    {
       TargetSocket = *Found;
     }
   }
-  
-  if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
-    if (!TargetSocket->Send(Serialized)) {
+
+  if (TargetSocket.IsValid() && TargetSocket->IsConnected())
+  {
+    if (!TargetSocket->Send(Serialized))
+    {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
              TEXT("Failed to send progress update for RequestId=%s"),
              *RequestId);
-    } else {
+    }
+    else
+    {
       // Verbose logging only for progress updates to avoid flooding logs
       UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
              TEXT("Progress update for %s: %.1f%% %s"),
@@ -988,11 +1142,13 @@ void FMcpConnectionManager::SendProgressUpdate(
 
 void FMcpConnectionManager::RecordAutomationTelemetry(
     const FString &RequestId, bool bSuccess, const FString &Message,
-    const FString &ErrorCode) {
+    const FString &ErrorCode)
+{
   const double NowSeconds = FPlatformTime::Seconds();
 
   FAutomationRequestTelemetry Entry;
-  if (!ActiveRequestTelemetry.RemoveAndCopyValue(RequestId, Entry)) {
+  if (!ActiveRequestTelemetry.RemoveAndCopyValue(RequestId, Entry))
+  {
     return;
   }
 
@@ -1003,10 +1159,13 @@ void FMcpConnectionManager::RecordAutomationTelemetry(
 
   const double DurationSeconds =
       FMath::Max(0.0, NowSeconds - Entry.StartTimeSeconds);
-  if (bSuccess) {
+  if (bSuccess)
+  {
     ++Stats.SuccessCount;
     Stats.TotalSuccessDurationSeconds += DurationSeconds;
-  } else {
+  }
+  else
+  {
     ++Stats.FailureCount;
     Stats.TotalFailureDurationSeconds += DurationSeconds;
   }
@@ -1016,7 +1175,8 @@ void FMcpConnectionManager::RecordAutomationTelemetry(
 }
 
 void FMcpConnectionManager::EmitAutomationTelemetrySummaryIfNeeded(
-    double NowSeconds) {
+    double NowSeconds)
+{
   if (TelemetrySummaryIntervalSeconds <= 0.0)
     return;
   if ((NowSeconds - LastTelemetrySummaryLogSeconds) <
@@ -1031,7 +1191,8 @@ void FMcpConnectionManager::EmitAutomationTelemetrySummaryIfNeeded(
   Lines.Reserve(AutomationActionTelemetry.Num());
 
   for (const TPair<FString, FAutomationActionStats> &Pair :
-       AutomationActionTelemetry) {
+       AutomationActionTelemetry)
+  {
     const FString &ActionKey = Pair.Key;
     const FAutomationActionStats &Stats = Pair.Value;
     const double AvgSuccess =
@@ -1054,21 +1215,26 @@ void FMcpConnectionManager::EmitAutomationTelemetrySummaryIfNeeded(
          Lines.Num(), *FString::Join(Lines, TEXT("\n")));
 }
 
-int32 FMcpConnectionManager::GetActiveSocketCount() const {
+int32 FMcpConnectionManager::GetActiveSocketCount() const
+{
   return ActiveSockets.Num();
 }
 
 void FMcpConnectionManager::RegisterRequestSocket(
-    const FString &RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!RequestId.IsEmpty() && Socket.IsValid()) {
+    const FString &RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+  if (!RequestId.IsEmpty() && Socket.IsValid())
+  {
     FScopeLock Lock(&PendingRequestsMutex);
     PendingRequestsToSockets.Add(RequestId, Socket);
   }
 }
 
 void FMcpConnectionManager::StartRequestTelemetry(const FString &RequestId,
-                                                  const FString &Action) {
-  if (!ActiveRequestTelemetry.Contains(RequestId)) {
+                                                  const FString &Action)
+{
+  if (!ActiveRequestTelemetry.Contains(RequestId))
+  {
     FAutomationRequestTelemetry Entry;
     // Store lowercase action for consistent aggregation, similar to original
     // logic

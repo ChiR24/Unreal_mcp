@@ -1,7 +1,7 @@
 // Shared runtime defaults and protocol constants
 export const DEFAULT_AUTOMATION_HOST = '127.0.0.1';
-export const DEFAULT_AUTOMATION_PORT = 8090;
-export const DEFAULT_AUTOMATION_PORTS = [8090, 8091];
+export const DEFAULT_AUTOMATION_PORTS = [8091, 8090];
+export const DEFAULT_AUTOMATION_PORT = DEFAULT_AUTOMATION_PORTS[0];
 export const DEFAULT_NEGOTIATED_PROTOCOLS = ['mcp-automation'];
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 10000;
 export const DEFAULT_HANDSHAKE_TIMEOUT_MS = 5000;
