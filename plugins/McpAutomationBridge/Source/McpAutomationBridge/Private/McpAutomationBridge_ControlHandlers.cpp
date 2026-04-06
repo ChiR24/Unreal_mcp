@@ -56,6 +56,7 @@
 #include "McpAutomationBridgeHelpers.h"
 #include "McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridge_WidgetBlueprintEditorUtils.h"
 #include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
@@ -103,6 +104,7 @@
 #include "Framework/Application/SlateUser.h"
 #include "Framework/Docking/TabManager.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
+#include "GraphEditor.h"
 #include "InputCoreTypes.h"
 #include "HAL/PlatformProcess.h"
 #include "ImageUtils.h"
@@ -111,6 +113,7 @@
 #include "IAssetViewport.h" // For IAssetViewport::GetAssetViewportClient()
 #include "Rendering/DrawElements.h"
 #include "Widgets/Docking/SDockTab.h"
+#include "Widgets/Input/SButton.h"
 #include "Widgets/SLeafWidget.h"
 #include "Widgets/SWindow.h"
 
@@ -149,6 +152,15 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "BlueprintEditor.h"
+#include "Blueprint/WidgetTree.h"
+#include "BlueprintModes/WidgetBlueprintApplicationModes.h"
+#include "Components/Widget.h"
+#include "Designer/SDesignerView.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
+#include "WidgetBlueprint.h"
+#include "WidgetBlueprintEditor.h"
 
 // -----------------------------------------------------------------------------
 // Editor-only Includes: Export & Output
@@ -217,10 +229,749 @@ namespace
   {
     TSharedPtr<SWindow> Window;
     TSharedPtr<SDockTab> Tab;
+    TSharedPtr<SWidget> PreferredWidget;
     FString TabId;
     FString WindowTitle;
+    FString ResolutionSource;
+    FString RequestedAssetPath;
+    FString AssetTargetError;
+    FString PreferredWidgetType;
+    FSlateRect WindowRect;
     FSlateRect ClientRect;
   };
+
+  struct FMcpResolvedBlueprintEditorContext
+  {
+    UObject *Asset = nullptr;
+    UBlueprint *Blueprint = nullptr;
+    FBlueprintEditor *Editor = nullptr;
+    FString AssetPath;
+    FString RequestedGraphName;
+    FString RequestedTabId;
+    FString RequestedWindowTitle;
+    FString ResolvedGraphName;
+    FString EditorType;
+    FString CurrentMode;
+    FString TabId;
+    FString WindowTitle;
+    FString ResolvedTargetSource;
+    bool bOpenedAssetEditor = false;
+  };
+
+  using namespace McpWidgetBlueprintEditorUtils;
+
+  FString GetTrimmedPayloadString(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName)
+  {
+    FString Value;
+    if (Payload.IsValid())
+    {
+      Payload->TryGetStringField(FieldName, Value);
+    }
+
+    return Value.TrimStartAndEnd();
+  }
+
+  FString GetBlueprintGraphDisplayName(const UEdGraph *Graph)
+  {
+    return Graph != nullptr ? FBlueprintEditor::GetGraphDisplayName(Graph).ToString() : FString();
+  }
+
+  FString GetBlueprintNodeListTitle(const UEdGraphNode *Node)
+  {
+    return Node != nullptr ? Node->GetNodeTitle(ENodeTitleType::ListView).ToString() : FString();
+  }
+
+  void RefreshBlueprintEditorSurfaceDiagnostics(IAssetEditorInstance *EditorInstance,
+                                                FMcpResolvedBlueprintEditorContext &Context)
+  {
+    if (EditorInstance == nullptr)
+    {
+      return;
+    }
+
+    TSharedPtr<FTabManager> TabManager = EditorInstance->GetAssociatedTabManager();
+    auto ApplyTabDiagnostics = [&Context](const TSharedPtr<SDockTab> &DockTab,
+                                          const FString &Source)
+    {
+      if (!DockTab.IsValid())
+      {
+        return;
+      }
+
+      Context.TabId = DockTab->GetLayoutIdentifier().ToString();
+      if (const TSharedPtr<SWindow> ParentWindow = DockTab->GetParentWindow())
+      {
+        Context.WindowTitle = ParentWindow->GetTitle().ToString();
+      }
+      if (!Source.IsEmpty())
+      {
+        Context.ResolvedTargetSource = Source;
+      }
+    };
+
+    if (TabManager.IsValid())
+    {
+      if (!Context.RequestedTabId.IsEmpty())
+      {
+        if (const TSharedPtr<SDockTab> RequestedTab =
+                TabManager->FindExistingLiveTab(FTabId(FName(*Context.RequestedTabId))))
+        {
+          ApplyTabDiagnostics(RequestedTab, TEXT("tab_id_hint"));
+        }
+      }
+
+      if (Context.ResolvedTargetSource.IsEmpty())
+      {
+        if (const TSharedPtr<SDockTab> OwnerTab = TabManager->GetOwnerTab())
+        {
+          ApplyTabDiagnostics(OwnerTab,
+                              Context.RequestedWindowTitle.IsEmpty() ? TEXT("asset_path")
+                                                                     : TEXT("window_title_hint"));
+        }
+      }
+    }
+
+    if (Context.TabId.IsEmpty() && !Context.RequestedTabId.IsEmpty())
+    {
+      Context.TabId = Context.RequestedTabId;
+    }
+
+    if (Context.WindowTitle.IsEmpty() && !Context.RequestedWindowTitle.IsEmpty())
+    {
+      Context.WindowTitle = Context.RequestedWindowTitle;
+    }
+
+    if (Context.ResolvedTargetSource.IsEmpty())
+    {
+      Context.ResolvedTargetSource = !Context.RequestedTabId.IsEmpty()
+                                         ? TEXT("tab_id_hint")
+                                         : (!Context.RequestedWindowTitle.IsEmpty() ? TEXT("window_title_hint")
+                                                                                    : TEXT("asset_path"));
+    }
+  }
+
+  void ApplyBlueprintNavigationDiagnostics(const FMcpResolvedBlueprintEditorContext &Context,
+                                           const TSharedPtr<FJsonObject> &Response)
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    if (!Context.AssetPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("assetPath"), Context.AssetPath);
+    }
+    if (!Context.EditorType.IsEmpty())
+    {
+      Response->SetStringField(TEXT("editorType"), Context.EditorType);
+    }
+    if (!Context.RequestedGraphName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedGraphName"), Context.RequestedGraphName);
+    }
+    if (!Context.ResolvedGraphName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedGraphName"), Context.ResolvedGraphName);
+      Response->SetStringField(TEXT("graphName"), Context.ResolvedGraphName);
+    }
+    if (!Context.CurrentMode.IsEmpty())
+    {
+      Response->SetStringField(TEXT("currentMode"), Context.CurrentMode);
+    }
+    if (!Context.TabId.IsEmpty())
+    {
+      Response->SetStringField(TEXT("tabId"), Context.TabId);
+    }
+    if (!Context.WindowTitle.IsEmpty())
+    {
+      Response->SetStringField(TEXT("windowTitle"), Context.WindowTitle);
+    }
+    if (!Context.ResolvedTargetSource.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedTargetSource"), Context.ResolvedTargetSource);
+    }
+
+    Response->SetBoolField(TEXT("openedAssetEditor"), Context.bOpenedAssetEditor);
+  }
+
+  TSharedPtr<FJsonObject> CreateBlueprintNavigationDiagnosticsObject(
+      const FMcpResolvedBlueprintEditorContext &Context)
+  {
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    ApplyBlueprintNavigationDiagnostics(Context, Response);
+    return Response;
+  }
+
+  void SendBlueprintNavigationError(UMcpAutomationBridgeSubsystem *Subsystem,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                    const FString &RequestId,
+                                    const FMcpResolvedBlueprintEditorContext &Context,
+                                    const FString &ErrorCode,
+                                    const FString &ErrorMessage)
+  {
+    SendStandardErrorResponse(Subsystem, Socket, RequestId, *ErrorCode, *ErrorMessage,
+                              CreateBlueprintNavigationDiagnosticsObject(Context));
+  }
+
+  bool ResolveBlueprintEditorContext(const TSharedPtr<FJsonObject> &Payload,
+                                     FMcpResolvedBlueprintEditorContext &OutContext,
+                                     FString &OutErrorCode,
+                                     FString &OutErrorMessage)
+  {
+    OutErrorCode.Reset();
+    OutErrorMessage.Reset();
+    OutContext = FMcpResolvedBlueprintEditorContext();
+
+    if (!GEditor)
+    {
+      OutErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
+      OutErrorMessage = TEXT("Editor not available");
+      return false;
+    }
+
+    OutContext.AssetPath = GetTrimmedPayloadString(Payload, TEXT("assetPath"));
+    OutContext.RequestedGraphName = GetTrimmedPayloadString(Payload, TEXT("graphName"));
+    OutContext.RequestedTabId = GetTrimmedPayloadString(Payload, TEXT("tabId"));
+    OutContext.RequestedWindowTitle = GetTrimmedPayloadString(Payload, TEXT("windowTitle"));
+
+    if (OutContext.AssetPath.IsEmpty())
+    {
+      OutErrorCode = TEXT("INVALID_ARGUMENT");
+      OutErrorMessage = TEXT("assetPath required");
+      return false;
+    }
+
+    UAssetEditorSubsystem *AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+    if (AssetEditorSubsystem == nullptr)
+    {
+      OutErrorCode = TEXT("SUBSYSTEM_MISSING");
+      OutErrorMessage = TEXT("AssetEditorSubsystem not available");
+      return false;
+    }
+
+    if (!UEditorAssetLibrary::DoesAssetExist(OutContext.AssetPath))
+    {
+      OutErrorCode = TEXT("ASSET_NOT_FOUND");
+      OutErrorMessage = TEXT("Asset not found");
+      return false;
+    }
+
+    UObject *Asset = UEditorAssetLibrary::LoadAsset(OutContext.AssetPath);
+    if (Asset == nullptr)
+    {
+      OutErrorCode = TEXT("LOAD_FAILED");
+      OutErrorMessage = TEXT("Failed to load asset");
+      return false;
+    }
+
+    UBlueprint *Blueprint = Cast<UBlueprint>(Asset);
+    if (Blueprint == nullptr)
+    {
+      OutErrorCode = TEXT("INVALID_ASSET");
+      OutErrorMessage = TEXT("assetPath must resolve to a Blueprint asset");
+      return false;
+    }
+
+    IAssetEditorInstance *EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Asset, false);
+    if (EditorInstance == nullptr)
+    {
+      if (!AssetEditorSubsystem->OpenEditorForAsset(Asset))
+      {
+        OutErrorCode = TEXT("OPEN_FAILED");
+        OutErrorMessage = TEXT("Failed to open asset editor");
+        return false;
+      }
+
+      OutContext.bOpenedAssetEditor = true;
+      EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Asset, false);
+    }
+
+    if (EditorInstance == nullptr)
+    {
+      OutErrorCode = TEXT("EDITOR_NOT_FOUND");
+      OutErrorMessage = TEXT("Failed to resolve a live asset editor for the Blueprint");
+      return false;
+    }
+
+    OutContext.EditorType = EditorInstance->GetEditorName().ToString();
+    if (!OutContext.EditorType.Contains(TEXT("Blueprint"), ESearchCase::IgnoreCase))
+    {
+      OutErrorCode = TEXT("UNSUPPORTED_EDITOR");
+      OutErrorMessage = FString::Printf(TEXT("Resolved editor '%s' is not Blueprint-backed"),
+                                        *OutContext.EditorType);
+      return false;
+    }
+
+    EditorInstance->FocusWindow(Asset);
+
+    OutContext.Asset = Asset;
+    OutContext.Blueprint = Blueprint;
+    // Use static_cast after verifying the toolkit type via IAssetEditorInstance::GetEditorName().
+    OutContext.Editor = static_cast<FBlueprintEditor *>(EditorInstance);
+    OutContext.CurrentMode = OutContext.Editor != nullptr ? OutContext.Editor->GetCurrentMode().ToString()
+                                                          : FString();
+
+    RefreshBlueprintEditorSurfaceDiagnostics(EditorInstance, OutContext);
+    return true;
+  }
+
+  bool ResolveBlueprintGraph(FMcpResolvedBlueprintEditorContext &Context,
+                             UEdGraph *&OutGraph,
+                             FString &OutError)
+  {
+    OutGraph = nullptr;
+    OutError.Reset();
+
+    if (Context.Blueprint == nullptr || Context.Editor == nullptr)
+    {
+      OutError = TEXT("Blueprint editor context is not available");
+      return false;
+    }
+
+    auto ApplyResolvedGraph = [&Context, &OutGraph](UEdGraph *Graph)
+    {
+      if (Graph == nullptr)
+      {
+        return false;
+      }
+
+      Context.Editor->OpenGraphAndBringToFront(Graph, true);
+      Context.ResolvedGraphName = GetBlueprintGraphDisplayName(Graph);
+      Context.CurrentMode = Context.Editor->GetCurrentMode().ToString();
+      OutGraph = Graph;
+      return true;
+    };
+
+    if (Context.RequestedGraphName.IsEmpty())
+    {
+      if (UEdGraph *FocusedGraph = Context.Editor->GetFocusedGraph())
+      {
+        return ApplyResolvedGraph(FocusedGraph);
+      }
+
+      if (Context.Blueprint->UbergraphPages.Num() > 0)
+      {
+        return ApplyResolvedGraph(Context.Blueprint->UbergraphPages[0]);
+      }
+
+      TArray<UEdGraph *> AllGraphs;
+      Context.Blueprint->GetAllGraphs(AllGraphs);
+      if (AllGraphs.Num() > 0)
+      {
+        return ApplyResolvedGraph(AllGraphs[0]);
+      }
+
+      OutError = TEXT("Blueprint has no graphs to navigate");
+      return false;
+    }
+
+    TArray<UEdGraph *> MatchingGraphs;
+    TArray<UEdGraph *> AllGraphs;
+    Context.Blueprint->GetAllGraphs(AllGraphs);
+    for (UEdGraph *Graph : AllGraphs)
+    {
+      if (Graph == nullptr)
+      {
+        continue;
+      }
+
+      const FString InternalName = Graph->GetName();
+      const FString DisplayName = GetBlueprintGraphDisplayName(Graph);
+      if (InternalName.Equals(Context.RequestedGraphName, ESearchCase::IgnoreCase) ||
+          DisplayName.Equals(Context.RequestedGraphName, ESearchCase::IgnoreCase))
+      {
+        MatchingGraphs.Add(Graph);
+      }
+    }
+
+    if (MatchingGraphs.Num() == 0)
+    {
+      OutError = FString::Printf(TEXT("Blueprint graph '%s' was not found"),
+                                 *Context.RequestedGraphName);
+      return false;
+    }
+
+    if (MatchingGraphs.Num() > 1)
+    {
+      OutError = FString::Printf(TEXT("Blueprint graph '%s' matched %d graphs; use an exact internal graph name"),
+                                 *Context.RequestedGraphName,
+                                 MatchingGraphs.Num());
+      return false;
+    }
+
+    return ApplyResolvedGraph(MatchingGraphs[0]);
+  }
+
+  void ApplyWidgetBlueprintNavigationDiagnostics(
+      const FMcpResolvedWidgetBlueprintEditorContext &Context,
+      const TSharedPtr<FJsonObject> &Response)
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    if (!Context.AssetPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("assetPath"), Context.AssetPath);
+    }
+    if (!Context.EditorType.IsEmpty())
+    {
+      Response->SetStringField(TEXT("editorType"), Context.EditorType);
+    }
+    if (!Context.RequestedGraphName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedGraphName"), Context.RequestedGraphName);
+    }
+    if (!Context.ResolvedGraphName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedGraphName"), Context.ResolvedGraphName);
+      Response->SetStringField(TEXT("graphName"), Context.ResolvedGraphName);
+    }
+    if (!Context.CurrentMode.IsEmpty())
+    {
+      Response->SetStringField(TEXT("currentMode"), Context.CurrentMode);
+    }
+    if (!Context.TabId.IsEmpty())
+    {
+      Response->SetStringField(TEXT("tabId"), Context.TabId);
+    }
+    if (!Context.WindowTitle.IsEmpty())
+    {
+      Response->SetStringField(TEXT("windowTitle"), Context.WindowTitle);
+    }
+    if (!Context.ResolvedTargetSource.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedTargetSource"), Context.ResolvedTargetSource);
+    }
+
+    Response->SetBoolField(TEXT("openedAssetEditor"), Context.bOpenedAssetEditor);
+
+    if (!Context.RequestedMode.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedMode"), Context.RequestedMode);
+    }
+
+    if (!Context.WidgetSelectorType.IsEmpty())
+    {
+      Response->SetStringField(TEXT("widgetSelectorType"), Context.WidgetSelectorType);
+    }
+
+    if (!Context.WidgetSelectorValue.IsEmpty())
+    {
+      Response->SetStringField(TEXT("widgetSelector"), Context.WidgetSelectorValue);
+    }
+
+    if (!Context.RequestedWidgetName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedWidgetName"), Context.RequestedWidgetName);
+    }
+
+    if (!Context.RequestedWidgetPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedWidgetPath"), Context.RequestedWidgetPath);
+    }
+
+    if (!Context.RequestedWidgetObjectPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedWidgetObjectPath"), Context.RequestedWidgetObjectPath);
+    }
+
+    if (!Context.ResolvedWidgetName.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedWidgetName"), Context.ResolvedWidgetName);
+    }
+
+    if (!Context.ResolvedWidgetPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedWidgetPath"), Context.ResolvedWidgetPath);
+    }
+
+    if (!Context.ResolvedWidgetObjectPath.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedWidgetObjectPath"), Context.ResolvedWidgetObjectPath);
+    }
+
+    Response->SetBoolField(TEXT("designerTabFound"), Context.bDesignerTabFound);
+    Response->SetBoolField(TEXT("designerViewFound"), Context.bDesignerViewFound);
+    Response->SetBoolField(TEXT("queuedDesignerAction"), Context.bQueuedDesignerAction);
+  }
+
+  TSharedPtr<FJsonObject> CreateWidgetBlueprintNavigationDiagnosticsObject(
+      const FMcpResolvedWidgetBlueprintEditorContext &Context)
+  {
+    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    ApplyWidgetBlueprintNavigationDiagnostics(Context, Response);
+    return Response;
+  }
+
+  void SendWidgetBlueprintNavigationError(UMcpAutomationBridgeSubsystem *Subsystem,
+                                          TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                          const FString &RequestId,
+                                          const FMcpResolvedWidgetBlueprintEditorContext &Context,
+                                          const FString &ErrorCode,
+                                          const FString &ErrorMessage)
+  {
+    SendStandardErrorResponse(Subsystem, Socket, RequestId, *ErrorCode, *ErrorMessage,
+                              CreateWidgetBlueprintNavigationDiagnosticsObject(Context));
+  }
+
+  FString NormalizeWidgetBlueprintModeString(const FString &Mode)
+  {
+    const FString LowerMode = Mode.TrimStartAndEnd().ToLower();
+    if (LowerMode == TEXT("designer"))
+    {
+      return TEXT("Designer");
+    }
+
+    if (LowerMode == TEXT("graph"))
+    {
+      return TEXT("Graph");
+    }
+
+    return FString();
+  }
+
+  FName GetWidgetBlueprintModeId(const FString &NormalizedMode)
+  {
+    if (NormalizedMode.Equals(TEXT("Designer"), ESearchCase::CaseSensitive))
+    {
+      return FWidgetBlueprintApplicationModes::DesignerMode;
+    }
+
+    if (NormalizedMode.Equals(TEXT("Graph"), ESearchCase::CaseSensitive))
+    {
+      return FWidgetBlueprintApplicationModes::GraphMode;
+    }
+
+    return NAME_None;
+  }
+
+  TSharedPtr<SButton> FindDesignerZoomToFitButtonInWidgetTree(
+      const TSharedRef<const SWidget> &RootWidget)
+  {
+    const TSharedRef<SWidget> MutableRootWidget = ConstCastSharedRef<SWidget>(RootWidget);
+    FChildren *Children = MutableRootWidget->GetAllChildren();
+    if (Children == nullptr)
+    {
+      return nullptr;
+    }
+
+    bool bSawDesignerToolbarSibling = false;
+    for (int32 ChildIndex = 0; ChildIndex < Children->Num(); ++ChildIndex)
+    {
+      const TSharedRef<const SWidget> ChildWidget = Children->GetChildAt(ChildIndex);
+      const FString ChildType = ChildWidget->GetTypeAsString();
+      if (ChildType.Contains(TEXT("SDesignerToolBar"), ESearchCase::IgnoreCase))
+      {
+        bSawDesignerToolbarSibling = true;
+        continue;
+      }
+
+      if (bSawDesignerToolbarSibling && ChildType.Contains(TEXT("SButton"), ESearchCase::IgnoreCase))
+      {
+        return StaticCastSharedRef<SButton>(ConstCastSharedRef<SWidget>(ChildWidget));
+      }
+    }
+
+    for (int32 ChildIndex = 0; ChildIndex < Children->Num(); ++ChildIndex)
+    {
+      if (TSharedPtr<SButton> FoundButton =
+              FindDesignerZoomToFitButtonInWidgetTree(Children->GetChildAt(ChildIndex)))
+      {
+        return FoundButton;
+      }
+    }
+
+    return nullptr;
+  }
+
+  bool TryExecuteWidgetDesignerZoomToFit(
+      FMcpResolvedWidgetBlueprintEditorContext &Context,
+      FString &OutDisposition,
+      FString &OutFailureReason)
+  {
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+    if (!Context.DesignerTab.IsValid() || !Context.DesignerView.IsValid())
+    {
+      OutDisposition = TEXT("queued_after_layout");
+      OutFailureReason = TEXT("Designer surface not yet available");
+      return false;
+    }
+
+    if (const TSharedPtr<SButton> ZoomToFitButton =
+            FindDesignerZoomToFitButtonInWidgetTree(Context.DesignerTab.ToSharedRef()))
+    {
+#if !UE_BUILD_SHIPPING
+      ZoomToFitButton->SimulateClick();
+      RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+      OutDisposition = TEXT("immediate");
+      OutFailureReason.Reset();
+      return true;
+#else
+      OutDisposition = TEXT("fallback_mode_only");
+      OutFailureReason = TEXT("Designer fit button simulation unavailable in shipping builds");
+      return false;
+#endif
+    }
+
+    OutDisposition = TEXT("fallback_mode_only");
+    OutFailureReason = TEXT("Could not resolve the Designer Zoom-To-Fit button structurally");
+    return false;
+  }
+
+  template <typename Tag, typename Tag::type Member>
+  struct TMcpProtectedDesignerMemberAccessor
+  {
+    friend typename Tag::type ResolveDesignerSurfaceMember(Tag)
+    {
+      return Member;
+    }
+  };
+
+  struct FMcpDesignerViewOffsetTag
+  {
+    using type = FVector2D SDesignSurface::*;
+    friend type ResolveDesignerSurfaceMember(FMcpDesignerViewOffsetTag);
+  };
+
+  template struct TMcpProtectedDesignerMemberAccessor<FMcpDesignerViewOffsetTag,
+                                                      &SDesignSurface::ViewOffset>;
+
+  bool TryGetPointField(const TSharedPtr<FJsonObject> &Payload,
+                        const TCHAR *FieldName,
+                        FVector2D &OutPoint)
+  {
+    if (!Payload.IsValid() || !Payload->HasTypedField<EJson::Object>(FieldName))
+    {
+      return false;
+    }
+
+    const TSharedPtr<FJsonObject> PointObject = Payload->GetObjectField(FieldName);
+    if (!PointObject.IsValid() || !PointObject->HasField(TEXT("x")) || !PointObject->HasField(TEXT("y")))
+    {
+      return false;
+    }
+
+    OutPoint = FVector2D(GetJsonNumberField(PointObject, TEXT("x")),
+                         GetJsonNumberField(PointObject, TEXT("y")));
+    return true;
+  }
+
+  FVector2D GetDesignerSurfaceViewOffset(const SDesignerView &DesignerView)
+  {
+    static const FMcpDesignerViewOffsetTag::type ViewOffsetMember =
+        ResolveDesignerSurfaceMember(FMcpDesignerViewOffsetTag{});
+    return DesignerView.*ViewOffsetMember;
+  }
+
+  void SetDesignerSurfaceViewOffset(SDesignerView &DesignerView,
+                                    const FVector2D &NewViewOffset)
+  {
+    static const FMcpDesignerViewOffsetTag::type ViewOffsetMember =
+        ResolveDesignerSurfaceMember(FMcpDesignerViewOffsetTag{});
+    DesignerView.*ViewOffsetMember = NewViewOffset;
+    DesignerView.Invalidate(EInvalidateWidgetReason::Paint);
+  }
+
+  bool TryApplyWidgetDesignerViewChange(
+      FMcpResolvedWidgetBlueprintEditorContext &Context,
+      const TOptional<FVector2D> &RequestedViewLocation,
+      const TOptional<FVector2D> &RequestedDelta,
+      FVector2D &OutPreviousViewOffset,
+      FVector2D &OutNewViewOffset,
+      FString &OutDisposition,
+      FString &OutFailureReason)
+  {
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+    if (!Context.DesignerTab.IsValid() || !Context.DesignerView.IsValid())
+    {
+      OutDisposition = TEXT("queued_after_layout");
+      OutFailureReason = TEXT("Designer surface not yet available");
+      return false;
+    }
+
+    SDesignerView &DesignerView = *Context.DesignerView;
+    OutPreviousViewOffset = GetDesignerSurfaceViewOffset(DesignerView);
+    OutNewViewOffset = RequestedViewLocation.IsSet() ? RequestedViewLocation.GetValue()
+                                                     : OutPreviousViewOffset;
+    if (RequestedDelta.IsSet())
+    {
+      OutNewViewOffset += RequestedDelta.GetValue();
+    }
+
+    SetDesignerSurfaceViewOffset(DesignerView, OutNewViewOffset);
+    OutDisposition = TEXT("immediate");
+    OutFailureReason.Reset();
+    return true;
+  }
+
+  void QueueWidgetDesignerViewChange(
+      FMcpResolvedWidgetBlueprintEditorContext &Context,
+      const TOptional<FVector2D> RequestedViewLocation,
+      const TOptional<FVector2D> RequestedDelta)
+  {
+    QueueWidgetBlueprintDesignerAction(
+        Context,
+        [RequestedViewLocation, RequestedDelta](FWidgetBlueprintEditor *WidgetEditor)
+        {
+          if (WidgetEditor == nullptr)
+          {
+            return;
+          }
+
+          FMcpResolvedWidgetBlueprintEditorContext WidgetContext;
+          WidgetContext.WidgetEditor = WidgetEditor;
+          RefreshWidgetBlueprintSurfaceDiagnostics(WidgetContext);
+          if (!WidgetContext.DesignerView.IsValid())
+          {
+            return;
+          }
+
+          SDesignerView &DesignerView = *WidgetContext.DesignerView;
+          FVector2D NewViewOffset = RequestedViewLocation.IsSet()
+                                        ? RequestedViewLocation.GetValue()
+                                        : GetDesignerSurfaceViewOffset(DesignerView);
+          if (RequestedDelta.IsSet())
+          {
+            NewViewOffset += RequestedDelta.GetValue();
+          }
+
+          SetDesignerSurfaceViewOffset(DesignerView, NewViewOffset);
+        });
+  }
+
+  void QueueWidgetDesignerZoomToFit(FMcpResolvedWidgetBlueprintEditorContext &Context)
+  {
+    QueueWidgetBlueprintDesignerAction(
+        Context,
+        [](FWidgetBlueprintEditor *WidgetEditor)
+        {
+          if (WidgetEditor == nullptr)
+          {
+            return;
+          }
+
+          FMcpResolvedWidgetBlueprintEditorContext WidgetContext;
+          WidgetContext.WidgetEditor = WidgetEditor;
+          RefreshWidgetBlueprintSurfaceDiagnostics(WidgetContext);
+          if (!WidgetContext.DesignerTab.IsValid() || !WidgetContext.DesignerView.IsValid())
+          {
+            return;
+          }
+
+          if (const TSharedPtr<SButton> ZoomToFitButton =
+                  FindDesignerZoomToFitButtonInWidgetTree(WidgetContext.DesignerTab.ToSharedRef()))
+          {
+#if !UE_BUILD_SHIPPING
+            ZoomToFitButton->SimulateClick();
+#endif
+          }
+        });
+  }
 
   bool TryGetPointerPositionFromPayload(const TSharedPtr<FJsonObject> &Payload, FVector2D &OutPosition);
   TSet<FKey> ConvertPressedButtonNamesToKeys(const TSet<FString> &PressedButtonNames);
@@ -339,6 +1090,258 @@ namespace
     return Windows;
   }
 
+  FSlateRect GetEffectiveClientRectInScreen(const TSharedPtr<SWindow> &Window)
+  {
+    if (!Window.IsValid())
+    {
+      return FSlateRect();
+    }
+
+    if (Window->IsVirtualWindow())
+    {
+      const FVector2D WindowPosition = Window->GetPositionInScreen();
+      const FVector2D ClientSize = Window->GetClientSizeInScreen();
+      return FSlateRect(WindowPosition.X,
+                        WindowPosition.Y,
+                        WindowPosition.X + ClientSize.X,
+                        WindowPosition.Y + ClientSize.Y);
+    }
+
+    return Window->GetClientRectInScreen();
+  }
+
+  struct FMcpDesignerRectSelectionCandidate
+  {
+    FWidgetReference WidgetReference;
+    FString WidgetPath;
+    bool bIsRoot = false;
+  };
+
+  bool TryGetDesignerSurfaceAbsoluteGeometry(const TSharedPtr<SDockTab> &DesignerTab,
+                                             const TSharedPtr<SDesignerView> &DesignerView,
+                                             FVector2D &OutAbsolutePosition,
+                                             FVector2D &OutAbsoluteSize)
+  {
+    auto IsUsableGeometry = [](const FGeometry &Geometry)
+    {
+      const FVector2D Position = Geometry.GetAbsolutePosition();
+      const FVector2D Size = Geometry.GetAbsoluteSize();
+      return FMath::IsFinite(Position.X) && FMath::IsFinite(Position.Y) &&
+             FMath::IsFinite(Size.X) && FMath::IsFinite(Size.Y) &&
+             Size.X > 1.0f && Size.Y > 1.0f;
+    };
+
+    if (DesignerView.IsValid() && FSlateApplication::IsInitialized())
+    {
+      FWidgetPath DesignerViewPath;
+      if (FSlateApplication::Get().GeneratePathToWidgetUnchecked(DesignerView.ToSharedRef(),
+                                                                 DesignerViewPath,
+                                                                 EVisibility::All) &&
+          DesignerViewPath.Widgets.Num() > 0)
+      {
+        const FGeometry &DesignerViewPathGeometry = DesignerViewPath.Widgets.Last().Geometry;
+        if (IsUsableGeometry(DesignerViewPathGeometry))
+        {
+          OutAbsolutePosition = DesignerViewPathGeometry.GetAbsolutePosition();
+          OutAbsoluteSize = DesignerViewPathGeometry.GetAbsoluteSize();
+          return true;
+        }
+      }
+    }
+
+    if (DesignerTab.IsValid())
+    {
+      const TSharedRef<SWidget> DesignerTabContent = DesignerTab->GetContent();
+      const FGeometry DesignerTabContentGeometry = DesignerTabContent->GetTickSpaceGeometry();
+      if (IsUsableGeometry(DesignerTabContentGeometry))
+      {
+        OutAbsolutePosition = DesignerTabContentGeometry.GetAbsolutePosition();
+        OutAbsoluteSize = DesignerTabContentGeometry.GetAbsoluteSize();
+        return true;
+      }
+
+      const FGeometry DesignerTabGeometry = DesignerTab->GetTickSpaceGeometry();
+      if (IsUsableGeometry(DesignerTabGeometry))
+      {
+        OutAbsolutePosition = DesignerTabGeometry.GetAbsolutePosition();
+        OutAbsoluteSize = DesignerTabGeometry.GetAbsoluteSize();
+        return true;
+      }
+    }
+
+    if (DesignerView.IsValid())
+    {
+      const FGeometry DesignerViewGeometry = DesignerView->GetTickSpaceGeometry();
+      if (IsUsableGeometry(DesignerViewGeometry))
+      {
+        OutAbsolutePosition = DesignerViewGeometry.GetAbsolutePosition();
+        OutAbsoluteSize = DesignerViewGeometry.GetAbsoluteSize();
+        return true;
+      }
+    }
+
+    OutAbsolutePosition = FVector2D::ZeroVector;
+    OutAbsoluteSize = FVector2D::ZeroVector;
+    return false;
+  }
+
+  bool TryGetRectObjectField(const TSharedPtr<FJsonObject> &Payload,
+                             const TCHAR *FieldName,
+                             FSlateRect &OutRect)
+  {
+    if (!Payload.IsValid())
+    {
+      return false;
+    }
+
+    const TSharedPtr<FJsonObject> *RectObject = nullptr;
+    if (!Payload->TryGetObjectField(FieldName, RectObject) || RectObject == nullptr || !RectObject->IsValid())
+    {
+      return false;
+    }
+
+    double Left = 0.0;
+    double Top = 0.0;
+    double Right = 0.0;
+    double Bottom = 0.0;
+    if (!(*RectObject)->TryGetNumberField(TEXT("left"), Left) ||
+        !(*RectObject)->TryGetNumberField(TEXT("top"), Top) ||
+        !(*RectObject)->TryGetNumberField(TEXT("right"), Right) ||
+        !(*RectObject)->TryGetNumberField(TEXT("bottom"), Bottom))
+    {
+      return false;
+    }
+
+    if (!FMath::IsFinite(Left) || !FMath::IsFinite(Top) ||
+        !FMath::IsFinite(Right) || !FMath::IsFinite(Bottom) ||
+        Right <= Left || Bottom <= Top)
+    {
+      return false;
+    }
+
+    OutRect = FSlateRect(Left, Top, Right, Bottom);
+    return true;
+  }
+
+  bool TryGetWidgetDesignerClientRect(const FWidgetReference &WidgetReference,
+                                      const TSharedPtr<SDesignerView> &DesignerView,
+                                      const TSharedPtr<SDockTab> &DesignerTab,
+                                      const TSharedPtr<SWindow> &ParentWindow,
+                                      FSlateRect &OutRect)
+  {
+    if (!WidgetReference.IsValid() || !DesignerView.IsValid())
+    {
+      return false;
+    }
+
+    FGeometry WidgetGeometry;
+    if (!DesignerView->GetWidgetGeometry(WidgetReference, WidgetGeometry))
+    {
+      return false;
+    }
+
+    TSharedPtr<SWindow> TargetWindow = ParentWindow;
+    if (!TargetWindow.IsValid() && FSlateApplication::IsInitialized())
+    {
+      TargetWindow = FSlateApplication::Get().FindWidgetWindow(DesignerView.ToSharedRef());
+    }
+
+    FVector2D AbsolutePosition = WidgetGeometry.GetAbsolutePosition();
+    const FVector2D AbsoluteSize = WidgetGeometry.GetAbsoluteSize();
+
+    const FGeometry PreviewGeometry = DesignerView->GetDesignerGeometry();
+    const FVector2D PreviewAbsolutePosition = PreviewGeometry.GetAbsolutePosition();
+    FVector2D DesignerSurfaceAbsolutePosition = FVector2D::ZeroVector;
+    FVector2D DesignerSurfaceAbsoluteSize = FVector2D::ZeroVector;
+    TryGetDesignerSurfaceAbsoluteGeometry(DesignerTab,
+                                          DesignerView,
+                                          DesignerSurfaceAbsolutePosition,
+                                          DesignerSurfaceAbsoluteSize);
+
+    if (FMath::IsFinite(PreviewAbsolutePosition.X) && FMath::IsFinite(PreviewAbsolutePosition.Y) &&
+        FMath::IsFinite(DesignerSurfaceAbsolutePosition.X) && FMath::IsFinite(DesignerSurfaceAbsolutePosition.Y))
+    {
+      AbsolutePosition = DesignerSurfaceAbsolutePosition + (AbsolutePosition - PreviewAbsolutePosition);
+    }
+
+    double Left = 0.0;
+    double Top = 0.0;
+    if (TargetWindow.IsValid())
+    {
+      const FSlateRect ClientRect = GetEffectiveClientRectInScreen(TargetWindow);
+      Left = static_cast<double>(AbsolutePosition.X) - static_cast<double>(ClientRect.Left);
+      Top = static_cast<double>(AbsolutePosition.Y) - static_cast<double>(ClientRect.Top);
+    }
+    else
+    {
+      const FGeometry WindowLocalGeometry = DesignerView->MakeGeometryWindowLocal(WidgetGeometry);
+      const FVector2D WindowLocalPosition = WindowLocalGeometry.GetAbsolutePosition();
+      Left = static_cast<double>(WindowLocalPosition.X);
+      Top = static_cast<double>(WindowLocalPosition.Y);
+    }
+
+    const double Width = AbsoluteSize.X;
+    const double Height = AbsoluteSize.Y;
+    if (!FMath::IsFinite(Left) || !FMath::IsFinite(Top) ||
+        !FMath::IsFinite(Width) || !FMath::IsFinite(Height) ||
+        Width <= 0.0 || Height <= 0.0)
+    {
+      return false;
+    }
+
+    OutRect = FSlateRect(Left, Top, Left + Width, Top + Height);
+    return true;
+  }
+
+  bool DoDesignerRectsIntersect(const FSlateRect &LeftRect, const FSlateRect &RightRect)
+  {
+    return LeftRect.Left < RightRect.Right && LeftRect.Right > RightRect.Left &&
+           LeftRect.Top < RightRect.Bottom && LeftRect.Bottom > RightRect.Top;
+  }
+
+  void CollectDesignerRectSelectionCandidates(UWidget *Widget,
+                                              UWidget *RootWidget,
+                                              FWidgetBlueprintEditor *WidgetEditor,
+                                              const TSharedPtr<SDesignerView> &DesignerView,
+                                              const TSharedPtr<SDockTab> &DesignerTab,
+                                              const TSharedPtr<SWindow> &ParentWindow,
+                                              const FSlateRect &SelectionRect,
+                                              TArray<FMcpDesignerRectSelectionCandidate> &OutCandidates)
+  {
+    if (!Widget || WidgetEditor == nullptr || !DesignerView.IsValid())
+    {
+      return;
+    }
+
+    const FWidgetReference WidgetReference = WidgetEditor->GetReferenceFromTemplate(Widget);
+    FSlateRect WidgetRect;
+    if (WidgetReference.IsValid() &&
+        TryGetWidgetDesignerClientRect(WidgetReference, DesignerView, DesignerTab, ParentWindow, WidgetRect) &&
+        DoDesignerRectsIntersect(SelectionRect, WidgetRect))
+    {
+      FMcpDesignerRectSelectionCandidate Candidate;
+      Candidate.WidgetReference = WidgetReference;
+      Candidate.WidgetPath = McpWidgetBlueprintEditorUtils::BuildWidgetDesignerPath(Widget);
+      Candidate.bIsRoot = Widget == RootWidget;
+      OutCandidates.Add(MoveTemp(Candidate));
+    }
+
+    if (UPanelWidget *PanelWidget = Cast<UPanelWidget>(Widget))
+    {
+      for (int32 ChildIndex = 0; ChildIndex < PanelWidget->GetChildrenCount(); ++ChildIndex)
+      {
+        CollectDesignerRectSelectionCandidates(PanelWidget->GetChildAt(ChildIndex),
+                                               RootWidget,
+                                               WidgetEditor,
+                                               DesignerView,
+                                               DesignerTab,
+                                               ParentWindow,
+                                               SelectionRect,
+                                               OutCandidates);
+      }
+    }
+  }
+
   void DetachVirtualCursorOverlay(UMcpAutomationBridgeSubsystem *Self)
   {
     if (Self == nullptr)
@@ -440,6 +1443,31 @@ namespace
     return false;
   }
 
+  bool TryGetPointObjectField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, FVector2D &OutPosition);
+
+  bool TryGetBlueprintViewPointField(const TSharedPtr<FJsonObject> &Payload,
+                                     const TCHAR *FieldName,
+                                     FVector2D &OutPosition)
+  {
+    return TryGetPointObjectField(Payload, FieldName, OutPosition) ||
+           TryGetRelativePointObjectField(Payload, FieldName, OutPosition);
+  }
+
+  void SetPointObjectField(const TSharedPtr<FJsonObject> &Response,
+                           const TCHAR *FieldName,
+                           const FVector2D &Point)
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    TSharedPtr<FJsonObject> PointObject = MakeShared<FJsonObject>();
+    PointObject->SetNumberField(TEXT("x"), Point.X);
+    PointObject->SetNumberField(TEXT("y"), Point.Y);
+    Response->SetObjectField(FieldName, PointObject);
+  }
+
   bool ResolveVirtualInputTarget(UMcpAutomationBridgeSubsystem *Self,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  bool &bOutAttempted,
@@ -465,29 +1493,98 @@ namespace
     RequestedTabId = RequestedTabId.TrimStartAndEnd();
     RequestedWindowTitle = RequestedWindowTitle.TrimStartAndEnd();
 
+#if WITH_EDITOR
+    const FString RequestedAssetPath = GetTrimmedPayloadString(Payload, TEXT("assetPath"));
+    if (!RequestedAssetPath.IsEmpty())
+    {
+      OutTarget.RequestedAssetPath = RequestedAssetPath;
+      FMcpResolvedWidgetBlueprintEditorContext WidgetContext;
+      FString WidgetErrorCode;
+      FString WidgetErrorMessage;
+      if (McpWidgetBlueprintEditorUtils::ResolveWidgetBlueprintEditorContext(
+              Payload,
+              WidgetContext,
+              WidgetErrorCode,
+              WidgetErrorMessage,
+              false,
+              false,
+              true) &&
+          WidgetContext.DesignerView.IsValid())
+      {
+        TSharedPtr<SWindow> DesignerWindow = WidgetContext.DesignerTab.IsValid()
+                                                 ? WidgetContext.DesignerTab->GetParentWindow()
+                                                 : TSharedPtr<SWindow>();
+        if (!DesignerWindow.IsValid())
+        {
+          DesignerWindow = FSlateApplication::Get().FindWidgetWindow(WidgetContext.DesignerView.ToSharedRef());
+        }
+        if (DesignerWindow.IsValid())
+        {
+          bOutAttempted = true;
+          OutTarget.Window = DesignerWindow;
+          OutTarget.Tab = WidgetContext.DesignerTab;
+          OutTarget.PreferredWidget = WidgetContext.DesignerView;
+          OutTarget.TabId = !WidgetContext.TabId.IsEmpty() ? WidgetContext.TabId : RequestedTabId;
+          OutTarget.WindowTitle = !WidgetContext.WindowTitle.IsEmpty()
+                                      ? WidgetContext.WindowTitle
+                                      : DesignerWindow->GetTitle().ToString();
+          OutTarget.ResolutionSource = WidgetContext.ResolvedTargetSource.IsEmpty()
+                                           ? TEXT("asset_path")
+                                           : WidgetContext.ResolvedTargetSource;
+          OutTarget.PreferredWidgetType = WidgetContext.DesignerView->GetTypeAsString();
+          OutTarget.WindowRect = DesignerWindow->GetRectInScreen();
+          OutTarget.ClientRect = GetEffectiveClientRectInScreen(DesignerWindow);
+          return true;
+        }
+
+        OutTarget.AssetTargetError = TEXT("DESIGNER_WINDOW_NOT_FOUND");
+      }
+      else if (!WidgetErrorCode.IsEmpty() || !WidgetErrorMessage.IsEmpty())
+      {
+        OutTarget.AssetTargetError = FString::Printf(TEXT("%s: %s"),
+                                                     WidgetErrorCode.IsEmpty() ? TEXT("WIDGET_CONTEXT_FAILED") : *WidgetErrorCode,
+                                                     WidgetErrorMessage.IsEmpty() ? TEXT("Unknown widget editor resolution error") : *WidgetErrorMessage);
+      }
+      else
+      {
+        OutTarget.AssetTargetError = FString::Printf(TEXT("DESIGNER_VIEW_NOT_FOUND (mode=%s resolvedTargetSource=%s tabFound=%s)"),
+                                                     *WidgetContext.CurrentMode,
+                                                     *WidgetContext.ResolvedTargetSource,
+                                                     WidgetContext.bDesignerTabFound ? TEXT("true") : TEXT("false"));
+      }
+    }
+#endif
+
+    FString TabResolutionError;
     if (!RequestedTabId.IsEmpty())
     {
       bOutAttempted = true;
       const TSharedPtr<SDockTab> TargetTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FName(*RequestedTabId));
-      if (!TargetTab.IsValid())
+      if (TargetTab.IsValid())
       {
-        OutError = FString::Printf(TEXT("Live tab %s was not found"), *RequestedTabId);
-        return false;
+        const TSharedPtr<SWindow> TargetWindow = TargetTab->GetParentWindow();
+        if (!TargetWindow.IsValid())
+        {
+          OutError = FString::Printf(TEXT("Tab %s does not have a live parent window"), *RequestedTabId);
+          return false;
+        }
+
+        OutTarget.Window = TargetWindow;
+        OutTarget.Tab = TargetTab;
+        OutTarget.TabId = RequestedTabId;
+        OutTarget.WindowTitle = TargetWindow->GetTitle().ToString();
+        OutTarget.ResolutionSource = TEXT("tab_id");
+        OutTarget.WindowRect = TargetWindow->GetRectInScreen();
+        OutTarget.ClientRect = GetEffectiveClientRectInScreen(TargetWindow);
+        return true;
       }
 
-      const TSharedPtr<SWindow> TargetWindow = TargetTab->GetParentWindow();
-      if (!TargetWindow.IsValid())
+      TabResolutionError = FString::Printf(TEXT("Live tab %s was not found"), *RequestedTabId);
+      if (RequestedWindowTitle.IsEmpty())
       {
-        OutError = FString::Printf(TEXT("Tab %s does not have a live parent window"), *RequestedTabId);
+        OutError = TabResolutionError;
         return false;
       }
-
-      OutTarget.Window = TargetWindow;
-      OutTarget.Tab = TargetTab;
-      OutTarget.TabId = RequestedTabId;
-      OutTarget.WindowTitle = TargetWindow->GetTitle().ToString();
-      OutTarget.ClientRect = TargetWindow->GetClientRectInScreen();
-      return true;
     }
 
     if (!RequestedWindowTitle.IsEmpty())
@@ -499,12 +1596,16 @@ namespace
         {
           OutTarget.Window = Window;
           OutTarget.WindowTitle = Window->GetTitle().ToString();
-          OutTarget.ClientRect = Window->GetClientRectInScreen();
+          OutTarget.ResolutionSource = TEXT("window_title");
+          OutTarget.WindowRect = Window->GetRectInScreen();
+          OutTarget.ClientRect = GetEffectiveClientRectInScreen(Window);
           return true;
         }
       }
 
-      OutError = FString::Printf(TEXT("Visible window '%s' was not found"), *RequestedWindowTitle);
+      OutError = TabResolutionError.IsEmpty()
+                     ? FString::Printf(TEXT("Visible window '%s' was not found"), *RequestedWindowTitle)
+                     : FString::Printf(TEXT("%s; Visible window '%s' was not found"), *TabResolutionError, *RequestedWindowTitle);
       return false;
     }
 
@@ -515,7 +1616,9 @@ namespace
       OutTarget.Tab = Self->SimulatedTargetDockTab.Pin();
       OutTarget.TabId = Self->SimulatedTargetTabId;
       OutTarget.WindowTitle = Self->SimulatedTargetWindowTitle;
-      OutTarget.ClientRect = OutTarget.Window->GetClientRectInScreen();
+      OutTarget.ResolutionSource = TEXT("stored_target");
+      OutTarget.WindowRect = OutTarget.Window->GetRectInScreen();
+      OutTarget.ClientRect = GetEffectiveClientRectInScreen(OutTarget.Window);
       return true;
     }
 
@@ -558,11 +1661,96 @@ namespace
     Self->SimulatedTargetWindowTitle = Target.WindowTitle;
   }
 
-  FWidgetPath LocateTargetWidgetPath(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &ScreenPosition)
+  FWidgetPath BuildPointerAwareWidgetPath(const FWidgetPath &WidgetPath)
   {
-    TArray<TSharedRef<SWindow>> TargetWindows;
-    TargetWindows.Add(Target.Window.ToSharedRef());
-    return FSlateApplication::Get().LocateWindowUnderMouse(FVector2f(static_cast<float>(ScreenPosition.X), static_cast<float>(ScreenPosition.Y)), TargetWindows, false, GetSimulatedSlateUserIndex());
+    if (!WidgetPath.IsValid() || WidgetPath.Widgets.Num() == 0)
+    {
+      return FWidgetPath();
+    }
+
+    TArray<FWidgetAndPointer> WidgetsAndPointers;
+    WidgetsAndPointers.Reserve(WidgetPath.Widgets.Num());
+    for (int32 WidgetIndex = 0; WidgetIndex < WidgetPath.Widgets.Num(); ++WidgetIndex)
+    {
+      WidgetsAndPointers.Add(FWidgetAndPointer(WidgetPath.Widgets[WidgetIndex]));
+    }
+
+    return FWidgetPath(WidgetsAndPointers);
+  }
+
+  bool TryBuildPreferredTargetWidgetPath(const FMcpResolvedVirtualInputTarget &Target,
+                                         const FVector2D &ScreenPosition,
+                                         FWidgetPath &OutWidgetPath)
+  {
+    OutWidgetPath = FWidgetPath();
+
+    if (!Target.PreferredWidget.IsValid() || !FSlateApplication::IsInitialized())
+    {
+      return false;
+    }
+
+    FWidgetPath PreferredWidgetPath;
+    if (!FSlateApplication::Get().GeneratePathToWidgetUnchecked(Target.PreferredWidget.ToSharedRef(),
+                                                                PreferredWidgetPath,
+                                                                EVisibility::All) ||
+        !PreferredWidgetPath.IsValid() ||
+        PreferredWidgetPath.Widgets.Num() == 0)
+    {
+      return false;
+    }
+
+    const FGeometry &PreferredGeometry = PreferredWidgetPath.Widgets.Last().Geometry;
+    const FVector2D PreferredAbsolutePosition = PreferredGeometry.GetAbsolutePosition();
+    const FVector2D PreferredAbsoluteSize = PreferredGeometry.GetAbsoluteSize();
+    const bool bPointInsidePreferredWidget =
+        ScreenPosition.X >= PreferredAbsolutePosition.X &&
+        ScreenPosition.Y >= PreferredAbsolutePosition.Y &&
+        ScreenPosition.X <= PreferredAbsolutePosition.X + PreferredAbsoluteSize.X &&
+        ScreenPosition.Y <= PreferredAbsolutePosition.Y + PreferredAbsoluteSize.Y;
+
+    if (!bPointInsidePreferredWidget)
+    {
+      return false;
+    }
+
+    OutWidgetPath = BuildPointerAwareWidgetPath(PreferredWidgetPath);
+    return OutWidgetPath.IsValid();
+  }
+
+  FWidgetPath LocateTargetWidgetPath(const FMcpResolvedVirtualInputTarget &Target,
+                                     const FVector2D &ScreenPosition,
+                                     bool *bOutUsedPreferredWidgetPath = nullptr)
+  {
+    if (bOutUsedPreferredWidgetPath != nullptr)
+    {
+      *bOutUsedPreferredWidgetPath = false;
+    }
+
+    FWidgetPath PreferredWidgetPath;
+    if (TryBuildPreferredTargetWidgetPath(Target, ScreenPosition, PreferredWidgetPath))
+    {
+      if (bOutUsedPreferredWidgetPath != nullptr)
+      {
+        *bOutUsedPreferredWidgetPath = true;
+      }
+      return PreferredWidgetPath;
+    }
+
+    if (!Target.Window.IsValid() ||
+        !Target.Window->IsVisible() ||
+        !Target.Window->AcceptsInput() ||
+        !Target.Window->IsScreenspaceMouseWithin(FVector2f(static_cast<float>(ScreenPosition.X), static_cast<float>(ScreenPosition.Y))))
+    {
+      return FWidgetPath();
+    }
+
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    TArray<FWidgetAndPointer> WidgetsAndCursors = Target.Window->GetHittestGrid().GetBubblePath(
+        FVector2f(static_cast<float>(ScreenPosition.X), static_cast<float>(ScreenPosition.Y)),
+        SlateApp.GetCursorRadius(),
+        false,
+        GetSimulatedSlateUserIndex());
+    return FWidgetPath(MoveTemp(WidgetsAndCursors));
   }
 
   bool FocusVirtualTargetAtPosition(const FMcpResolvedVirtualInputTarget &Target, const FVector2D &ScreenPosition)
@@ -1298,7 +2486,7 @@ namespace
 
   FString BuildSimulatedInputScreenshotFilename(const FString &RequestId,
                                                 const FString &InputType,
-                                                const FString &Phase)
+                                                const FString &CaptureStage)
   {
     FString SanitizedRequestId = RequestId;
     SanitizedRequestId.ReplaceInline(TEXT("-"), TEXT(""));
@@ -1315,7 +2503,7 @@ namespace
     return SanitizeScreenshotFilename(FString::Printf(
         TEXT("SimInput_%s_%s_%s"),
         *SanitizedInputType,
-        *Phase,
+        *CaptureStage,
         *SanitizedRequestId.Left(12)));
   }
 
@@ -1360,6 +2548,141 @@ namespace
     }
 
     return FindVisibleWindowByTitle(FString());
+  }
+
+  FString ClassifyVirtualTargetStaleReason(const FString &ErrorMessage)
+  {
+    if (ErrorMessage.Contains(TEXT("does not have a live parent window"), ESearchCase::IgnoreCase))
+    {
+      return TEXT("tab_without_parent_window");
+    }
+
+    if (ErrorMessage.Contains(TEXT("Visible window"), ESearchCase::IgnoreCase))
+    {
+      return TEXT("missing_visible_window");
+    }
+
+    if (ErrorMessage.Contains(TEXT("Live tab"), ESearchCase::IgnoreCase))
+    {
+      return TEXT("missing_live_tab");
+    }
+
+    return FString();
+  }
+
+  FString BuildVirtualTargetRecoveryHint(const FString &StaleReason)
+  {
+    if (StaleReason == TEXT("missing_live_tab"))
+    {
+      return TEXT("Call manage_ui.resolve_ui_target or reopen the target before retrying the action.");
+    }
+
+    if (StaleReason == TEXT("tab_without_parent_window"))
+    {
+      return TEXT("Reopen the tab so it has a live parent window, then retry the action.");
+    }
+
+    if (StaleReason == TEXT("missing_visible_window"))
+    {
+      return TEXT("Resolve the target again or provide a live windowTitle before retrying the action.");
+    }
+
+    return TEXT("Resolve the target again before retrying the action.");
+  }
+
+  void ApplyTargetHealthResponseFields(const TSharedPtr<FJsonObject> &Response,
+                                       const FString &TargetStatus,
+                                       const bool bRequestedTargetStillLive,
+                                       const bool bReResolved,
+                                       const FString &StaleReason = FString(),
+                                       const FString &RecoveryHint = FString(),
+                                       const FString &RecoveryAction = FString())
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    if (!TargetStatus.IsEmpty())
+    {
+      Response->SetStringField(TEXT("targetStatus"), TargetStatus);
+    }
+
+    Response->SetBoolField(TEXT("requestedTargetStillLive"), bRequestedTargetStillLive);
+    Response->SetBoolField(TEXT("reResolved"), bReResolved);
+
+    if (!StaleReason.IsEmpty())
+    {
+      Response->SetStringField(TEXT("staleReason"), StaleReason);
+    }
+
+    if (!RecoveryHint.IsEmpty())
+    {
+      Response->SetStringField(TEXT("recoveryHint"), RecoveryHint);
+    }
+
+    if (!RecoveryAction.IsEmpty())
+    {
+      Response->SetStringField(TEXT("recoveryAction"), RecoveryAction);
+    }
+  }
+
+  void ApplyRequestedVirtualTargetFields(const TSharedPtr<FJsonObject> &Response,
+                                         const FString &RequestedTabId,
+                                         const FString &RequestedWindowTitle,
+                                         const FString &FallbackResolvedTargetSource)
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    const bool bHasRequestedTab = !RequestedTabId.IsEmpty();
+    const bool bHasRequestedWindow = !RequestedWindowTitle.IsEmpty();
+
+    if (bHasRequestedTab)
+    {
+      Response->SetStringField(TEXT("requestedTabId"), RequestedTabId);
+      Response->SetStringField(TEXT("resolvedTargetSource"), TEXT("tab_id"));
+    }
+
+    if (bHasRequestedWindow)
+    {
+      Response->SetStringField(TEXT("requestedWindowTitle"), RequestedWindowTitle);
+      if (!bHasRequestedTab)
+      {
+        Response->SetStringField(TEXT("resolvedTargetSource"), TEXT("window_title"));
+      }
+    }
+
+    if (!bHasRequestedTab && !bHasRequestedWindow &&
+        !FallbackResolvedTargetSource.IsEmpty())
+    {
+      Response->SetStringField(TEXT("resolvedTargetSource"),
+                               FallbackResolvedTargetSource);
+    }
+  }
+
+  FString DetermineScreenshotIntentSource(UMcpAutomationBridgeSubsystem *Self,
+                                          const FString &RequestedTitle,
+                                          const bool bCaptureEditorWindow)
+  {
+    if (!RequestedTitle.IsEmpty())
+    {
+      return TEXT("requested_window_title");
+    }
+
+    if (bCaptureEditorWindow && Self != nullptr && Self->SimulatedTargetWindow.IsValid())
+    {
+      return TEXT("stored_target_window");
+    }
+
+    if (bCaptureEditorWindow)
+    {
+      return TEXT("active_top_level_window");
+    }
+
+    return TEXT("viewport_default");
   }
 
   TArray<TSharedPtr<FJsonValue>> BuildVisibleWindowTitleValues()
@@ -4454,6 +5777,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetViewMode(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_asset"))
     return HandleControlEditorOpenAsset(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fit_blueprint_graph"))
+    return HandleControlEditorFitBlueprintGraph(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_blueprint_graph_view"))
+    return HandleControlEditorSetBlueprintGraphView(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("jump_to_blueprint_node"))
+    return HandleControlEditorJumpToBlueprintNode(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("capture_blueprint_graph_review"))
+    return HandleControlEditorCaptureBlueprintGraphReview(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_widget_blueprint_mode"))
+    return HandleControlEditorSetWidgetBlueprintMode(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fit_widget_designer"))
+    return HandleControlEditorFitWidgetDesigner(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_widget_designer_view"))
+    return HandleControlEditorSetWidgetDesignerView(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("select_widget_in_designer"))
+    return HandleControlEditorSelectWidgetInDesigner(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("select_widgets_in_designer_rect"))
+    return HandleControlEditorSelectWidgetsInDesignerRect(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("focus_editor_surface"))
+    return HandleControlEditorFocusEditorSurface(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("screenshot") || LowerSub == TEXT("take_screenshot"))
     return HandleControlEditorScreenshot(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("pause"))
@@ -4582,6 +5925,1301 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
 #endif
 }
 
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorFitBlueprintGraph(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  UEdGraph *TargetGraph = nullptr;
+  FString GraphError;
+  if (!ResolveBlueprintGraph(Context, TargetGraph, GraphError))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                 TEXT("GRAPH_RESOLUTION_FAILED"), GraphError);
+    return true;
+  }
+
+  FString Scope = GetTrimmedPayloadString(Payload, TEXT("scope")).ToLower();
+  if (Scope.IsEmpty())
+  {
+    Scope = TEXT("full");
+  }
+  if (Scope != TEXT("full") && Scope != TEXT("selection"))
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("scope"), Scope);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("scope must be 'full' or 'selection'"), ErrorDetails);
+    return true;
+  }
+
+  FVector2D PreviousViewLocation = FVector2D::ZeroVector;
+  float PreviousZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(PreviousViewLocation, PreviousZoomAmount);
+
+  const TSharedPtr<SGraphEditor> GraphEditor = Context.Editor->OpenGraphAndBringToFront(TargetGraph, true);
+  if (!GraphEditor.IsValid())
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                 TEXT("GRAPH_EDITOR_NOT_AVAILABLE"),
+                                 TEXT("Unable to resolve a live graph editor for the Blueprint graph"));
+    return true;
+  }
+
+  if (Scope == TEXT("selection"))
+  {
+    GraphEditor->ZoomToFit(true);
+  }
+  else
+  {
+    GraphEditor->ZoomToFit(false);
+  }
+
+  FVector2D ViewLocation = FVector2D::ZeroVector;
+  float ZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(ViewLocation, ZoomAmount);
+  RefreshBlueprintEditorSurfaceDiagnostics(Context.Editor, Context);
+
+  TSharedPtr<FJsonObject> Response = CreateBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("scope"), Scope);
+  SetPointObjectField(Response, TEXT("previousViewLocation"), PreviousViewLocation);
+  Response->SetNumberField(TEXT("previousZoomAmount"), PreviousZoomAmount);
+  SetPointObjectField(Response, TEXT("viewLocation"), ViewLocation);
+  Response->SetNumberField(TEXT("zoomAmount"), ZoomAmount);
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         Scope == TEXT("selection") ? TEXT("Blueprint graph fitted to selection")
+                                                    : TEXT("Blueprint graph fitted to window"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetBlueprintGraphView(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  UEdGraph *TargetGraph = nullptr;
+  FString GraphError;
+  if (!ResolveBlueprintGraph(Context, TargetGraph, GraphError))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                 TEXT("GRAPH_RESOLUTION_FAILED"), GraphError);
+    return true;
+  }
+
+  FVector2D CurrentViewLocation = FVector2D::ZeroVector;
+  float CurrentZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(CurrentViewLocation, CurrentZoomAmount);
+
+  FVector2D RequestedViewLocation = FVector2D::ZeroVector;
+  const bool bHasRequestedViewLocation =
+      TryGetBlueprintViewPointField(Payload, TEXT("viewLocation"), RequestedViewLocation);
+
+  FVector2D RequestedDelta = FVector2D::ZeroVector;
+  const bool bHasRequestedDelta =
+      TryGetBlueprintViewPointField(Payload, TEXT("delta"), RequestedDelta);
+
+  if (!bHasRequestedViewLocation && !bHasRequestedDelta)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("viewLocation or delta required"), ErrorDetails);
+    return true;
+  }
+
+  bool bPreserveZoom = true;
+  Payload->TryGetBoolField(TEXT("preserveZoom"), bPreserveZoom);
+
+  double RequestedZoomAmount = static_cast<double>(CurrentZoomAmount);
+  const bool bHasRequestedZoomAmount = Payload->TryGetNumberField(TEXT("zoomAmount"), RequestedZoomAmount);
+
+  FVector2D TargetViewLocation = bHasRequestedViewLocation ? RequestedViewLocation : CurrentViewLocation;
+  if (bHasRequestedDelta)
+  {
+    TargetViewLocation += RequestedDelta;
+  }
+
+  const float TargetZoomAmount = bHasRequestedZoomAmount
+                                     ? static_cast<float>(RequestedZoomAmount)
+                                     : CurrentZoomAmount;
+
+  Context.Editor->SetViewLocation(TargetViewLocation, TargetZoomAmount);
+
+  FVector2D FinalViewLocation = FVector2D::ZeroVector;
+  float FinalZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(FinalViewLocation, FinalZoomAmount);
+  RefreshBlueprintEditorSurfaceDiagnostics(Context.Editor, Context);
+
+  TSharedPtr<FJsonObject> Response = CreateBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetBoolField(TEXT("preserveZoom"), bPreserveZoom);
+  SetPointObjectField(Response, TEXT("previousViewLocation"), CurrentViewLocation);
+  Response->SetNumberField(TEXT("previousZoomAmount"), CurrentZoomAmount);
+  if (bHasRequestedViewLocation)
+  {
+    SetPointObjectField(Response, TEXT("requestedViewLocation"), RequestedViewLocation);
+  }
+  if (bHasRequestedDelta)
+  {
+    SetPointObjectField(Response, TEXT("delta"), RequestedDelta);
+  }
+  if (bHasRequestedZoomAmount)
+  {
+    Response->SetNumberField(TEXT("requestedZoomAmount"), RequestedZoomAmount);
+  }
+  SetPointObjectField(Response, TEXT("viewLocation"), FinalViewLocation);
+  Response->SetNumberField(TEXT("zoomAmount"), FinalZoomAmount);
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint graph view updated"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBlueprintNode(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  const FString RequestedNodeGuid = GetTrimmedPayloadString(Payload, TEXT("nodeGuid"));
+  const FString RequestedNodeName = GetTrimmedPayloadString(Payload, TEXT("nodeName"));
+  const FString RequestedNodeTitle = GetTrimmedPayloadString(Payload, TEXT("nodeTitle"));
+
+  FString SelectorType;
+  FString SelectorValue;
+  FGuid ParsedNodeGuid;
+  if (!RequestedNodeGuid.IsEmpty())
+  {
+    if (!FGuid::Parse(RequestedNodeGuid, ParsedNodeGuid))
+    {
+      TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+      ErrorDetails->SetStringField(TEXT("nodeGuid"), RequestedNodeGuid);
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("nodeGuid must be a valid GUID string"), ErrorDetails);
+      return true;
+    }
+
+    SelectorType = TEXT("nodeGuid");
+    SelectorValue = RequestedNodeGuid;
+  }
+  else if (!RequestedNodeName.IsEmpty())
+  {
+    SelectorType = TEXT("nodeName");
+    SelectorValue = RequestedNodeName;
+  }
+  else if (!RequestedNodeTitle.IsEmpty())
+  {
+    SelectorType = TEXT("nodeTitle");
+    SelectorValue = RequestedNodeTitle;
+  }
+  else
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("nodeGuid, nodeName, or nodeTitle required"), ErrorDetails);
+    return true;
+  }
+
+  TArray<UEdGraph *> CandidateGraphs;
+  if (!Context.RequestedGraphName.IsEmpty())
+  {
+    UEdGraph *RequestedGraph = nullptr;
+    FString GraphError;
+    if (!ResolveBlueprintGraph(Context, RequestedGraph, GraphError))
+    {
+      SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                   TEXT("GRAPH_RESOLUTION_FAILED"), GraphError);
+      return true;
+    }
+
+    CandidateGraphs.Add(RequestedGraph);
+  }
+  else
+  {
+    Context.Blueprint->GetAllGraphs(CandidateGraphs);
+  }
+
+  struct FMatchedNodeEntry
+  {
+    UEdGraph *Graph = nullptr;
+    UEdGraphNode *Node = nullptr;
+  };
+
+  TArray<FMatchedNodeEntry> Matches;
+  for (UEdGraph *Graph : CandidateGraphs)
+  {
+    if (Graph == nullptr)
+    {
+      continue;
+    }
+
+    for (UEdGraphNode *Node : Graph->Nodes)
+    {
+      if (Node == nullptr)
+      {
+        continue;
+      }
+
+      bool bMatches = false;
+      if (SelectorType == TEXT("nodeGuid"))
+      {
+        bMatches = Node->NodeGuid == ParsedNodeGuid;
+      }
+      else if (SelectorType == TEXT("nodeName"))
+      {
+        bMatches = Node->GetName().Equals(SelectorValue, ESearchCase::IgnoreCase);
+      }
+      else if (SelectorType == TEXT("nodeTitle"))
+      {
+        bMatches = GetBlueprintNodeListTitle(Node).Equals(SelectorValue, ESearchCase::CaseSensitive);
+      }
+
+      if (bMatches)
+      {
+        FMatchedNodeEntry &Entry = Matches.AddDefaulted_GetRef();
+        Entry.Graph = Graph;
+        Entry.Node = Node;
+      }
+    }
+  }
+
+  if (Matches.Num() == 0)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+    ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NODE_NOT_FOUND"),
+                              TEXT("Blueprint node selector did not match any node"), ErrorDetails);
+    return true;
+  }
+
+  if (Matches.Num() > 1)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+    ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+    ErrorDetails->SetNumberField(TEXT("matchCount"), Matches.Num());
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("AMBIGUOUS_NODE_SELECTOR"),
+                              TEXT("Blueprint node selector matched multiple nodes"), ErrorDetails);
+    return true;
+  }
+
+  UEdGraph *MatchedGraph = Matches[0].Graph;
+  UEdGraphNode *MatchedNode = Matches[0].Node;
+  Context.Editor->OpenGraphAndBringToFront(MatchedGraph, true);
+  Context.Editor->JumpToNode(MatchedNode, false);
+  Context.Editor->ClearSelectionStateFor(FBlueprintEditor::SelectionState_Graph);
+  Context.Editor->SetUISelectionState(FBlueprintEditor::SelectionState_Graph);
+  Context.Editor->AddToSelection(MatchedNode);
+  Context.ResolvedGraphName = GetBlueprintGraphDisplayName(MatchedGraph);
+  Context.CurrentMode = Context.Editor->GetCurrentMode().ToString();
+  RefreshBlueprintEditorSurfaceDiagnostics(Context.Editor, Context);
+
+  FVector2D ViewLocation = FVector2D::ZeroVector;
+  float ZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(ViewLocation, ZoomAmount);
+
+  TSharedPtr<FJsonObject> Response = CreateBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+  Response->SetStringField(TEXT("nodeSelector"), SelectorValue);
+  Response->SetStringField(TEXT("matchedNodeId"), MatchedNode->NodeGuid.ToString());
+  Response->SetStringField(TEXT("matchedNodeName"), MatchedNode->GetName());
+  Response->SetStringField(TEXT("matchedNodeTitle"), GetBlueprintNodeListTitle(MatchedNode));
+  SetPointObjectField(Response, TEXT("viewLocation"), ViewLocation);
+  Response->SetNumberField(TEXT("zoomAmount"), ZoomAmount);
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint node revealed"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphReview(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  UEdGraph *TargetGraph = nullptr;
+  FString GraphError;
+  if (!ResolveBlueprintGraph(Context, TargetGraph, GraphError))
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                 TEXT("GRAPH_RESOLUTION_FAILED"), GraphError);
+    return true;
+  }
+
+  FString Scope = GetTrimmedPayloadString(Payload, TEXT("scope")).ToLower();
+  if (Scope.IsEmpty())
+  {
+    Scope = TEXT("full");
+  }
+  if (Scope != TEXT("full") && Scope != TEXT("selection"))
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("scope"), Scope);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("scope must be 'full' or 'selection'"), ErrorDetails);
+    return true;
+  }
+
+  const FString RequestedNodeGuid = GetTrimmedPayloadString(Payload, TEXT("nodeGuid"));
+  const FString RequestedNodeName = GetTrimmedPayloadString(Payload, TEXT("nodeName"));
+  const FString RequestedNodeTitle = GetTrimmedPayloadString(Payload, TEXT("nodeTitle"));
+  const bool bHasNodeSelector = !RequestedNodeGuid.IsEmpty() || !RequestedNodeName.IsEmpty() ||
+                                !RequestedNodeTitle.IsEmpty();
+
+  FString SelectorType;
+  FString SelectorValue;
+  FGuid ParsedNodeGuid;
+  UEdGraph *ReviewGraph = TargetGraph;
+  UEdGraphNode *MatchedNode = nullptr;
+
+  if (bHasNodeSelector)
+  {
+    if (!RequestedNodeGuid.IsEmpty())
+    {
+      if (!FGuid::Parse(RequestedNodeGuid, ParsedNodeGuid))
+      {
+        TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+        ErrorDetails->SetStringField(TEXT("nodeGuid"), RequestedNodeGuid);
+        SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                  TEXT("nodeGuid must be a valid GUID string"), ErrorDetails);
+        return true;
+      }
+
+      SelectorType = TEXT("nodeGuid");
+      SelectorValue = RequestedNodeGuid;
+    }
+    else if (!RequestedNodeName.IsEmpty())
+    {
+      SelectorType = TEXT("nodeName");
+      SelectorValue = RequestedNodeName;
+    }
+    else
+    {
+      SelectorType = TEXT("nodeTitle");
+      SelectorValue = RequestedNodeTitle;
+    }
+
+    TArray<UEdGraph *> CandidateGraphs;
+    if (!Context.RequestedGraphName.IsEmpty())
+    {
+      CandidateGraphs.Add(TargetGraph);
+    }
+    else
+    {
+      Context.Blueprint->GetAllGraphs(CandidateGraphs);
+    }
+
+    struct FMatchedNodeEntry
+    {
+      UEdGraph *Graph = nullptr;
+      UEdGraphNode *Node = nullptr;
+    };
+
+    TArray<FMatchedNodeEntry> Matches;
+    for (UEdGraph *Graph : CandidateGraphs)
+    {
+      if (Graph == nullptr)
+      {
+        continue;
+      }
+
+      for (UEdGraphNode *Node : Graph->Nodes)
+      {
+        if (Node == nullptr)
+        {
+          continue;
+        }
+
+        bool bMatches = false;
+        if (SelectorType == TEXT("nodeGuid"))
+        {
+          bMatches = Node->NodeGuid == ParsedNodeGuid;
+        }
+        else if (SelectorType == TEXT("nodeName"))
+        {
+          bMatches = Node->GetName().Equals(SelectorValue, ESearchCase::IgnoreCase);
+        }
+        else if (SelectorType == TEXT("nodeTitle"))
+        {
+          bMatches = GetBlueprintNodeListTitle(Node).Equals(SelectorValue, ESearchCase::CaseSensitive);
+        }
+
+        if (bMatches)
+        {
+          FMatchedNodeEntry &Entry = Matches.AddDefaulted_GetRef();
+          Entry.Graph = Graph;
+          Entry.Node = Node;
+        }
+      }
+    }
+
+    if (Matches.Num() == 0)
+    {
+      TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+      ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+      ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("NODE_NOT_FOUND"),
+                                TEXT("Blueprint node selector did not match any node"), ErrorDetails);
+      return true;
+    }
+
+    if (Matches.Num() > 1)
+    {
+      TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+      ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+      ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+      ErrorDetails->SetNumberField(TEXT("matchCount"), Matches.Num());
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("AMBIGUOUS_NODE_SELECTOR"),
+                                TEXT("Blueprint node selector matched multiple nodes"), ErrorDetails);
+      return true;
+    }
+
+    ReviewGraph = Matches[0].Graph;
+    MatchedNode = Matches[0].Node;
+  }
+
+  FVector2D PreviousViewLocation = FVector2D::ZeroVector;
+  float PreviousZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(PreviousViewLocation, PreviousZoomAmount);
+
+  const TSharedPtr<SGraphEditor> GraphEditor = Context.Editor->OpenGraphAndBringToFront(ReviewGraph, true);
+  if (!GraphEditor.IsValid())
+  {
+    SendBlueprintNavigationError(this, Socket, RequestId, Context,
+                                 TEXT("GRAPH_EDITOR_NOT_AVAILABLE"),
+                                 TEXT("Unable to resolve a live graph editor for the Blueprint graph"));
+    return true;
+  }
+
+  Context.Editor->ClearSelectionStateFor(FBlueprintEditor::SelectionState_Graph);
+  Context.Editor->SetUISelectionState(FBlueprintEditor::SelectionState_Graph);
+  if (MatchedNode != nullptr)
+  {
+    Context.Editor->JumpToNode(MatchedNode, false);
+    Context.Editor->AddToSelection(MatchedNode);
+  }
+
+  const bool bUseSelectionScope = Scope == TEXT("selection") && MatchedNode != nullptr;
+  GraphEditor->ZoomToFit(bUseSelectionScope);
+
+  FVector2D ViewLocation = FVector2D::ZeroVector;
+  float ZoomAmount = 1.0f;
+  Context.Editor->GetViewLocation(ViewLocation, ZoomAmount);
+  Context.ResolvedGraphName = GetBlueprintGraphDisplayName(ReviewGraph);
+  Context.CurrentMode = Context.Editor->GetCurrentMode().ToString();
+  RefreshBlueprintEditorSurfaceDiagnostics(Context.Editor, Context);
+
+  FString Filename = GetTrimmedPayloadString(Payload, TEXT("filename"));
+  Filename = SanitizeScreenshotFilename(Filename);
+  const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
+  IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
+  const FString FullPath = ScreenshotDir / Filename;
+  const bool bIncludeMenus =
+      !Payload->HasField(TEXT("includeMenus"))
+          ? true
+          : GetJsonBoolField(Payload, TEXT("includeMenus"), true);
+
+  TSharedPtr<SWindow> TargetWindow;
+  if (TSharedPtr<FTabManager> TabManager = Context.Editor->GetAssociatedTabManager())
+  {
+    TSharedPtr<SDockTab> TargetTab;
+    if (!Context.RequestedTabId.IsEmpty())
+    {
+      TargetTab = TabManager->FindExistingLiveTab(FTabId(FName(*Context.RequestedTabId)));
+    }
+    if (!TargetTab.IsValid())
+    {
+      TargetTab = TabManager->GetOwnerTab();
+    }
+    if (TargetTab.IsValid())
+    {
+      if (Context.TabId.IsEmpty())
+      {
+        Context.TabId = TargetTab->GetLayoutIdentifier().ToString();
+      }
+      TargetWindow = TargetTab->GetParentWindow();
+      if (TargetWindow.IsValid() && Context.WindowTitle.IsEmpty())
+      {
+        Context.WindowTitle = TargetWindow->GetTitle().ToString();
+      }
+    }
+  }
+
+  if (!TargetWindow.IsValid())
+  {
+    TargetWindow = ResolvePreferredScreenshotWindow(this, Context.WindowTitle);
+  }
+
+  if (!TargetWindow.IsValid())
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
+    ErrorDetails->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+    if (!SelectorType.IsEmpty())
+    {
+      ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+      ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+    }
+    if (MatchedNode != nullptr)
+    {
+      ErrorDetails->SetStringField(TEXT("matchedNodeId"), MatchedNode->NodeGuid.ToString());
+      ErrorDetails->SetStringField(TEXT("matchedNodeName"), MatchedNode->GetName());
+      ErrorDetails->SetStringField(TEXT("matchedNodeTitle"), GetBlueprintNodeListTitle(MatchedNode));
+    }
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("WINDOW_NOT_FOUND"),
+                              TEXT("No visible Blueprint editor window was available for graph review capture"),
+                              ErrorDetails);
+    return true;
+  }
+
+  FIntPoint ScreenshotSize = FIntPoint::ZeroValue;
+  int32 IncludedMenuWindowCount = 0;
+  FString CaptureError;
+  if (bIncludeMenus)
+  {
+    if (!CaptureWindowScreenshotIncludingChildWindowsToFile(
+            TargetWindow, FullPath, ScreenshotSize, IncludedMenuWindowCount,
+            CaptureError))
+    {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), CaptureError,
+                                nullptr);
+      return true;
+    }
+  }
+  else if (!CaptureWindowScreenshotToFile(TargetWindow, FullPath, ScreenshotSize, CaptureError))
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"), CaptureError,
+                              nullptr);
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Response = CreateBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+  Response->SetStringField(TEXT("requestedScope"), Scope);
+  Response->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
+  Response->SetStringField(TEXT("filename"), Filename);
+  Response->SetStringField(TEXT("path"), FullPath);
+  Response->SetStringField(TEXT("captureTarget"), TEXT("editor_window"));
+  Response->SetStringField(TEXT("captureMode"), TEXT("editor_window"));
+  Response->SetBoolField(TEXT("includeMenus"), bIncludeMenus);
+  Response->SetNumberField(TEXT("includedMenuWindowCount"), IncludedMenuWindowCount);
+  Response->SetNumberField(TEXT("width"), ScreenshotSize.X);
+  Response->SetNumberField(TEXT("height"), ScreenshotSize.Y);
+  SetPointObjectField(Response, TEXT("previousViewLocation"), PreviousViewLocation);
+  Response->SetNumberField(TEXT("previousZoomAmount"), PreviousZoomAmount);
+  SetPointObjectField(Response, TEXT("viewLocation"), ViewLocation);
+  Response->SetNumberField(TEXT("zoomAmount"), ZoomAmount);
+  ApplyTargetHealthResponseFields(Response, TEXT("resolved"), true, false);
+  if (!SelectorType.IsEmpty())
+  {
+    Response->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+    Response->SetStringField(TEXT("nodeSelector"), SelectorValue);
+  }
+  if (MatchedNode != nullptr)
+  {
+    Response->SetStringField(TEXT("matchedNodeId"), MatchedNode->NodeGuid.ToString());
+    Response->SetStringField(TEXT("matchedNodeName"), MatchedNode->GetName());
+    Response->SetStringField(TEXT("matchedNodeTitle"), GetBlueprintNodeListTitle(MatchedNode));
+  }
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint graph review captured"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetWidgetBlueprintMode(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedWidgetBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  const FString RequestedMode = GetTrimmedPayloadString(Payload, TEXT("mode"));
+  Context.RequestedMode = NormalizeWidgetBlueprintModeString(RequestedMode);
+  if (Context.RequestedMode.IsEmpty())
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("mode"), RequestedMode);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("mode must be 'designer' or 'graph'"), ErrorDetails);
+    return true;
+  }
+
+  const FString PreviousMode = Context.CurrentMode;
+  const FName TargetModeId = GetWidgetBlueprintModeId(Context.RequestedMode);
+  const bool bModeChanged = !Context.CurrentMode.Equals(TargetModeId.ToString(), ESearchCase::CaseSensitive);
+
+  if (bModeChanged)
+  {
+    Context.WidgetEditor->SetCurrentMode(TargetModeId);
+  }
+
+  RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+  TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("previousMode"), PreviousMode);
+  Response->SetBoolField(TEXT("modeChanged"), bModeChanged);
+  Response->SetStringField(TEXT("designerActionDisposition"),
+                           Context.RequestedMode.Equals(TEXT("Designer"), ESearchCase::CaseSensitive) &&
+                                   Context.bDesignerViewFound
+                               ? TEXT("immediate")
+                               : TEXT("mode_only"));
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         FString::Printf(TEXT("Widget Blueprint switched to %s mode"),
+                                         *Context.RequestedMode),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorFitWidgetDesigner(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedWidgetBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  const FString PreviousMode = Context.CurrentMode;
+  const bool bEnteredDesigner = !Context.CurrentMode.Equals(FWidgetBlueprintApplicationModes::DesignerMode.ToString(),
+                                                            ESearchCase::CaseSensitive);
+  Context.RequestedMode = TEXT("Designer");
+  if (bEnteredDesigner)
+  {
+    Context.WidgetEditor->SetCurrentMode(FWidgetBlueprintApplicationModes::DesignerMode);
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+  }
+
+  FString DesignerActionDisposition;
+  FString FitFailureReason;
+  bool bFitExecuted = TryExecuteWidgetDesignerZoomToFit(Context,
+                                                        DesignerActionDisposition,
+                                                        FitFailureReason);
+  if (!bFitExecuted && DesignerActionDisposition == TEXT("queued_after_layout"))
+  {
+    QueueWidgetDesignerZoomToFit(Context);
+  }
+
+  RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+  TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("previousMode"), PreviousMode);
+  Response->SetBoolField(TEXT("enteredDesignerMode"), bEnteredDesigner);
+  Response->SetBoolField(TEXT("fitExecuted"), bFitExecuted);
+  Response->SetStringField(TEXT("designerActionDisposition"), DesignerActionDisposition);
+  if (!FitFailureReason.IsEmpty())
+  {
+    Response->SetStringField(TEXT("fitFailureReason"), FitFailureReason);
+  }
+
+  const FString ResponseMessage = bFitExecuted
+                                      ? TEXT("Widget Designer fitted to content")
+                                      : (DesignerActionDisposition == TEXT("queued_after_layout")
+                                             ? TEXT("Widget Designer fit queued after layout")
+                                             : TEXT("Widget Designer switched to a narrower semantic fallback"));
+
+  SendAutomationResponse(Socket, RequestId, true, ResponseMessage, Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetWidgetDesignerView(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedWidgetBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  FVector2D RequestedViewLocation = FVector2D::ZeroVector;
+  const bool bHasViewLocation = TryGetPointField(Payload, TEXT("viewLocation"), RequestedViewLocation);
+  FVector2D RequestedDelta = FVector2D::ZeroVector;
+  const bool bHasDelta = TryGetPointField(Payload, TEXT("delta"), RequestedDelta);
+  if (!bHasViewLocation && !bHasDelta)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("viewLocation or delta required"), ErrorDetails);
+    return true;
+  }
+
+  const bool bPreserveZoom = GetJsonBoolField(Payload, TEXT("preserveZoom"), true);
+  const FString PreviousMode = Context.CurrentMode;
+  Context.RequestedMode = TEXT("Designer");
+  const bool bEnteredDesigner = !Context.CurrentMode.Equals(FWidgetBlueprintApplicationModes::DesignerMode.ToString(),
+                                                            ESearchCase::CaseSensitive);
+  if (bEnteredDesigner)
+  {
+    Context.WidgetEditor->SetCurrentMode(FWidgetBlueprintApplicationModes::DesignerMode);
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+  }
+
+  const TOptional<FVector2D> RequestedViewLocationOption =
+      bHasViewLocation ? TOptional<FVector2D>(RequestedViewLocation) : TOptional<FVector2D>();
+  const TOptional<FVector2D> RequestedDeltaOption =
+      bHasDelta ? TOptional<FVector2D>(RequestedDelta) : TOptional<FVector2D>();
+
+  FVector2D PreviousViewOffset = FVector2D::ZeroVector;
+  FVector2D NewViewOffset = FVector2D::ZeroVector;
+  FString DesignerActionDisposition;
+  FString ViewFailureReason;
+  const bool bViewUpdated = TryApplyWidgetDesignerViewChange(Context,
+                                                             RequestedViewLocationOption,
+                                                             RequestedDeltaOption,
+                                                             PreviousViewOffset,
+                                                             NewViewOffset,
+                                                             DesignerActionDisposition,
+                                                             ViewFailureReason);
+  if (!bViewUpdated && DesignerActionDisposition == TEXT("queued_after_layout"))
+  {
+    QueueWidgetDesignerViewChange(Context, RequestedViewLocationOption, RequestedDeltaOption);
+  }
+
+  const FVector2D TargetViewOffset = bViewUpdated
+                                         ? NewViewOffset
+                                         : (RequestedViewLocationOption.IsSet()
+                                                ? RequestedViewLocationOption.GetValue()
+                                                : PreviousViewOffset) +
+                                               (RequestedDeltaOption.IsSet() ? RequestedDeltaOption.GetValue()
+                                                                             : FVector2D::ZeroVector);
+
+  RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+  TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("previousMode"), PreviousMode);
+  Response->SetBoolField(TEXT("enteredDesignerMode"), bEnteredDesigner);
+  SetPointObjectField(Response, TEXT("previousViewLocation"), PreviousViewOffset);
+  if (bHasViewLocation)
+  {
+    SetPointObjectField(Response, TEXT("requestedViewLocation"), RequestedViewLocation);
+  }
+  if (bHasDelta)
+  {
+    SetPointObjectField(Response, TEXT("delta"), RequestedDelta);
+  }
+  SetPointObjectField(Response, TEXT("viewLocation"), TargetViewOffset);
+  Response->SetNumberField(TEXT("viewOffsetX"), TargetViewOffset.X);
+  Response->SetNumberField(TEXT("viewOffsetY"), TargetViewOffset.Y);
+  Response->SetBoolField(TEXT("preserveZoom"), bPreserveZoom);
+  Response->SetStringField(TEXT("designerActionDisposition"), DesignerActionDisposition);
+  if (!ViewFailureReason.IsEmpty())
+  {
+    Response->SetStringField(TEXT("viewFailureReason"), ViewFailureReason);
+  }
+  if (Context.DesignerView.IsValid())
+  {
+    Response->SetNumberField(TEXT("zoomAmount"), Context.DesignerView->GetZoomAmount());
+  }
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         bViewUpdated ? TEXT("Widget Designer view updated")
+                                      : TEXT("Widget Designer view queued after layout"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSelectWidgetInDesigner(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedWidgetBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  UWidget *TargetWidget = nullptr;
+  if (!ResolveWidgetBlueprintTargetWidget(Payload, Context, TargetWidget, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  const FString PreviousMode = Context.CurrentMode;
+  Context.RequestedMode = TEXT("Designer");
+  const bool bEnteredDesigner = !Context.CurrentMode.Equals(FWidgetBlueprintApplicationModes::DesignerMode.ToString(),
+                                                            ESearchCase::CaseSensitive);
+  if (bEnteredDesigner)
+  {
+    Context.WidgetEditor->SetCurrentMode(FWidgetBlueprintApplicationModes::DesignerMode);
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+  }
+
+  const FWidgetReference WidgetReference = Context.WidgetEditor->GetReferenceFromTemplate(TargetWidget);
+  if (!WidgetReference.IsValid())
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("resolvedWidgetName"), Context.ResolvedWidgetName);
+    ErrorDetails->SetStringField(TEXT("resolvedWidgetPath"), Context.ResolvedWidgetPath);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("WIDGET_REFERENCE_INVALID"),
+                              TEXT("The target widget could not be resolved into a live designer reference"),
+                              ErrorDetails);
+    return true;
+  }
+
+  TSet<FWidgetReference> Selection;
+  Selection.Add(WidgetReference);
+  const bool bAppendOrToggle = Payload.IsValid() && Payload->HasField(TEXT("appendOrToggle"))
+                                   ? GetJsonBoolField(Payload, TEXT("appendOrToggle"), false)
+                                   : false;
+  Context.WidgetEditor->SelectWidgets(Selection, bAppendOrToggle);
+
+  const TSet<FWidgetReference> &SelectedWidgets = Context.WidgetEditor->GetSelectedWidgets();
+  const bool bTargetStillSelected = SelectedWidgets.Contains(WidgetReference);
+  const int32 SelectedWidgetCount = SelectedWidgets.Num();
+
+  FString DesignerActionDisposition;
+  FString RevealFailureReason;
+  bool bRevealExecuted = false;
+  if (bTargetStillSelected)
+  {
+    bRevealExecuted = TryExecuteWidgetDesignerZoomToFit(Context,
+                                                        DesignerActionDisposition,
+                                                        RevealFailureReason);
+  }
+  else
+  {
+    DesignerActionDisposition = TEXT("skipped_target_deselected");
+    RevealFailureReason = TEXT("Target widget was toggled out of the current selection");
+  }
+
+  if (bTargetStillSelected && !bRevealExecuted && DesignerActionDisposition == TEXT("queued_after_layout"))
+  {
+    QueueWidgetDesignerZoomToFit(Context);
+  }
+
+  RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+  TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("previousMode"), PreviousMode);
+  Response->SetBoolField(TEXT("enteredDesignerMode"), bEnteredDesigner);
+  Response->SetBoolField(TEXT("selectionApplied"), true);
+  Response->SetBoolField(TEXT("appendOrToggle"), bAppendOrToggle);
+  Response->SetBoolField(TEXT("targetStillSelected"), bTargetStillSelected);
+  Response->SetNumberField(TEXT("selectedWidgetCount"), SelectedWidgetCount);
+  Response->SetBoolField(TEXT("revealExecuted"), bRevealExecuted);
+  Response->SetStringField(TEXT("designerActionDisposition"), DesignerActionDisposition);
+  if (!RevealFailureReason.IsEmpty())
+  {
+    Response->SetStringField(TEXT("revealFailureReason"), RevealFailureReason);
+  }
+
+  const FString ResponseMessage = !bTargetStillSelected && bAppendOrToggle
+                                      ? TEXT("Widget selection toggled in Designer")
+                                      : (bRevealExecuted
+                                             ? TEXT("Widget selection updated and revealed in Designer")
+                                             : (DesignerActionDisposition == TEXT("queued_after_layout")
+                                                    ? TEXT("Widget selection updated; Designer reveal queued after layout")
+                                                    : TEXT("Widget selection updated with narrower semantic Designer fallback")));
+
+  SendAutomationResponse(Socket, RequestId, true, ResponseMessage, Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorSelectWidgetsInDesignerRect(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  FMcpResolvedWidgetBlueprintEditorContext Context;
+  FString ErrorCode;
+  FString ErrorMessage;
+  if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage))
+  {
+    SendWidgetBlueprintNavigationError(this, Socket, RequestId, Context, ErrorCode, ErrorMessage);
+    return true;
+  }
+
+  FSlateRect RequestedRect;
+  if (!TryGetRectObjectField(Payload, TEXT("rect"), RequestedRect))
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("rect with left, top, right, and bottom is required"),
+                              ErrorDetails);
+    return true;
+  }
+
+  const FString PreviousMode = Context.CurrentMode;
+  Context.RequestedMode = TEXT("Designer");
+  const bool bEnteredDesigner = !Context.CurrentMode.Equals(FWidgetBlueprintApplicationModes::DesignerMode.ToString(),
+                                                            ESearchCase::CaseSensitive);
+  if (bEnteredDesigner)
+  {
+    Context.WidgetEditor->SetCurrentMode(FWidgetBlueprintApplicationModes::DesignerMode);
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+  }
+
+  UWidgetBlueprint *WidgetBlueprint = Context.WidgetEditor->GetWidgetBlueprintObj();
+  UWidget *RootWidget = WidgetBlueprint && WidgetBlueprint->WidgetTree ? WidgetBlueprint->WidgetTree->RootWidget : nullptr;
+  if (RootWidget == nullptr)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ROOT_WIDGET"),
+                              TEXT("The Widget Blueprint has no root widget"),
+                              ErrorDetails);
+    return true;
+  }
+
+  TSharedPtr<SWindow> DesignerParentWindow =
+      Context.DesignerTab.IsValid() ? Context.DesignerTab->GetParentWindow() : TSharedPtr<SWindow>();
+  if (!DesignerParentWindow.IsValid() && Context.DesignerView.IsValid() && FSlateApplication::IsInitialized())
+  {
+    DesignerParentWindow = FSlateApplication::Get().FindWidgetWindow(Context.DesignerView.ToSharedRef());
+  }
+
+  TArray<FMcpDesignerRectSelectionCandidate> Matches;
+  CollectDesignerRectSelectionCandidates(RootWidget,
+                                         RootWidget,
+                                         Context.WidgetEditor,
+                                         Context.DesignerView,
+                                         Context.DesignerTab,
+                                         DesignerParentWindow,
+                                         RequestedRect,
+                                         Matches);
+
+  const bool bHasNonRootMatch = Matches.ContainsByPredicate([](const FMcpDesignerRectSelectionCandidate &Candidate)
+                                                            { return !Candidate.bIsRoot; });
+
+  TSet<FWidgetReference> Selection;
+  TArray<FString> MatchedWidgetPaths;
+  for (const FMcpDesignerRectSelectionCandidate &Match : Matches)
+  {
+    if (bHasNonRootMatch && Match.bIsRoot)
+    {
+      continue;
+    }
+
+    Selection.Add(Match.WidgetReference);
+    MatchedWidgetPaths.Add(Match.WidgetPath);
+  }
+  MatchedWidgetPaths.Sort();
+
+  const bool bAppendOrToggle = Payload.IsValid() && Payload->HasField(TEXT("appendOrToggle"))
+                                   ? GetJsonBoolField(Payload, TEXT("appendOrToggle"), false)
+                                   : false;
+  Context.WidgetEditor->SelectWidgets(Selection, bAppendOrToggle);
+
+  const int32 SelectedWidgetCount = Context.WidgetEditor->GetSelectedWidgets().Num();
+
+  RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+
+  TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+  Response->SetBoolField(TEXT("success"), true);
+  Response->SetStringField(TEXT("previousMode"), PreviousMode);
+  Response->SetBoolField(TEXT("enteredDesignerMode"), bEnteredDesigner);
+  Response->SetBoolField(TEXT("selectionApplied"), true);
+  Response->SetBoolField(TEXT("appendOrToggle"), bAppendOrToggle);
+  Response->SetNumberField(TEXT("matchedWidgetCount"), MatchedWidgetPaths.Num());
+  Response->SetNumberField(TEXT("selectedWidgetCount"), SelectedWidgetCount);
+
+  TArray<TSharedPtr<FJsonValue>> MatchedWidgetPathValues;
+  MatchedWidgetPathValues.Reserve(MatchedWidgetPaths.Num());
+  for (const FString &MatchedWidgetPath : MatchedWidgetPaths)
+  {
+    MatchedWidgetPathValues.Add(MakeShared<FJsonValueString>(MatchedWidgetPath));
+  }
+  Response->SetArrayField(TEXT("matchedWidgetPaths"), MatchedWidgetPathValues);
+
+  const FString ResponseMessage = MatchedWidgetPaths.Num() > 0
+                                      ? FString::Printf(TEXT("Rectangle selection matched %d widget(s)"), MatchedWidgetPaths.Num())
+                                      : (bAppendOrToggle
+                                             ? TEXT("Rectangle selection matched no widgets; existing selection unchanged")
+                                             : TEXT("Rectangle selection matched no widgets; selection cleared"));
+
+  SendAutomationResponse(Socket, RequestId, true, ResponseMessage, Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusEditorSurface(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+#if WITH_EDITOR
+  if (!FSlateApplication::IsInitialized())
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SLATE_NOT_AVAILABLE"),
+                              TEXT("Slate application is not initialized"), nullptr);
+    return true;
+  }
+
+  const FString Surface = GetTrimmedPayloadString(Payload, TEXT("surface"));
+  if (Surface.IsEmpty())
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("surface is required"), nullptr);
+    return true;
+  }
+
+  const FString RequestedTabId = GetTrimmedPayloadString(Payload, TEXT("tabId"));
+  const FString RequestedWindowTitle = GetTrimmedPayloadString(Payload, TEXT("windowTitle"));
+
+  if (Surface.Equals(TEXT("widget_designer"), ESearchCase::IgnoreCase))
+  {
+    FMcpResolvedWidgetBlueprintEditorContext Context;
+    FString ErrorCode;
+    FString ErrorMessage;
+    if (!ResolveWidgetBlueprintEditorContext(Payload, Context, ErrorCode, ErrorMessage,
+                                             false, true, true))
+    {
+      TSharedPtr<FJsonObject> ErrorDetails = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+      ErrorDetails->SetStringField(TEXT("focusTargetSurface"), TEXT("widget_designer"));
+      ErrorDetails->SetBoolField(TEXT("focusApplied"), false);
+      ErrorDetails->SetStringField(TEXT("focusFailureReason"), ErrorMessage);
+      ApplyRequestedVirtualTargetFields(ErrorDetails, RequestedTabId,
+                                        RequestedWindowTitle, FString());
+      ApplyTargetHealthResponseFields(ErrorDetails, TEXT("stale"), false, false,
+                                      TEXT("missing_live_tab"),
+                                      TEXT("Open the Widget Blueprint editor and switch to Designer mode before retrying focus."),
+                                      TEXT("resolve_ui_target"));
+      ErrorDetails->SetStringField(TEXT("suggestedMode"), TEXT("designer"));
+      SendStandardErrorResponse(this, Socket, RequestId, *ErrorCode, *ErrorMessage, ErrorDetails);
+      return true;
+    }
+
+    RefreshWidgetBlueprintSurfaceDiagnostics(Context);
+    TSharedPtr<FJsonObject> Response = CreateWidgetBlueprintNavigationDiagnosticsObject(Context);
+    Response->SetStringField(TEXT("focusTargetSurface"), TEXT("widget_designer"));
+    Response->SetBoolField(TEXT("focusApplied"), false);
+    Response->SetStringField(TEXT("suggestedMode"), TEXT("designer"));
+    ApplyRequestedVirtualTargetFields(Response, RequestedTabId,
+                                      RequestedWindowTitle, FString());
+
+    if (!Context.bDesignerViewFound || !Context.DesignerView.IsValid())
+    {
+      Response->SetStringField(TEXT("focusFailureReason"), TEXT("The live Widget Blueprint Designer surface is not available"));
+      ApplyTargetHealthResponseFields(Response, TEXT("stale"), Context.bDesignerTabFound, false,
+                                      Context.bDesignerTabFound ? TEXT("tab_without_parent_window") : TEXT("missing_live_tab"),
+                                      TEXT("Switch the asset editor to Designer mode and retry focus."),
+                                      TEXT("set_widget_blueprint_mode"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                                TEXT("The live Widget Blueprint Designer surface is not available"), Response);
+      return true;
+    }
+
+    if (Context.DesignerTab.IsValid())
+    {
+      Context.DesignerTab->ActivateInParent(ETabActivationCause::SetDirectly);
+    }
+
+    TSharedPtr<SWindow> DesignerWindow = Context.DesignerTab.IsValid()
+                                             ? Context.DesignerTab->GetParentWindow()
+                                             : TSharedPtr<SWindow>();
+    if (!DesignerWindow.IsValid())
+    {
+      DesignerWindow = FSlateApplication::Get().FindWidgetWindow(Context.DesignerView.ToSharedRef());
+    }
+    if (DesignerWindow.IsValid())
+    {
+      DesignerWindow->BringToFront(true);
+    }
+
+    const bool bFocusApplied = FSlateApplication::Get().SetKeyboardFocus(Context.DesignerView.ToSharedRef(), EFocusCause::SetDirectly);
+    Response->SetBoolField(TEXT("focusApplied"), bFocusApplied);
+    ApplyTargetHealthResponseFields(Response, TEXT("resolved"), true, false);
+    SetFocusedWidgetResponseFields(Response);
+
+    if (!bFocusApplied)
+    {
+      Response->SetStringField(TEXT("focusFailureReason"), TEXT("Slate failed to apply keyboard focus to the live Widget Blueprint Designer surface"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                                TEXT("Slate failed to apply keyboard focus to the live Widget Blueprint Designer surface"),
+                                Response);
+      return true;
+    }
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Focused the live Widget Blueprint Designer surface"),
+                           Response, FString());
+    return true;
+  }
+
+  TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+  Response->SetStringField(TEXT("focusTargetSurface"), Surface);
+  ApplyRequestedVirtualTargetFields(Response, RequestedTabId,
+                                    RequestedWindowTitle,
+                                    TEXT("stored_target"));
+
+  if (!RequestedTabId.IsEmpty())
+  {
+    const TSharedPtr<SDockTab> RequestedTab = FGlobalTabmanager::Get()->FindExistingLiveTab(FName(*RequestedTabId));
+    if (!RequestedTab.IsValid())
+    {
+      const FString FocusFailureReason = FString::Printf(TEXT("Live tab %s was not found"), *RequestedTabId);
+      Response->SetBoolField(TEXT("focusApplied"), false);
+      Response->SetStringField(TEXT("focusFailureReason"), FocusFailureReason);
+      ApplyTargetHealthResponseFields(Response, TEXT("stale"), false, false,
+                                      TEXT("missing_live_tab"),
+                                      BuildVirtualTargetRecoveryHint(TEXT("missing_live_tab")),
+                                      TEXT("resolve_ui_target"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                                *FocusFailureReason, Response);
+      return true;
+    }
+
+    if (!RequestedTab->GetParentWindow().IsValid())
+    {
+      const FString FocusFailureReason = FString::Printf(TEXT("Tab %s does not have a live parent window"), *RequestedTabId);
+      Response->SetBoolField(TEXT("focusApplied"), false);
+      Response->SetStringField(TEXT("focusFailureReason"), FocusFailureReason);
+      ApplyTargetHealthResponseFields(Response, TEXT("stale"), true, false,
+                                      TEXT("tab_without_parent_window"),
+                                      BuildVirtualTargetRecoveryHint(TEXT("tab_without_parent_window")),
+                                      TEXT("resolve_ui_target"));
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                                *FocusFailureReason, Response);
+      return true;
+    }
+  }
+
+  bool bAttemptedVirtualTarget = false;
+  FMcpResolvedVirtualInputTarget VirtualTarget;
+  FString VirtualTargetError;
+  const bool bHasVirtualTarget = ResolveVirtualInputTarget(this, Payload,
+                                                           bAttemptedVirtualTarget,
+                                                           VirtualTarget,
+                                                           VirtualTargetError);
+
+  if (!bHasVirtualTarget)
+  {
+    const FString StaleReason = ClassifyVirtualTargetStaleReason(VirtualTargetError);
+    Response->SetBoolField(TEXT("focusApplied"), false);
+    Response->SetStringField(TEXT("focusFailureReason"), VirtualTargetError.IsEmpty() ? TEXT("No live target surface was available to focus") : VirtualTargetError);
+    ApplyTargetHealthResponseFields(Response, TEXT("stale"), false, false, StaleReason,
+                                    BuildVirtualTargetRecoveryHint(StaleReason),
+                                    TEXT("resolve_ui_target"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                              VirtualTargetError.IsEmpty() ? TEXT("No live target surface was available to focus") : VirtualTargetError,
+                              Response);
+    return true;
+  }
+
+  if (!VirtualTarget.TabId.IsEmpty())
+  {
+    Response->SetStringField(TEXT("tabId"), VirtualTarget.TabId);
+  }
+  if (!VirtualTarget.WindowTitle.IsEmpty())
+  {
+    Response->SetStringField(TEXT("windowTitle"), VirtualTarget.WindowTitle);
+  }
+
+  const FVector2D FocusScreenPosition((VirtualTarget.ClientRect.Left + VirtualTarget.ClientRect.Right) * 0.5,
+                                      (VirtualTarget.ClientRect.Top + VirtualTarget.ClientRect.Bottom) * 0.5);
+  const bool bFocusApplied = FocusVirtualTargetAtPosition(VirtualTarget, FocusScreenPosition);
+  Response->SetBoolField(TEXT("focusApplied"), bFocusApplied);
+  ApplyTargetHealthResponseFields(Response, TEXT("resolved"), true, false);
+  SetFocusedWidgetResponseFields(Response);
+
+  if (!bFocusApplied)
+  {
+    Response->SetStringField(TEXT("focusFailureReason"), TEXT("Slate could not locate a focusable widget at the resolved target position"));
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("FOCUS_FAILED"),
+                              TEXT("Slate could not locate a focusable widget at the resolved target position"),
+                              Response);
+    return true;
+  }
+
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Focused the resolved editor surface"),
+                         Response, FString());
+  return true;
+#else
+  return false;
+#endif
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -4605,6 +7243,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   FString TargetWindowName;
   Payload->TryGetStringField(TEXT("name"), TargetWindowName);
+  TargetWindowName = TargetWindowName.TrimStartAndEnd();
+  FString RequestedTabId;
+  Payload->TryGetStringField(TEXT("tabId"), RequestedTabId);
+  RequestedTabId = RequestedTabId.TrimStartAndEnd();
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   const bool bIncludeMenus =
@@ -4616,12 +7258,57 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
       Mode.Equals(TEXT("editor"), ESearchCase::IgnoreCase) ||
       Mode.Equals(TEXT("window"), ESearchCase::IgnoreCase) ||
       Mode.Equals(TEXT("ui"), ESearchCase::IgnoreCase);
+  const TSharedPtr<SDockTab> RequestedTab = RequestedTabId.IsEmpty()
+                                                ? nullptr
+                                                : FGlobalTabmanager::Get()->FindExistingLiveTab(FName(*RequestedTabId));
+  const bool bRequestedTabStillLive = RequestedTab.IsValid();
+  const FString CaptureIntentSource = DetermineScreenshotIntentSource(this, TargetWindowName,
+                                                                      bCaptureEditorWindow);
 
   Resp->SetStringField(TEXT("requestedCaptureMode"),
                        Mode.IsEmpty() ? TEXT("viewport") : Mode);
+  Resp->SetStringField(TEXT("captureIntentSource"), CaptureIntentSource);
   if (!TargetWindowName.IsEmpty())
   {
     Resp->SetStringField(TEXT("requestedWindowTitle"), TargetWindowName);
+    ApplyTargetHealthResponseFields(Resp, TEXT("resolved"), true, false);
+  }
+  if (!RequestedTabId.IsEmpty())
+  {
+    Resp->SetStringField(TEXT("requestedTabId"), RequestedTabId);
+    Resp->SetStringField(TEXT("suggestedMode"), TEXT("editor"));
+    Resp->SetStringField(TEXT("suggestedPreflightAction"), TEXT("resolve_ui_target"));
+    if (bRequestedTabStillLive)
+    {
+      ApplyTargetHealthResponseFields(Resp, TEXT("resolved"), true, false,
+                                      FString(),
+                                      TEXT("Resolve the tab to a windowTitle before retrying screenshot capture."),
+                                      TEXT("resolve_ui_target"));
+      Resp->SetStringField(TEXT("captureIntentWarning"), TEXT("tabId is ignored for screenshot targeting; use windowTitle or resolve_ui_target first."));
+    }
+    else
+    {
+      ApplyTargetHealthResponseFields(Resp, TEXT("stale"), false, false,
+                                      TEXT("missing_live_tab"),
+                                      BuildVirtualTargetRecoveryHint(TEXT("missing_live_tab")),
+                                      TEXT("resolve_ui_target"));
+      Resp->SetStringField(TEXT("captureIntentWarning"), TEXT("Requested tabId is not live and screenshot targeting does not consume tabId directly; resolve a windowTitle before retrying."));
+    }
+  }
+  else if (bCaptureEditorWindow && TargetWindowName.IsEmpty() && Mode.IsEmpty())
+  {
+    Resp->SetStringField(TEXT("captureIntentWarning"), TEXT("Editor-window capture relied on the stored or active window; provide windowTitle or run resolve_ui_target first for deterministic targeting."));
+    Resp->SetStringField(TEXT("suggestedMode"), TEXT("editor"));
+    Resp->SetStringField(TEXT("suggestedPreflightAction"), TEXT("resolve_ui_target"));
+  }
+
+  if (bCaptureEditorWindow && !RequestedTabId.IsEmpty() && TargetWindowName.IsEmpty())
+  {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              TEXT("AMBIGUOUS_CAPTURE_TARGET"),
+                              TEXT("Screenshot capture cannot target a tabId directly; resolve the tab to a live windowTitle before retrying."),
+                              Resp);
+    return true;
   }
 
   if (bCaptureEditorWindow)
@@ -4638,6 +7325,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     {
       TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
       ErrorDetails->SetStringField(TEXT("requestedWindowTitle"), TargetWindowName);
+      if (!RequestedTabId.IsEmpty())
+      {
+        ErrorDetails->SetStringField(TEXT("requestedTabId"), RequestedTabId);
+        ErrorDetails->SetStringField(TEXT("captureIntentWarning"), TEXT("tabId is ignored for screenshot targeting; resolve a live windowTitle before retrying."));
+      }
+      ErrorDetails->SetStringField(TEXT("captureIntentSource"), CaptureIntentSource);
+      ApplyTargetHealthResponseFields(ErrorDetails,
+                                      TargetWindowName.IsEmpty() ? TEXT("not_found") : TEXT("stale"),
+                                      false,
+                                      false,
+                                      TargetWindowName.IsEmpty() ? FString() : TEXT("missing_visible_window"),
+                                      TEXT("Call manage_ui.resolve_ui_target or list_visible_windows before retrying screenshot capture."),
+                                      TEXT("resolve_ui_target"));
       ErrorDetails->SetArrayField(TEXT("visibleWindowTitles"),
                                   BuildVisibleWindowTitleValues());
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("WINDOW_NOT_FOUND"),
@@ -4681,6 +7381,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Editor window screenshot captured"), Resp, FString());
+    return true;
+  }
+
+  if (!RequestedTabId.IsEmpty())
+  {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              TEXT("AMBIGUOUS_CAPTURE_TARGET"),
+                              TEXT("Screenshot capture cannot target a tabId directly; resolve the tab to a live windowTitle before retrying."),
+                              Resp);
     return true;
   }
 
@@ -5239,6 +7948,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   FString Key;
   Payload->TryGetStringField(TEXT("key"), Key);
 
+  FString RequestedTabId;
+  FString RequestedWindowTitle;
+  if (Payload.IsValid())
+  {
+    Payload->TryGetStringField(TEXT("tabId"), RequestedTabId);
+    Payload->TryGetStringField(TEXT("windowTitle"), RequestedWindowTitle);
+  }
+  RequestedTabId = RequestedTabId.TrimStartAndEnd();
+  RequestedWindowTitle = RequestedWindowTitle.TrimStartAndEnd();
+
   bool bSuccess = false;
   FString Message;
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -5255,8 +7974,48 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     Resp->SetStringField(TEXT("pressedModifierKeys"), PressedModifierKeys);
   };
 
-  auto SetTargetResponseFields = [Resp](const FMcpResolvedVirtualInputTarget &Target)
+  auto SetRequestedTargetFields = [Resp, &RequestedTabId, &RequestedWindowTitle](const FString &ResolvedTargetSource)
   {
+    if (!RequestedTabId.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("requestedTabId"), RequestedTabId);
+    }
+    if (!RequestedWindowTitle.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("requestedWindowTitle"), RequestedWindowTitle);
+    }
+    if (!ResolvedTargetSource.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("resolvedTargetSource"), ResolvedTargetSource);
+    }
+  };
+
+  auto SetTargetHealthFields = [Resp](const FString &TargetStatus,
+                                      const bool bRequestedTargetStillLive,
+                                      const bool bReResolved,
+                                      const FString &StaleReason = FString(),
+                                      const FString &RecoveryHint = FString(),
+                                      const FString &RecoveryAction = FString())
+  {
+    ApplyTargetHealthResponseFields(Resp, TargetStatus, bRequestedTargetStillLive,
+                                    bReResolved, StaleReason, RecoveryHint, RecoveryAction);
+  };
+
+  auto SetTargetResponseFields = [Resp, &RequestedTabId, &RequestedWindowTitle, &SetRequestedTargetFields](const FMcpResolvedVirtualInputTarget &Target)
+  {
+    if (!RequestedTabId.IsEmpty())
+    {
+      SetRequestedTargetFields(TEXT("tab_id"));
+    }
+    else if (!RequestedWindowTitle.IsEmpty())
+    {
+      SetRequestedTargetFields(TEXT("window_title"));
+    }
+    else if (Target.Window.IsValid())
+    {
+      SetRequestedTargetFields(TEXT("stored_target"));
+    }
+
     if (!Target.TabId.IsEmpty())
     {
       Resp->SetStringField(TEXT("tabId"), Target.TabId);
@@ -5265,13 +8024,39 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     {
       Resp->SetStringField(TEXT("windowTitle"), Target.WindowTitle);
     }
+    if (!Target.ResolutionSource.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("targetResolutionSource"), Target.ResolutionSource);
+    }
+    if (!Target.RequestedAssetPath.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("requestedAssetPath"), Target.RequestedAssetPath);
+    }
+    if (!Target.AssetTargetError.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("assetTargetError"), Target.AssetTargetError);
+    }
+    if (!Target.PreferredWidgetType.IsEmpty())
+    {
+      Resp->SetStringField(TEXT("targetPreferredWidgetType"), Target.PreferredWidgetType);
+    }
+    Resp->SetNumberField(TEXT("targetWindowLeft"), Target.WindowRect.Left);
+    Resp->SetNumberField(TEXT("targetWindowTop"), Target.WindowRect.Top);
+    Resp->SetNumberField(TEXT("targetWindowRight"), Target.WindowRect.Right);
+    Resp->SetNumberField(TEXT("targetWindowBottom"), Target.WindowRect.Bottom);
+    Resp->SetNumberField(TEXT("targetClientLeft"), Target.ClientRect.Left);
+    Resp->SetNumberField(TEXT("targetClientTop"), Target.ClientRect.Top);
+    Resp->SetNumberField(TEXT("targetClientRight"), Target.ClientRect.Right);
+    Resp->SetNumberField(TEXT("targetClientBottom"), Target.ClientRect.Bottom);
   };
 
   auto SetTargetWidgetPathFields = [Resp](const FMcpResolvedVirtualInputTarget &Target, const FVector2D &Position)
   {
     const FVector2D ScreenPosition = ClientPositionToScreen(Target, Position);
-    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition);
+    bool bUsedPreferredWidgetPath = false;
+    const FWidgetPath WidgetPath = LocateTargetWidgetPath(Target, ScreenPosition, &bUsedPreferredWidgetPath);
     Resp->SetBoolField(TEXT("targetWidgetPathValid"), WidgetPath.IsValid());
+    Resp->SetStringField(TEXT("targetWidgetPathSource"), bUsedPreferredWidgetPath ? TEXT("preferred_widget") : TEXT("window_local_hit_test"));
     if (WidgetPath.IsValid())
     {
       Resp->SetStringField(TEXT("targetWidgetPath"), WidgetPath.ToString());
@@ -5372,6 +8157,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   }
   else if (bAttemptedVirtualTarget && !bHasVirtualTarget)
   {
+    const FString StaleReason = ClassifyVirtualTargetStaleReason(VirtualTargetError);
+    if (!RequestedTabId.IsEmpty())
+    {
+      SetRequestedTargetFields(TEXT("tab_id"));
+    }
+    else if (!RequestedWindowTitle.IsEmpty())
+    {
+      SetRequestedTargetFields(TEXT("window_title"));
+    }
+    SetTargetHealthFields(TEXT("stale"), false, false, StaleReason,
+                          BuildVirtualTargetRecoveryHint(StaleReason),
+                          TEXT("resolve_ui_target"));
     Message = VirtualTargetError;
   }
   else if (InputType == TEXT("key_down") || InputType == TEXT("keydown"))
@@ -5746,6 +8543,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetStringField(TEXT("type"), InputType);
   Resp->SetStringField(TEXT("message"), Message);
+  if (bSuccess)
+  {
+    SetTargetHealthFields(TEXT("resolved"), bHasVirtualTarget, false);
+  }
   SetFocusedWidgetResponseFields(Resp);
 
   if (bSuccess)

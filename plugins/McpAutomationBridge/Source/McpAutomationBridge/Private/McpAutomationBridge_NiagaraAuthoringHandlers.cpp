@@ -39,10 +39,10 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 // =============================================================================
 
-#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpVersionCompatibility.h" // MUST be first
 #include "McpHandlerUtils.h"
 
-#include "Modules/ModuleManager.h"  // Required for FModuleManager::IsModuleLoaded() runtime checks
+#include "Modules/ModuleManager.h" // Required for FModuleManager::IsModuleLoaded() runtime checks
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"
@@ -79,6 +79,8 @@
 #include "NiagaraNodeInput.h"
 #include "NiagaraNodeOutput.h"
 #include "NiagaraEditorModule.h"
+#include "NiagaraEmitterFactoryNew.h"
+#include "NiagaraSystemFactoryNew.h"
 #include "NiagaraStackEditorData.h"
 #include "NiagaraEmitterHandle.h"
 #include "NiagaraSimulationStageBase.h"
@@ -145,35 +147,33 @@
 #define GetNumberFieldNiagAuth GetJsonNumberField
 #define GetBoolFieldNiagAuth GetJsonBoolField
 
-
 // Helper to get FVector from JSON object
-static FVector GetVectorFromJsonNiag(const TSharedPtr<FJsonObject>& Obj)
+static FVector GetVectorFromJsonNiag(const TSharedPtr<FJsonObject> &Obj)
 {
-    if (!Obj.IsValid()) return FVector::ZeroVector;
+    if (!Obj.IsValid())
+        return FVector::ZeroVector;
     return FVector(
         GetNumberFieldNiagAuth(Obj, TEXT("x"), 0.0),
         GetNumberFieldNiagAuth(Obj, TEXT("y"), 0.0),
-        GetNumberFieldNiagAuth(Obj, TEXT("z"), 0.0)
-    );
+        GetNumberFieldNiagAuth(Obj, TEXT("z"), 0.0));
 }
 
 // Helper to get FLinearColor from JSON object
-static FLinearColor GetColorFromJsonNiagara(const TSharedPtr<FJsonObject>& Obj)
+static FLinearColor GetColorFromJsonNiagara(const TSharedPtr<FJsonObject> &Obj)
 {
-    if (!Obj.IsValid()) return FLinearColor::White;
+    if (!Obj.IsValid())
+        return FLinearColor::White;
     return FLinearColor(
         static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("r"), 1.0)),
         static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("g"), 1.0)),
         static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("b"), 1.0)),
-        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("a"), 1.0))
-    );
+        static_cast<float>(GetNumberFieldNiagAuth(Obj, TEXT("a"), 1.0)));
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
-    const FString& RequestId,
-    const FString& Action,
-    const TSharedPtr<FJsonObject>& Payload,
+    const FString &RequestId,
+    const FString &Action,
+    const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     if (Action != TEXT("manage_niagara_authoring"))
@@ -191,8 +191,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             !FModuleManager::Get().LoadModule(TEXT("NiagaraEditor")))
         {
             SendAutomationError(RequestingSocket, RequestId,
-                TEXT("NiagaraEditor plugin is not enabled in this project. Enable the Niagara plugin to use Niagara VFX features."),
-                TEXT("NIAGARAEDITOR_PLUGIN_NOT_ENABLED"));
+                                TEXT("NiagaraEditor plugin is not enabled in this project. Enable the Niagara plugin to use Niagara VFX features."),
+                                TEXT("NIAGARAEDITOR_PLUGIN_NOT_ENABLED"));
             return true;
         }
     }
@@ -221,27 +221,33 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
     // Validate all provided paths upfront (prevents hangs from extremely long paths)
     // Guard against extremely long paths (UE limit is ~512 chars for full paths)
-    auto CheckPathLength = [&](const FString& PathToCheck, const FString& ParamName) {
-        if (PathToCheck.Len() > 512) {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("'%s' is too long (%d chars). Maximum allowed is 512 characters."), *ParamName, PathToCheck.Len()), 
-                TEXT("INVALID_ARGUMENT"));
+    auto CheckPathLength = [&](const FString &PathToCheck, const FString &ParamName)
+    {
+        if (PathToCheck.Len() > 512)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("'%s' is too long (%d chars). Maximum allowed is 512 characters."), *ParamName, PathToCheck.Len()),
+                                TEXT("INVALID_ARGUMENT"));
             return false;
         }
-        if (!PathToCheck.IsEmpty() && (!PathToCheck.StartsWith(TEXT("/")) || PathToCheck.Contains(TEXT("..")))) {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("'%s' has invalid format. Path must start with '/' and not contain '..'."), *ParamName), 
-                TEXT("INVALID_ARGUMENT"));
+        if (!PathToCheck.IsEmpty() && (!PathToCheck.StartsWith(TEXT("/")) || PathToCheck.Contains(TEXT(".."))))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("'%s' has invalid format. Path must start with '/' and not contain '..'."), *ParamName),
+                                TEXT("INVALID_ARGUMENT"));
             return false;
         }
         return true;
     };
-    
-    if (!CheckPathLength(Path, TEXT("path"))) return true;
-    if (!CheckPathLength(AssetPath, TEXT("assetPath"))) return true;
-    if (!CheckPathLength(SystemPath, TEXT("systemPath"))) return true;
-    if (!CheckPathLength(EmitterPath, TEXT("emitterPath"))) return true;
 
+    if (!CheckPathLength(Path, TEXT("path")))
+        return true;
+    if (!CheckPathLength(AssetPath, TEXT("assetPath")))
+        return true;
+    if (!CheckPathLength(SystemPath, TEXT("systemPath")))
+        return true;
+    if (!CheckPathLength(EmitterPath, TEXT("emitterPath")))
+        return true;
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
@@ -258,35 +264,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Ensure path ends correctly
-        if (!Path.EndsWith(TEXT("/"))) Path += TEXT("/");
+        if (!Path.EndsWith(TEXT("/")))
+            Path += TEXT("/");
         FString FullPath = Path + Name;
         FString PackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-        
-        UPackage* Package = CreatePackage(*PackagePath);
+
+        UPackage *Package = CreatePackage(*PackagePath);
         if (!Package)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
             return true;
         }
 
-        // Create NiagaraSystem directly without factory (compatible with all UE versions)
-        // Note: Factories are editor-internal and not exported for plugin use
-        UNiagaraSystem* NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone);
+        UNiagaraSystem *NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone);
         if (NewSystem)
         {
-            // Add default emitter using direct API
-            // UE 5.4+ changed AddEmitterHandle signature - requires additional parameters
-            UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(NewSystem, FName(TEXT("DefaultEmitter")));
-            if (NewEmitter)
-            {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-                // UE 5.0 - AddEmitterHandle takes only 2 parameters
-                NewSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
-#else
-                // UE 5.1+ - AddEmitterHandle takes 3 parameters: Emitter, Name, and Version GUID
-                NewSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
-#endif
-            }
+            UNiagaraSystemFactoryNew::InitializeSystem(NewSystem, true);
+            NewSystem->RequestCompile(false);
+            NewSystem->MarkPackageDirty();
         }
         if (!NewSystem)
         {
@@ -295,7 +290,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         FAssetRegistryModule::AssetCreated(NewSystem);
-        
+
         if (bSave)
         {
             McpSafeAssetSave(NewSystem);
@@ -315,28 +310,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        if (!Path.EndsWith(TEXT("/"))) Path += TEXT("/");
+        if (!Path.EndsWith(TEXT("/")))
+            Path += TEXT("/");
         FString FullPath = Path + Name;
         FString PackagePath = FPackageName::ObjectPathToPackageName(FullPath);
-        
-        UPackage* Package = CreatePackage(*PackagePath);
+
+        UPackage *Package = CreatePackage(*PackagePath);
         if (!Package)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
             return true;
         }
 
-        // Create NiagaraEmitter directly without factory (compatible with all UE versions)
-        // Note: Factories are editor-internal and not exported for plugin use
-        UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Name), RF_Public | RF_Standalone);
+        UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Name), RF_Public | RF_Standalone);
         if (!NewEmitter)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));
             return true;
         }
 
+        UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
+        NewEmitter->MarkPackageDirty();
+
         FAssetRegistryModule::AssetCreated(NewEmitter);
-        
+
         if (bSave)
         {
             McpSafeAssetSave(NewEmitter);
@@ -356,14 +353,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        UNiagaraEmitter* Emitter = LoadObject<UNiagaraEmitter>(nullptr, *EmitterPath);
+        UNiagaraEmitter *Emitter = LoadObject<UNiagaraEmitter>(nullptr, *EmitterPath);
         if (!Emitter)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara Emitter."), TEXT("ASSET_NOT_FOUND"));
@@ -378,7 +375,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         // UE 5.0 - no version GUID needed
         FNiagaraEmitterHandle NewHandle = System->AddEmitterHandle(*Emitter, FName(*Emitter->GetName()));
 #endif
-        
+
         if (bSave)
         {
             System->MarkPackageDirty();
@@ -399,30 +396,30 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = nullptr;
-        for (const FNiagaraEmitterHandle& H : System->GetEmitterHandles())
+        FNiagaraEmitterHandle *Handle = nullptr;
+        for (const FNiagaraEmitterHandle &H : System->GetEmitterHandles())
         {
             if (H.GetName().ToString() == EmitterName)
             {
-                Handle = const_cast<FNiagaraEmitterHandle*>(&H);
+                Handle = const_cast<FNiagaraEmitterHandle *>(&H);
                 break;
             }
         }
-        
+
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found in system."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
             return true;
         }
-        
-        const TSharedPtr<FJsonObject>* PropsObj;
+
+        const TSharedPtr<FJsonObject> *PropsObj;
         if (Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) && PropsObj->IsValid())
         {
             bool bEnabled;
@@ -450,7 +447,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
     // Helper lambda to add a module script to the Niagara stack
     // Returns the created UNiagaraNodeFunctionCall or nullptr on failure
-    auto AddModuleToEmitterStack = [](FNiagaraEmitterHandle* Handle, const FString& ModuleScriptPath, ENiagaraScriptUsage TargetUsage, const FString& SuggestedName = FString()) -> UNiagaraNodeFunctionCall*
+    auto AddModuleToEmitterStack = [](FNiagaraEmitterHandle *Handle, const FString &ModuleScriptPath, ENiagaraScriptUsage TargetUsage, const FString &SuggestedName = FString()) -> UNiagaraNodeFunctionCall *
     {
         if (!Handle)
         {
@@ -459,9 +456,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Get the versioned emitter data
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetEmitterData();
 #else
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetInstance();
 #endif
         if (!EmitterData)
         {
@@ -469,21 +466,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Get the graph source
-        UNiagaraScriptSource* ScriptSource = Cast<UNiagaraScriptSource>(EmitterData->GraphSource);
+        UNiagaraScriptSource *ScriptSource = Cast<UNiagaraScriptSource>(EmitterData->GraphSource);
         if (!ScriptSource || !ScriptSource->NodeGraph)
         {
             return nullptr;
         }
 
-        UNiagaraGraph* Graph = ScriptSource->NodeGraph;
+        UNiagaraGraph *Graph = ScriptSource->NodeGraph;
 
         // Find the output node for the target usage
         // NOTE: UNiagaraGraph::FindOutputNode is not exported in all UE versions
         // Use manual iteration through nodes to find the output node
-        UNiagaraNodeOutput* TargetOutput = nullptr;
-        for (UEdGraphNode* Node : Graph->Nodes)
+        UNiagaraNodeOutput *TargetOutput = nullptr;
+        for (UEdGraphNode *Node : Graph->Nodes)
         {
-            if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node))
+            if (UNiagaraNodeOutput *OutputNode = Cast<UNiagaraNodeOutput>(Node))
             {
                 if (OutputNode->GetUsage() == TargetUsage)
                 {
@@ -499,7 +496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Load the module script asset
         FSoftObjectPath AssetRef(ModuleScriptPath);
-        UNiagaraScript* ModuleScript = Cast<UNiagaraScript>(AssetRef.TryLoad());
+        UNiagaraScript *ModuleScript = Cast<UNiagaraScript>(AssetRef.TryLoad());
         if (!ModuleScript)
         {
             return nullptr;
@@ -508,12 +505,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         // Add the module to the stack using the Stack Graph Utilities
         // Note: FNiagaraStackGraphUtilities is only available in UE 5.1+
 #if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
-        UNiagaraNodeFunctionCall* NewModule = FNiagaraStackGraphUtilities::AddScriptModuleToStack(
+        UNiagaraNodeFunctionCall *NewModule = FNiagaraStackGraphUtilities::AddScriptModuleToStack(
             ModuleScript,
             *TargetOutput,
             INDEX_NONE, // Append to end
-            SuggestedName.IsEmpty() ? ModuleScript->GetName() : SuggestedName
-        );
+            SuggestedName.IsEmpty() ? ModuleScript->GetName() : SuggestedName);
         return NewModule;
 #else
         // UE 5.0: Stack graph utilities not available
@@ -523,13 +519,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     };
 
     // Helper lambda to find emitter handle
-    auto FindEmitterHandle = [&](UNiagaraSystem* System, const FString& TargetEmitter) -> FNiagaraEmitterHandle*
+    auto FindEmitterHandle = [&](UNiagaraSystem *System, const FString &TargetEmitter) -> FNiagaraEmitterHandle *
     {
-        for (const FNiagaraEmitterHandle& H : System->GetEmitterHandles())
+        for (const FNiagaraEmitterHandle &H : System->GetEmitterHandles())
         {
             if (H.GetName().ToString() == TargetEmitter)
             {
-                return const_cast<FNiagaraEmitterHandle*>(&H);
+                return const_cast<FNiagaraEmitterHandle *>(&H);
             }
         }
         return nullptr;
@@ -544,14 +540,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -562,17 +558,16 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Add the SpawnRate module to the Emitter Update stage
         // SpawnRate modules belong in EmitterUpdateScript as they control emission rate over time
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"),
             ENiagaraScriptUsage::EmitterUpdateScript,
-            TEXT("SpawnRate")
-        );
+            TEXT("SpawnRate"));
 
         bool bModuleAdded = (NewModule != nullptr);
-        
+
         // Also set user-exposed parameters if available
-        FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
+        FNiagaraUserRedirectionParameterStore &UserStore = System->GetExposedParameters();
         FNiagaraVariable SpawnRateVar(FNiagaraTypeDefinition::GetFloatDef(), FName(TEXT("SpawnRate")));
         if (UserStore.FindParameterVariable(SpawnRateVar))
         {
@@ -601,14 +596,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -620,12 +615,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Add the SpawnBurst_Instantaneous module to the Emitter Spawn stage
         // Burst modules belong in EmitterSpawnScript for instantaneous spawns
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"),
             ENiagaraScriptUsage::EmitterSpawnScript,
-            TEXT("SpawnBurst")
-        );
+            TEXT("SpawnBurst"));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -652,14 +646,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -669,12 +663,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         double SpawnPerUnit = GetNumberFieldNiagAuth(Payload, TEXT("spawnPerUnit"), 1.0);
 
         // Add the SpawnPerUnit module to the Emitter Update stage
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             TEXT("/Niagara/Modules/Emitter/SpawnPerUnit.SpawnPerUnit"),
             ENiagaraScriptUsage::EmitterUpdateScript,
-            TEXT("SpawnPerUnit")
-        );
+            TEXT("SpawnPerUnit"));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -700,14 +693,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -718,12 +711,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         double Mass = GetNumberFieldNiagAuth(Payload, TEXT("mass"), 1.0);
 
         // Add the InitializeParticle module to the Particle Spawn stage
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"),
             ENiagaraScriptUsage::ParticleSpawnScript,
-            TEXT("InitializeParticle")
-        );
+            TEXT("InitializeParticle"));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -750,14 +742,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -766,12 +758,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Add the ParticleState module to the Particle Update stage
         // ParticleState handles age tracking and lifetime evaluation
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             TEXT("/Niagara/Modules/Update/Lifetime/ParticleState.ParticleState"),
             ENiagaraScriptUsage::ParticleUpdateScript,
-            TEXT("ParticleState")
-        );
+            TEXT("ParticleState"));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -798,14 +789,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         FString ForceType = GetStringFieldNiagAuth(Payload, TEXT("forceType"), TEXT("Gravity"));
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -813,8 +804,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         double ForceStrength = GetNumberFieldNiagAuth(Payload, TEXT("forceStrength"), 980.0);
-        
-        const TSharedPtr<FJsonObject>* ForceVectorObj;
+
+        const TSharedPtr<FJsonObject> *ForceVectorObj;
         FVector ForceVector = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("forceVector"), ForceVectorObj))
         {
@@ -855,12 +846,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Add the force module to the Particle Update stage
         // Forces are applied every frame to update particle velocity
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             ModulePath,
             ENiagaraScriptUsage::ParticleUpdateScript,
-            FString::Printf(TEXT("%sForce"), *ForceType)
-        );
+            FString::Printf(TEXT("%sForce"), *ForceType));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -887,21 +877,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
             return true;
         }
 
-        const TSharedPtr<FJsonObject>* VelObj;
+        const TSharedPtr<FJsonObject> *VelObj;
         FVector Velocity = FVector(0, 0, 100);
         if (Payload->TryGetObjectField(TEXT("velocity"), VelObj))
         {
@@ -928,12 +918,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Add the velocity module to the Particle Spawn stage
         // Initial velocity is set when particles are spawned
-        UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(
+        UNiagaraNodeFunctionCall *NewModule = AddModuleToEmitterStack(
             Handle,
             ModulePath,
             ENiagaraScriptUsage::ParticleSpawnScript,
-            TEXT("AddVelocity")
-        );
+            TEXT("AddVelocity"));
 
         bool bModuleAdded = (NewModule != nullptr);
 
@@ -959,14 +948,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        const TSharedPtr<FJsonObject>* AccelObj;
+        const TSharedPtr<FJsonObject> *AccelObj;
         FVector Acceleration = FVector(0, 0, -980);
         if (Payload->TryGetObjectField(TEXT("acceleration"), AccelObj))
         {
@@ -993,7 +982,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1025,14 +1014,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        const TSharedPtr<FJsonObject>* ColorObj;
+        const TSharedPtr<FJsonObject> *ColorObj;
         FLinearColor Color = FLinearColor::White;
         if (Payload->TryGetObjectField(TEXT("color"), ColorObj))
         {
@@ -1062,14 +1051,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -1082,21 +1071,21 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Get the versioned emitter data for the specified emitter (UE 5.7+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+        UNiagaraEmitter *Emitter = VersionedEmitter.Emitter;
 #else
         // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetInstance();
+        UNiagaraEmitter *Emitter = Handle->GetInstance();
 #endif
         if (EmitterData && Emitter)
         {
             // Create sprite renderer if not exists
-            UNiagaraSpriteRendererProperties* SpriteRenderer = nullptr;
-            for (UNiagaraRendererProperties* Renderer : EmitterData->GetRenderers())
+            UNiagaraSpriteRendererProperties *SpriteRenderer = nullptr;
+            for (UNiagaraRendererProperties *Renderer : EmitterData->GetRenderers())
             {
-                if (UNiagaraSpriteRendererProperties* SR = Cast<UNiagaraSpriteRendererProperties>(Renderer))
+                if (UNiagaraSpriteRendererProperties *SR = Cast<UNiagaraSpriteRendererProperties>(Renderer))
                 {
                     SpriteRenderer = SR;
                     break;
@@ -1121,7 +1110,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
             if (!MaterialPath.IsEmpty())
             {
-                UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+                UMaterialInterface *Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
                 if (Material)
                 {
                     SpriteRenderer->Material = Material;
@@ -1149,14 +1138,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -1167,20 +1156,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Get the versioned emitter data (UE 5.7+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+        UNiagaraEmitter *Emitter = VersionedEmitter.Emitter;
 #else
         // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetInstance();
+        UNiagaraEmitter *Emitter = Handle->GetInstance();
 #endif
         if (EmitterData && Emitter)
         {
-            UNiagaraMeshRendererProperties* MeshRenderer = nullptr;
-            for (UNiagaraRendererProperties* Renderer : EmitterData->GetRenderers())
+            UNiagaraMeshRendererProperties *MeshRenderer = nullptr;
+            for (UNiagaraRendererProperties *Renderer : EmitterData->GetRenderers())
             {
-                if (UNiagaraMeshRendererProperties* MR = Cast<UNiagaraMeshRendererProperties>(Renderer))
+                if (UNiagaraMeshRendererProperties *MR = Cast<UNiagaraMeshRendererProperties>(Renderer))
                 {
                     MeshRenderer = MR;
                     break;
@@ -1205,7 +1194,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
             if (!MeshPath.IsEmpty())
             {
-                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+                UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
                 if (Mesh)
                 {
                     FNiagaraMeshRendererMeshProperties MeshProps;
@@ -1236,14 +1225,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -1252,20 +1241,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Get the versioned emitter data (UE 5.7+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+        UNiagaraEmitter *Emitter = VersionedEmitter.Emitter;
 #else
         // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetInstance();
+        UNiagaraEmitter *Emitter = Handle->GetInstance();
 #endif
         if (EmitterData && Emitter)
         {
-            UNiagaraRibbonRendererProperties* RibbonRenderer = nullptr;
-            for (UNiagaraRendererProperties* Renderer : EmitterData->GetRenderers())
+            UNiagaraRibbonRendererProperties *RibbonRenderer = nullptr;
+            for (UNiagaraRendererProperties *Renderer : EmitterData->GetRenderers())
             {
-                if (UNiagaraRibbonRendererProperties* RR = Cast<UNiagaraRibbonRendererProperties>(Renderer))
+                if (UNiagaraRibbonRendererProperties *RR = Cast<UNiagaraRibbonRendererProperties>(Renderer))
                 {
                     RibbonRenderer = RR;
                     break;
@@ -1291,7 +1280,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             FString MaterialPath = GetStringFieldNiagAuth(Payload, TEXT("materialPath"));
             if (!MaterialPath.IsEmpty())
             {
-                UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
+                UMaterialInterface *Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
                 if (Material)
                 {
                     RibbonRenderer->Material = Material;
@@ -1319,14 +1308,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -1335,20 +1324,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
         // Get the versioned emitter data (UE 5.7+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetEmitterData();
         FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
+        UNiagaraEmitter *Emitter = VersionedEmitter.Emitter;
 #else
         // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-        MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle->GetInstance();
+        UNiagaraEmitter *Emitter = Handle->GetInstance();
 #endif
         if (EmitterData && Emitter)
         {
-            UNiagaraLightRendererProperties* LightRenderer = nullptr;
-            for (UNiagaraRendererProperties* Renderer : EmitterData->GetRenderers())
+            UNiagaraLightRendererProperties *LightRenderer = nullptr;
+            for (UNiagaraRendererProperties *Renderer : EmitterData->GetRenderers())
             {
-                if (UNiagaraLightRendererProperties* LR = Cast<UNiagaraLightRendererProperties>(Renderer))
+                if (UNiagaraLightRendererProperties *LR = Cast<UNiagaraLightRendererProperties>(Renderer))
                 {
                     LightRenderer = LR;
                     break;
@@ -1395,7 +1384,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1431,7 +1420,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1461,7 +1450,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1504,15 +1493,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-        
+        FNiagaraUserRedirectionParameterStore &UserStore = System->GetExposedParameters();
+
         FNiagaraTypeDefinition TypeDef;
         if (ParamType == TEXT("Float"))
         {
@@ -1570,15 +1559,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-        
+        FNiagaraUserRedirectionParameterStore &UserStore = System->GetExposedParameters();
+
         // Try to find and set the parameter value
         FNiagaraVariable FloatVar(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName));
         FNiagaraVariable IntVar(FNiagaraTypeDefinition::GetIntDef(), FName(*ParamName));
@@ -1604,7 +1593,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
         else if (UserStore.FindParameterVariable(VecVar))
         {
-            const TSharedPtr<FJsonObject>* ValObj;
+            const TSharedPtr<FJsonObject> *ValObj;
             if (Payload->TryGetObjectField(TEXT("parameterValue"), ValObj))
             {
                 FVector Vec = GetVectorFromJsonNiag(*ValObj);
@@ -1646,7 +1635,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1676,7 +1665,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1705,7 +1694,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1734,7 +1723,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1761,7 +1750,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1788,7 +1777,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1826,7 +1815,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1861,7 +1850,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1900,7 +1889,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -1908,13 +1897,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Get payload definition from JSON
-        const TArray<TSharedPtr<FJsonValue>>* PayloadArray;
+        const TArray<TSharedPtr<FJsonValue>> *PayloadArray;
         TArray<FString> PayloadAttributes;
         if (Payload->TryGetArrayField(TEXT("eventPayload"), PayloadArray))
         {
-            for (const auto& Item : *PayloadArray)
+            for (const auto &Item : *PayloadArray)
             {
-                const TSharedPtr<FJsonObject>* AttrObj;
+                const TSharedPtr<FJsonObject> *AttrObj;
                 if (Item->TryGetObject(AttrObj) && AttrObj->IsValid())
                 {
                     FString AttrName = GetStringFieldNiagAuth(*AttrObj, TEXT("name"));
@@ -1945,14 +1934,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
-        FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, EmitterName);
+        FNiagaraEmitterHandle *Handle = FindEmitterHandle(System, EmitterName);
         if (!Handle)
         {
             SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found."), *EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -1960,12 +1949,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        UNiagaraEmitter* Emitter = Handle->GetInstance().Emitter;
+        UNiagaraEmitter *Emitter = Handle->GetInstance().Emitter;
         if (Emitter)
         {
             // Enable GPU simulation by setting simulation target
             // This requires accessing the versioned emitter data
-            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
+            MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
             if (EmitterData)
             {
                 EmitterData->SimTarget = ENiagaraSimTarget::GPUComputeSim;
@@ -1973,7 +1962,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 #else
         // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-        UNiagaraEmitter* Emitter = Handle->GetInstance();
+        UNiagaraEmitter *Emitter = Handle->GetInstance();
         if (Emitter)
         {
             Emitter->SimTarget = ENiagaraSimTarget::GPUComputeSim;
@@ -2012,7 +2001,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -2052,24 +2041,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         // UE path limit is typically 256 characters for asset names, 512 for full paths
         if (TargetPath.Len() > 512)
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                FString::Printf(TEXT("Path too long (%d chars). Maximum allowed is 512 characters."), TargetPath.Len()), 
-                TEXT("INVALID_ARGUMENT"));
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Path too long (%d chars). Maximum allowed is 512 characters."), TargetPath.Len()),
+                                TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
         // Basic path format validation
         if (!TargetPath.StartsWith(TEXT("/")) || TargetPath.Contains(TEXT("..")))
         {
-            SendAutomationError(RequestingSocket, RequestId, 
-                TEXT("Invalid path format. Path must start with '/' and not contain '..'."), 
-                TEXT("INVALID_ARGUMENT"));
+            SendAutomationError(RequestingSocket, RequestId,
+                                TEXT("Invalid path format. Path must start with '/' and not contain '..'."),
+                                TEXT("INVALID_ARGUMENT"));
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath);
-        UNiagaraEmitter* Emitter = nullptr;
-        
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath);
+        UNiagaraEmitter *Emitter = nullptr;
+
         if (!System)
         {
             Emitter = LoadObject<UNiagaraEmitter>(nullptr, *TargetPath);
@@ -2089,39 +2078,39 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             InfoObj->SetNumberField(TEXT("emitterCount"), System->GetEmitterHandles().Num());
 
             TArray<TSharedPtr<FJsonValue>> EmittersArray;
-            for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+            for (const FNiagaraEmitterHandle &Handle : System->GetEmitterHandles())
             {
                 TSharedPtr<FJsonObject> EmitterObj = McpHandlerUtils::CreateResultObject();
                 EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
                 EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
-                
-                #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                UNiagaraEmitter* Em = Handle.GetInstance().Emitter;
-                #else
-                UNiagaraEmitter* Em = Handle.GetInstance();
-                #endif
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                UNiagaraEmitter *Em = Handle.GetInstance().Emitter;
+#else
+                UNiagaraEmitter *Em = Handle.GetInstance();
+#endif
                 if (Em)
                 {
-                    MCP_NIAGARA_EMITTER_DATA_TYPE* EmData = MCP_GET_LATEST_EMITTER_DATA(Em);
+                    MCP_NIAGARA_EMITTER_DATA_TYPE *EmData = MCP_GET_LATEST_EMITTER_DATA(Em);
                     if (EmData)
                     {
                         EmitterObj->SetStringField(TEXT("simulationTarget"), EmData->SimTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"));
                     }
                 }
-                
+
                 EmittersArray.Add(MakeShared<FJsonValueObject>(EmitterObj));
             }
             InfoObj->SetArrayField(TEXT("emitters"), EmittersArray);
 
             // User parameters
-            FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
+            FNiagaraUserRedirectionParameterStore &UserStore = System->GetExposedParameters();
             TArray<FNiagaraVariable> Params;
             UserStore.GetParameters(Params);
-            
+
             InfoObj->SetNumberField(TEXT("userParameterCount"), Params.Num());
-            
+
             TArray<TSharedPtr<FJsonValue>> ParamsArray;
-            for (const FNiagaraVariable& Param : Params)
+            for (const FNiagaraVariable &Param : Params)
             {
                 TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
                 ParamObj->SetStringField(TEXT("name"), Param.GetName().ToString());
@@ -2132,13 +2121,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
             // Check for GPU emitters
             bool bHasGPU = false;
-            for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+            for (const FNiagaraEmitterHandle &Handle : System->GetEmitterHandles())
             {
-                #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                UNiagaraEmitter* Em = Handle.GetInstance().Emitter;
-                #else
-                UNiagaraEmitter* Em = Handle.GetInstance();
-                #endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+                UNiagaraEmitter *Em = Handle.GetInstance().Emitter;
+#else
+                UNiagaraEmitter *Em = Handle.GetInstance();
+#endif
                 if (Em && MCP_GET_LATEST_EMITTER_DATA(Em) && MCP_GET_LATEST_EMITTER_DATA(Em)->SimTarget == ENiagaraSimTarget::GPUComputeSim)
                 {
                     bHasGPU = true;
@@ -2151,8 +2140,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         {
             InfoObj->SetStringField(TEXT("assetType"), TEXT("Emitter"));
             InfoObj->SetStringField(TEXT("name"), Emitter->GetName());
-            
-            MCP_NIAGARA_EMITTER_DATA_TYPE* EmData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
+
+            MCP_NIAGARA_EMITTER_DATA_TYPE *EmData = MCP_GET_LATEST_EMITTER_DATA(Emitter);
             if (EmData)
             {
                 InfoObj->SetStringField(TEXT("simulationTarget"), EmData->SimTarget == ENiagaraSimTarget::GPUComputeSim ? TEXT("GPU") : TEXT("CPU"));
@@ -2173,7 +2162,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
             return true;
         }
 
-        UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+        UNiagaraSystem *System = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
         if (!System)
         {
             SendAutomationError(RequestingSocket, RequestId, TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
@@ -2193,7 +2182,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         }
 
         // Check each emitter for issues
-        for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+        for (const FNiagaraEmitterHandle &Handle : System->GetEmitterHandles())
         {
             if (!Handle.GetIsEnabled())
             {
@@ -2202,9 +2191,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
             // Get emitter data - UE 5.1+ uses GetEmitterData(), UE 5.0 uses GetInstance()
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetEmitterData();
+            MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle.GetEmitterData();
 #else
-            MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle.GetInstance();
+            MCP_NIAGARA_EMITTER_DATA_TYPE *EmitterData = Handle.GetInstance();
 #endif
             if (EmitterData)
             {
@@ -2239,4 +2228,3 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 #undef GetStringFieldNiagAuth
 #undef GetNumberFieldNiagAuth
 #undef GetBoolFieldNiagAuth
-

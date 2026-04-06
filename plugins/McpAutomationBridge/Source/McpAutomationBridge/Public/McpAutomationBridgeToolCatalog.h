@@ -6,6 +6,11 @@ struct MCPAUTOMATIONBRIDGE_API FMcpAutomationBridgeToolSubActionCatalogEntry
 {
     FString Name;
     FString Summary;
+    bool bEditorOnly = true;
+    bool bRequiresLiveEditor = false;
+    bool bRequiresAssetEditor = false;
+    FString InteractionModel;
+    FString LimitationNote;
 };
 
 struct MCPAUTOMATIONBRIDGE_API FMcpAutomationBridgeToolCatalogEntry

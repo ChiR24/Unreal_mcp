@@ -1093,6 +1093,99 @@ namespace
     return nullptr;
   }
 
+  TArray<const FMcpDiscoveredUiTargetDefinition *> FindDiscoveredUiTargetsByIdentifier(
+      const TArray<FMcpDiscoveredUiTargetDefinition> &Targets,
+      const FString &Identifier)
+  {
+    TArray<const FMcpDiscoveredUiTargetDefinition *> Result;
+    const FString LookupKey = NormalizeMcpLookupKey(Identifier);
+    if (LookupKey.IsEmpty())
+    {
+      return Result;
+    }
+
+    for (const FMcpDiscoveredUiTargetDefinition &Target : Targets)
+    {
+      for (const FString &Alias : Target.Aliases)
+      {
+        if (NormalizeMcpLookupKey(Alias) == LookupKey)
+        {
+          Result.Add(&Target);
+          break;
+        }
+      }
+    }
+
+    return Result;
+  }
+
+  bool IsDiscoveredUiTargetOpenable(const FMcpDiscoveredUiTargetDefinition &Target)
+  {
+    return Target.SourceType == TEXT("registered_command") ||
+           Target.SourceType == TEXT("tool_menu_entry") ||
+           !Target.TabId.IsEmpty();
+  }
+
+  TSharedPtr<SDockTab> FindLiveDockTabById(const FString &TabId)
+  {
+    const FString TrimmedTabId = TabId.TrimStartAndEnd();
+    if (TrimmedTabId.IsEmpty())
+    {
+      return nullptr;
+    }
+
+    return FGlobalTabmanager::Get()->FindExistingLiveTab(FName(*TrimmedTabId));
+  }
+
+  void ApplyWindowBoundsToResponse(const TSharedPtr<SWindow> &Window,
+                                   const TSharedPtr<FJsonObject> &Response)
+  {
+    if (!Window.IsValid() || !Response.IsValid())
+    {
+      return;
+    }
+
+    const FSlateRect WindowRect = Window->GetRectInScreen();
+    const FSlateRect ClientRect = Window->GetClientRectInScreen();
+    const FVector2D WindowSize = Window->GetSizeInScreen();
+    const FVector2D ClientSize = Window->GetClientSizeInScreen();
+
+    Response->SetNumberField(TEXT("x"), WindowRect.Left);
+    Response->SetNumberField(TEXT("y"), WindowRect.Top);
+    Response->SetNumberField(TEXT("width"), WindowSize.X);
+    Response->SetNumberField(TEXT("height"), WindowSize.Y);
+    Response->SetNumberField(TEXT("clientX"), ClientRect.Left);
+    Response->SetNumberField(TEXT("clientY"), ClientRect.Top);
+    Response->SetNumberField(TEXT("clientWidth"), ClientSize.X);
+    Response->SetNumberField(TEXT("clientHeight"), ClientSize.Y);
+  }
+
+  void ApplyRequestedUiTargetFields(const FString &RequestedIdentifier,
+                                    const FString &RequestedTabId,
+                                    const FString &RequestedWindowTitle,
+                                    const TSharedPtr<FJsonObject> &Response)
+  {
+    if (!Response.IsValid())
+    {
+      return;
+    }
+
+    if (!RequestedIdentifier.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedIdentifier"), RequestedIdentifier);
+    }
+
+    if (!RequestedTabId.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedTabId"), RequestedTabId);
+    }
+
+    if (!RequestedWindowTitle.IsEmpty())
+    {
+      Response->SetStringField(TEXT("requestedWindowTitle"), RequestedWindowTitle);
+    }
+  }
+
   FName MakeEditorUtilityRegistrationId(const UObject *Asset,
                                         const FString &RequestedTabId)
   {
@@ -1885,6 +1978,285 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
       bSuccess = true;
       Message = FString::Printf(TEXT("Listed %d visible Slate windows"),
                                 WindowValues.Num());
+    }
+  }
+  // ===========================================================================
+  // SubAction: resolve_ui_target
+  // ===========================================================================
+  else if (LowerSub == TEXT("resolve_ui_target"))
+  {
+    FString RequestedIdentifier;
+    FString RequestedTabId;
+    FString RequestedWindowTitle;
+    Payload->TryGetStringField(TEXT("identifier"), RequestedIdentifier);
+    Payload->TryGetStringField(TEXT("tabId"), RequestedTabId);
+    Payload->TryGetStringField(TEXT("windowTitle"), RequestedWindowTitle);
+
+    RequestedIdentifier = RequestedIdentifier.TrimStartAndEnd();
+    RequestedTabId = RequestedTabId.TrimStartAndEnd();
+    RequestedWindowTitle = RequestedWindowTitle.TrimStartAndEnd();
+    ApplyRequestedUiTargetFields(RequestedIdentifier, RequestedTabId,
+                                 RequestedWindowTitle, Resp);
+
+    if (RequestedIdentifier.IsEmpty() && RequestedTabId.IsEmpty() &&
+        RequestedWindowTitle.IsEmpty())
+    {
+      Message = TEXT("identifier, tabId, or windowTitle is required");
+      ErrorCode = TEXT("INVALID_ARGUMENT");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else if (!FSlateApplication::IsInitialized())
+    {
+      Message = TEXT("Slate application is not initialized");
+      ErrorCode = TEXT("SLATE_NOT_AVAILABLE");
+      Resp->SetStringField(TEXT("error"), Message);
+    }
+    else
+    {
+      TArray<FString> ResolvedMenuNames;
+      TArray<FString> MissingMenuNames;
+      const TArray<FMcpDiscoveredUiTargetDefinition> Targets =
+          DiscoverUiTargets(Payload, ResolvedMenuNames, MissingMenuNames);
+
+      const TArray<const FMcpDiscoveredUiTargetDefinition *> IdentifierMatches =
+          RequestedIdentifier.IsEmpty()
+              ? TArray<const FMcpDiscoveredUiTargetDefinition *>()
+              : FindDiscoveredUiTargetsByIdentifier(Targets, RequestedIdentifier);
+
+      if (IdentifierMatches.Num() > 1)
+      {
+        Resp->SetStringField(TEXT("targetStatus"), TEXT("ambiguous"));
+        Resp->SetStringField(TEXT("staleReason"), TEXT("ambiguous_identifier"));
+        Resp->SetStringField(TEXT("recoveryHint"), TEXT("Provide an exact tabId or windowTitle, or narrow the identifier before retrying."));
+        Message = FString::Printf(TEXT("UI target identifier '%s' matched multiple targets"),
+                                  *RequestedIdentifier);
+        bSuccess = true;
+      }
+      else
+      {
+        const FMcpDiscoveredUiTargetDefinition *ResolvedTarget =
+            IdentifierMatches.Num() == 1 ? IdentifierMatches[0] : nullptr;
+        const TSharedPtr<SDockTab> RequestedLiveTab =
+            FindLiveDockTabById(RequestedTabId);
+        TSharedPtr<SWindow> RequestedLiveWindow;
+
+        if (!RequestedWindowTitle.IsEmpty())
+        {
+          for (const TSharedRef<SWindow> &Window : GetVisibleSlateWindows())
+          {
+            if (Window->GetTitle().ToString().Equals(RequestedWindowTitle,
+                                                     ESearchCase::IgnoreCase))
+            {
+              RequestedLiveWindow = Window;
+              break;
+            }
+          }
+        }
+
+        TSharedPtr<SDockTab> ResolvedLiveTab = RequestedLiveTab;
+        if (!ResolvedLiveTab.IsValid() && ResolvedTarget != nullptr &&
+            !ResolvedTarget->TabId.IsEmpty())
+        {
+          ResolvedLiveTab = FindLiveDockTabById(ResolvedTarget->TabId);
+        }
+
+        TSharedPtr<SWindow> ResolvedLiveWindow = RequestedLiveWindow;
+        if (!ResolvedLiveWindow.IsValid() && ResolvedLiveTab.IsValid())
+        {
+          ResolvedLiveWindow = ResolvedLiveTab->GetParentWindow();
+        }
+
+        if (!ResolvedLiveTab.IsValid() && ResolvedTarget != nullptr &&
+            !ResolvedTarget->TabId.IsEmpty())
+        {
+          const TSharedPtr<SDockTab> TargetLiveTab =
+              FindLiveDockTabById(ResolvedTarget->TabId);
+          if (TargetLiveTab.IsValid())
+          {
+            ResolvedLiveTab = TargetLiveTab;
+            if (!ResolvedLiveWindow.IsValid())
+            {
+              ResolvedLiveWindow = TargetLiveTab->GetParentWindow();
+            }
+          }
+        }
+
+        if (!ResolvedLiveWindow.IsValid() && ResolvedTarget != nullptr &&
+            !RequestedWindowTitle.IsEmpty() && ResolvedLiveTab.IsValid())
+        {
+          ResolvedLiveWindow = ResolvedLiveTab->GetParentWindow();
+        }
+
+        const bool bHadRequestedTab = !RequestedTabId.IsEmpty();
+        const bool bHadRequestedWindow = !RequestedWindowTitle.IsEmpty();
+        const bool bHadRequestedIdentifier = !RequestedIdentifier.IsEmpty();
+        const bool bRecoveredViaIdentifier = ResolvedTarget != nullptr &&
+                                             ((bHadRequestedTab && !RequestedLiveTab.IsValid() && !RequestedLiveWindow.IsValid()) ||
+                                              (bHadRequestedWindow && !RequestedLiveWindow.IsValid()));
+
+        FString ResolvedIdentifier =
+            ResolvedTarget != nullptr ? ResolvedTarget->Identifier : RequestedIdentifier;
+        FString ResolvedTabId = ResolvedLiveTab.IsValid()
+                                    ? ResolvedLiveTab->GetLayoutIdentifier().ToString()
+                                    : (ResolvedTarget != nullptr ? ResolvedTarget->TabId : RequestedTabId);
+        FString ResolvedWindowTitle = ResolvedLiveWindow.IsValid()
+                                          ? ResolvedLiveWindow->GetTitle().ToString()
+                                          : RequestedWindowTitle;
+        FString ResolvedTargetSource;
+        if (RequestedLiveTab.IsValid())
+        {
+          ResolvedTargetSource = TEXT("tab_id");
+        }
+        else if (RequestedLiveWindow.IsValid())
+        {
+          ResolvedTargetSource = TEXT("window_title");
+        }
+        else if (ResolvedLiveTab.IsValid())
+        {
+          ResolvedTargetSource = RequestedTabId.IsEmpty() ? TEXT("tab_id_hint") : TEXT("tab_id");
+        }
+        else if (ResolvedTarget != nullptr)
+        {
+          ResolvedTargetSource = TEXT("tab_id_hint");
+        }
+
+        if (!ResolvedIdentifier.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("resolvedIdentifier"), ResolvedIdentifier);
+          Resp->SetStringField(TEXT("identifier"), ResolvedIdentifier);
+        }
+        if (!ResolvedTabId.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("resolvedTabId"), ResolvedTabId);
+          Resp->SetStringField(TEXT("tabId"), ResolvedTabId);
+        }
+        if (!ResolvedWindowTitle.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("resolvedWindowTitle"), ResolvedWindowTitle);
+          Resp->SetStringField(TEXT("windowTitle"), ResolvedWindowTitle);
+        }
+        if (ResolvedTarget != nullptr)
+        {
+          Resp->SetStringField(TEXT("targetType"), ResolvedTarget->SourceType);
+        }
+        if (!ResolvedTargetSource.IsEmpty())
+        {
+          Resp->SetStringField(TEXT("resolvedTargetSource"), ResolvedTargetSource);
+        }
+
+        bool bResolvedWithLiveSurface = false;
+        if (ResolvedLiveTab.IsValid())
+        {
+          if (ResolvedLiveWindow.IsValid())
+          {
+            ApplyWindowBoundsToResponse(ResolvedLiveWindow, Resp);
+            bResolvedWithLiveSurface = true;
+          }
+          else
+          {
+            Resp->SetStringField(TEXT("targetStatus"), TEXT("stale"));
+            Resp->SetBoolField(TEXT("reResolved"), bRecoveredViaIdentifier);
+            Resp->SetStringField(TEXT("staleReason"), TEXT("tab_without_parent_window"));
+            Resp->SetStringField(TEXT("recoveryHint"), TEXT("Reopen the tab through manage_ui.open_ui_target, then resolve it again once the parent window is live."));
+            Resp->SetStringField(TEXT("recoveryAction"), TEXT("open_ui_target"));
+            Message = FString::Printf(TEXT("Resolved tab %s does not have a live parent window"),
+                                      *ResolvedTabId);
+            bSuccess = true;
+          }
+        }
+        else if (ResolvedLiveWindow.IsValid())
+        {
+          ApplyWindowBoundsToResponse(ResolvedLiveWindow, Resp);
+          bResolvedWithLiveSurface = true;
+        }
+
+        if (!bSuccess && bResolvedWithLiveSurface)
+        {
+          const bool bRecoveredToDifferentTabId = bHadRequestedTab &&
+                                                  !RequestedLiveTab.IsValid() &&
+                                                  !ResolvedTabId.IsEmpty() &&
+                                                  !ResolvedTabId.Equals(RequestedTabId,
+                                                                        ESearchCase::CaseSensitive);
+          const bool bWindowHintDrifted = bHadRequestedWindow &&
+                                          !RequestedLiveWindow.IsValid() &&
+                                          ResolvedLiveWindow.IsValid();
+          const bool bTabHintDrifted = bHadRequestedTab &&
+                                       !RequestedLiveTab.IsValid() &&
+                                       (ResolvedLiveTab.IsValid() ||
+                                        bRecoveredToDifferentTabId);
+          const bool bNeedsReresolve = bRecoveredViaIdentifier || bWindowHintDrifted || bTabHintDrifted;
+          Resp->SetStringField(TEXT("targetStatus"), bNeedsReresolve ? TEXT("stale") : TEXT("resolved"));
+          Resp->SetBoolField(TEXT("reResolved"), bNeedsReresolve);
+          if (bWindowHintDrifted)
+          {
+            Resp->SetStringField(TEXT("staleReason"), TEXT("missing_visible_window"));
+          }
+          else if (bTabHintDrifted)
+          {
+            Resp->SetStringField(TEXT("staleReason"), TEXT("missing_live_tab"));
+          }
+          Message = bNeedsReresolve
+                        ? FString::Printf(TEXT("Re-resolved UI target %s to a live surface"),
+                                          *ResolvedIdentifier)
+                        : FString::Printf(TEXT("Resolved UI target %s"),
+                                          *ResolvedIdentifier);
+          bSuccess = true;
+        }
+
+        if (!bSuccess && ResolvedTarget != nullptr &&
+            IsDiscoveredUiTargetOpenable(*ResolvedTarget))
+        {
+          Resp->SetStringField(TEXT("targetStatus"), TEXT("needs_open"));
+          Resp->SetBoolField(TEXT("reResolved"), bRecoveredViaIdentifier);
+          if ((bHadRequestedTab || !ResolvedTarget->TabId.IsEmpty()) && !ResolvedLiveTab.IsValid())
+          {
+            Resp->SetStringField(TEXT("staleReason"), TEXT("missing_live_tab"));
+          }
+          else if (bHadRequestedWindow && !RequestedLiveWindow.IsValid())
+          {
+            Resp->SetStringField(TEXT("staleReason"), TEXT("missing_visible_window"));
+          }
+          Resp->SetStringField(TEXT("recoveryHint"), TEXT("Open the resolved target through manage_ui.open_ui_target and retry resolution to capture live bounds."));
+          Resp->SetStringField(TEXT("recoveryAction"), TEXT("open_ui_target"));
+          Message = FString::Printf(TEXT("Resolved UI target %s, but the live surface is not open"),
+                                    *ResolvedIdentifier);
+          bSuccess = true;
+        }
+
+        if (!bSuccess && bHadRequestedWindow && !RequestedLiveWindow.IsValid())
+        {
+          Resp->SetStringField(TEXT("targetStatus"), TEXT("not_found"));
+          Resp->SetStringField(TEXT("staleReason"), TEXT("missing_visible_window"));
+          Resp->SetStringField(TEXT("recoveryHint"), TEXT("Call manage_ui.list_visible_windows or manage_ui.resolve_ui_target with a stronger identifier before retrying."));
+          Message = FString::Printf(TEXT("Visible window '%s' was not found"),
+                                    *RequestedWindowTitle);
+          bSuccess = true;
+        }
+
+        if (!bSuccess && bHadRequestedTab && !RequestedLiveTab.IsValid())
+        {
+          Resp->SetStringField(TEXT("targetStatus"), TEXT("not_found"));
+          Resp->SetStringField(TEXT("staleReason"), TEXT("missing_live_tab"));
+          Resp->SetStringField(TEXT("recoveryHint"), TEXT("Retry with manage_ui.resolve_ui_target using an identifier, or open the target explicitly if it is known."));
+          Message = FString::Printf(TEXT("Live tab %s was not found"), *RequestedTabId);
+          bSuccess = true;
+        }
+
+        if (!bSuccess)
+        {
+          Resp->SetStringField(TEXT("targetStatus"), TEXT("not_found"));
+          if (bHadRequestedIdentifier)
+          {
+            Message = FString::Printf(TEXT("UI target not found: %s"),
+                                      *RequestedIdentifier);
+          }
+          else
+          {
+            Message = TEXT("UI target not found");
+          }
+          bSuccess = true;
+        }
+      }
     }
   }
   // ===========================================================================

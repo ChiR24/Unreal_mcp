@@ -51,6 +51,14 @@ namespace
         TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
         Json->SetStringField(TEXT("name"), Entry.Name);
         Json->SetStringField(TEXT("summary"), Entry.Summary);
+        Json->SetBoolField(TEXT("editorOnly"), Entry.bEditorOnly);
+        Json->SetBoolField(TEXT("requiresLiveEditor"), Entry.bRequiresLiveEditor);
+        Json->SetBoolField(TEXT("requiresAssetEditor"), Entry.bRequiresAssetEditor);
+        Json->SetStringField(TEXT("interactionModel"), Entry.InteractionModel);
+        if (!Entry.LimitationNote.IsEmpty())
+        {
+            Json->SetStringField(TEXT("limitationNote"), Entry.LimitationNote);
+        }
         return Json;
     }
 

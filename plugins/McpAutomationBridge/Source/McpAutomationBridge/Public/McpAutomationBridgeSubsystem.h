@@ -1140,6 +1140,36 @@ private:
     bool HandleControlEditorOpenAsset(const FString &RequestId,
                                       const TSharedPtr<FJsonObject> &Payload,
                                       TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorFitBlueprintGraph(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorSetBlueprintGraphView(const FString &RequestId,
+                                                  const TSharedPtr<FJsonObject> &Payload,
+                                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorJumpToBlueprintNode(const FString &RequestId,
+                                                const TSharedPtr<FJsonObject> &Payload,
+                                                TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorCaptureBlueprintGraphReview(const FString &RequestId,
+                                                        const TSharedPtr<FJsonObject> &Payload,
+                                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorSetWidgetBlueprintMode(const FString &RequestId,
+                                                   const TSharedPtr<FJsonObject> &Payload,
+                                                   TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorFitWidgetDesigner(const FString &RequestId,
+                                              const TSharedPtr<FJsonObject> &Payload,
+                                              TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorSetWidgetDesignerView(const FString &RequestId,
+                                                  const TSharedPtr<FJsonObject> &Payload,
+                                                  TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorSelectWidgetInDesigner(const FString &RequestId,
+                                                   const TSharedPtr<FJsonObject> &Payload,
+                                                   TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorSelectWidgetsInDesignerRect(const FString &RequestId,
+                                                        const TSharedPtr<FJsonObject> &Payload,
+                                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
+    bool HandleControlEditorFocusEditorSurface(const FString &RequestId,
+                                               const TSharedPtr<FJsonObject> &Payload,
+                                               TSharedPtr<FMcpBridgeWebSocket> Socket);
     bool HandleControlEditorScreenshot(const FString &RequestId,
                                        const TSharedPtr<FJsonObject> &Payload,
                                        TSharedPtr<FMcpBridgeWebSocket> Socket);
