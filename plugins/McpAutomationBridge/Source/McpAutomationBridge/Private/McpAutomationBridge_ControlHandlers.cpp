@@ -6467,10 +6467,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
           ? true
           : GetJsonBoolField(Payload, TEXT("includeMenus"), true);
 
+  TSharedPtr<SDockTab> TargetTab;
   TSharedPtr<SWindow> TargetWindow;
   if (TSharedPtr<FTabManager> TabManager = Context.Editor->GetAssociatedTabManager())
   {
-    TSharedPtr<SDockTab> TargetTab;
     if (!Context.RequestedTabId.IsEmpty())
     {
       TargetTab = TabManager->FindExistingLiveTab(FTabId(FName(*Context.RequestedTabId)));
@@ -6490,6 +6490,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
       {
         Context.WindowTitle = TargetWindow->GetTitle().ToString();
       }
+    }
+  }
+
+  if (!TargetWindow.IsValid())
+  {
+    TargetWindow = FSlateApplication::Get().FindWidgetWindow(GraphEditor.ToSharedRef());
+    if (TargetWindow.IsValid() && Context.WindowTitle.IsEmpty())
+    {
+      Context.WindowTitle = TargetWindow->GetTitle().ToString();
     }
   }
 
@@ -6517,6 +6526,67 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("WINDOW_NOT_FOUND"),
                               TEXT("No visible Blueprint editor window was available for graph review capture"),
                               ErrorDetails);
+    return true;
+  }
+
+  if (TargetTab.IsValid())
+  {
+    TargetTab->ActivateInParent(ETabActivationCause::SetDirectly);
+  }
+
+  TargetWindow->BringToFront(true);
+
+  const bool bFocusApplied =
+      FSlateApplication::Get().SetKeyboardFocus(GraphEditor, EFocusCause::SetDirectly);
+  const bool bGraphFocusReady = GraphEditor->HasAnyUserFocus().IsSet() ||
+                                GraphEditor->HasFocusedDescendants();
+  const bool bWindowActiveForCapture = TargetWindow->IsActive() ||
+                                       TargetWindow->HasActiveChildren();
+  const TSharedPtr<SWindow> ActiveModalWindow = FSlateApplication::Get().GetActiveModalWindow();
+  const bool bBlockedByDifferentModalWindow = ActiveModalWindow.IsValid() &&
+                                              ActiveModalWindow != TargetWindow;
+
+  if (bBlockedByDifferentModalWindow || !bWindowActiveForCapture ||
+      (!bFocusApplied && !bGraphFocusReady))
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
+    ErrorDetails->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+    ErrorDetails->SetBoolField(TEXT("focusApplied"), bFocusApplied);
+    ErrorDetails->SetBoolField(TEXT("graphFocusReady"), bGraphFocusReady);
+    ErrorDetails->SetBoolField(TEXT("windowActiveForCapture"), bWindowActiveForCapture);
+    ErrorDetails->SetStringField(TEXT("targetWindowTitle"), TargetWindow->GetTitle().ToString());
+    if (!Context.TabId.IsEmpty())
+    {
+      ErrorDetails->SetStringField(TEXT("targetTabId"), Context.TabId);
+    }
+    if (ActiveModalWindow.IsValid())
+    {
+      ErrorDetails->SetStringField(TEXT("activeModalWindowTitle"), ActiveModalWindow->GetTitle().ToString());
+    }
+    if (!SelectorType.IsEmpty())
+    {
+      ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
+      ErrorDetails->SetStringField(TEXT("nodeSelector"), SelectorValue);
+    }
+    if (MatchedNode != nullptr)
+    {
+      ErrorDetails->SetStringField(TEXT("matchedNodeId"), MatchedNode->NodeGuid.ToString());
+      ErrorDetails->SetStringField(TEXT("matchedNodeName"), MatchedNode->GetName());
+      ErrorDetails->SetStringField(TEXT("matchedNodeTitle"), GetBlueprintNodeListTitle(MatchedNode));
+    }
+    ApplyTargetHealthResponseFields(
+        ErrorDetails, bWindowActiveForCapture ? TEXT("resolved") : TEXT("stale"),
+        true, false,
+        bBlockedByDifferentModalWindow ? TEXT("blocked_by_modal_window") : FString(),
+        bBlockedByDifferentModalWindow
+            ? TEXT("Dismiss the active modal window before retrying graph review capture.")
+            : TEXT("Bring the Blueprint editor window to the foreground and retry graph review capture."),
+        TEXT("focus_editor_surface"));
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("CAPTURE_PRECONDITION_FAILED"),
+        TEXT("Blueprint graph review capture requires an active, focused Blueprint editor window"),
+        ErrorDetails);
     return true;
   }
 

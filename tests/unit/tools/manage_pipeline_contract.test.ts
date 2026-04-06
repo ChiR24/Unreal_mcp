@@ -528,6 +528,55 @@ describe('Manage Pipeline Contract', () => {
     );
   });
 
+  it('delegates manage_pipeline run_ubt through the consolidated handler', async () => {
+    const { automationBridge, callToolHandler } = createRegistry('smoke-test');
+
+    mockHandleConsolidatedToolCall.mockResolvedValueOnce({
+      success: true,
+      delegated: true,
+      action: 'run_ubt'
+    });
+
+    const response = await callToolHandler({
+      params: {
+        name: 'manage_pipeline',
+        arguments: {
+          action: 'run_ubt',
+          target: 'UE_AutomationMCPEditor',
+          platform: 'Win64',
+          configuration: 'Development'
+        }
+      }
+    });
+
+    const responseObj = response as {
+      success?: boolean;
+      isError?: boolean;
+      structuredContent?: Record<string, unknown>;
+      content?: Array<{ text?: string }>;
+    };
+
+    expect(responseObj.success).toBe(true);
+    expect(responseObj.isError).not.toBe(true);
+    expect(responseObj.structuredContent).toMatchObject({
+      success: true,
+      delegated: true,
+      action: 'run_ubt'
+    });
+    expect(responseObj.content?.[0]?.text).toContain('success: true');
+    expect(mockHandleConsolidatedToolCall).toHaveBeenCalledWith(
+      'manage_pipeline',
+      expect.objectContaining({
+        action: 'run_ubt',
+        target: 'UE_AutomationMCPEditor',
+        platform: 'Win64',
+        configuration: 'Development'
+      }),
+      expect.any(Object)
+    );
+    expect(automationBridge.sendAutomationRequest).not.toHaveBeenCalled();
+  });
+
   it('keeps category-management semantics on manage_tools', async () => {
     const { server, automationBridge, callToolHandler } = createRegistry('smoke-test');
 

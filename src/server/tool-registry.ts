@@ -180,8 +180,8 @@ export class ToolRegistry {
                 message: 'manage_pipeline is reserved for build and bridge-catalog discovery. Use manage_tools for dynamic category controls.'
             };
         }
-        // Delegate unknown actions (like run_ubt) to the registered handler in consolidated-tool-handlers
-        // This allows handlePipelineTools to process run_ubt etc.
+        // Delegate run_ubt to the registered consolidated handler.
+        // This keeps build execution on the local pipeline handler while discovery/status stay catalog-backed.
         return { _delegateToHandler: true, action, args };
     }
 

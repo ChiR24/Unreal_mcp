@@ -4057,7 +4057,7 @@ async function runUiTargetingSuite() {
   );
 
   runner.addStep(
-    "UI targeting: preserve ambiguous screenshot warnings without changing the old default path",
+    "UI targeting: preserve screenshot ambiguity diagnostics after re-resolution when only tabId is retried",
     async (tools) => {
       const screenshotResult = unwrapAutomationResult(
         await tools.executeTool(
@@ -4073,30 +4073,48 @@ async function runUiTargetingSuite() {
           { timeoutMs: 20000 },
         ),
       );
+      const screenshotErrorDetails =
+        screenshotResult?.error && typeof screenshotResult.error === "object"
+          ? screenshotResult.error
+          : screenshotResult;
 
       requireStep(
-        screenshotResult?.success === true,
-        `ambiguous screenshot failed: ${screenshotResult?.error ?? screenshotResult?.message ?? "unknown error"}`,
+        screenshotResult?.success === false,
+        `Expected tabId-only screenshot retry to fail explicitly, got ${JSON.stringify(screenshotResult)}`,
       );
       requireStep(
-        screenshotResult?.captureTarget === "viewport",
-        `Expected ambiguous screenshot to preserve the viewport default path, got ${JSON.stringify(screenshotResult)}`,
+        screenshotResult?.errorCode === "AMBIGUOUS_CAPTURE_TARGET",
+        `Expected tabId-only screenshot retry to return AMBIGUOUS_CAPTURE_TARGET, got ${JSON.stringify(screenshotResult)}`,
       );
       requireStep(
-        typeof screenshotResult?.captureIntentWarning === "string" &&
-          /tabid/i.test(screenshotResult.captureIntentWarning) &&
+        typeof screenshotErrorDetails?.captureIntentWarning === "string" &&
+          /tabid/i.test(screenshotErrorDetails.captureIntentWarning) &&
           /windowtitle|resolve_ui_target/i.test(
-            screenshotResult.captureIntentWarning,
+            screenshotErrorDetails.captureIntentWarning,
           ),
         `Ambiguous screenshot did not surface the expected warning: ${JSON.stringify(screenshotResult)}`,
       );
       requireStep(
-        screenshotResult?.captureIntentSource === "viewport_default",
-        `Ambiguous screenshot did not preserve captureIntentSource=viewport_default: ${JSON.stringify(screenshotResult)}`,
+        screenshotErrorDetails?.captureIntentSource === "viewport_default",
+        `TabId-only screenshot retry did not preserve captureIntentSource=viewport_default: ${JSON.stringify(screenshotResult)}`,
       );
       requireStep(
-        screenshotResult?.suggestedPreflightAction === "resolve_ui_target",
-        `Ambiguous screenshot did not surface resolve_ui_target guidance: ${JSON.stringify(screenshotResult)}`,
+        screenshotErrorDetails?.suggestedPreflightAction ===
+          "resolve_ui_target",
+        `TabId-only screenshot retry did not surface resolve_ui_target guidance: ${JSON.stringify(screenshotResult)}`,
+      );
+      requireStep(
+        screenshotErrorDetails?.targetStatus === "stale",
+        `TabId-only screenshot retry did not preserve stale target diagnostics: ${JSON.stringify(screenshotResult)}`,
+      );
+      requireStep(
+        screenshotErrorDetails?.requestedTargetStillLive === false,
+        `TabId-only screenshot retry did not preserve requestedTargetStillLive=false: ${JSON.stringify(screenshotResult)}`,
+      );
+      requireStep(
+        screenshotErrorDetails?.captureTarget !== "viewport" &&
+          screenshotErrorDetails?.captureTarget !== "editor_window",
+        `TabId-only screenshot retry must not claim a capture target: ${JSON.stringify(screenshotResult)}`,
       );
 
       return true;
