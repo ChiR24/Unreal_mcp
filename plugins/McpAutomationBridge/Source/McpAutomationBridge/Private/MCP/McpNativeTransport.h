@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
+#include "Dom/JsonValue.h"
 #include "MCP/McpToolSchemaLoader.h"
 #include "MCP/McpDynamicToolManager.h"
 #include <atomic>
@@ -84,14 +85,16 @@ private:
 	struct FSSEConnection
 	{
 		FSocket* Socket = nullptr;
-		int32 JsonRpcId = -1;
+		TSharedPtr<FJsonValue> JsonRpcId;
 		double StartTime = 0.0;
 		FString ToolName;
+		FString SessionId;  // for touching ActiveSessions during long-running calls
 		FCriticalSection WriteMutex;  // protects socket writes from GameThread
+		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
 	};
 
-	// Accept loop: handle one client connection
-	void HandleConnection(FSocket* ClientSocket, ISocketSubsystem* SocketSub);
+	// Accept loop: handle one client connection (runs on ThreadPool)
+	void HandleConnection(FSocket* ClientSocket);
 
 	// Low-level socket helpers
 	static bool SendAllBytes(FSocket* Socket, const uint8* Data, int32 Length);
@@ -102,15 +105,15 @@ private:
 		const FString& ContentType, const FString& Body,
 		const TMap<FString, FString>& ExtraHeaders = {});
 	bool SendSSEHeaders(FSocket* Socket, const FString& SessionId);
-	bool WriteSSEEvent(FSocket* Socket, const FString& EventData,
-		FCriticalSection& WriteMutex);
+	static bool WriteSSEEvent(FSSEConnection& Conn, const FString& EventData);
 
 	// JSON-RPC method handlers (return response body string)
-	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params, int32 Id,
-		FString& OutSessionId);
-	FString HandleToolsList(int32 Id);
-	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params, int32 Id,
-		FSocket* ClientSocket, const FString& SessionId);
+	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId);
+	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id);
+	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params,
+		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
+		const FString& SessionId);
 
 	// Session validation
 	bool ValidateSession(const FString& SessionId, FString& OutError);
@@ -137,7 +140,11 @@ private:
 	FSocket* ListenSocket = nullptr;
 	FRunnableThread* Thread = nullptr;
 	FEvent* StopEvent = nullptr;
+	FEvent* BindCompleteEvent = nullptr;
 	std::atomic<bool> bStopping{false};
+	std::atomic<bool> bBindSuccess{false};
+	std::atomic<int32> ActiveConnectionCount{0};
+	static constexpr int32 MaxConcurrentConnections = 16;
 
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime

@@ -59,17 +59,22 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 ### Prerequisites
 
-- **Node.js** 18+
 - **Unreal Engine** 5.0–5.7
 
-### Step 1: Install MCP Server
+Choose your transport:
+- **Option A: Native MCP** (recommended) — no additional dependencies
+- **Option B: TypeScript Bridge** — requires **Node.js** 18+
 
-**Option A: NPX (Recommended)**
+### Step 1: Install MCP Server (Option B only — skip for Native MCP)
+
+> Skip this step if using **Option A: Native MCP Transport** ([Step 4A](#option-a-native-mcp-transport-direct-http--no-bridge-needed) below).
+
+**NPX (Recommended):**
 ```bash
 npx unreal-engine-mcp-server
 ```
 
-**Option B: Clone & Build**
+**Clone & Build:**
 ```bash
 git clone https://github.com/ChiR24/Unreal_mcp.git
 cd Unreal_mcp
@@ -88,7 +93,7 @@ Your project must have a code target (`.sln` or `.xcworkspace`).
 Blueprint-only projects cannot compile native plugins — to convert, add any class via **Tools > New C++ Class** in the editor.
 
 **Method 1: Copy Folder**
-```
+```text
 Copy:  Unreal_mcp/plugins/McpAutomationBridge/
 To:    YourUnrealProject/Plugins/McpAutomationBridge/
 ```

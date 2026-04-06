@@ -7,6 +7,12 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpSchema, Log, All);
 
 bool FMcpToolSchemaLoader::LoadFromFile(const FString& PluginDir)
 {
+	// Clear cached state upfront so failed reload doesn't leave stale data
+	CachedToolsList.Reset();
+	ToolNames.Empty();
+	ToolCategories.Empty();
+	AllToolsArray.Empty();
+
 	const FString FilePath = PluginDir / TEXT("Resources/MCP/tool-schemas.json");
 	FString JsonString;
 
@@ -34,8 +40,6 @@ bool FMcpToolSchemaLoader::LoadFromFile(const FString& PluginDir)
 	}
 
 	// Build tool name and category indices
-	ToolNames.Empty();
-	ToolCategories.Empty();
 	AllToolsArray = *ToolsArray;
 
 	for (const auto& ToolVal : AllToolsArray)

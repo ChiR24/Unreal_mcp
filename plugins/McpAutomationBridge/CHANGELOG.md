@@ -22,7 +22,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Client info logging** — log connecting client name and version from `initialize` request
 - **`execute_python` action** in `system_control` — execute Python code with stdout/stderr capture, supports inline `code` and `file` path
 - **Shared `ListenHost` setting** — native MCP respects `AllowNonLoopback` for network access control
-- **Package scripts** for Win/Mac/Linux — build, cook, and package UE projects from command line with smart arg parsing
+- **Plugin-packaging scripts** for Win/Mac/Linux — build and package the plugin via RunUAT BuildPlugin, with smart arg parsing
 
 ### Fixed
 - `reset` action now restores initial state from `Initialize()` instead of enabling all tools unconditionally
@@ -35,6 +35,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - Opt-in via `bEnableNativeMCP` project setting (default: off)
 
 ### New Files
+
 | File | Purpose |
 |------|---------|
 | `Private/MCP/McpNativeTransport.h/cpp` | Raw-socket HTTP+SSE server, session management, JSON-RPC dispatch |

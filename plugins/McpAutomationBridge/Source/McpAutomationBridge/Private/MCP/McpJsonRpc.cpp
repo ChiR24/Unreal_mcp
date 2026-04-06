@@ -13,30 +13,42 @@ FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 
 	if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
 	{
-		return Result;  // bValid = false
+		Result.ErrorType = EMcpJsonRpcError::ParseError;
+		return Result;  // bValid = false, Id stays null per JSON-RPC 2.0
+	}
+
+	// Extract id early so it can be echoed in InvalidRequest errors
+	TSharedPtr<FJsonValue> IdField = Root->TryGetField(TEXT("id"));
+	if (IdField.IsValid() && (IdField->Type == EJson::Number || IdField->Type == EJson::String))
+	{
+		Result.Id = IdField;
+		Result.bIsNotification = false;
 	}
 
 	// Validate jsonrpc field
 	FString Version;
 	if (!Root->TryGetStringField(TEXT("jsonrpc"), Version) || Version != TEXT("2.0"))
 	{
+		Result.ErrorType = EMcpJsonRpcError::InvalidRequest;
 		return Result;
 	}
 
 	// Method is required
 	if (!Root->TryGetStringField(TEXT("method"), Result.Method))
 	{
+		Result.ErrorType = EMcpJsonRpcError::InvalidRequest;
 		return Result;
 	}
 
-	// Id is optional — if absent, this is a notification
-	TSharedPtr<FJsonValue> IdField = Root->TryGetField(TEXT("id"));
-	if (IdField.IsValid() && IdField->Type == EJson::Number)
+	// Validate id type if present — null/bool/array/object are invalid per MCP spec
+	if (IdField.IsValid() && !Result.Id.IsValid())
 	{
-		Result.Id = static_cast<int32>(IdField->AsNumber());
-		Result.bIsNotification = false;
+		Result.ErrorType = EMcpJsonRpcError::InvalidRequest;
+		return Result;
 	}
-	else
+
+	// No id field = notification
+	if (!IdField.IsValid())
 	{
 		Result.bIsNotification = true;
 	}
@@ -52,11 +64,11 @@ FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 	return Result;
 }
 
-FString FMcpJsonRpc::BuildResponse(int32 Id, const TSharedPtr<FJsonObject>& Result)
+FString FMcpJsonRpc::BuildResponse(const TSharedPtr<FJsonValue>& Id, const TSharedPtr<FJsonObject>& Result)
 {
 	auto Root = MakeShared<FJsonObject>();
 	Root->SetStringField(TEXT("jsonrpc"), TEXT("2.0"));
-	Root->SetNumberField(TEXT("id"), Id);
+	Root->SetField(TEXT("id"), Id.IsValid() ? Id : MakeShared<FJsonValueNull>());
 
 	if (Result.IsValid())
 	{
@@ -70,7 +82,7 @@ FString FMcpJsonRpc::BuildResponse(int32 Id, const TSharedPtr<FJsonObject>& Resu
 	return JsonToString(Root);
 }
 
-FString FMcpJsonRpc::BuildError(int32 Id, int32 Code, const FString& Message)
+FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message)
 {
 	auto ErrorObj = MakeShared<FJsonObject>();
 	ErrorObj->SetNumberField(TEXT("code"), Code);
@@ -78,7 +90,7 @@ FString FMcpJsonRpc::BuildError(int32 Id, int32 Code, const FString& Message)
 
 	auto Root = MakeShared<FJsonObject>();
 	Root->SetStringField(TEXT("jsonrpc"), TEXT("2.0"));
-	Root->SetNumberField(TEXT("id"), Id);
+	Root->SetField(TEXT("id"), Id.IsValid() ? Id : MakeShared<FJsonValueNull>());
 	Root->SetObjectField(TEXT("error"), ErrorObj);
 
 	return JsonToString(Root);

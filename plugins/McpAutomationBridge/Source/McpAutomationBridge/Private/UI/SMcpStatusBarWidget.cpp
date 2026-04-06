@@ -46,7 +46,7 @@ void SMcpStatusBarWidget::Construct(const FArguments& InArgs)
 
 FReply SMcpStatusBarWidget::OnClicked()
 {
-	ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+	ISettingsModule* SettingsModule = FModuleManager::LoadModulePtr<ISettingsModule>("Settings");
 	if (SettingsModule)
 	{
 		SettingsModule->ShowViewer("Project", "Plugins", "McpAutomationBridgeSettings");

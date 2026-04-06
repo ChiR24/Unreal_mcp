@@ -58,11 +58,11 @@ REM ─── Extract version info ───────────────
 set "UE_VER=unknown"
 set "UE_VERSION_FILE=%ENGINE_DIR%\Engine\Build\Build.version"
 if exist "%UE_VERSION_FILE%" (
-    for /f "delims=" %%V in ('python -c "import json; v=json.load(open(r'%UE_VERSION_FILE%')); print(f\"{v['MajorVersion']}.{v['MinorVersion']}\")" 2^>nul') do set "UE_VER=%%V"
+    for /f "delims=" %%V in ('powershell -NoProfile -Command "$v = Get-Content '%UE_VERSION_FILE%' | ConvertFrom-Json; Write-Output \"$($v.MajorVersion).$($v.MinorVersion)\""') do set "UE_VER=%%V"
 )
 
 set "PLUGIN_VER=0.0.0"
-for /f "delims=" %%V in ('python -c "import json; print(json.load(open(r'%PLUGIN_FILE%'))['VersionName'])" 2^>nul') do set "PLUGIN_VER=%%V"
+for /f "delims=" %%V in ('powershell -NoProfile -Command "$d = Get-Content '%PLUGIN_FILE%' | ConvertFrom-Json; Write-Output $d.VersionName"') do set "PLUGIN_VER=%%V"
 
 set "PACKAGE_DIR=%OUTPUT_DIR%\McpAutomationBridge"
 set "ZIP_NAME=McpAutomationBridge-v%PLUGIN_VER%-UE%UE_VER%-Win64.zip"
@@ -95,7 +95,11 @@ REM ─── Post-process: set Installed=true ───────────
 set "OUTPUT_UPLUGIN=%PACKAGE_DIR%\McpAutomationBridge.uplugin"
 if exist "%OUTPUT_UPLUGIN%" (
     echo Setting Installed=true in output .uplugin...
-    python -c "import json; f=r'%OUTPUT_UPLUGIN%'; d=json.load(open(f)); d['Installed']=True; json.dump(d,open(f,'w'),indent=2); print()"
+    powershell -NoProfile -Command "$f='%OUTPUT_UPLUGIN%'; $d=Get-Content $f | ConvertFrom-Json; $d | Add-Member -Force -NotePropertyName Installed -NotePropertyValue $true; $d | ConvertTo-Json -Depth 10 | Set-Content $f"
+    if errorlevel 1 (
+        echo ERROR: Failed to set Installed=true in .uplugin
+        exit /b 1
+    )
 )
 
 REM ─── Zip ───────────────────────────────────────────────────────────────────
@@ -103,7 +107,11 @@ REM ─── Zip ────────────────────�
 echo Creating archive: %ZIP_NAME%
 cd /d "%OUTPUT_DIR%"
 if exist "%ZIP_NAME%" del "%ZIP_NAME%"
-powershell -NoProfile -Command "Compress-Archive -Path 'McpAutomationBridge' -DestinationPath '%ZIP_NAME%' -Force"
+powershell -NoProfile -Command "Get-ChildItem -Path 'McpAutomationBridge' -Recurse | Where-Object { $_.Extension -ne '.pdb' -and $_.FullName -notmatch '\\Intermediate\\' } | Compress-Archive -DestinationPath '%ZIP_NAME%' -Force"
+if errorlevel 1 (
+    echo ERROR: Failed to create zip archive.
+    exit /b 1
+)
 
 echo.
 echo ============================================

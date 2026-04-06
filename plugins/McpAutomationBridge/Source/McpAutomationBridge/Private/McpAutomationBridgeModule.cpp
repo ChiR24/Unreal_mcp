@@ -50,8 +50,8 @@ public:
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module shut down."));
 
 #if WITH_EDITOR
-        // No explicit unregister needed because we did not register the settings
-        // manually. UDeveloperSettings instances are managed by the engine.
+        UToolMenus::UnRegisterStartupCallback(this);
+        UToolMenus::UnregisterOwner(this);
 #endif
     }
 
@@ -76,6 +76,7 @@ public:
 private:
     void RegisterStatusBarWidget()
     {
+        FToolMenuOwnerScoped OwnerScoped(this);
         UToolMenu* StatusBar = UToolMenus::Get()->ExtendMenu("LevelEditor.StatusBar.ToolBar");
         if (!StatusBar) return;
 

@@ -94,12 +94,33 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 
 	// Create stop event and launch accept thread
 	StopEvent = FPlatformProcess::GetSynchEventFromPool(true);
+	BindCompleteEvent = FPlatformProcess::GetSynchEventFromPool(false);
 	bStopping.store(false);
+	bBindSuccess.store(false);
 
 	Thread = FRunnableThread::Create(this, TEXT("McpNativeHTTPServer"), 0, TPri_Normal);
 	if (!Thread)
 	{
 		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to create HTTP server thread"));
+		FPlatformProcess::ReturnSynchEventToPool(BindCompleteEvent);
+		BindCompleteEvent = nullptr;
+		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
+		StopEvent = nullptr;
+		return false;
+	}
+
+	// Wait for the thread to complete bind/listen before reporting success
+	BindCompleteEvent->Wait();
+	FPlatformProcess::ReturnSynchEventToPool(BindCompleteEvent);
+	BindCompleteEvent = nullptr;
+
+	if (!bBindSuccess.load())
+	{
+		UE_LOG(LogMcpNativeTransport, Error,
+			TEXT("Failed to start native MCP server on %s:%d — bind/listen failed"), *ListenHost, Port);
+		Thread->WaitForCompletion();
+		delete Thread;
+		Thread = nullptr;
 		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
 		StopEvent = nullptr;
 		return false;
@@ -137,32 +158,50 @@ void FMcpNativeTransport::Shutdown()
 		Thread = nullptr;
 	}
 
+	// Wait for in-flight connection handlers to finish
+	{
+		double WaitDeadline = FPlatformTime::Seconds() + 10.0;
+		while (ActiveConnectionCount.load() > 0 && FPlatformTime::Seconds() < WaitDeadline)
+		{
+			FPlatformProcess::Sleep(0.01f);
+		}
+	}
+
 	if (StopEvent)
 	{
 		FPlatformProcess::ReturnSynchEventToPool(StopEvent);
 		StopEvent = nullptr;
 	}
 
-	// Close all active SSE connections with error
+	// Close all active SSE connections with error.
+	// WriteMutex is taken per-connection to synchronize with in-flight async writes.
 	{
 		ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (auto& [RequestId, Conn] : SSEConnections)
 		{
-			if (Conn.IsValid() && Conn->Socket)
+			if (Conn.IsValid())
 			{
-				// Send error as final SSE event before closing
-				FString ErrorJson = FMcpJsonRpc::BuildError(
-					Conn->JsonRpcId, FMcpJsonRpc::ErrorInternalError,
-					TEXT("Server shutting down"));
-				WriteSSEEvent(Conn->Socket, ErrorJson, Conn->WriteMutex);
-
-				Conn->Socket->Close();
-				if (SocketSub)
+				FScopeLock WriteLock(&Conn->WriteMutex);
+				if (Conn->Socket)
 				{
-					SocketSub->DestroySocket(Conn->Socket);
+					// Inline SSE write — we already hold WriteMutex
+					FString ErrorJson = FMcpJsonRpc::BuildError(
+						Conn->JsonRpcId, FMcpJsonRpc::ErrorInternalError,
+						TEXT("Server shutting down"));
+					FString Frame = FString::Printf(
+						TEXT("event: message\ndata: %s\n\n"), *ErrorJson);
+					FTCHARToUTF8 Utf8(*Frame);
+					SendAllBytes(Conn->Socket,
+						reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+
+					Conn->Socket->Close();
+					if (SocketSub)
+					{
+						SocketSub->DestroySocket(Conn->Socket);
+					}
+					Conn->Socket = nullptr;
 				}
-				Conn->Socket = nullptr;
 			}
 		}
 		SSEConnections.Empty();
@@ -182,9 +221,22 @@ void FMcpNativeTransport::Shutdown()
 
 bool FMcpNativeTransport::SendAllBytes(FSocket* Socket, const uint8* Data, int32 Length)
 {
+	static constexpr double WriteTimeoutSeconds = 5.0;
+	const double Deadline = FPlatformTime::Seconds() + WriteTimeoutSeconds;
+
 	int32 TotalSent = 0;
 	while (TotalSent < Length)
 	{
+		const double Remaining = Deadline - FPlatformTime::Seconds();
+		if (Remaining <= 0.0)
+		{
+			return false;
+		}
+		if (!Socket->Wait(ESocketWaitConditions::WaitForWrite,
+			FTimespan::FromSeconds(FMath::Min(Remaining, 1.0))))
+		{
+			return false;
+		}
 		int32 BytesSent = 0;
 		if (!Socket->Send(Data + TotalSent, Length - TotalSent, BytesSent))
 		{
@@ -207,6 +259,8 @@ uint32 FMcpNativeTransport::Run()
 	if (!SocketSub)
 	{
 		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to get socket subsystem"));
+		bBindSuccess.store(false);
+		if (BindCompleteEvent) BindCompleteEvent->Trigger();
 		return 1;
 	}
 
@@ -215,6 +269,8 @@ uint32 FMcpNativeTransport::Run()
 	if (!ListenSocket)
 	{
 		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to create listen socket"));
+		bBindSuccess.store(false);
+		if (BindCompleteEvent) BindCompleteEvent->Trigger();
 		return 1;
 	}
 
@@ -239,6 +295,8 @@ uint32 FMcpNativeTransport::Run()
 			TEXT("Failed to bind to %s:%d"), *ListenHost, ListenPort);
 		SocketSub->DestroySocket(ListenSocket);
 		ListenSocket = nullptr;
+		bBindSuccess.store(false);
+		if (BindCompleteEvent) BindCompleteEvent->Trigger();
 		return 1;
 	}
 
@@ -247,8 +305,14 @@ uint32 FMcpNativeTransport::Run()
 		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to listen on socket"));
 		SocketSub->DestroySocket(ListenSocket);
 		ListenSocket = nullptr;
+		bBindSuccess.store(false);
+		if (BindCompleteEvent) BindCompleteEvent->Trigger();
 		return 1;
 	}
+
+	// Signal Start() that bind/listen succeeded
+	bBindSuccess.store(true);
+	if (BindCompleteEvent) BindCompleteEvent->Trigger();
 
 	UE_LOG(LogMcpNativeTransport, Verbose,
 		TEXT("Accept loop started on port %d"), ListenPort);
@@ -270,7 +334,22 @@ uint32 FMcpNativeTransport::Run()
 		if (ClientSocket)
 		{
 			ClientSocket->SetNoDelay(true);
-			HandleConnection(ClientSocket, SocketSub);
+			int32 Count = ActiveConnectionCount.fetch_add(1);
+			if (Count >= MaxConcurrentConnections)
+			{
+				ActiveConnectionCount.fetch_sub(1);
+				SendHttpResponse(ClientSocket, 503, TEXT("text/plain"), TEXT("Service Unavailable"));
+				ClientSocket->Close();
+				SocketSub->DestroySocket(ClientSocket);
+			}
+			else
+			{
+				Async(EAsyncExecution::ThreadPool, [this, ClientSocket]()
+				{
+					HandleConnection(ClientSocket);
+					ActiveConnectionCount.fetch_sub(1);
+				});
+			}
 		}
 		else
 		{
@@ -293,8 +372,9 @@ uint32 FMcpNativeTransport::Run()
 
 // ─── Connection Handler ─────────────────────────────────────────────────────
 
-void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket, ISocketSubsystem* SocketSub)
+void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 {
+	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	FParsedHttpRequest HttpReq;
 	if (!ReadHttpRequest(ClientSocket, HttpReq))
 	{
@@ -344,8 +424,16 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket, ISocketSubsyst
 	FMcpJsonRpcRequest Rpc = FMcpJsonRpc::ParseRequest(HttpReq.Body);
 	if (!Rpc.bValid)
 	{
-		FString ErrorBody = FMcpJsonRpc::BuildError(
-			0, FMcpJsonRpc::ErrorParseError, TEXT("Invalid JSON-RPC request"));
+		int32 ErrorCode = (Rpc.ErrorType == EMcpJsonRpcError::ParseError)
+			? FMcpJsonRpc::ErrorParseError
+			: FMcpJsonRpc::ErrorInvalidRequest;
+		// Echo id for InvalidRequest if available; null for ParseError per JSON-RPC 2.0
+		TSharedPtr<FJsonValue> ErrorId = (Rpc.ErrorType == EMcpJsonRpcError::ParseError)
+			? MakeShared<FJsonValueNull>()
+			: (Rpc.Id.IsValid() ? Rpc.Id : MakeShared<FJsonValueNull>());
+		FString ErrorBody = FMcpJsonRpc::BuildError(ErrorId, ErrorCode,
+			(Rpc.ErrorType == EMcpJsonRpcError::ParseError)
+				? TEXT("Parse error") : TEXT("Invalid Request"));
 		SendHttpResponse(ClientSocket, 400, TEXT("application/json"), ErrorBody);
 		ClientSocket->Close();
 		SocketSub->DestroySocket(ClientSocket);
@@ -472,8 +560,8 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 	}
 
 	// Parse headers
-	FString HeaderStr = FString(HeaderBuf.Num(),
-		reinterpret_cast<const char*>(HeaderBuf.GetData()));
+	FUTF8ToTCHAR HeaderConverter(reinterpret_cast<const ANSICHAR*>(HeaderBuf.GetData()), HeaderBuf.Num());
+	FString HeaderStr(HeaderConverter.Length(), HeaderConverter.Get());
 
 	TArray<FString> Lines;
 	HeaderStr.ParseIntoArray(Lines, TEXT("\r\n"));
@@ -559,8 +647,8 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 			}
 		}
 
-		OutRequest.Body = FString(TotalRead,
-			reinterpret_cast<const char*>(BodyBuf.GetData()));
+		FUTF8ToTCHAR BodyConverter(reinterpret_cast<const ANSICHAR*>(BodyBuf.GetData()), TotalRead);
+		OutRequest.Body = FString(BodyConverter.Length(), BodyConverter.Get());
 	}
 
 	return true;
@@ -633,23 +721,27 @@ bool FMcpNativeTransport::SendSSEHeaders(FSocket* Socket, const FString& Session
 		Utf8.Length());
 }
 
-bool FMcpNativeTransport::WriteSSEEvent(FSocket* Socket, const FString& EventData,
-	FCriticalSection& WriteMutex)
+bool FMcpNativeTransport::WriteSSEEvent(FSSEConnection& Conn, const FString& EventData)
 {
 	FString Frame = FString::Printf(
 		TEXT("event: message\ndata: %s\n\n"), *EventData);
 
 	FTCHARToUTF8 Utf8(*Frame);
 
-	FScopeLock Lock(&WriteMutex);
-	return SendAllBytes(Socket, reinterpret_cast<const uint8*>(Utf8.Get()),
+	FScopeLock Lock(&Conn.WriteMutex);
+	if (!Conn.Socket)
+	{
+		return false;
+	}
+	return SendAllBytes(Conn.Socket, reinterpret_cast<const uint8*>(Utf8.Get()),
 		Utf8.Length());
 }
 
 // ─── Initialize ─────────────────────────────────────────────────────────────
 
 FString FMcpNativeTransport::HandleInitialize(
-	const TSharedPtr<FJsonObject>& Params, int32 Id, FString& OutSessionId)
+	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
+	FString& OutSessionId)
 {
 	// Extract client info for logging
 	FString ClientName = TEXT("unknown");
@@ -665,9 +757,11 @@ FString FMcpNativeTransport::HandleInitialize(
 	}
 
 	OutSessionId = FGuid::NewGuid().ToString();
+	int32 CurrentSessionCount;
 	{
 		FScopeLock Lock(&SessionMutex);
 		ActiveSessions.Add(OutSessionId, FPlatformTime::Seconds());
+		CurrentSessionCount = ActiveSessions.Num();
 	}
 
 	auto Result = MakeShared<FJsonObject>();
@@ -701,14 +795,14 @@ FString FMcpNativeTransport::HandleInitialize(
 
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("MCP session initialized: %s (client: %s %s, active sessions: %d)"),
-		*OutSessionId, *ClientName, *ClientVersion, ActiveSessions.Num());
+		*OutSessionId, *ClientName, *ClientVersion, CurrentSessionCount);
 
 	return FMcpJsonRpc::BuildResponse(Id, Result);
 }
 
 // ─── Tools List ─────────────────────────────────────────────────────────────
 
-FString FMcpNativeTransport::HandleToolsList(int32 Id)
+FString FMcpNativeTransport::HandleToolsList(const TSharedPtr<FJsonValue>& Id)
 {
 	TSet<FString> EnabledTools = ToolManager.GetEnabledToolNames();
 	TSharedPtr<FJsonObject> ToolsList = SchemaLoader.GetFilteredToolsResponse(EnabledTools);
@@ -727,7 +821,7 @@ FString FMcpNativeTransport::HandleToolsList(int32 Id)
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────
 
 void FMcpNativeTransport::HandleToolsCall(
-	const TSharedPtr<FJsonObject>& Params, int32 Id,
+	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
 	FSocket* ClientSocket, const FString& SessionId)
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
@@ -753,13 +847,25 @@ void FMcpNativeTransport::HandleToolsCall(
 		return;
 	}
 
-	const TSharedPtr<FJsonObject>* ArgumentsPtr = nullptr;
 	TSharedPtr<FJsonObject> Arguments;
-	if (Params->TryGetObjectField(TEXT("arguments"), ArgumentsPtr) && ArgumentsPtr)
+	const TSharedPtr<FJsonValue> ArgsValue = Params->TryGetField(TEXT("arguments"));
+
+	if (ArgsValue.IsValid() && ArgsValue->Type != EJson::Null)
 	{
-		Arguments = *ArgumentsPtr;
+		if (ArgsValue->Type != EJson::Object)
+		{
+			FString ErrorBody = FMcpJsonRpc::BuildError(
+				Id, FMcpJsonRpc::ErrorInvalidParams,
+				TEXT("'arguments' must be an object if provided"));
+			SendHttpResponse(ClientSocket, 200, TEXT("application/json"), ErrorBody);
+			ClientSocket->Close();
+			if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+			return;
+		}
+		Arguments = ArgsValue->AsObject();
 	}
-	else
+
+	if (!Arguments.IsValid())
 	{
 		Arguments = MakeShared<FJsonObject>();
 	}
@@ -770,8 +876,28 @@ void FMcpNativeTransport::HandleToolsCall(
 		FString Action;
 		Arguments->TryGetStringField(TEXT("action"), Action);
 		TSharedPtr<FJsonObject> Result = ToolManager.HandleAction(Action, Arguments);
+		bool bActionSuccess = Result.IsValid() && Result->GetBoolField(TEXT("success"));
+		FString ActionMessage = TEXT("OK");
+		if (!bActionSuccess && Result.IsValid())
+		{
+			Result->TryGetStringField(TEXT("error"), ActionMessage);
+		}
 		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
-			true, TEXT("OK"), Result);
+			bActionSuccess, ActionMessage, Result);
+		FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
+		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body);
+		ClientSocket->Close();
+		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		return;
+	}
+
+	// Enforce tool enabled check — tools/list filters, tools/call must also enforce
+	if (!ToolManager.IsToolEnabled(ToolName))
+	{
+		TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
+			false,
+			FString::Printf(TEXT("Tool '%s' is not enabled"), *ToolName),
+			nullptr, TEXT("TOOL_DISABLED"));
 		FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
 		SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body);
 		ClientSocket->Close();
@@ -799,6 +925,7 @@ void FMcpNativeTransport::HandleToolsCall(
 		Conn->JsonRpcId = Id;
 		Conn->StartTime = FPlatformTime::Seconds();
 		Conn->ToolName = ToolName;
+		Conn->SessionId = SessionId;
 		SSEConnections.Add(RequestId, Conn);
 	}
 
@@ -841,31 +968,57 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		SSEConnections.Remove(RequestId);
 	}
 
-	if (!Conn.IsValid() || !Conn->Socket)
+	if (!Conn.IsValid())
 	{
 		return true;  // Already cleaned up
 	}
 
-	// Build final JSON-RPC result
+	// Signal any snapshot holders (e.g. BroadcastToolsListChanged) that
+	// this connection is being torn down — prevents them from attempting writes.
+	Conn->bMarkedForRemoval.store(true);
+
+	// Build final JSON-RPC result (cheap, no I/O)
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
 		bSuccess, Message, Result, ErrorCode);
 	FString ResponseBody = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, ToolResult);
 
-	// Send as final SSE event
-	WriteSSEEvent(Conn->Socket, ResponseBody, Conn->WriteMutex);
+	// Offload blocking write + close to thread pool so GameThread is not blocked
+	FString CapturedRequestId = RequestId;
+	FString CapturedToolName = Conn->ToolName;
+	bool bCapturedSuccess = bSuccess;
 
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("tools/call completed: %s (tool=%s, success=%s)"),
-		*RequestId, *Conn->ToolName, bSuccess ? TEXT("true") : TEXT("false"));
-
-	// Close the connection
-	Conn->Socket->Close();
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-	if (SocketSub)
+	Async(EAsyncExecution::ThreadPool,
+		[Conn, ResponseBody = MoveTemp(ResponseBody),
+		 CapturedRequestId, CapturedToolName, bCapturedSuccess]()
 	{
-		SocketSub->DestroySocket(Conn->Socket);
-	}
-	Conn->Socket = nullptr;
+		{
+			FScopeLock WriteLock(&Conn->WriteMutex);
+			if (!Conn->Socket)
+			{
+				return;  // Already cleaned up by Shutdown
+			}
+
+			// Inline SSE write — we already hold WriteMutex
+			FString Frame = FString::Printf(
+				TEXT("event: message\ndata: %s\n\n"), *ResponseBody);
+			FTCHARToUTF8 Utf8(*Frame);
+			SendAllBytes(Conn->Socket,
+				reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+
+			Conn->Socket->Close();
+			ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+			if (SocketSub)
+			{
+				SocketSub->DestroySocket(Conn->Socket);
+			}
+			Conn->Socket = nullptr;
+		}
+
+		UE_LOG(LogMcpNativeTransport, Log,
+			TEXT("tools/call completed: %s (tool=%s, success=%s)"),
+			*CapturedRequestId, *CapturedToolName,
+			bCapturedSuccess ? TEXT("true") : TEXT("false"));
+	});
 
 	return true;
 }
@@ -889,28 +1042,60 @@ void FMcpNativeTransport::TouchPendingRequest(const FString& RequestId)
 void FMcpNativeTransport::SendSSEProgressUpdate(
 	const FString& RequestId, float Percent, const FString& Message)
 {
-	FScopeLock Lock(&SSEConnectionsMutex);
-	TSharedPtr<FSSEConnection>* Found = SSEConnections.Find(RequestId);
-	if (!Found || !Found->IsValid() || !(*Found)->Socket)
+	TSharedPtr<FSSEConnection> Conn;
+	FString CapturedSessionId;
 	{
-		return;
+		FScopeLock Lock(&SSEConnectionsMutex);
+		TSharedPtr<FSSEConnection>* Found = SSEConnections.Find(RequestId);
+		if (!Found || !Found->IsValid() || !(*Found)->Socket
+			|| (*Found)->bMarkedForRemoval.load())
+		{
+			return;
+		}
+		Conn = *Found;
+		CapturedSessionId = Conn->SessionId;
 	}
 
-	TSharedPtr<FSSEConnection>& Conn = *Found;
-
+	// Build progress JSON before offloading (cheap, no I/O)
 	FString ProgressJson = FMcpJsonRpc::BuildProgressNotification(
 		RequestId, Percent, 100.0f, Message);
 
-	if (!WriteSSEEvent(Conn->Socket, ProgressJson, Conn->WriteMutex))
-	{
-		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("SSE write failed for request %s — client may have disconnected"),
-			*RequestId);
-		// Don't remove here — CleanupStaleRequests or CompletePendingRequest will handle it
-	}
+	// Capture state for async closure
+	FString CapturedRequestId = RequestId;
+	FCriticalSection* SSEMutexPtr = &SSEConnectionsMutex;
+	FCriticalSection* SessionMutexPtr = &SessionMutex;
+	TMap<FString, double>* ActiveSessionsPtr = &ActiveSessions;
 
-	// Reset timeout
-	Conn->StartTime = FPlatformTime::Seconds();
+	Async(EAsyncExecution::ThreadPool,
+		[Conn, ProgressJson = MoveTemp(ProgressJson), CapturedRequestId,
+		 CapturedSessionId, SSEMutexPtr, SessionMutexPtr, ActiveSessionsPtr]()
+	{
+		if (WriteSSEEvent(*Conn, ProgressJson))
+		{
+			// Reset SSE request timeout
+			{
+				FScopeLock Lock(SSEMutexPtr);
+				Conn->StartTime = FPlatformTime::Seconds();
+			}
+			// Touch session so long-running tool calls don't expire the session
+			if (!CapturedSessionId.IsEmpty())
+			{
+				FScopeLock Lock(SessionMutexPtr);
+				double* LastActivity = ActiveSessionsPtr->Find(CapturedSessionId);
+				if (LastActivity)
+				{
+					*LastActivity = FPlatformTime::Seconds();
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogMcpNativeTransport, Warning,
+				TEXT("SSE write failed for request %s — marking for removal"),
+				*CapturedRequestId);
+			Conn->bMarkedForRemoval.store(true);
+		}
+	});
 }
 
 void FMcpNativeTransport::CleanupStaleRequests()
@@ -923,7 +1108,8 @@ void FMcpNativeTransport::CleanupStaleRequests()
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (const auto& [RequestId, Conn] : SSEConnections)
 		{
-			if (Conn.IsValid() && Now - Conn->StartTime > RequestTimeoutSeconds)
+			if (Conn.IsValid() && (Now - Conn->StartTime > RequestTimeoutSeconds
+				|| Conn->bMarkedForRemoval.load()))
 			{
 				Expired.Add(RequestId);
 			}
@@ -1005,7 +1191,7 @@ void FMcpNativeTransport::BroadcastToolsListChanged()
 		Snapshot.Reserve(SSEConnections.Num());
 		for (auto& [ReqId, Conn] : SSEConnections)
 		{
-			if (Conn.IsValid() && Conn->Socket)
+			if (Conn.IsValid() && !Conn->bMarkedForRemoval.load())
 			{
 				Snapshot.Add(Conn);
 			}
@@ -1014,10 +1200,11 @@ void FMcpNativeTransport::BroadcastToolsListChanged()
 
 	for (const auto& Conn : Snapshot)
 	{
-		if (!WriteSSEEvent(Conn->Socket, NotificationJson, Conn->WriteMutex))
+		if (!WriteSSEEvent(*Conn, NotificationJson))
 		{
+			Conn->bMarkedForRemoval.store(true);
 			UE_LOG(LogMcpNativeTransport, Warning,
-				TEXT("Failed to send list_changed to SSE connection (tool=%s)"),
+				TEXT("Failed to send list_changed to SSE connection (tool=%s) — marking for removal"),
 				*Conn->ToolName);
 		}
 	}

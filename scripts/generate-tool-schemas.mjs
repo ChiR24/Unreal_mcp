@@ -9,9 +9,15 @@
  * Usage:  npx tsx scripts/generate-tool-schemas.mjs
  */
 
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
+
+if (platform() === 'win32') {
+  console.error('This script is not supported on Windows. Use macOS or Linux.');
+  process.exit(1);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -36,6 +42,7 @@ const outPath = resolve(
   ROOT,
   'plugins/McpAutomationBridge/Resources/MCP/tool-schemas.json'
 );
+mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, json + '\n', 'utf-8');
 
 console.log(`Written ${tools.length} tool schemas to ${outPath}`);

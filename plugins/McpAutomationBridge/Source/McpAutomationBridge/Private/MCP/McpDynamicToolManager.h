@@ -53,15 +53,21 @@ private:
 	TMap<FString, bool> InitialToolEnabled;
 	TMap<FString, bool> InitialCategoryEnabled;
 
+	/** Protects ToolStates, CategoryStates, InitialToolEnabled, InitialCategoryEnabled. */
+	mutable FCriticalSection StateMutex;
+
+	/** Lock-free impl — caller must hold StateMutex. */
+	bool IsToolEnabled_NoLock(const FString& ToolName) const;
+
 	// Actions
 	TSharedPtr<FJsonObject> ListTools();
 	TSharedPtr<FJsonObject> ListCategories();
-	TSharedPtr<FJsonObject> EnableTools(const TArray<FString>& ToolNames);
-	TSharedPtr<FJsonObject> DisableTools(const TArray<FString>& ToolNames);
-	TSharedPtr<FJsonObject> EnableCategory(const FString& Category);
-	TSharedPtr<FJsonObject> DisableCategory(const FString& Category);
+	TSharedPtr<FJsonObject> EnableTools(const TArray<FString>& ToolNames, bool& bOutChanged);
+	TSharedPtr<FJsonObject> DisableTools(const TArray<FString>& ToolNames, bool& bOutChanged);
+	TSharedPtr<FJsonObject> EnableCategory(const FString& Category, bool& bOutChanged);
+	TSharedPtr<FJsonObject> DisableCategory(const FString& Category, bool& bOutChanged);
 	TSharedPtr<FJsonObject> GetStatus();
-	TSharedPtr<FJsonObject> Reset();
+	TSharedPtr<FJsonObject> Reset(bool& bOutChanged);
 
 	static bool IsProtectedTool(const FString& Name);
 	static bool IsProtectedCategory(const FString& Name);

@@ -409,15 +409,20 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
     const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
-  // Native MCP HTTP path: when Socket is nullptr, try HTTP transport first
+  // Native MCP HTTP path: TargetSocket==nullptr means this originated from HTTP.
+  // If NativeTransport exists, route exclusively to it — never fall through to
+  // WebSocket, which would broadcast to all WS clients.
   if (!TargetSocket.IsValid() && NativeTransport)
   {
-    if (NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
+    if (!NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
     {
-      return;  // Handled by HTTP transport
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("Native HTTP response for %s dropped — request already expired or unknown"),
+        *RequestId);
     }
+    return;
   }
-  // Existing WebSocket path
+  // WebSocket path (TargetSocket is valid, or no NativeTransport configured)
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
                                               Message, Result, ErrorCode);

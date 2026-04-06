@@ -952,7 +952,7 @@
               "redo",
               "save_all"
             ],
-            "description": "Editor action"
+            "description": "Editor action. Note: screenshot/take_screenshot is async — the file is written on the next rendered viewport frame, not immediately. The editor window must be visible and actively rendering for capture to complete."
           },
           "location": {
             "type": "object",

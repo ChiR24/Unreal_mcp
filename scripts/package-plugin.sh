@@ -22,10 +22,10 @@ ENGINE_DIR="${1:?Usage: $0 <UnrealEngineDir> [OutputDir] [extra RunUAT args...]}
 shift
 
 OUTPUT_DIR=""
-EXTRA_ARGS=""
+EXTRA_ARGS=()
 for arg in "$@"; do
     case "$arg" in
-        -*) EXTRA_ARGS="$EXTRA_ARGS $arg" ;;
+        -*) EXTRA_ARGS+=("$arg") ;;
         *)  [ -z "$OUTPUT_DIR" ] && OUTPUT_DIR="$arg" ;;
     esac
 done
@@ -67,19 +67,27 @@ if [ ! -f "$RUN_UAT" ]; then
     exit 1
 fi
 
+# ─── Preflight: python3 ─────────────────────────────────────────────────────
+
+if ! command -v python3 &>/dev/null; then
+    echo "ERROR: python3 is required but not found in PATH."
+    echo "Install Python 3 or ensure it is on your PATH."
+    exit 1
+fi
+
 # ─── Extract version info ───────────────────────────────────────────────────
 
-# Get UE version from the engine
+# Get UE version from the engine (paths passed via argv to avoid quoting issues)
 UE_VERSION_FILE="$ENGINE_DIR/Engine/Build/Build.version"
 if [ -f "$UE_VERSION_FILE" ]; then
-    UE_MAJOR=$(python3 -c "import json; print(json.load(open('$UE_VERSION_FILE'))['MajorVersion'])" 2>/dev/null || echo "5")
-    UE_MINOR=$(python3 -c "import json; print(json.load(open('$UE_VERSION_FILE'))['MinorVersion'])" 2>/dev/null || echo "x")
+    UE_MAJOR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['MajorVersion'])" "$UE_VERSION_FILE" 2>/dev/null || echo "5")
+    UE_MINOR=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['MinorVersion'])" "$UE_VERSION_FILE" 2>/dev/null || echo "x")
     UE_VER="${UE_MAJOR}.${UE_MINOR}"
 else
     UE_VER="unknown"
 fi
 
-PLUGIN_VER=$(python3 -c "import json; print(json.load(open('$PLUGIN_FILE'))['VersionName'])" 2>/dev/null || echo "0.0.0")
+PLUGIN_VER=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['VersionName'])" "$PLUGIN_FILE" 2>/dev/null || echo "0.0.0")
 
 PACKAGE_DIR="$OUTPUT_DIR/McpAutomationBridge"
 ZIP_NAME="McpAutomationBridge-v${PLUGIN_VER}-UE${UE_VER}-${PLATFORM}.zip"
@@ -102,7 +110,7 @@ echo "Building plugin..."
     -Plugin="$PLUGIN_FILE" \
     -Package="$PACKAGE_DIR" \
     -TargetPlatforms="$PLATFORM" \
-    -Rocket $EXTRA_ARGS
+    -Rocket "${EXTRA_ARGS[@]}"
 
 echo ""
 echo "Build complete."
@@ -114,13 +122,14 @@ if [ -f "$OUTPUT_UPLUGIN" ]; then
     echo "Setting Installed=true in output .uplugin..."
     python3 -c "
 import json, sys
-with open('$OUTPUT_UPLUGIN', 'r') as f:
-    data = json.load(f)
+f = sys.argv[1]
+with open(f, 'r') as fh:
+    data = json.load(fh)
 data['Installed'] = True
-with open('$OUTPUT_UPLUGIN', 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
-"
+with open(f, 'w') as fh:
+    json.dump(data, fh, indent=2)
+    fh.write('\n')
+" "$OUTPUT_UPLUGIN"
 fi
 
 # ─── Zip ─────────────────────────────────────────────────────────────────────

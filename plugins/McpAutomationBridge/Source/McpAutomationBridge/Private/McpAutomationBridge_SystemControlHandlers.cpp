@@ -534,16 +534,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       PlatformFile.CreateDirectoryTree(*TempDir);
     }
 
-    FString SafeId = RequestId.Replace(TEXT("-"), TEXT(""));
+    FString SafeId = FGuid::NewGuid().ToString(EGuidFormats::Digits);
     FString ScriptPath = TempDir / FString::Printf(TEXT("mcp_exec_%s.py"), *SafeId);
     FString OutputPath = TempDir / FString::Printf(TEXT("output_%s.txt"), *SafeId);
     FString ErrorPath  = TempDir / FString::Printf(TEXT("error_%s.txt"), *SafeId);
     FString StatusPath = TempDir / FString::Printf(TEXT("status_%s.txt"), *SafeId);
+    FString CodePath   = TempDir / FString::Printf(TEXT("code_%s.py"), *SafeId);
 
-    // Normalize paths for Python (forward slashes everywhere)
-    FString PyOutputPath = OutputPath.Replace(TEXT("\\"), TEXT("/"));
-    FString PyErrorPath  = ErrorPath.Replace(TEXT("\\"), TEXT("/"));
-    FString PyStatusPath = StatusPath.Replace(TEXT("\\"), TEXT("/"));
+    // Normalize paths for Python (forward slashes, escape single quotes for r'...' literals)
+    auto NormalizePyPath = [](const FString& Path) -> FString {
+      return Path.Replace(TEXT("\\"), TEXT("/")).Replace(TEXT("'"), TEXT("\\'"));
+    };
+    FString PyOutputPath = NormalizePyPath(OutputPath);
+    FString PyErrorPath  = NormalizePyPath(ErrorPath);
+    FString PyStatusPath = NormalizePyPath(StatusPath);
 
     // Build Python wrapper
     FString Wrapper;
@@ -556,13 +560,48 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     Wrapper += TEXT("try:\n");
 
     if (bHasCode) {
-      // Escape triple quotes in user code so the wrapper string stays intact
-      FString EscapedCode = Code.Replace(TEXT("'''"), TEXT("\\x27\\x27\\x27"));
-      Wrapper += TEXT("    _user_code = '''") + EscapedCode + TEXT("'''\n");
-      Wrapper += TEXT("    exec(compile(_user_code, '<mcp>', 'exec'))\n");
+      // Write user code to a separate temp file to avoid backslash/quote escaping
+      // issues in triple-quoted strings — then read it back in the wrapper.
+      if (!FFileHelper::SaveStringToFile(Code, *CodePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Failed to write temp code file: %s"), *CodePath),
+                            TEXT("FILE_WRITE_FAILED"));
+        return true;
+      }
+      FString PyCodePath = NormalizePyPath(CodePath);
+      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyCodePath);
+      Wrapper += TEXT("        _user_code = _f.read()\n");
+      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyCodePath);
     } else {
-      FString PyFilePath = File.Replace(TEXT("\\"), TEXT("/"));
-      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r') as _f:\n"), *PyFilePath);
+      // SECURITY: Sanitize file path to prevent directory traversal
+      FString SafeFilePath = SanitizeProjectFilePath(File);
+      if (SafeFilePath.IsEmpty()) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Invalid or unsafe file path: %s"), *File),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      // Resolve absolute path and verify it stays within project directory
+      FString AbsoluteFilePath = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / SafeFilePath);
+      FPaths::NormalizeFilename(AbsoluteFilePath);
+
+      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
+      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
+        NormalizedProjectDir += TEXT("/");
+      }
+
+      if (!AbsoluteFilePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
+        SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("File path escapes project directory: %s"), *File),
+                            TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+
+      // Use absolute path in Python wrapper (forward slashes)
+      FString PyFilePath = NormalizePyPath(AbsoluteFilePath);
+      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r', encoding='utf-8') as _f:\n"), *PyFilePath);
       Wrapper += TEXT("        _user_code = _f.read()\n");
       Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyFilePath);
     }
@@ -612,6 +651,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     PlatformFile.DeleteFile(*OutputPath);
     PlatformFile.DeleteFile(*ErrorPath);
     PlatformFile.DeleteFile(*StatusPath);
+    PlatformFile.DeleteFile(*CodePath);
 
     // Check if Python is available
     if (!bExecHandled && Status.IsEmpty()) {

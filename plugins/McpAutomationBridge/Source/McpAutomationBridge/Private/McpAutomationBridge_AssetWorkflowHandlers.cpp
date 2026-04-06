@@ -2345,12 +2345,8 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     Filter.PackagePaths.Add(FName(TEXT("/Game")));
   }
 
-  // Ensure registry is up to date for the requested paths
-  TArray<FString> ScanPaths;
-  for (const FName &Path : Filter.PackagePaths) {
-    ScanPaths.Add(Path.ToString());
-  }
-  AssetRegistry.ScanPathsSynchronous(ScanPaths, true);
+  // Use cached AssetRegistry data — ScanPathsSynchronous() removed to prevent
+  // blocking the GameThread (causes SSE/HTTP transport timeouts).
 
   if (!ClassFilter.IsEmpty()) {
     // Support both short class names and full paths (best effort)
