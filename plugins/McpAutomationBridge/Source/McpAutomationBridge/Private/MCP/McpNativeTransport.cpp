@@ -158,10 +158,11 @@ void FMcpNativeTransport::Shutdown()
 		Thread = nullptr;
 	}
 
-	// Wait for in-flight connection handlers to finish
+	// Wait for in-flight connection handlers and async writes to finish
 	{
 		double WaitDeadline = FPlatformTime::Seconds() + 10.0;
-		while (ActiveConnectionCount.load() > 0 && FPlatformTime::Seconds() < WaitDeadline)
+		while ((ActiveConnectionCount.load() > 0 || PendingAsyncWrites.load() > 0)
+			&& FPlatformTime::Seconds() < WaitDeadline)
 		{
 			FPlatformProcess::Sleep(0.01f);
 		}
@@ -986,15 +987,17 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	FString CapturedRequestId = RequestId;
 	FString CapturedToolName = Conn->ToolName;
 	bool bCapturedSuccess = bSuccess;
+	PendingAsyncWrites.fetch_add(1);
 
 	Async(EAsyncExecution::ThreadPool,
-		[Conn, ResponseBody = MoveTemp(ResponseBody),
+		[this, Conn, ResponseBody = MoveTemp(ResponseBody),
 		 CapturedRequestId, CapturedToolName, bCapturedSuccess]()
 	{
 		{
 			FScopeLock WriteLock(&Conn->WriteMutex);
 			if (!Conn->Socket)
 			{
+				PendingAsyncWrites.fetch_sub(1);
 				return;  // Already cleaned up by Shutdown
 			}
 
@@ -1018,6 +1021,8 @@ bool FMcpNativeTransport::CompletePendingRequest(
 			TEXT("tools/call completed: %s (tool=%s, success=%s)"),
 			*CapturedRequestId, *CapturedToolName,
 			bCapturedSuccess ? TEXT("true") : TEXT("false"));
+
+		PendingAsyncWrites.fetch_sub(1);
 	});
 
 	return true;
@@ -1060,28 +1065,32 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 	FString ProgressJson = FMcpJsonRpc::BuildProgressNotification(
 		RequestId, Percent, 100.0f, Message);
 
-	// Capture state for async closure
 	FString CapturedRequestId = RequestId;
-	FCriticalSection* SSEMutexPtr = &SSEConnectionsMutex;
-	FCriticalSection* SessionMutexPtr = &SessionMutex;
-	TMap<FString, double>* ActiveSessionsPtr = &ActiveSessions;
+	PendingAsyncWrites.fetch_add(1);
 
 	Async(EAsyncExecution::ThreadPool,
-		[Conn, ProgressJson = MoveTemp(ProgressJson), CapturedRequestId,
-		 CapturedSessionId, SSEMutexPtr, SessionMutexPtr, ActiveSessionsPtr]()
+		[this, Conn, ProgressJson = MoveTemp(ProgressJson), CapturedRequestId,
+		 CapturedSessionId]()
 	{
+		// Guard: if transport is shutting down, bail out
+		if (bStopping.load())
+		{
+			PendingAsyncWrites.fetch_sub(1);
+			return;
+		}
+
 		if (WriteSSEEvent(*Conn, ProgressJson))
 		{
 			// Reset SSE request timeout
 			{
-				FScopeLock Lock(SSEMutexPtr);
+				FScopeLock Lock(&SSEConnectionsMutex);
 				Conn->StartTime = FPlatformTime::Seconds();
 			}
 			// Touch session so long-running tool calls don't expire the session
 			if (!CapturedSessionId.IsEmpty())
 			{
-				FScopeLock Lock(SessionMutexPtr);
-				double* LastActivity = ActiveSessionsPtr->Find(CapturedSessionId);
+				FScopeLock Lock(&SessionMutex);
+				double* LastActivity = ActiveSessions.Find(CapturedSessionId);
 				if (LastActivity)
 				{
 					*LastActivity = FPlatformTime::Seconds();
@@ -1095,6 +1104,8 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 				*CapturedRequestId);
 			Conn->bMarkedForRemoval.store(true);
 		}
+
+		PendingAsyncWrites.fetch_sub(1);
 	});
 }
 

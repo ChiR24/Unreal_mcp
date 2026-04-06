@@ -144,6 +144,7 @@ private:
 	std::atomic<bool> bStopping{false};
 	std::atomic<bool> bBindSuccess{false};
 	std::atomic<int32> ActiveConnectionCount{0};
+	std::atomic<int32> PendingAsyncWrites{0};  // tracks in-flight SSE progress/complete writes
 	static constexpr int32 MaxConcurrentConnections = 16;
 
 	// Session state (multi-session, with activity tracking)
