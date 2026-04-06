@@ -62,6 +62,36 @@ function clientSupportsListChanged(clientName: string | undefined): boolean {
     return false;
 }
 
+const TOOLS_LIST_HIDE_OUTPUT_SCHEMA_ENV = 'MCP_TOOLS_LIST_HIDE_OUTPUT_SCHEMA';
+
+function shouldHideToolsListOutputSchema(): boolean {
+    const raw = process.env[TOOLS_LIST_HIDE_OUTPUT_SCHEMA_ENV];
+    if (!raw) {
+        return false;
+    }
+
+    const normalized = raw.toLowerCase().trim();
+    return normalized === 'true' || normalized === '1' || normalized === 'on';
+}
+
+function getPublishedToolDefinition(tool: ToolDefinition): Record<string, unknown> {
+    try {
+        const copy = JSON.parse(JSON.stringify(tool)) as Record<string, unknown>;
+        if (shouldHideToolsListOutputSchema()) {
+            delete copy.outputSchema;
+        }
+        return copy;
+    } catch (_e) {
+        if (shouldHideToolsListOutputSchema()) {
+            const fallback = { ...tool } as Record<string, unknown>;
+            delete fallback.outputSchema;
+            return fallback;
+        }
+
+        return tool as Record<string, unknown>;
+    }
+}
+
 export class ToolRegistry {
     private defaultElicitationTimeoutMs = 60000;
     private currentCategories: string[] = parseDefaultCategories();
@@ -77,6 +107,54 @@ export class ToolRegistry {
         private levelResources: LevelResources,
         private ensureConnected: () => Promise<boolean>
     ) { }
+
+    private async proxyPipelineCatalogCall(action: 'list_categories' | 'get_status'): Promise<Record<string, unknown>> {
+        if (!this.automationBridge || !this.automationBridge.isConnected()) {
+            return {
+                success: false,
+                error: 'Automation bridge not connected',
+                errorCode: 'AUTOMATION_BRIDGE_NOT_CONNECTED',
+                message: `manage_pipeline ${action} requires a live Unreal automation bridge. Use manage_tools for local tool-category controls.`
+            };
+        }
+
+        try {
+            const response = await this.automationBridge.sendAutomationRequest(
+                'manage_pipeline',
+                {
+                    action: 'manage_pipeline',
+                    subAction: action
+                },
+                { timeoutMs: 30000 }
+            ) as Record<string, unknown>;
+
+            const message = typeof response?.message === 'string' ? response.message : undefined;
+            if (!response || response.success === false) {
+                return cleanObject({
+                    success: false,
+                    error: typeof response?.error === 'string' ? response.error : `manage_pipeline ${action} failed`,
+                    errorCode: typeof response?.errorCode === 'string' ? response.errorCode : 'PIPELINE_CATALOG_ERROR',
+                    message: message ?? `manage_pipeline ${action} failed.`
+                }) as Record<string, unknown>;
+            }
+
+            const result = response.result && typeof response.result === 'object'
+                ? response.result as Record<string, unknown>
+                : response;
+
+            return cleanObject({
+                success: true,
+                ...(message ? { message } : {}),
+                ...result
+            }) as Record<string, unknown>;
+        } catch (error) {
+            return {
+                success: false,
+                error: `Failed to query bridge catalog via manage_pipeline ${action}: ${error instanceof Error ? error.message : String(error)}`,
+                errorCode: 'PIPELINE_CATALOG_UNAVAILABLE'
+            };
+        }
+    }
     
     private async handlePipelineCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
         const action = args.action as string;
@@ -92,28 +170,14 @@ export class ToolRegistry {
             }).catch(err => this.logger.error('Failed to send list_changed notification', err));
 
             return { success: true, message: `Categories updated to ${this.currentCategories.join(', ')}`, categories: this.currentCategories };
-        } else if (action === 'list_categories') {
-            const categories = dynamicToolManager.listCategories();
-            return { 
-                success: true, 
-                categories: this.currentCategories, 
-                available: ['core', 'world', 'authoring', 'gameplay', 'utility', 'all'],
-                categoryDetails: categories.map(c => ({
-                    name: c.name,
-                    enabled: c.enabled,
-                    toolCount: c.toolCount,
-                    enabledCount: c.enabledCount
-                }))
-            };
-        } else if (action === 'get_status') {
-            const status = dynamicToolManager.getStatus();
-            return { 
-                success: true, 
-                categories: this.currentCategories,
-                toolCount: status.totalTools,
-                enabledCount: status.enabledTools,
-                disabledCount: status.disabledTools,
-                filteredCount: dynamicToolManager.getEnabledToolDefinitions().length
+        } else if (action === 'list_categories' || action === 'get_status') {
+            return await this.proxyPipelineCatalogCall(action);
+        } else if (action !== 'run_ubt') {
+            return {
+                success: false,
+                error: 'UNKNOWN_ACTION',
+                errorCode: 'UNKNOWN_ACTION',
+                message: 'manage_pipeline is reserved for build and bridge-catalog discovery. Use manage_tools for dynamic category controls.'
             };
         }
         // Delegate unknown actions (like run_ubt) to the registered handler in consolidated-tool-handlers
@@ -464,7 +528,7 @@ export class ToolRegistry {
             const allTools = dynamicToolManager.getAllToolDefinitions();
             const status = dynamicToolManager.getStatus();
             
-            // Filter by: 1) tool enabled in DynamicToolManager, 2) category, 3) hide manage_pipeline from non-dynamic clients
+            // Filter by tool enabled state and category; manage_pipeline remains public for all clients.
             const filtered = allTools
                 .filter((t: ToolDefinition) => {
                     // Check if tool is enabled
@@ -475,25 +539,14 @@ export class ToolRegistry {
                     if (category && !effectiveCategories.includes(category) && !effectiveCategories.includes('all')) {
                         return false;
                     }
-                    
-                    // Hide manage_pipeline from clients that can't use it
-                    if (!supportsListChanged && t.name === 'manage_pipeline') return false;
-                    
+
                     return true;
                 });
             
             this.logger.debug(`Tool filtering: ${status.enabledTools}/${status.totalTools} enabled, ${filtered.length} visible`);
             
-            const sanitized = filtered.map((t: ToolDefinition) => {
-                try {
-                    const copy = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
-                    delete copy.outputSchema;
-                    return copy;
-                } catch (_e) {
-                    return t;
-                }
-            });
-            return { tools: sanitized };
+            const publishedTools = filtered.map((tool: ToolDefinition) => getPublishedToolDefinition(tool));
+            return { tools: publishedTools };
         });
 
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {

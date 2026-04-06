@@ -310,12 +310,12 @@ export class AnimationTools {
         const bridge = this.automationBridge;
         try {
           const payload = cleanObject({
-            subAction: 'add_state_machine',
+            action: 'add_state_machine',
             blueprintPath,
             stateMachineName: machineName
           });
 
-          const resp = await bridge.sendAutomationRequest('manage_animation_authoring', payload, { timeoutMs: 60000 });
+          const resp = await bridge.sendAutomationRequest('animation_physics', payload, { timeoutMs: 60000 });
           const result = resp?.result ?? resp;
           const resultObj = result && typeof result === 'object' ? result as Record<string, unknown> : undefined;
           const isSuccess = resp && resp.success !== false && !!resultObj;
@@ -337,8 +337,8 @@ export class AnimationTools {
             const addedStateNames: string[] = [];
             if (normalizedStates.length > 0) {
               const stateResults = await Promise.all(normalizedStates.map(state =>
-                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                  subAction: 'add_state',
+                bridge.sendAutomationRequest('animation_physics', cleanObject({
+                  action: 'add_state',
                   blueprintPath,
                   stateMachineName: machineName,
                   stateName: state.name
@@ -363,8 +363,8 @@ export class AnimationTools {
             // Add transitions if provided - use Promise.all for parallel execution
             if (normalizedTransitions.length > 0) {
               const transitionResults = await Promise.all(normalizedTransitions.map(transition =>
-                bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                  subAction: 'add_transition',
+                bridge.sendAutomationRequest('animation_physics', cleanObject({
+                  action: 'add_transition',
                   blueprintPath,
                   stateMachineName: machineName,
                   fromState: transition.sourceState,
@@ -380,8 +380,8 @@ export class AnimationTools {
                 // Rollback: Delete any states that were added
                 if (addedStateNames.length > 0) {
                   await Promise.all(addedStateNames.map(stateName =>
-                    bridge.sendAutomationRequest('manage_animation_authoring', cleanObject({
-                      subAction: 'delete_state',
+                    bridge.sendAutomationRequest('animation_physics', cleanObject({
+                      action: 'delete_state',
                       blueprintPath,
                       stateMachineName: machineName,
                       stateName

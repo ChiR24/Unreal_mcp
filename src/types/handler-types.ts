@@ -42,6 +42,18 @@ export interface HandlerArgs {
     [key: string]: unknown;
 }
 
+export interface WidgetBindingArgs extends HandlerArgs {
+    widgetPath?: string;
+    slotName?: string;
+    propertyName?: string;
+    bindingType?: string;
+    bindingSource?: string;
+    functionName?: string;
+    ensureVariable?: boolean;
+    onHoveredFunction?: string;
+    onUnhoveredFunction?: string;
+}
+
 /**
  * Standard response from automation bridge requests.
  * Re-exported from automation-responses.ts for convenience.
@@ -160,6 +172,9 @@ export interface BlueprintArgs extends HandlerArgs {
     graphName?: string;
     x?: number;
     y?: number;
+    nodeIds?: string[];
+    limit?: number;
+    cursor?: string;
     memberName?: string;
     nodeId?: string;
     pinName?: string;
@@ -244,8 +259,82 @@ export interface EditorArgs extends HandlerArgs {
     bookmarkName?: string;
     assetPath?: string;
     path?: string;
+    graphName?: string;
+    nodeGuid?: string;
+    nodeName?: string;
+    nodeTitle?: string;
+    scope?: string;
+    viewLocation?: Record<string, number>;
+    delta?: Record<string, number>;
+    zoomAmount?: number;
+    preserveZoom?: boolean;
     category?: string;
     preferences?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+    timeoutMs?: number;
+    frameRate?: number;
+    durationSeconds?: number;
+    mode?: string;
+    surface?: string;
+    widgetName?: string;
+    widgetPath?: string;
+    widgetObjectPath?: string;
+    templateObjectPath?: string;
+    appendOrToggle?: boolean;
+    rect?: Record<string, number>;
+    deltaTime?: number;
+    levelPath?: string;
+    actorName?: string;
+    name?: string;
+    stat?: string;
+    section?: string;
+    key?: string;
+    value?: unknown;
+    inputAction?: string;
+    inputType?: string;
+    type?: string;
+    axis?: string;
+    includeMenus?: boolean;
+    windowTitle?: string;
+    tabId?: string;
+    captureScreenshots?: boolean;
+    text?: string;
+    submit?: boolean;
+    button?: string;
+    x?: number;
+    y?: number;
+    clientX?: number;
+    clientY?: number;
+    wheelSteps?: number;
+    preciseDelta?: number;
+    holdDurationMs?: number;
+    durationMs?: number;
+    holdBeforeMoveMs?: number;
+    holdAfterMoveMs?: number;
+    steps?: number;
+    start?: Record<string, number>;
+    end?: Record<string, number>;
+}
+
+// ============================================================================
+// UI Types
+// ============================================================================
+
+export interface UiArgs extends HandlerArgs {
+    identifier?: string;
+    tabId?: string;
+    windowTitle?: string;
+    name?: string;
+    label?: string;
+    tooltip?: string;
+    iconName?: string;
+    kind?: string;
+    command?: string;
+    assetPath?: string;
+    menuName?: string;
+    sectionName?: string;
+    entryName?: string;
+    commandName?: string;
     timeoutMs?: number;
 }
 

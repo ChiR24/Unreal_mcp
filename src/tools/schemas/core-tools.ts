@@ -27,12 +27,12 @@ export interface ToolDefinition {
 export const coreToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',
-    description: 'Build automation and pipeline control. Actions: run_ubt (compile targets), list_categories (show tool categories), get_status (bridge status). Routes to system_control internally.',
+    description: 'Build automation and bridge discovery. Actions: run_ubt (compile targets), list_categories (return the public bridge-owned MCP runtime capability matrix), get_status (return bridge status plus catalog-derived capability counts). Dynamic category controls live on manage_tools.',
     category: 'core',
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: show available tool categories. get_status: get bridge status.' },
+        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: return the public bridge-owned MCP runtime capability matrix. get_status: return bridge status plus catalog-derived capability counts.' },
         target: { type: 'string', description: 'Build target name (e.g., MyProjectEditor)' },
         platform: { type: 'string', description: 'Target platform (Win64, Linux, Mac)' },
         configuration: { type: 'string', description: 'Build configuration (Development, Shipping, Debug)' },
@@ -45,7 +45,54 @@ export const coreToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         output: { type: 'string', description: 'Build output' },
-        command: { type: 'string', description: 'Executed command' }
+        command: { type: 'string', description: 'Executed command' },
+        categories: { type: 'array', items: commonSchemas.stringProp, description: 'Public tool names published by the bridge catalog.' },
+        tools: {
+          type: 'array',
+          description: 'Structured public tool rows from the bridge-owned catalog.',
+          items: {
+            type: 'object',
+            properties: {
+              toolName: commonSchemas.stringProp,
+              category: commonSchemas.stringProp,
+              summary: commonSchemas.stringProp,
+              public: commonSchemas.booleanProp,
+              subActions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: commonSchemas.stringProp,
+                    summary: commonSchemas.stringProp,
+                    editorOnly: commonSchemas.booleanProp,
+                    requiresLiveEditor: commonSchemas.booleanProp,
+                    requiresAssetEditor: commonSchemas.booleanProp,
+                    interactionModel: commonSchemas.stringProp,
+                    limitationNote: commonSchemas.stringProp
+                  }
+                }
+              },
+              subActionCount: commonSchemas.numberProp
+            }
+          }
+        },
+        categoryGroupNames: { type: 'array', items: commonSchemas.stringProp, description: 'Unique public category groups from the bridge catalog.' },
+        count: commonSchemas.numberProp,
+        groupCount: commonSchemas.numberProp,
+        actionCount: commonSchemas.numberProp,
+        catalogSource: commonSchemas.stringProp,
+        connected: commonSchemas.booleanProp,
+        bridgeType: commonSchemas.stringProp,
+        version: commonSchemas.stringProp,
+        engineVersion: commonSchemas.stringProp,
+        engineMajor: commonSchemas.numberProp,
+        engineMinor: commonSchemas.numberProp,
+        editorMode: commonSchemas.booleanProp,
+        totalActions: commonSchemas.numberProp,
+        toolCategories: commonSchemas.numberProp,
+        platform: commonSchemas.stringProp,
+        isPlayInEditor: commonSchemas.booleanProp,
+        projectName: commonSchemas.stringProp
       }
     }
   },
@@ -287,7 +334,8 @@ export const coreToolDefinitions: ToolDefinition[] = [
             'open_level', 'focus_actor',
             'show_stats', 'hide_stats',
             'set_editor_mode', 'set_immersive_mode', 'set_game_view',
-            'undo', 'redo', 'save_all'
+            'undo', 'redo', 'save_all',
+            'select_widgets_in_designer_rect'
           ],
           description: 'Editor action'
         },
@@ -312,6 +360,16 @@ export const coreToolDefinitions: ToolDefinition[] = [
         name: commonSchemas.name,
         // Action-specific parameters
         mode: commonSchemas.stringProp,
+        rect: {
+          type: 'object',
+          properties: {
+            left: commonSchemas.numberProp,
+            top: commonSchemas.numberProp,
+            right: commonSchemas.numberProp,
+            bottom: commonSchemas.numberProp
+          },
+          description: 'Client-space rectangle within the active Widget Blueprint Designer window.'
+        },
         deltaTime: commonSchemas.numberProp,
         resolution: commonSchemas.resolution,
         realtime: commonSchemas.booleanProp,
@@ -321,6 +379,7 @@ export const coreToolDefinitions: ToolDefinition[] = [
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,
         value: commonSchemas.value,
+        appendOrToggle: commonSchemas.booleanProp,
         // simulate_input parameters
         inputAction: commonSchemas.stringProp,
         axis: commonSchemas.stringProp

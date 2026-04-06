@@ -51,6 +51,11 @@ function normalizePathFields(args: Record<string, unknown>, fields: string[]): R
   return result;
 }
 
+function getOptionalNonEmptyString(args: Record<string, unknown>, field: string): string | undefined {
+  const value = args[field];
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
 /**
  * Handles all widget authoring actions for the manage_widget_authoring tool.
  */
@@ -64,8 +69,11 @@ export async function handleWidgetAuthoringTools(
   const timeoutMs = getTimeoutMs();
 
   // All actions are dispatched to C++ via automation bridge
-  const sendRequest = async (subAction: string): Promise<Record<string, unknown>> => {
-    const payload = { ...argsRecord, subAction };
+  const sendRequest = async (
+    subAction: string,
+    overrides: Record<string, unknown> = {}
+  ): Promise<Record<string, unknown>> => {
+    const payload = { ...argsRecord, ...overrides, subAction };
     const result = await executeAutomationRequest(
       tools,
       'manage_widget_authoring',
@@ -74,6 +82,32 @@ export async function handleWidgetAuthoringTools(
       { timeoutMs }
     );
     return cleanObject(result) as Record<string, unknown>;
+  };
+
+  const buildPropertyBindingPayload = (propertyName: string): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+      targetWidget: argsRecord.slotName,
+      property: propertyName,
+      propertyName
+    };
+
+    const bindingSource = getOptionalNonEmptyString(argsRecord, 'bindingSource');
+    const functionName = getOptionalNonEmptyString(argsRecord, 'functionName');
+    const bindingType = getOptionalNonEmptyString(argsRecord, 'bindingType');
+
+    if (bindingSource) {
+      payload.bindingSource = bindingSource;
+    }
+
+    if (functionName) {
+      payload.functionName = functionName;
+    }
+
+    if (bindingType) {
+      payload.bindingType = bindingType;
+    }
+
+    return payload;
   };
 
   switch (action) {
@@ -356,41 +390,34 @@ export async function handleWidgetAuthoringTools(
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
       requireNonEmptyString(argsRecord.propertyName, 'propertyName', 'Missing required parameter: propertyName');
-      // Creates a property binding function for the widget
-      // Optional: bindingType (function, variable)
-      return sendRequest('create_property_binding');
+      return sendRequest(
+        'set_widget_binding',
+        buildPropertyBindingPayload(argsRecord.propertyName as string)
+      );
     }
 
     case 'bind_text': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
-      // Binds text property to a variable or function
-      // Accepts: bindingSource (variable name or function name)
-      return sendRequest('bind_text');
+      return sendRequest('set_widget_binding', buildPropertyBindingPayload('Text'));
     }
 
     case 'bind_visibility': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
-      // Binds visibility to a variable or function
-      // Accepts: bindingSource
-      return sendRequest('bind_visibility');
+      return sendRequest('set_widget_binding', buildPropertyBindingPayload('Visibility'));
     }
 
     case 'bind_color': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
-      // Binds color and opacity to a variable or function
-      // Accepts: bindingSource
-      return sendRequest('bind_color');
+      return sendRequest('set_widget_binding', buildPropertyBindingPayload('ColorAndOpacity'));
     }
 
     case 'bind_enabled': {
       requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
       requireNonEmptyString(argsRecord.slotName, 'slotName', 'Missing required parameter: slotName');
-      // Binds enabled state to a variable or function
-      // Accepts: bindingSource
-      return sendRequest('bind_enabled');
+      return sendRequest('set_widget_binding', buildPropertyBindingPayload('IsEnabled'));
     }
 
     case 'bind_on_clicked': {
@@ -581,6 +608,18 @@ export async function handleWidgetAuthoringTools(
       // Returns widget blueprint information
       // Optional: slotName (to get specific slot info)
       return sendRequest('get_widget_info');
+    }
+
+    case 'get_widget_tree': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Returns the recursive widget hierarchy for a widget blueprint
+      return sendRequest('get_widget_tree');
+    }
+
+    case 'get_widget_designer_state': {
+      requireNonEmptyString(argsRecord.widgetPath, 'widgetPath', 'Missing required parameter: widgetPath');
+      // Returns static widget hierarchy plus live Designer diagnostics and selection state
+      return sendRequest('get_widget_designer_state');
     }
 
     case 'preview_widget': {

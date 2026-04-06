@@ -49,6 +49,16 @@ const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
   'open_asset': ['assetPath'],
   'close_asset': ['assetPath'],
   'open_level': ['levelPath'],
+  'fit_blueprint_graph': ['assetPath'],
+  'set_blueprint_graph_view': ['assetPath'],
+  'jump_to_blueprint_node': ['assetPath'],
+  'capture_blueprint_graph_review': ['assetPath', 'filename'],
+  'set_widget_blueprint_mode': ['assetPath', 'mode'],
+  'fit_widget_designer': ['assetPath'],
+  'set_widget_designer_view': ['assetPath'],
+  'select_widget_in_designer': ['assetPath'],
+  'select_widgets_in_designer_rect': ['assetPath'],
+  'focus_editor_surface': ['surface'],
   'focus_actor': ['actorName'],
   'focus': ['actorName'],  // Normalized alias for focus_actor
   'possess': ['actorName'],
@@ -81,6 +91,16 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'open_asset': ['assetPath', 'path'],
   'close_asset': ['assetPath', 'path'],
   'open_level': ['levelPath', 'path', 'assetPath'],
+  'fit_blueprint_graph': ['assetPath', 'graphName', 'scope', 'tabId', 'windowTitle'],
+  'set_blueprint_graph_view': ['assetPath', 'graphName', 'viewLocation', 'delta', 'zoomAmount', 'preserveZoom', 'tabId', 'windowTitle'],
+  'jump_to_blueprint_node': ['assetPath', 'graphName', 'nodeGuid', 'nodeName', 'nodeTitle', 'tabId', 'windowTitle'],
+  'capture_blueprint_graph_review': ['assetPath', 'graphName', 'nodeGuid', 'nodeName', 'nodeTitle', 'scope', 'filename', 'tabId', 'windowTitle', 'includeMenus'],
+  'set_widget_blueprint_mode': ['assetPath', 'mode', 'tabId', 'windowTitle'],
+  'fit_widget_designer': ['assetPath', 'tabId', 'windowTitle'],
+  'set_widget_designer_view': ['assetPath', 'viewLocation', 'delta', 'preserveZoom', 'tabId', 'windowTitle'],
+  'select_widget_in_designer': ['assetPath', 'mode', 'widgetName', 'widgetPath', 'widgetObjectPath', 'templateObjectPath', 'appendOrToggle', 'tabId', 'windowTitle'],
+  'select_widgets_in_designer_rect': ['assetPath', 'rect', 'appendOrToggle', 'tabId', 'windowTitle'],
+  'focus_editor_surface': ['surface', 'assetPath', 'tabId', 'windowTitle'],
   'focus_actor': ['actorName', 'name'],
   'focus': ['actorName', 'name'],  // Normalized alias for focus_actor
   'set_camera': ['location', 'rotation', 'actorName'],
@@ -90,7 +110,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'set_camera_fov': ['fov'],
   'set_game_speed': ['speed'],
   'set_fixed_delta_time': ['deltaTime'],
-  'screenshot': ['filename', 'resolution'],
+  'screenshot': ['filename', 'resolution', 'name', 'windowTitle', 'tabId', 'mode', 'includeMenus'],
   'set_preferences': ['category', 'preferences', 'section', 'key', 'value'],
   'execute_command': ['command'],
   'console_command': ['command'],
@@ -108,7 +128,16 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   'start_recording': ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],
   'stop_recording': [],
   'set_viewport_realtime': ['enabled', 'realtime'],
-  'simulate_input': ['key', 'action', 'inputAction', 'axis', 'value'],
+  'simulate_input': [
+    'key', 'action', 'inputAction', 'inputType', 'type', 'axis', 'value',
+    'assetPath',
+    'tabId', 'windowTitle', 'captureScreenshots',
+    'text', 'submit', 'button',
+    'x', 'y', 'clientX', 'clientY',
+    'wheelSteps', 'preciseDelta',
+    'holdDurationMs', 'durationMs', 'holdBeforeMoveMs', 'holdAfterMoveMs', 'steps',
+    'start', 'end'
+  ],
 };
 
 /**
@@ -116,6 +145,78 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
  */
 function normalizeEditorAction(action: string): string {
   return EDITOR_ACTION_ALIASES[action] ?? action;
+}
+
+function hasNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function hasDesignerRect(value: unknown): value is Record<string, number> {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const rect = value as Record<string, unknown>;
+  return typeof rect.left === 'number' && Number.isFinite(rect.left) &&
+    typeof rect.top === 'number' && Number.isFinite(rect.top) &&
+    typeof rect.right === 'number' && Number.isFinite(rect.right) &&
+    typeof rect.bottom === 'number' && Number.isFinite(rect.bottom) &&
+    rect.right > rect.left && rect.bottom > rect.top;
+}
+
+function buildControlEditorPayload(
+  action: string,
+  args: EditorArgs,
+  allowedFields: string[]
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = { action };
+
+  for (const field of allowedFields) {
+    const value = args[field];
+    if (value !== undefined) {
+      payload[field] = value;
+    }
+  }
+
+  return cleanObject(payload);
+}
+
+function validateSemanticNavigationArgs(
+  action: string,
+  args: Record<string, unknown>
+): void {
+  switch (action) {
+    case 'set_blueprint_graph_view':
+      if (args.viewLocation === undefined && args.delta === undefined) {
+        throw new Error('control_editor:set_blueprint_graph_view requires viewLocation or delta');
+      }
+      break;
+    case 'jump_to_blueprint_node':
+      if (!hasNonEmptyString(args.nodeGuid) && !hasNonEmptyString(args.nodeName) && !hasNonEmptyString(args.nodeTitle)) {
+        throw new Error('control_editor:jump_to_blueprint_node requires nodeGuid, nodeName, or nodeTitle');
+      }
+      break;
+    case 'set_widget_designer_view':
+      if (args.viewLocation === undefined && args.delta === undefined) {
+        throw new Error('control_editor:set_widget_designer_view requires viewLocation or delta');
+      }
+      break;
+    case 'select_widget_in_designer':
+      if (!hasNonEmptyString(args.widgetName) &&
+          !hasNonEmptyString(args.widgetPath) &&
+          !hasNonEmptyString(args.widgetObjectPath) &&
+          !hasNonEmptyString(args.templateObjectPath)) {
+        throw new Error('control_editor:select_widget_in_designer requires widgetName, widgetPath, widgetObjectPath, or templateObjectPath');
+      }
+      break;
+    case 'select_widgets_in_designer_rect':
+      if (!hasDesignerRect(args.rect)) {
+        throw new Error('control_editor:select_widgets_in_designer_rect requires rect with left, top, right, and bottom');
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 /**
@@ -157,6 +258,7 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
   // Validate arguments for this action
   const argsRecord = args as Record<string, unknown>;
   validateEditorActionArgs(normalizedAction, argsRecord);
+  validateSemanticNavigationArgs(normalizedAction, argsRecord);
   
   switch (normalizedAction) {
     case 'play': {
@@ -191,7 +293,22 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'screenshot': {
-      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'screenshot', filename: args.filename, resolution: args.resolution }) as Record<string, unknown>;
+      const targetWindowName = typeof args.windowTitle === 'string' && args.windowTitle.trim() !== ''
+        ? args.windowTitle
+        : args.name;
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        cleanObject({
+          action: 'screenshot',
+          filename: args.filename,
+          resolution: args.resolution,
+          mode: args.mode,
+          includeMenus: args.includeMenus,
+          name: targetWindowName,
+          tabId: args.tabId
+        })
+      ) as Record<string, unknown>;
       return cleanObject(res);
     }
     case 'console_command': {
@@ -261,6 +378,86 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
     case 'open_asset': {
       const assetPath = requireNonEmptyString(args.assetPath || args.path, 'assetPath');
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'open_asset', assetPath });
+      return cleanObject(res);
+    }
+    case 'fit_blueprint_graph': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('fit_blueprint_graph', args, ACTION_ALLOWED_PARAMS.fit_blueprint_graph)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'set_blueprint_graph_view': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('set_blueprint_graph_view', args, ACTION_ALLOWED_PARAMS.set_blueprint_graph_view)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'jump_to_blueprint_node': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('jump_to_blueprint_node', args, ACTION_ALLOWED_PARAMS.jump_to_blueprint_node)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'capture_blueprint_graph_review': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('capture_blueprint_graph_review', args, ACTION_ALLOWED_PARAMS.capture_blueprint_graph_review)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'set_widget_blueprint_mode': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('set_widget_blueprint_mode', args, ACTION_ALLOWED_PARAMS.set_widget_blueprint_mode)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'fit_widget_designer': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('fit_widget_designer', args, ACTION_ALLOWED_PARAMS.fit_widget_designer)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'set_widget_designer_view': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('set_widget_designer_view', args, ACTION_ALLOWED_PARAMS.set_widget_designer_view)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'select_widget_in_designer': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('select_widget_in_designer', args, ACTION_ALLOWED_PARAMS.select_widget_in_designer)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'select_widgets_in_designer_rect': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('select_widgets_in_designer_rect', args, ACTION_ALLOWED_PARAMS.select_widgets_in_designer_rect)
+      ) as Record<string, unknown>;
+      return cleanObject(res);
+    }
+    case 'focus_editor_surface': {
+      const res = await executeAutomationRequest(
+        tools,
+        'control_editor',
+        buildControlEditorPayload('focus_editor_surface', args, ACTION_ALLOWED_PARAMS.focus_editor_surface)
+      ) as Record<string, unknown>;
       return cleanObject(res);
     }
     case 'execute_command': {
@@ -363,19 +560,10 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
       return cleanObject(res);
     }
     case 'simulate_input': {
-      // CRITICAL: Validation runs in validateEditorActionArgs before reaching here.
-      // Allowed params are defined in ACTION_ALLOWED_PARAMS: ['key', 'action', 'axis', 'value']
-      // This ensures unknown params like 'invalidExtraParam' are rejected.
-      
-      // CRITICAL FIX: Read from 'inputAction' field to avoid conflict with routing 'action' field.
-      // The test generator spreads {...b, action:a} where a='simulate_input', which overwrites
-      // any 'action' field in b. So tests must use 'inputAction' for the input type.
-      // C++ handler also accepts 'inputAction' as an alternative to 'type'.
-      const inputActionValue = args.inputAction ?? args.action ?? '';
+      const inputActionValue = args.inputAction ?? args.inputType ?? args.type ?? '';
       const inputType = typeof inputActionValue === 'string' ? inputActionValue.toLowerCase() : '';
       let mappedType = inputType;
-      
-      // Map action values to C++ expected type values
+
       if (inputType === 'pressed' || inputType === 'down') {
         mappedType = 'key_down';
       } else if (inputType === 'released' || inputType === 'up') {
@@ -384,15 +572,40 @@ export async function handleEditorTools(action: string, args: EditorArgs, tools:
         mappedType = 'mouse_click';
       } else if (inputType === 'move') {
         mappedType = 'mouse_move';
+      } else if (inputType === 'drag') {
+        mappedType = 'mouse_drag';
+      } else if (inputType === 'wheel' || inputType === 'scroll') {
+        mappedType = 'mouse_wheel';
+      } else if (inputType === 'reset' || inputType === 'clear') {
+        mappedType = 'reset_input';
       }
-      // If inputType already matches expected values (key_down, key_up, mouse_click, mouse_move), keep it
-      
+
       const res = await executeAutomationRequest(tools, 'control_editor', { 
         action: 'simulate_input',
         type: mappedType,
+        assetPath: args.assetPath,
         key: args.key,
         axis: args.axis,
-        value: args.value
+        value: args.value,
+        tabId: args.tabId,
+        windowTitle: args.windowTitle,
+        captureScreenshots: args.captureScreenshots,
+        text: args.text,
+        submit: args.submit,
+        button: args.button,
+        x: args.x,
+        y: args.y,
+        clientX: args.clientX,
+        clientY: args.clientY,
+        wheelSteps: args.wheelSteps,
+        preciseDelta: args.preciseDelta,
+        holdDurationMs: args.holdDurationMs,
+        durationMs: args.durationMs,
+        holdBeforeMoveMs: args.holdBeforeMoveMs,
+        holdAfterMoveMs: args.holdAfterMoveMs,
+        steps: args.steps,
+        start: args.start,
+        end: args.end
       });
       return cleanObject(res);
     }

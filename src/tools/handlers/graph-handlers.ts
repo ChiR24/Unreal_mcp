@@ -6,11 +6,25 @@ import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
 // AutomationResponse imported from types/handler-types.js
 
+const LEGACY_BLUEPRINT_GRAPH_TOOL = 'manage_blueprint_graph';
+
 
 interface ProcessedGraphArgs extends GraphArgs {
     subAction?: string;
     nodeCategory?: string;
     [key: string]: unknown;
+}
+
+function flattenAutomationResponse(res: AutomationResponse): Record<string, unknown> {
+    const flattenedResult = res.result && typeof res.result === 'object'
+        ? cleanObject(res.result) as Record<string, unknown>
+        : {};
+
+    // Clone the nested result before spreading it to top-level fields.
+    // Some inspection responses expose arrays like `nodes` or `pins`; reusing
+    // the same array object at both `result.nodes` and `nodes` causes
+    // cleanObject() to mark the second occurrence as a circular reference.
+    return cleanObject({ ...res, ...flattenedResult }) as Record<string, unknown>;
 }
 
 // Blueprint node type aliases: map human-friendly names to K2Node class names
@@ -81,8 +95,8 @@ export async function handleGraphTools(toolName: string, action: string, args: G
     // Dispatch based on tool name
     switch (toolName) {
         case TOOL_ACTIONS.MANAGE_BLUEPRINT:
-        case 'manage_blueprint_graph': // Backward compat - callers still pass this
-            return handleBlueprintGraph(action, args, tools);
+        case LEGACY_BLUEPRINT_GRAPH_TOOL: // Backward compat - callers still pass this
+            return handleBlueprintGraph(toolName, action, args, tools);
         case 'manage_niagara_graph':
             return handleNiagaraGraph(action, args, tools);
         case 'manage_material_graph':
@@ -94,7 +108,7 @@ export async function handleGraphTools(toolName: string, action: string, args: G
     }
 }
 
-async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleBlueprintGraph(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
     const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
 
     // Default graphName
@@ -166,8 +180,15 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
         }
     }
 
-    const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    // Canonical manage_blueprint callers still reach the legacy bridge graph tool today.
+    // Keep that compatibility shim localized here instead of repeating the deprecated
+    // route name throughout the wrapper and registry layers.
+    const automationToolName = toolName === TOOL_ACTIONS.MANAGE_BLUEPRINT
+        ? LEGACY_BLUEPRINT_GRAPH_TOOL
+        : toolName;
+
+    const res = await executeAutomationRequest(tools, automationToolName, processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return flattenAutomationResponse(res);
 }
 
 async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
@@ -183,7 +204,7 @@ async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools
         payload.assetPath = args.system as string;
     }
     const res = await executeAutomationRequest(tools, 'manage_niagara_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return flattenAutomationResponse(res);
 }
 
 async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
@@ -209,7 +230,7 @@ async function handleMaterialGraph(action: string, args: GraphArgs, tools: ITool
     }
 
     const res = await executeAutomationRequest(tools, 'manage_material_graph', payload as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return flattenAutomationResponse(res);
 }
 
 async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
@@ -226,5 +247,5 @@ async function handleBehaviorTree(action: string, args: GraphArgs, tools: ITools
     }
     
     const res = await executeAutomationRequest(tools, 'manage_behavior_tree', processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject({ ...res, ...(res.result || {}) }) as Record<string, unknown>;
+    return flattenAutomationResponse(res);
 }

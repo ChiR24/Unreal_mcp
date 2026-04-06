@@ -21,6 +21,7 @@ import { handleAudioTools } from './handlers/audio-handlers.js';
 import { handleLightingTools } from './handlers/lighting-handlers.js';
 import { handlePerformanceTools } from './handlers/performance-handlers.js';
 import { handleInputTools } from './handlers/input-handlers.js';
+import { handleUiTools } from './handlers/ui-handlers.js';
 import { handleGeometryTools } from './handlers/geometry-handlers.js';
 import { handleSkeletonTools } from './handlers/skeleton-handlers.js';
 import { handleMaterialAuthoringTools } from './handlers/material-authoring-handlers.js';
@@ -132,7 +133,7 @@ function normalizeToolCall(
     action = 'console_command';
   }
   // manage_pipeline has its own handler registered - don't normalize to system_control
-  // handlePipelineTools handles: run_ubt (local), list_categories/get_status (via system_control)
+  // handlePipelineTools handles run_ubt locally; discovery and status proxy to the bridge catalog.
   if (normalizedName === 'manage_tests') {
     normalizedName = 'system_control';
     action = 'run_tests';
@@ -178,10 +179,14 @@ function registerDefaultHandlers() {
     if (action === 'get_blueprint') {
       return await handleBlueprintGet(args, tools);
     }
+    const inspectionActions = ['get_graph_details', 'get_graph_review_summary', 'get_pin_details', 'get_node_details_batch'];
+    if (inspectionActions.includes(action)) {
+      return await handleBlueprintTools(action, args, tools);
+    }
     // Graph actions (merged from manage_blueprint_graph)
-    const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details', 'list_node_types', 'set_pin_default_value'];
+    const graphActions = ['create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'list_node_types', 'set_pin_default_value'];
     if (graphActions.includes(action)) {
-      return await handleGraphTools('manage_blueprint_graph', action, args, tools);
+      return await handleGraphTools('manage_blueprint', action, args, tools);
     }
     return await handleBlueprintTools(action, args, tools);
   });
@@ -314,13 +319,16 @@ function registerDefaultHandlers() {
   // 12. DYNAMIC TOOLS MANAGEMENT
   toolRegistry.register('manage_tools', async (args, tools) => await handleManageToolsTools(getAction(args), args, tools));
 
+  // 12. UI DISCOVERY AND TARGETING HELPERS
+  toolRegistry.register('manage_ui', async (args, tools) => await handleUiTools(getAction(args), args, tools));
+
   // 13. MANAGE_PIPELINE - Routes to handlePipelineTools with action dispatch
-  // Actions: run_ubt (local spawn), list_categories, get_status (via system_control)
+  // Actions: run_ubt (local spawn), list_categories, get_status (bridge catalog)
   toolRegistry.register('manage_pipeline', async (args, tools) => {
     const action = getAction(args);
-    // list_categories and get_status route through system_control
+    // list_categories and get_status proxy to the native bridge catalog surface
     if (action === 'list_categories' || action === 'get_status') {
-      return cleanObject(await executeAutomationRequest(tools, 'manage_tools', { ...args, subAction: action }, 'Automation bridge not available'));
+      return cleanObject(await executeAutomationRequest(tools, 'manage_pipeline', { ...args, subAction: action }, 'Automation bridge not available for manage_pipeline'));
     }
     // run_ubt handled locally in pipeline-handlers.ts
     return await handlePipelineTools(action, args, tools);
