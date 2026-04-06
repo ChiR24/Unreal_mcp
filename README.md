@@ -82,23 +82,51 @@ node dist/cli.js
 
 The MCP Automation Bridge plugin is included at `Unreal_mcp/plugins/McpAutomationBridge`.
 
+#### From source (requires a project with code target)
+
+Your project must have a code target (`.sln` or `.xcworkspace`).
+Blueprint-only projects cannot compile native plugins — to convert, add any class via **Tools > New C++ Class** in the editor.
+
 **Method 1: Copy Folder**
 ```
 Copy:  Unreal_mcp/plugins/McpAutomationBridge/
 To:    YourUnrealProject/Plugins/McpAutomationBridge/
 ```
-Regenerate project files after copying.
 
-**Method 2: Add in Editor**
+**Method 2: External Plugin Directory (no copy needed)**
 1. Open Unreal Editor → **Edit → Plugins**
-2. Click **"Add"** → Browse to `Unreal_mcp/plugins/`
-3. Select the `McpAutomationBridge` folder
+2. Click **Plugin Directories** (bottom-left)
+3. In **Additional Plugin Directories**, add the path to `Unreal_mcp/plugins/`
+4. Restart the editor — the plugin will be picked up from the external location
+
+This saves the path in your `.uproject` file so the plugin stays linked without copying.
+
+The plugin compiles automatically when you open the project — UE detects the `.uplugin` + `Source/` and runs UnrealBuildTool.
 
 **Video Guide:**
 
 https://github.com/user-attachments/assets/d8b86ebc-4364-48c9-9781-de854bf3ef7d
 
-> ⚠️ **First-Time Project Open:** When opening the project directly (double-click `.uproject`) for the first time, UE will prompt *"Would you like to rebuild them now?"* for missing modules. Click **Yes** to rebuild. After the rebuild completes, you may still see: *"Plugin 'McpAutomationBridge' failed to load because module could not be loaded."* This is expected — UE rebuilds successfully but doesn't reload the plugin in the same session. **Simply close and reopen the project** and the plugin will load correctly. Alternatively, build via Visual Studio first to avoid this.
+> ⚠️ **First-Time Project Open:** UE may prompt *"Would you like to rebuild them now?"* — click **Yes**. If instead you see *"Missing Modules — McpAutomationBridge. Engine modules cannot be compiled at runtime. Please build through your IDE."* — open your project in **Visual Studio** (Win) or **Xcode** (Mac) and build from there. After that, the editor will open normally with the plugin loaded.
+
+#### Pre-built (works with any project, including Blueprint-only)
+
+Build the plugin once, then distribute the compiled binaries — no IDE or compilation needed on the target machine.
+
+**1. Build:**
+```bash
+# macOS / Linux
+./scripts/package-plugin.sh /path/to/UE_5.6
+
+# Windows
+scripts\package-plugin.bat C:\Path\To\UE_5.6
+```
+
+This produces a zip like `McpAutomationBridge-v0.6.0-UE5.6-Mac.zip`.
+
+**2. Install:** unzip into `YourProject/Plugins/` and open the project. That's it — no compilation step.
+
+> Note: pre-built binaries are tied to a specific UE version. A build for 5.6 won't work with 5.5 or 5.7.
 
 ### Step 3: Enable Required Plugins
 
@@ -143,6 +171,67 @@ Enable via **Edit → Plugins**, then restart the editor.
 > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin when needed.
 
 ### Step 4: Configure MCP Client
+
+#### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
+
+The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
+
+**Enable in Unreal:**
+1. **Edit > Project Settings > Plugins > MCP Automation Bridge**
+2. Check **Enable Native MCP**
+3. Set port (default: `3000`)
+4. Optionally set **Native MCP Instructions** for project-specific guidance
+5. Restart the editor
+
+**Configure your MCP client** to use Streamable HTTP transport at:
+```
+http://localhost:3000/mcp
+```
+
+**Claude Code:**
+```bash
+claude mcp add unreal-engine --transport http http://localhost:3000/mcp
+```
+
+Or manually in `~/.claude/settings.json` or project `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "type": "url",
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+**Verify it works:**
+- **Status bar** — look for `● MCP :3000 (2)` in the bottom-right of the editor. Green dot = server running, number in parens = active sessions. Click it to open settings.
+- **Output Log** — filter by `LogMcpNativeTransport` to see connections, tool calls, and session activity:
+  ```
+  LogMcpNativeTransport: Native MCP server started on http://localhost:3000/mcp
+  LogMcpNativeTransport: MCP session initialized: ... (client: claude-code 2.1.92, active sessions: 1)
+  LogMcpNativeTransport: tools/call: inspect (RequestId=...)
+  LogMcpNativeTransport: tools/call completed: ... (tool=inspect, success=true)
+  ```
+
+Features:
+- SSE streaming for real-time progress during long operations
+- Multiple concurrent sessions (Cursor + Claude Code + others simultaneously)
+- Dynamic tool management — only core tools (8) loaded by default, enable more via `manage_tools`
+
+#### Option B: TypeScript Bridge (stdio — classic setup)
 
 Add to your Claude Desktop / Cursor config file:
 

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
+#include "ToolMenus.h"
+#include "UI/SMcpStatusBarWidget.h"
 
 // Save current LOCTEXT_NAMESPACE if defined, then set our own
 #pragma push_macro("LOCTEXT_NAMESPACE")
@@ -31,6 +33,9 @@ public:
         // produces duplicate entries in Project Settings. The settings class saves
         // automatically in PostEditChangeProperty.
         UE_LOG(LogMcpAutomationBridge, Verbose, TEXT("UMcpAutomationBridgeSettings are exposed via Project Settings (auto-registered)."));
+
+        UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(
+            this, &FMcpAutomationBridgeModule::RegisterStatusBarWidget));
 #endif
     }
 
@@ -69,6 +74,22 @@ public:
     }
 
 private:
+    void RegisterStatusBarWidget()
+    {
+        UToolMenu* StatusBar = UToolMenus::Get()->ExtendMenu("LevelEditor.StatusBar.ToolBar");
+        if (!StatusBar) return;
+
+        FToolMenuSection& Section = StatusBar->AddSection(
+            "McpStatus", FText::GetEmpty(),
+            FToolMenuInsert("SourceControl", EToolMenuInsertType::Before));
+
+        Section.AddEntry(FToolMenuEntry::InitWidget(
+            "McpStatusWidget",
+            SNew(SMcpStatusBarWidget),
+            FText::GetEmpty(),
+            true, false));
+    }
+
     // Hold the registered settings section so we can unbind and unregister it cleanly
     TSharedPtr<class ISettingsSection> SettingsSection;
 };

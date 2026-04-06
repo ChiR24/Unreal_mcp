@@ -720,7 +720,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'system_control',
     category: 'core',
-    description: 'Run profiling, set quality/CVars, execute console commands, run UBT, and manage widgets.',
+    description: 'Run profiling, set quality/CVars, execute console commands, execute Python scripts, run UBT, and manage widgets.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -731,7 +731,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'run_ubt', 'run_tests', 'subscribe', 'unsubscribe', 'spawn_category', 'start_session', 'lumen_update_scene',
             'play_sound', 'create_widget', 'show_widget', 'add_widget_child',
             'set_cvar', 'get_project_settings', 'validate_assets',
-            'set_project_setting'
+            'set_project_setting', 'execute_python'
           ],
           description: 'Action'
         },
@@ -753,7 +753,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,
         value: commonSchemas.stringProp,
-        configName: commonSchemas.stringProp
+        configName: commonSchemas.stringProp,
+        code: { type: 'string', description: 'Python code to execute inline' },
+        file: { type: 'string', description: 'Path to .py file to execute' }
       },
       required: ['action']
     },

@@ -39,7 +39,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       !Lower.StartsWith(TEXT("run_tests")) &&
       !Lower.StartsWith(TEXT("test_progress")) &&
       !Lower.StartsWith(TEXT("test_stale")) &&
-      Lower != TEXT("export_asset")) {
+      Lower != TEXT("export_asset") &&
+      Lower != TEXT("execute_python")) {
     return false; // Not handled by this function
   }
 
@@ -502,6 +503,132 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                              FString::Printf(TEXT("Export failed: %s"), *ExportError),
                              Result, TEXT("EXPORT_FAILED"));
     }
+    return true;
+  } else if (Lower == TEXT("execute_python")) {
+    // Execute Python code with stdout/stderr capture via temp file wrapper
+    FString Code;
+    Payload->TryGetStringField(TEXT("code"), Code);
+    FString File;
+    Payload->TryGetStringField(TEXT("file"), File);
+
+    const bool bHasCode = !Code.TrimStartAndEnd().IsEmpty();
+    const bool bHasFile = !File.TrimStartAndEnd().IsEmpty();
+
+    if (!bHasCode && !bHasFile) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("'code' or 'file' parameter is required"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    if (bHasCode && bHasFile) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Provide either 'code' or 'file', not both"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    // Temp paths — RequestId in filenames for concurrency safety
+    FString TempDir = FPaths::ProjectSavedDir() / TEXT("Temp/MCP_Python");
+    IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+    if (!PlatformFile.DirectoryExists(*TempDir)) {
+      PlatformFile.CreateDirectoryTree(*TempDir);
+    }
+
+    FString SafeId = RequestId.Replace(TEXT("-"), TEXT(""));
+    FString ScriptPath = TempDir / FString::Printf(TEXT("mcp_exec_%s.py"), *SafeId);
+    FString OutputPath = TempDir / FString::Printf(TEXT("output_%s.txt"), *SafeId);
+    FString ErrorPath  = TempDir / FString::Printf(TEXT("error_%s.txt"), *SafeId);
+    FString StatusPath = TempDir / FString::Printf(TEXT("status_%s.txt"), *SafeId);
+
+    // Normalize paths for Python (forward slashes everywhere)
+    FString PyOutputPath = OutputPath.Replace(TEXT("\\"), TEXT("/"));
+    FString PyErrorPath  = ErrorPath.Replace(TEXT("\\"), TEXT("/"));
+    FString PyStatusPath = StatusPath.Replace(TEXT("\\"), TEXT("/"));
+
+    // Build Python wrapper
+    FString Wrapper;
+    Wrapper += TEXT("import sys\nimport traceback\n\n");
+    Wrapper += FString::Printf(TEXT("_out = open(r'%s', 'w', encoding='utf-8')\n"), *PyOutputPath);
+    Wrapper += FString::Printf(TEXT("_err = open(r'%s', 'w', encoding='utf-8')\n"), *PyErrorPath);
+    Wrapper += TEXT("_old_out, _old_err = sys.stdout, sys.stderr\n");
+    Wrapper += TEXT("sys.stdout, sys.stderr = _out, _err\n\n");
+    Wrapper += TEXT("_success = True\n");
+    Wrapper += TEXT("try:\n");
+
+    if (bHasCode) {
+      // Escape triple quotes in user code so the wrapper string stays intact
+      FString EscapedCode = Code.Replace(TEXT("'''"), TEXT("\\x27\\x27\\x27"));
+      Wrapper += TEXT("    _user_code = '''") + EscapedCode + TEXT("'''\n");
+      Wrapper += TEXT("    exec(compile(_user_code, '<mcp>', 'exec'))\n");
+    } else {
+      FString PyFilePath = File.Replace(TEXT("\\"), TEXT("/"));
+      Wrapper += FString::Printf(TEXT("    with open(r'%s', 'r') as _f:\n"), *PyFilePath);
+      Wrapper += TEXT("        _user_code = _f.read()\n");
+      Wrapper += FString::Printf(TEXT("    exec(compile(_user_code, r'%s', 'exec'))\n"), *PyFilePath);
+    }
+
+    Wrapper += TEXT("except:\n");
+    Wrapper += TEXT("    traceback.print_exc()\n");
+    Wrapper += TEXT("    _success = False\n");
+    Wrapper += TEXT("finally:\n");
+    Wrapper += TEXT("    sys.stdout, sys.stderr = _old_out, _old_err\n");
+    Wrapper += TEXT("    _out.close()\n");
+    Wrapper += TEXT("    _err.close()\n");
+    Wrapper += FString::Printf(TEXT("    with open(r'%s', 'w') as _sf:\n"), *PyStatusPath);
+    Wrapper += TEXT("        _sf.write('1' if _success else '0')\n");
+
+    // Write wrapper to disk
+    if (!FFileHelper::SaveStringToFile(Wrapper, *ScriptPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Failed to write temp script: %s"), *ScriptPath),
+                          TEXT("FILE_WRITE_FAILED"));
+      return true;
+    }
+
+    // Get world context (same pattern as console_command handler)
+    UWorld* World = nullptr;
+    if (GEditor) {
+      World = GEditor->GetEditorWorldContext().World();
+    }
+    if (!World && GEngine && GEngine->GetWorldContexts().Num() > 0) {
+      World = GEngine->GetWorldContexts()[0].World();
+    }
+
+    // Execute via py console command
+    FString PyCommand = FString::Printf(TEXT("py \"%s\""), *ScriptPath);
+    bool bExecHandled = false;
+    if (GEngine) {
+      bExecHandled = GEngine->Exec(World, *PyCommand);
+    }
+
+    // Read results
+    FString Output, Error, Status;
+    FFileHelper::LoadFileToString(Output, *OutputPath);
+    FFileHelper::LoadFileToString(Error, *ErrorPath);
+    FFileHelper::LoadFileToString(Status, *StatusPath);
+
+    // Cleanup temp files
+    PlatformFile.DeleteFile(*ScriptPath);
+    PlatformFile.DeleteFile(*OutputPath);
+    PlatformFile.DeleteFile(*ErrorPath);
+    PlatformFile.DeleteFile(*StatusPath);
+
+    // Check if Python is available
+    if (!bExecHandled && Status.IsEmpty()) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Python command not recognized. Is the Python Editor Script Plugin enabled?"),
+                          TEXT("PYTHON_NOT_AVAILABLE"));
+      return true;
+    }
+
+    bool bSuccess = Status.TrimStartAndEnd().Equals(TEXT("1"));
+    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+    Result->SetStringField(TEXT("output"), Output.TrimEnd());
+    Result->SetStringField(TEXT("error"), Error.TrimEnd());
+
+    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
+                           bSuccess ? TEXT("Python executed successfully") : TEXT("Python execution failed"),
+                           Result, bSuccess ? FString() : TEXT("PYTHON_ERROR"));
     return true;
   }
 
