@@ -1,5 +1,5 @@
 #include "MCP/McpDynamicToolManager.h"
-#include "MCP/McpToolSchemaLoader.h"
+#include "MCP/McpToolRegistry.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpToolManager, Log, All);
 
@@ -17,15 +17,15 @@ bool FMcpDynamicToolManager::IsProtectedCategory(const FString& Name)
 
 // ─── Initialize ─────────────────────────────────────────────────────────────
 
-void FMcpDynamicToolManager::Initialize(const FMcpToolSchemaLoader& SchemaLoader, bool bLoadAllTools)
+void FMcpDynamicToolManager::Initialize(const FMcpToolRegistry& Registry, bool bLoadAllTools)
 {
 	FScopeLock Lock(&StateMutex);
 	ToolStates.Empty();
 	CategoryStates.Empty();
 
-	for (const FString& ToolName : SchemaLoader.GetToolNames())
+	for (const FString& ToolName : Registry.GetToolNames())
 	{
-		FString Category = SchemaLoader.GetToolCategory(ToolName);
+		FString Category = Registry.GetToolCategory(ToolName);
 
 		bool bEnabled = bLoadAllTools || (Category == TEXT("core"));
 
@@ -58,7 +58,7 @@ void FMcpDynamicToolManager::Initialize(const FMcpToolSchemaLoader& SchemaLoader
 		InitialCategoryEnabled.Add(Pair.Key, Pair.Value.bEnabled);
 	}
 
-	UE_LOG(LogMcpToolManager, Log, TEXT("Initialized with %d tools across %d categories"),
+	UE_LOG(LogMcpToolManager, Log, TEXT("Initialized from registry with %d tools across %d categories"),
 		ToolStates.Num(), CategoryStates.Num());
 }
 

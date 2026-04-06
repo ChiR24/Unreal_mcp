@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
-#include "MCP/McpToolSchemaLoader.h"
 #include "MCP/McpDynamicToolManager.h"
 #include <atomic>
 
@@ -39,7 +38,7 @@ public:
 	int32 GetListenPort() const { return ListenPort; }
 	int32 GetActiveSessionCount() const;
 	int32 GetEnabledToolCount() const { return ToolManager.GetEnabledToolNames().Num(); }
-	int32 GetTotalToolCount() const { return SchemaLoader.GetToolCount(); }
+	int32 GetTotalToolCount() const;
 
 	/**
 	 * Complete a pending SSE request with the handler's result.
@@ -122,7 +121,6 @@ private:
 	void BroadcastToolsListChanged();
 
 	UMcpAutomationBridgeSubsystem* Subsystem;
-	FMcpToolSchemaLoader SchemaLoader;
 	FMcpDynamicToolManager ToolManager;
 	int32 ListenPort = 0;
 

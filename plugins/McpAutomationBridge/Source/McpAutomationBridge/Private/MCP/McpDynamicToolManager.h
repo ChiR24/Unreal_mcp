@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-class FMcpToolSchemaLoader;
+class FMcpToolRegistry;
 
 DECLARE_DELEGATE(FOnToolsChanged);
 
@@ -14,8 +14,8 @@ DECLARE_DELEGATE(FOnToolsChanged);
 class FMcpDynamicToolManager
 {
 public:
-	/** Initialize from loaded schemas. bLoadAllTools=true enables all, false enables only core. */
-	void Initialize(const FMcpToolSchemaLoader& SchemaLoader, bool bLoadAllTools = false);
+	/** Initialize from tool registry (self-describing C++ tool classes). */
+	void Initialize(const FMcpToolRegistry& Registry, bool bLoadAllTools = false);
 
 	/** Check if a tool is enabled (tool AND category must be enabled). */
 	bool IsToolEnabled(const FString& ToolName) const;

@@ -1,5 +1,7 @@
 #include "MCP/McpNativeTransport.h"
 #include "MCP/McpJsonRpc.h"
+#include "MCP/McpToolRegistry.h"
+#include "MCP/McpToolDefinition.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/Guid.h"
 #include "Sockets.h"
@@ -81,15 +83,13 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 		}
 	}
 
-	// Load tool schemas
-	if (!SchemaLoader.LoadFromFile(PluginDir))
+	// Initialize dynamic tool manager from self-describing C++ tool registry
 	{
-		UE_LOG(LogMcpNativeTransport, Warning,
-			TEXT("Tool schemas not loaded — tools/list will return empty. Continuing startup."));
+		FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
+		UE_LOG(LogMcpNativeTransport, Log,
+			TEXT("Tool registry: %d self-describing tools registered"), Registry.GetToolCount());
+		ToolManager.Initialize(Registry, bLoadAllTools);
 	}
-
-	// Initialize dynamic tool manager
-	ToolManager.Initialize(SchemaLoader, bLoadAllTools);
 	ToolManager.OnToolsChanged.BindRaw(this, &FMcpNativeTransport::OnToolsListChanged);
 
 	// Create stop event and launch accept thread
@@ -806,7 +806,7 @@ FString FMcpNativeTransport::HandleInitialize(
 FString FMcpNativeTransport::HandleToolsList(const TSharedPtr<FJsonValue>& Id)
 {
 	TSet<FString> EnabledTools = ToolManager.GetEnabledToolNames();
-	TSharedPtr<FJsonObject> ToolsList = SchemaLoader.GetFilteredToolsResponse(EnabledTools);
+	TSharedPtr<FJsonObject> ToolsList = FMcpToolRegistry::Get().GetFilteredToolsResponse(EnabledTools);
 
 	if (ToolsList.IsValid())
 	{
@@ -817,6 +817,11 @@ FString FMcpNativeTransport::HandleToolsList(const TSharedPtr<FJsonValue>& Id)
 	TArray<TSharedPtr<FJsonValue>> EmptyArray;
 	EmptyResult->SetArrayField(TEXT("tools"), EmptyArray);
 	return FMcpJsonRpc::BuildResponse(Id, EmptyResult);
+}
+
+int32 FMcpNativeTransport::GetTotalToolCount() const
+{
+	return FMcpToolRegistry::Get().GetToolCount();
 }
 
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────
@@ -934,19 +939,44 @@ void FMcpNativeTransport::HandleToolsCall(
 		TEXT("tools/call: %s (RequestId=%s)"),
 		*ToolName, *RequestId);
 
+	// Resolve dispatch action using tool definition metadata.
+	// Pattern A: pass tool name as Action (handler checks Action == "tool_name")
+	// Pattern B: extract sub-action from arguments (handler checks Action.StartsWith("sub_action"))
+	FString DispatchAction = ToolName;
+	FMcpToolDefinition* ToolDef = FMcpToolRegistry::Get().FindTool(ToolName);
+	if (ToolDef && !ToolDef->UsesToolNameDispatch())
+	{
+		// Pattern B: extract action from arguments
+		FString ActionField = ToolDef->GetActionFieldName();
+		FString Extracted;
+		if (Arguments->TryGetStringField(ActionField, Extracted) && !Extracted.IsEmpty())
+		{
+			DispatchAction = Extracted;
+		}
+	}
+
+	// Normalize: some handlers read "subAction" instead of "action".
+	// Ensure both fields exist so handlers find the value regardless of field name.
+	if (!Arguments->HasField(TEXT("subAction")) && Arguments->HasField(TEXT("action")))
+	{
+		FString ActionVal;
+		Arguments->TryGetStringField(TEXT("action"), ActionVal);
+		Arguments->SetStringField(TEXT("subAction"), ActionVal);
+	}
+
 	// Dispatch to handler on GameThread
 	TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(Subsystem);
 	FString CapturedRequestId = RequestId;
-	FString CapturedToolName = ToolName;
+	FString CapturedDispatchAction = DispatchAction;
 	TSharedPtr<FJsonObject> CapturedArguments = Arguments;
 
 	AsyncTask(ENamedThreads::GameThread, [WeakSubsystem, CapturedRequestId,
-		CapturedToolName, CapturedArguments]()
+		CapturedDispatchAction, CapturedArguments]()
 	{
 		if (UMcpAutomationBridgeSubsystem* Sub = WeakSubsystem.Get())
 		{
 			Sub->ProcessAutomationRequest(
-				CapturedRequestId, CapturedToolName, CapturedArguments, nullptr);
+				CapturedRequestId, CapturedDispatchAction, CapturedArguments, nullptr);
 		}
 	});
 }
