@@ -72,7 +72,7 @@ private:
 	/** Parsed HTTP request (minimal — only POST/DELETE /mcp). */
 	struct FParsedHttpRequest
 	{
-		FString Method;      // "POST" or "DELETE"
+		FString Method;      // "GET", "POST", or "DELETE"
 		FString Path;        // "/mcp"
 		FString Body;
 		FString SessionId;   // from Mcp-Session-Id header
@@ -90,6 +90,18 @@ private:
 		FString SessionId;  // for touching ActiveSessions during long-running calls
 		FCriticalSection WriteMutex;  // protects socket writes from GameThread
 		std::atomic<bool> bMarkedForRemoval{false};  // set by failed writes, checked by CleanupStaleRequests
+	};
+
+	/** Persistent SSE notification stream (GET /mcp). */
+	struct FNotificationStream
+	{
+		FSocket* Socket = nullptr;
+		FString SessionId;
+		FString StreamId;
+		double StartTime = 0.0;
+		double LastKeepaliveTime = 0.0;
+		FCriticalSection WriteMutex;
+		std::atomic<bool> bMarkedForRemoval{false};
 	};
 
 	// Accept loop: handle one client connection (runs on ThreadPool)
@@ -119,6 +131,12 @@ private:
 
 	void OnToolsListChanged();
 	void BroadcastToolsListChanged();
+
+	// Persistent notification stream helpers (GET /mcp)
+	void HandleGetMcp(FSocket* ClientSocket, const FString& SessionId);
+	static bool WriteNotificationEvent(FNotificationStream& Stream, const FString& EventData);
+	static bool WriteNotificationKeepalive(FNotificationStream& Stream);
+	void CloseNotificationStream(TSharedPtr<FNotificationStream> Stream);
 
 	UMcpAutomationBridgeSubsystem* Subsystem;
 	FMcpDynamicToolManager ToolManager;
@@ -156,4 +174,12 @@ private:
 	mutable FCriticalSection SSEConnectionsMutex;
 
 	static constexpr double RequestTimeoutSeconds = 300.0;  // 5 minutes
+
+	// Persistent notification streams (GET /mcp — StreamId → stream)
+	TMap<FString, TSharedPtr<FNotificationStream>> NotificationStreams;
+	mutable FCriticalSection NotificationStreamsMutex;
+
+	static constexpr int32 MaxNotificationStreamsPerSession = 4;
+	static constexpr double NotificationStreamTimeoutSeconds = 3600.0;  // 1 hour
+	static constexpr double KeepaliveIntervalSeconds = 30.0;
 };
