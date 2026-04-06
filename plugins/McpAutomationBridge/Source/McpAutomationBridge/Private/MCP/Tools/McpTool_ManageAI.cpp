@@ -177,8 +177,8 @@ public:
 			.Object(TEXT("generatorSettings"), TEXT("Generator-specific settings."),
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("searchRadius"))
-				 .String(TEXT("searchCenter"))
-				 .String(TEXT("actorClass"))
+				 .String(TEXT("searchCenter"), TEXT(""))
+				 .String(TEXT("actorClass"), TEXT(""))
 				 .Number(TEXT("gridSize"))
 				 .Number(TEXT("spacesBetween"))
 				 .Number(TEXT("innerRadius"))
@@ -266,7 +266,7 @@ public:
 				[](FMcpSchemaBuilder& S) {
 				S.Number(TEXT("entityCount"))
 				 .Number(TEXT("spawnRadius"))
-				 .String(TEXT("entityConfig"))
+				 .String(TEXT("entityConfig"), TEXT(""))
 				 .Bool(TEXT("spawnOnBeginPlay"), TEXT(""));
 			})
 			.FreeformObject(TEXT("value"), TEXT("Generic value (any type)."))

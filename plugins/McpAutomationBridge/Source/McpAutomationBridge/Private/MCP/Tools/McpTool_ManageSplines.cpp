@@ -191,6 +191,8 @@ public:
 			.Number(TEXT("cableSlack"),
 				TEXT("Slack/sag amount for cable template."))
 			.ArrayOfObjects(TEXT("points"), TEXT(""))
+			.String(TEXT("filter"), TEXT("General search filter."))
+			.Bool(TEXT("save"), TEXT("Save the asset(s) after the operation."))
 			.Required({TEXT("action")})
 			.Build();
 	}
