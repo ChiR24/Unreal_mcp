@@ -98,6 +98,15 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Object(const FString& Name, const FString&
 		FMcpSchemaBuilder Sub;
 		SubBuilder(Sub);
 		Prop->SetObjectField(TEXT("properties"), Sub.Properties);
+		if (Sub.RequiredFields.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Req;
+			for (const FString& RequiredName : Sub.RequiredFields)
+			{
+				Req.Add(MakeShared<FJsonValueString>(RequiredName));
+			}
+			Prop->SetArrayField(TEXT("required"), Req);
+		}
 	}
 
 	AddProperty(Name, Prop);
@@ -139,6 +148,15 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfObjects(const FString& Name,
 		FMcpSchemaBuilder Sub;
 		ItemBuilder(Sub);
 		Items->SetObjectField(TEXT("properties"), Sub.Properties);
+		if (Sub.RequiredFields.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Req;
+			for (const FString& RequiredName : Sub.RequiredFields)
+			{
+				Req.Add(MakeShared<FJsonValueString>(RequiredName));
+			}
+			Items->SetArrayField(TEXT("required"), Req);
+		}
 	}
 	Prop->SetObjectField(TEXT("items"), Items);
 

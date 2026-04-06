@@ -51,7 +51,7 @@ public:
 	TSharedPtr<FJsonObject> GetFilteredToolsResponse(const TSet<FString>& EnabledTools);
 
 	/** Invalidate cached schemas (e.g. if tools are dynamically added at runtime). */
-	void InvalidateCache() { bCacheValid = false; }
+	void InvalidateCache();
 
 private:
 	FMcpToolRegistry() = default;
@@ -62,8 +62,9 @@ private:
 	// Cached per-tool JSON schemas (built lazily on first GetFilteredToolsResponse)
 	TMap<FString, TSharedPtr<FJsonObject>> CachedToolSchemas;
 	bool bCacheValid = false;
+	mutable FCriticalSection CacheMutex;  // protects CachedToolSchemas + bCacheValid
 
-	void EnsureCache();
+	void EnsureCache();  // caller must hold CacheMutex
 	TSharedPtr<FJsonObject> BuildToolJson(FMcpToolDefinition* Tool);
 };
 

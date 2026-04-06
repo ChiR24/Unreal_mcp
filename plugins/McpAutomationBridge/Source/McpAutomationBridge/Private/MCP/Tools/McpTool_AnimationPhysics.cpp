@@ -71,7 +71,6 @@ public:
 				TEXT("activate_ragdoll"),
 				TEXT("configure_vehicle"),
 				TEXT("setup_physics_simulation"),
-				TEXT("create_anim_blueprint"),
 				TEXT("add_blend_sample"),
 				TEXT("set_axis_settings"),
 				TEXT("set_interpolation_settings"),

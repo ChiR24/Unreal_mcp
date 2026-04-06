@@ -1120,6 +1120,15 @@ void FMcpNativeTransport::HandleToolsCall(
 		{
 			DispatchAction = Extracted;
 		}
+		else
+		{
+			CompletePendingRequest(
+				RequestId, false,
+				FString::Printf(TEXT("Missing required '%s' field in arguments for tool '%s'"),
+					*ActionField, *ToolName),
+				nullptr, TEXT("INVALID_PARAMS"));
+			return;
+		}
 	}
 
 	// Normalize: some handlers read "subAction" instead of "action".

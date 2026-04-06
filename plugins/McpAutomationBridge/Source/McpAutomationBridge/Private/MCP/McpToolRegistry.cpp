@@ -26,6 +26,7 @@ void FMcpToolRegistry::Register(FMcpToolDefinition* Tool)
 
 	Tools.Add(Tool);
 	ToolsByName.Add(Name, Tool);
+	InvalidateCache();
 }
 
 FMcpToolDefinition* FMcpToolRegistry::FindTool(const FString& Name) const
@@ -100,9 +101,16 @@ TSharedPtr<FJsonObject> FMcpToolRegistry::BuildToolJson(FMcpToolDefinition* Tool
 	return ToolObj;
 }
 
+void FMcpToolRegistry::InvalidateCache()
+{
+	FScopeLock Lock(&CacheMutex);
+	bCacheValid = false;
+}
+
 TSharedPtr<FJsonObject> FMcpToolRegistry::GetFilteredToolsResponse(
 	const TSet<FString>& EnabledTools)
 {
+	FScopeLock Lock(&CacheMutex);
 	EnsureCache();
 
 	TArray<TSharedPtr<FJsonValue>> FilteredTools;

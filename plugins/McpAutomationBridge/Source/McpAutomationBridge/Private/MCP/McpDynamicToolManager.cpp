@@ -418,7 +418,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableCategory(const FString& C
 		}
 		for (auto& Pair : ToolStates)
 		{
-			if (IsProtectedTool(Pair.Key))
+			if (IsProtectedTool(Pair.Key) || IsProtectedCategory(Pair.Value.Category))
 			{
 				Protected.Add(MakeShared<FJsonValueString>(Pair.Key));
 			}
@@ -456,11 +456,17 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableCategory(const FString& C
 			return Err;
 		}
 
-		if (!IsProtectedCategory(Category))
+		if (IsProtectedCategory(Category))
 		{
-			if (CS->bEnabled) bAnyCategoryToggled = true;
-			CS->bEnabled = false;
+			auto Err = MakeShared<FJsonObject>();
+			Err->SetBoolField(TEXT("success"), false);
+			Err->SetStringField(TEXT("error"),
+				FString::Printf(TEXT("Category '%s' is protected and cannot be disabled"), *Category));
+			return Err;
 		}
+
+		if (CS->bEnabled) bAnyCategoryToggled = true;
+		CS->bEnabled = false;
 
 		for (auto& Pair : ToolStates)
 		{

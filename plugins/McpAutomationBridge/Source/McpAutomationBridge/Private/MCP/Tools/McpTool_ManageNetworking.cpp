@@ -154,7 +154,6 @@ public:
 			.String(TEXT("replicationPolicy"), TEXT("Replication policy for replication graph."))
 			.Bool(TEXT("customSerialization"), TEXT("Use custom serialization."))
 			.Number(TEXT("predictionThreshold"), TEXT("Prediction threshold for client prediction."))
-			.Bool(TEXT("removeAll"), TEXT("Remove all foliage instances."))
 			.Required({TEXT("action")})
 			.Build();
 	}

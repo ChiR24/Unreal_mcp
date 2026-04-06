@@ -1,4 +1,4 @@
-// McpTool_ManageSkeleton.cpp — manage_skeleton tool definition (28 actions)
+// McpTool_ManageSkeleton.cpp — manage_skeleton tool definition (29 actions)
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"

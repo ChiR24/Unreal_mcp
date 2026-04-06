@@ -16,7 +16,7 @@ public:
 			"layouts, bindings, animations. Build HUDs and menus.");
 	}
 
-	FString GetCategory() const override { return TEXT("utility"); }
+	FString GetCategory() const override { return TEXT("authoring"); }
 
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
