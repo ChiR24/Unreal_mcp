@@ -45,7 +45,8 @@ public:
 				TEXT("get_project_settings"),
 				TEXT("validate_assets"),
 				TEXT("set_project_setting"),
-				TEXT("execute_python")
+				TEXT("execute_python"),
+				TEXT("export_asset")
 			}, TEXT("Action"))
 			.String(TEXT("profileType"), TEXT(""))
 			.String(TEXT("category"), TEXT(""))
@@ -57,6 +58,7 @@ public:
 			.String(TEXT("platform"), TEXT(""))
 			.String(TEXT("configuration"), TEXT(""))
 			.String(TEXT("arguments"), TEXT(""))
+			.String(TEXT("additionalArgs"), TEXT("Additional UBT arguments or extra action args."))
 			.String(TEXT("filter"), TEXT(""))
 			.String(TEXT("channels"), TEXT(""))
 			.String(TEXT("widgetPath"), TEXT("Widget blueprint path."))
