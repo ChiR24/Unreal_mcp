@@ -70,6 +70,8 @@ public:
 			.String(TEXT("configName"), TEXT(""))
 			.String(TEXT("code"), TEXT("Python code to execute inline"))
 			.String(TEXT("file"), TEXT("Path to .py file to execute"))
+			.String(TEXT("assetPath"), TEXT("Asset path to export."))
+			.String(TEXT("exportPath"), TEXT("Destination file path for export."))
 			.Required({TEXT("action")})
 			.Build();
 	}
