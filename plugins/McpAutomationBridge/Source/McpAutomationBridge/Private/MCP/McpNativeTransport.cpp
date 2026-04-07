@@ -734,6 +734,7 @@ bool FMcpNativeTransport::SendHttpResponse(FSocket* Socket, int32 StatusCode,
 	case 406: StatusText = TEXT("Not Acceptable"); break;
 	case 429: StatusText = TEXT("Too Many Requests"); break;
 	case 500: StatusText = TEXT("Internal Server Error"); break;
+	case 503: StatusText = TEXT("Service Unavailable"); break;
 	default:  StatusText = TEXT("OK"); break;
 	}
 
