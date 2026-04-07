@@ -18,8 +18,6 @@ public:
 
 	FString GetCategory() const override { return TEXT("world"); }
 
-	// Pattern B: dispatch action is empty — uses action field for sub-dispatch
-	FString GetDispatchAction() const override { return FString(); }
 
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{

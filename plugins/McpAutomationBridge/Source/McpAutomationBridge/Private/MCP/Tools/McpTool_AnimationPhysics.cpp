@@ -18,7 +18,6 @@ public:
 
 	FString GetCategory() const override { return TEXT("gameplay"); }
 
-	FString GetDispatchAction() const override { return FString(); }
 
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
