@@ -63,7 +63,7 @@ public:
 				TEXT("redo"),
 				TEXT("save_all")
 			}, TEXT("Editor action. Note: screenshot/take_screenshot is async "
-				"\\u2014 the file is written on the next rendered viewport frame, "
+				"\u2014 the file is written on the next rendered viewport frame, "
 				"not immediately. The editor window must be visible and actively "
 				"rendering for capture to complete."))
 			.Object(TEXT("location"), TEXT("3D location (x, y, z)."),
