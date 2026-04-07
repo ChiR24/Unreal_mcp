@@ -2,9 +2,13 @@ import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
 import type { PipelineArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
-import { spawn, execSync } from 'child_process';
+import { spawn, exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import fsp from 'fs/promises';
+import util from 'util';
+
+const execAsync = util.promisify(exec);
 
 function validateUbtArgumentsString(extraArgs: string): void {
   if (!extraArgs || typeof extraArgs !== 'string') {
@@ -71,13 +75,13 @@ function tokenizeArgs(extraArgs: string): string[] {
  * Probe a concrete UBT file path for existence + executability.
  * Returns the path if valid, undefined otherwise.
  */
-function tryUbtpath(candidate: string): string | undefined {
-  // On Windows F_OK is sufficient for executability; X_OK is a no-op on fs.accessSync
+async function tryUbtpath(candidate: string): Promise<string | undefined> {
+  // On Windows F_OK is sufficient for executability; X_OK is a no-op on fs.access
   const mode = process.platform === 'win32'
     ? fs.constants.F_OK
     : fs.constants.F_OK | fs.constants.X_OK;
   try {
-    fs.accessSync(candidate, mode);
+    await fsp.access(candidate, mode);
     return candidate;
   } catch { /* not usable */ }
   return undefined;
@@ -87,7 +91,7 @@ function tryUbtpath(candidate: string): string | undefined {
  * Resolve the UnrealBuildTool executable path using multiple discovery strategies.
  * Returns an empty string when not found — caller should delegate to C++ handler.
  */
-function findUbtExecutable(): string {
+async function findUbtExecutable(): Promise<string> {
   // ─── Strategy 1: Explicit environment variable ────────────────────────
   // UE_ENGINE_PATH is the convention in this project (see AGENTS.md / README).
   // The path may point to either:
@@ -117,7 +121,7 @@ function findUbtExecutable(): string {
         path.join(root, 'Binaries', 'DotNET', 'UnrealBuildTool.dll'),
       ];
       for (const c of candidates) {
-        const hit = tryUbtpath(c);
+        const hit = await tryUbtpath(c);
         if (hit) return hit;
       }
     }
@@ -126,19 +130,22 @@ function findUbtExecutable(): string {
   // ─── Strategy 2: Discover from .uproject EngineAssociation ────────────
   const projectPath = process.env.UE_PROJECT_PATH;
   if (projectPath) {
-    const uprojectFile = projectPath.endsWith('.uproject')
-      ? projectPath
-      : (() => {
-          try {
-            const files = fs.readdirSync(projectPath);
-            const found = files.find(f => f.endsWith('.uproject'));
-            return found ? path.join(projectPath, found) : undefined;
-          } catch { return undefined; }
-        })();
+    let uprojectFile: string | undefined;
+    if (projectPath.endsWith('.uproject')) {
+      uprojectFile = projectPath;
+    } else {
+      try {
+        const files = await fsp.readdir(projectPath);
+        const found = files.find(f => f.endsWith('.uproject'));
+        if (found) {
+          uprojectFile = path.join(projectPath, found);
+        }
+      } catch { /* ignore */ }
+    }
 
     if (uprojectFile) {
       try {
-        const content = JSON.parse(fs.readFileSync(uprojectFile, 'utf-8'));
+        const content = JSON.parse(await fsp.readFile(uprojectFile, 'utf-8'));
         const association = content.EngineAssociation as string | undefined;
 
         if (association) {
@@ -182,7 +189,7 @@ function findUbtExecutable(): string {
                 path.join(root, 'Binaries', 'DotNET', 'UnrealBuildTool.dll'),
               ];
               for (const c of candidates) {
-                const hit = tryUbtpath(c);
+                const hit = await tryUbtpath(c);
                 if (hit) return hit;
               }
             }
@@ -192,7 +199,7 @@ function findUbtExecutable(): string {
         // Fallback: check DefaultEngine.ini for EnginePath
         const iniPath = path.join(path.dirname(uprojectFile), 'Config', 'DefaultEngine.ini');
         try {
-          const iniContent = fs.readFileSync(iniPath, 'utf-8');
+          const iniContent = await fsp.readFile(iniPath, 'utf-8');
           const iniMatch = iniContent.match(/EnginePath\s*=\s*(.+)/);
           if (iniMatch) {
             const iniEnginePath = iniMatch[1].trim().replace(/["']/g, '');
@@ -202,7 +209,7 @@ function findUbtExecutable(): string {
               path.join(iniEnginePath, 'Binaries', 'DotNET', 'UnrealBuildTool.dll'),
             ];
             for (const c of candidates) {
-              const hit = tryUbtpath(c);
+              const hit = await tryUbtpath(c);
               if (hit) return hit;
             }
           }
@@ -214,12 +221,11 @@ function findUbtExecutable(): string {
   // ─── Strategy 3: Global PATH lookup ───────────────────────────────────
   try {
     const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-    const result = execSync(`${whichCmd} UnrealBuildTool`, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    const { stdout } = await execAsync(`${whichCmd} UnrealBuildTool`, {
       encoding: 'utf-8',
     });
-    if (result) {
-      const first = result.trim().split(/\r?\n/)[0];
+    if (stdout) {
+      const first = stdout.trim().split(/\r?\n/)[0];
       if (first) return first;
     }
   } catch { /* not on PATH */ }
@@ -242,7 +248,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
 
       validateUbtArgumentsString(extraArgs);
 
-      const discoveredUbtPath = findUbtExecutable();
+      const discoveredUbtPath = await findUbtExecutable();
 
       if (!discoveredUbtPath) {
         // UBT not found on TS side — delegate to C++ handler which uses
@@ -268,7 +274,7 @@ export async function handlePipelineTools(action: string, args: PipelineArgs, to
       let uprojectFile = projectPath;
       if (!uprojectFile.endsWith('.uproject')) {
         try {
-          const files = fs.readdirSync(projectPath);
+          const files = await fsp.readdir(projectPath);
           const found = files.find(f => f.endsWith('.uproject'));
           if (found) {
             uprojectFile = path.join(projectPath, found);
