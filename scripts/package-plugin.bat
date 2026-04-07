@@ -95,7 +95,7 @@ REM ─── Post-process: set Installed=true ───────────
 set "OUTPUT_UPLUGIN=%PACKAGE_DIR%\McpAutomationBridge.uplugin"
 if exist "%OUTPUT_UPLUGIN%" (
     echo Setting Installed=true in output .uplugin...
-    powershell -NoProfile -Command "$f='%OUTPUT_UPLUGIN%'; $d=Get-Content $f | ConvertFrom-Json; $d | Add-Member -Force -NotePropertyName Installed -NotePropertyValue $true; $d | ConvertTo-Json -Depth 10 | Set-Content $f"
+    powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; $f='%OUTPUT_UPLUGIN%'; $d=Get-Content $f | ConvertFrom-Json; $d | Add-Member -Force -NotePropertyName Installed -NotePropertyValue $true; $d | ConvertTo-Json -Depth 10 | Set-Content $f } catch { Write-Error $_; exit 1 }"
     if errorlevel 1 (
         echo ERROR: Failed to set Installed=true in .uplugin
         exit /b 1
@@ -107,7 +107,7 @@ REM ─── Zip ────────────────────�
 echo Creating archive: %ZIP_NAME%
 cd /d "%OUTPUT_DIR%"
 if exist "%ZIP_NAME%" del "%ZIP_NAME%"
-powershell -NoProfile -Command "Get-ChildItem -Path 'McpAutomationBridge' -Recurse | Where-Object { $_.Extension -ne '.pdb' -and $_.FullName -notmatch '\\Intermediate\\' } | Compress-Archive -DestinationPath '%ZIP_NAME%' -Force"
+powershell -NoProfile -Command "try { $ErrorActionPreference='Stop'; Get-ChildItem -Path 'McpAutomationBridge' -Recurse | Where-Object { $_.Extension -ne '.pdb' -and $_.FullName -notmatch '\\Intermediate\\' } | Compress-Archive -DestinationPath '%ZIP_NAME%' -Force } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
     echo ERROR: Failed to create zip archive.
     exit /b 1
