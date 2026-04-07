@@ -1,4 +1,4 @@
-// McpTool_SystemControl.cpp — system_control tool definition (24 actions)
+// McpTool_SystemControl.cpp — system_control tool definition (25 actions)
 
 #include "McpVersionCompatibility.h"
 #include "MCP/McpToolDefinition.h"
