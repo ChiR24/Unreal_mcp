@@ -158,13 +158,25 @@ void FMcpNativeTransport::Shutdown()
 		Thread = nullptr;
 	}
 
-	// Wait for in-flight connection handlers and async writes to finish
+	// Wait for in-flight connection handlers and async writes to finish.
+	// Individual writes have a 5-second timeout, so 15 seconds is generous.
+	// If writes still remain, log a warning but keep waiting — proceeding
+	// with PendingAsyncWrites > 0 would cause use-after-free.
 	{
-		double WaitDeadline = FPlatformTime::Seconds() + 10.0;
-		while ((ActiveConnectionCount.load() > 0 || PendingAsyncWrites.load() > 0)
-			&& FPlatformTime::Seconds() < WaitDeadline)
+		double WaitStart = FPlatformTime::Seconds();
+		constexpr double WarnAfter = 15.0;
+		bool bWarned = false;
+		while (ActiveConnectionCount.load() > 0 || PendingAsyncWrites.load() > 0)
 		{
 			FPlatformProcess::Sleep(0.01f);
+			double Elapsed = FPlatformTime::Seconds() - WaitStart;
+			if (!bWarned && Elapsed > WarnAfter)
+			{
+				UE_LOG(LogMcpNativeTransport, Warning,
+					TEXT("Shutdown stalled: %d active connections, %d pending async writes after %.0fs"),
+					ActiveConnectionCount.load(), PendingAsyncWrites.load(), Elapsed);
+				bWarned = true;
+			}
 		}
 	}
 
