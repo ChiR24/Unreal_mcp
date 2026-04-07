@@ -159,15 +159,21 @@ void FMcpNativeTransport::Shutdown()
 	}
 
 	// Wait for in-flight connection handlers and async writes to finish.
-	// Individual writes have a 5-second timeout, so 15 seconds is generous.
-	// If writes still remain, log a warning but keep waiting — proceeding
-	// with PendingAsyncWrites > 0 would cause use-after-free.
+	// IMPORTANT: Shutdown runs on GameThread. HandleToolsCall dispatches
+	// ProcessAutomationRequest → CompletePendingRequest to GameThread via
+	// AsyncTask. If we block GameThread with a plain spin-wait, those tasks
+	// can never execute and PendingAsyncWrites never reaches 0 → deadlock.
+	// Solution: pump GameThread tasks while waiting so queued handlers drain.
 	{
 		double WaitStart = FPlatformTime::Seconds();
 		constexpr double WarnAfter = 15.0;
 		bool bWarned = false;
 		while (ActiveConnectionCount.load() > 0 || PendingAsyncWrites.load() > 0)
 		{
+			if (IsInGameThread())
+			{
+				FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+			}
 			FPlatformProcess::Sleep(0.01f);
 			double Elapsed = FPlatformTime::Seconds() - WaitStart;
 			if (!bWarned && Elapsed > WarnAfter)
