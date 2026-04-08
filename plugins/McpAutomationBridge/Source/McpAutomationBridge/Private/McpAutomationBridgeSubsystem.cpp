@@ -1282,6 +1282,14 @@ void UMcpAutomationBridgeSubsystem::InitializeHandlers() {
                     return true;
 #endif
                   });
+
+  // Movie Render Queue (MRQ)
+  RegisterHandler(TEXT("manage_mrq"),
+                  [this](const FString &R, const FString &A,
+                         const TSharedPtr<FJsonObject> &P,
+                         TSharedPtr<FMcpBridgeWebSocket> S) {
+                    return HandleMrqAction(R, A, P, S);
+                  });
 }
 
 // Drain and process any automation requests that were enqueued while the
