@@ -793,20 +793,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCharacterAction(
 			}
 		}
 		else if (Payload->HasField(TEXT("runSpeed")))
+		{
 			Movement->MaxWalkSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("runSpeed"), 600.0));
-            if (Payload->HasField(TEXT("crouchSpeed")))
-                Movement->MaxWalkSpeedCrouched = static_cast<float>(GetNumberFieldChar(Payload, TEXT("crouchSpeed"), 300.0));
-            if (Payload->HasField(TEXT("swimSpeed")))
-                Movement->MaxSwimSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("swimSpeed"), 300.0));
-            if (Payload->HasField(TEXT("flySpeed")))
-                Movement->MaxFlySpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("flySpeed"), 600.0));
-            if (Payload->HasField(TEXT("acceleration")))
-                Movement->MaxAcceleration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("acceleration"), 2048.0));
-            if (Payload->HasField(TEXT("deceleration")))
-                Movement->BrakingDecelerationWalking = static_cast<float>(GetNumberFieldChar(Payload, TEXT("deceleration"), 2048.0));
-            if (Payload->HasField(TEXT("groundFriction")))
-                Movement->GroundFriction = static_cast<float>(GetNumberFieldChar(Payload, TEXT("groundFriction"), 8.0));
-        }
+		}
+		if (Payload->HasField(TEXT("crouchSpeed")))
+			Movement->MaxWalkSpeedCrouched = static_cast<float>(GetNumberFieldChar(Payload, TEXT("crouchSpeed"), 300.0));
+		if (Payload->HasField(TEXT("swimSpeed")))
+			Movement->MaxSwimSpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("swimSpeed"), 300.0));
+		if (Payload->HasField(TEXT("flySpeed")))
+			Movement->MaxFlySpeed = static_cast<float>(GetNumberFieldChar(Payload, TEXT("flySpeed"), 600.0));
+		if (Payload->HasField(TEXT("acceleration")))
+			Movement->MaxAcceleration = static_cast<float>(GetNumberFieldChar(Payload, TEXT("acceleration"), 2048.0));
+		if (Payload->HasField(TEXT("deceleration")))
+			Movement->BrakingDecelerationWalking = static_cast<float>(GetNumberFieldChar(Payload, TEXT("deceleration"), 2048.0));
+		if (Payload->HasField(TEXT("groundFriction")))
+			Movement->GroundFriction = static_cast<float>(GetNumberFieldChar(Payload, TEXT("groundFriction"), 8.0));
+	}
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 

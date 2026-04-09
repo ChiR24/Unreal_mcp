@@ -43,7 +43,7 @@
 // -----------------------------------------------------------------------------
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "Misc/Paths.h"
 #include "McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeHelpers.h"
