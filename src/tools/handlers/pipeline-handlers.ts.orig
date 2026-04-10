@@ -75,13 +75,10 @@ function tokenizeArgs(extraArgs: string): string[] {
  * Returns the path if valid, undefined otherwise.
  */
 async function tryUbtpath(candidate: string): Promise<string | undefined> {
-  let mode = fs.constants.F_OK;
-  if (process.platform !== 'win32') {
-    // For non-Windows, require X_OK unless it's a .dll which dotnet executes
-    if (!candidate.endsWith('.dll')) {
-      mode = fs.constants.F_OK | fs.constants.X_OK;
-    }
-  }
+  // On Windows F_OK is sufficient for executability; X_OK is a no-op on fs.access
+  const mode = process.platform === 'win32'
+    ? fs.constants.F_OK
+    : fs.constants.F_OK | fs.constants.X_OK;
   try {
     await fs.promises.access(candidate, mode);
     return candidate;
