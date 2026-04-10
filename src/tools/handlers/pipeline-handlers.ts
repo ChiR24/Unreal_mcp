@@ -75,10 +75,17 @@ function tokenizeArgs(extraArgs: string): string[] {
  * Returns the path if valid, undefined otherwise.
  */
 async function tryUbtpath(candidate: string): Promise<string | undefined> {
-  // On Windows F_OK is sufficient for executability; X_OK is a no-op on fs.access
-  const mode = process.platform === 'win32'
-    ? fs.constants.F_OK
-    : fs.constants.F_OK | fs.constants.X_OK;
+  // On Windows F_OK is sufficient; X_OK is a no-op on Windows.
+  // On non-Windows: .dll files are not marked executable (they are run via `dotnet`),
+  // so only check F_OK for them. True executables (.exe, no extension) still need X_OK.
+  let mode: number;
+  if (process.platform === 'win32') {
+    mode = fs.constants.F_OK;
+  } else if (candidate.toLowerCase().endsWith('.dll')) {
+    mode = fs.constants.F_OK;
+  } else {
+    mode = fs.constants.F_OK | fs.constants.X_OK;
+  }
   try {
     await fs.promises.access(candidate, mode);
     return candidate;
