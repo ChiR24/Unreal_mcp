@@ -16,13 +16,18 @@ import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
 
+const CANONICAL_EFFECT_TOOL = 'manage_effect';
+const LEGACY_NIAGARA_AUTHORING_BRIDGE_TOOL = 'manage_niagara_authoring';
+
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
   return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
 }
 
 /**
- * Handles all Niagara authoring actions for the manage_niagara_authoring tool.
+ * Handles Niagara authoring actions that are publicly merged into manage_effect.
+ * The native bridge still expects manage_niagara_authoring, so keep that
+ * compatibility boundary localized to this helper.
  */
 export async function handleNiagaraAuthoringTools(
   action: string,
@@ -65,9 +70,9 @@ export async function handleNiagaraAuthoringTools(
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
-      'manage_niagara_authoring',
+      LEGACY_NIAGARA_AUTHORING_BRIDGE_TOOL,
       payload as HandlerArgs,
-      `Automation bridge not available for Niagara authoring action: ${subAction}`,
+      `Automation bridge not available for ${CANONICAL_EFFECT_TOOL} action: ${subAction}`,
       { timeoutMs }
     );
     return cleanObject(result) as Record<string, unknown>;

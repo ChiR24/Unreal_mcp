@@ -10,20 +10,28 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 
 ## Features
 
-| Category | Capabilities |
-|----------|-------------|
-| **Asset Management** | Browse, import, duplicate, rename, delete assets; create materials |
-| **Actor Control** | Spawn, delete, transform, physics, tags, components |
-| **Editor Control** | PIE sessions, camera, viewport, screenshots, bookmarks |
-| **Level Management** | Load/save levels, streaming, World Partition, data layers |
-| **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints |
-| **Visual Effects** | Niagara particles, GPU simulations, procedural effects |
-| **Sequencer** | Cinematics, timeline control, camera animations |
-| **Graph Editing** | Blueprint, Niagara, Material, Behavior Tree graphs |
-| **Audio** | Sound cues, audio components, MetaSounds |
-| **System** | Console commands, UBT, tests, logs, project settings |
+| Category                | Capabilities                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| **Asset Management**    | Browse, import, duplicate, rename, delete assets; create materials                         |
+| **Actor Control**       | Spawn, delete, transform, physics, tags, components                                        |
+| **Editor Control**      | PIE sessions, camera, viewport, screenshots, bookmarks, targeted simulated input           |
+| **Level Management**    | Load/save levels, streaming, World Partition, data layers                                  |
+| **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints                             |
+| **Visual Effects**      | Niagara particles, GPU simulations, procedural effects                                     |
+| **Sequencer**           | Cinematics, timeline control, camera animations                                            |
+| **Graph Editing**       | Blueprint, Niagara, Material, Behavior Tree graphs                                         |
+| **Audio**               | Sound cues, audio components, MetaSounds                                                   |
+| **UI Automation**       | UI target discovery, visible-window listing, editor utility widgets, ToolMenus integration |
+| **System**              | Console commands, UBT, tests, logs, project settings, catalog-backed pipeline status       |
 
-**200+ automation actions** across 36 MCP tools.
+Automation actions are exposed through a catalog-backed MCP surface; use `manage_pipeline list_categories` or `manage_pipeline get_status` to inspect the current runtime contract.
+
+Notable UI and pipeline capabilities include:
+
+- `manage_ui list_visible_windows` exposes live Slate window discovery so callers can resolve the exact target before driving screenshots or simulated input.
+- Window-aware `control_editor screenshot` reports the resolved capture target and stronger diagnostics for easier verification.
+- Tab-scoped and window-scoped `control_editor simulate_input` lets automation target a known dock tab or editor window instead of falling back to the active viewport.
+- Catalog-backed `manage_pipeline list_categories` and `manage_pipeline get_status` keep published tool metadata in one plugin-owned source of truth.
 
 ---
 
@@ -40,6 +48,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 ### Method 1: Copy to Project
 
 1. Copy the `McpAutomationBridge` folder to your project's `Plugins/` directory:
+
    ```
    YourProject/Plugins/McpAutomationBridge/
    ```
@@ -55,36 +64,36 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 <details>
 <summary><b>Core Plugins (Required)</b></summary>
 
-   - ✅ MCP Automation Bridge
-   - ✅ Editor Scripting Utilities
-   - ✅ Niagara
+- ✅ MCP Automation Bridge
+- ✅ Editor Scripting Utilities
+- ✅ Niagara
 
 </details>
 
 <details>
 <summary><b>Optional Plugins (Auto-enabled)</b></summary>
 
-   - ✅ Level Sequence Editor (for `manage_sequence`)
-   - ✅ Control Rig (for `animation_physics`)
-   - ✅ GeometryScripting (for `manage_geometry`)
-   - ✅ Behavior Tree Editor (for `manage_behavior_tree`)
-   - ✅ Niagara Editor (for Niagara authoring)
-   - ✅ Gameplay Abilities (for `manage_gas`)
-   - ✅ MetaSound (for `manage_audio` MetaSounds)
-   - ✅ StateTree (for `manage_ai` State Trees)
-   - ✅ Enhanced Input (for `manage_input`)
-   - ✅ Environment Query Editor (for AI/EQS)
-   - ✅ Smart Objects (for AI smart objects)
-   - ✅ Chaos Cloth (for cloth simulation)
-   - ✅ Interchange (for asset import/export)
-   - ✅ Data Validation (for data validation)
-   - ✅ Procedural Mesh Component (for procedural geometry)
-   - ✅ OnlineSubsystem (for sessions/networking)
-   - ✅ OnlineSubsystemUtils (for sessions/networking)
+- ✅ Level Sequence Editor (for `manage_sequence`)
+- ✅ Control Rig (for `animation_physics`)
+- ✅ GeometryScripting (for `manage_geometry`)
+- ✅ Behavior Tree Editor (for `manage_behavior_tree`)
+- ✅ Niagara Editor (for Niagara authoring)
+- ✅ Gameplay Abilities (for `manage_gas`)
+- ✅ MetaSound (for `manage_audio` MetaSounds)
+- ✅ StateTree (for `manage_ai` State Trees)
+- ✅ Enhanced Input (for `manage_input`)
+- ✅ Environment Query Editor (for AI/EQS)
+- ✅ Smart Objects (for AI smart objects)
+- ✅ Chaos Cloth (for cloth simulation)
+- ✅ Interchange (for asset import/export)
+- ✅ Data Validation (for data validation)
+- ✅ Procedural Mesh Component (for procedural geometry)
+- ✅ OnlineSubsystem (for sessions/networking)
+- ✅ OnlineSubsystemUtils (for sessions/networking)
 
 </details>
 
-   > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin. Only the core plugins require manual verification.
+> 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin. Only the core plugins require manual verification.
 
 5. Restart the editor
 
@@ -134,10 +143,12 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 3. The MCP server will automatically connect to the Automation Bridge
 
 Example prompts:
+
 - "List all assets in /Game/Characters"
 - "Spawn a point light at (100, 200, 300)"
 - "Create a new material called M_Glow"
-- "Take a screenshot of the current viewport"
+- "List visible editor windows before capturing a screenshot"
+- "Show the public tool catalog exposed by manage_pipeline"
 
 ---
 
@@ -145,12 +156,12 @@ Example prompts:
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `UE_PROJECT_PATH` | - | Path to your `.uproject` file |
-| `MCP_AUTOMATION_HOST` | `127.0.0.1` | Bridge host address |
-| `MCP_AUTOMATION_PORT` | `8091` | Bridge WebSocket port |
-| `LOG_LEVEL` | `info` | Logging level (debug/info/warn/error) |
+| Variable              | Default     | Description                           |
+| --------------------- | ----------- | ------------------------------------- |
+| `UE_PROJECT_PATH`     | -           | Path to your `.uproject` file         |
+| `MCP_AUTOMATION_HOST` | `127.0.0.1` | Bridge host address                   |
+| `MCP_AUTOMATION_PORT` | `8091`      | Bridge WebSocket port                 |
+| `LOG_LEVEL`           | `info`      | Logging level (debug/info/warn/error) |
 
 ### Plugin Settings
 
@@ -159,6 +170,16 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - **Listen Ports**: WebSocket ports (default: 8090, 8091)
 - **Enable TLS**: Enable secure WebSocket connections
 - **Allow Non-Loopback**: Enable LAN access (security consideration)
+- **UiDefinitionRoots**: Optional project roots scanned for JSON-defined UI targets
+- **KnownToolMenuNames**: ToolMenus paths that should be surfaced by UI discovery
+- **JsonToolTabIdPrefix**: Optional prefix used when discovered JSON tools need generated tab ids
+
+### Public Surface Notes
+
+- `manage_pipeline list_categories` and `manage_pipeline get_status` now derive their public metadata from the merged plugin-owned tool catalog instead of a duplicated hard-coded list.
+- `manage_ui list_visible_windows` returns the exact window titles and bounds that `control_editor screenshot` and `control_editor simulate_input` can target.
+- `control_editor simulate_input` supports keyboard, text, mouse, wheel, drag, and reset flows that can be aimed at a known tab id or window title.
+- `control_editor screenshot` reports stronger targeting diagnostics so callers can confirm what window or viewport was actually captured.
 
 ---
 
@@ -176,7 +197,8 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 ### Plugin Failed to Load
 
-If you see *"Plugin 'McpAutomationBridge' failed to load"* on first open:
+If you see _"Plugin 'McpAutomationBridge' failed to load"_ on first open:
+
 1. Close Unreal Editor
 2. Reopen the project
 3. The plugin should load correctly
@@ -189,9 +211,22 @@ This is a known UE behavior when plugins are rebuilt on first load.
 2. Check port 8091 is not blocked by firewall
 3. Ensure MCP server is running: `npx unreal-engine-mcp-server`
 
+### UI Target Not Found
+
+1. Use `manage_ui list_ui_targets` to inspect the currently discoverable targets
+2. Use `manage_ui list_visible_windows` to confirm the live editor window title before targeting screenshots or input
+3. If you already know the live Slate tab id, target it directly with `tabId`
+
+### Wrong Window Was Captured Or Controlled
+
+1. Call `manage_ui list_visible_windows` first and reuse the exact returned `windowTitle`
+2. Check the screenshot or simulated-input response fields to confirm the resolved target
+3. Prefer explicit `tabId` targeting when automating a known dock tab
+
 ### Build Errors
 
 The plugin uses `PCHUsageMode.NoPCHs` to prevent memory issues during compilation. If you encounter build errors:
+
 1. Close Visual Studio
 2. Delete `Intermediate/`, `Binaries/`, `Saved/` folders
 3. Regenerate project files
@@ -223,6 +258,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## Contributing
 
 Contributions are welcome! Please:
+
 - Include reproduction steps for bugs
 - Keep PRs focused and small
 - Follow existing code style

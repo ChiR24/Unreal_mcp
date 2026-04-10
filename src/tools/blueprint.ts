@@ -62,6 +62,14 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     }
   }
 
+  private async sendBlueprintGraphAction(subAction: string, payload: Record<string, unknown> = {}, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number }): Promise<ActionResponse> {
+    // manage_blueprint is the canonical public route, but direct wrapper graph
+    // calls still need the legacy native graph tool today. Keep that compatibility
+    // boundary localized here instead of repeating the deprecated tool name in
+    // each wrapper method.
+    return this.sendAction('manage_blueprint_graph', { ...payload, subAction }, options);
+  }
+
   private isUnknownActionResponse(res: ActionResponse | StandardActionResponse | null | undefined): boolean {
     if (!res) return false;
     const errStr = typeof res.error === 'string' ? res.error : '';
@@ -749,11 +757,10 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
 
     try {
       const payload: Record<string, unknown> = {
-        subAction: 'get_nodes',
         blueprintPath: blueprintPath,
         graphName: params.graphName || 'EventGraph'
       };
-      const pluginResp = await this.sendAction('manage_blueprint_graph', payload, { timeoutMs: params.timeoutMs });
+      const pluginResp = await this.sendBlueprintGraphAction('get_nodes', payload, { timeoutMs: params.timeoutMs });
       if (pluginResp && pluginResp.success) {
         return {
           success: true,
@@ -788,9 +795,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
 
-    // Fix: C++ expects 'manage_blueprint_graph' with 'subAction' = 'create_node'
     const payload: Record<string, unknown> = {
-      subAction: 'create_node',
       assetPath: primary,    // C++ expects 'assetPath' or 'blueprintPath'
       nodeType: params.nodeType,
       graphName: params.graphName,
@@ -802,7 +807,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       x: params.posX,
       y: params.posY
     };
-    const res = await this.sendAction('manage_blueprint_graph', payload, { timeoutMs: params.timeoutMs });
+    const res = await this.sendBlueprintGraphAction('create_node', payload, { timeoutMs: params.timeoutMs });
     return res;
   }
 
@@ -816,8 +821,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'delete_node',
+    const res = await this.sendBlueprintGraphAction('delete_node', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId
@@ -835,8 +839,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'create_reroute_node',
+    const res = await this.sendBlueprintGraphAction('create_reroute_node', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       x: params.x,
@@ -858,8 +861,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
     if (!params.propertyName) return { success: false, error: 'INVALID_PROPERTY', message: 'Property name is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'set_node_property',
+    const res = await this.sendBlueprintGraphAction('set_node_property', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId,
@@ -879,8 +881,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'get_node_details',
+    const res = await this.sendBlueprintGraphAction('get_node_details', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId
@@ -896,8 +897,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const blueprintPath = coerceString(params.blueprintPath);
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'get_graph_details',
+    const res = await this.sendBlueprintGraphAction('get_graph_details', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph'
     }, { timeoutMs: params.timeoutMs });
@@ -915,8 +915,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!blueprintPath) return { success: false, error: 'INVALID_BLUEPRINT_PATH', message: 'Blueprint path is required' } as const;
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'get_pin_details',
+    const res = await this.sendBlueprintGraphAction('get_pin_details', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId,
@@ -929,8 +928,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     blueprintPath?: string;
     timeoutMs?: number;
   } = {}): Promise<StandardActionResponse> {
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'list_node_types',
+    const res = await this.sendBlueprintGraphAction('list_node_types', {
       blueprintPath: params.blueprintPath || '/Game/Temp',
       graphName: 'EventGraph'
     }, { timeoutMs: params.timeoutMs });
@@ -950,8 +948,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     if (!params.nodeId) return { success: false, error: 'INVALID_NODE_ID', message: 'Node ID is required' } as const;
     if (!params.pinName) return { success: false, error: 'INVALID_PIN_NAME', message: 'Pin name is required' } as const;
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'set_pin_default_value',
+    const res = await this.sendBlueprintGraphAction('set_pin_default_value', {
       blueprintPath: blueprintPath,
       graphName: params.graphName || 'EventGraph',
       nodeId: params.nodeId,
@@ -974,7 +971,6 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
     const primary = candidates[0];
     if (!primary) return { success: false as const, error: 'Invalid blueprint name' };
 
-    // Fix: C++ expects 'manage_blueprint_graph' with 'subAction' = 'connect_pins'
     let fromNodeId = params.sourceNodeGuid;
     let fromPinName = params.sourcePinName;
     if (fromNodeId && fromNodeId.includes('.') && !fromPinName) {
@@ -991,8 +987,7 @@ export class BlueprintTools extends BaseTool implements IBlueprintTools {
       toPinName = parts.slice(1).join('.');
     }
 
-    const res = await this.sendAction('manage_blueprint_graph', {
-      subAction: 'connect_pins',
+    const res = await this.sendBlueprintGraphAction('connect_pins', {
       assetPath: primary,
       graphName: 'EventGraph',
       fromNodeId: fromNodeId,

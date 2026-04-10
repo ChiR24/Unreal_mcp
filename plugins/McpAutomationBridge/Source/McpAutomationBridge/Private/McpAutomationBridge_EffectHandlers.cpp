@@ -37,7 +37,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 // =============================================================================
 
-#include "McpVersionCompatibility.h"  // MUST be first
+#include "McpVersionCompatibility.h" // MUST be first
 #include "McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
@@ -127,15 +127,16 @@
 bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
   const FString Lower = Action.ToLower();
   const bool bIsCreateEffect = Lower.Equals(TEXT("create_effect")) ||
                                Lower.StartsWith(TEXT("create_effect"));
   const bool bIsNiagaraModule = Lower.StartsWith(TEXT("add_")) ||
-                                 Lower.StartsWith(TEXT("set_parameter")) ||
-                                 Lower.StartsWith(TEXT("bind_parameter")) ||
-                                 Lower.StartsWith(TEXT("enable_gpu")) ||
-                                 Lower.StartsWith(TEXT("configure_event"));
+                                Lower.StartsWith(TEXT("set_parameter")) ||
+                                Lower.StartsWith(TEXT("bind_parameter")) ||
+                                Lower.StartsWith(TEXT("enable_gpu")) ||
+                                Lower.StartsWith(TEXT("configure_event"));
   // Note: Only accept spawn_niagara explicitly, NOT spawn_sky_light (which goes to HandleLightingAction)
   const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
   if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
@@ -149,13 +150,15 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
   auto SendResponse = [&](bool bOk, const FString &Msg,
                           const TSharedPtr<FJsonObject> &ResObj,
-                          const FString &ErrCode = FString()) {
+                          const FString &ErrCode = FString())
+  {
     SendAutomationResponse(RequestingSocket, RequestId, bOk, Msg, ResObj,
                            ErrCode);
   };
 
   // Discovery: list available debug shape types
-  if (Lower.Equals(TEXT("list_debug_shapes"))) {
+  if (Lower.Equals(TEXT("list_debug_shapes")))
+  {
     TArray<TSharedPtr<FJsonValue>> Shapes;
     Shapes.Add(MakeShared<FJsonValueString>(TEXT("sphere")));
     Shapes.Add(MakeShared<FJsonValueString>(TEXT("box")));
@@ -178,16 +181,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // Handle create_effect tool with sub-actions
-  if (Lower.Equals(TEXT("clear_debug_shapes"))) {
+  if (Lower.Equals(TEXT("clear_debug_shapes")))
+  {
 #if WITH_EDITOR
-    if (GEditor && GEditor->GetEditorWorldContext().World()) {
+    if (GEditor && GEditor->GetEditorWorldContext().World())
+    {
       FlushPersistentDebugLines(GEditor->GetEditorWorldContext().World());
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Debug shapes cleared"), Resp);
       return true;
-    } else {
+    }
+    else
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor world not available"), nullptr,
                              TEXT("NO_WORLD"));
@@ -201,11 +208,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 #endif
   }
 
-  if (bIsCreateEffect || Lower.Equals(TEXT("create_niagara_system"))) {
+  if (bIsCreateEffect || Lower.Equals(TEXT("create_niagara_system")))
+  {
     FString SubAction;
     LocalPayload->TryGetStringField(TEXT("action"), SubAction);
 
-    if (Lower.Equals(TEXT("create_niagara_system"))) {
+    if (Lower.Equals(TEXT("create_niagara_system")))
+    {
       SubAction = TEXT("create_niagara_system");
     }
 
@@ -213,24 +222,28 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // Action is a specific tool (e.g. set_niagara_parameter) and use that as
     // sub-action.
     if (SubAction.IsEmpty() &&
-        !Action.Equals(TEXT("create_effect"), ESearchCase::IgnoreCase)) {
+        !Action.Equals(TEXT("create_effect"), ESearchCase::IgnoreCase))
+    {
       SubAction = Action;
     }
 
     const FString LowerSub = SubAction.ToLower();
 
     // Handle debug_shape sub-action - draws debug visualization shapes
-    if (LowerSub == TEXT("debug_shape")) {
+    if (LowerSub == TEXT("debug_shape"))
+    {
       // shapeType is required
       FString ShapeType = TEXT("sphere");
       LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
       // Also accept 'shape' as alias
-      if (ShapeType.Equals(TEXT("sphere"), ESearchCase::IgnoreCase) && LocalPayload->HasField(TEXT("shape"))) {
+      if (ShapeType.Equals(TEXT("sphere"), ESearchCase::IgnoreCase) && LocalPayload->HasField(TEXT("shape")))
+      {
         LocalPayload->TryGetStringField(TEXT("shape"), ShapeType);
       }
 
       // Location is required for debug shapes
-      if (!LocalPayload->HasField(TEXT("location"))) {
+      if (!LocalPayload->HasField(TEXT("location")))
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"), TEXT("location parameter is required for debug_shape"));
@@ -243,12 +256,16 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       // Parse location
       FVector Loc(0, 0, 0);
       const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
-      if (LocVal.IsValid()) {
-        if (LocVal->Type == EJson::Array) {
+      if (LocVal.IsValid())
+      {
+        if (LocVal->Type == EJson::Array)
+        {
           const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
           if (Arr.Num() >= 3)
             Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
-        } else if (LocVal->Type == EJson::Object) {
+        }
+        else if (LocVal->Type == EJson::Object)
+        {
           const TSharedPtr<FJsonObject> O = LocVal->AsObject();
           if (O.IsValid())
             Loc = FVector(
@@ -278,17 +295,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       // Color (default: white)
       TArray<double> ColorArr = {255, 255, 255, 255};
       const TArray<TSharedPtr<FJsonValue>> *ColorJsonArr = nullptr;
-      if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) && ColorJsonArr && ColorJsonArr->Num() >= 3) {
+      if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) && ColorJsonArr && ColorJsonArr->Num() >= 3)
+      {
         ColorArr[0] = (*ColorJsonArr)[0]->AsNumber();
         ColorArr[1] = (*ColorJsonArr)[1]->AsNumber();
         ColorArr[2] = (*ColorJsonArr)[2]->AsNumber();
-        if (ColorJsonArr->Num() >= 4) {
+        if (ColorJsonArr->Num() >= 4)
+        {
           ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
         }
       }
 
 #if WITH_EDITOR
-      if (!GEditor) {
+      if (!GEditor)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"), TEXT("Editor not available for debug drawing"));
@@ -299,7 +319,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
 
       UWorld *World = GEditor->GetEditorWorldContext().World();
-      if (!World) {
+      if (!World)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"), TEXT("No world available for debug drawing"));
@@ -312,39 +333,64 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       const FColor DebugColor((uint8)ColorArr[0], (uint8)ColorArr[1], (uint8)ColorArr[2], (uint8)ColorArr[3]);
       const FString LowerShapeType = ShapeType.ToLower();
 
-      if (LowerShapeType == TEXT("sphere")) {
+      if (LowerShapeType == TEXT("sphere"))
+      {
         DrawDebugSphere(World, Loc, Size, 16, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("box")) {
+      }
+      else if (LowerShapeType == TEXT("box"))
+      {
         DrawDebugBox(World, Loc, FVector(Size), FRotator::ZeroRotator.Quaternion(), DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("circle")) {
+      }
+      else if (LowerShapeType == TEXT("circle"))
+      {
         DrawDebugCircle(World, Loc, Size, 32, DebugColor, false, Duration, 0, Thickness, FVector::UpVector);
-      } else if (LowerShapeType == TEXT("line")) {
+      }
+      else if (LowerShapeType == TEXT("line"))
+      {
         FVector EndLoc = Loc + FVector(100, 0, 0);
-        if (LocalPayload->HasField(TEXT("endLocation"))) {
+        if (LocalPayload->HasField(TEXT("endLocation")))
+        {
           const TSharedPtr<FJsonValue> EndVal = LocalPayload->TryGetField(TEXT("endLocation"));
-          if (EndVal.IsValid() && EndVal->Type == EJson::Array) {
+          if (EndVal.IsValid() && EndVal->Type == EJson::Array)
+          {
             const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
             if (Arr.Num() >= 3)
               EndLoc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
           }
         }
         DrawDebugLine(World, Loc, EndLoc, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("point")) {
+      }
+      else if (LowerShapeType == TEXT("point"))
+      {
         DrawDebugPoint(World, Loc, Size, DebugColor, false, Duration);
-      } else if (LowerShapeType == TEXT("arrow")) {
+      }
+      else if (LowerShapeType == TEXT("arrow"))
+      {
         FVector EndLoc = Loc + FVector(100, 0, 0);
         DrawDebugDirectionalArrow(World, Loc, EndLoc, Size > 0 ? Size : 10.0f, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("capsule")) {
+      }
+      else if (LowerShapeType == TEXT("capsule"))
+      {
         DrawDebugCapsule(World, Loc, Size, Size, FQuat::Identity, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("cylinder")) {
+      }
+      else if (LowerShapeType == TEXT("cylinder"))
+      {
         DrawDebugCylinder(World, Loc, Loc + FVector(0, 0, Size * 2), Size, 16, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("cone")) {
+      }
+      else if (LowerShapeType == TEXT("cone"))
+      {
         DrawDebugCone(World, Loc, FVector::UpVector, Size * 2, FMath::DegreesToRadians(45.0f), FMath::DegreesToRadians(45.0f), 16, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("coordinate")) {
+      }
+      else if (LowerShapeType == TEXT("coordinate"))
+      {
         DrawDebugCoordinateSystem(World, Loc, FRotator::ZeroRotator, Size, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("plane")) {
+      }
+      else if (LowerShapeType == TEXT("plane"))
+      {
         DrawDebugBox(World, Loc, FVector(Size, Size, 1.0f), FQuat::Identity, DebugColor, false, Duration, 0, Thickness);
-      } else {
+      }
+      else
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"), FString::Printf(TEXT("Unsupported shape type: %s"), *ShapeType));
@@ -374,10 +420,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     // Handle particle spawning
-    if (LowerSub == TEXT("particle")) {
+    if (LowerSub == TEXT("particle"))
+    {
       FString Preset;
       LocalPayload->TryGetStringField(TEXT("preset"), Preset);
-      if (Preset.IsEmpty()) {
+      if (Preset.IsEmpty())
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(
@@ -391,17 +439,22 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
       // Location and optional rotation/scale
       FVector Loc(0, 0, 0);
-      if (LocalPayload->HasField(TEXT("location"))) {
+      if (LocalPayload->HasField(TEXT("location")))
+      {
         const TSharedPtr<FJsonValue> LocVal =
             LocalPayload->TryGetField(TEXT("location"));
-        if (LocVal.IsValid()) {
-          if (LocVal->Type == EJson::Array) {
+        if (LocVal.IsValid())
+        {
+          if (LocVal->Type == EJson::Array)
+          {
             const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
             if (Arr.Num() >= 3)
               Loc =
                   FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(),
                           (float)Arr[2]->AsNumber());
-          } else if (LocVal->Type == EJson::Object) {
+          }
+          else if (LocVal->Type == EJson::Object)
+          {
             const TSharedPtr<FJsonObject> O = LocVal->AsObject();
             if (O.IsValid())
               Loc = FVector(
@@ -419,7 +472,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       TArray<double> RotArr = {0, 0, 0};
       const TArray<TSharedPtr<FJsonValue>> *RA = nullptr;
       if (LocalPayload->TryGetArrayField(TEXT("rotation"), RA) && RA &&
-          RA->Num() >= 3) {
+          RA->Num() >= 3)
+      {
         RotArr[0] = (*RA)[0]->AsNumber();
         RotArr[1] = (*RA)[1]->AsNumber();
         RotArr[2] = (*RA)[2]->AsNumber();
@@ -429,11 +483,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       TArray<double> ScaleArr = {1, 1, 1};
       const TArray<TSharedPtr<FJsonValue>> *ScaleJsonArr = nullptr;
       if (LocalPayload->TryGetArrayField(TEXT("scale"), ScaleJsonArr) &&
-          ScaleJsonArr && ScaleJsonArr->Num() >= 3) {
+          ScaleJsonArr && ScaleJsonArr->Num() >= 3)
+      {
         ScaleArr[0] = (*ScaleJsonArr)[0]->AsNumber();
         ScaleArr[1] = (*ScaleJsonArr)[1]->AsNumber();
         ScaleArr[2] = (*ScaleJsonArr)[2]->AsNumber();
-      } else if (LocalPayload->TryGetNumberField(TEXT("scale"), ScaleArr[0])) {
+      }
+      else if (LocalPayload->TryGetNumberField(TEXT("scale"), ScaleArr[0]))
+      {
         ScaleArr[1] = ScaleArr[2] = ScaleArr[0];
       }
 
@@ -463,11 +520,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       TArray<double> ColorArr = {255, 255, 255, 255};
       const TArray<TSharedPtr<FJsonValue>> *ColorJsonArr = nullptr;
       if (LocalPayload->TryGetArrayField(TEXT("color"), ColorJsonArr) &&
-          ColorJsonArr && ColorJsonArr->Num() >= 3) {
+          ColorJsonArr && ColorJsonArr->Num() >= 3)
+      {
         ColorArr[0] = (*ColorJsonArr)[0]->AsNumber();
         ColorArr[1] = (*ColorJsonArr)[1]->AsNumber();
         ColorArr[2] = (*ColorJsonArr)[2]->AsNumber();
-        if (ColorJsonArr->Num() >= 4) {
+        if (ColorJsonArr->Num() >= 4)
+        {
           ColorArr[3] = (*ColorJsonArr)[3]->AsNumber();
         }
       }
@@ -476,7 +535,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       LocalPayload->TryGetStringField(TEXT("shapeType"), ShapeType);
 
 #if WITH_EDITOR
-      if (!GEditor) {
+      if (!GEditor)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"),
@@ -489,7 +549,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
       // Get the current world for debug drawing
       UWorld *World = GEditor->GetEditorWorldContext().World();
-      if (!World) {
+      if (!World)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"),
@@ -504,15 +565,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                               (uint8)ColorArr[2], (uint8)ColorArr[3]);
       const FString LowerShapeType = ShapeType.ToLower();
 
-      if (LowerShapeType == TEXT("sphere")) {
+      if (LowerShapeType == TEXT("sphere"))
+      {
         DrawDebugSphere(World, Loc, Size, 16, DebugColor, false, Duration, 0,
                         Thickness);
-      } else if (LowerShapeType == TEXT("box")) {
+      }
+      else if (LowerShapeType == TEXT("box"))
+      {
         FVector BoxSize = FVector(Size);
-        if (LocalPayload->HasField(TEXT("boxSize"))) {
+        if (LocalPayload->HasField(TEXT("boxSize")))
+        {
           const TArray<TSharedPtr<FJsonValue>> *BoxSizeArr = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("boxSize"), BoxSizeArr) &&
-              BoxSizeArr && BoxSizeArr->Num() >= 3) {
+              BoxSizeArr && BoxSizeArr->Num() >= 3)
+          {
             BoxSize = FVector((float)(*BoxSizeArr)[0]->AsNumber(),
                               (float)(*BoxSizeArr)[1]->AsNumber(),
                               (float)(*BoxSizeArr)[2]->AsNumber());
@@ -520,22 +586,31 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugBox(World, Loc, BoxSize, FRotator::ZeroRotator.Quaternion(),
                      DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("circle")) {
+      }
+      else if (LowerShapeType == TEXT("circle"))
+      {
         DrawDebugCircle(World, Loc, Size, 32, DebugColor, false, Duration, 0,
                         Thickness, FVector::UpVector);
-      } else if (LowerShapeType == TEXT("line")) {
+      }
+      else if (LowerShapeType == TEXT("line"))
+      {
         FVector EndLoc = Loc + FVector(100, 0, 0);
-        if (LocalPayload->HasField(TEXT("endLocation"))) {
+        if (LocalPayload->HasField(TEXT("endLocation")))
+        {
           const TSharedPtr<FJsonValue> EndVal =
               LocalPayload->TryGetField(TEXT("endLocation"));
-          if (EndVal.IsValid()) {
-            if (EndVal->Type == EJson::Array) {
+          if (EndVal.IsValid())
+          {
+            if (EndVal->Type == EJson::Array)
+            {
               const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
               if (Arr.Num() >= 3)
                 EndLoc = FVector((float)Arr[0]->AsNumber(),
                                  (float)Arr[1]->AsNumber(),
                                  (float)Arr[2]->AsNumber());
-            } else if (EndVal->Type == EJson::Object) {
+            }
+            else if (EndVal->Type == EJson::Object)
+            {
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
@@ -552,14 +627,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugLine(World, Loc, EndLoc, DebugColor, false, Duration, 0,
                       Thickness);
-      } else if (LowerShapeType == TEXT("point")) {
+      }
+      else if (LowerShapeType == TEXT("point"))
+      {
         DrawDebugPoint(World, Loc, Size, DebugColor, false, Duration);
-      } else if (LowerShapeType == TEXT("coordinate")) {
+      }
+      else if (LowerShapeType == TEXT("coordinate"))
+      {
         FRotator Rot = FRotator::ZeroRotator;
-        if (LocalPayload->HasField(TEXT("rotation"))) {
+        if (LocalPayload->HasField(TEXT("rotation")))
+        {
           const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
-              RotJsonArr && RotJsonArr->Num() >= 3) {
+              RotJsonArr && RotJsonArr->Num() >= 3)
+          {
             Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
                            (float)(*RotJsonArr)[1]->AsNumber(),
                            (float)(*RotJsonArr)[2]->AsNumber());
@@ -567,19 +648,26 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugCoordinateSystem(World, Loc, Rot, Size, false, Duration, 0,
                                   Thickness);
-      } else if (LowerShapeType == TEXT("cylinder")) {
+      }
+      else if (LowerShapeType == TEXT("cylinder"))
+      {
         FVector EndLoc = Loc + FVector(0, 0, 100);
-        if (LocalPayload->HasField(TEXT("endLocation"))) {
+        if (LocalPayload->HasField(TEXT("endLocation")))
+        {
           const TSharedPtr<FJsonValue> EndVal =
               LocalPayload->TryGetField(TEXT("endLocation"));
-          if (EndVal.IsValid()) {
-            if (EndVal->Type == EJson::Array) {
+          if (EndVal.IsValid())
+          {
+            if (EndVal->Type == EJson::Array)
+            {
               const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
               if (Arr.Num() >= 3)
                 EndLoc = FVector((float)Arr[0]->AsNumber(),
                                  (float)Arr[1]->AsNumber(),
                                  (float)Arr[2]->AsNumber());
-            } else if (EndVal->Type == EJson::Object) {
+            }
+            else if (EndVal->Type == EJson::Object)
+            {
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
@@ -596,19 +684,26 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugCylinder(World, Loc, EndLoc, Size, 16, DebugColor, false,
                           Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("cone")) {
+      }
+      else if (LowerShapeType == TEXT("cone"))
+      {
         FVector Direction = FVector::UpVector;
-        if (LocalPayload->HasField(TEXT("direction"))) {
+        if (LocalPayload->HasField(TEXT("direction")))
+        {
           const TSharedPtr<FJsonValue> DirVal =
               LocalPayload->TryGetField(TEXT("direction"));
-          if (DirVal.IsValid()) {
-            if (DirVal->Type == EJson::Array) {
+          if (DirVal.IsValid())
+          {
+            if (DirVal->Type == EJson::Array)
+            {
               const TArray<TSharedPtr<FJsonValue>> &Arr = DirVal->AsArray();
               if (Arr.Num() >= 3)
                 Direction = FVector((float)Arr[0]->AsNumber(),
                                     (float)Arr[1]->AsNumber(),
                                     (float)Arr[2]->AsNumber());
-            } else if (DirVal->Type == EJson::Object) {
+            }
+            else if (DirVal->Type == EJson::Object)
+            {
               const TSharedPtr<FJsonObject> O = DirVal->AsObject();
               if (O.IsValid())
                 Direction = FVector((float)(O->HasField(TEXT("x"))
@@ -624,26 +719,32 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           }
         }
         float Length = 100.0f;
-        if (LocalPayload->HasField(TEXT("length"))) {
+        if (LocalPayload->HasField(TEXT("length")))
+        {
           Length = (float)GetJsonNumberField(LocalPayload, TEXT("length"));
         }
         // Default to a 45 degree cone if not specified
         float AngleWidth = FMath::DegreesToRadians(45.0f);
         float AngleHeight = FMath::DegreesToRadians(45.0f);
 
-        if (LocalPayload->HasField(TEXT("angle"))) {
+        if (LocalPayload->HasField(TEXT("angle")))
+        {
           float AngleDeg = (float)GetJsonNumberField(LocalPayload, TEXT("angle"));
           AngleWidth = AngleHeight = FMath::DegreesToRadians(AngleDeg);
         }
 
         DrawDebugCone(World, Loc, Direction, Length, AngleWidth, AngleHeight,
                       16, DebugColor, false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("capsule")) {
+      }
+      else if (LowerShapeType == TEXT("capsule"))
+      {
         FQuat Rot = FQuat::Identity;
-        if (LocalPayload->HasField(TEXT("rotation"))) {
+        if (LocalPayload->HasField(TEXT("rotation")))
+        {
           const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
-              RotJsonArr && RotJsonArr->Num() >= 3) {
+              RotJsonArr && RotJsonArr->Num() >= 3)
+          {
             Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
                            (float)(*RotJsonArr)[1]->AsNumber(),
                            (float)(*RotJsonArr)[2]->AsNumber())
@@ -651,25 +752,33 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           }
         }
         float HalfHeight = Size; // Default if not specified
-        if (LocalPayload->HasField(TEXT("halfHeight"))) {
+        if (LocalPayload->HasField(TEXT("halfHeight")))
+        {
           HalfHeight = (float)GetJsonNumberField(LocalPayload, TEXT("halfHeight"));
         }
         DrawDebugCapsule(World, Loc, HalfHeight, Size, Rot, DebugColor, false,
                          Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("arrow")) {
+      }
+      else if (LowerShapeType == TEXT("arrow"))
+      {
         FVector EndLoc = Loc + FVector(100, 0, 0);
-        if (LocalPayload->HasField(TEXT("endLocation"))) {
+        if (LocalPayload->HasField(TEXT("endLocation")))
+        {
           // ... parsing logic same as line ...
           const TSharedPtr<FJsonValue> EndVal =
               LocalPayload->TryGetField(TEXT("endLocation"));
-          if (EndVal.IsValid()) {
-            if (EndVal->Type == EJson::Array) {
+          if (EndVal.IsValid())
+          {
+            if (EndVal->Type == EJson::Array)
+            {
               const TArray<TSharedPtr<FJsonValue>> &Arr = EndVal->AsArray();
               if (Arr.Num() >= 3)
                 EndLoc = FVector((float)Arr[0]->AsNumber(),
                                  (float)Arr[1]->AsNumber(),
                                  (float)Arr[2]->AsNumber());
-            } else if (EndVal->Type == EJson::Object) {
+            }
+            else if (EndVal->Type == EJson::Object)
+            {
               const TSharedPtr<FJsonObject> O = EndVal->AsObject();
               if (O.IsValid())
                 EndLoc = FVector((float)(O->HasField(TEXT("x"))
@@ -687,19 +796,24 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         float ArrowSize = Size > 0 ? Size : 10.0f;
         DrawDebugDirectionalArrow(World, Loc, EndLoc, ArrowSize, DebugColor,
                                   false, Duration, 0, Thickness);
-      } else if (LowerShapeType == TEXT("plane")) {
+      }
+      else if (LowerShapeType == TEXT("plane"))
+      {
         // Draw a simple plane using a box with 0 height or DrawDebugSolidPlane
         // if available but DrawDebugBox is safer for wireframe Using Box with
         // minimal Z thickness
         FVector BoxSize = FVector(Size, Size, 1.0f);
-        if (LocalPayload->HasField(TEXT("boxSize"))) {
+        if (LocalPayload->HasField(TEXT("boxSize")))
+        {
           // ... parsing ...
         }
         FQuat Rot = FQuat::Identity;
-        if (LocalPayload->HasField(TEXT("rotation"))) {
+        if (LocalPayload->HasField(TEXT("rotation")))
+        {
           const TArray<TSharedPtr<FJsonValue>> *RotJsonArr = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("rotation"), RotJsonArr) &&
-              RotJsonArr && RotJsonArr->Num() >= 3) {
+              RotJsonArr && RotJsonArr->Num() >= 3)
+          {
             Rot = FRotator((float)(*RotJsonArr)[0]->AsNumber(),
                            (float)(*RotJsonArr)[1]->AsNumber(),
                            (float)(*RotJsonArr)[2]->AsNumber())
@@ -708,7 +822,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         DrawDebugBox(World, Loc, BoxSize, Rot, DebugColor, false, Duration, 0,
                      Thickness);
-      } else {
+      }
+      else
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(
@@ -749,16 +865,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     // Handle niagara sub-action (delegates to existing spawn_niagara logic)
-    if (LowerSub == TEXT("niagara") || LowerSub == TEXT("spawn_niagara")) {
+    if (LowerSub == TEXT("niagara") || LowerSub == TEXT("spawn_niagara"))
+    {
       // Reuse logic below
-    } else if (LowerSub.Equals(TEXT("set_niagara_parameter"))) {
+    }
+    else if (LowerSub.Equals(TEXT("set_niagara_parameter")))
+    {
       FString SystemName;
       LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
       FString ParameterName;
       LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
       FString ParameterType;
       LocalPayload->TryGetStringField(TEXT("parameterType"), ParameterType);
-      if (ParameterName.IsEmpty()) {
+      if (ParameterName.IsEmpty())
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("parameterName required"), nullptr,
                                TEXT("INVALID_ARGUMENT"));
@@ -773,7 +893,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           *SystemName, *ParameterName);
 
 #if WITH_EDITOR
-      if (!GEditor) {
+      if (!GEditor)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
                                TEXT("EDITOR_NOT_AVAILABLE"));
@@ -781,7 +902,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-      if (!ActorSS) {
+      if (!ActorSS)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("EditorActorSubsystem not available"),
                                nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -801,7 +923,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       bool bActorFound = false;
       bool bComponentFound = false;
 
-      for (AActor *Actor : AllActors) {
+      for (AActor *Actor : AllActors)
+      {
         if (!Actor)
           continue;
         if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
@@ -812,7 +935,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                TEXT("SetNiagaraParameter: Found actor '%s'"), *SystemName);
         UNiagaraComponent *NiComp =
             Actor->FindComponentByClass<UNiagaraComponent>();
-        if (!NiComp) {
+        if (!NiComp)
+        {
           UE_LOG(
               LogMcpAutomationBridgeSubsystem, Warning,
               TEXT("SetNiagaraParameter: Actor '%s' has no NiagaraComponent"),
@@ -825,27 +949,35 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         bComponentFound = true;
 
-        if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase)) {
+        if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+        {
           double NumberValue = 0.0;
           bool bHasNumber =
               LocalPayload->TryGetNumberField(TEXT("value"), NumberValue);
-          if (!bHasNumber && ValueField.IsValid()) {
-            if (ValueField->Type == EJson::Number) {
+          if (!bHasNumber && ValueField.IsValid())
+          {
+            if (ValueField->Type == EJson::Number)
+            {
               NumberValue = ValueField->AsNumber();
               bHasNumber = true;
-            } else if (ValueField->Type == EJson::Object) {
+            }
+            else if (ValueField->Type == EJson::Object)
+            {
               const TSharedPtr<FJsonObject> Obj = ValueField->AsObject();
               if (Obj.IsValid())
                 bHasNumber = Obj->TryGetNumberField(TEXT("v"), NumberValue);
             }
           }
-          if (bHasNumber) {
+          if (bHasNumber)
+          {
             NiComp->SetVariableFloat(ParamName,
                                      static_cast<float>(NumberValue));
             bApplied = true;
           }
-        } else if (ParameterType.Equals(TEXT("Vector"),
-                                        ESearchCase::IgnoreCase)) {
+        }
+        else if (ParameterType.Equals(TEXT("Vector"),
+                                      ESearchCase::IgnoreCase))
+        {
           const TSharedPtr<FJsonValue> Val =
               LocalPayload->TryGetField(TEXT("value"));
           UE_LOG(
@@ -855,7 +987,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           const TArray<TSharedPtr<FJsonValue>> *ArrValue = nullptr;
           const TSharedPtr<FJsonObject> *ObjValue = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) &&
-              ArrValue && ArrValue->Num() >= 3) {
+              ArrValue && ArrValue->Num() >= 3)
+          {
             const float X = static_cast<float>((*ArrValue)[0]->AsNumber());
             const float Y = static_cast<float>((*ArrValue)[1]->AsNumber());
             const float Z = static_cast<float>((*ArrValue)[2]->AsNumber());
@@ -865,8 +998,10 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                    TEXT("SetNiagaraParameter: Applied Vector from "
                         "Array: %f, %f, %f"),
                    X, Y, Z);
-        } else if (LocalPayload->TryGetObjectField(TEXT("value"), ObjValue) &&
-                   ObjValue && (*ObjValue).IsValid()) {
+          }
+          else if (LocalPayload->TryGetObjectField(TEXT("value"), ObjValue) &&
+                   ObjValue && (*ObjValue).IsValid())
+          {
             double VX = 0, VY = 0, VZ = 0;
             (*ObjValue)->TryGetNumberField(TEXT("x"), VX);
             (*ObjValue)->TryGetNumberField(TEXT("y"), VY);
@@ -878,15 +1013,20 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                    TEXT("SetNiagaraParameter: Applied Vector from "
                         "Object: %f, %f, %f"),
                    VX, VY, VZ);
-        } else {
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-                 TEXT("SetNiagaraParameter: Failed to parse Vector value."));
+          }
+          else
+          {
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+                   TEXT("SetNiagaraParameter: Failed to parse Vector value."));
+          }
         }
-      } else if (ParameterType.Equals(TEXT("Color"),
-                                      ESearchCase::IgnoreCase)) {
+        else if (ParameterType.Equals(TEXT("Color"),
+                                      ESearchCase::IgnoreCase))
+        {
           const TArray<TSharedPtr<FJsonValue>> *ArrValue = nullptr;
           if (LocalPayload->TryGetArrayField(TEXT("value"), ArrValue) &&
-              ArrValue && ArrValue->Num() >= 3) {
+              ArrValue && ArrValue->Num() >= 3)
+          {
             const float R = static_cast<float>((*ArrValue)[0]->AsNumber());
             const float G = static_cast<float>((*ArrValue)[1]->AsNumber());
             const float B = static_cast<float>((*ArrValue)[2]->AsNumber());
@@ -898,11 +1038,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                                            FLinearColor(R, G, B, Alpha));
             bApplied = true;
           }
-        } else if (ParameterType.Equals(TEXT("Bool"),
-                                        ESearchCase::IgnoreCase)) {
+        }
+        else if (ParameterType.Equals(TEXT("Bool"),
+                                      ESearchCase::IgnoreCase))
+        {
           bool bValue = false;
           bool bHasBool = LocalPayload->TryGetBoolField(TEXT("value"), bValue);
-          if (bHasBool) {
+          if (bHasBool)
+          {
             NiComp->SetVariableBool(ParamName, bValue);
             bApplied = true;
           }
@@ -920,27 +1063,36 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       Resp->SetStringField(TEXT("parameterName"), ParameterName);
       Resp->SetStringField(TEXT("parameterType"), ParameterType);
 
-      if (bApplied) {
+      if (bApplied)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara parameter set"), Resp, FString());
-      } else {
+      }
+      else
+      {
         FString ErrMsg = TEXT("Niagara parameter not applied");
         FString ErrCode = TEXT("SET_NIAGARA_PARAM_FAILED");
 
-        if (!bActorFound) {
+        if (!bActorFound)
+        {
           ErrMsg = FString::Printf(TEXT("Actor '%s' not found"), *SystemName);
           ErrCode = TEXT("ACTOR_NOT_FOUND");
-        } else if (!bComponentFound) {
+        }
+        else if (!bComponentFound)
+        {
           ErrMsg = FString::Printf(TEXT("Actor '%s' has no Niagara component"),
                                    *SystemName);
           ErrCode = TEXT("COMPONENT_NOT_FOUND");
-        } else {
+        }
+        else
+        {
           // Check common failure reasons
           // Invalid Type?
           if (!ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase) &&
               !ParameterType.Equals(TEXT("Vector"), ESearchCase::IgnoreCase) &&
               !ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase) &&
-              !ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase)) {
+              !ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))
+          {
             ErrMsg = FString::Printf(TEXT("Invalid parameter type: %s"),
                                      *ParameterType);
             ErrCode = TEXT("INVALID_ARGUMENT");
@@ -958,7 +1110,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           TEXT("NOT_IMPLEMENTED"));
       return true;
 #endif
-    } else if (LowerSub.Equals(TEXT("activate_niagara"))) {
+    }
+    else if (LowerSub.Equals(TEXT("activate_niagara")))
+    {
       FString SystemName;
       LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
       bool bReset = LocalPayload->HasField(TEXT("reset"))
@@ -973,7 +1127,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
       TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
       bool bFound = false;
-      for (AActor *Actor : AllActors) {
+      for (AActor *Actor : AllActors)
+      {
         if (!Actor)
           continue;
         if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
@@ -990,18 +1145,22 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         bFound = true;
         break;
       }
-      if (bFound) {
+      if (bFound)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("active"), true);
-        for (AActor *FoundActor : AllActors) {
-          if (FoundActor && FoundActor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase)) {
+        for (AActor *FoundActor : AllActors)
+        {
+          if (FoundActor && FoundActor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
+          {
             McpHandlerUtils::AddVerification(Resp, FoundActor);
             break;
           }
         }
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara system activated."), Resp);
-      } else
+      }
+      else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -1012,7 +1171,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              nullptr, TEXT("NOT_IMPLEMENTED"));
       return true;
 #endif
-    } else if (LowerSub.Equals(TEXT("deactivate_niagara"))) {
+    }
+    else if (LowerSub.Equals(TEXT("deactivate_niagara")))
+    {
       FString SystemName;
       LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
       if (SystemName.IsEmpty())
@@ -1023,7 +1184,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
       TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
       bool bFound = false;
-      for (AActor *Actor : AllActors) {
+      for (AActor *Actor : AllActors)
+      {
         if (!Actor)
           continue;
         if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
@@ -1040,14 +1202,16 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         bFound = true;
         break;
       }
-      if (bFound) {
+      if (bFound)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetBoolField(TEXT("active"), false);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara system deactivated."), Resp);
-      } else
+      }
+      else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -1058,7 +1222,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              nullptr, TEXT("NOT_IMPLEMENTED"));
       return true;
 #endif
-    } else if (LowerSub.Equals(TEXT("advance_simulation"))) {
+    }
+    else if (LowerSub.Equals(TEXT("advance_simulation")))
+    {
       FString SystemName;
       LocalPayload->TryGetStringField(TEXT("systemName"), SystemName);
       if (SystemName.IsEmpty())
@@ -1074,7 +1240,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
       TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
       bool bFound = false;
-      for (AActor *Actor : AllActors) {
+      for (AActor *Actor : AllActors)
+      {
         if (!Actor)
           continue;
         if (!Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
@@ -1087,20 +1254,23 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         if (!NiComp)
           continue;
 
-        for (int i = 0; i < Steps; i++) {
+        for (int i = 0; i < Steps; i++)
+        {
           NiComp->AdvanceSimulation(Steps, DeltaTime);
         }
         bFound = true;
         break;
       }
-      if (bFound) {
+      if (bFound)
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("actorName"), SystemName);
         Resp->SetNumberField(TEXT("steps"), Steps);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Niagara simulation advanced."), Resp);
-      } else
+      }
+      else
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Niagara system not found."), nullptr,
                                TEXT("SYSTEM_NOT_FOUND"));
@@ -1111,9 +1281,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                              nullptr, TEXT("NOT_IMPLEMENTED"));
       return true;
 #endif
-    } else if (LowerSub.Equals(TEXT("create_dynamic_light"))) {
+    }
+    else if (LowerSub.Equals(TEXT("create_dynamic_light")))
+    {
       // Validate required parameters - location is mandatory for meaningful light creation
-      if (!LocalPayload->HasField(TEXT("location"))) {
+      if (!LocalPayload->HasField(TEXT("location")))
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetBoolField(TEXT("success"), false);
         Resp->SetStringField(TEXT("error"), TEXT("location parameter is required for create_dynamic_light"));
@@ -1132,17 +1305,22 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
       // location
       FVector Loc(0, 0, 0);
-      if (LocalPayload->HasField(TEXT("location"))) {
+      if (LocalPayload->HasField(TEXT("location")))
+      {
         const TSharedPtr<FJsonValue> LocVal =
             LocalPayload->TryGetField(TEXT("location"));
-        if (LocVal.IsValid()) {
-          if (LocVal->Type == EJson::Array) {
+        if (LocVal.IsValid())
+        {
+          if (LocVal->Type == EJson::Array)
+          {
             const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
             if (Arr.Num() >= 3)
               Loc =
                   FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(),
                           (float)Arr[2]->AsNumber());
-          } else if (LocVal->Type == EJson::Object) {
+          }
+          else if (LocVal->Type == EJson::Object)
+          {
             const TSharedPtr<FJsonObject> O = LocVal->AsObject();
             if (O.IsValid())
               Loc = FVector(
@@ -1161,19 +1339,24 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       // color can be array or object
       bool bHasColor = false;
       double Cr = 1.0, Cg = 1.0, Cb = 1.0, Ca = 1.0;
-      if (LocalPayload->HasField(TEXT("color"))) {
+      if (LocalPayload->HasField(TEXT("color")))
+      {
         const TArray<TSharedPtr<FJsonValue>> *ColArr = nullptr;
         if (LocalPayload->TryGetArrayField(TEXT("color"), ColArr) && ColArr &&
-            ColArr->Num() >= 3) {
+            ColArr->Num() >= 3)
+        {
           bHasColor = true;
           Cr = (*ColArr)[0]->AsNumber();
           Cg = (*ColArr)[1]->AsNumber();
           Cb = (*ColArr)[2]->AsNumber();
           Ca = (ColArr->Num() > 3) ? (*ColArr)[3]->AsNumber() : 1.0;
-        } else {
+        }
+        else
+        {
           const TSharedPtr<FJsonObject> *CO = nullptr;
           if (LocalPayload->TryGetObjectField(TEXT("color"), CO) && CO &&
-              (*CO).IsValid()) {
+              (*CO).IsValid())
+          {
             bHasColor = true;
             Cr = (*CO)->HasField(TEXT("r")) ? GetJsonNumberField(*CO, TEXT("r"))
                                             : Cr;
@@ -1190,10 +1373,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       // pulse param optional
       bool bPulseEnabled = false;
       double PulseFreq = 1.0;
-      if (LocalPayload->HasField(TEXT("pulse"))) {
+      if (LocalPayload->HasField(TEXT("pulse")))
+      {
         const TSharedPtr<FJsonObject> *P = nullptr;
         if (LocalPayload->TryGetObjectField(TEXT("pulse"), P) && P &&
-            (*P).IsValid()) {
+            (*P).IsValid())
+        {
           (*P)->TryGetBoolField(TEXT("enabled"), bPulseEnabled);
           (*P)->TryGetNumberField(TEXT("frequency"), PulseFreq);
         }
@@ -1201,7 +1386,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
 #if WITH_EDITOR
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      if (!GEditor) {
+      if (!GEditor)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
                                TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1209,7 +1395,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-      if (!ActorSS) {
+      if (!ActorSS)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("EditorActorSubsystem not available"),
                                nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -1219,20 +1406,26 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       UClass *ChosenClass = APointLight::StaticClass();
       UClass *CompClass = UPointLightComponent::StaticClass();
       FString LT = LightType.ToLower();
-      if (LT == TEXT("spot") || LT == TEXT("spotlight")) {
+      if (LT == TEXT("spot") || LT == TEXT("spotlight"))
+      {
         ChosenClass = ASpotLight::StaticClass();
         CompClass = USpotLightComponent::StaticClass();
-      } else if (LT == TEXT("directional") || LT == TEXT("directionallight")) {
+      }
+      else if (LT == TEXT("directional") || LT == TEXT("directionallight"))
+      {
         ChosenClass = ADirectionalLight::StaticClass();
         CompClass = UDirectionalLightComponent::StaticClass();
-      } else if (LT == TEXT("rect") || LT == TEXT("rectlight")) {
+      }
+      else if (LT == TEXT("rect") || LT == TEXT("rectlight"))
+      {
         ChosenClass = ARectLight::StaticClass();
         CompClass = URectLightComponent::StaticClass();
       }
 
       AActor *Spawned = SpawnActorInActiveWorld<AActor>(ChosenClass, Loc,
                                                         FRotator::ZeroRotator);
-      if (!Spawned) {
+      if (!Spawned)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Failed to spawn light actor"), nullptr,
                                TEXT("CREATE_DYNAMIC_LIGHT_FAILED"));
@@ -1240,10 +1433,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
 
       UActorComponent *C = Spawned->GetComponentByClass(CompClass);
-      if (C) {
-        if (ULightComponent *LC = Cast<ULightComponent>(C)) {
+      if (C)
+      {
+        if (ULightComponent *LC = Cast<ULightComponent>(C))
+        {
           LC->SetIntensity(static_cast<float>(Intensity));
-          if (bHasColor) {
+          if (bHasColor)
+          {
             LC->SetLightColor(
                 FLinearColor(static_cast<float>(Cr), static_cast<float>(Cg),
                              static_cast<float>(Cb), static_cast<float>(Ca)));
@@ -1251,10 +1447,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
       }
 
-      if (!LightName.IsEmpty()) {
+      if (!LightName.IsEmpty())
+      {
         Spawned->SetActorLabel(LightName);
       }
-      if (bPulseEnabled) {
+      if (bPulseEnabled)
+      {
         Spawned->Tags.Add(
             FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFreq)));
       }
@@ -1270,10 +1468,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
           TEXT("NOT_IMPLEMENTED"));
       return true;
 #endif
-    } else if (LowerSub.Equals(TEXT("cleanup"))) {
+    }
+    else if (LowerSub.Equals(TEXT("cleanup")))
+    {
       FString Filter;
       LocalPayload->TryGetStringField(TEXT("filter"), Filter);
-      if (Filter.IsEmpty()) {
+      if (Filter.IsEmpty())
+      {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetNumberField(TEXT("removed"), 0);
         SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1282,7 +1483,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         return true;
       }
 #if WITH_EDITOR
-      if (!GEditor) {
+      if (!GEditor)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
                                TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1290,7 +1492,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-      if (!ActorSS) {
+      if (!ActorSS)
+      {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("EditorActorSubsystem not available"),
                                nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -1298,7 +1501,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
       TArray<FString> Removed;
-      for (AActor *A : Actors) {
+      for (AActor *A : Actors)
+      {
         if (!A)
           continue;
         FString Label = A->GetActorLabel();
@@ -1333,7 +1537,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
   // Spawn Niagara system in-level as a NiagaraActor (editor-only)
   bool bSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
-  if (bIsCreateEffect) {
+  if (bIsCreateEffect)
+  {
     FString Sub;
     LocalPayload->TryGetStringField(TEXT("action"), Sub);
     FString LowerSub = Sub.ToLower();
@@ -1343,10 +1548,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // legacy behavior below
   }
 
-  if (bSpawnNiagara) {
+  if (bSpawnNiagara)
+  {
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-    if (SystemPath.IsEmpty()) {
+    if (SystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
@@ -1354,7 +1561,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     // Guard against non-existent assets to prevent LoadPackage warnings
-    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath)) {
+    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+    {
       SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Niagara system asset not found: %s"),
@@ -1365,16 +1573,21 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     // Location and optional rotation/scale
     FVector Loc(0, 0, 0);
-    if (LocalPayload->HasField(TEXT("location"))) {
+    if (LocalPayload->HasField(TEXT("location")))
+    {
       const TSharedPtr<FJsonValue> LocVal =
           LocalPayload->TryGetField(TEXT("location"));
-      if (LocVal.IsValid()) {
-        if (LocVal->Type == EJson::Array) {
+      if (LocVal.IsValid())
+      {
+        if (LocVal->Type == EJson::Array)
+        {
           const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
           if (Arr.Num() >= 3)
             Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(),
                           (float)Arr[2]->AsNumber());
-        } else if (LocVal->Type == EJson::Object) {
+        }
+        else if (LocVal->Type == EJson::Object)
+        {
           const TSharedPtr<FJsonObject> O = LocVal->AsObject();
           if (O.IsValid())
             Loc = FVector(
@@ -1392,7 +1605,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     TArray<double> RotArr = {0, 0, 0};
     const TArray<TSharedPtr<FJsonValue>> *RA = nullptr;
     if (LocalPayload->TryGetArrayField(TEXT("rotation"), RA) && RA &&
-        RA->Num() >= 3) {
+        RA->Num() >= 3)
+    {
       RotArr[0] = (*RA)[0]->AsNumber();
       RotArr[1] = (*RA)[1]->AsNumber();
       RotArr[2] = (*RA)[2]->AsNumber();
@@ -1402,11 +1616,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     TArray<double> ScaleArr = {1, 1, 1};
     const TArray<TSharedPtr<FJsonValue>> *ScaleJsonArr = nullptr;
     if (LocalPayload->TryGetArrayField(TEXT("scale"), ScaleJsonArr) &&
-        ScaleJsonArr && ScaleJsonArr->Num() >= 3) {
+        ScaleJsonArr && ScaleJsonArr->Num() >= 3)
+    {
       ScaleArr[0] = (*ScaleJsonArr)[0]->AsNumber();
       ScaleArr[1] = (*ScaleJsonArr)[1]->AsNumber();
       ScaleArr[2] = (*ScaleJsonArr)[2]->AsNumber();
-    } else if (LocalPayload->TryGetNumberField(TEXT("scale"), ScaleArr[0])) {
+    }
+    else if (LocalPayload->TryGetNumberField(TEXT("scale"), ScaleArr[0]))
+    {
       ScaleArr[1] = ScaleArr[2] = ScaleArr[0];
     }
 
@@ -1418,7 +1635,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     LocalPayload->TryGetStringField(TEXT("attachToActor"), AttachToActor);
 
 #if WITH_EDITOR
-    if (!GEditor) {
+    if (!GEditor)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1426,7 +1644,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     UEditorActorSubsystem *ActorSS =
         GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS) {
+    if (!ActorSS)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("EditorActorSubsystem not available"),
                              nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -1434,7 +1653,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     UObject *NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
-    if (!NiagObj) {
+    if (!NiagObj)
+    {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), false);
       Resp->SetStringField(TEXT("error"),
@@ -1450,7 +1670,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
                             static_cast<float>(RotArr[2]));
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(), Loc, SpawnRot);
-    if (!Spawned) {
+    if (!Spawned)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Failed to spawn NiagaraActor"), nullptr,
                              TEXT("SPAWN_FAILED"));
@@ -1459,23 +1680,28 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     UNiagaraComponent *NiComp =
         Spawned->FindComponentByClass<UNiagaraComponent>();
-    if (NiComp && NiagObj->IsA<UNiagaraSystem>()) {
+    if (NiComp && NiagObj->IsA<UNiagaraSystem>())
+    {
       NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
       NiComp->SetWorldScale3D(FVector(ScaleArr[0], ScaleArr[1], ScaleArr[2]));
       NiComp->Activate(true); // Set to true
     }
 
-    if (!AttachToActor.IsEmpty()) {
+    if (!AttachToActor.IsEmpty())
+    {
       AActor *Parent = nullptr;
       TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-      for (AActor *A : AllActors) {
+      for (AActor *A : AllActors)
+      {
         if (A &&
-            A->GetActorLabel().Equals(AttachToActor, ESearchCase::IgnoreCase)) {
+            A->GetActorLabel().Equals(AttachToActor, ESearchCase::IgnoreCase))
+        {
           Parent = A;
           break;
         }
       }
-      if (Parent) {
+      if (Parent)
+      {
         Spawned->AttachToActor(Parent,
                                FAttachmentTransformRules::KeepWorldTransform);
       }
@@ -1487,9 +1713,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (Name.IsEmpty())
       LocalPayload->TryGetStringField(TEXT("actorName"), Name);
 
-    if (!Name.IsEmpty()) {
+    if (!Name.IsEmpty())
+    {
       Spawned->SetActorLabel(Name);
-    } else {
+    }
+    else
+    {
       Spawned->SetActorLabel(FString::Printf(
           TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
     }
@@ -1514,18 +1743,21 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // CLEANUP EFFECTS - remove actors whose label starts with the provided filter
   // (editor-only)
   bool bCleanup = Lower.Equals(TEXT("cleanup"));
-  if (bIsCreateEffect) {
+  if (bIsCreateEffect)
+  {
     FString Sub;
     LocalPayload->TryGetStringField(TEXT("action"), Sub);
     if (Sub.ToLower() == TEXT("cleanup"))
       bCleanup = true;
   }
 
-  if (bCleanup) {
+  if (bCleanup)
+  {
     FString Filter;
     LocalPayload->TryGetStringField(TEXT("filter"), Filter);
     // Allow empty filter as a no-op success
-    if (Filter.IsEmpty()) {
+    if (Filter.IsEmpty())
+    {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetNumberField(TEXT("removed"), 0);
       SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -1534,7 +1766,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       return true;
     }
 #if WITH_EDITOR
-    if (!GEditor) {
+    if (!GEditor)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1542,7 +1775,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     UEditorActorSubsystem *ActorSS =
         GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS) {
+    if (!ActorSS)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("EditorActorSubsystem not available"),
                              nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -1550,24 +1784,30 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
     TArray<FString> Removed;
-    for (AActor *A : Actors) {
-      if (!A) {
+    for (AActor *A : Actors)
+    {
+      if (!A)
+      {
         continue;
       }
       FString Label = A->GetActorLabel();
-      if (Label.IsEmpty()) {
+      if (Label.IsEmpty())
+      {
         continue;
       }
-      if (!Label.StartsWith(Filter, ESearchCase::IgnoreCase)) {
+      if (!Label.StartsWith(Filter, ESearchCase::IgnoreCase))
+      {
         continue;
       }
       bool bDel = ActorSS->DestroyActor(A);
-      if (bDel) {
+      if (bDel)
+      {
         Removed.Add(Label);
       }
     }
     TArray<TSharedPtr<FJsonValue>> Arr;
-    for (const FString &S : Removed) {
+    for (const FString &S : Removed)
+    {
       Arr.Add(MakeShared<FJsonValueString>(S));
     }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -1593,7 +1833,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   bool bCreateEnv = Lower.Equals(TEXT("create_environment_effect"));
   bool bCreateImpact = Lower.Equals(TEXT("create_impact_effect"));
 
-  if (bIsCreateEffect) {
+  if (bIsCreateEffect)
+  {
     FString Sub;
     LocalPayload->TryGetStringField(TEXT("action"), Sub);
     FString LSub = Sub.ToLower();
@@ -1612,10 +1853,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // PROCEDURAL EFFECT HANDLERS
   // These create actual actors/components without requiring Niagara system assets
 
-  if (bCreateFog) {
+  if (bCreateFog)
+  {
     // Create volumetric fog using AExponentialHeightFog
 #if WITH_EDITOR
-    if (!GEditor) {
+    if (!GEditor)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1623,7 +1866,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     UEditorActorSubsystem *ActorSS =
         GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS) {
+    if (!ActorSS)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("EditorActorSubsystem not available"),
                              nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
@@ -1632,9 +1876,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     // Parse location
     FVector Loc(0, 0, 0);
-    if (LocalPayload->HasField(TEXT("location"))) {
+    if (LocalPayload->HasField(TEXT("location")))
+    {
       const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
-      if (LocVal.IsValid() && LocVal->Type == EJson::Array) {
+      if (LocVal.IsValid() && LocVal->Type == EJson::Array)
+      {
         const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
         if (Arr.Num() >= 3)
           Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
@@ -1651,9 +1897,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 #if __has_include("Engine/ExponentialHeightFog.h")
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(
         AExponentialHeightFog::StaticClass(), Loc, FRotator::ZeroRotator);
-    if (Spawned) {
+    if (Spawned)
+    {
       UExponentialHeightFogComponent *FogComp = Spawned->FindComponentByClass<UExponentialHeightFogComponent>();
-      if (FogComp) {
+      if (FogComp)
+      {
         FogComp->SetFogDensity(static_cast<float>(Density));
         // Enable volumetric fog
 #if ENGINE_MAJOR_VERSION == 5
@@ -1664,9 +1912,12 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       }
       FString Name;
       LocalPayload->TryGetStringField(TEXT("name"), Name);
-      if (!Name.IsEmpty()) {
+      if (!Name.IsEmpty())
+      {
         Spawned->SetActorLabel(Name);
-      } else {
+      }
+      else
+      {
         Spawned->SetActorLabel(FString::Printf(TEXT("VolumetricFog_%lld"), FDateTime::Now().ToUnixTimestamp()));
       }
 
@@ -1693,16 +1944,19 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 #endif
   }
 
-  if (bCreateTrail) {
+  if (bCreateTrail)
+  {
     // Create a particle trail using Cascade particles or Niagara if available
     // If systemPath is provided, use Niagara; otherwise create a simple trail
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-    if (SystemPath.IsEmpty()) {
+    if (SystemPath.IsEmpty())
+    {
       LocalPayload->TryGetStringField(TEXT("emitter"), SystemPath);
     }
 
-    if (!SystemPath.IsEmpty()) {
+    if (!SystemPath.IsEmpty())
+    {
       // Use the provided system path
       return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                  TEXT("create_particle_trail"), SystemPath);
@@ -1710,7 +1964,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
 #if WITH_EDITOR
     // Create a simple trail without an asset - spawn a NiagaraActor with default settings
-    if (!GEditor) {
+    if (!GEditor)
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
@@ -1718,9 +1973,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
 
     FVector Loc(0, 0, 0);
-    if (LocalPayload->HasField(TEXT("location"))) {
+    if (LocalPayload->HasField(TEXT("location")))
+    {
       const TSharedPtr<FJsonValue> LocVal = LocalPayload->TryGetField(TEXT("location"));
-      if (LocVal.IsValid() && LocVal->Type == EJson::Array) {
+      if (LocVal.IsValid() && LocVal->Type == EJson::Array)
+      {
         const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
         if (Arr.Num() >= 3)
           Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(), (float)Arr[2]->AsNumber());
@@ -1730,6 +1987,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // For procedural trail without asset, inform user that systemPath is needed
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("performed"), false);
+    Resp->SetStringField(TEXT("capabilityState"), TEXT("requires_system_path"));
+    Resp->SetStringField(TEXT("requiredParameter"), TEXT("systemPath"));
     Resp->SetStringField(TEXT("error"), TEXT("systemPath or emitter parameter is required for particle trail creation. Please provide a valid Niagara system asset path."));
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("systemPath required for particle trail"), Resp,
@@ -1743,12 +2003,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 #endif
   }
 
-  if (bCreateEnv) {
+  if (bCreateEnv)
+  {
     // Create environment effect - requires a Niagara system asset
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
-    
-    if (!SystemPath.IsEmpty()) {
+
+    if (!SystemPath.IsEmpty())
+    {
       return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                  TEXT("create_environment_effect"), SystemPath);
     }
@@ -1756,6 +2018,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // Without systemPath, inform user
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("performed"), false);
+    Resp->SetStringField(TEXT("capabilityState"), TEXT("requires_system_path"));
+    Resp->SetStringField(TEXT("requiredParameter"), TEXT("systemPath"));
     Resp->SetStringField(TEXT("error"), TEXT("systemPath parameter is required for environment effect creation. Please provide a valid Niagara system asset path."));
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("systemPath required for environment effect"), Resp,
@@ -1763,12 +2028,14 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     return true;
   }
 
-  if (bCreateImpact) {
+  if (bCreateImpact)
+  {
     // Create impact effect - requires a Niagara system asset
     FString SystemPath;
     LocalPayload->TryGetStringField(TEXT("systemPath"), SystemPath);
 
-    if (!SystemPath.IsEmpty()) {
+    if (!SystemPath.IsEmpty())
+    {
       return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                  TEXT("create_impact_effect"), SystemPath);
     }
@@ -1776,6 +2043,9 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     // Without systemPath, inform user
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetBoolField(TEXT("performed"), false);
+    Resp->SetStringField(TEXT("capabilityState"), TEXT("requires_system_path"));
+    Resp->SetStringField(TEXT("requiredParameter"), TEXT("systemPath"));
     Resp->SetStringField(TEXT("error"), TEXT("systemPath parameter is required for impact effect creation. Please provide a valid Niagara system asset path."));
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("systemPath required for impact effect"), Resp,
@@ -1783,7 +2053,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     return true;
   }
 
-  if (bCreateRibbon) {
+  if (bCreateRibbon)
+  {
     // Require systemPath
     return CreateNiagaraEffect(RequestId, Payload, RequestingSocket,
                                TEXT("create_niagara_ribbon"), FString());
@@ -1798,28 +2069,33 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
 #if WITH_EDITOR
   // Helper to load Niagara system from path
-  auto LoadNiagaraSystem = [&](const FString& SystemPath) -> UNiagaraSystem* {
-    if (SystemPath.IsEmpty()) {
+  auto LoadNiagaraSystem = [&](const FString &SystemPath) -> UNiagaraSystem *
+  {
+    if (SystemPath.IsEmpty())
+    {
       return nullptr;
     }
-    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath)) {
+    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+    {
       return nullptr;
     }
-    UObject* LoadedObj = UEditorAssetLibrary::LoadAsset(SystemPath);
+    UObject *LoadedObj = UEditorAssetLibrary::LoadAsset(SystemPath);
     return Cast<UNiagaraSystem>(LoadedObj);
   };
 
   // Helper to send niagara module response
-  auto SendNiagaraModuleResponse = [&](bool bSuccess, const FString& ModuleName,
-                                       const FString& SystemPath,
-                                       const FString& EmitterName,
-                                       const FString& Message,
-                                       const FString& ErrorCode = FString()) {
+  auto SendNiagaraModuleResponse = [&](bool bSuccess, const FString &ModuleName,
+                                       const FString &SystemPath,
+                                       const FString &EmitterName,
+                                       const FString &Message,
+                                       const FString &ErrorCode = FString())
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bSuccess);
     Resp->SetStringField(TEXT("moduleAdded"), ModuleName);
     Resp->SetStringField(TEXT("systemPath"), SystemPath);
-    if (!EmitterName.IsEmpty()) {
+    if (!EmitterName.IsEmpty())
+    {
       Resp->SetStringField(TEXT("emitterName"), EmitterName);
     }
     SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp,
@@ -1839,15 +2115,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 1. add_spawn_rate_module - Add spawn rate module
-  if (Lower == TEXT("add_spawn_rate_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_spawn_rate_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SpawnRate"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -1868,15 +2147,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 2. add_spawn_burst_module - Add spawn burst module
-  if (Lower == TEXT("add_spawn_burst_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_spawn_burst_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SpawnBurst"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -1892,21 +2174,24 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
            *ModuleSystemPath, BurstCount, BurstInterval);
     SendNiagaraModuleResponse(true, TEXT("SpawnBurst"), ModuleSystemPath,
                               ModuleEmitterName,
-                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"), 
+                              FString::Printf(TEXT("Spawn burst module configured: count=%d, interval=%.3f"),
                                               BurstCount, BurstInterval));
     return true;
   }
 
   // 3. add_spawn_per_unit_module - Add spawn per unit module
-  if (Lower == TEXT("add_spawn_per_unit_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_spawn_per_unit_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SpawnPerUnit"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -1929,15 +2214,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 4. add_initialize_particle_module - Add initialize particle module
-  if (Lower == TEXT("add_initialize_particle_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_initialize_particle_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("InitializeParticle"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -1954,15 +2242,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 5. add_particle_state_module - Add particle state module
-  if (Lower == TEXT("add_particle_state_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_particle_state_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("ParticleState"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -1986,15 +2277,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 6. add_force_module - Add force module
-  if (Lower == TEXT("add_force_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_force_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Force"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2002,12 +2296,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       return true;
     }
     FVector ForceValue(0, 0, -980.0f); // Default gravity
-    const TArray<TSharedPtr<FJsonValue>>* ForceArr = nullptr;
-    if (LocalPayload->TryGetArrayField(TEXT("force"), ForceArr) && ForceArr && ForceArr->Num() >= 3) {
+    const TArray<TSharedPtr<FJsonValue>> *ForceArr = nullptr;
+    if (LocalPayload->TryGetArrayField(TEXT("force"), ForceArr) && ForceArr && ForceArr->Num() >= 3)
+    {
       ForceValue = FVector(
-        static_cast<float>((*ForceArr)[0]->AsNumber()),
-        static_cast<float>((*ForceArr)[1]->AsNumber()),
-        static_cast<float>((*ForceArr)[2]->AsNumber()));
+          static_cast<float>((*ForceArr)[0]->AsNumber()),
+          static_cast<float>((*ForceArr)[1]->AsNumber()),
+          static_cast<float>((*ForceArr)[2]->AsNumber()));
     }
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_force_module: System=%s, Force=(%.2f, %.2f, %.2f)"),
@@ -2020,15 +2315,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 7. add_velocity_module - Add velocity module
-  if (Lower == TEXT("add_velocity_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_velocity_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Velocity"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2037,7 +2335,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString VelocityMode;
     LocalPayload->TryGetStringField(TEXT("velocityMode"), VelocityMode);
-    if (VelocityMode.IsEmpty()) VelocityMode = TEXT("Linear");
+    if (VelocityMode.IsEmpty())
+      VelocityMode = TEXT("Linear");
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_velocity_module: System=%s, Mode=%s"),
            *ModuleSystemPath, *VelocityMode);
@@ -2048,15 +2347,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 8. add_acceleration_module - Add acceleration module
-  if (Lower == TEXT("add_acceleration_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_acceleration_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Acceleration"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2064,12 +2366,13 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
       return true;
     }
     FVector AccelValue(0, 0, 0);
-    const TArray<TSharedPtr<FJsonValue>>* AccelArr = nullptr;
-    if (LocalPayload->TryGetArrayField(TEXT("acceleration"), AccelArr) && AccelArr && AccelArr->Num() >= 3) {
+    const TArray<TSharedPtr<FJsonValue>> *AccelArr = nullptr;
+    if (LocalPayload->TryGetArrayField(TEXT("acceleration"), AccelArr) && AccelArr && AccelArr->Num() >= 3)
+    {
       AccelValue = FVector(
-        static_cast<float>((*AccelArr)[0]->AsNumber()),
-        static_cast<float>((*AccelArr)[1]->AsNumber()),
-        static_cast<float>((*AccelArr)[2]->AsNumber()));
+          static_cast<float>((*AccelArr)[0]->AsNumber()),
+          static_cast<float>((*AccelArr)[1]->AsNumber()),
+          static_cast<float>((*AccelArr)[2]->AsNumber()));
     }
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_acceleration_module: System=%s, Accel=(%.2f, %.2f, %.2f)"),
@@ -2082,15 +2385,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 9. add_size_module - Add size module
-  if (Lower == TEXT("add_size_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_size_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Size"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2099,7 +2405,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString SizeMode;
     LocalPayload->TryGetStringField(TEXT("sizeMode"), SizeMode);
-    if (SizeMode.IsEmpty()) SizeMode = TEXT("Uniform");
+    if (SizeMode.IsEmpty())
+      SizeMode = TEXT("Uniform");
     double SizeScale = 1.0;
     LocalPayload->TryGetNumberField(TEXT("sizeScale"), SizeScale);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -2112,15 +2419,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 10. add_color_module - Add color module
-  if (Lower == TEXT("add_color_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_color_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Color"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2129,20 +2439,22 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FLinearColor StartColor(1, 1, 1, 1);
     FLinearColor EndColor(1, 1, 1, 0);
-    const TArray<TSharedPtr<FJsonValue>>* ColorArr = nullptr;
-    if (LocalPayload->TryGetArrayField(TEXT("startColor"), ColorArr) && ColorArr && ColorArr->Num() >= 3) {
+    const TArray<TSharedPtr<FJsonValue>> *ColorArr = nullptr;
+    if (LocalPayload->TryGetArrayField(TEXT("startColor"), ColorArr) && ColorArr && ColorArr->Num() >= 3)
+    {
       StartColor = FLinearColor(
-        static_cast<float>((*ColorArr)[0]->AsNumber()),
-        static_cast<float>((*ColorArr)[1]->AsNumber()),
-        static_cast<float>((*ColorArr)[2]->AsNumber()),
-        ColorArr->Num() > 3 ? static_cast<float>((*ColorArr)[3]->AsNumber()) : 1.0f);
+          static_cast<float>((*ColorArr)[0]->AsNumber()),
+          static_cast<float>((*ColorArr)[1]->AsNumber()),
+          static_cast<float>((*ColorArr)[2]->AsNumber()),
+          ColorArr->Num() > 3 ? static_cast<float>((*ColorArr)[3]->AsNumber()) : 1.0f);
     }
-    if (LocalPayload->TryGetArrayField(TEXT("endColor"), ColorArr) && ColorArr && ColorArr->Num() >= 3) {
+    if (LocalPayload->TryGetArrayField(TEXT("endColor"), ColorArr) && ColorArr && ColorArr->Num() >= 3)
+    {
       EndColor = FLinearColor(
-        static_cast<float>((*ColorArr)[0]->AsNumber()),
-        static_cast<float>((*ColorArr)[1]->AsNumber()),
-        static_cast<float>((*ColorArr)[2]->AsNumber()),
-        ColorArr->Num() > 3 ? static_cast<float>((*ColorArr)[3]->AsNumber()) : 0.0f);
+          static_cast<float>((*ColorArr)[0]->AsNumber()),
+          static_cast<float>((*ColorArr)[1]->AsNumber()),
+          static_cast<float>((*ColorArr)[2]->AsNumber()),
+          ColorArr->Num() > 3 ? static_cast<float>((*ColorArr)[3]->AsNumber()) : 0.0f);
     }
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_color_module: System=%s"),
@@ -2154,15 +2466,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 11. add_collision_module - Add collision module
-  if (Lower == TEXT("add_collision_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_collision_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("Collision"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2171,7 +2486,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString CollisionMode;
     LocalPayload->TryGetStringField(TEXT("collisionMode"), CollisionMode);
-    if (CollisionMode.IsEmpty()) CollisionMode = TEXT("SceneDepth");
+    if (CollisionMode.IsEmpty())
+      CollisionMode = TEXT("SceneDepth");
     double Restitution = 0.5;
     double Friction = 0.2;
     LocalPayload->TryGetNumberField(TEXT("restitution"), Restitution);
@@ -2187,15 +2503,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 12. add_kill_particles_module - Add kill particles module
-  if (Lower == TEXT("add_kill_particles_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_kill_particles_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("KillParticles"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2204,7 +2523,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString KillCondition;
     LocalPayload->TryGetStringField(TEXT("killCondition"), KillCondition);
-    if (KillCondition.IsEmpty()) KillCondition = TEXT("LifetimeExpired");
+    if (KillCondition.IsEmpty())
+      KillCondition = TEXT("LifetimeExpired");
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_kill_particles_module: System=%s, Condition=%s"),
            *ModuleSystemPath, *KillCondition);
@@ -2215,15 +2535,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 13. add_camera_offset_module - Add camera offset module
-  if (Lower == TEXT("add_camera_offset_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_camera_offset_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("CameraOffset"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2246,15 +2569,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 14. add_sprite_renderer_module - Add sprite renderer
-  if (Lower == TEXT("add_sprite_renderer_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_sprite_renderer_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SpriteRenderer"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2273,15 +2599,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 15. add_mesh_renderer_module - Add mesh renderer
-  if (Lower == TEXT("add_mesh_renderer_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_mesh_renderer_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("MeshRenderer"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2300,15 +2629,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 16. add_ribbon_renderer_module - Add ribbon renderer
-  if (Lower == TEXT("add_ribbon_renderer_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_ribbon_renderer_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("RibbonRenderer"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2327,15 +2659,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 17. add_light_renderer_module - Add light renderer
-  if (Lower == TEXT("add_light_renderer_module")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_light_renderer_module"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("LightRenderer"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2361,15 +2696,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 18. add_skeletal_mesh_data_interface - Add skeletal mesh DI
-  if (Lower == TEXT("add_skeletal_mesh_data_interface")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_skeletal_mesh_data_interface"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SkeletalMeshDI"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2388,15 +2726,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 19. add_static_mesh_data_interface - Add static mesh DI
-  if (Lower == TEXT("add_static_mesh_data_interface")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_static_mesh_data_interface"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("StaticMeshDI"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2415,15 +2756,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 20. add_spline_data_interface - Add spline DI
-  if (Lower == TEXT("add_spline_data_interface")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_spline_data_interface"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SplineDI"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2440,15 +2784,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 21. add_audio_spectrum_data_interface - Add audio spectrum DI
-  if (Lower == TEXT("add_audio_spectrum_data_interface")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_audio_spectrum_data_interface"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("AudioSpectrumDI"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2467,15 +2814,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 22. add_collision_query_data_interface - Add collision query DI
-  if (Lower == TEXT("add_collision_query_data_interface")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_collision_query_data_interface"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("CollisionQueryDI"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2484,7 +2834,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString TraceChannel;
     LocalPayload->TryGetStringField(TEXT("traceChannel"), TraceChannel);
-    if (TraceChannel.IsEmpty()) TraceChannel = TEXT("Visibility");
+    if (TraceChannel.IsEmpty())
+      TraceChannel = TEXT("Visibility");
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
            TEXT("add_collision_query_data_interface: System=%s, Channel=%s"),
            *ModuleSystemPath, *TraceChannel);
@@ -2499,15 +2850,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 23. add_event_generator - Add event generator
-  if (Lower == TEXT("add_event_generator")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_event_generator"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("EventGenerator"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2516,7 +2870,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString EventName;
     LocalPayload->TryGetStringField(TEXT("eventName"), EventName);
-    if (EventName.IsEmpty()) EventName = TEXT("CustomEvent");
+    if (EventName.IsEmpty())
+      EventName = TEXT("CustomEvent");
     int32 MaxEventsPerFrame = 64;
     LocalPayload->TryGetNumberField(TEXT("maxEventsPerFrame"), MaxEventsPerFrame);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -2530,15 +2885,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 24. add_event_receiver - Add event receiver
-  if (Lower == TEXT("add_event_receiver")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_event_receiver"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("EventReceiver"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2560,15 +2918,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 25. configure_event_payload - Configure event payload
-  if (Lower == TEXT("configure_event_payload")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("configure_event_payload"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("EventPayload"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2577,9 +2938,10 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString EventName;
     LocalPayload->TryGetStringField(TEXT("eventName"), EventName);
-    const TArray<TSharedPtr<FJsonValue>>* PayloadVars = nullptr;
+    const TArray<TSharedPtr<FJsonValue>> *PayloadVars = nullptr;
     int32 VarCount = 0;
-    if (LocalPayload->TryGetArrayField(TEXT("payloadVariables"), PayloadVars) && PayloadVars) {
+    if (LocalPayload->TryGetArrayField(TEXT("payloadVariables"), PayloadVars) && PayloadVars)
+    {
       VarCount = PayloadVars->Num();
     }
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -2597,15 +2959,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   // -----------------------------------------------------------------------
 
   // 26. add_user_parameter - Add user parameter
-  if (Lower == TEXT("add_user_parameter")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_user_parameter"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("UserParameter"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2616,8 +2981,10 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     FString ParameterType;
     LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
     LocalPayload->TryGetStringField(TEXT("parameterType"), ParameterType);
-    if (ParameterType.IsEmpty()) ParameterType = TEXT("Float");
-    if (ParameterName.IsEmpty()) {
+    if (ParameterType.IsEmpty())
+      ParameterType = TEXT("Float");
+    if (ParameterName.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("parameterName required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
@@ -2634,15 +3001,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 27. set_parameter_value - Set parameter value
-  if (Lower == TEXT("set_parameter_value")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("set_parameter_value"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("ParameterValue"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2651,7 +3021,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString ParameterName;
     LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
-    if (ParameterName.IsEmpty()) {
+    if (ParameterName.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("parameterName required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
@@ -2667,15 +3038,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 28. bind_parameter_to_source - Bind parameter to source
-  if (Lower == TEXT("bind_parameter_to_source")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("bind_parameter_to_source"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("ParameterBinding"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2688,7 +3062,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     LocalPayload->TryGetStringField(TEXT("parameterName"), ParameterName);
     LocalPayload->TryGetStringField(TEXT("sourceType"), SourceType);
     LocalPayload->TryGetStringField(TEXT("sourceName"), SourceName);
-    if (ParameterName.IsEmpty()) {
+    if (ParameterName.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("parameterName required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
@@ -2705,15 +3080,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 29. enable_gpu_simulation - Enable GPU simulation
-  if (Lower == TEXT("enable_gpu_simulation")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("enable_gpu_simulation"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("GPUSimulation"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2733,15 +3111,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
   }
 
   // 30. add_simulation_stage - Add simulation stage
-  if (Lower == TEXT("add_simulation_stage")) {
-    if (ModuleSystemPath.IsEmpty()) {
+  if (Lower == TEXT("add_simulation_stage"))
+  {
+    if (ModuleSystemPath.IsEmpty())
+    {
       SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("systemPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    UNiagaraSystem* NiagSys = LoadNiagaraSystem(ModuleSystemPath);
-    if (!NiagSys) {
+    UNiagaraSystem *NiagSys = LoadNiagaraSystem(ModuleSystemPath);
+    if (!NiagSys)
+    {
       SendNiagaraModuleResponse(false, TEXT("SimulationStage"), ModuleSystemPath,
                                 ModuleEmitterName,
                                 TEXT("Niagara system not found"),
@@ -2750,7 +3131,8 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     }
     FString StageName;
     LocalPayload->TryGetStringField(TEXT("stageName"), StageName);
-    if (StageName.IsEmpty()) StageName = TEXT("CustomStage");
+    if (StageName.IsEmpty())
+      StageName = TEXT("CustomStage");
     int32 NumIterations = 1;
     LocalPayload->TryGetNumberField(TEXT("numIterations"), NumIterations);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Display,
@@ -2781,9 +3163,11 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString &EffectName,
-    const FString &DefaultSystemPath) {
+    const FString &DefaultSystemPath)
+{
 #if WITH_EDITOR
-  if (!GEditor) {
+  if (!GEditor)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Editor not available"));
@@ -2794,7 +3178,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   }
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  if (!ActorSS) {
+  if (!ActorSS)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"),
@@ -2809,7 +3194,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   FString SystemPath = DefaultSystemPath;
   Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
 
-  if (SystemPath.IsEmpty()) {
+  if (SystemPath.IsEmpty())
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(
@@ -2825,16 +3211,21 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
 
   // Location
   FVector Loc(0, 0, 0);
-  if (Payload->HasField(TEXT("location"))) {
+  if (Payload->HasField(TEXT("location")))
+  {
     const TSharedPtr<FJsonValue> LocVal =
         Payload->TryGetField(TEXT("location"));
-    if (LocVal.IsValid()) {
-      if (LocVal->Type == EJson::Array) {
+    if (LocVal.IsValid())
+    {
+      if (LocVal->Type == EJson::Array)
+      {
         const TArray<TSharedPtr<FJsonValue>> &Arr = LocVal->AsArray();
         if (Arr.Num() >= 3)
           Loc = FVector((float)Arr[0]->AsNumber(), (float)Arr[1]->AsNumber(),
                         (float)Arr[2]->AsNumber());
-      } else if (LocVal->Type == EJson::Object) {
+      }
+      else if (LocVal->Type == EJson::Object)
+      {
         const TSharedPtr<FJsonObject> O = LocVal->AsObject();
         if (O.IsValid())
           Loc = FVector(
@@ -2849,7 +3240,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   }
 
   // Load the Niagara system
-  if (!UEditorAssetLibrary::DoesAssetExist(SystemPath)) {
+  if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+  {
     SendAutomationResponse(
         RequestingSocket, RequestId, false,
         FString::Printf(TEXT("Niagara system asset not found: %s"),
@@ -2859,7 +3251,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   }
 
   UObject *NiagObj = UEditorAssetLibrary::LoadAsset(SystemPath);
-  if (!NiagObj) {
+  if (!NiagObj)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
@@ -2873,7 +3266,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   // Spawn the actor
   AActor *Spawned = SpawnActorInActiveWorld<AActor>(
       ANiagaraActor::StaticClass(), Loc, FRotator::ZeroRotator);
-  if (!Spawned) {
+  if (!Spawned)
+  {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), false);
     Resp->SetStringField(TEXT("error"), TEXT("Failed to spawn Niagara actor"));
@@ -2886,7 +3280,8 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   // Configure the Niagara component
   UNiagaraComponent *NiComp =
       Spawned->FindComponentByClass<UNiagaraComponent>();
-  if (NiComp && NiagObj->IsA<UNiagaraSystem>()) {
+  if (NiComp && NiagObj->IsA<UNiagaraSystem>())
+  {
     NiComp->SetAsset(Cast<UNiagaraSystem>(NiagObj));
     NiComp->Activate(true);
   }
@@ -2897,9 +3292,12 @@ bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
   if (Name.IsEmpty())
     Payload->TryGetStringField(TEXT("actorName"), Name);
 
-  if (!Name.IsEmpty()) {
+  if (!Name.IsEmpty())
+  {
     Spawned->SetActorLabel(Name);
-  } else {
+  }
+  else
+  {
     Spawned->SetActorLabel(FString::Printf(
         TEXT("%s_%lld"), *EffectName.Replace(TEXT("create_"), TEXT("")),
         FDateTime::Now().ToUnixTimestamp()));

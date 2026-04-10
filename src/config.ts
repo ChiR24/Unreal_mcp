@@ -1,16 +1,9 @@
 import { z } from 'zod';
 import { Logger } from './utils/logger.js';
 import dotenv from 'dotenv';
+import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT } from './constants.js';
 
-// Suppress dotenv output to avoid corrupting MCP stdout stream
-const originalWrite = process.stdout.write;
- 
-process.stdout.write = function () { return true; } as typeof process.stdout.write;
-try {
-  dotenv.config();
-} finally {
-  process.stdout.write = originalWrite;
-}
+dotenv.config({ quiet: true });
 
 const log = new Logger('Config');
 
@@ -44,8 +37,8 @@ export const EnvSchema = z.object({
 
 
   // Connection Settings
-  MCP_AUTOMATION_PORT: z.preprocess((v) => stringToNumber(v, 8091), z.number().default(8091)),
-  MCP_AUTOMATION_HOST: z.string().default('127.0.0.1'),
+  MCP_AUTOMATION_PORT: z.preprocess((v) => stringToNumber(v, DEFAULT_AUTOMATION_PORT), z.number().default(DEFAULT_AUTOMATION_PORT)),
+  MCP_AUTOMATION_HOST: z.string().default(DEFAULT_AUTOMATION_HOST),
   MCP_AUTOMATION_CLIENT_MODE: z.preprocess(stringToBoolean, z.boolean().default(false)),
 
   // Timeouts

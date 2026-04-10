@@ -1,7 +1,8 @@
 import { cleanObject } from '../../utils/safe-json.js';
 import { ITools } from '../../types/tool-interfaces.js';
-import type { HandlerArgs, BlueprintArgs } from '../../types/handler-types.js';
+import type { HandlerArgs, BlueprintArgs, GraphArgs } from '../../types/handler-types.js';
 import { executeAutomationRequest } from './common-handlers.js';
+import { handleGraphTools } from './graph-handlers.js';
 
 
 /**
@@ -11,10 +12,19 @@ import { executeAutomationRequest } from './common-handlers.js';
 function normalizeBlueprintPath(path: string | undefined): string | undefined {
   if (!path || typeof path !== 'string') return path;
   // Convert backslashes to forward slashes
-  let normalized = path.replace(/\\/g, '/');
+  let normalized = path.replace(/\\/g, '/').trim();
   // Collapse double slashes
   while (normalized.includes('//')) {
     normalized = normalized.replace(/\/\//g, '/');
+  }
+  if (normalized.startsWith('/Content/')) {
+    normalized = '/Game/' + normalized.slice('/Content/'.length);
+  }
+  if (!normalized.startsWith('/')) {
+    if (normalized.startsWith('Game/')) normalized = '/' + normalized;
+    else if (normalized.startsWith('Engine/')) normalized = '/' + normalized;
+    else if (normalized.startsWith('Script/')) normalized = '/' + normalized;
+    else normalized = '/Game/' + normalized;
   }
   return normalized;
 }
@@ -426,8 +436,10 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
     case 'create_reroute_node':
     case 'set_node_property':
     case 'get_node_details':
+    case 'get_node_details_batch':
     case 'get_pin_details':
     case 'get_graph_details':
+    case 'get_graph_review_summary':
     case 'create_node':
     case 'list_node_types':
     case 'set_pin_default_value': {
@@ -472,8 +484,7 @@ export async function handleBlueprintTools(action: string, args: HandlerArgs, to
         blueprintPath,
         assetPath: argsRecord.assetPath || blueprintPath
       };
-      const res = await executeAutomationRequest(tools, 'manage_blueprint_graph', processedArgs, 'Automation bridge not available for blueprint graph operations');
-      return cleanObject(res) as Record<string, unknown>;
+      return await handleGraphTools('manage_blueprint', action, processedArgs as GraphArgs, tools);
     }
     default: {
       // Translate applyAndSave to compile/save flags for modify_scs action

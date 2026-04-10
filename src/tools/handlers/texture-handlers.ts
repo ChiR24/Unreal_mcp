@@ -929,7 +929,18 @@ export async function handleTextureTools(
         })) as AutomationResponse;
 
         if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create cube texture', res.errorCode);
+          return ResponseFactory.errorWithCode(
+            res.errorCode ?? (typeof res.error === 'string' ? res.error : 'NOT_IMPLEMENTED'),
+            'create_cube_texture is not implemented. Use import_texture with an HDR source to create a real cube map.',
+            {
+              data: res.result ?? res.data ?? null,
+              assetPath: `${path}/${name}`,
+              note: 'Cube textures typically come from imported HDR sources rather than procedural generation in this bridge.',
+              performed: false,
+              capabilityState: 'import_required',
+              requestedSize: size,
+            },
+          );
         }
         return ResponseFactory.success(res, res.message ?? `Cube texture '${name}' created`);
       }
@@ -959,7 +970,20 @@ export async function handleTextureTools(
         })) as AutomationResponse;
 
         if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create volume texture', res.errorCode);
+          return ResponseFactory.errorWithCode(
+            res.errorCode ?? (typeof res.error === 'string' ? res.error : 'NOT_IMPLEMENTED'),
+            'create_volume_texture is not implemented. Import a VDB or image sequence through the editor workflow instead.',
+            {
+              data: res.result ?? res.data ?? null,
+              assetPath: `${path}/${name}`,
+              note: 'Volume textures typically require imported source data rather than procedural creation in this bridge.',
+              performed: false,
+              capabilityState: 'import_required',
+              requestedWidth: width,
+              requestedHeight: height,
+              requestedDepth: depth,
+            },
+          );
         }
         return ResponseFactory.success(res, res.message ?? `Volume texture '${name}' created`);
       }
@@ -989,7 +1013,20 @@ export async function handleTextureTools(
         })) as AutomationResponse;
 
         if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create texture array', res.errorCode);
+          return ResponseFactory.errorWithCode(
+            res.errorCode ?? (typeof res.error === 'string' ? res.error : 'NOT_IMPLEMENTED'),
+            'create_texture_array is not implemented. Import or assemble the source 2D textures through the editor workflow first.',
+            {
+              data: res.result ?? res.data ?? null,
+              assetPath: `${path}/${name}`,
+              note: 'Texture arrays require real source textures and are not procedurally assembled by this bridge yet.',
+              performed: false,
+              capabilityState: 'source_textures_required',
+              requestedWidth: width,
+              requestedHeight: height,
+              requestedSlices: numSlices,
+            },
+          );
         }
         return ResponseFactory.success(res, res.message ?? `Texture array '${name}' created`);
       }
