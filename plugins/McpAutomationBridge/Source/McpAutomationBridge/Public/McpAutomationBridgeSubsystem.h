@@ -7,6 +7,8 @@
 #include "HAL/CriticalSection.h"
 #include "Templates/SharedPointer.h"
 #include "Engine/DataAsset.h"
+class FMcpNativeTransport;
+
 #include "McpAutomationBridgeSubsystem.generated.h"
 
 // Define MCP_HAS_CONTROLRIG_FACTORY based on UE version
@@ -205,6 +207,9 @@ public:
 
   // Connection Manager
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
+
+  /** Native MCP Streamable HTTP transport (opt-in via bEnableNativeMCP setting) */
+  TSharedPtr<FMcpNativeTransport> NativeTransport;
 
   // Track a blueprint currently being modified by this subsystem request
   // so scope-exit handlers can reliably clear busy state without
@@ -1295,4 +1300,6 @@ private:
   ProcessAutomationRequest(const FString &RequestId, const FString &Action,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+  friend class FMcpNativeTransport;
 };

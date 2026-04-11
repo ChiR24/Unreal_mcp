@@ -6,6 +6,8 @@
 #endif
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "MCP/McpNativeTransport.h"
+#include "Interfaces/IPluginManager.h"
 
 // =============================================================================
 // FMcpRequestErrorDevice - Custom log device for per-request error capture
@@ -170,6 +172,31 @@ void UMcpAutomationBridgeSubsystem::Initialize(
   // Start the connection manager
   ConnectionManager->Start();
 
+  // Native MCP Streamable HTTP transport (opt-in)
+  {
+    const auto* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    if (Settings && Settings->bEnableNativeMCP)
+    {
+      // Find plugin directory for loading tool schemas
+      FString PluginDir;
+      TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"));
+      if (Plugin.IsValid())
+      {
+        PluginDir = Plugin->GetBaseDir();
+      }
+
+      NativeTransport = MakeShared<FMcpNativeTransport>(this);
+      if (!NativeTransport->Start(Settings->NativeMCPPort, PluginDir, Settings->bLoadAllToolsOnStart,
+                                  Settings->NativeMCPInstructions,
+                                  Settings->ListenHost, Settings->bAllowNonLoopback))
+      {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
+               TEXT("Failed to start Native MCP server on port %d"), Settings->NativeMCPPort);
+        NativeTransport.Reset();
+      }
+    }
+  }
+
   // Register Ticker
   TickHandle = FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateUObject(this,
@@ -205,6 +232,12 @@ void UMcpAutomationBridgeSubsystem::Deinitialize() {
   if (!IsRunningCommandlet()) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("McpAutomationBridgeSubsystem deinitializing."));
+  }
+
+  if (NativeTransport)
+  {
+    NativeTransport->Shutdown();
+    NativeTransport.Reset();
   }
 
   if (ConnectionManager.IsValid()) {
@@ -345,6 +378,11 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime) {
       !IsGarbageCollecting() && !IsAsyncLoading()) {
     ProcessPendingAutomationRequests();
   }
+  // Cleanup stale HTTP pending requests (5 minute timeout)
+  if (NativeTransport)
+  {
+    NativeTransport->CleanupStaleRequests();
+  }
   return true;
 }
 
@@ -371,6 +409,20 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     const bool bSuccess, const FString &Message,
     const TSharedPtr<FJsonObject> &Result, const FString &ErrorCode) {
+  // Native MCP HTTP path: TargetSocket==nullptr means this originated from HTTP.
+  // If NativeTransport exists, route exclusively to it — never fall through to
+  // WebSocket, which would broadcast to all WS clients.
+  if (!TargetSocket.IsValid() && NativeTransport)
+  {
+    if (!NativeTransport->CompletePendingRequest(RequestId, bSuccess, Message, Result, ErrorCode))
+    {
+      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
+        TEXT("Native HTTP response for %s dropped — request already expired or unknown"),
+        *RequestId);
+    }
+    return;
+  }
+  // WebSocket path (TargetSocket is valid, or no NativeTransport configured)
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendAutomationResponse(TargetSocket, RequestId, bSuccess,
                                               Message, Result, ErrorCode);
@@ -417,6 +469,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
  */
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
     const FString &RequestId, float Percent, const FString &Message, bool bStillWorking) {
+  // Native MCP HTTP path: stream progress via SSE
+  if (NativeTransport && NativeTransport->HasPendingRequest(RequestId))
+  {
+    NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);
+    return;
+  }
+  // Existing WebSocket path
   if (ConnectionManager.IsValid()) {
     ConnectionManager->SendProgressUpdate(RequestId, Percent, Message, bStillWorking);
   }

@@ -1,3 +1,6 @@
+# Claude Code
+CLAUDE.md
+
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -71,6 +74,8 @@ plugins/McpAutomationBridge/Source/McpAutomationBridge/ue_stubs.h
 .claude/
 .opencode/
 .clangd
+.mcp.json
+.cursor/
 compile_commands_50.json
 compile_commands_55.json
 compile_commands_56.json
