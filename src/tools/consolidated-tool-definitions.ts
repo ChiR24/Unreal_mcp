@@ -388,7 +388,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         metadata: commonSchemas.objectProp,
         graphName: commonSchemas.graphName,
         nodeType: commonSchemas.stringProp,
-        nodeId: commonSchemas.nodeId,
+        nodeId: {
+          ...commonSchemas.nodeId,
+          description: 'Node ID. For get_graph_review_summary, reuse reviewTargets[].nodeId from the first-pass summary to request focused follow-up.'
+        },
         sourceNodeId: commonSchemas.sourceNodeId,
         targetNodeId: commonSchemas.targetNodeId,
         inputName: commonSchemas.pinName,
@@ -568,6 +571,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         commentGroups: commonSchemas.arrayOfObjects,
         highFanOutNodes: commonSchemas.arrayOfObjects,
         reviewTargets: commonSchemas.arrayOfObjects,
+        focusedReviewTarget: commonSchemas.objectProp,
+        incomingNodes: commonSchemas.arrayOfObjects,
+        outgoingNodes: commonSchemas.arrayOfObjects,
+        containingCommentGroup: commonSchemas.nullableObjectProp,
+        focusTruncated: commonSchemas.booleanProp,
         shown: commonSchemas.numberProp,
         totalRequested: commonSchemas.numberProp,
         truncated: commonSchemas.booleanProp,

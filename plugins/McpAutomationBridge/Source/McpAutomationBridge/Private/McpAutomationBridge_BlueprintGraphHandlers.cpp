@@ -1871,9 +1871,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
     Result->SetNumberField(TEXT("nodeCount"), TargetGraph->Nodes.Num());
 
+    FString FocusNodeId;
+    Payload->TryGetStringField(TEXT("nodeId"), FocusNodeId);
+    FocusNodeId = FocusNodeId.TrimStartAndEnd();
+
     int32 ConnectionCount = 0;
     bool bTruncated = false;
     TSet<FString> ReviewTargetKeys;
+    TMap<FString, FString> ReviewTargetReasons;
     TArray<TSharedPtr<FJsonValue>> EntryNodes;
     TArray<TSharedPtr<FJsonValue>> CommentGroups;
     TArray<TSharedPtr<FJsonValue>> HighFanOutNodes;
@@ -1891,8 +1896,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       Array.Add(MakeShared<FJsonValueObject>(Object));
     };
 
-    auto AddReviewTarget = [&ReviewTargets, &ReviewTargetKeys, &bTruncated](UEdGraphNode *Node,
-                                                                            const FString &Reason)
+    auto AddReviewTarget = [&ReviewTargets, &ReviewTargetKeys, &ReviewTargetReasons, &bTruncated](
+                               UEdGraphNode *Node, const FString &Reason)
     {
       if (Node == nullptr)
       {
@@ -1913,6 +1918,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       }
 
       ReviewTargetKeys.Add(TargetKey);
+      if (!ReviewTargetReasons.Contains(NodeId))
+      {
+        ReviewTargetReasons.Add(NodeId, Reason);
+      }
 
       TSharedPtr<FJsonObject> TargetObject = McpHandlerUtils::CreateResultObject();
       TargetObject->SetStringField(TEXT("nodeId"), NodeId);
@@ -1971,6 +1980,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
       return NodeCount;
     };
 
+    auto MakeNodeSummaryObject = [](UEdGraphNode *Node)
+    {
+      TSharedPtr<FJsonObject> NodeObject = McpHandlerUtils::CreateResultObject();
+      NodeObject->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
+      NodeObject->SetStringField(TEXT("nodeName"), Node->GetName());
+      NodeObject->SetStringField(TEXT("nodeTitle"),
+                                 Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+      return NodeObject;
+    };
+
     for (UEdGraphNode *Node : TargetGraph->Nodes)
     {
       if (Node == nullptr)
@@ -2026,6 +2045,141 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     Result->SetArrayField(TEXT("highFanOutNodes"), HighFanOutNodes);
     Result->SetArrayField(TEXT("reviewTargets"), ReviewTargets);
     Result->SetBoolField(TEXT("truncated"), bTruncated);
+
+    if (!FocusNodeId.IsEmpty())
+    {
+      UEdGraphNode *FocusNode = FindNodeByIdOrName(FocusNodeId);
+      if (!FocusNode)
+      {
+        TSharedPtr<FJsonObject> ErrorResult = McpHandlerUtils::CreateResultObject();
+        ErrorResult->SetStringField(TEXT("graphName"), TargetGraph->GetName());
+        ErrorResult->SetStringField(TEXT("nodeId"), FocusNodeId);
+        McpHandlerUtils::AddVerification(ErrorResult, Blueprint);
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Node not found."), ErrorResult,
+                               TEXT("NODE_NOT_FOUND"));
+        return true;
+      }
+
+      TArray<UEdGraphNode *> IncomingOrder;
+      TArray<UEdGraphNode *> OutgoingOrder;
+      TMap<UEdGraphNode *, int32> IncomingCounts;
+      TMap<UEdGraphNode *, int32> OutgoingCounts;
+      bool bFocusTruncated = false;
+
+      auto AccumulateFocusedNode = [](TArray<UEdGraphNode *> &Order,
+                                      TMap<UEdGraphNode *, int32> &Counts,
+                                      UEdGraphNode *Node)
+      {
+        if (Node == nullptr)
+        {
+          return;
+        }
+
+        if (int32 *ExistingCount = Counts.Find(Node))
+        {
+          ++(*ExistingCount);
+          return;
+        }
+
+        Counts.Add(Node, 1);
+        Order.Add(Node);
+      };
+
+      for (UEdGraphPin *Pin : FocusNode->Pins)
+      {
+        if (!Pin)
+        {
+          continue;
+        }
+
+        for (UEdGraphPin *LinkedPin : Pin->LinkedTo)
+        {
+          if (!LinkedPin)
+          {
+            continue;
+          }
+
+          UEdGraphNode *LinkedNode = LinkedPin->GetOwningNode();
+          if (!LinkedNode || LinkedNode == FocusNode)
+          {
+            continue;
+          }
+
+          if (Pin->Direction == EGPD_Input)
+          {
+            AccumulateFocusedNode(IncomingOrder, IncomingCounts, LinkedNode);
+          }
+          else if (Pin->Direction == EGPD_Output)
+          {
+            AccumulateFocusedNode(OutgoingOrder, OutgoingCounts, LinkedNode);
+          }
+        }
+      }
+
+      auto BuildFocusedArray = [&MakeNodeSummaryObject, &bFocusTruncated](
+                                   const TArray<UEdGraphNode *> &Order,
+                                   const TMap<UEdGraphNode *, int32> &Counts)
+      {
+        TArray<TSharedPtr<FJsonValue>> Values;
+        if (Order.Num() > MaxSummaryEntries)
+        {
+          bFocusTruncated = true;
+        }
+
+        const int32 Limit = FMath::Min(Order.Num(), MaxSummaryEntries);
+        for (int32 Index = 0; Index < Limit; ++Index)
+        {
+          UEdGraphNode *RelatedNode = Order[Index];
+          TSharedPtr<FJsonObject> RelatedObject = MakeNodeSummaryObject(RelatedNode);
+          const int32 *LinkCount = Counts.Find(RelatedNode);
+          RelatedObject->SetNumberField(TEXT("linkCount"), LinkCount ? *LinkCount : 0);
+          Values.Add(MakeShared<FJsonValueObject>(RelatedObject));
+        }
+
+        return Values;
+      };
+
+      TSharedPtr<FJsonObject> FocusedReviewTarget = MakeNodeSummaryObject(FocusNode);
+      if (const FString *FocusReason = ReviewTargetReasons.Find(FocusNode->NodeGuid.ToString()))
+      {
+        FocusedReviewTarget->SetStringField(TEXT("reason"), *FocusReason);
+      }
+
+      TSharedPtr<FJsonValue> ContainingCommentGroupValue = MakeShared<FJsonValueNull>();
+      if (Cast<UEdGraphNode_Comment>(FocusNode) == nullptr)
+      {
+        for (UEdGraphNode *Node : TargetGraph->Nodes)
+        {
+          UEdGraphNode_Comment *CommentNode = Cast<UEdGraphNode_Comment>(Node);
+          if (!CommentNode)
+          {
+            continue;
+          }
+
+          const float Left = static_cast<float>(CommentNode->NodePosX);
+          const float Top = static_cast<float>(CommentNode->NodePosY);
+          const float Right = Left + CommentNode->NodeWidth;
+          const float Bottom = Top + CommentNode->NodeHeight;
+
+          if (FocusNode->NodePosX >= Left && FocusNode->NodePosX <= Right &&
+              FocusNode->NodePosY >= Top && FocusNode->NodePosY <= Bottom)
+          {
+            TSharedPtr<FJsonObject> CommentObject = MakeNodeSummaryObject(CommentNode);
+            CommentObject->SetNumberField(TEXT("nodeCount"), CountNodesInsideComment(CommentNode));
+            ContainingCommentGroupValue = MakeShared<FJsonValueObject>(CommentObject);
+            break;
+          }
+        }
+      }
+
+      Result->SetObjectField(TEXT("focusedReviewTarget"), FocusedReviewTarget);
+      Result->SetArrayField(TEXT("incomingNodes"), BuildFocusedArray(IncomingOrder, IncomingCounts));
+      Result->SetArrayField(TEXT("outgoingNodes"), BuildFocusedArray(OutgoingOrder, OutgoingCounts));
+      Result->SetField(TEXT("containingCommentGroup"), ContainingCommentGroupValue);
+      Result->SetBoolField(TEXT("focusTruncated"), bFocusTruncated);
+    }
+
     McpHandlerUtils::AddVerification(Result, Blueprint);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
