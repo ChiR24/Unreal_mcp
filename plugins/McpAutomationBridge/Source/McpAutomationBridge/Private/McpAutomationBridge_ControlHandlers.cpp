@@ -6299,12 +6299,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
   {
     Scope = TEXT("full");
   }
-  if (Scope != TEXT("full") && Scope != TEXT("selection"))
+  if (Scope != TEXT("full") && Scope != TEXT("selection") && Scope != TEXT("neighborhood"))
   {
     TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
     ErrorDetails->SetStringField(TEXT("scope"), Scope);
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("scope must be 'full' or 'selection'"), ErrorDetails);
+                              TEXT("scope must be 'full', 'selection', or 'neighborhood'"), ErrorDetails);
     return true;
   }
 
@@ -6313,6 +6313,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
   const FString RequestedNodeTitle = GetTrimmedPayloadString(Payload, TEXT("nodeTitle"));
   const bool bHasNodeSelector = !RequestedNodeGuid.IsEmpty() || !RequestedNodeName.IsEmpty() ||
                                 !RequestedNodeTitle.IsEmpty();
+
+  if (Scope == TEXT("neighborhood") && !bHasNodeSelector)
+  {
+    TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
+    ErrorDetails->SetStringField(TEXT("scope"), Scope);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("scope 'neighborhood' requires nodeGuid, nodeName, or nodeTitle"), ErrorDetails);
+    return true;
+  }
 
   FString SelectorType;
   FString SelectorValue;
@@ -6426,6 +6435,97 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
     MatchedNode = Matches[0].Node;
   }
 
+  TArray<UEdGraphNode *> FramedNodes;
+  bool bTruncatedNeighborhood = false;
+  constexpr int32 MaxNeighborhoodNodes = 12;
+  auto AddFramedNode = [&FramedNodes, &bTruncatedNeighborhood](UEdGraphNode *Node)
+  {
+    if (Node == nullptr || FramedNodes.Contains(Node))
+    {
+      return;
+    }
+
+    if (FramedNodes.Num() >= MaxNeighborhoodNodes)
+    {
+      bTruncatedNeighborhood = true;
+      return;
+    }
+
+    FramedNodes.Add(Node);
+  };
+
+  if (Scope == TEXT("neighborhood") && MatchedNode != nullptr)
+  {
+    AddFramedNode(MatchedNode);
+
+    for (UEdGraphPin *Pin : MatchedNode->Pins)
+    {
+      if (Pin == nullptr)
+      {
+        continue;
+      }
+
+      for (UEdGraphPin *LinkedPin : Pin->LinkedTo)
+      {
+        if (LinkedPin == nullptr)
+        {
+          continue;
+        }
+
+        AddFramedNode(LinkedPin->GetOwningNode());
+      }
+    }
+
+    if (FramedNodes.Num() == 1)
+    {
+      TArray<UEdGraphNode *> NearbyNodes;
+      NearbyNodes.Reserve(ReviewGraph->Nodes.Num());
+
+      for (UEdGraphNode *CandidateNode : ReviewGraph->Nodes)
+      {
+        if (CandidateNode == nullptr || CandidateNode == MatchedNode)
+        {
+          continue;
+        }
+
+        NearbyNodes.Add(CandidateNode);
+      }
+
+      NearbyNodes.Sort([MatchedNode](const UEdGraphNode &A, const UEdGraphNode &B)
+                       {
+                         const int64 DistanceA =
+                             FMath::Abs(static_cast<int64>(A.NodePosX) - static_cast<int64>(MatchedNode->NodePosX)) +
+                             FMath::Abs(static_cast<int64>(A.NodePosY) - static_cast<int64>(MatchedNode->NodePosY));
+                         const int64 DistanceB =
+                             FMath::Abs(static_cast<int64>(B.NodePosX) - static_cast<int64>(MatchedNode->NodePosX)) +
+                             FMath::Abs(static_cast<int64>(B.NodePosY) - static_cast<int64>(MatchedNode->NodePosY));
+                         return DistanceA < DistanceB; });
+
+      for (UEdGraphNode *CandidateNode : NearbyNodes)
+      {
+        AddFramedNode(CandidateNode);
+        if (FramedNodes.Num() >= 2)
+        {
+          break;
+        }
+      }
+    }
+  }
+
+  const bool bUseNeighborhoodScope = Scope == TEXT("neighborhood") && MatchedNode != nullptr;
+  const bool bUseSelectionScope = Scope == TEXT("selection") && MatchedNode != nullptr;
+  const bool bUseFocusedScope = bUseSelectionScope || bUseNeighborhoodScope;
+  const FString EffectiveScope =
+      bUseNeighborhoodScope ? TEXT("neighborhood")
+                            : (bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+  const FString FramingSource =
+      bUseNeighborhoodScope ? TEXT("matched_node_neighborhood")
+                            : (MatchedNode != nullptr ? TEXT("matched_node_selection")
+                                                      : TEXT("graph_overview"));
+  const int32 FramedNodeCount =
+      bUseNeighborhoodScope ? FramedNodes.Num()
+                            : (MatchedNode != nullptr ? 1 : ReviewGraph->Nodes.Num());
+
   FVector2D PreviousViewLocation = FVector2D::ZeroVector;
   float PreviousZoomAmount = 1.0f;
   Context.Editor->GetViewLocation(PreviousViewLocation, PreviousZoomAmount);
@@ -6444,11 +6544,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
   if (MatchedNode != nullptr)
   {
     Context.Editor->JumpToNode(MatchedNode, false);
+  }
+
+  if (bUseNeighborhoodScope)
+  {
+    for (UEdGraphNode *FramedNode : FramedNodes)
+    {
+      Context.Editor->AddToSelection(FramedNode);
+    }
+  }
+  else if (MatchedNode != nullptr)
+  {
     Context.Editor->AddToSelection(MatchedNode);
   }
 
-  const bool bUseSelectionScope = Scope == TEXT("selection") && MatchedNode != nullptr;
-  GraphEditor->ZoomToFit(bUseSelectionScope);
+  GraphEditor->ZoomToFit(bUseFocusedScope);
 
   FVector2D ViewLocation = FVector2D::ZeroVector;
   float ZoomAmount = 1.0f;
@@ -6511,7 +6621,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
   {
     TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
     ErrorDetails->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
-    ErrorDetails->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+    ErrorDetails->SetStringField(TEXT("scope"), EffectiveScope);
     if (!SelectorType.IsEmpty())
     {
       ErrorDetails->SetStringField(TEXT("nodeSelectorType"), SelectorType);
@@ -6551,7 +6661,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
   {
     TSharedPtr<FJsonObject> ErrorDetails = CreateBlueprintNavigationDiagnosticsObject(Context);
     ErrorDetails->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
-    ErrorDetails->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+    ErrorDetails->SetStringField(TEXT("scope"), EffectiveScope);
     ErrorDetails->SetBoolField(TEXT("focusApplied"), bFocusApplied);
     ErrorDetails->SetBoolField(TEXT("graphFocusReady"), bGraphFocusReady);
     ErrorDetails->SetBoolField(TEXT("windowActiveForCapture"), bWindowActiveForCapture);
@@ -6613,8 +6723,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCaptureBlueprintGraphRevi
 
   TSharedPtr<FJsonObject> Response = CreateBlueprintNavigationDiagnosticsObject(Context);
   Response->SetBoolField(TEXT("success"), true);
-  Response->SetStringField(TEXT("scope"), bUseSelectionScope ? TEXT("selection") : TEXT("full"));
+  Response->SetStringField(TEXT("scope"), EffectiveScope);
   Response->SetStringField(TEXT("requestedScope"), Scope);
+  Response->SetStringField(TEXT("framingSource"), FramingSource);
+  Response->SetNumberField(TEXT("framedNodeCount"), FramedNodeCount);
+  Response->SetBoolField(TEXT("truncatedNeighborhood"), bUseNeighborhoodScope && bTruncatedNeighborhood);
   Response->SetStringField(TEXT("captureIntentSource"), TEXT("blueprint_editor_context"));
   Response->SetStringField(TEXT("filename"), Filename);
   Response->SetStringField(TEXT("path"), FullPath);

@@ -152,6 +152,10 @@ function hasNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
 }
 
+function hasBlueprintNodeSelector(args: Record<string, unknown>): boolean {
+  return hasNonEmptyString(args.nodeGuid) || hasNonEmptyString(args.nodeName) || hasNonEmptyString(args.nodeTitle);
+}
+
 function hasDesignerRect(value: unknown): value is Record<string, number> {
   if (!value || typeof value !== 'object') {
     return false;
@@ -197,6 +201,16 @@ function validateSemanticNavigationArgs(
         throw new Error('control_editor:jump_to_blueprint_node requires nodeGuid, nodeName, or nodeTitle');
       }
       break;
+    case 'capture_blueprint_graph_review': {
+      const normalizedScope = hasNonEmptyString(args.scope) ? args.scope.trim().toLowerCase() : '';
+      if (normalizedScope !== '' && normalizedScope !== 'full' && normalizedScope !== 'selection' && normalizedScope !== 'neighborhood') {
+        throw new Error("control_editor:capture_blueprint_graph_review scope must be 'full', 'selection', or 'neighborhood'");
+      }
+      if (normalizedScope === 'neighborhood' && !hasBlueprintNodeSelector(args)) {
+        throw new Error('control_editor:capture_blueprint_graph_review scope=neighborhood requires nodeGuid, nodeName, or nodeTitle');
+      }
+      break;
+    }
     case 'set_widget_designer_view':
       if (args.viewLocation === undefined && args.delta === undefined) {
         throw new Error('control_editor:set_widget_designer_view requires viewLocation or delta');

@@ -203,6 +203,9 @@ const controlEditorOutputProperties = {
   matchedNodeId: commonSchemas.stringProp,
   matchedNodeName: commonSchemas.stringProp,
   matchedNodeTitle: commonSchemas.stringProp,
+  framingSource: commonSchemas.stringProp,
+  framedNodeCount: commonSchemas.integerProp,
+  truncatedNeighborhood: commonSchemas.booleanProp,
   widgetSelectorType: commonSchemas.stringProp,
   widgetSelector: commonSchemas.stringProp,
   widgetName: commonSchemas.stringProp,
@@ -649,7 +652,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'control_editor',
     category: 'core',
-    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input, and drive semantic Blueprint or Widget Blueprint navigation actions.',
+    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input, and drive semantic Blueprint or Widget Blueprint navigation actions, including bounded graph-review capture around a matched node neighborhood.',
     inputSchema: {
       type: 'object',
       properties: {
