@@ -39,6 +39,7 @@ describe('Control Editor Navigation Contract', () => {
       properties?: Record<string, unknown>;
     };
     const inputProperties = inputSchema.properties ?? {};
+    const outputProperties = ((editorTool?.outputSchema as { properties?: Record<string, unknown> }).properties) ?? {};
     const actionSchema = inputProperties.action as { enum?: string[] } | undefined;
 
     expect(actionSchema?.enum).toContain('fit_blueprint_graph');
@@ -53,6 +54,9 @@ describe('Control Editor Navigation Contract', () => {
     expect(inputProperties.nodeName).toBeDefined();
     expect(inputProperties.nodeTitle).toBeDefined();
     expect(inputProperties.filename).toBeDefined();
+    expect(outputProperties.framingSource).toBeDefined();
+    expect(outputProperties.framedNodeCount).toBeDefined();
+    expect(outputProperties.truncatedNeighborhood).toBeDefined();
   });
 
   it('publishes explicit Widget Blueprint Designer navigation actions in the public schema', () => {
@@ -148,7 +152,7 @@ describe('Control Editor Navigation Contract', () => {
         nodeGuid: 'NODE_GUID',
         nodeName: 'EventBeginPlay',
         nodeTitle: 'Event BeginPlay',
-        scope: 'selection',
+        scope: 'neighborhood',
         filename: 'graph-review-capture.png',
         tabId: 'Document',
         windowTitle: 'WBP_StatusPanel'
@@ -271,7 +275,7 @@ describe('Control Editor Navigation Contract', () => {
         nodeGuid: 'NODE_GUID',
         nodeName: 'EventBeginPlay',
         nodeTitle: 'Event BeginPlay',
-        scope: 'selection',
+        scope: 'neighborhood',
         filename: 'graph-review-capture.png',
         tabId: 'Document',
         windowTitle: 'WBP_StatusPanel'

@@ -1393,7 +1393,7 @@ async function runGraphReviewSuite() {
           assetPath: NAVIGATION_BLUEPRINT_PATH,
           graphName: blueprintHelperGraphName,
           nodeGuid: blueprintHelperNodeGuid,
-          scope: "selection",
+          scope: "neighborhood",
           filename: "graph-review-blueprint.png",
         }),
       );
@@ -1409,6 +1409,18 @@ async function runGraphReviewSuite() {
       requireStep(
         reviewResult?.matchedNodeId === blueprintHelperNodeGuid,
         `capture_blueprint_graph_review did not preserve the Blueprint helper node match: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        reviewResult?.framingSource === "matched_node_neighborhood",
+        `capture_blueprint_graph_review did not report neighborhood framing for the Blueprint helper graph: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        Number(reviewResult?.framedNodeCount ?? 0) >= 2,
+        `capture_blueprint_graph_review did not report a bounded Blueprint helper neighborhood: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        typeof reviewResult?.truncatedNeighborhood === "boolean",
+        `capture_blueprint_graph_review did not report truncatedNeighborhood for the Blueprint helper graph: ${JSON.stringify(reviewResult)}`,
       );
       requireStep(
         reviewResult?.captureTarget === "editor_window",
@@ -1450,7 +1462,7 @@ async function runGraphReviewSuite() {
           assetPath: widgetAssetPath,
           graphName: widgetHelperGraphName,
           nodeGuid: widgetHelperNodeGuid,
-          scope: "selection",
+          scope: "neighborhood",
           filename: "graph-review-widget.png",
         }),
       );
@@ -1466,6 +1478,18 @@ async function runGraphReviewSuite() {
       requireStep(
         reviewResult?.matchedNodeId === widgetHelperNodeGuid,
         `capture_blueprint_graph_review did not preserve the widget helper node match: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        reviewResult?.framingSource === "matched_node_neighborhood",
+        `capture_blueprint_graph_review did not report neighborhood framing for the widget helper graph: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        Number(reviewResult?.framedNodeCount ?? 0) >= 2,
+        `capture_blueprint_graph_review did not report a bounded widget helper neighborhood: ${JSON.stringify(reviewResult)}`,
+      );
+      requireStep(
+        typeof reviewResult?.truncatedNeighborhood === "boolean",
+        `capture_blueprint_graph_review did not report truncatedNeighborhood for the widget helper graph: ${JSON.stringify(reviewResult)}`,
       );
       requireStep(
         reviewResult?.captureTarget === "editor_window",

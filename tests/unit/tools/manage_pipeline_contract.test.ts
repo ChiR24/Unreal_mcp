@@ -167,7 +167,7 @@ function getLimitationNote(action: string): string {
     return 'Requires a live Blueprint or Widget Blueprint editor surface before keyboard or text input.';
   }
   if (action === 'capture_blueprint_graph_review') {
-    return 'Captures the resolved Blueprint editor window after semantic graph and optional node selection; it does not fall back to a viewport screenshot.';
+    return 'Captures the resolved Blueprint editor window after semantic graph activation and can frame a bounded dense-review neighborhood around a matched node; it does not fall back to a viewport screenshot.';
   }
   if (action === 'get_node_details_batch') {
     return 'Use graph details first to inventory node ids before paging through large graphs.';
@@ -376,7 +376,7 @@ describe('Manage Pipeline Contract', () => {
     expect(reviewCaptureAction).toMatchObject({
       name: 'capture_blueprint_graph_review',
       interactionModel: 'semantic_capture',
-      limitationNote: expect.stringContaining('does not fall back to a viewport screenshot')
+      limitationNote: expect.stringMatching(/bounded dense-review neighborhood/i)
     });
   });
 
