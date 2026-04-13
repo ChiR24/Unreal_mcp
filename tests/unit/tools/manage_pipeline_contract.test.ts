@@ -173,7 +173,7 @@ function getLimitationNote(action: string): string {
     return 'Use graph details first to inventory node ids before paging through large graphs.';
   }
   if (action === 'get_graph_review_summary') {
-    return 'Use the bounded graph review summary before raw node-detail batches on large Blueprint graphs.';
+    return 'Use reviewTargets[].nodeId for one bounded focused follow-up before raw node-detail batches on large Blueprint graphs.';
   }
   if (action === 'create_property_binding') {
     return 'Binding functions must stay signature-compatible with the target property.';
@@ -394,7 +394,7 @@ describe('Manage Pipeline Contract', () => {
     expect(summaryAction).toMatchObject({
       name: 'get_graph_review_summary',
       interactionModel: 'semantic_read',
-      limitationNote: expect.stringContaining('bounded graph review summary before raw node-detail batches')
+      limitationNote: expect.stringMatching(/reviewTargets.*nodeId|nodeId.*reviewTargets/i)
     });
   });
 

@@ -72,7 +72,12 @@ describe('ResponseValidator', () => {
       reviewTargets: [
         { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' },
         { nodeId: 'NODE_BRANCH', nodeTitle: 'Branch', reason: 'high_fan_out' }
-      ]
+      ],
+      focusedReviewTarget: { nodeId: 'NODE_BRANCH', nodeTitle: 'Branch', reason: 'high_fan_out' },
+      incomingNodes: [{ nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', linkCount: 1 }],
+      outgoingNodes: [{ nodeId: 'NODE_PRINT', nodeTitle: 'Print String', linkCount: 1 }],
+      containingCommentGroup: { nodeId: 'NODE_COMMENT', nodeTitle: 'Comment', nodeCount: 3 },
+      focusTruncated: false
     });
 
     expect(wrapped.success).toBe(true);
@@ -87,7 +92,12 @@ describe('ResponseValidator', () => {
       reviewTargets: [
         { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' },
         { nodeId: 'NODE_BRANCH', nodeTitle: 'Branch', reason: 'high_fan_out' }
-      ]
+      ],
+      focusedReviewTarget: { nodeId: 'NODE_BRANCH', nodeTitle: 'Branch', reason: 'high_fan_out' },
+      incomingNodes: [{ nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', linkCount: 1 }],
+      outgoingNodes: [{ nodeId: 'NODE_PRINT', nodeTitle: 'Print String', linkCount: 1 }],
+      containingCommentGroup: { nodeId: 'NODE_COMMENT', nodeTitle: 'Comment', nodeCount: 3 },
+      focusTruncated: false
     });
   });
 });

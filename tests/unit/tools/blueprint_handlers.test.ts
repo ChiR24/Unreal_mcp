@@ -325,14 +325,20 @@ describe('Blueprint Handlers', () => {
       reviewTargets: [
         { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' }
       ],
-      truncated: false
+      truncated: false,
+      focusedReviewTarget: { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' },
+      incomingNodes: [],
+      outgoingNodes: [],
+      containingCommentGroup: null,
+      focusTruncated: false
     });
 
     const result = await handleBlueprintTools(
       'get_graph_review_summary',
       {
         blueprintPath: '/Content/IntegrationTest/BP_Inspection',
-        graphName: 'ReviewFunction'
+        graphName: 'ReviewFunction',
+        nodeId: 'NODE_ENTRY'
       },
       mockTools
     );
@@ -344,7 +350,8 @@ describe('Blueprint Handlers', () => {
         subAction: 'get_graph_review_summary',
         blueprintPath: '/Game/IntegrationTest/BP_Inspection',
         assetPath: '/Game/IntegrationTest/BP_Inspection',
-        graphName: 'ReviewFunction'
+        graphName: 'ReviewFunction',
+        nodeId: 'NODE_ENTRY'
       }),
       'Automation bridge not available'
     );
@@ -360,7 +367,12 @@ describe('Blueprint Handlers', () => {
       reviewTargets: [
         { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' }
       ],
-      truncated: false
+      truncated: false,
+      focusedReviewTarget: { nodeId: 'NODE_ENTRY', nodeTitle: 'Function Entry', reason: 'entry_node' },
+      incomingNodes: [],
+      outgoingNodes: [],
+      containingCommentGroup: null,
+      focusTruncated: false
     });
   });
 

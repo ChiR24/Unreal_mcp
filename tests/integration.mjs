@@ -1535,6 +1535,41 @@ async function runGraphReviewSuite() {
         `Expected reviewTargets array from get_graph_review_summary: ${JSON.stringify(summaryResult)}`,
       );
 
+      const focusNodeId = summaryResult?.reviewTargets?.[0]?.nodeId;
+      requireStep(
+        typeof focusNodeId === "string" && focusNodeId.length > 0,
+        `Expected reviewTargets[0].nodeId for focused Blueprint follow-up: ${JSON.stringify(summaryResult)}`,
+      );
+
+      const focusedResult = unwrapAutomationResult(
+        await tools.executeTool("manage_blueprint", {
+          action: "get_graph_review_summary",
+          blueprintPath: NAVIGATION_BLUEPRINT_PATH,
+          graphName: blueprintHelperGraphName,
+          nodeId: focusNodeId,
+        }),
+      );
+      requireStep(
+        focusedResult?.success === true,
+        `Focused get_graph_review_summary failed for Blueprint helper graph: ${focusedResult?.error ?? focusedResult?.message ?? "unknown error"}`,
+      );
+      requireStep(
+        focusedResult?.focusedReviewTarget?.nodeId === focusNodeId,
+        `Focused get_graph_review_summary did not preserve the selected Blueprint review target: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        Array.isArray(focusedResult?.incomingNodes),
+        `Expected incomingNodes from focused Blueprint review summary: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        Array.isArray(focusedResult?.outgoingNodes),
+        `Expected outgoingNodes from focused Blueprint review summary: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        typeof focusedResult?.focusTruncated === "boolean",
+        `Expected focusTruncated from focused Blueprint review summary: ${JSON.stringify(focusedResult)}`,
+      );
+
       return true;
     },
   );
@@ -1568,6 +1603,41 @@ async function runGraphReviewSuite() {
       requireStep(
         Array.isArray(summaryResult?.reviewTargets),
         `Expected reviewTargets array from widget get_graph_review_summary: ${JSON.stringify(summaryResult)}`,
+      );
+
+      const focusNodeId = summaryResult?.reviewTargets?.[0]?.nodeId;
+      requireStep(
+        typeof focusNodeId === "string" && focusNodeId.length > 0,
+        `Expected reviewTargets[0].nodeId for focused widget follow-up: ${JSON.stringify(summaryResult)}`,
+      );
+
+      const focusedResult = unwrapAutomationResult(
+        await tools.executeTool("manage_blueprint", {
+          action: "get_graph_review_summary",
+          blueprintPath: widgetAssetPath,
+          graphName: widgetHelperGraphName,
+          nodeId: focusNodeId,
+        }),
+      );
+      requireStep(
+        focusedResult?.success === true,
+        `Focused get_graph_review_summary failed for widget helper graph: ${focusedResult?.error ?? focusedResult?.message ?? "unknown error"}`,
+      );
+      requireStep(
+        focusedResult?.focusedReviewTarget?.nodeId === focusNodeId,
+        `Focused get_graph_review_summary did not preserve the selected widget review target: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        Array.isArray(focusedResult?.incomingNodes),
+        `Expected incomingNodes from focused widget review summary: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        Array.isArray(focusedResult?.outgoingNodes),
+        `Expected outgoingNodes from focused widget review summary: ${JSON.stringify(focusedResult)}`,
+      );
+      requireStep(
+        typeof focusedResult?.focusTruncated === "boolean",
+        `Expected focusTruncated from focused widget review summary: ${JSON.stringify(focusedResult)}`,
       );
 
       return true;

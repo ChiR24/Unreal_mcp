@@ -48,6 +48,11 @@ describe('consolidated inspection contract', () => {
     expect(outputSchema.properties?.highFanOutNodes).toBeDefined();
     expect(outputSchema.properties?.reviewTargets).toBeDefined();
     expect(outputSchema.properties?.connectionCount).toBeDefined();
+    expect(outputSchema.properties?.focusedReviewTarget).toBeDefined();
+    expect(outputSchema.properties?.incomingNodes).toBeDefined();
+    expect(outputSchema.properties?.outgoingNodes).toBeDefined();
+    expect(outputSchema.properties?.containingCommentGroup).toBeDefined();
+    expect(outputSchema.properties?.focusTruncated).toBeDefined();
   });
 
   it('exposes get_widget_tree on manage_widget_authoring', () => {
