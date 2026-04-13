@@ -46,7 +46,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 
 - **Native C++ Automation** — All operations route through the MCP Automation Bridge plugin
 - **Catalog-Backed Tool Surface** — The plugin ships one bridge-owned tool catalog that powers `manage_pipeline` metadata and the packaged plugin contract after the latest bridge merge
-- **Window-Aware UI Automation** — `manage_ui` can enumerate visible Slate windows and `control_editor` can target live tabs or windows for screenshots and simulated input
+- **Window-Aware UI Automation** — `manage_ui` can enumerate visible Slate windows, `control_editor screenshot` can capture live editor windows with explicit ambiguity diagnostics, and `control_editor simulate_input` can target live tabs or windows
 - **Dynamic Type Discovery** — Runtime introspection for lights, debug shapes, and sequencer tracks
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
@@ -250,7 +250,8 @@ The packaged bridge surface is now catalog-backed. Use `manage_pipeline list_cat
 For the synced editor automation additions, the most relevant entry points are:
 
 - `manage_ui list_visible_windows` to inspect the currently visible Slate windows before targeting a screenshot or live tab.
-- `control_editor screenshot` with window-aware diagnostics and explicit target resolution.
+- `control_editor screenshot` with explicit `windowTitle` targeting for deterministic editor capture, `includeMenus` and `includedMenuWindowCount` diagnostics for editor-window composition, and `AMBIGUOUS_CAPTURE_TARGET` when editor capture is retried with only `tabId`.
+- `control_editor focus_editor_surface` when deliberate graph or Designer focus matters before keyboard or text input.
 - `control_editor simulate_input` for tab-scoped keyboard, text, mouse, wheel, drag, and reset flows.
 - `manage_pipeline get_status` for runtime bridge status plus catalog-derived tool and action counts.
 

@@ -179,7 +179,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - `manage_pipeline list_categories` and `manage_pipeline get_status` now derive their public metadata from the merged plugin-owned tool catalog instead of a duplicated hard-coded list.
 - `manage_ui list_visible_windows` returns the exact window titles and bounds that `control_editor screenshot` and `control_editor simulate_input` can target.
 - `control_editor simulate_input` supports keyboard, text, mouse, wheel, drag, and reset flows that can be aimed at a known tab id or window title.
-- `control_editor screenshot` reports stronger targeting diagnostics so callers can confirm what window or viewport was actually captured.
+- `control_editor screenshot` reports stronger targeting diagnostics so callers can confirm what window or viewport was actually captured. Deterministic editor-window capture expects a live `windowTitle`; retrying editor capture with only `tabId` returns `AMBIGUOUS_CAPTURE_TARGET`, `captureIntentWarning`, and `suggestedPreflightAction: resolve_ui_target` instead of silently falling back, while successful editor-window captures report `includeMenus` and `includedMenuWindowCount` for menu composition.
 
 ---
 
@@ -215,13 +215,13 @@ This is a known UE behavior when plugins are rebuilt on first load.
 
 1. Use `manage_ui list_ui_targets` to inspect the currently discoverable targets
 2. Use `manage_ui list_visible_windows` to confirm the live editor window title before targeting screenshots or input
-3. If you already know the live Slate tab id, target it directly with `tabId`
+3. If you already know the live Slate tab id, reuse it for `control_editor simulate_input` or `control_editor focus_editor_surface`; for `control_editor screenshot`, resolve a live `windowTitle` first with `manage_ui resolve_ui_target`
 
 ### Wrong Window Was Captured Or Controlled
 
 1. Call `manage_ui list_visible_windows` first and reuse the exact returned `windowTitle`
 2. Check the screenshot or simulated-input response fields to confirm the resolved target
-3. Prefer explicit `tabId` targeting when automating a known dock tab
+3. Prefer explicit `windowTitle` for screenshots and explicit `tabId` or `windowTitle` for simulated input, depending on whether you are driving a dock tab or a top-level editor window
 
 ### Build Errors
 
