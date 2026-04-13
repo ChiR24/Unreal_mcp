@@ -181,6 +181,15 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - `control_editor simulate_input` supports keyboard, text, mouse, wheel, drag, and reset flows that can be aimed at a known tab id or window title.
 - `control_editor screenshot` reports stronger targeting diagnostics so callers can confirm what window or viewport was actually captured. Deterministic editor-window capture expects a live `windowTitle`; retrying editor capture with only `tabId` returns `AMBIGUOUS_CAPTURE_TARGET`, `captureIntentWarning`, and `suggestedPreflightAction: resolve_ui_target` instead of silently falling back, while successful editor-window captures report `includeMenus` and `includedMenuWindowCount` for menu composition.
 
+### Dense Graph Review
+
+The packaged plugin now ships one two-step dense-review flow for Blueprint and Widget Blueprint helper graphs:
+
+1. `control_editor capture_blueprint_graph_review` accepts `scope: neighborhood` so callers can capture a bounded readable screenshot around a matched node while keeping the editor-window and focus-preflight behavior.
+2. `manage_blueprint get_graph_review_summary` accepts `nodeId` so callers can reuse `reviewTargets[].nodeId` from the first-pass summary and request one bounded focused follow-up.
+
+The focused summary returns `focusedReviewTarget`, `incomingNodes`, `outgoingNodes`, `containingCommentGroup`, and `focusTruncated` while preserving the broader first-pass fields such as `reviewTargets`, `commentGroups`, and `connectionCount`.
+
 ---
 
 ## Security

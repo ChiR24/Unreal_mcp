@@ -4,19 +4,20 @@
 
 This repo now uses one consolidated live integration entrypoint in `tests/integration.mjs`, a shared harness in `tests/test-runner.mjs`, focused Vitest files for public-contract coverage, and a mock-mode smoke test for packaged discovery checks.
 
-The integration runner supports targeted reruns through `UNREAL_MCP_INTEGRATION_SUITE`, which keeps operator-reliability proofs small and deterministic. For the current screenshot and recovery contract, the most important focused suites are `ui-targeting` and `graph-review`.
+The integration runner supports targeted reruns through `UNREAL_MCP_INTEGRATION_SUITE`, which keeps operator-reliability proofs small and deterministic. For the current screenshot, recovery, and dense-review contract, the most important focused suites are `ui-targeting` and `graph-review`.
 
 ## Test Commands
 
-| Command                                                                                                                                           | Description                                                                 | Requires UE? |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------ |
-| `npm test`                                                                                                                                        | Run the full consolidated live integration suite in `tests/integration.mjs` | Yes          |
-| `node tests/integration.mjs`                                                                                                                      | Same full live suite, without the npm wrapper                               | Yes          |
-| `npm run test:unit`                                                                                                                               | Run all Vitest unit suites                                                  | No           |
-| `npx vitest run tests/unit/tools/editor_contract.test.ts tests/unit/tools/ui_handlers.test.ts tests/unit/tools/control-editor-navigation.test.ts` | Run the focused screenshot/recovery contract bundle                         | No           |
-| `npm run type-check`                                                                                                                              | TypeScript typecheck for the server layer                                   | No           |
-| `npm run build`                                                                                                                                   | Rebuild `dist/` for live integration runs                                   | No           |
-| `npm run test:smoke`                                                                                                                              | Mock-mode packaged-surface validation                                       | No           |
+| Command                                                                                                                                                                                                     | Description                                                                 | Requires UE? |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------ |
+| `npm test`                                                                                                                                                                                                  | Run the full consolidated live integration suite in `tests/integration.mjs` | Yes          |
+| `node tests/integration.mjs`                                                                                                                                                                                | Same full live suite, without the npm wrapper                               | Yes          |
+| `npm run test:unit`                                                                                                                                                                                         | Run all Vitest unit suites                                                  | No           |
+| `npx vitest run tests/unit/tools/editor_contract.test.ts tests/unit/tools/ui_handlers.test.ts tests/unit/tools/control-editor-navigation.test.ts`                                                           | Run the focused screenshot/recovery contract bundle                         | No           |
+| `npx vitest run src/tools/consolidated-tool-inspection-contract.test.ts tests/unit/tools/blueprint_handlers.test.ts tests/unit/tools/manage_pipeline_contract.test.ts src/utils/response-validator.test.ts` | Run the focused graph-review follow-up contract bundle                      | No           |
+| `npm run type-check`                                                                                                                                                                                        | TypeScript typecheck for the server layer                                   | No           |
+| `npm run build`                                                                                                                                                                                             | Rebuild `dist/` for live integration runs                                   | No           |
+| `npm run test:smoke`                                                                                                                                                                                        | Mock-mode packaged-surface validation                                       | No           |
 
 ## Live Integration Suites
 
@@ -51,15 +52,41 @@ Remove-Item Env:UNREAL_MCP_INTEGRATION_SUITE -ErrorAction SilentlyContinue
 These focused suites currently prove:
 
 - `ui-targeting`: `manage_ui.resolve_ui_target`, `control_editor.focus_editor_surface`, targeted editor screenshots with `includeMenus` and `includedMenuWindowCount` diagnostics, and the `AMBIGUOUS_CAPTURE_TARGET` path when editor capture is retried with only `tabId`.
-- `graph-review`: readable `capture_blueprint_graph_review` capture plus bounded `get_graph_review_summary` follow-up on helper graphs.
+- `graph-review`: readable `capture_blueprint_graph_review` capture with `scope: neighborhood` plus bounded `get_graph_review_summary` follow-up that reuses `reviewTargets[].nodeId` and returns `focusedReviewTarget` context on helper graphs.
 - Other supported focused suites in `tests/integration.mjs` include `public-inspection`, `targeted-window-input`, `semantic-navigation`, `public-surface-validation`, `designer-marquee`, `designer-selection`, `designer-geometry-readback`, `designer-rectangle-selection`, `ui-target-policy`, `graph-batching`, `widget-bindings`, and `capability-honesty`.
 
 ### Latest Focused Evidence
 
 - `tests/reports/ui-targeting-test-results-2026-04-13T16-42-54.147Z.json` — passed `8/8`
-- `tests/reports/graph-review-test-results-2026-04-13T16-43-09.200Z.json` — passed `7/7`
+- `tests/reports/graph-review-test-results-2026-04-13T18-48-32.509Z.json` — passed `7/7`
 
 Reports are written to `tests/reports/` with timestamped filenames. Fresh reruns will create newer files alongside these examples.
+
+### Dense Review Request Examples
+
+Readable neighborhood capture:
+
+```json
+{
+  "action": "capture_blueprint_graph_review",
+  "assetPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeGuid": "<matched node guid>",
+  "scope": "neighborhood",
+  "filename": "graph-review-blueprint.png"
+}
+```
+
+Focused bounded follow-up using the first-pass summary:
+
+```json
+{
+  "action": "get_graph_review_summary",
+  "blueprintPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeId": "<reviewTargets[0].nodeId>"
+}
+```
 
 ## Unit Tests
 
@@ -111,6 +138,7 @@ Keep focused suites small and behavior-scoped. Prefer extending an existing suit
 
 - Verify the named helper graph is openable through the semantic navigation step before investigating capture.
 - Treat `capture_blueprint_graph_review` as a visible-editor-window workflow; re-focus the asset editor if the capture precondition fails.
+- For dense review follow-up, inspect `reviewTargets` first and then reuse one returned `nodeId` for the bounded `focusedReviewTarget` path instead of reaching for raw node batches immediately.
 
 ## Exit Codes
 

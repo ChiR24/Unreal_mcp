@@ -15,6 +15,7 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ## Table of Contents
 
 - [Features](#features)
+- [Dense Graph Review](#dense-graph-review)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Available Tools](#available-tools)
@@ -54,6 +55,39 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 - **Asset Caching** — 10-second TTL for improved performance
 - **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
 - **Centralized Configuration** — Unified class aliases and type definitions
+
+## Dense Graph Review
+
+The shipped dense-review workflow now stays on two existing public verbs:
+
+1. Use `control_editor capture_blueprint_graph_review` with `scope: neighborhood` for a readable editor-window screenshot around one matched Blueprint node.
+2. Reuse `reviewTargets[].nodeId` from `manage_blueprint get_graph_review_summary` for one deeper bounded follow-up that returns `focusedReviewTarget`, `incomingNodes`, `outgoingNodes`, `containingCommentGroup`, and `focusTruncated`.
+
+Example readable capture request:
+
+```json
+{
+  "action": "capture_blueprint_graph_review",
+  "assetPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeGuid": "<matched node guid>",
+  "scope": "neighborhood",
+  "filename": "graph-review-blueprint.png"
+}
+```
+
+Example bounded follow-up request:
+
+```json
+{
+  "action": "get_graph_review_summary",
+  "blueprintPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeId": "<reviewTargets[0].nodeId>"
+}
+```
+
+This keeps graph review on the existing editor-window capture and bounded-summary seams instead of reopening raw graph dumps or second-tool discovery drift.
 
 ---
 

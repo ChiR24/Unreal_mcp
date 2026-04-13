@@ -4,17 +4,17 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 
 ## Operator Contract Validation (2026-04-13)
 
-Fresh focused live reruns on the merged baseline confirmed that the remaining Phase 20 contract work is documentary, not a native screenshot or recovery regression.
+Fresh focused live reruns on the merged Phase 21 baseline confirmed the shipped dense-review workflow: neighborhood capture stays on `capture_blueprint_graph_review`, and bounded deeper follow-up now stays on `get_graph_review_summary` through `reviewTargets[].nodeId`.
 
 | Slice          | Result   | Current Contract                                                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ui-targeting` | ✅ `8/8` | `control_editor screenshot` preserves `AMBIGUOUS_CAPTURE_TARGET`, `captureIntentWarning`, `suggestedPreflightAction: resolve_ui_target`, `targetStatus`, `requestedTargetStillLive`, and `reResolved` when editor capture is retried with only `tabId`. Deterministic editor-window capture still expects a live `windowTitle`, and successful editor-window captures retain `includeMenus` plus `includedMenuWindowCount`. |
-| `graph-review` | ✅ `7/7` | `capture_blueprint_graph_review` and `get_graph_review_summary` remain green on the merged helper-graph baseline.                                                                                                                                                                                                                                                                                                           |
+| `graph-review` | ✅ `7/7` | `capture_blueprint_graph_review` now supports `scope: neighborhood` for readable dense helper-graph capture, and `get_graph_review_summary` now supports `reviewTargets[].nodeId` focused follow-up with `focusedReviewTarget`, `incomingNodes`, `outgoingNodes`, `containingCommentGroup`, and `focusTruncated`.                                                                                                           |
 
 Latest focused reports:
 
 - `tests/reports/ui-targeting-test-results-2026-04-13T16-42-54.147Z.json`
-- `tests/reports/graph-review-test-results-2026-04-13T16-43-09.200Z.json`
+- `tests/reports/graph-review-test-results-2026-04-13T18-48-32.509Z.json`
 
 ## Asset Workflow & Source Control
 
