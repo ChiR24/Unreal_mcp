@@ -5,6 +5,7 @@ import { Logger } from '../utils/logger.js';
 import {
     DEFAULT_AUTOMATION_HOST,
     DEFAULT_AUTOMATION_PORT,
+    DEFAULT_AUTOMATION_PORTS,
     DEFAULT_NEGOTIATED_PROTOCOLS,
     DEFAULT_HEARTBEAT_INTERVAL_MS,
     DEFAULT_MAX_PENDING_REQUESTS,
@@ -165,12 +166,6 @@ export class AutomationBridge extends EventEmitter {
             return DEFAULT_AUTOMATION_HOST;
         };
 
-        const rawHost = options.host
-            ?? process.env.MCP_AUTOMATION_WS_HOST
-            ?? process.env.MCP_AUTOMATION_HOST
-            ?? DEFAULT_AUTOMATION_HOST;
-        this.host = normalizeHost(rawHost, 'Automation bridge host');
-
         const sanitizePort = (value: unknown): number | null => {
             if (typeof value === 'number' && Number.isInteger(value)) {
                 return value > 0 && value <= 65535 ? value : null;
@@ -182,28 +177,40 @@ export class AutomationBridge extends EventEmitter {
             return null;
         };
 
-        const defaultPort = sanitizePort(options.port ?? process.env.MCP_AUTOMATION_WS_PORT) ?? DEFAULT_AUTOMATION_PORT;
+        const orderedUniquePorts = (primaryPort: number, values: Array<number | string> | undefined): number[] => {
+            const configuredPorts = Array.isArray(values)
+                ? values
+                    .map((value) => sanitizePort(value))
+                    .filter((port): port is number => port !== null)
+                : [];
+            const fallbackPorts = configuredPorts.length > 0
+                ? configuredPorts
+                : [...DEFAULT_AUTOMATION_PORTS];
+
+            return Array.from(new Set([
+                primaryPort,
+                ...fallbackPorts.filter((port) => port !== primaryPort)
+            ]));
+        };
+
+        const rawHost = options.host
+            ?? process.env.MCP_AUTOMATION_HOST
+            ?? process.env.MCP_AUTOMATION_WS_HOST
+            ?? DEFAULT_AUTOMATION_HOST;
+        this.host = normalizeHost(rawHost, 'Automation bridge host');
+
+        const defaultPort = sanitizePort(
+            options.port
+            ?? process.env.MCP_AUTOMATION_PORT
+            ?? process.env.MCP_AUTOMATION_WS_PORT
+        ) ?? DEFAULT_AUTOMATION_PORT;
         const configuredPortValues: Array<number | string> | undefined = options.ports
-            ? options.ports
-            : process.env.MCP_AUTOMATION_WS_PORTS
+            ?? process.env.MCP_AUTOMATION_WS_PORTS
                 ?.split(',')
                 .map((token) => token.trim())
                 .filter((token) => token.length > 0);
 
-        const sanitizedPorts = Array.isArray(configuredPortValues)
-            ? configuredPortValues
-                .map((value) => sanitizePort(value))
-                .filter((port): port is number => port !== null)
-            : [];
-
-        if (!sanitizedPorts.includes(defaultPort)) {
-            sanitizedPorts.unshift(defaultPort);
-        }
-        if (sanitizedPorts.length === 0) {
-            sanitizedPorts.push(DEFAULT_AUTOMATION_PORT);
-        }
-
-        this.ports = Array.from(new Set(sanitizedPorts));
+        this.ports = orderedUniquePorts(defaultPort, configuredPortValues);
         const defaultProtocols = DEFAULT_NEGOTIATED_PROTOCOLS;
         const userProtocols = Array.isArray(options.protocols)
             ? options.protocols.filter((proto) => typeof proto === 'string' && proto.trim().length > 0)
@@ -274,10 +281,9 @@ export class AutomationBridge extends EventEmitter {
 
         const rawClientHost = options.clientHost
             ?? process.env.MCP_AUTOMATION_CLIENT_HOST
-            ?? process.env.MCP_AUTOMATION_HOST
-            ?? DEFAULT_AUTOMATION_HOST;
+            ?? this.host;
         this.clientHost = normalizeHost(rawClientHost, 'Automation bridge client host');
-        this.clientPort = options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? DEFAULT_AUTOMATION_PORT;
+        this.clientPort = sanitizePort(options.clientPort ?? process.env.MCP_AUTOMATION_CLIENT_PORT) ?? this.port;
         this.maxConcurrentConnections = maxConcurrentConnections;
 
         // Initialize components
@@ -566,6 +572,8 @@ export class AutomationBridge extends EventEmitter {
             host: this.host,
             port: this.port,
             configuredPorts: [...this.ports],
+            clientHost: this.clientHost,
+            clientPort: this.clientPort,
             listeningPorts: [], // We are client-only now
             connected: this.isConnected(),
             connectedAt: connectionInfos.length > 0 ? connectionInfos[0].connectedAt : null,

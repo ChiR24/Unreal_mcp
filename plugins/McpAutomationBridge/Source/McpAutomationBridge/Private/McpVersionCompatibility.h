@@ -26,11 +26,11 @@
 // ControlRigBlueprintFactory availability
 // Available in all UE 5.x versions, but header location varies
 #ifndef MCP_HAS_CONTROLRIG_FACTORY
-  #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    #define MCP_HAS_CONTROLRIG_FACTORY 1
-  #else
-    #define MCP_HAS_CONTROLRIG_FACTORY 0
-  #endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_HAS_CONTROLRIG_FACTORY 1
+#else
+#define MCP_HAS_CONTROLRIG_FACTORY 0
+#endif
 #endif
 
 // =============================================================================
@@ -40,17 +40,17 @@
 // UE 5.1+: Material->GetEditorOnlyData()->ExpressionCollection.Expressions
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
-    (Material)->GetEditorOnlyData()->ExpressionCollection.Expressions
-  #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
-    (Material)->GetEditorOnlyData()->InputName
-  #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 1
+#define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
+  (Material)->GetEditorOnlyData()->ExpressionCollection.Expressions
+#define MCP_GET_MATERIAL_INPUT(Material, InputName) \
+  (Material)->GetEditorOnlyData()->InputName
+#define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 1
 #else
-  #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
-    (Material)->Expressions
-  #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
-    (Material)->InputName
-  #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 0
+#define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
+  (Material)->Expressions
+#define MCP_GET_MATERIAL_INPUT(Material, InputName) \
+  (Material)->InputName
+#define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 0
 #endif
 
 // =============================================================================
@@ -60,15 +60,15 @@
 // UE 5.1+: UDataLayerInstance, UDataLayerAsset with FDataLayerCreationParameters
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_DATALAYER_INSTANCE 1
-  #define MCP_HAS_DATALAYER_ASSET 1
-  #define MCP_DATALAYER_TYPE UDataLayerInstance
-  #define MCP_DATALAYER_ASSET_TYPE UDataLayerAsset
+#define MCP_HAS_DATALAYER_INSTANCE 1
+#define MCP_HAS_DATALAYER_ASSET 1
+#define MCP_DATALAYER_TYPE UDataLayerInstance
+#define MCP_DATALAYER_ASSET_TYPE UDataLayerAsset
 #else
-  #define MCP_HAS_DATALAYER_INSTANCE 0
-  #define MCP_HAS_DATALAYER_ASSET 0
-  #define MCP_DATALAYER_TYPE UDataLayer
-  #define MCP_DATALAYER_ASSET_TYPE UDataLayer
+#define MCP_HAS_DATALAYER_INSTANCE 0
+#define MCP_HAS_DATALAYER_ASSET 0
+#define MCP_DATALAYER_TYPE UDataLayer
+#define MCP_DATALAYER_ASSET_TYPE UDataLayer
 #endif
 
 // =============================================================================
@@ -78,11 +78,11 @@
 // UE 5.1+: Also Remove(), SetParent()
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 1
-  #define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 1
+#define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 1
+#define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 1
 #else
-  #define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 0
-  #define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 0
+#define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 0
+#define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 0
 #endif
 
 // =============================================================================
@@ -92,13 +92,13 @@
 // UE 5.1+: Returns FVersionedNiagaraEmitter
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
-  #define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetEmitterData()
-  #define MCP_HAS_NIAGARA_VERSIONING 1
+#define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
+#define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetEmitterData()
+#define MCP_HAS_NIAGARA_VERSIONING 1
 #else
-  #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
-  #define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetInstance()
-  #define MCP_HAS_NIAGARA_VERSIONING 0
+#define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
+#define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetInstance()
+#define MCP_HAS_NIAGARA_VERSIONING 0
 #endif
 
 // =============================================================================
@@ -108,13 +108,13 @@
 // UE 5.1+: FARFilter uses ClassPaths (TArray<FTopLevelAssetPath>)
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassPaths
-  #define MCP_HAS_ASSET_CLASS_PATHS 1
-  #define MCP_FTOP_LEVEL_ASSET_PATH FTopLevelAssetPath
+#define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassPaths
+#define MCP_HAS_ASSET_CLASS_PATHS 1
+#define MCP_FTOP_LEVEL_ASSET_PATH FTopLevelAssetPath
 #else
-  #define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassNames
-  #define MCP_HAS_ASSET_CLASS_PATHS 0
-  #define MCP_FTOP_LEVEL_ASSET_PATH FName
+#define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassNames
+#define MCP_HAS_ASSET_CLASS_PATHS 0
+#define MCP_FTOP_LEVEL_ASSET_PATH FName
 #endif
 
 // =============================================================================
@@ -124,13 +124,13 @@
 // UE 5.1+: AssetClassPath (FTopLevelAssetPath), GetSoftObjectPath()
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClassPath.ToString()
-  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).GetSoftObjectPath().ToString()
-  #define MCP_HAS_ASSET_SOFT_PATH 1
+#define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClassPath.ToString()
+#define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).GetSoftObjectPath().ToString()
+#define MCP_HAS_ASSET_SOFT_PATH 1
 #else
-  #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
-  #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).PackageName.ToString()
-  #define MCP_HAS_ASSET_SOFT_PATH 0
+#define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
+#define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).PackageName.ToString()
+#define MCP_HAS_ASSET_SOFT_PATH 0
 #endif
 
 // =============================================================================
@@ -140,11 +140,11 @@
 // UE 5.1+: ExportTextItem_Direct()
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
-    (Property)->ExportTextItem_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags)
+#define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
+  (Property)->ExportTextItem_Direct(OutText, ValuePtr, DefaultValuePtr, Container, Flags)
 #else
-  #define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
-    (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Flags, Container)
+#define MCP_PROPERTY_EXPORT_TEXT(Property, OutText, ValuePtr, DefaultValuePtr, Container, Flags) \
+  (Property)->ExportText_Direct(OutText, ValuePtr, DefaultValuePtr, Flags, Container)
 #endif
 
 // =============================================================================
@@ -154,11 +154,11 @@
 // UE 5.1+: FSmartObjectSlotDefinition with bEnabled, ID, etc.
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 1
-  #define MCP_HAS_SMARTOBJECT_SLOT_ID 1
+#define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 1
+#define MCP_HAS_SMARTOBJECT_SLOT_ID 1
 #else
-  #define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 0
-  #define MCP_HAS_SMARTOBJECT_SLOT_ID 0
+#define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 0
+#define MCP_HAS_SMARTOBJECT_SLOT_ID 0
 #endif
 
 // =============================================================================
@@ -168,11 +168,11 @@
 // UE 5.1+: SetNumberOfFrames(), IsValidBoneTrackName(), etc.
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 1
-  #define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 1
+#define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 1
+#define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 1
 #else
-  #define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 0
-  #define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 0
+#define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 0
+#define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 0
 #endif
 
 // =============================================================================
@@ -182,11 +182,11 @@
 // UE 5.1+: These methods exist
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 1
-  #define MCP_HAS_HLOD_SET_LAYER_TYPE 1
+#define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 1
+#define MCP_HAS_HLOD_SET_LAYER_TYPE 1
 #else
-  #define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 0
-  #define MCP_HAS_HLOD_SET_LAYER_TYPE 0
+#define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 0
+#define MCP_HAS_HLOD_SET_LAYER_TYPE 0
 #endif
 
 // =============================================================================
@@ -196,9 +196,9 @@
 // UE 5.1+: Has Origin member
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 1
+#define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 1
 #else
-  #define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 0
+#define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 0
 #endif
 
 // =============================================================================
@@ -256,16 +256,18 @@
 // UE 5.1: WidgetVariableNameToGuidMap exists
 // UE 5.2: WidgetVariableNameToGuidMap does NOT exist (or is private)
 // UE 5.3: WidgetVariableNameToGuidMap does NOT exist (not present in engine)
-// UE 5.4+: Unknown; assume fallback to NewVariables for safety
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 1
-    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (WidgetBP)->WidgetVariableNameToGuidMap
+// UE 5.7: WidgetVariableNameToGuidMap exists again on UWidgetBlueprint and is required
+// for compiler validation of newly added widgets and animations.
+#if ENGINE_MAJOR_VERSION == 5 && (ENGINE_MINOR_VERSION == 1 || ENGINE_MINOR_VERSION >= 7)
+#define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 1
+#define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (WidgetBP)->WidgetVariableNameToGuidMap
 #else
-    // UE 5.0, 5.2, 5.3+: WidgetVariableNameToGuidMap does not exist.
-    // The macro is never used because MCP_HAS_WIDGET_VARIABLE_GUID_MAP is 0,
-    // but we define it to a no-op to avoid "macro redefined" warnings.
-    #define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 0
-    #define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (void)(WidgetBP)
+// UE 5.0, 5.2, 5.3, 5.4, 5.5, 5.6: WidgetVariableNameToGuidMap is unavailable
+// or not safely consumable from this compatibility layer.
+// The macro is never used because MCP_HAS_WIDGET_VARIABLE_GUID_MAP is 0,
+// but we define it to a no-op to avoid "macro redefined" warnings.
+#define MCP_HAS_WIDGET_VARIABLE_GUID_MAP 0
+#define MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP) (void)(WidgetBP)
 #endif
 
 // =============================================================================
@@ -278,41 +280,41 @@
 
 // CreateNewIKRigAsset availability – only UE 5.1 has it
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 1
+#define MCP_HAS_IKRIG_CREATE_NEW_ASSET 1
 #else
-    #define MCP_HAS_IKRIG_CREATE_NEW_ASSET 0
+#define MCP_HAS_IKRIG_CREATE_NEW_ASSET 0
 #endif
 
 // SetIKRig with enum availability (all UE 5.1+)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 1
-    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
-    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
+#define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 1
+#define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
+#define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
 #else
-    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 0
-    // UE 5.0: use separate methods
-    #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
-    #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
+#define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 0
+// UE 5.0: use separate methods
+#define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
+#define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
 #endif
 
 // CreateNewIKRigAsset macro (only when available)
 #if MCP_HAS_IKRIG_CREATE_NEW_ASSET
-    #define MCP_IKRIG_CREATE_NEW_ASSET(Path, Name) UIKRigDefinitionFactory::CreateNewIKRigAsset(Path, Name)
+#define MCP_IKRIG_CREATE_NEW_ASSET(Path, Name) UIKRigDefinitionFactory::CreateNewIKRigAsset(Path, Name)
 #else
-    // No macro for creation – code will fall back to NewObject
+// No macro for creation – code will fall back to NewObject
 #endif
 
 // =============================================================================
 // Deterministic GUID generator (for widget/anim variable GUIDs)
 // =============================================================================
 #ifndef MCP_NEW_DETERMINISTIC_GUID
-    #define MCP_NEW_DETERMINISTIC_GUID(PathString) \
-        [Path = FString(PathString)]() -> FGuid \
-        { \
-            uint32 Hash = FCrc::StrCrc32(*Path); \
-            uint32 Hash2 = FCrc::StrCrc32(*FString::Printf(TEXT("%s_salt"), *Path)); \
-            return FGuid(Hash, Hash2, Hash, Hash2); \
-        }()
+#define MCP_NEW_DETERMINISTIC_GUID(PathString)                               \
+  [Path = FString(PathString)]() -> FGuid                                    \
+  {                                                                          \
+    uint32 Hash = FCrc::StrCrc32(*Path);                                     \
+    uint32 Hash2 = FCrc::StrCrc32(*FString::Printf(TEXT("%s_salt"), *Path)); \
+    return FGuid(Hash, Hash2, Hash, Hash2);                                  \
+  }()
 #endif
 
 // =============================================================================

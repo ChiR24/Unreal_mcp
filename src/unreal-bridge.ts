@@ -1,7 +1,7 @@
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import type { AutomationBridge } from './automation/index.js';
-import { DEFAULT_AUTOMATION_HOST, DEFAULT_AUTOMATION_PORT, CONSOLE_COMMAND_TIMEOUT_MS, ENGINE_QUERY_TIMEOUT_MS } from './constants.js';
+import { CONSOLE_COMMAND_TIMEOUT_MS, ENGINE_QUERY_TIMEOUT_MS } from './constants.js';
 import { UnrealCommandQueue } from './utils/unreal-command-queue.js';
 import { CommandValidator } from './utils/command-validator.js';
 import type { StandardActionResponse } from './types/tool-interfaces.js';
@@ -180,7 +180,16 @@ export class UnrealBridge {
       const errObj = err as Record<string, unknown> | null;
       this.log.warn(`Automation bridge connection failed after ${maxAttempts} attempts:`, String(errObj?.message ?? err));
       this.log.warn('⚠️  Ensure Unreal Editor is running with MCP Automation Bridge plugin enabled');
-      this.log.warn(`⚠️  Plugin should listen on ws://${DEFAULT_AUTOMATION_HOST}:${DEFAULT_AUTOMATION_PORT} for MCP server connections`);
+      const automationStatus = this.automationBridge?.getStatus();
+      if (automationStatus) {
+        const compatibilityPorts = automationStatus.configuredPorts.filter((port) => port !== automationStatus.clientPort);
+        const compatibilityOrder = compatibilityPorts.length > 0
+          ? ` Compatibility fallback order: ${compatibilityPorts.join(', ')}.`
+          : '';
+        this.log.warn(
+          `⚠️  Plugin should listen on ws://${automationStatus.clientHost}:${automationStatus.clientPort} for MCP server connections.${compatibilityOrder}`
+        );
+      }
     });
 
     try {

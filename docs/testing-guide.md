@@ -2,158 +2,145 @@
 
 ## Overview
 
-This project uses consolidated integration test suites covering all MCP tools:
-- **Core Suite** (17 original tools, 44 scenarios)
-- **Advanced Suite** (15 new Phase 6-20 tools, 80 scenarios)
+This repo now uses one consolidated live integration entrypoint in `tests/integration.mjs`, a shared harness in `tests/test-runner.mjs`, focused Vitest files for public-contract coverage, and a mock-mode smoke test for packaged discovery checks.
 
-Plus Vitest for unit tests and a CI smoke test for mock-mode validation.
+The integration runner supports targeted reruns through `UNREAL_MCP_INTEGRATION_SUITE`, which keeps operator-reliability proofs small and deterministic. For the current screenshot, recovery, and dense-review contract, the most important focused suites are `ui-targeting` and `graph-review`.
 
 ## Test Commands
 
-| Command | Description | Requires UE? |
-|---------|-------------|--------------|
-| `npm test` | Run core integration suite | Yes |
-| `npm run test:advanced` | Run advanced integration suite (Phases 6-20) | Yes |
-| `npm run test:all` | Run both integration suites | Yes |
-| `npm run test:unit` | Run Vitest unit tests | No |
-| `npm run test:smoke` | CI smoke test (mock mode) | No |
+| Command                                                                                                                                                                                                     | Description                                                                 | Requires UE? |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------ |
+| `npm test`                                                                                                                                                                                                  | Run the full consolidated live integration suite in `tests/integration.mjs` | Yes          |
+| `node tests/integration.mjs`                                                                                                                                                                                | Same full live suite, without the npm wrapper                               | Yes          |
+| `npm run test:unit`                                                                                                                                                                                         | Run all Vitest unit suites                                                  | No           |
+| `npx vitest run tests/unit/tools/editor_contract.test.ts tests/unit/tools/ui_handlers.test.ts tests/unit/tools/control-editor-navigation.test.ts`                                                           | Run the focused screenshot/recovery contract bundle                         | No           |
+| `npx vitest run src/tools/consolidated-tool-inspection-contract.test.ts tests/unit/tools/blueprint_handlers.test.ts tests/unit/tools/manage_pipeline_contract.test.ts src/utils/response-validator.test.ts` | Run the focused graph-review follow-up contract bundle                      | No           |
+| `npm run type-check`                                                                                                                                                                                        | TypeScript typecheck for the server layer                                   | No           |
+| `npm run build`                                                                                                                                                                                             | Rebuild `dist/` for live integration runs                                   | No           |
+| `npm run test:smoke`                                                                                                                                                                                        | Mock-mode packaged-surface validation                                       | No           |
 
-## Integration Tests
+## Live Integration Suites
 
-### Running
+### Prerequisites
+
+1. Run the `UE_AutomationMCP` Unreal Editor project with the `McpAutomationBridge` plugin enabled.
+2. Confirm the automation bridge is listening on `127.0.0.1:8091`. The test runner will probe `8091` first and then `8090` as an explicit compatibility fallback.
+3. Re-resolve editor targets before live screenshot or input steps when the editor layout changes.
+
+Optional environment overrides:
 
 ```bash
-# Ensure Unreal Engine is running with MCP Automation Bridge plugin enabled
-npm test              # Core suite (44 tests)
-npm run test:advanced # Advanced suite (80 tests)
-npm run test:all      # Both suites (124 tests)
+MCP_AUTOMATION_HOST=127.0.0.1
+MCP_AUTOMATION_PORT=8091
+MCP_AUTOMATION_WS_PORTS=8091,8090
 ```
 
-### Core Suite (`tests/integration.mjs`)
+### Run Focused Suites
 
-Covers 44 scenarios across the original 17 tool categories:
-- Infrastructure & Discovery
-- Asset & Material Lifecycle
-- Actor Control & Introspection
-- Blueprint Authoring
-- Environment & Visuals
-- AI & Input
-- Cinematics & Audio
-- Operations & Performance
+PowerShell examples:
 
-### Advanced Suite (`tests/integration-advanced.mjs`)
+```powershell
+$env:UNREAL_MCP_INTEGRATION_SUITE='ui-targeting'
+node tests/integration.mjs
+Remove-Item Env:UNREAL_MCP_INTEGRATION_SUITE -ErrorAction SilentlyContinue
 
-Covers 80 scenarios across the 15 new Phase 6-20 tools:
-- Phase 6: Geometry & Mesh Creation (`manage_geometry`)
-- Phase 7: Skeletal Mesh & Rigging (`manage_skeleton`)
-- Phase 8: Advanced Material Authoring (`manage_material_authoring`)
-- Phase 9: Texture Generation (`manage_texture`)
-- Phase 10: Animation Authoring (`manage_animation_authoring`)
-- Phase 11: Audio Authoring (`manage_audio_authoring`)
-- Phase 12: Niagara VFX Authoring (`manage_niagara_authoring`)
-- Phase 13: Gameplay Ability System (`manage_gas`)
-- Phase 14: Character & Movement (`manage_character`)
-- Phase 15: Combat & Weapons (`manage_combat`)
-- Phase 16: AI System - Enhanced (`manage_ai`)
-- Phase 17: Inventory & Items (`manage_inventory`)
-- Phase 18: Interaction System (`manage_interaction`)
-- Phase 19: Widget Authoring (`manage_widget_authoring`)
-- Phase 20: Networking & Multiplayer (`manage_networking`)
-
-### Test Structure
-
-```
-tests/
-├── integration.mjs          # Core test suite (44 scenarios)
-├── integration-advanced.mjs # Advanced test suite (80 scenarios)
-├── test-runner.mjs          # Shared test harness
-└── reports/                 # JSON test results (gitignored)
+$env:UNREAL_MCP_INTEGRATION_SUITE='graph-review'
+node tests/integration.mjs
+Remove-Item Env:UNREAL_MCP_INTEGRATION_SUITE -ErrorAction SilentlyContinue
 ```
 
-### Adding New Tests
+These focused suites currently prove:
 
-Edit `tests/integration.mjs` and add a test case to the `testCases` array:
+- `ui-targeting`: `manage_ui.resolve_ui_target`, `control_editor.focus_editor_surface`, targeted editor screenshots with `includeMenus` and `includedMenuWindowCount` diagnostics, and the `AMBIGUOUS_CAPTURE_TARGET` path when editor capture is retried with only `tabId`.
+- `graph-review`: readable `capture_blueprint_graph_review` capture with `scope: neighborhood` plus bounded `get_graph_review_summary` follow-up that reuses `reviewTargets[].nodeId` and returns `focusedReviewTarget` context on helper graphs.
+- Other supported focused suites in `tests/integration.mjs` include `public-inspection`, `targeted-window-input`, `semantic-navigation`, `public-surface-validation`, `designer-marquee`, `designer-selection`, `designer-geometry-readback`, `designer-rectangle-selection`, `ui-target-policy`, `graph-batching`, `widget-bindings`, and `capability-honesty`.
 
-```javascript
+### Latest Focused Evidence
+
+- `tests/reports/ui-targeting-test-results-2026-04-13T16-42-54.147Z.json` — passed `8/8`
+- `tests/reports/graph-review-test-results-2026-04-13T18-48-32.509Z.json` — passed `7/7`
+
+Reports are written to `tests/reports/` with timestamped filenames. Fresh reruns will create newer files alongside these examples.
+
+### Dense Review Request Examples
+
+Readable neighborhood capture:
+
+```json
 {
-  scenario: 'Your test description',
-  toolName: 'manage_asset',
-  arguments: { action: 'list', path: '/Game/MyFolder' },
-  expected: 'success'
+  "action": "capture_blueprint_graph_review",
+  "assetPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeGuid": "<matched node guid>",
+  "scope": "neighborhood",
+  "filename": "graph-review-blueprint.png"
 }
 ```
 
-The `expected` field supports flexible matching:
-- `'success'` — response must have `success: true`
-- `'success|not found'` — either success OR "not found" in response
-- `'error'` — expects failure
+Focused bounded follow-up using the first-pass summary:
 
-### Test Output
-
-Console shows pass/fail status with timing:
+```json
+{
+  "action": "get_graph_review_summary",
+  "blueprintPath": "/Game/IntegrationTest/BP_SemanticNavigation",
+  "graphName": "ReviewFunction",
+  "nodeId": "<reviewTargets[0].nodeId>"
+}
 ```
-[PASSED] Asset: create test folder (234.5 ms)
-[PASSED] Actor: spawn StaticMeshActor (456.7 ms)
-[FAILED] Level: get summary (123.4 ms) => {"success":false,"error":"..."}
-```
-
-JSON reports are saved to `tests/reports/` with timestamps.
 
 ## Unit Tests
 
 ```bash
-npm run test:unit        # Run once
-npm run test:unit:watch  # Watch mode
-npm run test:unit:coverage  # With coverage
+npm run test:unit
+npm run test:unit:watch
+npm run test:unit:coverage
 ```
 
-Unit tests use Vitest and don't require Unreal Engine. They cover:
-- Utility functions (`normalize.ts`, `validation.ts`, `safe-json.ts`)
-- Pure TypeScript logic
+For the screenshot and recovery contract, the most relevant focused Vitest files are:
 
-## CI Smoke Test
+- `tests/unit/tools/editor_contract.test.ts`
+- `tests/unit/tools/ui_handlers.test.ts`
+- `tests/unit/tools/control-editor-navigation.test.ts`
+
+These suites pin the public field contract for `resolve_ui_target`, `focus_editor_surface`, `screenshot`, and graph-review capture behavior without requiring a running editor.
+
+## Smoke Test
 
 ```bash
 MOCK_UNREAL_CONNECTION=true npm run test:smoke
 ```
 
-Runs in GitHub Actions on every push/PR. Uses mock mode to validate server startup and basic tool registration without an actual Unreal connection.
+Use this in CI to verify startup and packaged tool discovery without connecting to a live Unreal session.
 
-## Prerequisites
+## Adding New Live Tests
 
-### Unreal Engine Setup
-1. **Unreal Engine 5.0–5.7** must be running
-2. **MCP Automation Bridge plugin** enabled and listening on port 8091
+Add or extend a focused suite function in `tests/integration.mjs`, use `TestRunner` plus `runner.addStep(...)`, and register the suite in the `UNREAL_MCP_INTEGRATION_SUITE` dispatch block near the end of the file.
 
-### Environment Variables (optional)
-```bash
-MCP_AUTOMATION_HOST=127.0.0.1  # Default
-MCP_AUTOMATION_PORT=8091       # Default
-```
+Keep focused suites small and behavior-scoped. Prefer extending an existing suite such as `ui-targeting` or `graph-review` over creating a new taxonomy when the behavior already belongs to one of the shipped contract slices.
 
 ## Troubleshooting
 
-### All Tests Fail with ECONNREFUSED
-- Unreal Engine is not running, or
-- MCP Automation Bridge plugin is not enabled, or
-- Port 8091 is blocked
+### Automation Bridge Unavailable
 
-### Specific Tests Fail
-- Check Unreal Output Log for errors
-- Verify the asset/actor/level referenced in the test exists
-- Some tests create temporary assets in `/Game/IntegrationTest` (cleaned up at end)
+- Make sure the `UE_AutomationMCP` editor session is running.
+- Confirm the plugin is enabled and listening on `8091` or the explicit `8090` fallback.
+- If the editor is open but the runner still fails, restart the editor session and rerun the focused suite instead of the full suite first.
 
-### Test Times Out
-- Default timeout is 30 seconds per test
-- Complex operations (lighting builds, large imports) may need longer
-- Check if Unreal is frozen or unresponsive
+### Screenshot Ambiguity Failures
+
+- Use `manage_ui.resolve_ui_target` before retrying editor-window capture.
+- Use `control_editor.focus_editor_surface` when keyboard or text input depends on a deliberate graph or Designer focus change.
+- For deterministic editor screenshots, pass a live `windowTitle`. `tabId` alone is diagnostic context for ambiguity on `control_editor.screenshot`, not a direct editor-window capture selector.
+- Check `includeMenus` and `includedMenuWindowCount` on successful editor-window captures when you need to verify whether popup or menu surfaces were intentionally composed into the screenshot.
+- Check `captureIntentWarning`, `suggestedPreflightAction`, `targetStatus`, `requestedTargetStillLive`, and `reResolved` in the structured error payload.
+
+### Graph Review Failures
+
+- Verify the named helper graph is openable through the semantic navigation step before investigating capture.
+- Treat `capture_blueprint_graph_review` as a visible-editor-window workflow; re-focus the asset editor if the capture precondition fails.
+- For dense review follow-up, inspect `reviewTargets` first and then reuse one returned `nodeId` for the bounded `focusedReviewTarget` path instead of reaching for raw node batches immediately.
 
 ## Exit Codes
 
-- `0` — All tests passed
-- `1` — One or more tests failed
-
-Use in CI/CD:
-```bash
-npm test && echo "All tests passed"
-```
+- `0` — all requested tests passed
+- `1` — one or more requested tests failed

@@ -17,13 +17,18 @@ import { cleanObject } from '../../utils/safe-json.js';
 import type { HandlerArgs } from '../../types/handler-types.js';
 import { requireNonEmptyString, executeAutomationRequest } from './common-handlers.js';
 
+const CANONICAL_AUDIO_TOOL = 'manage_audio';
+const LEGACY_AUDIO_AUTHORING_BRIDGE_TOOL = 'manage_audio_authoring';
+
 function getTimeoutMs(): number {
   const envDefault = Number(process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS ?? '120000');
   return Number.isFinite(envDefault) && envDefault > 0 ? envDefault : 120000;
 }
 
 /**
- * Handles all audio authoring actions for the manage_audio_authoring tool.
+ * Handles audio authoring actions that are publicly merged into manage_audio.
+ * The native bridge still expects manage_audio_authoring, so keep that
+ * compatibility boundary localized to this helper.
  */
 export async function handleAudioAuthoringTools(
   action: string,
@@ -38,9 +43,9 @@ export async function handleAudioAuthoringTools(
     const payload = { ...argsRecord, subAction };
     const result = await executeAutomationRequest(
       tools,
-      'manage_audio_authoring',
+      LEGACY_AUDIO_AUTHORING_BRIDGE_TOOL,
       payload as HandlerArgs,
-      `Automation bridge not available for audio authoring action: ${subAction}`,
+      `Automation bridge not available for ${CANONICAL_AUDIO_TOOL} action: ${subAction}`,
       { timeoutMs }
     );
     return cleanObject(result) as Record<string, unknown>;

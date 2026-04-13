@@ -7,15 +7,243 @@ export interface ToolDefinition {
   [key: string]: unknown;
 }
 import { commonSchemas } from './tool-definition-utils.js';
+
+const visibleWindowSchema = {
+  type: 'object',
+  properties: {
+    index: commonSchemas.integerProp,
+    title: commonSchemas.stringProp,
+    isActive: commonSchemas.booleanProp,
+    isVisible: commonSchemas.booleanProp,
+    x: commonSchemas.numberProp,
+    y: commonSchemas.numberProp,
+    width: commonSchemas.numberProp,
+    height: commonSchemas.numberProp,
+    clientX: commonSchemas.numberProp,
+    clientY: commonSchemas.numberProp,
+    clientWidth: commonSchemas.numberProp,
+    clientHeight: commonSchemas.numberProp
+  }
+};
+
+const pointerPositionSchema = {
+  type: 'object',
+  properties: {
+    x: commonSchemas.numberProp,
+    y: commonSchemas.numberProp,
+    clientX: commonSchemas.numberProp,
+    clientY: commonSchemas.numberProp
+  },
+  description: 'Pointer position in screen or client coordinates.'
+};
+
+const point2DSchema = {
+  type: 'object',
+  properties: {
+    x: commonSchemas.numberProp,
+    y: commonSchemas.numberProp
+  },
+  description: '2D point used for graph and designer navigation.'
+};
+
+const designerRectSchema = {
+  type: 'object',
+  properties: {
+    left: commonSchemas.numberProp,
+    top: commonSchemas.numberProp,
+    right: commonSchemas.numberProp,
+    bottom: commonSchemas.numberProp
+  },
+  description: 'Client-space rectangle within the active Widget Blueprint Designer window.'
+};
+
+const widgetDesignerSelectorSchema = {
+  type: 'object',
+  properties: {
+    widgetName: commonSchemas.stringProp,
+    widgetPath: commonSchemas.stringProp,
+    widgetObjectPath: commonSchemas.stringProp,
+    templateObjectPath: commonSchemas.stringProp
+  },
+  description: 'Optional nested selector for a child widget inside the Widget Blueprint asset.'
+};
+
+const widgetDesignerSelectionSchema: {
+  type: string;
+  properties: Record<string, unknown>;
+  description: string;
+} = {
+  type: 'object',
+  properties: {
+    name: commonSchemas.stringProp,
+    widgetClass: commonSchemas.stringProp,
+    widgetPath: commonSchemas.stringProp,
+    widgetObjectPath: commonSchemas.stringProp
+  },
+  description: 'Stable selected widget readback from the live Widget Blueprint designer.'
+};
+
+const widgetDesignerLayoutSchema: {
+  type: string;
+  properties: Record<string, unknown>;
+  description: string;
+} = {
+  type: 'object',
+  properties: {
+    slotClass: commonSchemas.stringProp,
+    position: point2DSchema,
+    size: point2DSchema,
+    alignment: point2DSchema,
+    anchors: {
+      type: 'object',
+      properties: {
+        minimum: point2DSchema,
+        maximum: point2DSchema
+      },
+      description: 'Canvas anchor minimum and maximum values.'
+    },
+    offsetMinimum: point2DSchema,
+    offsetMaximum: point2DSchema,
+    designerBounds: {
+      type: 'object',
+      properties: {
+        left: commonSchemas.numberProp,
+        top: commonSchemas.numberProp,
+        right: commonSchemas.numberProp,
+        bottom: commonSchemas.numberProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp
+      },
+      description: 'Live client-space widget bounds within the active Widget Blueprint window when the widget can be resolved against the current Designer surface.'
+    },
+    zOrder: commonSchemas.numberProp
+  },
+  description: 'Read-only layout metadata for canvas-backed widgets in the live Widget Blueprint designer.'
+};
+
+widgetDesignerSelectionSchema.properties.slotClass = commonSchemas.stringProp;
+widgetDesignerSelectionSchema.properties.layout = widgetDesignerLayoutSchema;
+
+const controlEditorOutputProperties = {
+  ...commonSchemas.outputBase,
+  assetPath: commonSchemas.assetPath,
+  filename: commonSchemas.stringProp,
+  path: commonSchemas.stringProp,
+  width: commonSchemas.numberProp,
+  height: commonSchemas.numberProp,
+  captureTarget: { type: 'string', enum: ['viewport', 'editor_window'] },
+  captureMode: commonSchemas.stringProp,
+  requestedCaptureMode: commonSchemas.stringProp,
+  requestedWindowTitle: commonSchemas.stringProp,
+  requestedTabId: commonSchemas.stringProp,
+  resolvedTargetSource: commonSchemas.stringProp,
+  targetStatus: { type: 'string', enum: ['resolved', 'stale', 'needs_open', 'ambiguous', 'not_found'] },
+  requestedTargetStillLive: commonSchemas.booleanProp,
+  reResolved: commonSchemas.booleanProp,
+  staleReason: commonSchemas.stringProp,
+  recoveryHint: commonSchemas.stringProp,
+  recoveryAction: commonSchemas.stringProp,
+  captureIntentWarning: commonSchemas.stringProp,
+  captureIntentSource: commonSchemas.stringProp,
+  suggestedMode: commonSchemas.stringProp,
+  suggestedPreflightAction: commonSchemas.stringProp,
+  windowTitle: commonSchemas.stringProp,
+  tabId: commonSchemas.stringProp,
+  includeMenus: commonSchemas.booleanProp,
+  includedMenuWindowCount: commonSchemas.integerProp,
+  virtualCursorVisible: commonSchemas.booleanProp,
+  pressedButtons: commonSchemas.stringProp,
+  pressedModifierKeys: commonSchemas.stringProp,
+  keyboardFocusedWidgetType: commonSchemas.stringProp,
+  userFocusedWidgetType: commonSchemas.stringProp,
+  keyboardUserIndex: commonSchemas.integerProp,
+  targetWidgetPathValid: commonSchemas.booleanProp,
+  targetWidgetPath: commonSchemas.stringProp,
+  targetWidgetPathDepth: commonSchemas.integerProp,
+  targetLeafWidgetType: commonSchemas.stringProp,
+  button: commonSchemas.stringProp,
+  text: commonSchemas.stringProp,
+  submit: commonSchemas.booleanProp,
+  x: commonSchemas.numberProp,
+  y: commonSchemas.numberProp,
+  clientX: commonSchemas.numberProp,
+  clientY: commonSchemas.numberProp,
+  screenX: commonSchemas.numberProp,
+  screenY: commonSchemas.numberProp,
+  wheelSteps: commonSchemas.numberProp,
+  preciseDelta: commonSchemas.numberProp,
+  durationMs: commonSchemas.numberProp,
+  holdBeforeMoveMs: commonSchemas.numberProp,
+  holdAfterMoveMs: commonSchemas.numberProp,
+  holdDurationMs: commonSchemas.numberProp,
+  steps: commonSchemas.integerProp,
+  graphName: commonSchemas.graphName,
+  requestedGraphName: commonSchemas.graphName,
+  resolvedGraphName: commonSchemas.graphName,
+  scope: commonSchemas.stringProp,
+  currentMode: commonSchemas.stringProp,
+  requestedMode: commonSchemas.stringProp,
+  openedAssetEditor: commonSchemas.booleanProp,
+  previousViewLocation: point2DSchema,
+  requestedViewLocation: point2DSchema,
+  viewLocation: point2DSchema,
+  delta: point2DSchema,
+  viewOffsetX: commonSchemas.numberProp,
+  viewOffsetY: commonSchemas.numberProp,
+  previousZoomAmount: commonSchemas.numberProp,
+  requestedZoomAmount: commonSchemas.numberProp,
+  zoomAmount: commonSchemas.numberProp,
+  preserveZoom: commonSchemas.booleanProp,
+  surface: commonSchemas.stringProp,
+  focusApplied: commonSchemas.booleanProp,
+  focusTargetSurface: commonSchemas.stringProp,
+  focusFailureReason: commonSchemas.stringProp,
+  nodeSelectorType: commonSchemas.stringProp,
+  nodeSelector: commonSchemas.stringProp,
+  matchedNodeId: commonSchemas.stringProp,
+  matchedNodeName: commonSchemas.stringProp,
+  matchedNodeTitle: commonSchemas.stringProp,
+  framingSource: commonSchemas.stringProp,
+  framedNodeCount: commonSchemas.integerProp,
+  truncatedNeighborhood: commonSchemas.booleanProp,
+  widgetSelectorType: commonSchemas.stringProp,
+  widgetSelector: commonSchemas.stringProp,
+  widgetName: commonSchemas.stringProp,
+  widgetPath: commonSchemas.stringProp,
+  widgetObjectPath: commonSchemas.stringProp,
+  requestedWidgetName: commonSchemas.stringProp,
+  requestedWidgetPath: commonSchemas.stringProp,
+  requestedWidgetObjectPath: commonSchemas.stringProp,
+  resolvedWidgetName: commonSchemas.stringProp,
+  resolvedWidgetPath: commonSchemas.stringProp,
+  resolvedWidgetObjectPath: commonSchemas.stringProp,
+  matchedWidgetPaths: commonSchemas.arrayOfStrings,
+  matchedWidgetCount: commonSchemas.integerProp,
+  appendOrToggle: commonSchemas.booleanProp,
+  targetStillSelected: commonSchemas.booleanProp,
+  selectedWidgetCount: commonSchemas.integerProp,
+  designerTabFound: commonSchemas.booleanProp,
+  designerViewFound: commonSchemas.booleanProp,
+  queuedDesignerAction: commonSchemas.booleanProp,
+  designerActionDisposition: commonSchemas.stringProp,
+  fitExecuted: commonSchemas.booleanProp,
+  fitFailureReason: commonSchemas.stringProp,
+  viewFailureReason: commonSchemas.stringProp,
+  enteredDesignerMode: commonSchemas.booleanProp,
+  selectionApplied: commonSchemas.booleanProp,
+  revealExecuted: commonSchemas.booleanProp,
+  revealFailureReason: commonSchemas.stringProp
+};
+
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',
-    description: 'Build automation and pipeline control. Actions: run_ubt (compile targets), list_categories (show tool categories), get_status (bridge status). Routes to system_control internally.',
+    description: 'Build automation and bridge discovery. Actions: run_ubt (compile targets), list_categories (return the public bridge-owned MCP runtime capability matrix), get_status (return bridge status plus catalog-derived capability counts). Dynamic category controls live on manage_tools.',
     category: 'core',
     inputSchema: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: show available tool categories. get_status: get bridge status.' },
+        action: { type: 'string', enum: ['run_ubt', 'list_categories', 'get_status'], description: 'run_ubt: compile with UnrealBuildTool. list_categories: return the public bridge-owned MCP runtime capability matrix. get_status: return bridge status plus catalog-derived capability counts.' },
         target: { type: 'string', description: 'Build target name (e.g., MyProjectEditor)' },
         platform: { type: 'string', description: 'Target platform (Win64, Linux, Mac)' },
         configuration: { type: 'string', description: 'Build configuration (Development, Shipping, Debug)' },
@@ -28,7 +256,54 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         output: { type: 'string', description: 'Build output' },
-        command: { type: 'string', description: 'Executed command' }
+        command: { type: 'string', description: 'Executed command' },
+        categories: { type: 'array', items: commonSchemas.stringProp, description: 'Public tool names published by the bridge catalog.' },
+        tools: {
+          type: 'array',
+          description: 'Structured public tool rows from the bridge-owned catalog.',
+          items: {
+            type: 'object',
+            properties: {
+              toolName: commonSchemas.stringProp,
+              category: commonSchemas.stringProp,
+              summary: commonSchemas.stringProp,
+              public: commonSchemas.booleanProp,
+              subActions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: commonSchemas.stringProp,
+                    summary: commonSchemas.stringProp,
+                    editorOnly: commonSchemas.booleanProp,
+                    requiresLiveEditor: commonSchemas.booleanProp,
+                    requiresAssetEditor: commonSchemas.booleanProp,
+                    interactionModel: commonSchemas.stringProp,
+                    limitationNote: commonSchemas.stringProp
+                  }
+                }
+              },
+              subActionCount: commonSchemas.numberProp
+            }
+          }
+        },
+        categoryGroupNames: { type: 'array', items: commonSchemas.stringProp, description: 'Unique public category groups from the bridge catalog.' },
+        count: commonSchemas.numberProp,
+        groupCount: commonSchemas.numberProp,
+        actionCount: commonSchemas.numberProp,
+        catalogSource: commonSchemas.stringProp,
+        connected: commonSchemas.booleanProp,
+        bridgeType: commonSchemas.stringProp,
+        version: commonSchemas.stringProp,
+        engineVersion: commonSchemas.stringProp,
+        engineMajor: commonSchemas.numberProp,
+        engineMinor: commonSchemas.numberProp,
+        editorMode: commonSchemas.booleanProp,
+        totalActions: commonSchemas.numberProp,
+        toolCategories: commonSchemas.numberProp,
+        platform: commonSchemas.stringProp,
+        isPlayInEditor: commonSchemas.booleanProp,
+        projectName: commonSchemas.stringProp
       }
     }
   },
@@ -113,7 +388,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         metadata: commonSchemas.objectProp,
         graphName: commonSchemas.graphName,
         nodeType: commonSchemas.stringProp,
-        nodeId: commonSchemas.nodeId,
+        nodeId: {
+          ...commonSchemas.nodeId,
+          description: 'Node ID. For get_graph_review_summary, reuse reviewTargets[].nodeId from the first-pass summary to request focused follow-up.'
+        },
         sourceNodeId: commonSchemas.sourceNodeId,
         targetNodeId: commonSchemas.targetNodeId,
         inputName: commonSchemas.pinName,
@@ -190,7 +468,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create', 'get_blueprint', 'get', 'compile',
             'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component', 'remove_scs_component', 'reparent_scs_component', 'set_scs_transform', 'set_scs_property',
             'ensure_exists', 'probe_handle', 'add_variable', 'remove_variable', 'rename_variable', 'add_function', 'add_event', 'remove_event', 'add_construction_script', 'set_variable_metadata', 'set_metadata',
-            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
+            'create_node', 'add_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node', 'get_node_details', 'get_node_details_batch', 'get_graph_details', 'get_graph_review_summary', 'get_pin_details',
             'list_node_types', 'set_pin_default_value'
           ],
           description: 'Blueprint action'
@@ -214,7 +492,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         graphName: commonSchemas.graphName,
         nodeType: commonSchemas.stringProp,
         nodeId: commonSchemas.nodeId,
+        nodeIds: commonSchemas.arrayOfStrings,
         pinName: commonSchemas.pinName,
+        cursor: commonSchemas.stringProp,
+        limit: commonSchemas.numberProp,
         linkedTo: commonSchemas.stringProp,
         memberName: commonSchemas.stringProp,
         x: commonSchemas.numberProp,
@@ -281,7 +562,24 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         ...commonSchemas.outputBase,
         blueprintPath: commonSchemas.blueprintPath,
-        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' }
+        blueprint: { oneOf: [{ type: 'object' }, { type: 'string' }], description: 'Blueprint data object or path string.' },
+        graphName: commonSchemas.graphName,
+        nodeCount: commonSchemas.numberProp,
+        connectionCount: commonSchemas.numberProp,
+        nodes: commonSchemas.arrayOfObjects,
+        entryNodes: commonSchemas.arrayOfObjects,
+        commentGroups: commonSchemas.arrayOfObjects,
+        highFanOutNodes: commonSchemas.arrayOfObjects,
+        reviewTargets: commonSchemas.arrayOfObjects,
+        focusedReviewTarget: commonSchemas.objectProp,
+        incomingNodes: commonSchemas.arrayOfObjects,
+        outgoingNodes: commonSchemas.arrayOfObjects,
+        containingCommentGroup: commonSchemas.nullableObjectProp,
+        focusTruncated: commonSchemas.booleanProp,
+        shown: commonSchemas.numberProp,
+        totalRequested: commonSchemas.numberProp,
+        truncated: commonSchemas.booleanProp,
+        nextCursor: commonSchemas.stringProp
       }
     }
   },
@@ -362,7 +660,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'control_editor',
     category: 'core',
-    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.',
+    description: 'Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input, and drive semantic Blueprint or Widget Blueprint navigation actions, including bounded graph-review capture around a matched node neighborhood.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -382,7 +680,10 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'open_level', 'focus_actor',
             'show_stats', 'hide_stats',
             'set_editor_mode', 'set_immersive_mode', 'set_game_view',
-            'undo', 'redo', 'save_all'
+            'undo', 'redo', 'save_all',
+            'fit_blueprint_graph', 'set_blueprint_graph_view', 'jump_to_blueprint_node', 'capture_blueprint_graph_review',
+            'set_widget_blueprint_mode', 'fit_widget_designer', 'set_widget_designer_view', 'select_widget_in_designer', 'select_widgets_in_designer_rect',
+            'focus_editor_surface'
           ],
           description: 'Editor action'
         },
@@ -402,6 +703,22 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         assetPath: commonSchemas.assetPath,
         levelPath: commonSchemas.levelPath,
         path: commonSchemas.directoryPath,
+        graphName: commonSchemas.graphName,
+        nodeGuid: commonSchemas.stringProp,
+        nodeName: commonSchemas.name,
+        nodeTitle: commonSchemas.stringProp,
+        scope: commonSchemas.stringProp,
+        viewLocation: point2DSchema,
+        delta: point2DSchema,
+        zoomAmount: commonSchemas.numberProp,
+        preserveZoom: commonSchemas.booleanProp,
+        surface: commonSchemas.stringProp,
+        widgetName: commonSchemas.name,
+        widgetPath: commonSchemas.stringProp,
+        widgetObjectPath: commonSchemas.stringProp,
+        templateObjectPath: commonSchemas.stringProp,
+        rect: designerRectSchema,
+        appendOrToggle: commonSchemas.booleanProp,
         // Actor-related parameters
         actorName: commonSchemas.actorName,
         name: commonSchemas.name,
@@ -412,20 +729,107 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         realtime: commonSchemas.booleanProp,
         stat: commonSchemas.stringProp,
         category: commonSchemas.stringProp,
+        includeMenus: commonSchemas.booleanProp,
+        windowTitle: commonSchemas.stringProp,
+        tabId: commonSchemas.stringProp,
+        captureScreenshots: commonSchemas.booleanProp,
         preferences: commonSchemas.objectProp,
         section: commonSchemas.stringProp,
         key: commonSchemas.stringProp,
         value: commonSchemas.value,
         // simulate_input parameters
         inputAction: commonSchemas.stringProp,
-        axis: commonSchemas.stringProp
+        inputType: commonSchemas.stringProp,
+        type: commonSchemas.stringProp,
+        axis: commonSchemas.stringProp,
+        text: commonSchemas.stringProp,
+        submit: commonSchemas.booleanProp,
+        button: commonSchemas.stringProp,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        clientX: commonSchemas.numberProp,
+        clientY: commonSchemas.numberProp,
+        wheelSteps: commonSchemas.numberProp,
+        preciseDelta: commonSchemas.numberProp,
+        holdDurationMs: commonSchemas.numberProp,
+        durationMs: commonSchemas.numberProp,
+        holdBeforeMoveMs: commonSchemas.numberProp,
+        holdAfterMoveMs: commonSchemas.numberProp,
+        start: pointerPositionSchema,
+        end: pointerPositionSchema
       },
       required: ['action']
     },
     outputSchema: {
       type: 'object',
       properties: {
-        ...commonSchemas.outputBase
+        ...controlEditorOutputProperties
+      }
+    }
+  },
+  {
+    name: 'manage_ui',
+    category: 'core',
+    description: 'Discover UI targets, resolve stable target handles, inspect visible Slate windows, and manage bridge-owned commands or menu entry targets.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['list_ui_targets', 'list_visible_windows', 'resolve_ui_target', 'open_ui_target', 'register_editor_command', 'add_menu_entry'],
+          description: 'UI automation action. list_visible_windows is the canonical discovery step before targeted screenshot or input, and resolve_ui_target is the read-first preflight step before opening or acting on a target.'
+        },
+        identifier: commonSchemas.stringProp,
+        tabId: commonSchemas.stringProp,
+        windowTitle: commonSchemas.stringProp,
+        name: commonSchemas.name,
+        label: commonSchemas.stringProp,
+        tooltip: commonSchemas.stringProp,
+        iconName: commonSchemas.stringProp,
+        kind: commonSchemas.stringProp,
+        command: commonSchemas.stringProp,
+        assetPath: commonSchemas.assetPath,
+        menuName: commonSchemas.stringProp,
+        sectionName: commonSchemas.stringProp,
+        entryName: commonSchemas.stringProp,
+        commandName: commonSchemas.stringProp
+      },
+      required: ['action']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ...commonSchemas.outputBase,
+        count: commonSchemas.integerProp,
+        windows: { type: 'array', items: visibleWindowSchema },
+        targets: { type: 'array', items: commonSchemas.objectProp },
+        jsonDefinitionRoots: commonSchemas.arrayOfStrings,
+        knownMenuNames: commonSchemas.arrayOfStrings,
+        missingMenuNames: commonSchemas.arrayOfStrings,
+        tabId: commonSchemas.stringProp,
+        windowTitle: commonSchemas.stringProp,
+        identifier: commonSchemas.stringProp,
+        targetType: commonSchemas.stringProp,
+        targetStatus: { type: 'string', enum: ['resolved', 'ambiguous', 'stale', 'needs_open', 'not_found'] },
+        requestedIdentifier: commonSchemas.stringProp,
+        requestedTabId: commonSchemas.stringProp,
+        requestedWindowTitle: commonSchemas.stringProp,
+        resolvedIdentifier: commonSchemas.stringProp,
+        resolvedTabId: commonSchemas.stringProp,
+        resolvedWindowTitle: commonSchemas.stringProp,
+        resolvedTargetSource: commonSchemas.stringProp,
+        reResolved: commonSchemas.booleanProp,
+        staleReason: commonSchemas.stringProp,
+        recoveryHint: commonSchemas.stringProp,
+        recoveryAction: commonSchemas.stringProp,
+        x: commonSchemas.numberProp,
+        y: commonSchemas.numberProp,
+        width: commonSchemas.numberProp,
+        height: commonSchemas.numberProp,
+        clientX: commonSchemas.numberProp,
+        clientY: commonSchemas.numberProp,
+        clientWidth: commonSchemas.numberProp,
+        clientHeight: commonSchemas.numberProp
       }
     }
   },
@@ -3192,6 +3596,8 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_dialog_widget',
             'create_radial_menu',
             'get_widget_info',
+            'get_widget_tree',
+            'get_widget_designer_state',
             'preview_widget'
           ],
           description: 'The widget authoring action to perform.'
@@ -3199,6 +3605,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         name: commonSchemas.name,
         folder: commonSchemas.directoryPath,
         widgetPath: commonSchemas.widgetPath,
+        selector: widgetDesignerSelectorSchema,
+        openEditorIfNeeded: {
+          type: 'boolean',
+          description: 'Open the Widget Blueprint editor if a live Designer context is needed and not already available.'
+        },
         slotName: commonSchemas.slotName,
         parentSlot: { type: 'string', description: 'Parent slot to add widget to.' },
         parentClass: commonSchemas.parentClass,
@@ -3382,6 +3793,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         bindingType: { type: 'string', enum: ['function', 'variable'], description: 'Binding type.' },
         bindingSource: { type: 'string', description: 'Variable or function name to bind to.' },
         functionName: commonSchemas.functionName,
+        ensureVariable: { type: 'boolean', description: 'Promote the target widget to a Blueprint variable before creating a component-bound event.' },
         onHoveredFunction: { type: 'string', description: 'Function to call on hover.' },
         onUnhoveredFunction: { type: 'string', description: 'Function to call on unhover.' },
         animationName: commonSchemas.animationName,
@@ -3512,6 +3924,23 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         trackIndex: { type: 'number', description: 'Index of created track.' },
         keyframeIndex: { type: 'number', description: 'Index of created keyframe.' },
         bindingCreated: { type: 'boolean', description: 'Whether binding was created.' },
+        bindingApplied: { type: 'boolean', description: 'Whether the requested binding is now authored on the widget blueprint.' },
+        bindingFunctionName: { type: 'string', description: 'The authored or generated binding function name backing the binding.' },
+        bindingFunctionCreated: { type: 'boolean', description: 'Whether the binding function graph was created during this request.' },
+        bindingFunctionExisted: { type: 'boolean', description: 'Whether the request reused a pre-existing binding function or event handler.' },
+        eventNodeCreated: { type: 'boolean', description: 'Whether the bridge created a new component-bound event node.' },
+        eventNodeExisted: { type: 'boolean', description: 'Whether a matching component-bound event node already existed.' },
+        handlerNamingMode: { type: 'string', enum: ['requested', 'engine_generated'], description: 'How the returned bindingFunctionName was chosen.' },
+        requestedFunctionName: commonSchemas.functionName,
+        propertyName: commonSchemas.propertyName,
+        eventType: commonSchemas.eventName,
+        widgetIsVariable: { type: 'boolean', description: 'Whether the target widget is a Blueprint variable after the request.' },
+        widgetWasMadeVariable: { type: 'boolean', description: 'Whether the bridge promoted the widget to a Blueprint variable during the request.' },
+        requiresBlueprintVariable: { type: 'boolean', description: 'Whether the requested event binding requires the widget to be a Blueprint variable.' },
+        requiresManualFollowThrough: { type: 'boolean', description: 'Whether the operator still has manual follow-through work after this request.' },
+        suggestedFix: commonSchemas.stringProp,
+        manualSteps: { type: 'array', items: commonSchemas.stringProp, description: 'Any manual follow-through steps still required after the request.' },
+        warnings: { type: 'array', items: commonSchemas.stringProp, description: 'Non-fatal warnings returned by the binding helper.' },
         widgetInfo: {
           type: 'object',
           properties: {
@@ -3525,6 +3954,64 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           },
           description: 'Widget info (for get_widget_info).'
         },
+        widgetTree: {
+          type: 'object',
+          properties: {
+            name: commonSchemas.stringProp,
+            class: commonSchemas.stringProp,
+            isPanel: commonSchemas.booleanProp,
+            isVariable: commonSchemas.booleanProp,
+            slotClass: commonSchemas.stringProp,
+            layout: widgetDesignerLayoutSchema,
+            children: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: commonSchemas.stringProp,
+                  class: commonSchemas.stringProp,
+                  isPanel: commonSchemas.booleanProp,
+                  isVariable: commonSchemas.booleanProp,
+                  slotClass: commonSchemas.stringProp,
+                  layout: widgetDesignerLayoutSchema,
+                  children: {
+                    type: 'array',
+                    items: { type: 'object' }
+                  }
+                }
+              }
+            }
+          },
+          description: 'Recursive widget tree (for get_widget_tree).'
+        },
+        widgetCount: { type: 'number', description: 'Total widgets in the tree.' },
+        rootWidgetName: commonSchemas.stringProp,
+        widgetBlueprintObjectPath: commonSchemas.stringProp,
+        currentMode: commonSchemas.stringProp,
+        openedAssetEditor: commonSchemas.booleanProp,
+        liveEditorContextFound: commonSchemas.booleanProp,
+        requestedWindowTitle: commonSchemas.stringProp,
+        requestedTabId: commonSchemas.stringProp,
+        resolvedTargetSource: commonSchemas.stringProp,
+        windowTitle: commonSchemas.stringProp,
+        tabId: commonSchemas.stringProp,
+        widgetSelectorType: commonSchemas.stringProp,
+        widgetSelector: commonSchemas.stringProp,
+        requestedWidgetName: commonSchemas.stringProp,
+        requestedWidgetPath: commonSchemas.stringProp,
+        requestedWidgetObjectPath: commonSchemas.stringProp,
+        resolvedWidgetName: commonSchemas.stringProp,
+        resolvedWidgetPath: commonSchemas.stringProp,
+        resolvedWidgetObjectPath: commonSchemas.stringProp,
+        designerTabFound: commonSchemas.booleanProp,
+        designerViewFound: commonSchemas.booleanProp,
+        selectedWidgetCount: commonSchemas.integerProp,
+        selectedWidgets: {
+          type: 'array',
+          items: widgetDesignerSelectionSchema,
+          description: 'Current live Widget Blueprint designer selection readback.'
+        },
+        errorCode: commonSchemas.stringProp,
         error: commonSchemas.stringProp
       }
     }
