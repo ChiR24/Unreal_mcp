@@ -68,6 +68,7 @@
 // Material Core
 #include "Materials/Material.h"
 #include "Materials/MaterialFunction.h"
+#include "Materials/MaterialFunctionInterface.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Engine/Texture.h"
@@ -148,6 +149,10 @@
 // Forward declarations of helper functions
 #if WITH_EDITOR
 static UMaterialExpression* FindExpressionByIdOrName(UMaterial* Material, const FString& NodeIdOrName);
+static UMaterialExpression* FindExpressionByIdOrNameInFunction(UMaterialFunction* Function, const FString& NodeIdOrName);
+static UObject* LoadMaterialOrFunction(const FString& AssetPath, UMaterial*& OutMaterial, UMaterialFunction*& OutFunction);
+static void AddExpressionToContainer(UMaterial* Material, UMaterialFunction* Function, UMaterialExpression* Expr);
+static FString FunctionInputTypeToString(EFunctionInputType InType);
 #endif
 static bool SaveMaterialAsset(UMaterial *Material);
 static bool SaveMaterialFunctionAsset(UMaterialFunction *Function);
@@ -1864,10 +1869,40 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
   }
 
   // --------------------------------------------------------------------------
-  // use_material_function
+  // use_material_function (host can be UMaterial OR UMaterialFunction)
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("use_material_function")) {
-    LOAD_MATERIAL_OR_RETURN();
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedAssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedAssetPath;
+
+    UMaterial *Material = nullptr;
+    UMaterialFunction *HostFunction = nullptr;
+    LoadMaterialOrFunction(AssetPath, Material, HostFunction);
+    if (!Material && !HostFunction) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material or Material Function host."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    UObject *HostOuter = Material ? static_cast<UObject*>(Material)
+                                  : static_cast<UObject*>(HostFunction);
+
+    float X = 0.0f, Y = 0.0f;
+    Payload->TryGetNumberField(TEXT("x"), X);
+    Payload->TryGetNumberField(TEXT("y"), Y);
 
     FString FunctionPath;
     if (!Payload->TryGetStringField(TEXT("functionPath"), FunctionPath) ||
@@ -1896,26 +1931,36 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
       return true;
     }
 
+    // Guard against self-reference when host is itself a MF
+    if (HostFunction && Func == HostFunction) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("A material function cannot call itself."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     UMaterialExpressionMaterialFunctionCall *FuncCall =
         NewObject<UMaterialExpressionMaterialFunctionCall>(
-            Material, UMaterialExpressionMaterialFunctionCall::StaticClass(),
+            HostOuter, UMaterialExpressionMaterialFunctionCall::StaticClass(),
             NAME_None, RF_Transactional);
     FuncCall->SetMaterialFunction(Func);
     FuncCall->MaterialExpressionEditorX = (int32)X;
     FuncCall->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(FuncCall);
+    AddExpressionToContainer(Material, HostFunction, FuncCall);
 #endif
 
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
+    HostOuter->PostEditChange();
+    HostOuter->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            FuncCall->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("hostType"),
+                           Material ? TEXT("Material") : TEXT("MaterialFunction"));
     SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material function added."), Result);
+                           TEXT("Material function call added."), Result);
     return true;
   }
 
@@ -2661,7 +2706,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
   }
 
   // --------------------------------------------------------------------------
-  // get_material_info
+  // get_material_info (supports UMaterial and UMaterialFunction)
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("get_material_info")) {
     FString AssetPath;
@@ -2682,82 +2727,211 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     AssetPath = ValidatedPath;
 
-    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (!Material) {
-      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
+    UMaterial *Material = nullptr;
+    UMaterialFunction *Function = nullptr;
+    LoadMaterialOrFunction(AssetPath, Material, Function);
+    if (!Material && !Function) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material or Material Function."),
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("assetType"),
+                           Material ? TEXT("Material") : TEXT("MaterialFunction"));
 
-    // Domain
-    switch (Material->MaterialDomain) {
-    case EMaterialDomain::MD_Surface:
-      Result->SetStringField(TEXT("domain"), TEXT("Surface"));
-      break;
-    case EMaterialDomain::MD_DeferredDecal:
-      Result->SetStringField(TEXT("domain"), TEXT("DeferredDecal"));
-      break;
-    case EMaterialDomain::MD_LightFunction:
-      Result->SetStringField(TEXT("domain"), TEXT("LightFunction"));
-      break;
-    case EMaterialDomain::MD_Volume:
-      Result->SetStringField(TEXT("domain"), TEXT("Volume"));
-      break;
-    case EMaterialDomain::MD_PostProcess:
-      Result->SetStringField(TEXT("domain"), TEXT("PostProcess"));
-      break;
-    case EMaterialDomain::MD_UI:
-      Result->SetStringField(TEXT("domain"), TEXT("UI"));
-      break;
-    default:
-      Result->SetStringField(TEXT("domain"), TEXT("Unknown"));
-      break;
-    }
-
-    // Blend mode
-    switch (Material->BlendMode) {
-    case EBlendMode::BLEND_Opaque:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Opaque"));
-      break;
-    case EBlendMode::BLEND_Masked:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Masked"));
-      break;
-    case EBlendMode::BLEND_Translucent:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Translucent"));
-      break;
-    case EBlendMode::BLEND_Additive:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Additive"));
-      break;
-    case EBlendMode::BLEND_Modulate:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Modulate"));
-      break;
-    default:
-      Result->SetStringField(TEXT("blendMode"), TEXT("Unknown"));
-      break;
-    }
-
-    Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
-    Result->SetNumberField(TEXT("nodeCount"), MCP_GET_MATERIAL_EXPRESSIONS(Material).Num());
-
-    // List parameters
-    TArray<TSharedPtr<FJsonValue>> ParamsArray;
-    for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
-      if (UMaterialExpressionParameter *Param =
-              Cast<UMaterialExpressionParameter>(Expr)) {
-        TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
-        ParamObj->SetStringField(TEXT("name"), Param->ParameterName.ToString());
-        ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
-        ParamObj->SetStringField(TEXT("nodeId"),
-                                 Expr->MaterialExpressionGuid.ToString());
-        ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+    if (Material) {
+      // Domain
+      switch (Material->MaterialDomain) {
+      case EMaterialDomain::MD_Surface:
+        Result->SetStringField(TEXT("domain"), TEXT("Surface"));
+        break;
+      case EMaterialDomain::MD_DeferredDecal:
+        Result->SetStringField(TEXT("domain"), TEXT("DeferredDecal"));
+        break;
+      case EMaterialDomain::MD_LightFunction:
+        Result->SetStringField(TEXT("domain"), TEXT("LightFunction"));
+        break;
+      case EMaterialDomain::MD_Volume:
+        Result->SetStringField(TEXT("domain"), TEXT("Volume"));
+        break;
+      case EMaterialDomain::MD_PostProcess:
+        Result->SetStringField(TEXT("domain"), TEXT("PostProcess"));
+        break;
+      case EMaterialDomain::MD_UI:
+        Result->SetStringField(TEXT("domain"), TEXT("UI"));
+        break;
+      default:
+        Result->SetStringField(TEXT("domain"), TEXT("Unknown"));
+        break;
       }
+
+      // Blend mode
+      switch (Material->BlendMode) {
+      case EBlendMode::BLEND_Opaque:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Opaque"));
+        break;
+      case EBlendMode::BLEND_Masked:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Masked"));
+        break;
+      case EBlendMode::BLEND_Translucent:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Translucent"));
+        break;
+      case EBlendMode::BLEND_Additive:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Additive"));
+        break;
+      case EBlendMode::BLEND_Modulate:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Modulate"));
+        break;
+      default:
+        Result->SetStringField(TEXT("blendMode"), TEXT("Unknown"));
+        break;
+      }
+
+      Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
+      Result->SetNumberField(TEXT("nodeCount"), MCP_GET_MATERIAL_EXPRESSIONS(Material).Num());
+
+      // List parameters
+      TArray<TSharedPtr<FJsonValue>> ParamsArray;
+      for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
+        if (UMaterialExpressionParameter *Param =
+                Cast<UMaterialExpressionParameter>(Expr)) {
+          TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
+          ParamObj->SetStringField(TEXT("name"), Param->ParameterName.ToString());
+          ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+          ParamObj->SetStringField(TEXT("nodeId"),
+                                   Expr->MaterialExpressionGuid.ToString());
+          ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+        }
+      }
+      Result->SetArrayField(TEXT("parameters"), ParamsArray);
+    } else {
+      // UMaterialFunction
+      Result->SetStringField(TEXT("description"), Function->Description);
+      Result->SetBoolField(TEXT("exposeToLibrary"), Function->bExposeToLibrary);
+      Result->SetNumberField(TEXT("nodeCount"), MCP_GET_FUNCTION_EXPRESSIONS(Function).Num());
+
+      // Enumerate FunctionInputs / FunctionOutputs and any parameter nodes
+      TArray<TSharedPtr<FJsonValue>> InputsArray;
+      TArray<TSharedPtr<FJsonValue>> OutputsArray;
+      TArray<TSharedPtr<FJsonValue>> ParamsArray;
+      for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
+        if (!Expr) continue;
+        if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+          TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+          Obj->SetStringField(TEXT("name"), In->InputName.ToString());
+          Obj->SetStringField(TEXT("type"), FunctionInputTypeToString(In->InputType));
+          Obj->SetStringField(TEXT("nodeId"), In->MaterialExpressionGuid.ToString());
+          Obj->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
+          Obj->SetNumberField(TEXT("sortPriority"), In->SortPriority);
+          Obj->SetStringField(TEXT("description"), In->Description);
+          // Default/preview value (for scalar/vector types)
+          const auto PV = In->PreviewValue;
+          TSharedPtr<FJsonObject> PreviewObj = MakeShared<FJsonObject>();
+          PreviewObj->SetNumberField(TEXT("x"), PV.X);
+          PreviewObj->SetNumberField(TEXT("y"), PV.Y);
+          PreviewObj->SetNumberField(TEXT("z"), PV.Z);
+          PreviewObj->SetNumberField(TEXT("w"), PV.W);
+          Obj->SetObjectField(TEXT("previewValue"), PreviewObj);
+          InputsArray.Add(MakeShared<FJsonValueObject>(Obj));
+        } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+          TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+          Obj->SetStringField(TEXT("name"), Out->OutputName.ToString());
+          Obj->SetStringField(TEXT("nodeId"), Out->MaterialExpressionGuid.ToString());
+          Obj->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
+          Obj->SetStringField(TEXT("description"), Out->Description);
+          OutputsArray.Add(MakeShared<FJsonValueObject>(Obj));
+        } else if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
+          TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
+          ParamObj->SetStringField(TEXT("name"), Param->ParameterName.ToString());
+          ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
+          ParamObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+          ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+        }
+      }
+      Result->SetArrayField(TEXT("inputs"), InputsArray);
+      Result->SetArrayField(TEXT("outputs"), OutputsArray);
+      Result->SetArrayField(TEXT("parameters"), ParamsArray);
     }
-    Result->SetArrayField(TEXT("parameters"), ParamsArray);
 
     SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material info retrieved."), Result);
+                           Material ? TEXT("Material info retrieved.")
+                                    : TEXT("Material function info retrieved."),
+                           Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // get_material_function_info (explicit MF introspection)
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("get_material_function_info")) {
+    FString AssetPath;
+    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+        AssetPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
+    if (ValidatedPath.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          TEXT("INVALID_PATH"));
+      return true;
+    }
+    AssetPath = ValidatedPath;
+
+    UMaterialFunction *Function = LoadObject<UMaterialFunction>(nullptr, *AssetPath);
+    if (!Function) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material Function."),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("assetPath"), AssetPath);
+    Result->SetStringField(TEXT("assetType"), TEXT("MaterialFunction"));
+    Result->SetStringField(TEXT("description"), Function->Description);
+    Result->SetBoolField(TEXT("exposeToLibrary"), Function->bExposeToLibrary);
+    Result->SetNumberField(TEXT("nodeCount"), MCP_GET_FUNCTION_EXPRESSIONS(Function).Num());
+
+    TArray<TSharedPtr<FJsonValue>> InputsArray;
+    TArray<TSharedPtr<FJsonValue>> OutputsArray;
+    for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
+      if (!Expr) continue;
+      if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+        TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+        Obj->SetStringField(TEXT("name"), In->InputName.ToString());
+        Obj->SetStringField(TEXT("type"), FunctionInputTypeToString(In->InputType));
+        Obj->SetStringField(TEXT("nodeId"), In->MaterialExpressionGuid.ToString());
+        Obj->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
+        Obj->SetNumberField(TEXT("sortPriority"), In->SortPriority);
+        Obj->SetStringField(TEXT("description"), In->Description);
+        const auto PV = In->PreviewValue;
+        TSharedPtr<FJsonObject> PreviewObj = MakeShared<FJsonObject>();
+        PreviewObj->SetNumberField(TEXT("x"), PV.X);
+        PreviewObj->SetNumberField(TEXT("y"), PV.Y);
+        PreviewObj->SetNumberField(TEXT("z"), PV.Z);
+        PreviewObj->SetNumberField(TEXT("w"), PV.W);
+        Obj->SetObjectField(TEXT("previewValue"), PreviewObj);
+        InputsArray.Add(MakeShared<FJsonValueObject>(Obj));
+      } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+        TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+        Obj->SetStringField(TEXT("name"), Out->OutputName.ToString());
+        Obj->SetStringField(TEXT("nodeId"), Out->MaterialExpressionGuid.ToString());
+        Obj->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
+        Obj->SetStringField(TEXT("description"), Out->Description);
+        OutputsArray.Add(MakeShared<FJsonValueObject>(Obj));
+      }
+    }
+    Result->SetArrayField(TEXT("inputs"), InputsArray);
+    Result->SetArrayField(TEXT("outputs"), OutputsArray);
+
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("Material function info retrieved."), Result);
     return true;
   }
 
@@ -2785,11 +2959,17 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     AssetPath = ValidatedPath;
 
-    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (!Material) {
-      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+    UMaterial *Material = nullptr;
+    UMaterialFunction *Function = nullptr;
+    LoadMaterialOrFunction(AssetPath, Material, Function);
+    if (!Material && !Function) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material or Material Function."),
+                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
+    UObject *HostOuter = Material ? static_cast<UObject*>(Material)
+                                  : static_cast<UObject*>(Function);
 
     // Get position from payload
     float X = 0.0f;
@@ -2895,7 +3075,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
     // Create the expression
     UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
-        Material, ExpressionClass, NAME_None, RF_Transactional);
+        HostOuter, ExpressionClass, NAME_None, RF_Transactional);
     if (!NewExpr) {
       SendAutomationError(Socket, RequestId, TEXT("Failed to create expression."), TEXT("CREATE_FAILED"));
       return true;
@@ -2905,15 +3085,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     NewExpr->MaterialExpressionEditorX = (int32)X;
     NewExpr->MaterialExpressionEditorY = (int32)Y;
 
-    // Add to material's expression collection
+    // Add to the host's expression collection (Material or MaterialFunction)
 #if WITH_EDITORONLY_DATA
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    if (Material->GetEditorOnlyData()) {
-      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(NewExpr);
-    }
-#else
-    Material->Expressions.Add(NewExpr);
-#endif
+    AddExpressionToContainer(Material, Function, NewExpr);
 #endif
 
     // If parameter node, set the parameter name
@@ -2924,8 +3098,8 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       }
     }
 
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
+    HostOuter->PostEditChange();
+    HostOuter->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
@@ -3055,13 +3229,19 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
     AssetPath = ValidatedPath;
 
-    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (!Material) {
-      SendAutomationError(Socket, RequestId, TEXT("Could not load Material."), TEXT("ASSET_NOT_FOUND"));
+    UMaterial *Material = nullptr;
+    UMaterialFunction *Function = nullptr;
+    LoadMaterialOrFunction(AssetPath, Material, Function);
+    if (!Material && !Function) {
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Could not load Material or Material Function."),
+                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
-    UMaterialExpression *Expr = FindExpressionByIdOrName(Material, NodeId);
+    UMaterialExpression *Expr = Material
+        ? FindExpressionByIdOrName(Material, NodeId)
+        : FindExpressionByIdOrNameInFunction(Function, NodeId);
     if (!Expr) {
       SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
       return true;
@@ -3071,6 +3251,19 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     Result->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
     Result->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
     Result->SetStringField(TEXT("nodeName"), Expr->GetName());
+    Result->SetStringField(TEXT("assetType"),
+                           Material ? TEXT("Material") : TEXT("MaterialFunction"));
+
+    // Extra introspection for function input/output nodes
+    if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+      Result->SetStringField(TEXT("inputName"), In->InputName.ToString());
+      Result->SetStringField(TEXT("inputType"), FunctionInputTypeToString(In->InputType));
+      Result->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
+      Result->SetNumberField(TEXT("sortPriority"), In->SortPriority);
+    } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+      Result->SetStringField(TEXT("outputName"), Out->OutputName.ToString());
+      Result->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
+    }
 
     SendAutomationResponse(Socket, RequestId, true, TEXT("Node details retrieved."), Result);
     return true;
@@ -3220,5 +3413,116 @@ static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
     }
   }
   return nullptr;
+}
+
+static UMaterialExpression *
+FindExpressionByIdOrNameInFunction(UMaterialFunction *Function,
+                                   const FString &IdOrName) {
+  if (IdOrName.IsEmpty() || !Function) {
+    return nullptr;
+  }
+
+  const FString Needle = IdOrName.TrimStartAndEnd();
+  for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
+    if (!Expr) {
+      continue;
+    }
+    if (Expr->MaterialExpressionGuid.ToString() == Needle) {
+      return Expr;
+    }
+    if (Expr->GetName() == Needle) {
+      return Expr;
+    }
+    if (Expr->GetPathName() == Needle) {
+      return Expr;
+    }
+    if (UMaterialExpressionFunctionInput *In =
+            Cast<UMaterialExpressionFunctionInput>(Expr)) {
+      if (In->InputName.ToString() == Needle) {
+        return Expr;
+      }
+    }
+    if (UMaterialExpressionFunctionOutput *Out =
+            Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+      if (Out->OutputName.ToString() == Needle) {
+        return Expr;
+      }
+    }
+    if (UMaterialExpressionParameter *ParamExpr =
+            Cast<UMaterialExpressionParameter>(Expr)) {
+      if (ParamExpr->ParameterName.ToString() == Needle) {
+        return Expr;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Resolve an asset path as either a UMaterial or a UMaterialFunction.
+// Exactly one of OutMaterial / OutFunction will be populated on success.
+static UObject *LoadMaterialOrFunction(const FString &AssetPath,
+                                       UMaterial *&OutMaterial,
+                                       UMaterialFunction *&OutFunction) {
+  OutMaterial = nullptr;
+  OutFunction = nullptr;
+
+  // Prefer a generic load and type-check the result: this avoids the
+  // LoadObject<UMaterial> null when the target is actually a function.
+  UObject *Loaded = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
+  if (!Loaded) {
+    // Fallback: try both concrete types directly.
+    OutMaterial = LoadObject<UMaterial>(nullptr, *AssetPath);
+    if (OutMaterial) return OutMaterial;
+    OutFunction = LoadObject<UMaterialFunction>(nullptr, *AssetPath);
+    return OutFunction;
+  }
+
+  if (UMaterial *AsMaterial = Cast<UMaterial>(Loaded)) {
+    OutMaterial = AsMaterial;
+    return AsMaterial;
+  }
+  if (UMaterialFunction *AsFunction = Cast<UMaterialFunction>(Loaded)) {
+    OutFunction = AsFunction;
+    return AsFunction;
+  }
+  // A UMaterialFunctionInterface that isn't a concrete UMaterialFunction
+  // (e.g. UMaterialFunctionInstance) is not directly editable here.
+  if (UMaterialFunctionInterface *AsIface =
+          Cast<UMaterialFunctionInterface>(Loaded)) {
+    // Resolve to the underlying parent function when possible.
+    if (UMaterialFunction *Parent =
+            Cast<UMaterialFunction>(AsIface->GetBaseFunction())) {
+      OutFunction = Parent;
+      return Parent;
+    }
+  }
+  return nullptr;
+}
+
+static void AddExpressionToContainer(UMaterial *Material,
+                                     UMaterialFunction *Function,
+                                     UMaterialExpression *Expr) {
+  if (!Expr) return;
+#if WITH_EDITORONLY_DATA
+  if (Material) {
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(Expr);
+  } else if (Function) {
+    MCP_GET_FUNCTION_EXPRESSIONS(Function).Add(Expr);
+  }
+#endif
+}
+
+static FString FunctionInputTypeToString(EFunctionInputType InType) {
+  switch (InType) {
+  case EFunctionInputType::FunctionInput_Scalar:             return TEXT("Scalar");
+  case EFunctionInputType::FunctionInput_Vector2:            return TEXT("Vector2");
+  case EFunctionInputType::FunctionInput_Vector3:            return TEXT("Vector3");
+  case EFunctionInputType::FunctionInput_Vector4:            return TEXT("Vector4");
+  case EFunctionInputType::FunctionInput_Texture2D:          return TEXT("Texture2D");
+  case EFunctionInputType::FunctionInput_TextureCube:        return TEXT("TextureCube");
+  case EFunctionInputType::FunctionInput_StaticBool:         return TEXT("StaticBool");
+  case EFunctionInputType::FunctionInput_MaterialAttributes: return TEXT("MaterialAttributes");
+  default:                                                   return TEXT("Unknown");
+  }
 }
 #endif

@@ -275,18 +275,14 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   // Reject paths that start with / but don't have a valid root
   // This catches paths like /etc/passwd or /invalid/path
   if (!bValidRoot) {
-    // Check if it looks like a plugin path (e.g., /MyPlugin/Content/Asset)
-    // Plugin paths must have at least 3 segments: /PluginName/Content/...
-    TArray<FString> Segments;
-    CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-    const bool bLooksLikePluginPath = Segments.Num() >= 3 &&
-        Segments.Num() >= 2 && Segments[1].Equals(TEXT("Content"), ESearchCase::IgnoreCase);
-    
-    if (!bLooksLikePluginPath) {
+    // Validate against engine's registered mount points (covers all plugin
+    // content mounts like /EterniaCore/, /ShooterCore/, /ALS/, etc.)
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(CleanPath, true, &MountReason)) {
       UE_LOG(
           LogMcpAutomationBridgeSubsystem, Warning,
-          TEXT("SanitizeProjectRelativePath: Rejected path without valid root (not /Game, /Engine, /Script, or valid plugin path): %s"),
-          *InPath);
+          TEXT("SanitizeProjectRelativePath: Rejected path '%s': %s"),
+          *InPath, *MountReason.ToString());
       return FString();
     }
   }

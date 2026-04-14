@@ -1444,6 +1444,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'add_noise', 'add_voronoi', 'add_if', 'add_switch', 'add_custom_expression',
             'connect_nodes', 'disconnect_nodes',
             'create_material_function', 'add_function_input', 'add_function_output', 'use_material_function',
+            'get_material_function_info',
             'create_material_instance', 'set_scalar_parameter_value', 'set_vector_parameter_value', 'set_texture_parameter_value',
             'create_landscape_material', 'create_decal_material', 'create_post_process_material',
             'add_landscape_layer', 'configure_layer_blend',

@@ -844,7 +844,7 @@ export async function handleMaterialAuthoringTools(
 
       case 'get_material_info': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
         ]);
 
         const assetPath = extractString(params, 'assetPath');
@@ -858,6 +858,24 @@ export async function handleMaterialAuthoringTools(
           return ResponseFactory.error(res.error ?? 'Failed to get material info', res.errorCode);
         }
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
+      }
+
+      case 'get_material_function_info': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['functionPath', 'materialFunctionPath'], required: true },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          subAction: 'get_material_function_info',
+          assetPath,
+        })) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get material function info', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Material function info retrieved');
       }
 
       // ===== 8.6 Aliases and Additional Actions =====
