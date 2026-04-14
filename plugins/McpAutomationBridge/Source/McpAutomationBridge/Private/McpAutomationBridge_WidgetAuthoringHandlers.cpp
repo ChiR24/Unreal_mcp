@@ -3419,9 +3419,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Value = GetJsonStringField(Payload, TEXT("style"));
             }
 
-            if (Value.IsEmpty())
+            if (PropertyName.IsEmpty())
             {
-                SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: value (or style)"), TEXT("MISSING_PARAMETER"));
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: propertyName"), TEXT("MISSING_PARAMETER"));
                 return true;
             }
 
@@ -3435,22 +3435,57 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
 
             void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Widget);
-            const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
-            if (!ImportResult)
+
+            if (Value.IsEmpty())
             {
-                SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Failed to set '%s' to '%s' on widget '%s'"), *PropertyName, *Value, *SlotName),
-                    TEXT("SET_PROPERTY_FAILED"));
-                return true;
+                // READ mode — no value provided, export and return current value
+                FString ExportedValue;
+                Prop->ExportText_Direct(ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
+
+                ResultJson->SetStringField(TEXT("mode"), TEXT("read"));
+                ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
+                ResultJson->SetStringField(TEXT("value"), ExportedValue);
+                ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+                ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
             }
+            else
+            {
+                // WRITE mode — set the property value
+                Widget->Modify();
 
-            ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
-            ResultJson->SetStringField(TEXT("value"), Value);
-            ResultJson->SetStringField(TEXT("widgetName"), SlotName);
-            ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
+                const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
+                if (!ImportResult)
+                {
+                    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Failed to set '%s' to '%s' on widget '%s'"), *PropertyName, *Value, *SlotName),
+                        TEXT("SET_PROPERTY_FAILED"));
+                    return true;
+                }
+
+                FPropertyChangedEvent ChangeEvent(Prop);
+                Widget->PostEditChangeProperty(ChangeEvent);
+
+                // Export the value back to verify what was actually set
+                FString ExportedValue;
+                Prop->ExportText_Direct(ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
+
+                ResultJson->SetStringField(TEXT("mode"), TEXT("write"));
+                ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
+                ResultJson->SetStringField(TEXT("value"), Value);
+                ResultJson->SetStringField(TEXT("exportedValue"), ExportedValue);
+                ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+                ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
+
+                // Property change — mark dirty and save, do NOT recompile (that wipes instance values)
+                WidgetBP->MarkPackageDirty();
+                McpSafeAssetSave(WidgetBP);
+            }
         }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        else
+        {
+            // Structural changes (clipping etc.) — recompile is correct
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        }
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%s applied"), *SubAction));
