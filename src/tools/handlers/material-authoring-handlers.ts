@@ -428,6 +428,8 @@ export async function handleMaterialAuthoringTools(
           { key: 'code', aliases: ['hlsl'], required: true },
           { key: 'outputType', default: 'Float1' },
           { key: 'description' },
+          { key: 'inputs' },
+          { key: 'additionalOutputs' },
           { key: 'x', default: 0 },
           { key: 'y', default: 0 },
         ]);
@@ -436,10 +438,12 @@ export async function handleMaterialAuthoringTools(
         const code = extractString(params, 'code');
         const outputType = extractOptionalString(params, 'outputType') ?? 'Float1';
         const description = extractOptionalString(params, 'description');
+        const inputs = params.inputs as Array<{name: string}> | undefined;
+        const additionalOutputs = params.additionalOutputs as Array<{name: string; type?: string}> | undefined;
         const x = extractOptionalNumber(params, 'x') ?? 0;
         const y = extractOptionalNumber(params, 'y') ?? 0;
 
-        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+        const payload: Record<string, unknown> = {
           subAction: 'add_custom_expression',
           assetPath,
           code,
@@ -447,7 +451,15 @@ export async function handleMaterialAuthoringTools(
           description,
           x,
           y,
-        })) as AutomationResponse;
+        };
+        if (inputs && Array.isArray(inputs)) {
+          payload.inputs = inputs;
+        }
+        if (additionalOutputs && Array.isArray(additionalOutputs)) {
+          payload.additionalOutputs = additionalOutputs;
+        }
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add custom expression', res.errorCode);
@@ -845,19 +857,244 @@ export async function handleMaterialAuthoringTools(
       case 'get_material_info': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
+          { key: 'filter' },
         ]);
 
         const assetPath = extractString(params, 'assetPath');
+        const filter = extractOptionalString(params, 'filter');
 
-        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+        const payload: Record<string, unknown> = {
           subAction: 'get_material_info',
           assetPath,
-        })) as AutomationResponse;
+        };
+        if (filter) payload.filter = filter;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to get material info', res.errorCode);
         }
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
+      }
+
+      case 'find_node': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeType' },
+          { key: 'name' },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeType = extractOptionalString(params, 'nodeType');
+        const name = extractOptionalString(params, 'name');
+
+        const payload: Record<string, unknown> = {
+          subAction: 'find_node',
+          assetPath,
+        };
+        if (nodeType) payload.nodeType = nodeType;
+        if (name) payload.name = name;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to find node', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node search complete');
+      }
+
+      case 'get_node_connections': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+          { key: 'direction' },
+          { key: 'depth', default: 1 },
+          { key: 'upstream' },
+          { key: 'downstream' },
+        ]);
+
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+
+        const payload: Record<string, unknown> = {
+          subAction: 'get_node_connections',
+          assetPath,
+          nodeId,
+        };
+        const direction = extractOptionalString(params, 'direction');
+        const depth = extractOptionalNumber(params, 'depth');
+        const upstream = extractOptionalBoolean(params, 'upstream');
+        const downstream = extractOptionalBoolean(params, 'downstream');
+        if (direction) payload.direction = direction;
+        if (depth !== undefined && depth !== null) payload.depth = depth;
+        if (upstream !== undefined && upstream !== null) payload.upstream = upstream;
+        if (downstream !== undefined && downstream !== null) payload.downstream = downstream;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get node connections', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node connections retrieved');
+      }
+
+      case 'get_node_properties': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          subAction: 'get_node_properties',
+          assetPath,
+          nodeId,
+        })) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get node properties', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node properties retrieved');
+      }
+
+      case 'set_static_switch_parameter_value': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'parameterName', required: true },
+          { key: 'value', required: true },
+          { key: 'save', default: true },
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const parameterName = extractString(params, 'parameterName');
+        const value = params.value as boolean;
+        const save = extractOptionalBoolean(params, 'save') ?? true;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          subAction: 'set_static_switch_parameter_value',
+          assetPath,
+          parameterName,
+          value,
+          save,
+        })) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to set static switch parameter', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Static switch parameter set');
+      }
+
+      case 'delete_node': {
+        const rawArgs = args as Record<string, unknown>;
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
+                         extractOptionalString(rawArgs, 'materialPath') ?? '';
+        if (!assetPath) {
+          return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
+        }
+        const nodeId = extractOptionalString(rawArgs, 'nodeId');
+        const nodeIds = rawArgs.nodeIds as string[] | undefined;
+
+        const payload: Record<string, unknown> = {
+          subAction: 'delete_node',
+          assetPath,
+        };
+        if (nodeId) payload.nodeId = nodeId;
+        if (nodeIds && Array.isArray(nodeIds)) payload.nodeIds = nodeIds;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to delete node(s)', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node(s) deleted');
+      }
+
+      case 'update_custom_expression': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+          { key: 'code' },
+          { key: 'description' },
+          { key: 'outputType' },
+          { key: 'inputs' },
+          { key: 'additionalOutputs' },
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+
+        const payload: Record<string, unknown> = {
+          subAction: 'update_custom_expression',
+          assetPath,
+          nodeId,
+        };
+        const code = extractOptionalString(params, 'code');
+        const description = extractOptionalString(params, 'description');
+        const outputType = extractOptionalString(params, 'outputType');
+        if (code !== undefined && code !== null) payload.code = code;
+        if (description !== undefined && description !== null) payload.description = description;
+        if (outputType !== undefined && outputType !== null) payload.outputType = outputType;
+        if (params.inputs) payload.inputs = params.inputs;
+        if (params.additionalOutputs) payload.additionalOutputs = params.additionalOutputs;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to update custom expression', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Custom expression updated');
+      }
+
+      case 'get_node_chain': {
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'startNodeId', required: true },
+          { key: 'endNodeId' },
+          { key: 'endPin' },
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const startNodeId = extractString(params, 'startNodeId');
+        const endNodeId = extractOptionalString(params, 'endNodeId');
+        const endPin = extractOptionalString(params, 'endPin');
+
+        const payload: Record<string, unknown> = {
+          subAction: 'get_node_chain',
+          assetPath,
+          startNodeId,
+        };
+        if (endNodeId) payload.endNodeId = endNodeId;
+        if (endPin) payload.endPin = endPin;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to trace node chain', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Node chain traced');
+      }
+
+      case 'get_connected_subgraph': {
+        const rawArgs = args as Record<string, unknown>;
+        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
+                         extractOptionalString(rawArgs, 'materialPath') ?? '';
+        if (!assetPath) {
+          return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
+        }
+        const nodeId = extractOptionalString(rawArgs, 'nodeId');
+        const orphansOnly = extractOptionalBoolean(rawArgs, 'orphansOnly') ?? false;
+
+        const payload: Record<string, unknown> = {
+          subAction: 'get_connected_subgraph',
+          assetPath,
+          orphansOnly,
+        };
+        if (nodeId) payload.nodeId = nodeId;
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to get connected subgraph', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Connected subgraph retrieved');
       }
 
       case 'get_material_function_info': {

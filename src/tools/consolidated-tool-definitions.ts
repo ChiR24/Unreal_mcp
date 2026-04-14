@@ -1448,7 +1448,11 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             'create_material_instance', 'set_scalar_parameter_value', 'set_vector_parameter_value', 'set_texture_parameter_value',
             'create_landscape_material', 'create_decal_material', 'create_post_process_material',
             'add_landscape_layer', 'configure_layer_blend',
-            'compile_material', 'get_material_info'
+            'compile_material', 'get_material_info',
+            'find_node', 'get_node_connections',
+            'get_node_properties', 'set_static_switch_parameter_value',
+            'delete_node', 'update_custom_expression',
+            'get_node_chain', 'get_connected_subgraph'
           ],
           description: 'Material authoring action to perform'
         },
@@ -1475,12 +1479,46 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         constB: { type: 'number', description: 'Constant B input value.' },
         code: commonSchemas.code,
         outputType: { type: 'string', enum: ['Float1', 'Float2', 'Float3', 'Float4', 'MaterialAttributes'], description: 'Output type of custom expression.' },
+        inputs: {
+          type: 'array',
+          description: 'Named input pins for custom expression. Each creates a connectable input pin on the node.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Input pin name (e.g. "UVs", "ShapeType").' }
+            },
+            required: ['name']
+          }
+        },
+        additionalOutputs: {
+          type: 'array',
+          description: 'Additional named output pins for custom expression (beyond the default output).',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Output pin name.' },
+              type: { type: 'string', enum: ['Float1', 'Float2', 'Float3', 'Float4', 'MaterialAttributes'], description: 'Output type.' }
+            },
+            required: ['name']
+          }
+        },
         description: { type: 'string', description: 'Description for custom expression or function.' },
         sourceNodeId: { type: 'string', description: 'Source node ID for connection.' },
         sourcePin: { type: 'string', description: 'Source pin name (output).' },
         targetNodeId: { type: 'string', description: 'Target node ID for connection.' },
         targetPin: { type: 'string', description: 'Target pin name (input).' },
         nodeId: commonSchemas.nodeId,
+        nodeIds: { type: 'array', items: { type: 'string' }, description: 'Array of node IDs (for batch delete_node or connection filtering).' },
+        nodeType: { type: 'string', description: 'Expression class name to search for (substring match). Used by find_node.' },
+        filter: { type: 'string', enum: ['all', 'parameters', 'expressions', 'connections'], description: 'Filter get_material_info response to a specific section. Default: all.' },
+        direction: { type: 'string', enum: ['inputs', 'outputs', 'both'], description: 'Connection direction for get_node_connections. Default: both.' },
+        depth: { type: 'number', description: 'Graph traversal depth for get_node_connections (1=direct, -1=unlimited). Default: 1.' },
+        upstream: { type: 'boolean', description: 'Walk backward through all sources (overrides direction/depth).' },
+        downstream: { type: 'boolean', description: 'Walk forward through all consumers (overrides direction/depth).' },
+        startNodeId: { type: 'string', description: 'Start node for get_node_chain.' },
+        endNodeId: { type: 'string', description: 'End node for get_node_chain.' },
+        endPin: { type: 'string', description: 'End material pin name for get_node_chain (e.g. "EmissiveColor").' },
+        orphansOnly: { type: 'boolean', description: 'For get_connected_subgraph: find all nodes NOT connected to any output pin.' },
         pinName: commonSchemas.pinName,
         functionPath: commonSchemas.functionPath,
         exposeToLibrary: { type: 'boolean', description: 'Expose function to material library.' },
