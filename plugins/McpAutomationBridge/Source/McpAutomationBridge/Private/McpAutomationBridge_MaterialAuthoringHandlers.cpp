@@ -785,6 +785,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       else if (Function) { Function->PostEditChange(); Function->MarkPackageDirty(); } \
     } while (0)
 
+  // Stable node ID: use UObject name (e.g. "MaterialExpressionCustom_0")
+  // which is unique within an asset and immune to GUID duplication.
+  // Responses also include "guid" for backwards compatibility.
+  #define MCP_NODE_ID(Expr) ((Expr)->GetName())
+
   // --------------------------------------------------------------------------
   // add_texture_sample
   // --------------------------------------------------------------------------
@@ -857,7 +862,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     FINALIZE_HOST();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), CreatedExpr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(CreatedExpr));
     SendAutomationResponse(Socket, RequestId, true, TEXT("Texture sample added."), Result);
     return true;
   }
@@ -889,7 +894,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           TexCoord->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(TexCoord));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Texture coordinate added."), Result);
     return true;
@@ -929,7 +934,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           ScalarParam->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(ScalarParam));
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Scalar parameter '%s' added."), *ParamName),
@@ -980,7 +985,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           VecParam->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(VecParam));
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Vector parameter '%s' added."), *ParamName),
@@ -1022,7 +1027,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           SwitchParam->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(SwitchParam));
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Static switch '%s' added."), *ParamName), Result);
@@ -1099,7 +1104,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           MathNode->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(MathNode));
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Math node '%s' added."), *Operation), Result);
@@ -1188,7 +1193,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("nodeId"),
-                             NewExpr->MaterialExpressionGuid.ToString());
+                             MCP_NODE_ID(NewExpr));
       SendAutomationResponse(
           Socket, RequestId, true,
           FString::Printf(TEXT("%s node added."), *NodeName), Result);
@@ -1231,7 +1236,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           NewExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(NewExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("%s node added."), *NodeName),
                            Result);
@@ -1266,7 +1271,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           MaskExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(MaskExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("ComponentMask node added."), Result);
     return true;
@@ -1290,7 +1295,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           DotExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(DotExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("DotProduct node added."), Result);
     return true;
@@ -1314,7 +1319,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           CrossExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(CrossExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("CrossProduct node added."), Result);
     return true;
@@ -1349,7 +1354,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           DesatExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(DesatExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Desaturation node added."), Result);
     return true;
@@ -1373,7 +1378,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           AppendExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(AppendExpr));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Append node added."), Result);
     return true;
@@ -1476,7 +1481,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           CustomExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(CustomExpr));
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
     SendAutomationResponse(Socket, RequestId, true,
@@ -2061,7 +2066,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           NewExpr->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(NewExpr));
     SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Function %s '%s' added."),
@@ -2160,7 +2165,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
-                           FuncCall->MaterialExpressionGuid.ToString());
+                           MCP_NODE_ID(FuncCall));
     Result->SetStringField(TEXT("hostType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
     SendAutomationResponse(Socket, RequestId, true,
@@ -2827,7 +2832,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
 #endif
       
-      CreatedNodeIds.Add(WeightParam->MaterialExpressionGuid.ToString());
+      CreatedNodeIds.Add(MCP_NODE_ID(WeightParam));
     }
     
     Material->PostEditChange();
@@ -3034,7 +3039,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
           TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
           ParamObj->SetStringField(TEXT("name"), Param->ParameterName.ToString());
           ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
-          ParamObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+          ParamObj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
           ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
         }
       }
@@ -3051,7 +3056,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
           TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
           Obj->SetStringField(TEXT("name"), In->InputName.ToString());
           Obj->SetStringField(TEXT("type"), FunctionInputTypeToString(In->InputType));
-          Obj->SetStringField(TEXT("nodeId"), In->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(In));
           Obj->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
           Obj->SetNumberField(TEXT("sortPriority"), In->SortPriority);
           Obj->SetStringField(TEXT("description"), In->Description);
@@ -3066,7 +3071,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
           TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
           Obj->SetStringField(TEXT("name"), Out->OutputName.ToString());
-          Obj->SetStringField(TEXT("nodeId"), Out->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Out));
           Obj->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
           Obj->SetStringField(TEXT("description"), Out->Description);
           OutputsArray.Add(MakeShared<FJsonValueObject>(Obj));
@@ -3082,7 +3087,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       for (UMaterialExpression *Expr : AllExpressions) {
         if (!Expr) continue;
         TSharedPtr<FJsonObject> ExprObj = MakeShared<FJsonObject>();
-        ExprObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+        ExprObj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
         ExprObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
         ExprObj->SetStringField(TEXT("desc"), Expr->GetDescription());
         ExprObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
@@ -3128,7 +3133,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       // Helper lambda: scan an expression's FExpressionInput properties and emit connections
       auto EmitExprConnections = [&](UMaterialExpression *TargetExpr) {
         if (!TargetExpr) return;
-        FString TargetId = TargetExpr->MaterialExpressionGuid.ToString();
+        FString TargetId = MCP_NODE_ID(TargetExpr);
 
         // Iterate all FExpressionInput struct properties via reflection
         for (TFieldIterator<FStructProperty> It(TargetExpr->GetClass()); It; ++It) {
@@ -3136,7 +3141,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
           if (!StructProp->Struct || StructProp->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
           FExpressionInput *InputPtr = StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
           if (!InputPtr || !InputPtr->Expression) continue;
-          FString SourceId = InputPtr->Expression->MaterialExpressionGuid.ToString();
+          FString SourceId = MCP_NODE_ID(InputPtr->Expression);
           if (bFilterConnections && !FilterNodeIds.Contains(SourceId) && !FilterNodeIds.Contains(TargetId)) continue;
 
           TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
@@ -3151,7 +3156,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         if (UMaterialExpressionCustom *CExpr = Cast<UMaterialExpressionCustom>(TargetExpr)) {
           for (int32 ci = 0; ci < CExpr->Inputs.Num(); ++ci) {
             if (CExpr->Inputs[ci].Input.Expression) {
-              FString SourceId = CExpr->Inputs[ci].Input.Expression->MaterialExpressionGuid.ToString();
+              FString SourceId = MCP_NODE_ID(CExpr->Inputs[ci].Input.Expression);
               if (bFilterConnections && !FilterNodeIds.Contains(SourceId) && !FilterNodeIds.Contains(TargetId)) continue;
               TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
               ConnObj->SetStringField(TEXT("sourceNodeId"), SourceId);
@@ -3167,7 +3172,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(TargetExpr)) {
           for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) {
             if (FI.Input.Expression) {
-              FString SourceId = FI.Input.Expression->MaterialExpressionGuid.ToString();
+              FString SourceId = MCP_NODE_ID(FI.Input.Expression);
               if (bFilterConnections && !FilterNodeIds.Contains(SourceId) && !FilterNodeIds.Contains(TargetId)) continue;
               TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
               ConnObj->SetStringField(TEXT("sourceNodeId"), SourceId);
@@ -3189,7 +3194,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #if WITH_EDITORONLY_DATA
         auto EmitMainPin = [&](const FString &PinName, const FExpressionInput &Input) {
           if (Input.Expression) {
-            FString SrcId = Input.Expression->MaterialExpressionGuid.ToString();
+            FString SrcId = MCP_NODE_ID(Input.Expression);
             if (bFilterConnections && !FilterNodeIds.Contains(SrcId) && !FilterNodeIds.Contains(TEXT("Main"))) return;
             TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
             ConnObj->SetStringField(TEXT("sourceNodeId"), SrcId);
@@ -3267,7 +3272,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
         Obj->SetStringField(TEXT("name"), In->InputName.ToString());
         Obj->SetStringField(TEXT("type"), FunctionInputTypeToString(In->InputType));
-        Obj->SetStringField(TEXT("nodeId"), In->MaterialExpressionGuid.ToString());
+        Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(In));
         Obj->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
         Obj->SetNumberField(TEXT("sortPriority"), In->SortPriority);
         Obj->SetStringField(TEXT("description"), In->Description);
@@ -3282,7 +3287,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
         TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
         Obj->SetStringField(TEXT("name"), Out->OutputName.ToString());
-        Obj->SetStringField(TEXT("nodeId"), Out->MaterialExpressionGuid.ToString());
+        Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Out));
         Obj->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
         Obj->SetStringField(TEXT("description"), Out->Description);
         OutputsArray.Add(MakeShared<FJsonValueObject>(Obj));
@@ -3379,7 +3384,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       SeenIds.Add(Expr->MaterialExpressionGuid);
 
       TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-      Obj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+      Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
       Obj->SetStringField(TEXT("type"), ClassName);
       Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
       Obj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
@@ -3532,9 +3537,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         for (const FEdge &E : AllEdges) {
           if (E.Target != Current.Expr) continue;
           TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), E.Source->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(E.Source));
           Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
-          Obj->SetStringField(TEXT("targetNodeId"), Current.Expr->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("targetNodeId"), MCP_NODE_ID(Current.Expr));
           Obj->SetStringField(TEXT("targetInput"), E.PinName);
           Obj->SetNumberField(TEXT("hop"), Current.Hop + 1);
           Obj->SetStringField(TEXT("direction"), TEXT("input"));
@@ -3551,9 +3556,9 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         for (const FEdge &E : AllEdges) {
           if (E.Source != Current.Expr) continue;
           TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), Current.Expr->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(Current.Expr));
           Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
-          Obj->SetStringField(TEXT("targetNodeId"), E.Target->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("targetNodeId"), MCP_NODE_ID(E.Target));
           Obj->SetStringField(TEXT("targetInput"), E.PinName);
           Obj->SetNumberField(TEXT("hop"), Current.Hop + 1);
           Obj->SetStringField(TEXT("direction"), TEXT("output"));
@@ -3567,7 +3572,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         for (const FEdge &E : MainPinEdges) {
           if (E.Source != Current.Expr) continue;
           TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), Current.Expr->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(Current.Expr));
           Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
           Obj->SetStringField(TEXT("targetNodeId"), TEXT("Main"));
           Obj->SetStringField(TEXT("targetInput"), E.PinName);
@@ -3579,7 +3584,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), StartExpr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(StartExpr));
     Result->SetStringField(TEXT("type"), StartExpr->GetClass()->GetName());
     Result->SetNumberField(TEXT("connectionCount"), ResultConns.Num());
     Result->SetArrayField(TEXT("connections"), ResultConns);
@@ -3608,7 +3613,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
     Result->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
     Result->SetStringField(TEXT("desc"), Expr->GetDescription());
     Result->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
@@ -4131,7 +4136,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       TArray<TSharedPtr<FJsonValue>> ChainArr;
       for (int32 i = 0; i < Path.Num(); ++i) {
         TSharedPtr<FJsonObject> N = MakeShared<FJsonObject>();
-        N->SetStringField(TEXT("nodeId"), Path[i]->MaterialExpressionGuid.ToString());
+        N->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Path[i]));
         N->SetStringField(TEXT("type"), Path[i]->GetClass()->GetName());
         N->SetStringField(TEXT("desc"), Path[i]->GetDescription());
         N->SetNumberField(TEXT("step"), i);
@@ -4254,7 +4259,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
         if (!Expr) continue;
         if (!OutputConnected.Contains(Expr)) {
           TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
           Obj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
           Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
           OrphansArr.Add(MakeShared<FJsonValueObject>(Obj));
@@ -4296,7 +4301,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     TArray<TSharedPtr<FJsonValue>> NodesArr;
     for (UMaterialExpression *Expr : Island) {
       TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-      Obj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+      Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
       Obj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
       Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
       Obj->SetBoolField(TEXT("connectedToOutput"), OutputConnected.Contains(Expr));
@@ -4479,7 +4484,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     HostOuter->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(NewExpr));
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetStringField(TEXT("nodeType"), NodeType);
     Result->SetBoolField(TEXT("nodeAdded"), true);
@@ -4636,7 +4641,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
     Result->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
     Result->SetStringField(TEXT("nodeName"), Expr->GetName());
     Result->SetStringField(TEXT("assetType"),
@@ -4776,77 +4781,86 @@ static bool SaveMaterialInstanceAsset(UMaterialInstanceConstant *Instance) {
   return McpSafeAssetSave(Instance);
 }
 
-static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
-                                                      const FString &IdOrName) {
-  if (IdOrName.IsEmpty() || !Material) {
-    return nullptr;
+// Shared lookup logic for expressions in any array.
+// Resolution order: object name (stable ID) > GUID (backwards compat) >
+// expr_N index > full path > parameter/input/output name.
+// If GUID matches multiple nodes, logs a warning and returns the first.
+template<typename TExprArray>
+static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
+                                                   const FString &IdOrName) {
+  const FString Needle = IdOrName.TrimStartAndEnd();
+
+  // 1. expr_N index-based lookup
+  if (Needle.StartsWith(TEXT("expr_"))) {
+    int32 Index = FCString::Atoi(*Needle.Mid(5));
+    if (Index >= 0 && Index < Expressions.Num()) {
+      UMaterialExpression *Expr = Expressions[Index];
+      if (Expr) return Expr;
+    }
   }
 
-  const FString Needle = IdOrName.TrimStartAndEnd();
-  for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
-    if (!Expr) {
-      continue;
-    }
+  // 2. Object name match (primary stable ID: "MaterialExpressionCustom_0")
+  for (auto *Expr : Expressions) {
+    if (!Expr) continue;
+    if (Expr->GetName() == Needle) return Expr;
+  }
+
+  // 3. GUID match (backwards compat) — detect collisions
+  UMaterialExpression *GuidMatch = nullptr;
+  int32 GuidMatchCount = 0;
+  for (auto *Expr : Expressions) {
+    if (!Expr) continue;
     if (Expr->MaterialExpressionGuid.ToString() == Needle) {
-      return Expr;
-    }
-    if (Expr->GetName() == Needle) {
-      return Expr;
-    }
-    if (Expr->GetPathName() == Needle) {
-      return Expr;
-    }
-    if (UMaterialExpressionParameter *ParamExpr =
-            Cast<UMaterialExpressionParameter>(Expr)) {
-      if (ParamExpr->ParameterName.ToString() == Needle) {
-        return Expr;
-      }
+      GuidMatchCount++;
+      if (!GuidMatch) GuidMatch = Expr;
     }
   }
+  if (GuidMatch) {
+    if (GuidMatchCount > 1) {
+      UE_LOG(LogTemp, Warning,
+             TEXT("MCP: GUID '%s' matches %d nodes — returning first. "
+                  "Use object name '%s' for unambiguous lookup."),
+             *Needle, GuidMatchCount, *GuidMatch->GetName());
+    }
+    return GuidMatch;
+  }
+
+  // 4. Full path match
+  for (auto *Expr : Expressions) {
+    if (!Expr) continue;
+    if (Expr->GetPathName() == Needle) return Expr;
+  }
+
+  // 5. Semantic name match (parameter name, input/output name)
+  for (auto *Expr : Expressions) {
+    if (!Expr) continue;
+    if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
+      if (P->ParameterName.ToString() == Needle) return Expr;
+    }
+    if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+      if (In->InputName.ToString() == Needle) return Expr;
+    }
+    if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+      if (Out->OutputName.ToString() == Needle) return Expr;
+    }
+  }
+
   return nullptr;
+}
+
+static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
+                                                      const FString &IdOrName) {
+  if (IdOrName.IsEmpty() || !Material) return nullptr;
+  auto &Expressions = MCP_GET_MATERIAL_EXPRESSIONS(Material);
+  return FindExpressionInArray(Expressions, IdOrName);
 }
 
 static UMaterialExpression *
 FindExpressionByIdOrNameInFunction(UMaterialFunction *Function,
                                    const FString &IdOrName) {
-  if (IdOrName.IsEmpty() || !Function) {
-    return nullptr;
-  }
-
-  const FString Needle = IdOrName.TrimStartAndEnd();
-  for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
-    if (!Expr) {
-      continue;
-    }
-    if (Expr->MaterialExpressionGuid.ToString() == Needle) {
-      return Expr;
-    }
-    if (Expr->GetName() == Needle) {
-      return Expr;
-    }
-    if (Expr->GetPathName() == Needle) {
-      return Expr;
-    }
-    if (UMaterialExpressionFunctionInput *In =
-            Cast<UMaterialExpressionFunctionInput>(Expr)) {
-      if (In->InputName.ToString() == Needle) {
-        return Expr;
-      }
-    }
-    if (UMaterialExpressionFunctionOutput *Out =
-            Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-      if (Out->OutputName.ToString() == Needle) {
-        return Expr;
-      }
-    }
-    if (UMaterialExpressionParameter *ParamExpr =
-            Cast<UMaterialExpressionParameter>(Expr)) {
-      if (ParamExpr->ParameterName.ToString() == Needle) {
-        return Expr;
-      }
-    }
-  }
-  return nullptr;
+  if (IdOrName.IsEmpty() || !Function) return nullptr;
+  auto &Expressions = MCP_GET_FUNCTION_EXPRESSIONS(Function);
+  return FindExpressionInArray(Expressions, IdOrName);
 }
 
 // Resolve an asset path as either a UMaterial or a UMaterialFunction.

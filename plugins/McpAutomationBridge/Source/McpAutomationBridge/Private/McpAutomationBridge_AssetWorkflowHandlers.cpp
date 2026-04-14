@@ -4017,7 +4017,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
-  Resp->SetStringField(TEXT("nodeGuid"), NewExpression->MaterialExpressionGuid.ToString());
+  Resp->SetStringField(TEXT("nodeGuid"), NewExpression->GetName());
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material node added successfully"), Resp, FString());
@@ -4155,7 +4155,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         McpHandlerUtils::AddVerification(Resp, Material);
         Resp->SetStringField(TEXT("inputName"), InputName);
-        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
+        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
         SendAutomationResponse(Socket, RequestId, true, TEXT("Connected to main material pin"), Resp, FString());
       } else {
         SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown main material input: %s"), *InputName), TEXT("INVALID_PIN"));
@@ -4174,7 +4174,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
         FinalizeHost(Material, Function);
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("inputName"), TargetOutput->OutputName.ToString());
-        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
+        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
         SendAutomationResponse(Socket, RequestId, true, TEXT("Connected to function output"), Resp, FString());
       } else {
         SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No FunctionOutput named '%s' found"), *InputName), TEXT("INVALID_PIN"));
@@ -4220,8 +4220,8 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   FinalizeHost(Material, Function);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
-  Resp->SetStringField(TEXT("targetNodeId"), ToExpression->MaterialExpressionGuid.ToString());
+  Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
+  Resp->SetStringField(TEXT("targetNodeId"), ToExpression->GetName());
   Resp->SetStringField(TEXT("inputName"), InputName);
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Material pins connected successfully"), Resp, FString());
@@ -4325,7 +4325,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   }
 
   FString RemovedName = ExpressionToRemove->GetName();
-  FString RemovedGuid = ExpressionToRemove->MaterialExpressionGuid.ToString();
+  FString RemovedGuid = ExpressionToRemove->GetName();
 
   // Remove the expression from the appropriate container
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -4506,7 +4506,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), TargetExpression->MaterialExpressionGuid.ToString());
+  Resp->SetStringField(TEXT("nodeId"), TargetExpression->GetName());
   Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
   if (bSpecificInput) Resp->SetStringField(TEXT("inputName"), InputName);
 
@@ -4605,7 +4605,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       if (!Expr) continue;
       
       TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-      NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+      NodeInfo->SetStringField(TEXT("nodeId"), Expr->GetName());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
       NodeInfo->SetNumberField(TEXT("index"), i);
       NodeInfo->SetNumberField(TEXT("editorX"), Expr->MaterialExpressionEditorX);
@@ -4635,7 +4635,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   // Build response for specific node
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), Expression->MaterialExpressionGuid.ToString());
+  Resp->SetStringField(TEXT("nodeId"), Expression->GetName());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
   Resp->SetStringField(TEXT("classPath"), Expression->GetClass()->GetPathName());
@@ -4656,7 +4656,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
         InputObj->SetStringField(TEXT("name"), Property->GetName());
         InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
         if (Input->Expression) {
-          InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->MaterialExpressionGuid.ToString());
+          InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->GetName());
           InputObj->SetStringField(TEXT("connectedToName"), Input->Expression->GetName());
         }
         InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
@@ -5126,7 +5126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
 
       TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
       NodeObj->SetNumberField(TEXT("index"), i);
-      NodeObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+      NodeObj->SetStringField(TEXT("nodeId"), Expr->GetName());
       NodeObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
       NodeObj->SetStringField(TEXT("name"), Expr->GetName());
       NodeObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
@@ -5147,7 +5147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
               if (ConnectedIndex) {
                 InputObj->SetNumberField(TEXT("connectedToIndex"), *ConnectedIndex);
               }
-              InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->MaterialExpressionGuid.ToString());
+              InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->GetName());
               InputObj->SetStringField(TEXT("connectedToName"), Input->Expression->GetName());
             }
             InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
