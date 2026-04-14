@@ -379,6 +379,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'set_property': {
       const objectPath = await resolveObjectPath(args, tools);
+      const blueprintPath = extractOptionalString(args as Record<string, unknown>, 'blueprintPath');
       const params = normalizeArgs(args, [
         { key: 'propertyName', aliases: ['propertyPath'], required: true },
         { key: 'value' }
@@ -386,16 +387,19 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       const propertyName = extractString(params, 'propertyName');
       const value = params.value;
 
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
+      if (!objectPath && !blueprintPath) {
+        throw new Error('Either objectPath or blueprintPath is required');
       }
 
-      const res = await executeAutomationRequest(tools, 'inspect', {
+      const payload: Record<string, unknown> = {
         action: 'set_property',
-        objectPath,
         propertyName,
         value
-      }) as InspectResponse;
+      };
+      if (blueprintPath) { payload.blueprintPath = blueprintPath; }
+      if (objectPath) { payload.objectPath = objectPath; }
+
+      const res = await executeAutomationRequest(tools, 'inspect', payload) as InspectResponse;
 
       if (res && res.success === false) {
         const errorCode = String(res.error || '').toUpperCase();

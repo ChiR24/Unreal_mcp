@@ -434,8 +434,8 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         }
     }
     
-    // Try to load as asset (supports both /Game/ and /Engine/ paths)
-    if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")))
+    // Try to load as asset (supports /Game/, /Engine/, /Script/, and plugin mount points)
+    if (Path.StartsWith(TEXT("/")))
     {
         FString PackagePath = Path;
         if (PackagePath.Contains(TEXT(".")))
