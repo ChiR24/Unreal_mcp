@@ -4794,13 +4794,14 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
   if (Needle.StartsWith(TEXT("expr_"))) {
     int32 Index = FCString::Atoi(*Needle.Mid(5));
     if (Index >= 0 && Index < Expressions.Num()) {
-      UMaterialExpression *Expr = Expressions[Index];
+      UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[Index]);
       if (Expr) return Expr;
     }
   }
 
   // 2. Object name match (primary stable ID: "MaterialExpressionCustom_0")
-  for (auto *Expr : Expressions) {
+  for (int32 i = 0; i < Expressions.Num(); ++i) {
+    UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
     if (Expr->GetName() == Needle) return Expr;
   }
@@ -4808,7 +4809,8 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
   // 3. GUID match (backwards compat) — detect collisions
   UMaterialExpression *GuidMatch = nullptr;
   int32 GuidMatchCount = 0;
-  for (auto *Expr : Expressions) {
+  for (int32 i = 0; i < Expressions.Num(); ++i) {
+    UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
     if (Expr->MaterialExpressionGuid.ToString() == Needle) {
       GuidMatchCount++;
@@ -4826,13 +4828,15 @@ static UMaterialExpression *FindExpressionInArray(TExprArray &Expressions,
   }
 
   // 4. Full path match
-  for (auto *Expr : Expressions) {
+  for (int32 i = 0; i < Expressions.Num(); ++i) {
+    UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
     if (Expr->GetPathName() == Needle) return Expr;
   }
 
   // 5. Semantic name match (parameter name, input/output name)
-  for (auto *Expr : Expressions) {
+  for (int32 i = 0; i < Expressions.Num(); ++i) {
+    UMaterialExpression *Expr = static_cast<UMaterialExpression*>(Expressions[i]);
     if (!Expr) continue;
     if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
       if (P->ParameterName.ToString() == Needle) return Expr;
