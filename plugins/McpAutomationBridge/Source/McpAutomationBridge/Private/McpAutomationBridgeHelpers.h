@@ -462,11 +462,12 @@ static inline bool ValidateAssetCreationPath(
     return false;
   }
   
-  // Ensure folder starts with valid root
-  if (!SanitizedFolder.StartsWith(TEXT("/Game")) && 
-      !SanitizedFolder.StartsWith(TEXT("/Engine")) &&
-      !SanitizedFolder.StartsWith(TEXT("/Script"))) {
-    SanitizedFolder = TEXT("/Game") + SanitizedFolder;
+  // Ensure folder starts with a root mount point.
+  // SanitizeProjectRelativePath already validated against registered mount
+  // points (including plugin content like /EterniaCore/), so only prepend
+  // /Game for paths that lack a leading slash (bare relative paths).
+  if (!SanitizedFolder.StartsWith(TEXT("/"))) {
+    SanitizedFolder = TEXT("/Game/") + SanitizedFolder;
   }
   
   // Sanitize asset name

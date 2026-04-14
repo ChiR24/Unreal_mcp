@@ -1873,7 +1873,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
      FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
-     if (!FullPath.StartsWith(TEXT("/Game/"))) {
+     if (!FullPath.StartsWith(TEXT("/"))) {
        FullPath = TEXT("/Game/") + FullPath;
      }
 
@@ -2259,7 +2259,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
   }
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
+  if (!FullPath.StartsWith(TEXT("/"))) {
     FullPath = TEXT("/Game/") + FullPath;
   }
 
@@ -2424,7 +2424,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   Payload->TryGetNumberField(TEXT("lateGain"), LateGain);
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
+  if (!FullPath.StartsWith(TEXT("/"))) {
     FullPath = TEXT("/Game/") + FullPath;
   }
 
@@ -2494,7 +2494,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
   }
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
+  if (!FullPath.StartsWith(TEXT("/"))) {
     FullPath = TEXT("/Game/") + FullPath;
   }
 
@@ -2642,7 +2642,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
   }
 
   FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
+  if (!FullPath.StartsWith(TEXT("/"))) {
     FullPath = TEXT("/Game/") + FullPath;
   }
 

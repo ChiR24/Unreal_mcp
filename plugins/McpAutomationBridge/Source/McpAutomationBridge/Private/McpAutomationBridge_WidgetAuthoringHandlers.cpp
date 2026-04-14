@@ -887,8 +887,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             return true;
         }
 
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
-        
+        // Accept both 'path' (preferred) and 'folder' for the destination directory
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty())
+        {
+            Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        }
+
         // SECURITY: Validate folder path for traversal attacks
         FString SanitizedFolder = SanitizeProjectRelativePath(Folder);
         if (SanitizedFolder.IsEmpty() && !Folder.IsEmpty())
@@ -904,7 +909,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
         // Build full path
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -5070,10 +5075,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_settings_menu"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus")); }
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -5168,10 +5174,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_loading_screen"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_LoadingScreen"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -5560,12 +5567,13 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_inventory_ui"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Inventory"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
         int32 GridColumns = GetJsonIntField(Payload, TEXT("columns"), 6);
         int32 GridRows = GetJsonIntField(Payload, TEXT("rows"), 4);
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -5655,10 +5663,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_dialog_widget"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_DialogBox"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -5754,11 +5763,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_radial_menu"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_RadialMenu"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
         int32 SegmentCount = GetJsonIntField(Payload, TEXT("segments"), 8);
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -6749,10 +6759,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_credits_screen"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }
@@ -6833,11 +6844,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     if (SubAction.Equals(TEXT("create_shop_ui"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Shop"));
-        FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        FString Folder = GetJsonStringField(Payload, TEXT("path"));
+        if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
         int32 ItemColumns = GetJsonIntField(Payload, TEXT("columns"), 4);
 
         FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/Game/")))
+        if (!FullPath.StartsWith(TEXT("/")))
         {
             FullPath = TEXT("/Game/") + FullPath;
         }

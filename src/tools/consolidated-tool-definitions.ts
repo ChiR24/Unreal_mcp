@@ -3236,6 +3236,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'The widget authoring action to perform.'
         },
         name: commonSchemas.name,
+        path: commonSchemas.directoryPath,
         folder: commonSchemas.directoryPath,
         widgetPath: commonSchemas.widgetPath,
         slotName: commonSchemas.slotName,
