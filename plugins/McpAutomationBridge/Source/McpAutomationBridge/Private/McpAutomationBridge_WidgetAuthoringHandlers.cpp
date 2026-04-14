@@ -3406,6 +3406,49 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
             Widget->SetClipping(Clipping);
         }
+        else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
+        {
+            // Generic property setter via UE reflection — works on any widget class, any property
+            FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+            FString Value = GetJsonStringField(Payload, TEXT("value"));
+
+            if (PropertyName.IsEmpty())
+            {
+                // Legacy path: if no propertyName given, try "style" param against "Style" property
+                PropertyName = TEXT("Style");
+                Value = GetJsonStringField(Payload, TEXT("style"));
+            }
+
+            if (Value.IsEmpty())
+            {
+                SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: value (or style)"), TEXT("MISSING_PARAMETER"));
+                return true;
+            }
+
+            FProperty* Prop = Widget->GetClass()->FindPropertyByName(FName(*PropertyName));
+            if (!Prop)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Property '%s' not found on widget '%s' (class %s)"), *PropertyName, *SlotName, *Widget->GetClass()->GetName()),
+                    TEXT("PROPERTY_NOT_FOUND"));
+                return true;
+            }
+
+            void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Widget);
+            const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
+            if (!ImportResult)
+            {
+                SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Failed to set '%s' to '%s' on widget '%s'"), *PropertyName, *Value, *SlotName),
+                    TEXT("SET_PROPERTY_FAILED"));
+                return true;
+            }
+
+            ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
+            ResultJson->SetStringField(TEXT("value"), Value);
+            ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+            ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
+        }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
