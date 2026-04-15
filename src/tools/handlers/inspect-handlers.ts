@@ -379,7 +379,8 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'set_property': {
       const objectPath = await resolveObjectPath(args, tools);
-      const blueprintPath = extractOptionalString(args as Record<string, unknown>, 'blueprintPath');
+      const rawBlueprintPath = extractOptionalString(args as Record<string, unknown>, 'blueprintPath');
+      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const params = normalizeArgs(args, [
         { key: 'propertyName', aliases: ['propertyPath'], required: true },
         { key: 'value' }
@@ -388,7 +389,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       const value = params.value;
 
       if (!objectPath && !blueprintPath) {
-        throw new Error('Either objectPath or blueprintPath is required');
+        throw new Error('inspect:set_property: Either objectPath or blueprintPath is required');
       }
 
       const payload: Record<string, unknown> = {

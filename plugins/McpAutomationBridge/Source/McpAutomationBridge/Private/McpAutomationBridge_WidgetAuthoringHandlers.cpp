@@ -3405,18 +3405,42 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 Clipping = EWidgetClipping::OnDemand;
             }
             Widget->SetClipping(Clipping);
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {
             // Generic property setter via UE reflection — works on any widget class, any property
             FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
-            FString Value = GetJsonStringField(Payload, TEXT("value"));
+            FString Value;
+            bool bHasValueField = Payload->HasField(TEXT("value"));
+
+            // Extract value from JSON — handle string, number, and bool types
+            if (bHasValueField)
+            {
+                const TSharedPtr<FJsonValue> ValField = Payload->TryGetField(TEXT("value"));
+                if (ValField.IsValid())
+                {
+                    if (ValField->Type == EJson::String)
+                    {
+                        Value = ValField->AsString();
+                    }
+                    else if (ValField->Type == EJson::Number)
+                    {
+                        Value = FString::SanitizeFloat(ValField->AsNumber());
+                    }
+                    else if (ValField->Type == EJson::Boolean)
+                    {
+                        Value = ValField->AsBool() ? TEXT("True") : TEXT("False");
+                    }
+                }
+            }
 
             if (PropertyName.IsEmpty())
             {
                 // Legacy path: if no propertyName given, try "style" param against "Style" property
                 PropertyName = TEXT("Style");
-                Value = GetJsonStringField(Payload, TEXT("style"));
+                bHasValueField = Payload->HasField(TEXT("style"));
+                Value = bHasValueField ? GetJsonStringField(Payload, TEXT("style")) : FString();
             }
 
             if (PropertyName.IsEmpty())
@@ -3436,11 +3460,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
             void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Widget);
 
-            if (Value.IsEmpty())
+            if (!bHasValueField)
             {
-                // READ mode — no value provided, export and return current value
+                // READ mode — value field not present, export and return current value
                 FString ExportedValue;
-                Prop->ExportText_Direct(ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
+                MCP_PROPERTY_EXPORT_TEXT(Prop, ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
 
                 ResultJson->SetStringField(TEXT("mode"), TEXT("read"));
                 ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
@@ -3453,7 +3477,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 // WRITE mode — set the property value
                 Widget->Modify();
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
+#else
+                // UE 5.0: ImportText with different signature
+                const TCHAR* ImportResult = Prop->ImportText(*Value, ValuePtr, PPF_None, Widget);
+#endif
                 if (!ImportResult)
                 {
                     SendAutomationError(RequestingSocket, RequestId,
@@ -3467,7 +3496,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
 
                 // Export the value back to verify what was actually set
                 FString ExportedValue;
-                Prop->ExportText_Direct(ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
+                MCP_PROPERTY_EXPORT_TEXT(Prop, ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
 
                 ResultJson->SetStringField(TEXT("mode"), TEXT("write"));
                 ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
@@ -3480,11 +3509,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 WidgetBP->MarkPackageDirty();
                 McpSafeAssetSave(WidgetBP);
             }
-        }
-        else
-        {
-            // Structural changes (clipping etc.) — recompile is correct
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
