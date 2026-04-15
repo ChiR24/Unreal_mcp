@@ -48,7 +48,7 @@
 #include "FileHelpers.h"
 #include "Misc/PackageName.h"
 #include "HAL/FileManager.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "AssetViewUtils.h"
 #include "Materials/MaterialInterface.h"
 #include "Editor/EditorEngine.h"
