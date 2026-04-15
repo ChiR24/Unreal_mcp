@@ -119,11 +119,8 @@ public class McpAutomationBridge : ModuleRules
         // Disable PCH to prevent virtual memory exhaustion
         PCHUsage = PCHUsageMode.NoPCHs;
         
-        // Unity builds enabled - combine files for faster compilation
-        // Note: If you get "compiler out of heap space" errors, install BuildConfiguration.xml
-        // from plugins/McpAutomationBridge/Config/BuildConfiguration.xml to %AppData%\Unreal Engine\UnrealBuildTool\
         bUseUnity = true;
-        Console.WriteLine("McpAutomationBridge: Unity builds enabled");
+        NumIncludedBytesPerUnityCPPOverride = 256 * 1024;
 
 PublicDependencyModuleNames.AddRange(new string[]
         {

@@ -44,9 +44,14 @@
 #include "McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
+#include "McpAutomationBridgeGlobals.h"
+
+class UProjectileMovementComponent;
+class USphereComponent;
+class UBoxComponent;
+
 #include "McpAutomationBridgeSubsystem.h"
 #include "McpAutomationBridgeHelpers.h"
-#include "McpAutomationBridgeGlobals.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"

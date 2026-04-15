@@ -15,7 +15,7 @@
 #include "HAL/PlatformMisc.h"
 #include "HAL/PlatformTime.h"
 #include "HAL/PlatformProcess.h"
-#include "HAL/PlatformFilemanager.h"
+#include "HAL/PlatformFileManager.h"
 #include "HAL/CriticalSection.h"
 #include "HAL/FileManager.h"
 
