@@ -4017,7 +4017,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
-  Resp->SetStringField(TEXT("nodeGuid"), NewExpression->GetName());
+  Resp->SetStringField(TEXT("nodeId"), NewExpression->GetName());
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material node added successfully"), Resp, FString());
@@ -4220,6 +4220,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   FinalizeHost(Material, Function);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
   Resp->SetStringField(TEXT("targetNodeId"), ToExpression->GetName());
   Resp->SetStringField(TEXT("inputName"), InputName);
@@ -4465,13 +4466,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
           }
         }
       }
-      FinalizeHost(Material, Function);
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetStringField(TEXT("pinName"), PinName);
-      Resp->SetBoolField(TEXT("disconnected"), bCleared);
-      SendAutomationResponse(Socket, RequestId, true,
-                             bCleared ? TEXT("Disconnected from function output") : TEXT("No matching output found"),
-                             Resp, FString());
+      if (!bCleared && !PinName.IsEmpty()) {
+        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown function output pin: %s"), *PinName), TEXT("INVALID_PIN"));
+      } else {
+        if (bCleared) FinalizeHost(Material, Function);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("pinName"), PinName);
+        Resp->SetBoolField(TEXT("disconnected"), bCleared);
+        SendAutomationResponse(Socket, RequestId, true,
+                               TEXT("Disconnected from function output"),
+                               Resp, FString());
+      }
     }
     return true;
   }

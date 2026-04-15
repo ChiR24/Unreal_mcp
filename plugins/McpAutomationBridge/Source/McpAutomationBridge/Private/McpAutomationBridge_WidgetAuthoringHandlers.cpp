@@ -5179,6 +5179,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI/Menus"); }
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))
@@ -5278,6 +5280,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_LoadingScreen"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))
@@ -5671,6 +5675,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Inventory"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 GridColumns = GetJsonIntField(Payload, TEXT("columns"), 6);
         int32 GridRows = GetJsonIntField(Payload, TEXT("rows"), 4);
 
@@ -5767,6 +5773,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_DialogBox"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))
@@ -5867,6 +5875,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_RadialMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 SegmentCount = GetJsonIntField(Payload, TEXT("segments"), 8);
 
         FString FullPath = Folder / Name;
@@ -6863,6 +6873,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))
@@ -6948,6 +6960,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Shop"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 ItemColumns = GetJsonIntField(Payload, TEXT("columns"), 4);
 
         FString FullPath = Folder / Name;
