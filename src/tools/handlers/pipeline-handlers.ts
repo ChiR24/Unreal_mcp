@@ -224,6 +224,7 @@ async function findUbtExecutable(): Promise<string> {
     const whichCmd = process.platform === 'win32' ? 'where' : 'which';
     const { stdout } = await execAsync(`${whichCmd} UnrealBuildTool`, {
       encoding: 'utf-8',
+      timeout: 5000,
     });
     if (stdout) {
       const first = stdout.trim().split(/\r?\n/)[0];
