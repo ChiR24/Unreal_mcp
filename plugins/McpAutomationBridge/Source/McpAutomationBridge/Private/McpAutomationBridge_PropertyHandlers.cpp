@@ -115,6 +115,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       !LowerAction.Contains(TEXT("set_object_property")))
     return false;
 
+  if (!Payload.IsValid())
+  {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("set_object_property payload missing."),
+          TEXT("INVALID_PAYLOAD"));
+      return true;
+  }
+
   // --- Parameter Validation (using McpHandlerUtils patterns) ---
   FString ObjectPath;
   FString ParamError;
