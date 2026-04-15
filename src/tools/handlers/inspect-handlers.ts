@@ -379,12 +379,13 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'set_property': {
       const objectPath = await resolveObjectPath(args, tools);
-      const rawBlueprintPath = extractOptionalString(args as Record<string, unknown>, 'blueprintPath');
-      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const params = normalizeArgs(args, [
+        { key: 'blueprintPath', aliases: ['blueprint_path'] },
         { key: 'propertyName', aliases: ['propertyPath'], required: true },
         { key: 'value' }
       ]);
+      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
+      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const propertyName = extractString(params, 'propertyName');
       const value = params.value;
 
