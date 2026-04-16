@@ -213,7 +213,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   // --- Special Actor Property Handling ---
   // Handle properties that require setter methods instead of direct property access
-  if (AActor *Actor = Cast<AActor>(RootObject)) {
+  // CDOs don't support runtime setters — changes won't persist to Blueprint defaults
+  const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
+  if (AActor *Actor = Cast<AActor>(RootObject); Actor && !bIsClassDefaultObject) {
       // ActorLocation
     if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
           FVector NewLoc = FVector::ZeroVector;

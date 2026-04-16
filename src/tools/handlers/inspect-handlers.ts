@@ -43,6 +43,7 @@ function normalizeInspectAction(action: string): string {
   return INSPECT_ACTION_ALIASES[action] ?? action;
 }
 
+/** Resolve a component's full object path from actor + component name args. */
 async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: ITools): Promise<string> {
   const argsTyped = args as InspectArgs;
   const componentName = typeof argsTyped.componentName === 'string' ? argsTyped.componentName.trim() : '';
@@ -143,6 +144,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 }
 
 
+/** Dispatch inspect/introspection actions (get_property, set_property, inspect_object, etc.). */
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
   const originalAction = action;

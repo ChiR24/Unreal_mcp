@@ -9,6 +9,7 @@ import util from 'util';
 
 const execAsync = util.promisify(exec);
 
+/** Reject UBT argument strings containing shell-dangerous characters. */
 function validateUbtArgumentsString(extraArgs: string): void {
   if (!extraArgs || typeof extraArgs !== 'string') {
     return;
@@ -24,6 +25,7 @@ function validateUbtArgumentsString(extraArgs: string): void {
   }
 }
 
+/** Split a UBT argument string into tokens, respecting quoted segments. */
 function tokenizeArgs(extraArgs: string): string[] {
   if (!extraArgs) {
     return [];
@@ -236,6 +238,7 @@ async function findUbtExecutable(): Promise<string> {
   return '';
 }
 
+/** Dispatch pipeline actions (run_ubt, etc.) to local UBT or the C++ bridge. */
 export async function handlePipelineTools(action: string, args: PipelineArgs, tools: ITools) {
   switch (action) {
     case 'run_ubt': {

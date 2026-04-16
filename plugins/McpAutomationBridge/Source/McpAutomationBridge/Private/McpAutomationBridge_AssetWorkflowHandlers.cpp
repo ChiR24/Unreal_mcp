@@ -4129,15 +4129,25 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
     if (ToExpressionIndex >= 0 && ToExpressionIndex < Expressions.Num()) ToExpression = Expressions[ToExpressionIndex];
   }
 
+  FString SourcePin;
+  Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
+  int32 SourcePinIndex = 0;
+  if (!SourcePin.IsEmpty() && SourcePin.IsNumeric()) {
+    SourcePinIndex = FCString::Atoi(*SourcePin);
+  }
+
   FString InputName;
   Payload->TryGetStringField(TEXT("inputName"), InputName);
   if (InputName.IsEmpty()) Payload->TryGetStringField(TEXT("targetPin"), InputName);
-  if (InputName.IsEmpty()) Payload->TryGetStringField(TEXT("sourcePin"), InputName);
 
   // Handle connection to main material / function output node
   bool bConnectToMainNode = false;
-  if ((TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) && !InputName.IsEmpty()) bConnectToMainNode = true;
-  else if (ToExpression == nullptr && !InputName.IsEmpty()) bConnectToMainNode = true;
+  if ((TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) && !InputName.IsEmpty()) {
+    bConnectToMainNode = true;
+  } else if (!TargetNodeId.IsEmpty() && ToExpression == nullptr) {
+    SendAutomationError(Socket, RequestId, TEXT("Target node not found"), TEXT("TARGET_NODE_NOT_FOUND"));
+    return true;
+  }
 
   if (bConnectToMainNode && FromExpression) {
     if (Material) {
@@ -4176,6 +4186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
       }
       if (TargetOutput) {
         TargetOutput->A.Expression = FromExpression;
+        TargetOutput->A.OutputIndex = SourcePinIndex;
         FinalizeHost(Material, Function);
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("inputName"), TargetOutput->OutputName.ToString());
@@ -4222,6 +4233,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   }
 
   TargetInput->Expression = FromExpression;
+  TargetInput->OutputIndex = SourcePinIndex;
   FinalizeHost(Material, Function);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

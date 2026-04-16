@@ -30,6 +30,18 @@ function parseMaterialPath(fullPath: string | undefined): { name: string; path: 
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
+/** Normalize asset path: backslash→slash, /Content/→/Game/, ensure valid root */
+function normalizeAssetPath(p: string): string {
+  let normalized = p.replace(/\\/g, '/');
+  if (normalized.startsWith('/Content/')) {
+    normalized = '/Game/' + normalized.slice('/Content/'.length);
+  }
+  if (!normalized.startsWith('/') && normalized.length > 0) {
+    normalized = '/Game/' + normalized;
+  }
+  return normalized;
+}
+
 /**
  * Handle material authoring actions
  */
@@ -603,8 +615,8 @@ export async function handleMaterialAuthoringTools(
           { key: 'y', default: 0 },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
-        const functionPath = extractString(params, 'functionPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
+        const functionPath = normalizeAssetPath(extractString(params, 'functionPath'));
         const x = extractOptionalNumber(params, 'x') ?? 0;
         const y = extractOptionalNumber(params, 'y') ?? 0;
 
@@ -860,7 +872,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'filter' },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const filter = extractOptionalString(params, 'filter');
 
         const payload: Record<string, unknown> = {
@@ -1042,6 +1054,18 @@ export async function handleMaterialAuthoringTools(
         const code = extractOptionalString(params, 'code');
         const description = extractOptionalString(params, 'description');
         const outputType = extractOptionalString(params, 'outputType');
+        const hasUpdates =
+          code !== undefined ||
+          description !== undefined ||
+          outputType !== undefined ||
+          params.inputs !== undefined ||
+          params.additionalOutputs !== undefined;
+        if (!hasUpdates) {
+          return ResponseFactory.error(
+            'manage_material_authoring.update_custom_expression: provide at least one field to update',
+            'MISSING_UPDATE_FIELDS'
+          );
+        }
         if (code !== undefined && code !== null) payload.code = code;
         if (description !== undefined && description !== null) payload.description = description;
         if (outputType !== undefined && outputType !== null) payload.outputType = outputType;
@@ -1114,7 +1138,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'assetPath', aliases: ['functionPath', 'materialFunctionPath'], required: true },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
           subAction: 'get_material_function_info',
