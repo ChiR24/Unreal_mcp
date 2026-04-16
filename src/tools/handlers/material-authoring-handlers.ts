@@ -77,7 +77,7 @@ export async function handleMaterialAuthoringTools(
           // Parse full path into name and directory
           const parsed = parseMaterialPath(materialPath);
           if (!parsed) {
-            return ResponseFactory.error('Invalid materialPath format', 'INVALID_ARGUMENT');
+            return ResponseFactory.error('manage_material_authoring.create_material: invalid materialPath format', 'INVALID_ARGUMENT');
           }
           name = parsed.name;
           path = parsed.path;
@@ -549,10 +549,10 @@ export async function handleMaterialAuthoringTools(
         const pinName = extractOptionalString(rawArgs, 'pinName');
         
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath or materialPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.disconnect_nodes: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         if (!nodeId) {
-          return ResponseFactory.error('Missing required argument: nodeId (or pinName)', 'MISSING_NODE_ID');
+          return ResponseFactory.error('manage_material_authoring.disconnect_nodes: missing required argument nodeId (or pinName)', 'MISSING_NODE_ID');
         }
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -679,7 +679,7 @@ export async function handleMaterialAuthoringTools(
           // Parse full path into name and directory
           const parsed = parseMaterialPath(instancePath);
           if (!parsed) {
-            return ResponseFactory.error('Invalid instancePath format', 'INVALID_ARGUMENT');
+            return ResponseFactory.error('manage_material_authoring.create_material_instance: invalid instancePath format', 'INVALID_ARGUMENT');
           }
           name = parsed.name;
           path = parsed.path;
@@ -697,7 +697,7 @@ export async function handleMaterialAuthoringTools(
         }
         
         if (!parentMaterial) {
-          return ResponseFactory.error('parentMaterialPath or parent is required', 'MISSING_PARENT');
+          return ResponseFactory.error('manage_material_authoring.create_material_instance: parentMaterialPath or parent is required', 'MISSING_PARENT');
         }
         
         const save = extractOptionalBoolean(rawArgs, 'save') ?? true;
@@ -937,7 +937,7 @@ export async function handleMaterialAuthoringTools(
         const name = extractOptionalString(params, 'name');
 
         if (!nodeType && !name) {
-          return ResponseFactory.error('find_node requires at least one of nodeType or name', 'MISSING_SEARCH_CRITERIA');
+          return ResponseFactory.error('manage_material_authoring.find_node: requires at least one of nodeType or name', 'MISSING_SEARCH_CRITERIA');
         }
 
         const payload: Record<string, unknown> = {
@@ -1052,7 +1052,7 @@ export async function handleMaterialAuthoringTools(
                          extractOptionalString(rawArgs, 'materialPath') ??
                          extractOptionalString(rawArgs, 'functionPath') ?? '');
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.delete_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         const nodeId = extractOptionalString(rawArgs, 'nodeId');
         const nodeIds = Array.isArray(rawArgs.nodeIds) ? rawArgs.nodeIds as string[] : undefined;
@@ -1161,7 +1161,7 @@ export async function handleMaterialAuthoringTools(
                          extractOptionalString(rawArgs, 'materialPath') ??
                          extractOptionalString(rawArgs, 'functionPath') ?? '');
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.get_connected_subgraph: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         const nodeId = extractOptionalString(rawArgs, 'nodeId');
         const orphansOnly = extractOptionalBoolean(rawArgs, 'orphansOnly') ?? false;
@@ -1213,10 +1213,10 @@ export async function handleMaterialAuthoringTools(
         const y = extractOptionalNumber(rawArgs, 'y') ?? 0;
         
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath or materialPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.add_material_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         if (!nodeType) {
-          return ResponseFactory.error('Missing required argument: nodeType', 'MISSING_NODE_TYPE');
+          return ResponseFactory.error('manage_material_authoring.add_material_node: missing required argument nodeType', 'MISSING_NODE_TYPE');
         }
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -1251,13 +1251,13 @@ export async function handleMaterialAuthoringTools(
         const value = rawArgs.value;
         
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath (or instancePath, materialPath)', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         if (!parameterName) {
-          return ResponseFactory.error('Missing required argument: parameterName', 'MISSING_PARAMETER_NAME');
+          return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument parameterName', 'MISSING_PARAMETER_NAME');
         }
         if (value === undefined) {
-          return ResponseFactory.error('Missing required argument: value', 'MISSING_VALUE');
+          return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument value', 'MISSING_VALUE');
         }
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -1283,10 +1283,10 @@ export async function handleMaterialAuthoringTools(
         const nodeId = extractOptionalString(rawArgs, 'nodeId') ?? '';
         
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath or materialPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.get_material_node_details: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         if (!nodeId) {
-          return ResponseFactory.error('Missing required argument: nodeId', 'MISSING_NODE_ID');
+          return ResponseFactory.error('manage_material_authoring.get_material_node_details: missing required argument nodeId', 'MISSING_NODE_ID');
         }
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -1309,10 +1309,10 @@ export async function handleMaterialAuthoringTools(
         const nodeId = extractOptionalString(rawArgs, 'nodeId') ?? '';
         
         if (!assetPath) {
-          return ResponseFactory.error('Missing required argument: assetPath or materialPath', 'MISSING_ASSET_PATH');
+          return ResponseFactory.error('manage_material_authoring.remove_material_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         if (!nodeId) {
-          return ResponseFactory.error('Missing required argument: nodeId', 'MISSING_NODE_ID');
+          return ResponseFactory.error('manage_material_authoring.remove_material_node: missing required argument nodeId', 'MISSING_NODE_ID');
         }
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
