@@ -75,9 +75,9 @@ export async function handleMaterialAuthoringTools(
         let path: string;
         
         if (materialPath) {
-          // Parse full path into name and directory
-          const parsed = parseMaterialPath(materialPath);
-          if (!parsed) {
+          // Normalize and parse full path into name and directory
+          const parsed = parseMaterialPath(normalizeAssetPath(materialPath));
+          if (!parsed || !parsed.name || !parsed.path) {
             return ResponseFactory.error('manage_material_authoring.create_material: invalid materialPath format', 'INVALID_ARGUMENT');
           }
           name = parsed.name;
@@ -645,7 +645,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'y', default: 0 },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const inputName = extractString(params, 'inputName');
         const inputType = extractOptionalString(params, 'inputType') ?? 'Float3';
         const x = extractOptionalNumber(params, 'x') ?? 0;
@@ -711,9 +711,9 @@ export async function handleMaterialAuthoringTools(
         let parentMaterial: string;
         
         if (instancePath) {
-          // Parse full path into name and directory
-          const parsed = parseMaterialPath(instancePath);
-          if (!parsed) {
+          // Normalize and parse full path into name and directory
+          const parsed = parseMaterialPath(normalizeAssetPath(instancePath));
+          if (!parsed || !parsed.name || !parsed.path) {
             return ResponseFactory.error('manage_material_authoring.create_material_instance: invalid instancePath format', 'INVALID_ARGUMENT');
           }
           name = parsed.name;

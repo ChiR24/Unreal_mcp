@@ -215,9 +215,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // Handle properties that require setter methods instead of direct property access
   // CDOs don't support runtime setters — changes won't persist to Blueprint defaults
   const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
-  if (AActor *Actor = Cast<AActor>(RootObject); Actor && !bIsClassDefaultObject) {
-      // ActorLocation
-    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+  if (AActor *Actor = Cast<AActor>(RootObject))
+  {
+    if (bIsClassDefaultObject &&
+        (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Cannot modify runtime transform on a Blueprint CDO. Edit defaults on the root component or SCS template instead."),
+          TEXT("CDO_TRANSFORM"));
+      return true;
+    }
+    if (!bIsClassDefaultObject &&
+        PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
           FVector NewLoc = FVector::ZeroVector;
           if (ValueField->Type == EJson::Object)
           {
@@ -476,10 +487,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   }
 
   // Special handling for common AActor properties that are actually functions
-  // or require setters
-  // or require setters
+  // or require setters — CDOs don't have valid runtime transform data
+  const bool bIsCDO = RootObject->HasAnyFlags(RF_ClassDefaultObject);
   if (AActor *Actor = Cast<AActor>(RootObject)) {
- if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+    if (bIsCDO && (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Cannot read runtime transform from a Blueprint CDO. Query the SCS template or a spawned instance instead."),
+          TEXT("CDO_TRANSFORM"));
+      return true;
+    }
+    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
       TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
@@ -2961,6 +2981,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
 
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    BlueprintPath.TrimStartAndEndInline();
     if (BlueprintPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -3002,6 +3023,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     // Parse optional params
     FString ComponentNameFilter;
     Payload->TryGetStringField(TEXT("componentName"), ComponentNameFilter);
+    ComponentNameFilter.TrimStartAndEndInline();
     bool bDetailed = false;
     Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
 

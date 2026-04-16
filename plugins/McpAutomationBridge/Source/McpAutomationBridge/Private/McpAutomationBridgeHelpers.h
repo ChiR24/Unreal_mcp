@@ -3000,26 +3000,13 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
   // as it causes Editor hangs when called repeatedly in polling loops
   FString CheckPath = Req;
 
-  // Normalize paths without a known root — preserve valid plugin mount points
-  if (!CheckPath.StartsWith(TEXT("/Game/")) &&
-      !CheckPath.StartsWith(TEXT("/Engine/")) &&
-      !CheckPath.StartsWith(TEXT("/Script/"))) {
-    if (CheckPath.StartsWith(TEXT("/")) &&
-        FPackageName::IsValidLongPackageName(CheckPath, true)) {
-      // Valid registered mount point (e.g., /ShooterCore/BP_Widget) — keep as-is
-    } else if (CheckPath.StartsWith(TEXT("/"))) {
-      CheckPath = TEXT("/Game") + CheckPath;
-    } else {
-      CheckPath = TEXT("/Game/") + CheckPath;
-    }
-  }
-
+  // Strip suffixes first so mount-point validation sees a clean package path
   // Remove .uasset extension if present
   if (CheckPath.EndsWith(TEXT(".uasset"))) {
     CheckPath = CheckPath.LeftChop(7);
   }
 
-  // Remove object path suffix (e.g., /Game/BP.BP -> /Game/BP)
+  // Remove object path suffix (e.g., /ShooterCore/BP.BP -> /ShooterCore/BP)
   int32 DotIdx;
   if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
     // Check if this looks like an object path (PackagePath.ObjectName)
@@ -3032,6 +3019,20 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
       if (AssetName.Equals(AfterDot, ESearchCase::IgnoreCase)) {
         CheckPath = BeforeDot;
       }
+    }
+  }
+
+  // Normalize paths without a known root — preserve valid plugin mount points
+  if (!CheckPath.StartsWith(TEXT("/Game/")) &&
+      !CheckPath.StartsWith(TEXT("/Engine/")) &&
+      !CheckPath.StartsWith(TEXT("/Script/"))) {
+    if (CheckPath.StartsWith(TEXT("/")) &&
+        FPackageName::IsValidLongPackageName(CheckPath, true)) {
+      // Valid registered mount point (e.g., /ShooterCore/BP_Widget) — keep as-is
+    } else if (CheckPath.StartsWith(TEXT("/"))) {
+      CheckPath = TEXT("/Game") + CheckPath;
+    } else {
+      CheckPath = TEXT("/Game/") + CheckPath;
     }
   }
 
