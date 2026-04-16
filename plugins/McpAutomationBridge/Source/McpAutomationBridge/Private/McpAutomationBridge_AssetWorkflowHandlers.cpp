@@ -4115,10 +4115,10 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
 
   auto& Expressions = GetHostExpressions(Material, Function);
 
-  // Helper to find expression by GUID, name, or index
+  // Helper to find expression by stable name, GUID (legacy), or index
   auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
-  // Accept both sourceNodeId/targetNodeId (GUID strings) and fromExpression/toExpression (indices)
+  // Accept both sourceNodeId/targetNodeId (stable name strings) and fromExpression/toExpression (indices)
   FString SourceNodeId, TargetNodeId;
   int32 FromExpressionIndex = -1, ToExpressionIndex = -1;
 
@@ -4326,7 +4326,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   auto& Expressions = GetHostExpressions(Material, Function);
 
-  // Helper to find expression by GUID, name, or index
+  // Helper to find expression by stable name, GUID (legacy), or index
   auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
   FString NodeId;
@@ -4343,7 +4343,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   if (!ExpressionToRemove) {
     SendAutomationError(Socket, RequestId,
-                        TEXT("Node not found. Provide valid nodeId (GUID) or expressionIndex"),
+                        TEXT("Node not found. Provide valid nodeId (stable name) or expressionIndex"),
                         TEXT("NODE_NOT_FOUND"));
     return true;
   }
@@ -4541,7 +4541,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
   }
 
   if (!TargetExpression) {
-    SendAutomationError(Socket, RequestId, TEXT("Node not found. Provide valid nodeId (GUID) or expressionIndex"), TEXT("NODE_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, TEXT("Node not found. Provide valid nodeId (stable name) or expressionIndex"), TEXT("NODE_NOT_FOUND"));
     return true;
   }
 
@@ -4559,7 +4559,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
     }
   }
 
-  FinalizeHost(Material, Function);
+  if (bSpecificInput && BrokenConnections == 0) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("No input named '%s' found on node '%s'"), *InputName, *TargetExpression->GetName()),
+                        TEXT("INPUT_NOT_FOUND"));
+    return true;
+  }
+
+  if (BrokenConnections > 0) {
+    FinalizeHost(Material, Function);
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
