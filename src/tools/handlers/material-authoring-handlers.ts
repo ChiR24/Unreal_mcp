@@ -30,12 +30,22 @@ function parseMaterialPath(fullPath: string | undefined): { name: string; path: 
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
 
-/** Normalize asset path: backslash→slash, /Content/→/Game/, ensure valid root */
+/** Normalize asset path: backslash→slash, /Content/→/Game/, bare names→/Game/ prefix */
 function normalizeAssetPath(p: string): string {
   let normalized = p.replace(/\\/g, '/');
+  // /Content/Foo → /Game/Foo
   if (normalized.startsWith('/Content/')) {
     normalized = '/Game/' + normalized.slice('/Content/'.length);
   }
+  // Content/Foo → /Game/Foo (no leading slash)
+  if (normalized.startsWith('Content/')) {
+    normalized = '/Game/' + normalized.slice('Content/'.length);
+  }
+  // Game/Foo → /Game/Foo (missing leading slash)
+  if (normalized.startsWith('Game/')) {
+    normalized = '/' + normalized;
+  }
+  // Bare name with no slash → /Game/ prefix
   if (!normalized.startsWith('/') && normalized.length > 0) {
     normalized = '/Game/' + normalized;
   }
@@ -889,14 +899,17 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
       }
 
+      // ===== 8.5 Graph Query & Mutation =====
+
+      // Search for nodes by type or name
       case 'find_node': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
           { key: 'nodeType' },
           { key: 'name' },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const nodeType = extractOptionalString(params, 'nodeType');
         const name = extractOptionalString(params, 'name');
 
@@ -915,9 +928,10 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Node search complete');
       }
 
+      // Get input/output connections for a node
       case 'get_node_connections': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
           { key: 'nodeId', required: true },
           { key: 'direction' },
           { key: 'depth', default: 1 },
@@ -925,7 +939,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'downstream' },
         ]);
 
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const nodeId = extractString(params, 'nodeId');
 
         const payload: Record<string, unknown> = {
@@ -950,12 +964,13 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Node connections retrieved');
       }
 
+      // Get editable properties of a node
       case 'get_node_properties': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
           { key: 'nodeId', required: true },
         ]);
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const nodeId = extractString(params, 'nodeId');
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -970,6 +985,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Node properties retrieved');
       }
 
+      // Set a static switch parameter value on a material
       case 'set_static_switch_parameter_value': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -977,7 +993,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'value', required: true },
           { key: 'save', default: true },
         ]);
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const parameterName = extractString(params, 'parameterName');
         const value = extractOptionalBoolean(params, 'value');
         if (value === undefined) {
@@ -1002,10 +1018,12 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Static switch parameter set');
       }
 
+      // Delete one or more expression nodes
       case 'delete_node': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
-                         extractOptionalString(rawArgs, 'materialPath') ?? '';
+        const assetPath = normalizeAssetPath(extractOptionalString(rawArgs, 'assetPath') ??
+                         extractOptionalString(rawArgs, 'materialPath') ??
+                         extractOptionalString(rawArgs, 'functionPath') ?? '');
         if (!assetPath) {
           return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
         }
@@ -1033,9 +1051,10 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Node(s) deleted');
       }
 
+      // Update code, description, or pins on a custom expression node
       case 'update_custom_expression': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
           { key: 'nodeId', required: true },
           { key: 'code' },
           { key: 'description' },
@@ -1043,7 +1062,7 @@ export async function handleMaterialAuthoringTools(
           { key: 'inputs' },
           { key: 'additionalOutputs' },
         ]);
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const nodeId = extractString(params, 'nodeId');
 
         const payload: Record<string, unknown> = {
@@ -1080,14 +1099,15 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Custom expression updated');
       }
 
+      // Trace the node chain between two nodes or from start to an output pin
       case 'get_node_chain': {
         const params = normalizeArgs(args, [
-          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },
           { key: 'startNodeId', required: true },
           { key: 'endNodeId' },
           { key: 'endPin' },
         ]);
-        const assetPath = extractString(params, 'assetPath');
+        const assetPath = normalizeAssetPath(extractString(params, 'assetPath'));
         const startNodeId = extractString(params, 'startNodeId');
         const endNodeId = extractOptionalString(params, 'endNodeId');
         const endPin = extractOptionalString(params, 'endPin');
@@ -1108,10 +1128,12 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Node chain traced');
       }
 
+      // Get the connected subgraph or find orphan nodes
       case 'get_connected_subgraph': {
         const rawArgs = args as Record<string, unknown>;
-        const assetPath = extractOptionalString(rawArgs, 'assetPath') ??
-                         extractOptionalString(rawArgs, 'materialPath') ?? '';
+        const assetPath = normalizeAssetPath(extractOptionalString(rawArgs, 'assetPath') ??
+                         extractOptionalString(rawArgs, 'materialPath') ??
+                         extractOptionalString(rawArgs, 'functionPath') ?? '');
         if (!assetPath) {
           return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
         }
@@ -1133,6 +1155,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Connected subgraph retrieved');
       }
 
+      // Get material function inputs, outputs, and expression details
       case 'get_material_function_info': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['functionPath', 'materialFunctionPath'], required: true },

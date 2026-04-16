@@ -3413,6 +3413,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
             FString Value;
             bool bHasValueField = Payload->HasField(TEXT("value"));
+            bool bUseJsonConverter = false;
+            TSharedPtr<FJsonValue> RawJsonValue;
 
             // Extract value from JSON — handle string, number, bool, object, and array types
             if (bHasValueField)
@@ -3434,11 +3436,9 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                     }
                     else if (ValField->Type == EJson::Object || ValField->Type == EJson::Array)
                     {
-                        // Serialize JSON object/array to string for ImportText (struct-backed properties)
-                        FString JsonStr;
-                        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonStr);
-                        FJsonSerializer::Serialize(ValField, TEXT(""), Writer);
-                        Value = JsonStr;
+                        // Defer to FJsonObjectConverter for struct-backed properties
+                        bUseJsonConverter = true;
+                        RawJsonValue = ValField;
                     }
                     else if (ValField->Type == EJson::Null)
                     {
@@ -3491,13 +3491,22 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 // WRITE mode — set the property value
                 Widget->Modify();
 
+                bool bWriteSuccess = false;
+                if (bUseJsonConverter && RawJsonValue.IsValid())
+                {
+                    // Use FJsonObjectConverter for struct-backed properties (Object/Array JSON)
+                    bWriteSuccess = FJsonObjectConverter::JsonValueToUProperty(RawJsonValue, Prop, ValuePtr, 0, 0);
+                }
+                else
+                {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
+                    const TCHAR* ImportResult = Prop->ImportText_Direct(*Value, ValuePtr, Widget, PPF_None);
 #else
-                // UE 5.0: ImportText with different signature
-                const TCHAR* ImportResult = Prop->ImportText(*Value, ValuePtr, PPF_None, Widget);
+                    const TCHAR* ImportResult = Prop->ImportText(*Value, ValuePtr, PPF_None, Widget);
 #endif
-                if (!ImportResult)
+                    bWriteSuccess = (ImportResult != nullptr);
+                }
+                if (!bWriteSuccess)
                 {
                     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Failed to set '%s' to '%s' on widget '%s'"), *PropertyName, *Value, *SlotName),

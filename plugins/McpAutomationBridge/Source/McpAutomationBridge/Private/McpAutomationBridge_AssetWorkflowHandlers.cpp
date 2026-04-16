@@ -4152,18 +4152,23 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   if (bConnectToMainNode && FromExpression) {
     if (Material) {
       bool bFound = false;
+      auto ConnectMainInput = [&](FExpressionInput& Input) {
+        Input.Expression = FromExpression;
+        Input.OutputIndex = SourcePinIndex;
+        bFound = true;
+      };
 #if WITH_EDITORONLY_DATA
-      if (InputName == TEXT("BaseColor")) { MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("EmissiveColor")) { MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("Roughness")) { MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("Metallic")) { MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("Specular")) { MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("Normal")) { MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("Opacity")) { MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("OpacityMask")) { MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("AmbientOcclusion") || InputName == TEXT("AO")) { MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("SubsurfaceColor")) { MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = FromExpression; bFound = true; }
-      else if (InputName == TEXT("WorldPositionOffset")) { MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression = FromExpression; bFound = true; }
+      if (InputName == TEXT("BaseColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, BaseColor)); }
+      else if (InputName == TEXT("EmissiveColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor)); }
+      else if (InputName == TEXT("Roughness")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Roughness)); }
+      else if (InputName == TEXT("Metallic")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Metallic)); }
+      else if (InputName == TEXT("Specular")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Specular)); }
+      else if (InputName == TEXT("Normal")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Normal)); }
+      else if (InputName == TEXT("Opacity")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Opacity)); }
+      else if (InputName == TEXT("OpacityMask")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, OpacityMask)); }
+      else if (InputName == TEXT("AmbientOcclusion") || InputName == TEXT("AO")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion)); }
+      else if (InputName == TEXT("SubsurfaceColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor)); }
+      else if (InputName == TEXT("WorldPositionOffset")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset)); }
 #endif
       if (bFound) {
         FinalizeHost(Material, Function);
@@ -5312,23 +5317,21 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
     return true;
   }
 
-  // Rebuild by triggering a recompile
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, Material, Function, AssetPath]() {
-    UObject *Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
-    Host->MarkPackageDirty();
-    Host->PreEditChange(nullptr);
-    Host->PostEditChange();
+  // Rebuild by triggering a recompile (already on game thread — no AsyncTask needed)
+  UObject *Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
+  Host->MarkPackageDirty();
+  Host->PreEditChange(nullptr);
+  Host->PostEditChange();
 
-    McpSafeAssetSave(Host);
+  McpSafeAssetSave(Host);
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (Material) McpHandlerUtils::AddVerification(Result, Material);
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("rebuilt"), true);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  if (Material) McpHandlerUtils::AddVerification(Result, Material);
+  Result->SetStringField(TEXT("assetPath"), AssetPath);
+  Result->SetBoolField(TEXT("rebuilt"), true);
 
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material rebuilt successfully"), Result, FString());
-  });
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Material rebuilt successfully"), Result, FString());
 
   return true;
 #else

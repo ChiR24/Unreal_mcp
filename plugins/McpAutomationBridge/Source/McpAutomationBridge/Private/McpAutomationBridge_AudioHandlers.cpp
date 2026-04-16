@@ -1878,7 +1878,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
                            TEXT("Invalid path"), TEXT("INVALID_PATH"));
        return true;
      }
-     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
+     FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *PackagePath, *Name));
+     if (FullPath.IsEmpty()) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
+       return true;
+     }
 
      UPackage *Package = CreatePackage(*FullPath);
      if (!Package) {
@@ -2267,7 +2272,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
     return true;
   }
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
+  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName));
+  if (FullPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
+    return true;
+  }
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2435,7 +2445,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
     return true;
   }
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
+  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName));
+  if (FullPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
+    return true;
+  }
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2508,7 +2523,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
     return true;
   }
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
+  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName));
+  if (FullPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
+    return true;
+  }
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2659,7 +2679,12 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
     return true;
   }
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
+  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName));
+  if (FullPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
+    return true;
+  }
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
