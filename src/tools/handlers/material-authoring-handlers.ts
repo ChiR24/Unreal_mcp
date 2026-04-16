@@ -1215,6 +1215,12 @@ export async function handleMaterialAuthoringTools(
         const startNodeId = extractString(params, 'startNodeId');
         const endNodeId = extractOptionalString(params, 'endNodeId');
         const endPin = extractOptionalString(params, 'endPin');
+        if (!endNodeId && !endPin) {
+          return ResponseFactory.error(
+            'manage_material_authoring.get_node_chain: provide endNodeId or endPin',
+            'INVALID_ARGUMENT'
+          );
+        }
 
         const payload: Record<string, unknown> = {
           subAction: 'get_node_chain',
