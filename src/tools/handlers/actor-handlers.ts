@@ -441,8 +441,12 @@ const handlers: Record<string, ActorActionHandler> = {
         }) as Record<string, unknown>;
     },
     find_by_class: async (args, tools) => {
+        // The control_actor tool schema exposes the class parameter as
+        // `classPath` (matching other path-style params) — accept that alias
+        // alongside the legacy `className`/`class_name`/`class` so a caller
+        // using the schema name doesn't get "Missing required argument".
         const params = normalizeArgs(args, [
-            { key: 'className', aliases: ['class_name', 'class'], required: true }
+            { key: 'className', aliases: ['class_name', 'class', 'classPath'], required: true }
         ]);
         const className = extractString(params, 'className');
         return await executeAutomationRequest(tools, TOOL_ACTIONS.CONTROL_ACTOR, {

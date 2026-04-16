@@ -112,6 +112,10 @@
 #include "EngineUtils.h"
 #include "FileHelpers.h"
 #include "GeneralProjectSettings.h"
+#include "Settings/LevelEditorViewportSettings.h"
+#include "GameFramework/WorldSettings.h"
+#include "GameFramework/GameModeBase.h"
+#include "Misc/EngineVersion.h"
 
 // =============================================================================
 // Procedural & Mesh Includes
@@ -1436,8 +1440,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("list_objects")) ||
         LowerSubAction.Equals(TEXT("find_by_class")) ||
         LowerSubAction.Equals(TEXT("find_by_tag")) ||
-        LowerSubAction.Equals(TEXT("inspect_class")) ||
-        LowerSubAction.Equals(TEXT("inspect_cdo"));
+        LowerSubAction.Equals(TEXT("inspect_class"));
 
     // Actor actions (delegated to HandleControlActorAction)
     const bool bIsActorAction =
@@ -1487,9 +1490,22 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         if (LowerSubAction.Equals(TEXT("get_project_settings")))
         {
-            Resp->SetStringField(TEXT("action"), TEXT("inspect"));
-            Resp->SetStringField(TEXT("subAction"), SubAction);
-            Resp->SetStringField(TEXT("message"), TEXT("Project settings retrieved"));
+            const UGeneralProjectSettings* ProjSettings = GetDefault<UGeneralProjectSettings>();
+            Resp->SetStringField(TEXT("projectName"),    FApp::GetProjectName());
+            Resp->SetStringField(TEXT("engineVersion"),  FEngineVersion::Current().ToString());
+            Resp->SetStringField(TEXT("buildConfig"),    LexToString(FApp::GetBuildConfiguration()));
+            if (ProjSettings)
+            {
+                Resp->SetStringField(TEXT("description"),      ProjSettings->Description);
+                Resp->SetStringField(TEXT("homepage"),         ProjSettings->Homepage);
+                Resp->SetStringField(TEXT("supportContact"),   ProjSettings->SupportContact);
+                Resp->SetStringField(TEXT("projectVersion"),   ProjSettings->ProjectVersion);
+                Resp->SetStringField(TEXT("companyName"),      ProjSettings->CompanyName);
+                Resp->SetStringField(TEXT("copyrightNotice"),  ProjSettings->CopyrightNotice);
+                Resp->SetStringField(TEXT("projectID"),        ProjSettings->ProjectID.ToString());
+                Resp->SetBoolField  (TEXT("startInVR"),        ProjSettings->bStartInVR);
+            }
+            Resp->SetStringField(TEXT("projectDir"), FPaths::ProjectDir());
             Resp->SetBoolField(TEXT("success"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Project settings retrieved"), Resp, FString());
@@ -1500,9 +1516,20 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_editor_settings")))
         {
-            Resp->SetStringField(TEXT("action"), TEXT("inspect"));
-            Resp->SetStringField(TEXT("subAction"), SubAction);
-            Resp->SetStringField(TEXT("message"), TEXT("Editor settings retrieved"));
+            if (const ULevelEditorViewportSettings* VPSettings = GetDefault<ULevelEditorViewportSettings>())
+            {
+                Resp->SetNumberField(TEXT("mouseSensitivity"),          VPSettings->MouseSensitivty);
+                Resp->SetNumberField(TEXT("mouseScrollCameraSpeed"),    VPSettings->MouseScrollCameraSpeed);
+                Resp->SetBoolField  (TEXT("useDistanceScaledCamera"),   VPSettings->bUseDistanceScaledCameraSpeed);
+            }
+            if (GEditor)
+            {
+                Resp->SetBoolField  (TEXT("isSimulating"),         GEditor->bIsSimulatingInEditor);
+                Resp->SetBoolField  (TEXT("isPIEActive"),          GEditor->PlayWorld != nullptr);
+                Resp->SetNumberField(TEXT("gameAgnosticSavedFPS"), GEngine ? GEngine->GetMaxFPS() : 0);
+            }
+            Resp->SetNumberField(TEXT("gRunningCommandlet"),  IsRunningCommandlet() ? 1 : 0);
+            Resp->SetBoolField(TEXT("isEditor"),              GIsEditor);
             Resp->SetBoolField(TEXT("success"), true);
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Editor settings retrieved"), Resp, FString());
@@ -1513,11 +1540,45 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_world_settings")))
         {
-            if (GEditor && GEditor->GetEditorWorldContext().World())
+            UWorld* World = nullptr;
+            if (GEditor)
             {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
+                if (GEditor->PlayWorld != nullptr)
+                {
+                    World = GEditor->PlayWorld;
+                }
+                else if (GEditor->GetEditorWorldContext().World())
+                {
+                    World = GEditor->GetEditorWorldContext().World();
+                }
+            }
+
+            if (World)
+            {
                 Resp->SetStringField(TEXT("worldName"), World->GetName());
-                Resp->SetStringField(TEXT("levelName"), World->GetCurrentLevel()->GetName());
+                if (ULevel* CurrentLevel = World->GetCurrentLevel())
+                {
+                    Resp->SetStringField(TEXT("levelName"), CurrentLevel->GetName());
+                }
+                Resp->SetStringField(TEXT("packageName"), World->GetOutermost()->GetName());
+                Resp->SetNumberField(TEXT("timeSeconds"),          World->GetTimeSeconds());
+                Resp->SetNumberField(TEXT("realTimeSeconds"),      World->GetRealTimeSeconds());
+                Resp->SetNumberField(TEXT("deltaTimeSeconds"),     World->GetDeltaSeconds());
+                Resp->SetBoolField  (TEXT("hasBegunPlay"),         World->HasBegunPlay());
+                Resp->SetBoolField  (TEXT("isPlayInEditor"),       World->IsPlayInEditor());
+
+                if (AWorldSettings* WorldSettings = World->GetWorldSettings())
+                {
+                    Resp->SetNumberField(TEXT("killZ"),               WorldSettings->KillZ);
+                    Resp->SetNumberField(TEXT("worldGravityZ"),       WorldSettings->GetGravityZ());
+                    Resp->SetNumberField(TEXT("timeDilation"),        WorldSettings->TimeDilation);
+                    Resp->SetBoolField  (TEXT("enableWorldBoundsChecks"), WorldSettings->bEnableWorldBoundsChecks);
+                    if (UClass* GameModeClass = WorldSettings->DefaultGameMode.Get())
+                    {
+                        Resp->SetStringField(TEXT("defaultGameMode"), GameModeClass->GetPathName());
+                    }
+                }
+
                 Resp->SetBoolField(TEXT("success"), true);
                 SendAutomationResponse(RequestingSocket, RequestId, true,
                                        TEXT("World settings retrieved"), Resp, FString());
@@ -1607,8 +1668,23 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_performance_stats")))
         {
+            // Thread times are cycle counters; convert via FPlatformTime.
+            const double GameThreadMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
+            const double RenderThreadMs = FPlatformTime::ToMilliseconds(GRenderThreadTime);
+            const double RHIThreadMs = FPlatformTime::ToMilliseconds(GRHIThreadTime);
+            const double GPUFrameMs = FPlatformTime::ToMilliseconds(GGPUFrameTime);
+            const float DeltaSeconds = FApp::GetDeltaTime();
+            const float FrameMs = DeltaSeconds * 1000.0f;
+            const float FPS = (DeltaSeconds > 0.0f) ? (1.0f / DeltaSeconds) : 0.0f;
+
+            Resp->SetNumberField(TEXT("fps"), FPS);
+            Resp->SetNumberField(TEXT("frameTimeMs"), FrameMs);
+            Resp->SetNumberField(TEXT("gameThreadMs"), GameThreadMs);
+            Resp->SetNumberField(TEXT("renderThreadMs"), RenderThreadMs);
+            Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
+            Resp->SetNumberField(TEXT("gpuMs"), GPUFrameMs);
+            Resp->SetNumberField(TEXT("deltaSeconds"), DeltaSeconds);
             Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("message"), TEXT("Performance stats placeholder - implement with actual metrics"));
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Performance stats retrieved"), Resp, FString());
             return true;
@@ -1618,8 +1694,18 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         // ---------------------------------------------------------------------
         else if (LowerSubAction.Equals(TEXT("get_memory_stats")))
         {
+            const FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
+            const FPlatformMemoryConstants& MemConstants = FPlatformMemory::GetConstants();
+
+            Resp->SetNumberField(TEXT("usedPhysicalMB"),   (double)MemStats.UsedPhysical   / (1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("peakUsedPhysicalMB"),(double)MemStats.PeakUsedPhysical/ (1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("availablePhysicalMB"),(double)MemStats.AvailablePhysical/(1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("usedVirtualMB"),    (double)MemStats.UsedVirtual    / (1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("peakUsedVirtualMB"),(double)MemStats.PeakUsedVirtual/ (1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("availableVirtualMB"),(double)MemStats.AvailableVirtual/(1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("totalPhysicalMB"),  (double)MemConstants.TotalPhysical/(1024.0 * 1024.0));
+            Resp->SetNumberField(TEXT("totalVirtualMB"),   (double)MemConstants.TotalVirtual /(1024.0 * 1024.0));
             Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("message"), TEXT("Memory stats placeholder - implement with actual metrics"));
             SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Memory stats retrieved"), Resp, FString());
             return true;
@@ -1754,13 +1840,6 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
                                     TEXT("INVALID_ARGUMENT"));
             }
             return true;
-        }
-        // ---------------------------------------------------------------------
-        // inspect_cdo - delegated to HandleInspectCdoAction (PropertyHandlers)
-        // ---------------------------------------------------------------------
-        else if (LowerSubAction.Equals(TEXT("inspect_cdo")))
-        {
-            return HandleInspectCdoAction(RequestId, Payload, RequestingSocket);
         }
 
         // Fallback for unimplemented global actions
