@@ -106,9 +106,48 @@ namespace
     }
 }
 
-// Forward declaration — defined later in this file (used by HandleInspectCdoAction).
 // Finds a component by name: first on CDO (native), then SCS templates (BP-added).
-UActorComponent* FindCdoComponent(UBlueprint* Blueprint, UObject* CDO, const FString& ComponentName);
+// Used by set/get_object_property (blueprintPath CDO support) and HandleInspectCdoAction.
+#if WITH_EDITOR
+static UActorComponent* FindCdoComponent(
+    UBlueprint* Blueprint,
+    UObject* CDO,
+    const FString& ComponentName)
+{
+    // Search native CDO components first (effective overrides)
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    {
+        TInlineComponentArray<UActorComponent*> Components;
+        DefaultActor->GetComponents(Components);
+        for (UActorComponent* Comp : Components)
+        {
+            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
+            {
+                return Comp;
+            }
+        }
+    }
+
+    // Search SCS node templates (BP-added components)
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (Node && Node->ComponentTemplate &&
+                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+                {
+                    return Node->ComponentTemplate;
+                }
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+    return nullptr;
+}
+#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
@@ -2959,46 +2998,6 @@ TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
         Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
     }
     return SourceMap;
-}
-
-// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
-UActorComponent* FindCdoComponent(
-    UBlueprint* Blueprint,
-    UObject* CDO,
-    const FString& ComponentName)
-{
-    // Search native CDO components first (effective overrides)
-    if (AActor* DefaultActor = Cast<AActor>(CDO))
-    {
-        TInlineComponentArray<UActorComponent*> Components;
-        DefaultActor->GetComponents(Components);
-        for (UActorComponent* Comp : Components)
-        {
-            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
-            {
-                return Comp;
-            }
-        }
-    }
-
-    // Search SCS node templates (BP-added components)
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
-    {
-        if (Bp->SimpleConstructionScript)
-        {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
-            {
-                if (Node && Node->ComponentTemplate &&
-                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
-                {
-                    return Node->ComponentTemplate;
-                }
-            }
-        }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
-    return nullptr;
 }
 
 } // anonymous namespace
