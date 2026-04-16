@@ -3553,9 +3553,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%s applied"), *SubAction));
+        FString ModeStr;
+        bool bIsRead = ResultJson->TryGetStringField(TEXT("mode"), ModeStr) && ModeStr == TEXT("read");
+        FString Msg = bIsRead
+            ? FString::Printf(TEXT("%s property read"), *SubAction)
+            : FString::Printf(TEXT("%s applied"), *SubAction);
+        ResultJson->SetStringField(TEXT("message"), Msg);
 
-        SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("%s applied"), *SubAction), ResultJson);
+        SendAutomationResponse(RequestingSocket, RequestId, true, Msg, ResultJson);
         return true;
     }
 

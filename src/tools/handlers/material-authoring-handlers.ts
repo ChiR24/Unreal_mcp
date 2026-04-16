@@ -45,9 +45,9 @@ function normalizeAssetPath(p: string): string {
   if (normalized.startsWith('Game/')) {
     normalized = '/' + normalized;
   }
-  // Bare name with no slash → /Game/ prefix
+  // Bare name with no slash → /Game/ prefix; paths with slashes get leading / (custom mount points)
   if (!normalized.startsWith('/') && normalized.length > 0) {
-    normalized = '/Game/' + normalized;
+    normalized = normalized.includes('/') ? '/' + normalized : '/Game/' + normalized;
   }
   return normalized;
 }
@@ -1100,23 +1100,22 @@ export async function handleMaterialAuthoringTools(
         const code = extractOptionalString(params, 'code');
         const description = extractOptionalString(params, 'description');
         const outputType = extractOptionalString(params, 'outputType');
-        const hasUpdates =
-          code !== undefined ||
-          description !== undefined ||
-          outputType !== undefined ||
-          params.inputs !== undefined ||
-          params.additionalOutputs !== undefined;
-        if (!hasUpdates) {
+        const hasCode = code !== undefined && code !== null;
+        const hasDescription = description !== undefined && description !== null;
+        const hasOutputType = outputType !== undefined && outputType !== null;
+        const hasInputs = params.inputs != null;
+        const hasAdditionalOutputs = params.additionalOutputs != null;
+        if (!hasCode && !hasDescription && !hasOutputType && !hasInputs && !hasAdditionalOutputs) {
           return ResponseFactory.error(
             'manage_material_authoring.update_custom_expression: provide at least one field to update',
             'MISSING_UPDATE_FIELDS'
           );
         }
-        if (code !== undefined && code !== null) payload.code = code;
-        if (description !== undefined && description !== null) payload.description = description;
-        if (outputType !== undefined && outputType !== null) payload.outputType = outputType;
-        if (params.inputs) payload.inputs = params.inputs;
-        if (params.additionalOutputs) payload.additionalOutputs = params.additionalOutputs;
+        if (hasCode) payload.code = code;
+        if (hasDescription) payload.description = description;
+        if (hasOutputType) payload.outputType = outputType;
+        if (hasInputs) payload.inputs = params.inputs;
+        if (hasAdditionalOutputs) payload.additionalOutputs = params.additionalOutputs;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 

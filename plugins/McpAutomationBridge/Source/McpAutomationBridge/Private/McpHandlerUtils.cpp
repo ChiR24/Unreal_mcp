@@ -139,7 +139,7 @@ FString ValidateAssetPath(const FString& Path)
     {
         // Use engine validation for non-standard roots (plugin paths, etc.)
         FText Reason;
-        if (!FPackageName::IsValidLongPackageName(CleanPath, false, &Reason))
+        if (!FPackageName::IsValidLongPackageName(CleanPath, true, &Reason))
         {
             UE_LOG(LogTemp, Warning, TEXT("ValidateAssetPath: Rejected path without valid root: %s (%s)"),
                    *Path, *Reason.ToString());

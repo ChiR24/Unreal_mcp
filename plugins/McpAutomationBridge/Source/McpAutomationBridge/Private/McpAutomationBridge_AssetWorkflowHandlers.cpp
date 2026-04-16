@@ -4495,6 +4495,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
       else if (PinName == TEXT("OpacityMask")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, OpacityMask)); }
       else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion)); }
       else if (PinName == TEXT("SubsurfaceColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor)); }
+      else if (PinName == TEXT("WorldPositionOffset")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset)); }
 #endif
       if (bFound) {
         FinalizeHost(Material, Function);
@@ -4769,7 +4770,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     TArray<TSharedPtr<FJsonValue>> FuncInputs;
     for (int32 fi = 0; fi < FuncCall->FunctionInputs.Num(); ++fi) {
       TSharedPtr<FJsonObject> FIObj = McpHandlerUtils::CreateResultObject();
-      FIObj->SetStringField(TEXT("inputName"), FuncCall->FunctionInputs[fi].ExpressionInput->InputName.ToString());
+      const UMaterialExpressionFunctionInput* FuncInputExpr = FuncCall->FunctionInputs[fi].ExpressionInput;
+      FIObj->SetStringField(TEXT("inputName"), FuncInputExpr ? FuncInputExpr->InputName.ToString() : FString());
       FIObj->SetNumberField(TEXT("index"), fi);
       FIObj->SetBoolField(TEXT("isConnected"), FuncCall->FunctionInputs[fi].Input.Expression != nullptr);
       if (FuncCall->FunctionInputs[fi].Input.Expression) {
@@ -4784,7 +4786,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     TArray<TSharedPtr<FJsonValue>> FuncOutputs;
     for (int32 fo = 0; fo < FuncCall->FunctionOutputs.Num(); ++fo) {
       TSharedPtr<FJsonObject> FOObj = McpHandlerUtils::CreateResultObject();
-      FOObj->SetStringField(TEXT("outputName"), FuncCall->FunctionOutputs[fo].ExpressionOutput->OutputName.ToString());
+      const UMaterialExpressionFunctionOutput* FuncOutputExpr = FuncCall->FunctionOutputs[fo].ExpressionOutput;
+      FOObj->SetStringField(TEXT("outputName"), FuncOutputExpr ? FuncOutputExpr->OutputName.ToString() : FString());
       FOObj->SetNumberField(TEXT("index"), fo);
       FuncOutputs.Add(MakeShared<FJsonValueObject>(FOObj));
     }
@@ -5204,7 +5207,10 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
   Host->PreEditChange(nullptr);
   Host->PostEditChange();
 
-  McpSafeAssetSave(Host);
+  if (!McpSafeAssetSave(Host)) {
+    SendAutomationError(Socket, RequestId, TEXT("Failed to save rebuilt material"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Result, Material);

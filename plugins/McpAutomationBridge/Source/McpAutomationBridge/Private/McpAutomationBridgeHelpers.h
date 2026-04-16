@@ -276,7 +276,7 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   // This catches paths like /etc/passwd or /invalid/path
   if (!bValidRoot) {
     // Validate against engine's registered mount points (covers all plugin
-    // content mounts like /EterniaCore/, /ShooterCore/, /ALS/, etc.)
+    // content mounts like /MyGameFeature/, /ShooterCore/, /ALS/, etc.)
     FText MountReason;
     if (!FPackageName::IsValidLongPackageName(CleanPath, true, &MountReason)) {
       UE_LOG(
@@ -464,7 +464,7 @@ static inline bool ValidateAssetCreationPath(
   
   // Ensure folder starts with a root mount point.
   // SanitizeProjectRelativePath already validated against registered mount
-  // points (including plugin content like /EterniaCore/), so only prepend
+  // points (including plugin content like /MyGameFeature/), so only prepend
   // /Game for paths that lack a leading slash (bare relative paths).
   if (!SanitizedFolder.StartsWith(TEXT("/"))) {
     SanitizedFolder = TEXT("/Game/") + SanitizedFolder;
