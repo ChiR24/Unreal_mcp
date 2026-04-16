@@ -1100,11 +1100,19 @@ export async function handleMaterialAuthoringTools(
         const code = extractOptionalString(params, 'code');
         const description = extractOptionalString(params, 'description');
         const outputType = extractOptionalString(params, 'outputType');
+        const inputs = (params as Record<string, unknown>).inputs;
+        const additionalOutputs = (params as Record<string, unknown>).additionalOutputs;
+        if (inputs != null && !Array.isArray(inputs)) {
+          return ResponseFactory.error('manage_material_authoring.update_custom_expression: inputs must be an array', 'INVALID_INPUTS');
+        }
+        if (additionalOutputs != null && !Array.isArray(additionalOutputs)) {
+          return ResponseFactory.error('manage_material_authoring.update_custom_expression: additionalOutputs must be an array', 'INVALID_OUTPUTS');
+        }
         const hasCode = code !== undefined && code !== null;
         const hasDescription = description !== undefined && description !== null;
         const hasOutputType = outputType !== undefined && outputType !== null;
-        const hasInputs = params.inputs != null;
-        const hasAdditionalOutputs = params.additionalOutputs != null;
+        const hasInputs = inputs != null;
+        const hasAdditionalOutputs = additionalOutputs != null;
         if (!hasCode && !hasDescription && !hasOutputType && !hasInputs && !hasAdditionalOutputs) {
           return ResponseFactory.error(
             'manage_material_authoring.update_custom_expression: provide at least one field to update',
@@ -1114,8 +1122,8 @@ export async function handleMaterialAuthoringTools(
         if (hasCode) payload.code = code;
         if (hasDescription) payload.description = description;
         if (hasOutputType) payload.outputType = outputType;
-        if (hasInputs) payload.inputs = params.inputs;
-        if (hasAdditionalOutputs) payload.additionalOutputs = params.additionalOutputs;
+        if (hasInputs) payload.inputs = inputs;
+        if (hasAdditionalOutputs) payload.additionalOutputs = additionalOutputs;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 

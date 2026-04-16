@@ -462,14 +462,6 @@ static inline bool ValidateAssetCreationPath(
     return false;
   }
   
-  // Ensure folder starts with a root mount point.
-  // SanitizeProjectRelativePath already validated against registered mount
-  // points (including plugin content like /MyGameFeature/), so only prepend
-  // /Game for paths that lack a leading slash (bare relative paths).
-  if (!SanitizedFolder.StartsWith(TEXT("/"))) {
-    SanitizedFolder = TEXT("/Game/") + SanitizedFolder;
-  }
-  
   // Sanitize asset name
   FString SanitizedName = SanitizeAssetName(AssetName);
   if (SanitizedName.IsEmpty()) {
