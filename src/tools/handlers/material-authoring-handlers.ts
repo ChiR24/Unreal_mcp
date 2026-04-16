@@ -1,7 +1,7 @@
 /**
  * Material Authoring Handlers for Phase 8
  *
- * Provides comprehensive material creation and shader authoring capabilities.
+ * Provides comprehensive material creation, shader authoring, and material function capabilities.
  */
 
 import { ITools } from '../../types/tool-interfaces.js';
