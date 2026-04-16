@@ -471,8 +471,42 @@ export async function handleMaterialAuthoringTools(
         const code = extractString(params, 'code');
         const outputType = extractOptionalString(params, 'outputType') ?? 'Float1';
         const description = extractOptionalString(params, 'description');
-        const inputs = params.inputs as Array<{name: string}> | undefined;
-        const additionalOutputs = params.additionalOutputs as Array<{name: string; type?: string}> | undefined;
+        const inputs = (params as Record<string, unknown>).inputs;
+        const additionalOutputs = (params as Record<string, unknown>).additionalOutputs;
+        if (inputs != null && !Array.isArray(inputs)) {
+          return ResponseFactory.error('manage_material_authoring.add_custom_expression: inputs must be an array', 'INVALID_INPUTS');
+        }
+        if (inputs != null && Array.isArray(inputs)) {
+          for (let i = 0; i < inputs.length; i++) {
+            const item = inputs[i] as Record<string, unknown>;
+            if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim()) {
+              return ResponseFactory.error(
+                `manage_material_authoring.add_custom_expression: inputs[${i}] must be an object with a non-empty string "name"`,
+                'INVALID_INPUTS'
+              );
+            }
+          }
+        }
+        if (additionalOutputs != null && !Array.isArray(additionalOutputs)) {
+          return ResponseFactory.error('manage_material_authoring.add_custom_expression: additionalOutputs must be an array', 'INVALID_OUTPUTS');
+        }
+        if (additionalOutputs != null && Array.isArray(additionalOutputs)) {
+          for (let i = 0; i < additionalOutputs.length; i++) {
+            const item = additionalOutputs[i] as Record<string, unknown>;
+            if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim()) {
+              return ResponseFactory.error(
+                `manage_material_authoring.add_custom_expression: additionalOutputs[${i}] must be an object with a non-empty string "name"`,
+                'INVALID_OUTPUTS'
+              );
+            }
+            if (item.type != null && typeof item.type !== 'string') {
+              return ResponseFactory.error(
+                `manage_material_authoring.add_custom_expression: additionalOutputs[${i}].type must be a string if provided`,
+                'INVALID_OUTPUTS'
+              );
+            }
+          }
+        }
         const x = extractOptionalNumber(params, 'x') ?? 0;
         const y = extractOptionalNumber(params, 'y') ?? 0;
 
@@ -485,10 +519,10 @@ export async function handleMaterialAuthoringTools(
           x,
           y,
         };
-        if (inputs && Array.isArray(inputs)) {
+        if (inputs != null) {
           payload.inputs = inputs;
         }
-        if (additionalOutputs && Array.isArray(additionalOutputs)) {
+        if (additionalOutputs != null) {
           payload.additionalOutputs = additionalOutputs;
         }
 
@@ -1055,7 +1089,14 @@ export async function handleMaterialAuthoringTools(
           return ResponseFactory.error('manage_material_authoring.delete_node: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
         const nodeId = extractOptionalString(rawArgs, 'nodeId');
-        const nodeIds = Array.isArray(rawArgs.nodeIds) ? rawArgs.nodeIds as string[] : undefined;
+        const nodeIdsRaw = Array.isArray(rawArgs.nodeIds) ? rawArgs.nodeIds : undefined;
+        const nodeIds = nodeIdsRaw?.filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+        if (nodeIdsRaw && (!nodeIds || nodeIds.length !== nodeIdsRaw.length)) {
+          return ResponseFactory.error(
+            'manage_material_authoring.delete_node: nodeIds must be an array of non-empty strings',
+            'INVALID_NODE_IDS'
+          );
+        }
         if (!nodeId && (!nodeIds || nodeIds.length === 0)) {
           return ResponseFactory.error(
             'manage_material_authoring.delete_node: provide nodeId or a non-empty nodeIds array',
@@ -1105,8 +1146,36 @@ export async function handleMaterialAuthoringTools(
         if (inputs != null && !Array.isArray(inputs)) {
           return ResponseFactory.error('manage_material_authoring.update_custom_expression: inputs must be an array', 'INVALID_INPUTS');
         }
+        if (inputs != null && Array.isArray(inputs)) {
+          for (let i = 0; i < inputs.length; i++) {
+            const item = inputs[i] as Record<string, unknown>;
+            if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim()) {
+              return ResponseFactory.error(
+                `manage_material_authoring.update_custom_expression: inputs[${i}] must be an object with a non-empty string "name"`,
+                'INVALID_INPUTS'
+              );
+            }
+          }
+        }
         if (additionalOutputs != null && !Array.isArray(additionalOutputs)) {
           return ResponseFactory.error('manage_material_authoring.update_custom_expression: additionalOutputs must be an array', 'INVALID_OUTPUTS');
+        }
+        if (additionalOutputs != null && Array.isArray(additionalOutputs)) {
+          for (let i = 0; i < additionalOutputs.length; i++) {
+            const item = additionalOutputs[i] as Record<string, unknown>;
+            if (!item || typeof item !== 'object' || typeof item.name !== 'string' || !item.name.trim()) {
+              return ResponseFactory.error(
+                `manage_material_authoring.update_custom_expression: additionalOutputs[${i}] must be an object with a non-empty string "name"`,
+                'INVALID_OUTPUTS'
+              );
+            }
+            if (item.type != null && typeof item.type !== 'string') {
+              return ResponseFactory.error(
+                `manage_material_authoring.update_custom_expression: additionalOutputs[${i}].type must be a string if provided`,
+                'INVALID_OUTPUTS'
+              );
+            }
+          }
         }
         const hasCode = code !== undefined && code !== null;
         const hasDescription = description !== undefined && description !== null;
