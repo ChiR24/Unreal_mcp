@@ -299,8 +299,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           return true;
       }
       
-      // bHidden (visibility)
-      if (PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
+      // bHidden (visibility) — skip runtime setter for CDOs, let generic path handle it
+      if (!bIsClassDefaultObject && PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
       {
           bool bHidden = McpHandlerUtils::GetOptionalBool(Payload, TEXT("value"), false);
           if (ValueField->Type == EJson::Boolean)

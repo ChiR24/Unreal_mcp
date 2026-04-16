@@ -89,9 +89,9 @@ export async function handleMaterialAuthoringTools(
             { key: 'path', aliases: ['directory'], default: '/Game/Materials' },
           ]);
           name = extractString(params, 'name');
-          path = extractOptionalString(params, 'path') ?? '/Game/Materials';
+          path = normalizeAssetPath(extractOptionalString(params, 'path') ?? '/Game/Materials');
         }
-        
+
         const materialDomain = extractOptionalString(rawArgs, 'materialDomain') ?? 
                               extractOptionalString(rawArgs, 'domain') ?? 'Surface';
         const blendMode = extractOptionalString(rawArgs, 'blendMode') ?? 'Opaque';
@@ -727,7 +727,7 @@ export async function handleMaterialAuthoringTools(
             { key: 'parentMaterial', aliases: ['parent'], required: true },
           ]);
           name = extractString(params, 'name');
-          path = extractOptionalString(params, 'path') ?? '/Game/Materials';
+          path = normalizeAssetPath(extractOptionalString(params, 'path') ?? '/Game/Materials');
           parentMaterial = extractString(params, 'parentMaterial');
         }
         
