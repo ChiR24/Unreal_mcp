@@ -224,8 +224,12 @@ namespace WidgetAuthoringHelpers
     // Load widget blueprint - robust lookup for both in-memory and on-disk assets
     UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
     {
-        FString Path = WidgetPath;
-        
+        FString Path = SanitizeProjectRelativePath(WidgetPath);
+        if (Path.IsEmpty())
+        {
+            return nullptr;
+        }
+
         // Reject _C class paths
         if (Path.EndsWith(TEXT("_C")))
         {

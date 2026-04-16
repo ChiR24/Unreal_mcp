@@ -367,9 +367,16 @@ static USoundWave* ResolveSoundWaveAsset(const FString& SoundPath) {
   if (SoundPath.IsEmpty())
     return nullptr;
 
-  // Full path: load directly as USoundWave
-  if (SoundPath.Contains(TEXT("/")))
+  // Full path: try UEditorAssetLibrary first (handles package-style paths),
+  // then fall back to LoadObject (handles full object paths)
+  if (SoundPath.Contains(TEXT("/"))) {
+    if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
+      if (USoundWave* Wave = Cast<USoundWave>(UEditorAssetLibrary::LoadAsset(SoundPath))) {
+        return Wave;
+      }
+    }
     return LoadObject<USoundWave>(nullptr, *SoundPath);
+  }
 
   // Simple name: search asset registry for USoundWave only
   const FString AssetName = FPaths::GetBaseFilename(SoundPath);
@@ -2323,8 +2330,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
   USoundWave *SoundWave = ResolveSoundWaveAsset(SoundPath);
   if (!SoundWave) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("soundPath must reference a SoundWave, not a SoundCue or other sound type"),
-                        TEXT("INVALID_ARGUMENT"));
+                        FString::Printf(TEXT("SoundWave not found at '%s'. Ensure the path points to a SoundWave asset (not a SoundCue or other type)."), *SoundPath),
+                        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 

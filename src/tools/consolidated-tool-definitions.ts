@@ -1512,7 +1512,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
         },
         description: { type: 'string', description: 'Description for custom expression or function.' },
         sourceNodeId: commonSchemas.sourceNodeId,
-        sourcePin: { type: 'string', description: 'Source output pin index (numeric). Selects which output of a multi-output node to connect.' },
+        sourcePin: { type: 'string', description: 'Source output pin selector. Use either a numeric string (output index) or an output name for multi-output nodes.' },
         targetNodeId: commonSchemas.targetNodeId,
         targetPin: { type: 'string', description: 'Target pin name (input).' },
         nodeId: commonSchemas.nodeId,
