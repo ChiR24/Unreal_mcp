@@ -4001,11 +4001,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   }
 
   // Add to host expression collection
-  auto& Expressions = GetHostExpressions(Material, Function);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   if (Material) Material->GetEditorOnlyData()->ExpressionCollection.AddExpression(NewExpression);
   else Function->GetEditorOnlyData()->ExpressionCollection.AddExpression(NewExpression);
 #else
+  auto& Expressions = GetHostExpressions(Material, Function);
   Expressions.Add(NewExpression);
 #endif
 
@@ -4015,7 +4015,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   if (Function) { Function->MarkPackageDirty(); }
 
   // Get the expression index for reference
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  int32 ExpressionIndex = Material
+    ? Material->GetEditorOnlyData()->ExpressionCollection.Expressions.IndexOfByKey(NewExpression)
+    : Function->GetEditorOnlyData()->ExpressionCollection.Expressions.IndexOfByKey(NewExpression);
+#else
   int32 ExpressionIndex = Expressions.IndexOfByKey(NewExpression);
+#endif
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("materialPath"), MaterialPath);
@@ -4348,7 +4354,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   }
 
   FString RemovedName = ExpressionToRemove->GetName();
-  FString RemovedGuid = ExpressionToRemove->GetName();
+  FString RemovedStableName = ExpressionToRemove->GetName();
 
   // Remove the expression from the appropriate container
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -4365,7 +4371,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), RemovedGuid);
+  Resp->SetStringField(TEXT("nodeId"), RemovedStableName);
   Resp->SetStringField(TEXT("removedName"), RemovedName);
   Resp->SetNumberField(TEXT("remainingExpressions"), Expressions.Num());
   Resp->SetBoolField(TEXT("removed"), true);
@@ -5073,198 +5079,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
 #else
   SendAutomationResponse(Socket, RequestId, false,
                          TEXT("analyze_graph requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
-}
-
-// ============================================================================
-// GET ASSET GRAPH
-// ============================================================================
-
-bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
-    const FString &RequestId, const FString &Action,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("get_asset_graph"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("get_asset_graph payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString AssetPath;
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
-      !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("assetPath is required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  if (AssetPath.IsEmpty()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("assetPath cannot be empty"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  // Load the asset
-  UObject *Asset = LoadObject<UObject>(nullptr, *AssetPath);
-  if (!Asset) {
-    SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
-                        TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Result, Asset);
-  Result->SetStringField(TEXT("assetPath"), AssetPath);
-  Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
-
-  // Check if it's a material
-  UMaterial *Material = Cast<UMaterial>(Asset);
-  if (Material) {
-    TArray<TSharedPtr<FJsonValue>> NodeList;
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-        Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-    const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
-
-    // Build node list with connections
-    TMap<UMaterialExpression*, int32> NodeIndexMap;
-    for (int32 i = 0; i < Expressions.Num(); ++i) {
-      NodeIndexMap.Add(Expressions[i], i);
-    }
-
-    for (int32 i = 0; i < Expressions.Num(); ++i) {
-      UMaterialExpression *Expr = Expressions[i];
-      if (!Expr) continue;
-
-      TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
-      NodeObj->SetNumberField(TEXT("index"), i);
-      NodeObj->SetStringField(TEXT("nodeId"), Expr->GetName());
-      NodeObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
-      NodeObj->SetStringField(TEXT("name"), Expr->GetName());
-      NodeObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
-      NodeObj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
-
-      // Add inputs with connections
-      TArray<TSharedPtr<FJsonValue>> InputsArray;
-      for (FProperty *Property = Expr->GetClass()->PropertyLink; Property;
-           Property = Property->PropertyLinkNext) {
-        if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
-          if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
-            FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-            TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
-            InputObj->SetStringField(TEXT("name"), Property->GetName());
-            InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
-            if (Input->Expression) {
-              int32 *ConnectedIndex = NodeIndexMap.Find(Input->Expression);
-              if (ConnectedIndex) {
-                InputObj->SetNumberField(TEXT("connectedToIndex"), *ConnectedIndex);
-              }
-              InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->GetName());
-              InputObj->SetStringField(TEXT("connectedToName"), Input->Expression->GetName());
-            }
-            InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
-          }
-        }
-      }
-      NodeObj->SetArrayField(TEXT("inputs"), InputsArray);
-
-      // Add parameter info if applicable
-      if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-        NodeObj->SetStringField(TEXT("parameterName"), Param->ParameterName.ToString());
-      }
-
-      NodeList.Add(MakeShared<FJsonValueObject>(NodeObj));
-    }
-
-    Result->SetStringField(TEXT("graphType"), TEXT("Material"));
-    Result->SetNumberField(TEXT("nodeCount"), Expressions.Num());
-    Result->SetArrayField(TEXT("nodes"), NodeList);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material graph retrieved"), Result, FString());
-    return true;
-  }
-
-  // Check if it's a blueprint
-  UBlueprint *Blueprint = Cast<UBlueprint>(Asset);
-  if (Blueprint) {
-    TArray<UEdGraph *> AllGraphs;
-    Blueprint->GetAllGraphs(AllGraphs);
-
-    TArray<TSharedPtr<FJsonValue>> GraphList;
-
-    for (UEdGraph *Graph : AllGraphs) {
-      if (!Graph) continue;
-
-      TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
-      GraphObj->SetStringField(TEXT("name"), Graph->GetName());
-      GraphObj->SetStringField(TEXT("graphType"), Graph->GetClass()->GetName());
-
-      TArray<TSharedPtr<FJsonValue>> NodeArray;
-      for (UEdGraphNode *Node : Graph->Nodes) {
-        if (!Node) continue;
-
-        TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
-        NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
-        NodeObj->SetStringField(TEXT("title"), Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
-        NodeObj->SetNumberField(TEXT("x"), Node->NodePosX);
-        NodeObj->SetNumberField(TEXT("y"), Node->NodePosY);
-        NodeObj->SetBoolField(TEXT("isDeprecated"), Node->IsDeprecated());
-
-        // Get pins
-        TArray<TSharedPtr<FJsonValue>> PinArray;
-        for (UEdGraphPin *Pin : Node->Pins) {
-          if (!Pin) continue;
-          TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
-          PinObj->SetStringField(TEXT("name"), Pin->PinName.ToString());
-          PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"));
-          PinObj->SetStringField(TEXT("type"), Pin->PinType.PinCategory.ToString());
-          PinObj->SetBoolField(TEXT("isConnected"), Pin->LinkedTo.Num() > 0);
-          PinArray.Add(MakeShared<FJsonValueObject>(PinObj));
-        }
-        NodeObj->SetArrayField(TEXT("pins"), PinArray);
-
-        NodeArray.Add(MakeShared<FJsonValueObject>(NodeObj));
-      }
-      GraphObj->SetArrayField(TEXT("nodes"), NodeArray);
-      GraphObj->SetNumberField(TEXT("nodeCount"), Graph->Nodes.Num());
-
-      GraphList.Add(MakeShared<FJsonValueObject>(GraphObj));
-    }
-
-    Result->SetStringField(TEXT("graphType"), TEXT("Blueprint"));
-    Result->SetNumberField(TEXT("graphCount"), AllGraphs.Num());
-    Result->SetArrayField(TEXT("graphs"), GraphList);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Blueprint graph retrieved"), Result, FString());
-    return true;
-  }
-
-  Result->SetStringField(TEXT("graphType"), TEXT("None"));
-  Result->SetStringField(TEXT("message"), TEXT("Asset does not have a graph structure"));
-
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("No graph for this asset type"), Result, FString());
-  return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("get_asset_graph requires editor build"),
                          nullptr, TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif

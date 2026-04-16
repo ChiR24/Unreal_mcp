@@ -1353,7 +1353,7 @@ export async function handleMaterialAuthoringTools(
 
       default:
         return ResponseFactory.error(
-          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, connect_nodes, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info`,
+          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, connect_nodes, disconnect_nodes, create_material_function, add_function_input, add_function_output, use_material_function, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info, find_node, get_node_connections, get_node_properties, set_static_switch_parameter_value, delete_node, update_custom_expression, get_node_chain, get_connected_subgraph, get_material_function_info, add_material_node, set_material_parameter, get_node_details, remove_node, set_two_sided, set_cast_shadows`,
           'UNKNOWN_ACTION'
         );
     }
