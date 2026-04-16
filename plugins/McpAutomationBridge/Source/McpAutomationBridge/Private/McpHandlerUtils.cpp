@@ -137,10 +137,10 @@ FString ValidateAssetPath(const FString& Path)
 
     if (!bValidRoot)
     {
-        // Check for plugin-like paths (e.g., /MyPlugin/Content/Asset)
+        // Check for plugin-like paths (e.g., /MyPlugin/MyAsset or /MyPlugin/Content/Asset)
         TArray<FString> Segments;
         CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-        const bool bLooksLikePluginPath = Segments.Num() >= 3;
+        const bool bLooksLikePluginPath = Segments.Num() >= 2;
         
         if (!bLooksLikePluginPath)
         {

@@ -3077,8 +3077,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     if (Material) {
       UMaterialEditingLibrary::LayoutMaterialExpressions(Material);
       UMaterialEditingLibrary::RecompileMaterial(Material);
+      Material->MarkPackageDirty();
+    } else {
+      FinalizeHost(nullptr, Function);
     }
-    FinalizeHost(Material, Function);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -4007,7 +4009,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Expressions.Add(NewExpression);
 #endif
 
-  FinalizeHost(Material, Function);
+  // Only mark dirty — skip PostEditChange to avoid shader recompile per node.
+  // Users batch-add nodes and compile once via compile_material.
+  if (Material) { Material->MarkPackageDirty(); }
+  if (Function) { Function->MarkPackageDirty(); }
 
   // Get the expression index for reference
   int32 ExpressionIndex = Expressions.IndexOfByKey(NewExpression);

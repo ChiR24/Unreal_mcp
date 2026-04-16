@@ -3414,7 +3414,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             FString Value;
             bool bHasValueField = Payload->HasField(TEXT("value"));
 
-            // Extract value from JSON — handle string, number, and bool types
+            // Extract value from JSON — handle string, number, bool, object, and array types
             if (bHasValueField)
             {
                 const TSharedPtr<FJsonValue> ValField = Payload->TryGetField(TEXT("value"));
@@ -3431,6 +3431,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                     else if (ValField->Type == EJson::Boolean)
                     {
                         Value = ValField->AsBool() ? TEXT("True") : TEXT("False");
+                    }
+                    else if (ValField->Type == EJson::Object || ValField->Type == EJson::Array)
+                    {
+                        // Serialize JSON object/array to string for ImportText (struct-backed properties)
+                        FString JsonStr;
+                        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonStr);
+                        FJsonSerializer::Serialize(ValField, TEXT(""), Writer);
+                        Value = JsonStr;
+                    }
+                    else if (ValField->Type == EJson::Null)
+                    {
+                        SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Null JSON value is not supported for property mutation"), TEXT("UNSUPPORTED_VALUE_TYPE"));
+                        return true;
                     }
                 }
             }
@@ -5179,7 +5193,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI/Menus"); }
 
         FString FullPath = Folder / Name;
@@ -5280,7 +5299,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_LoadingScreen"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
@@ -5675,7 +5699,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Inventory"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 GridColumns = GetJsonIntField(Payload, TEXT("columns"), 6);
         int32 GridRows = GetJsonIntField(Payload, TEXT("rows"), 4);
@@ -5773,7 +5802,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_DialogBox"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
@@ -5875,7 +5909,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_RadialMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 SegmentCount = GetJsonIntField(Payload, TEXT("segments"), 8);
 
@@ -6873,7 +6912,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
 
         FString FullPath = Folder / Name;
@@ -6960,7 +7004,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Shop"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
+        if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Invalid folder path: path traversal or invalid characters detected"), TEXT("INVALID_PATH"));
+            return true;
+        }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 ItemColumns = GetJsonIntField(Payload, TEXT("columns"), 4);
 

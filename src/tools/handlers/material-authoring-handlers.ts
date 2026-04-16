@@ -967,7 +967,13 @@ export async function handleMaterialAuthoringTools(
         ]);
         const assetPath = extractString(params, 'assetPath');
         const parameterName = extractString(params, 'parameterName');
-        const value = params.value as boolean;
+        const value = extractOptionalBoolean(params, 'value');
+        if (value === undefined) {
+          return ResponseFactory.error(
+            'manage_material_authoring.set_static_switch_parameter_value: value must be a boolean',
+            'INVALID_VALUE'
+          );
+        }
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
@@ -992,14 +998,20 @@ export async function handleMaterialAuthoringTools(
           return ResponseFactory.error('Missing required argument: assetPath', 'MISSING_ASSET_PATH');
         }
         const nodeId = extractOptionalString(rawArgs, 'nodeId');
-        const nodeIds = rawArgs.nodeIds as string[] | undefined;
+        const nodeIds = Array.isArray(rawArgs.nodeIds) ? rawArgs.nodeIds as string[] : undefined;
+        if (!nodeId && (!nodeIds || nodeIds.length === 0)) {
+          return ResponseFactory.error(
+            'manage_material_authoring.delete_node: provide nodeId or a non-empty nodeIds array',
+            'MISSING_NODE_ID'
+          );
+        }
 
         const payload: Record<string, unknown> = {
           subAction: 'delete_node',
           assetPath,
         };
         if (nodeId) payload.nodeId = nodeId;
-        if (nodeIds && Array.isArray(nodeIds)) payload.nodeIds = nodeIds;
+        if (nodeIds && nodeIds.length > 0) payload.nodeIds = nodeIds;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, payload)) as AutomationResponse;
 

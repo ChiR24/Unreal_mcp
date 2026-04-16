@@ -1549,6 +1549,13 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
             parameters: commonSchemas.arrayOfObjects
           }
         },
+        functionInfo: { type: 'object', description: 'Material function details (inputs, outputs, expressions).' },
+        nodes: commonSchemas.arrayOfObjects,
+        connections: commonSchemas.arrayOfObjects,
+        properties: { type: 'object', description: 'Node property values.' },
+        nodeChain: commonSchemas.arrayOfObjects,
+        connectedSubgraph: commonSchemas.arrayOfObjects,
+        orphanNodes: commonSchemas.arrayOfObjects,
         error: commonSchemas.stringProp
       }
     }

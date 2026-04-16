@@ -128,9 +128,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   FString ParamError;
   // objectPath is optional when blueprintPath is provided
   Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+  ObjectPath.TrimStartAndEndInline();
 
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+  BlueprintPath.TrimStartAndEndInline();
 
   if (ObjectPath.IsEmpty() && BlueprintPath.IsEmpty())
   {

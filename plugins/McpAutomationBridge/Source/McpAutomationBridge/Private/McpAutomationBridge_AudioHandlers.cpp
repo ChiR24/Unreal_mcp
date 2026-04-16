@@ -1872,10 +1872,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
-     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
-     if (!FullPath.StartsWith(TEXT("/"))) {
-       FullPath = TEXT("/Game/") + FullPath;
+     PackagePath = SanitizeProjectRelativePath(PackagePath);
+     if (PackagePath.IsEmpty()) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Invalid path"), TEXT("INVALID_PATH"));
+       return true;
      }
+     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
 
      UPackage *Package = CreatePackage(*FullPath);
      if (!Package) {
@@ -2258,10 +2261,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     OutputPath = TEXT("/Game/Audio/Dialogues");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
-  if (!FullPath.StartsWith(TEXT("/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  OutputPath = SanitizeProjectRelativePath(OutputPath);
+  if (OutputPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2423,10 +2429,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   float LateGain = 1.26f;
   Payload->TryGetNumberField(TEXT("lateGain"), LateGain);
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  OutputPath = SanitizeProjectRelativePath(OutputPath);
+  if (OutputPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2493,10 +2502,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     OutputPath = TEXT("/Game/Audio/Effects");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
-  if (!FullPath.StartsWith(TEXT("/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  OutputPath = SanitizeProjectRelativePath(OutputPath);
+  if (OutputPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
@@ -2641,10 +2653,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     EffectType = TEXT("Reverb");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  OutputPath = SanitizeProjectRelativePath(OutputPath);
+  if (OutputPath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
 
   UPackage *Package = CreatePackage(*FullPath);
   if (!Package) {
