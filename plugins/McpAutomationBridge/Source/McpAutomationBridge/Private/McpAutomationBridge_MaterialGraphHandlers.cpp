@@ -326,7 +326,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             McpHandlerUtils::AddVerification(Result, Material);
-            Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+            Result->SetStringField(TEXT("nodeId"), NewExpr->GetName());
             Result->SetStringField(TEXT("nodeType"), ExpressionClass->GetName());
             SendAutomationResponse(Socket, RequestId, true, TEXT("Node added."), Result);
         }
@@ -365,7 +365,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
 
         if (TargetExpr)
         {
-            FString RemovedNodeId = TargetExpr->MaterialExpressionGuid.ToString();
+            FString RemovedNodeId = TargetExpr->GetName();
 
 #if WITH_EDITORONLY_DATA
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -735,7 +735,7 @@ bool UMcpAutomationBridgeSubsystem::HandleMaterialGraphAction(
             {
                 UMaterialExpression *Expr = AllExpressions[i];
                 TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-                NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+                NodeInfo->SetStringField(TEXT("nodeId"), Expr->GetName());
                 NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
                 NodeInfo->SetNumberField(TEXT("index"), i);
                 if (!Expr->Desc.IsEmpty())
@@ -888,7 +888,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialTextureSample(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Material);
-    Result->SetStringField(TEXT("nodeId"), TexSample->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), TexSample->GetName());
     Result->SetStringField(TEXT("texturePath"), Texture->GetPathName());
 
     SendAutomationResponse(Socket, RequestId, true,
@@ -1045,7 +1045,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialExpression(
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Material);
-    Result->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+    Result->SetStringField(TEXT("nodeId"), NewExpr->GetName());
     Result->SetStringField(TEXT("expressionClass"), ExpressionClass->GetName());
 
     SendAutomationResponse(Socket, RequestId, true,
@@ -1260,7 +1260,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialNodes(
 
         // Record created node
         TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-        NodeInfo->SetStringField(TEXT("nodeId"), NewExpr->MaterialExpressionGuid.ToString());
+        NodeInfo->SetStringField(TEXT("nodeId"), NewExpr->GetName());
         NodeInfo->SetStringField(TEXT("type"), ExpressionClass->GetName());
         CreatedNodes.Add(MakeShared<FJsonValueObject>(NodeInfo));
 

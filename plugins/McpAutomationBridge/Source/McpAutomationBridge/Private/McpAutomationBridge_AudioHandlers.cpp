@@ -232,6 +232,31 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpAudioHandlers, Log, All);
 // =============================================================================
 
 /**
+ * Sanitize a directory path and build a combined asset FullPath.
+ *
+ * Calls SanitizeProjectRelativePath on the directory, then again on the
+ * combined "directory/assetName" string. Returns true on success with
+ * OutDirectory and OutFullPath set; returns false if either sanitization
+ * rejects the path.
+ */
+static bool BuildSanitizedAssetPath(
+    const FString& InDirectory, const FString& AssetName,
+    FString& OutDirectory, FString& OutFullPath)
+{
+  // Reject empty or invalid UObject names
+  if (AssetName.IsEmpty()) return false;
+  if (!FName::IsValidXName(AssetName, INVALID_OBJECTNAME_CHARACTERS)) {
+    return false;
+  }
+
+  OutDirectory = SanitizeProjectRelativePath(InDirectory);
+  if (OutDirectory.IsEmpty()) return false;
+  OutFullPath = SanitizeProjectRelativePath(
+      FString::Printf(TEXT("%s/%s"), *OutDirectory, *AssetName));
+  return !OutFullPath.IsEmpty();
+}
+
+/**
  * Finds an actor by object path/name or by actor label/name within an optional world.
  *
  * Searches first for an exact object path or registered name, and if not found and a World is provided,
@@ -328,6 +353,55 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 
   UE_LOG(LogMcpAudioHandlers, Warning,
          TEXT("Sound asset '%s' not found."), *SoundPath);
+  return nullptr;
+}
+
+/**
+ * @brief Resolve a USoundWave specifically (not USoundCue or other USoundBase subclasses).
+ *
+ * Unlike ResolveSoundAsset which searches both USoundWave and USoundCue,
+ * this function only searches USoundWave assets, avoiding asset-order-dependent
+ * failures when a same-named SoundCue exists alongside the desired SoundWave.
+ */
+static USoundWave* ResolveSoundWaveAsset(const FString& SoundPath) {
+  if (SoundPath.IsEmpty())
+    return nullptr;
+
+  // Full path: try UEditorAssetLibrary first (handles package-style paths),
+  // then fall back to LoadObject (handles full object paths)
+  if (SoundPath.Contains(TEXT("/"))) {
+    if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
+      if (USoundWave* Wave = Cast<USoundWave>(UEditorAssetLibrary::LoadAsset(SoundPath))) {
+        return Wave;
+      }
+    }
+    return LoadObject<USoundWave>(nullptr, *SoundPath);
+  }
+
+  // Simple name: search asset registry for USoundWave only
+  const FString AssetName = FPaths::GetBaseFilename(SoundPath);
+  FAssetRegistryModule& AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+  TArray<FAssetData> AssetData;
+  FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  Filter.ClassPaths.Add(USoundWave::StaticClass()->GetClassPathName());
+#else
+  Filter.ClassNames.Add(USoundWave::StaticClass()->GetFName());
+#endif
+  Filter.bRecursivePaths = true;
+  Filter.PackagePaths.Add(TEXT("/Game"));
+  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
+
+  for (const FAssetData& Data : AssetData) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+      return Cast<USoundWave>(Data.GetAsset());
+    }
+  }
+
+  UE_LOG(LogMcpAudioHandlers, Warning,
+         TEXT("SoundWave asset '%s' not found."), *SoundPath);
   return nullptr;
 }
 
@@ -1872,9 +1946,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
-     FString FullPath = FString::Printf(TEXT("%s/%s"), *PackagePath, *Name);
-     if (!FullPath.StartsWith(TEXT("/Game/"))) {
-       FullPath = TEXT("/Game/") + FullPath;
+     FString FullPath;
+     if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath)) {
+       SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Invalid path"), TEXT("INVALID_PATH"));
+       return true;
      }
 
      UPackage *Package = CreatePackage(*FullPath);
@@ -1907,6 +1983,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      }
 
      if (bSave) {
+       if (!McpSafeAssetSave(Atten)) {
+         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound attenuation asset"), TEXT("SAVE_FAILED"));
+         return true;
+       }
+     } else {
        Atten->MarkPackageDirty();
        FAssetRegistryModule::AssetCreated(Atten);
      }
@@ -2173,11 +2254,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
                     : EGrammaticalNumber::Singular;
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *VoiceName);
-  FString PackageName = FullPath;
-  if (!PackageName.StartsWith(TEXT("/Game/"))) {
-    PackageName = TEXT("/Game/") + PackageName;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, VoiceName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString PackageName = FullPath;
 
   UPackage *Package = CreatePackage(*PackageName);
   if (!Package) {
@@ -2197,8 +2280,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
   NewVoice->Gender = Gender;
   NewVoice->Plurality = Plurality;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(NewVoice);
+  if (!McpSafeAssetSave(NewVoice)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue voice asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("voicePath"), NewVoice->GetPathName());
@@ -2245,10 +2330,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  USoundBase *Sound = ResolveSoundAsset(SoundPath);
-  if (!Sound) {
+  USoundWave *SoundWave = ResolveSoundWaveAsset(SoundPath);
+  if (!SoundWave) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Sound asset not found"), TEXT("ASSET_NOT_FOUND"));
+                        FString::Printf(TEXT("SoundWave not found at '%s'. Ensure the path points to a SoundWave asset (not a SoundCue or other type)."), *SoundPath),
+                        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
@@ -2258,9 +2344,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     OutputPath = TEXT("/Game/Audio/Dialogues");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, WaveName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2277,14 +2365,15 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  // UE 5.7: DialogueVoice renamed to Speaker, SoundWave needs explicit cast from USoundBase
   FDialogueContextMapping Context;
   Context.Context.Speaker = nullptr;
-  Context.SoundWave = Cast<USoundWave>(Sound);
+  Context.SoundWave = SoundWave;
   DialogueWave->ContextMappings.Add(Context);
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(DialogueWave);
+  if (!McpSafeAssetSave(DialogueWave)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue wave asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
@@ -2423,9 +2512,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   float LateGain = 1.26f;
   Payload->TryGetNumberField(TEXT("lateGain"), LateGain);
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2451,8 +2542,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   ReverbEffect->ReflectionsGain = ReflectionsGain;
   ReverbEffect->LateGain = LateGain;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(ReverbEffect);
+  if (!McpSafeAssetSave(ReverbEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save reverb effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), ReverbEffect->GetPathName());
@@ -2493,9 +2586,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     OutputPath = TEXT("/Game/Audio/Effects");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, ChainName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2512,8 +2607,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(Chain);
+  if (!McpSafeAssetSave(Chain)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save source effect chain asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
@@ -2641,9 +2738,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     EffectType = TEXT("Reverb");
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName);
-  if (!FullPath.StartsWith(TEXT("/Game/"))) {
-    FullPath = TEXT("/Game/") + FullPath;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
 
   UPackage *Package = CreatePackage(*FullPath);
@@ -2660,8 +2759,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(SubmixEffect);
+  if (!McpSafeAssetSave(SubmixEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save submix effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), SubmixEffect->GetPathName());

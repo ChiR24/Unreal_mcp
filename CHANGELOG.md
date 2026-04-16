@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Material Function support** for `manage_material_authoring` – `get_material_info`, `add_material_node`, `get_material_node_details`, and `use_material_function` now accept `UMaterialFunction` paths in addition to `UMaterial`. Added new `get_material_function_info` sub-action that returns function inputs (name, `EFunctionInputType`, preview/default values, sort priority) and outputs. `use_material_function` now supports MF-in-MF calls (placing a function call inside another material function). Includes `MCP_GET_FUNCTION_EXPRESSIONS` version-compat macro for UE 5.0–5.7+.
+
 - **`inspect_cdo` sub-action** for the `inspect` tool – inspect any Blueprint's Class Default Object without spawning an actor. Reads CDO property values via reflection. For Actor BPs, enumerates all components: native CDO components with effective override values, plus Blueprint SCS components from node templates (full parent chain). Includes parent attachment info for SCS components. Source classified as Native, SCS, or SCS_Inherited. Key fields (mesh, animClass, transform) included in summary; full property export via detailed or propertyNames filter.
+
+### Fixed
+
+- **Game Feature Plugin path validation** – `SanitizeProjectRelativePath` now uses `FPackageName::IsValidLongPackageName` instead of a manual `/Content/` heuristic, correctly recognizing all registered engine mount points (game feature plugins like `/MyGameFeature/`, `/ShooterCore/`, `/ALS/`, etc.).
 
 ---
 

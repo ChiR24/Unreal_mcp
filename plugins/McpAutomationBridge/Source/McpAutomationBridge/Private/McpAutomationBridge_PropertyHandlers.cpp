@@ -106,6 +106,49 @@ namespace
     }
 }
 
+// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
+// Used by set/get_object_property (blueprintPath CDO support) and HandleInspectCdoAction.
+#if WITH_EDITOR
+static UActorComponent* FindCdoComponent(
+    UBlueprint* Blueprint,
+    UObject* CDO,
+    const FString& ComponentName)
+{
+    // Search native CDO components first (effective overrides)
+    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    {
+        TInlineComponentArray<UActorComponent*> Components;
+        DefaultActor->GetComponents(Components);
+        for (UActorComponent* Comp : Components)
+        {
+            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
+            {
+                return Comp;
+            }
+        }
+    }
+
+    // Search SCS node templates (BP-added components)
+    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    {
+        if (Bp->SimpleConstructionScript)
+        {
+            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            {
+                if (Node && Node->ComponentTemplate &&
+                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
+                {
+                    return Node->ComponentTemplate;
+                }
+            }
+        }
+        UClass* ParentClass = Bp->ParentClass;
+        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+    }
+    return nullptr;
+}
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -115,12 +158,30 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       !LowerAction.Contains(TEXT("set_object_property")))
     return false;
 
+  if (!Payload.IsValid())
+  {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("set_object_property payload missing."),
+          TEXT("INVALID_PAYLOAD"));
+      return true;
+  }
+
   // --- Parameter Validation (using McpHandlerUtils patterns) ---
   FString ObjectPath;
   FString ParamError;
-  if (!McpHandlerUtils::TryGetRequiredString(Payload, TEXT("objectPath"), ObjectPath, ParamError))
+  // objectPath is optional when blueprintPath is provided
+  Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+  ObjectPath.TrimStartAndEndInline();
+
+  FString BlueprintPath;
+  Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+  BlueprintPath.TrimStartAndEndInline();
+
+  if (ObjectPath.IsEmpty() && BlueprintPath.IsEmpty())
   {
-      SendAutomationError(RequestingSocket, RequestId, ParamError, TEXT("INVALID_OBJECT"));
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Either objectPath or blueprintPath is required."),
+          TEXT("INVALID_OBJECT"));
       return true;
   }
 
@@ -139,28 +200,79 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       return true;
   }
 
-  // --- Object Resolution (using helper) ---
-  FString ResolvedPath;
-  UObject* RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
-  if (!RootObject)
+  // --- Object Resolution ---
+  UObject* RootObject = nullptr;
+  UBlueprint* ResolvedBlueprint = nullptr;  // Non-null when blueprintPath was used
+
+  // Priority 1: blueprintPath → load Blueprint → get CDO
+  if (!BlueprintPath.IsEmpty())
   {
-      SendAutomationError(RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
-          TEXT("OBJECT_NOT_FOUND"));
-      return true;
+      FString NormalizedPath, LoadError;
+      ResolvedBlueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+      if (!ResolvedBlueprint)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
+              TEXT("BLUEPRINT_NOT_FOUND"));
+          return true;
+      }
+
+      UClass* GeneratedClass = ResolvedBlueprint->GeneratedClass;
+      if (!GeneratedClass)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      RootObject = GeneratedClass->GetDefaultObject();
+      if (!RootObject)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Failed to get Class Default Object"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      ObjectPath = RootObject->GetPathName();
   }
-  
-  // Use resolved path for error messages
-  if (!ResolvedPath.IsEmpty())
+  else
   {
-      ObjectPath = ResolvedPath;
+      // Priority 2: objectPath → standard resolution
+      FString ResolvedPath;
+      RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
+      if (!RootObject)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
+              TEXT("OBJECT_NOT_FOUND"));
+          return true;
+      }
+      if (!ResolvedPath.IsEmpty())
+      {
+          ObjectPath = ResolvedPath;
+      }
   }
 
   // --- Special Actor Property Handling ---
   // Handle properties that require setter methods instead of direct property access
-  if (AActor *Actor = Cast<AActor>(RootObject)) {
-      // ActorLocation
-    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+  // CDOs don't support runtime setters — changes won't persist to Blueprint defaults
+  const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
+  if (AActor *Actor = Cast<AActor>(RootObject))
+  {
+    if (bIsClassDefaultObject &&
+        (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+         PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Cannot modify runtime transform on a Blueprint CDO. Edit defaults on the root component or SCS template instead."),
+          TEXT("CDO_TRANSFORM"));
+      return true;
+    }
+    if (!bIsClassDefaultObject &&
+        PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
           FVector NewLoc = FVector::ZeroVector;
           if (ValueField->Type == EJson::Object)
           {
@@ -231,8 +343,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           return true;
       }
       
-      // bHidden (visibility)
-      if (PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
+      // bHidden (visibility) — skip runtime setter for CDOs, let generic path handle it
+      if (!bIsClassDefaultObject && PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
       {
           bool bHidden = McpHandlerUtils::GetOptionalBool(Payload, TEXT("value"), false);
           if (ValueField->Type == EJson::Boolean)
@@ -253,13 +365,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
 
 
+  // --- SCS-template lookup for Blueprint-added components ---
+  // When blueprintPath was used and the property path is dot-notation (e.g.,
+  // "MyBPComponent.RelativeLocation"), try resolving the first segment as a
+  // BP-added component via FindCdoComponent before falling back to CDO resolution.
+  FString EffectivePropertyName = PropertyName;
+#if WITH_EDITOR
+  if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
+  {
+      FString ComponentSegment, RemainingPath;
+      PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
+      UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment);
+      if (CompTemplate)
+      {
+          RootObject = CompTemplate;
+          EffectivePropertyName = RemainingPath;
+          ObjectPath = CompTemplate->GetPathName();
+      }
+      // else: fall through — ResolveNestedPropertyPath may still find it on the CDO
+  }
+#endif
+
   void* TargetContainer = nullptr;
   FProperty* Property = nullptr;
 
-  if (PropertyName.Contains(TEXT("."))) {
+  if (EffectivePropertyName.Contains(TEXT("."))) {
       // Nested property path (e.g., "MyComponent.PropertyName")
       FString ResolveError;
-      Property = ResolveNestedPropertyPath(RootObject, PropertyName, TargetContainer, ResolveError);
+      Property = ResolveNestedPropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolveError);
       if (!Property || !TargetContainer) {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Failed to resolve nested property path '%s': %s"), *PropertyName, *ResolveError),
@@ -271,7 +404,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   {
       // Simple property name - look it up directly
       TargetContainer = RootObject;
-      Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
+      Property = RootObject->GetClass()->FindPropertyByName(*EffectivePropertyName);
       if (!Property) {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Property '%s' not found on object '%s'."), *PropertyName, *ObjectPath),
@@ -336,14 +469,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
+  // --- Parameter Validation ---
   FString ObjectPath;
-  if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) ||
-      ObjectPath.TrimStartAndEnd().IsEmpty()) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("get_object_property requires a non-empty objectPath."),
-        TEXT("INVALID_OBJECT"));
-    return true;
+  Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+  ObjectPath.TrimStartAndEndInline();
+
+  FString BlueprintPath;
+  Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+  BlueprintPath.TrimStartAndEndInline();
+
+  if (ObjectPath.IsEmpty() && BlueprintPath.IsEmpty())
+  {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Either objectPath or blueprintPath is required."),
+          TEXT("INVALID_OBJECT"));
+      return true;
   }
 
   FString PropertyName;
@@ -356,29 +496,76 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  // --- Object Resolution (using centralized helper) ---
-  FString ResolvedPath;
-  UObject* RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
-  if (!RootObject)
+  // --- Object Resolution ---
+  UObject* RootObject = nullptr;
+  UBlueprint* ResolvedBlueprint = nullptr;  // Non-null when blueprintPath was used
+
+  // Priority 1: blueprintPath → load Blueprint → get CDO
+  if (!BlueprintPath.IsEmpty())
   {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
-          TEXT("OBJECT_NOT_FOUND"));
-      return true;
+      FString NormalizedPath, LoadError;
+      ResolvedBlueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+      if (!ResolvedBlueprint)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
+              TEXT("BLUEPRINT_NOT_FOUND"));
+          return true;
+      }
+
+      UClass* GeneratedClass = ResolvedBlueprint->GeneratedClass;
+      if (!GeneratedClass)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      RootObject = GeneratedClass->GetDefaultObject();
+      if (!RootObject)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Failed to get Class Default Object"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      ObjectPath = RootObject->GetPathName();
   }
-  
-  // Use resolved path for error messages
-  if (!ResolvedPath.IsEmpty())
+  else
   {
-      ObjectPath = ResolvedPath;
+      // Priority 2: objectPath → standard resolution
+      FString ResolvedPath;
+      RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
+      if (!RootObject)
+      {
+          SendAutomationError(
+              RequestingSocket, RequestId,
+              FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
+              TEXT("OBJECT_NOT_FOUND"));
+          return true;
+      }
+      if (!ResolvedPath.IsEmpty())
+      {
+          ObjectPath = ResolvedPath;
+      }
   }
 
   // Special handling for common AActor properties that are actually functions
-  // or require setters
-  // or require setters
+  // or require setters — CDOs don't have valid runtime transform data
+  const bool bIsCDO = RootObject->HasAnyFlags(RF_ClassDefaultObject);
   if (AActor *Actor = Cast<AActor>(RootObject)) {
- if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
+    if (bIsCDO && (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+                   PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))) {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Cannot read runtime transform from a Blueprint CDO. Query the SCS template or a spawned instance instead."),
+          TEXT("CDO_TRANSFORM"));
+      return true;
+    }
+    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase)) {
       FVector Loc = Actor->GetActorLocation();
       TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
       ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
@@ -436,8 +623,24 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     }
   }
 
+  // --- SCS-template lookup for Blueprint-added components ---
+  FString EffectivePropertyName = PropertyName;
+#if WITH_EDITOR
+  if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
+  {
+      FString ComponentSegment, RemainingPath;
+      PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
+      UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment);
+      if (CompTemplate)
+      {
+          RootObject = CompTemplate;
+          EffectivePropertyName = RemainingPath;
+      }
+  }
+#endif
+
   // Support nested property paths (e.g., "MyComponent.PropertyName")
-  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, PropertyName);
+  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, EffectivePropertyName);
   if (!PropResult.IsValid())
   {
       SendAutomationError(
@@ -2801,46 +3004,6 @@ TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
     return SourceMap;
 }
 
-// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
-UActorComponent* FindCdoComponent(
-    UBlueprint* Blueprint,
-    UObject* CDO,
-    const FString& ComponentName)
-{
-    // Search native CDO components first (effective overrides)
-    if (AActor* DefaultActor = Cast<AActor>(CDO))
-    {
-        TInlineComponentArray<UActorComponent*> Components;
-        DefaultActor->GetComponents(Components);
-        for (UActorComponent* Comp : Components)
-        {
-            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
-            {
-                return Comp;
-            }
-        }
-    }
-
-    // Search SCS node templates (BP-added components)
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
-    {
-        if (Bp->SimpleConstructionScript)
-        {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
-            {
-                if (Node && Node->ComponentTemplate &&
-                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
-                {
-                    return Node->ComponentTemplate;
-                }
-            }
-        }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
-    return nullptr;
-}
-
 } // anonymous namespace
 #endif // WITH_EDITOR
 
@@ -2860,6 +3023,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
 
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    BlueprintPath.TrimStartAndEndInline();
     if (BlueprintPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -2901,6 +3065,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     // Parse optional params
     FString ComponentNameFilter;
     Payload->TryGetStringField(TEXT("componentName"), ComponentNameFilter);
+    ComponentNameFilter.TrimStartAndEndInline();
     bool bDetailed = false;
     Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
 
