@@ -243,10 +243,9 @@ static bool BuildSanitizedAssetPath(
     const FString& InDirectory, const FString& AssetName,
     FString& OutDirectory, FString& OutFullPath)
 {
-  // Reject empty or path-like asset names (slashes are invalid in UObject names)
-  if (AssetName.IsEmpty() ||
-      AssetName.Contains(TEXT("/")) ||
-      AssetName.Contains(TEXT("\\"))) {
+  // Reject empty or invalid UObject names
+  if (AssetName.IsEmpty()) return false;
+  if (!FName::IsValidXName(AssetName, INVALID_OBJECTNAME_CHARACTERS)) {
     return false;
   }
 
@@ -1935,9 +1934,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      }
 
      if (bSave) {
-       Atten->MarkPackageDirty();
-       FAssetRegistryModule::AssetCreated(Atten);
-       McpSafeAssetSave(Atten);
+       if (!McpSafeAssetSave(Atten)) {
+         SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound attenuation asset"), TEXT("SAVE_FAILED"));
+         return true;
+       }
      }
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -2228,9 +2228,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
   NewVoice->Gender = Gender;
   NewVoice->Plurality = Plurality;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(NewVoice);
-  McpSafeAssetSave(NewVoice);
+  if (!McpSafeAssetSave(NewVoice)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue voice asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("voicePath"), NewVoice->GetPathName());
@@ -2317,9 +2318,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
   Context.SoundWave = SoundWave;
   DialogueWave->ContextMappings.Add(Context);
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(DialogueWave);
-  McpSafeAssetSave(DialogueWave);
+  if (!McpSafeAssetSave(DialogueWave)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save dialogue wave asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
@@ -2488,9 +2490,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   ReverbEffect->ReflectionsGain = ReflectionsGain;
   ReverbEffect->LateGain = LateGain;
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(ReverbEffect);
-  McpSafeAssetSave(ReverbEffect);
+  if (!McpSafeAssetSave(ReverbEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save reverb effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), ReverbEffect->GetPathName());
@@ -2552,9 +2555,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(Chain);
-  McpSafeAssetSave(Chain);
+  if (!McpSafeAssetSave(Chain)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save source effect chain asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
@@ -2703,9 +2707,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     return true;
   }
 
-  Package->MarkPackageDirty();
-  FAssetRegistryModule::AssetCreated(SubmixEffect);
-  McpSafeAssetSave(SubmixEffect);
+  if (!McpSafeAssetSave(SubmixEffect)) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save submix effect asset"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), SubmixEffect->GetPathName());

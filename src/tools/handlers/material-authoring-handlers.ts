@@ -936,6 +936,10 @@ export async function handleMaterialAuthoringTools(
         const nodeType = extractOptionalString(params, 'nodeType');
         const name = extractOptionalString(params, 'name');
 
+        if (!nodeType && !name) {
+          return ResponseFactory.error('find_node requires at least one of nodeType or name', 'MISSING_SEARCH_CRITERIA');
+        }
+
         const payload: Record<string, unknown> = {
           subAction: 'find_node',
           assetPath,
@@ -1376,7 +1380,7 @@ export async function handleMaterialAuthoringTools(
 
       default:
         return ResponseFactory.error(
-          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, add_texture_sample, add_scalar_parameter, add_vector_parameter, add_math_node, connect_nodes, disconnect_nodes, create_material_function, add_function_input, add_function_output, use_material_function, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, compile_material, get_material_info, find_node, get_node_connections, get_node_properties, set_static_switch_parameter_value, delete_node, update_custom_expression, get_node_chain, get_connected_subgraph, get_material_function_info, add_material_node, set_material_parameter, get_node_details, remove_node, set_two_sided, set_cast_shadows`,
+          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, set_material_domain, add_texture_sample, add_texture_coordinate, add_scalar_parameter, add_vector_parameter, add_static_switch_parameter, add_math_node, add_custom_expression, connect_nodes, disconnect_nodes, create_material_function, add_function_input, add_function_output, use_material_function, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, create_landscape_material, create_decal_material, create_post_process_material, add_landscape_layer, configure_layer_blend, compile_material, get_material_info, find_node, get_node_connections, get_node_properties, set_static_switch_parameter_value, delete_node, update_custom_expression, get_node_chain, get_connected_subgraph, get_material_function_info, add_material_node, rebuild_material, set_material_parameter, get_material_node_details, remove_material_node, set_two_sided, set_cast_shadows`,
           'UNKNOWN_ACTION'
         );
     }

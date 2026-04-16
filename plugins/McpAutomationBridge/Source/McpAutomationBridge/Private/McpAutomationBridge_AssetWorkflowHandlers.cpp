@@ -92,6 +92,7 @@
 #include "Materials/MaterialFunctionInterface.h"
 #include "Materials/MaterialExpressionFunctionInput.h"
 #include "Materials/MaterialExpressionFunctionOutput.h"
+#include "Materials/MaterialExpressionMaterialFunctionCall.h"
 
 #if WITH_EDITOR
 
@@ -4483,16 +4484,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
     if (Material) {
       bool bFound = false;
 #if WITH_EDITORONLY_DATA
-      if (PinName == TEXT("BaseColor")) { MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("EmissiveColor")) { MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("Roughness")) { MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("Metallic")) { MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("Specular")) { MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("Normal")) { MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("Opacity")) { MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("OpacityMask")) { MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) { MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = nullptr; bFound = true; }
-      else if (PinName == TEXT("SubsurfaceColor")) { MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = nullptr; bFound = true; }
+      auto ClearMainPin = [&](FExpressionInput& Input) { Input.Expression = nullptr; Input.OutputIndex = 0; bFound = true; };
+      if (PinName == TEXT("BaseColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, BaseColor)); }
+      else if (PinName == TEXT("EmissiveColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor)); }
+      else if (PinName == TEXT("Roughness")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Roughness)); }
+      else if (PinName == TEXT("Metallic")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Metallic)); }
+      else if (PinName == TEXT("Specular")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Specular)); }
+      else if (PinName == TEXT("Normal")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Normal)); }
+      else if (PinName == TEXT("Opacity")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Opacity)); }
+      else if (PinName == TEXT("OpacityMask")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, OpacityMask)); }
+      else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion)); }
+      else if (PinName == TEXT("SubsurfaceColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor)); }
 #endif
       if (bFound) {
         FinalizeHost(Material, Function);
@@ -4510,7 +4512,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
       for (UMaterialExpression *Expr : Expressions) {
         if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
           if (PinName.IsEmpty() || Out->OutputName.ToString().Equals(PinName)) {
-            Out->A.Expression = nullptr; bCleared = true;
+            Out->A.Expression = nullptr; Out->A.OutputIndex = 0; bCleared = true;
             if (!PinName.IsEmpty()) break;
           }
         }
@@ -4551,7 +4553,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
       if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
         if (bSpecificInput && !Property->GetName().Equals(InputName, ESearchCase::IgnoreCase)) continue;
         FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpression);
-        if (Input && Input->Expression) { Input->Expression = nullptr; BrokenConnections++; if (bSpecificInput) break; }
+        if (Input && Input->Expression) { Input->Expression = nullptr; Input->OutputIndex = 0; BrokenConnections++; if (bSpecificInput) break; }
       }
     }
   }
@@ -4657,6 +4659,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
         NodeInfo->SetStringField(TEXT("parameterName"), Param->ParameterName.ToString());
       }
+      // Add function path for MaterialFunctionCall nodes
+      if (UMaterialExpressionMaterialFunctionCall *FuncCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
+        if (FuncCall->MaterialFunction) {
+          NodeInfo->SetStringField(TEXT("functionPath"), FuncCall->MaterialFunction->GetPathName());
+        }
+      }
+      // Add pin name for FunctionInput/Output expressions
+      if (UMaterialExpressionFunctionInput *FuncIn = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+        NodeInfo->SetStringField(TEXT("inputName"), FuncIn->InputName.ToString());
+      }
+      if (UMaterialExpressionFunctionOutput *FuncOut = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+        NodeInfo->SetStringField(TEXT("outputName"), FuncOut->OutputName.ToString());
+      }
       NodeList.Add(MakeShared<FJsonValueObject>(NodeInfo));
     }
     
@@ -4743,6 +4758,50 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     DefaultObj->SetNumberField(TEXT("b"), VectorParam->DefaultValue.B);
     DefaultObj->SetNumberField(TEXT("a"), VectorParam->DefaultValue.A);
     Resp->SetObjectField(TEXT("defaultValue"), DefaultObj);
+  }
+
+  // Expose function pin metadata for MaterialFunctionCall nodes
+  if (UMaterialExpressionMaterialFunctionCall *FuncCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expression)) {
+    if (FuncCall->MaterialFunction) {
+      Resp->SetStringField(TEXT("functionPath"), FuncCall->MaterialFunction->GetPathName());
+    }
+    // Emit function inputs
+    TArray<TSharedPtr<FJsonValue>> FuncInputs;
+    for (int32 fi = 0; fi < FuncCall->FunctionInputs.Num(); ++fi) {
+      TSharedPtr<FJsonObject> FIObj = McpHandlerUtils::CreateResultObject();
+      FIObj->SetStringField(TEXT("inputName"), FuncCall->FunctionInputs[fi].ExpressionInput->InputName.ToString());
+      FIObj->SetNumberField(TEXT("index"), fi);
+      FIObj->SetBoolField(TEXT("isConnected"), FuncCall->FunctionInputs[fi].Input.Expression != nullptr);
+      if (FuncCall->FunctionInputs[fi].Input.Expression) {
+        FIObj->SetStringField(TEXT("connectedToId"), FuncCall->FunctionInputs[fi].Input.Expression->GetName());
+        FIObj->SetNumberField(TEXT("outputIndex"), FuncCall->FunctionInputs[fi].Input.OutputIndex);
+      }
+      FuncInputs.Add(MakeShared<FJsonValueObject>(FIObj));
+    }
+    Resp->SetArrayField(TEXT("functionInputs"), FuncInputs);
+
+    // Emit function outputs
+    TArray<TSharedPtr<FJsonValue>> FuncOutputs;
+    for (int32 fo = 0; fo < FuncCall->FunctionOutputs.Num(); ++fo) {
+      TSharedPtr<FJsonObject> FOObj = McpHandlerUtils::CreateResultObject();
+      FOObj->SetStringField(TEXT("outputName"), FuncCall->FunctionOutputs[fo].ExpressionOutput->OutputName.ToString());
+      FOObj->SetNumberField(TEXT("index"), fo);
+      FuncOutputs.Add(MakeShared<FJsonValueObject>(FOObj));
+    }
+    Resp->SetArrayField(TEXT("functionOutputs"), FuncOutputs);
+  }
+
+  // Expose function input/output pin metadata for FunctionInput/Output expressions
+  if (UMaterialExpressionFunctionInput *FuncIn = Cast<UMaterialExpressionFunctionInput>(Expression)) {
+    Resp->SetStringField(TEXT("inputName"), FuncIn->InputName.ToString());
+  }
+  if (UMaterialExpressionFunctionOutput *FuncOut = Cast<UMaterialExpressionFunctionOutput>(Expression)) {
+    Resp->SetStringField(TEXT("outputName"), FuncOut->OutputName.ToString());
+    Resp->SetBoolField(TEXT("isConnected"), FuncOut->A.Expression != nullptr);
+    if (FuncOut->A.Expression) {
+      Resp->SetStringField(TEXT("connectedToId"), FuncOut->A.Expression->GetName());
+      Resp->SetNumberField(TEXT("sourceOutputIndex"), FuncOut->A.OutputIndex);
+    }
   }
 
   SendAutomationResponse(Socket, RequestId, true,
