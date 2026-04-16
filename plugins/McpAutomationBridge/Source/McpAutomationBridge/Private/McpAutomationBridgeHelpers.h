@@ -11,6 +11,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/OutputDevice.h"
 #include "Misc/Paths.h"
+#include "Misc/PackageName.h"
 #include "Misc/ScopeLock.h"
 #include "UObject/UnrealType.h"
 #include <type_traits>
@@ -2999,11 +3000,14 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
   // as it causes Editor hangs when called repeatedly in polling loops
   FString CheckPath = Req;
 
-  // Ensure path starts with /Game if it doesn't have a valid root
+  // Normalize paths without a known root — preserve valid plugin mount points
   if (!CheckPath.StartsWith(TEXT("/Game/")) &&
       !CheckPath.StartsWith(TEXT("/Engine/")) &&
       !CheckPath.StartsWith(TEXT("/Script/"))) {
-    if (CheckPath.StartsWith(TEXT("/"))) {
+    if (CheckPath.StartsWith(TEXT("/")) &&
+        FPackageName::IsValidLongPackageName(CheckPath, true)) {
+      // Valid registered mount point (e.g., /ShooterCore/BP_Widget) — keep as-is
+    } else if (CheckPath.StartsWith(TEXT("/"))) {
       CheckPath = TEXT("/Game") + CheckPath;
     } else {
       CheckPath = TEXT("/Game/") + CheckPath;

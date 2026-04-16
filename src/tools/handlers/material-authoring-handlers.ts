@@ -29,6 +29,7 @@ function parseMaterialPath(fullPath: string | undefined): { name: string; path: 
 }
 import { ResponseFactory } from '../../utils/response-factory.js';
 import { TOOL_ACTIONS } from '../../utils/action-constants.js';
+import { MATERIAL_AUTHORING_ACTIONS } from '../consolidated-tool-definitions.js';
 
 /** Normalize asset path: backslash→slash, /Content/→/Game/, bare names→/Game/ prefix */
 function normalizeAssetPath(p: string): string {
@@ -1242,6 +1243,12 @@ export async function handleMaterialAuthoringTools(
         }
         const nodeId = extractOptionalString(rawArgs, 'nodeId');
         const orphansOnly = extractOptionalBoolean(rawArgs, 'orphansOnly') ?? false;
+        if (!nodeId && !orphansOnly) {
+          return ResponseFactory.error(
+            'manage_material_authoring.get_connected_subgraph: provide nodeId or set orphansOnly=true',
+            'MISSING_NODE_ID'
+          );
+        }
 
         const payload: Record<string, unknown> = {
           subAction: 'get_connected_subgraph',
@@ -1456,7 +1463,7 @@ export async function handleMaterialAuthoringTools(
 
       default:
         return ResponseFactory.error(
-          `Unknown material authoring action: ${action}. Available actions: create_material, set_blend_mode, set_shading_model, set_material_domain, add_texture_sample, add_texture_coordinate, add_scalar_parameter, add_vector_parameter, add_static_switch_parameter, add_math_node, add_custom_expression, connect_nodes, disconnect_nodes, create_material_function, add_function_input, add_function_output, use_material_function, create_material_instance, set_scalar_parameter_value, set_vector_parameter_value, set_texture_parameter_value, create_landscape_material, create_decal_material, create_post_process_material, add_landscape_layer, configure_layer_blend, compile_material, get_material_info, find_node, get_node_connections, get_node_properties, set_static_switch_parameter_value, delete_node, update_custom_expression, get_node_chain, get_connected_subgraph, get_material_function_info, add_material_node, rebuild_material, set_material_parameter, get_material_node_details, remove_material_node, set_two_sided, set_cast_shadows`,
+          `Unknown material authoring action: ${action}. Available actions: ${MATERIAL_AUTHORING_ACTIONS.join(', ')}`,
           'UNKNOWN_ACTION'
         );
     }

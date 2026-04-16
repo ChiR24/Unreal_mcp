@@ -8,6 +8,29 @@ export interface ToolDefinition {
   [key: string]: unknown;
 }
 import { commonSchemas } from './tool-definition-utils.js';
+
+/** Canonical list of material authoring actions — single source of truth for schema and handler. */
+export const MATERIAL_AUTHORING_ACTIONS = [
+  'create_material', 'set_blend_mode', 'set_shading_model', 'set_material_domain',
+  'add_texture_sample', 'add_texture_coordinate', 'add_scalar_parameter', 'add_vector_parameter',
+  'add_static_switch_parameter', 'add_math_node', 'add_world_position', 'add_vertex_normal',
+  'add_pixel_depth', 'add_fresnel', 'add_reflection_vector', 'add_panner', 'add_rotator',
+  'add_noise', 'add_voronoi', 'add_if', 'add_switch', 'add_custom_expression',
+  'connect_nodes', 'connect_material_pins', 'disconnect_nodes', 'break_material_connections',
+  'create_material_function', 'add_function_input', 'add_function_output', 'use_material_function',
+  'get_material_function_info',
+  'create_material_instance', 'set_scalar_parameter_value', 'set_vector_parameter_value', 'set_texture_parameter_value',
+  'create_landscape_material', 'create_decal_material', 'create_post_process_material',
+  'add_landscape_layer', 'configure_layer_blend',
+  'compile_material', 'get_material_info',
+  'find_node', 'get_node_connections', 'get_node_properties', 'set_static_switch_parameter_value',
+  'delete_node', 'update_custom_expression',
+  'get_node_chain', 'get_connected_subgraph',
+  'add_material_node', 'rebuild_material', 'set_material_parameter',
+  'get_material_node_details', 'remove_material_node',
+  'set_two_sided', 'set_cast_shadows',
+] as const;
+
 /** All MCP tool definitions registered with the server, grouped by category. */
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
@@ -1438,24 +1461,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
       properties: {
         action: {
           type: 'string',
-          enum: [
-            'create_material', 'set_blend_mode', 'set_shading_model', 'set_material_domain',
-            'add_texture_sample', 'add_texture_coordinate', 'add_scalar_parameter', 'add_vector_parameter',
-            'add_static_switch_parameter', 'add_math_node', 'add_world_position', 'add_vertex_normal',
-            'add_pixel_depth', 'add_fresnel', 'add_reflection_vector', 'add_panner', 'add_rotator',
-            'add_noise', 'add_voronoi', 'add_if', 'add_switch', 'add_custom_expression',
-            'connect_nodes', 'disconnect_nodes',
-            'create_material_function', 'add_function_input', 'add_function_output', 'use_material_function',
-            'get_material_function_info',
-            'create_material_instance', 'set_scalar_parameter_value', 'set_vector_parameter_value', 'set_texture_parameter_value',
-            'create_landscape_material', 'create_decal_material', 'create_post_process_material',
-            'add_landscape_layer', 'configure_layer_blend',
-            'compile_material', 'get_material_info',
-            'find_node', 'get_node_connections',
-            'get_node_properties', 'set_static_switch_parameter_value',
-            'delete_node', 'update_custom_expression',
-            'get_node_chain', 'get_connected_subgraph'
-          ],
+          enum: MATERIAL_AUTHORING_ACTIONS as unknown as string[],
           description: 'Material authoring action to perform'
         },
         assetPath: commonSchemas.assetPath,
