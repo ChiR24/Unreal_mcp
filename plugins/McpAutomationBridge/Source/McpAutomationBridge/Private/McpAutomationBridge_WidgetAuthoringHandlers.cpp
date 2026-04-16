@@ -3406,6 +3406,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
             Widget->SetClipping(Clipping);
             WidgetBP->MarkPackageDirty();
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {

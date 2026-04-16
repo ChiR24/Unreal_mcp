@@ -137,14 +137,12 @@ FString ValidateAssetPath(const FString& Path)
 
     if (!bValidRoot)
     {
-        // Check for plugin-like paths (e.g., /MyPlugin/MyAsset or /MyPlugin/Content/Asset)
-        TArray<FString> Segments;
-        CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-        const bool bLooksLikePluginPath = Segments.Num() >= 2;
-        
-        if (!bLooksLikePluginPath)
+        // Use engine validation for non-standard roots (plugin paths, etc.)
+        FText Reason;
+        if (!FPackageName::IsValidLongPackageName(CleanPath, false, &Reason))
         {
-            UE_LOG(LogTemp, Warning, TEXT("ValidateAssetPath: Rejected path without valid root: %s"), *Path);
+            UE_LOG(LogTemp, Warning, TEXT("ValidateAssetPath: Rejected path without valid root: %s (%s)"),
+                   *Path, *Reason.ToString());
             return FString();
         }
     }

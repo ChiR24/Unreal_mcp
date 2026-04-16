@@ -232,6 +232,25 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpAudioHandlers, Log, All);
 // =============================================================================
 
 /**
+ * Sanitize a directory path and build a combined asset FullPath.
+ *
+ * Calls SanitizeProjectRelativePath on the directory, then again on the
+ * combined "directory/assetName" string. Returns true on success with
+ * OutDirectory and OutFullPath set; returns false if either sanitization
+ * rejects the path.
+ */
+static bool BuildSanitizedAssetPath(
+    const FString& InDirectory, const FString& AssetName,
+    FString& OutDirectory, FString& OutFullPath)
+{
+  OutDirectory = SanitizeProjectRelativePath(InDirectory);
+  if (OutDirectory.IsEmpty()) return false;
+  OutFullPath = SanitizeProjectRelativePath(
+      FString::Printf(TEXT("%s/%s"), *OutDirectory, *AssetName));
+  return !OutFullPath.IsEmpty();
+}
+
+/**
  * Finds an actor by object path/name or by actor label/name within an optional world.
  *
  * Searches first for an exact object path or registered name, and if not found and a World is provided,
@@ -1872,16 +1891,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      bool bSave = true;
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
-     PackagePath = SanitizeProjectRelativePath(PackagePath);
-     if (PackagePath.IsEmpty()) {
+     FString FullPath;
+     if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath)) {
        SendAutomationError(RequestingSocket, RequestId,
                            TEXT("Invalid path"), TEXT("INVALID_PATH"));
-       return true;
-     }
-     FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *PackagePath, *Name));
-     if (FullPath.IsEmpty()) {
-       SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
        return true;
      }
 
@@ -2266,16 +2279,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     OutputPath = TEXT("/Game/Audio/Dialogues");
   }
 
-  OutputPath = SanitizeProjectRelativePath(OutputPath);
-  if (OutputPath.IsEmpty()) {
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, WaveName, OutputPath, FullPath)) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
-    return true;
-  }
-  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *WaveName));
-  if (FullPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
     return true;
   }
 
@@ -2439,16 +2446,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
   float LateGain = 1.26f;
   Payload->TryGetNumberField(TEXT("lateGain"), LateGain);
 
-  OutputPath = SanitizeProjectRelativePath(OutputPath);
-  if (OutputPath.IsEmpty()) {
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
-    return true;
-  }
-  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName));
-  if (FullPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
     return true;
   }
 
@@ -2517,16 +2518,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
     OutputPath = TEXT("/Game/Audio/Effects");
   }
 
-  OutputPath = SanitizeProjectRelativePath(OutputPath);
-  if (OutputPath.IsEmpty()) {
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, ChainName, OutputPath, FullPath)) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
-    return true;
-  }
-  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *ChainName));
-  if (FullPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
     return true;
   }
 
@@ -2673,16 +2668,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
     EffectType = TEXT("Reverb");
   }
 
-  OutputPath = SanitizeProjectRelativePath(OutputPath);
-  if (OutputPath.IsEmpty()) {
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, EffectName, OutputPath, FullPath)) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
-    return true;
-  }
-  FString FullPath = SanitizeProjectRelativePath(FString::Printf(TEXT("%s/%s"), *OutputPath, *EffectName));
-  if (FullPath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Invalid asset path"), TEXT("INVALID_PATH"));
     return true;
   }
 

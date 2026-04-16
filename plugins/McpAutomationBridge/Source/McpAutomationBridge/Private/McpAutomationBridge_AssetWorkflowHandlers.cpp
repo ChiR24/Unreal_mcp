@@ -173,19 +173,13 @@ static UObject* LoadMaterialOrFunctionAW(const FString& AssetPath,
 
 // Return a reference to the expressions TArray for either host type.
 // Caller must ensure at least one of Material/Function is non-null.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-static TArray<TObjectPtr<UMaterialExpression>>& GetHostExpressions(
+// Uses decltype(auto) so the return type matches the underlying member
+// (TArray<TObjectPtr<...>>& on UE 5.1+, TArray<UMaterialExpression*>& on 5.0).
+static decltype(auto) GetHostExpressions(
     UMaterial* Material, UMaterialFunction* Function) {
-  if (Material) return Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-  return Function->GetEditorOnlyData()->ExpressionCollection.Expressions;
+  return Material ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
+                  : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 }
-#else
-static TArray<UMaterialExpression*>& GetHostExpressions(
-    UMaterial* Material, UMaterialFunction* Function) {
-  if (Material) return Material->Expressions;
-  return Function->FunctionExpressions;
-}
-#endif
 
 // PostEditChange + MarkPackageDirty on whichever host is non-null.
 static void FinalizeHost(UMaterial* Material, UMaterialFunction* Function) {
@@ -4355,6 +4349,48 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   FString RemovedName = ExpressionToRemove->GetName();
   FString RemovedStableName = ExpressionToRemove->GetName();
+
+  // Disconnect inbound links: walk all sibling expressions and clear any
+  // FExpressionInput that references the node we're about to remove.
+  for (UMaterialExpression *Expr : Expressions) {
+    if (!Expr || Expr == ExpressionToRemove) continue;
+    for (FProperty *Property = Expr->GetClass()->PropertyLink; Property;
+         Property = Property->PropertyLinkNext) {
+      FStructProperty *StructProp = CastField<FStructProperty>(Property);
+      if (StructProp && StructProp->Struct &&
+          StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
+        FExpressionInput *Input =
+            StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expr);
+        if (Input && Input->Expression == ExpressionToRemove) {
+          Input->Expression = nullptr;
+          Input->OutputIndex = 0;
+        }
+      }
+    }
+  }
+
+  // Disconnect from main material inputs (root node pins)
+  if (Material) {
+#if WITH_EDITORONLY_DATA
+    auto ClearIfMatches = [&](FExpressionInput& Input) {
+      if (Input.Expression == ExpressionToRemove) {
+        Input.Expression = nullptr;
+        Input.OutputIndex = 0;
+      }
+    };
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, BaseColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Roughness));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Metallic));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Specular));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Normal));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Opacity));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, OpacityMask));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+#endif
+  }
 
   // Remove the expression from the appropriate container
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
