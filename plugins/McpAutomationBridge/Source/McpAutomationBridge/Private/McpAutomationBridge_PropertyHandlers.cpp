@@ -106,6 +106,10 @@ namespace
     }
 }
 
+// Forward declaration — defined later in this file (used by HandleInspectCdoAction).
+// Finds a component by name: first on CDO (native), then SCS templates (BP-added).
+UActorComponent* FindCdoComponent(UBlueprint* Blueprint, UObject* CDO, const FString& ComponentName);
+
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
@@ -159,13 +163,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   // --- Object Resolution ---
   UObject* RootObject = nullptr;
+  UBlueprint* ResolvedBlueprint = nullptr;  // Non-null when blueprintPath was used
 
   // Priority 1: blueprintPath → load Blueprint → get CDO
   if (!BlueprintPath.IsEmpty())
   {
       FString NormalizedPath, LoadError;
-      UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-      if (!Blueprint)
+      ResolvedBlueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+      if (!ResolvedBlueprint)
       {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
@@ -173,7 +178,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
           return true;
       }
 
-      UClass* GeneratedClass = Blueprint->GeneratedClass;
+      UClass* GeneratedClass = ResolvedBlueprint->GeneratedClass;
       if (!GeneratedClass)
       {
           SendAutomationError(RequestingSocket, RequestId,
@@ -321,13 +326,32 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
 
 
+  // --- SCS-template lookup for Blueprint-added components ---
+  // When blueprintPath was used and the property path is dot-notation (e.g.,
+  // "MyBPComponent.RelativeLocation"), try resolving the first segment as a
+  // BP-added component via FindCdoComponent before falling back to CDO resolution.
+  FString EffectivePropertyName = PropertyName;
+  if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
+  {
+      FString ComponentSegment, RemainingPath;
+      PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
+      UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment);
+      if (CompTemplate)
+      {
+          RootObject = CompTemplate;
+          EffectivePropertyName = RemainingPath;
+          ObjectPath = CompTemplate->GetPathName();
+      }
+      // else: fall through — ResolveNestedPropertyPath may still find it on the CDO
+  }
+
   void* TargetContainer = nullptr;
   FProperty* Property = nullptr;
 
-  if (PropertyName.Contains(TEXT("."))) {
+  if (EffectivePropertyName.Contains(TEXT("."))) {
       // Nested property path (e.g., "MyComponent.PropertyName")
       FString ResolveError;
-      Property = ResolveNestedPropertyPath(RootObject, PropertyName, TargetContainer, ResolveError);
+      Property = ResolveNestedPropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolveError);
       if (!Property || !TargetContainer) {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Failed to resolve nested property path '%s': %s"), *PropertyName, *ResolveError),
@@ -339,7 +363,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   {
       // Simple property name - look it up directly
       TargetContainer = RootObject;
-      Property = RootObject->GetClass()->FindPropertyByName(*PropertyName);
+      Property = RootObject->GetClass()->FindPropertyByName(*EffectivePropertyName);
       if (!Property) {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Property '%s' not found on object '%s'."), *PropertyName, *ObjectPath),
@@ -433,13 +457,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
 
   // --- Object Resolution ---
   UObject* RootObject = nullptr;
+  UBlueprint* ResolvedBlueprint = nullptr;  // Non-null when blueprintPath was used
 
   // Priority 1: blueprintPath → load Blueprint → get CDO
   if (!BlueprintPath.IsEmpty())
   {
       FString NormalizedPath, LoadError;
-      UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
-      if (!Blueprint)
+      ResolvedBlueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+      if (!ResolvedBlueprint)
       {
           SendAutomationError(RequestingSocket, RequestId,
               FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
@@ -447,7 +472,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
           return true;
       }
 
-      UClass* GeneratedClass = Blueprint->GeneratedClass;
+      UClass* GeneratedClass = ResolvedBlueprint->GeneratedClass;
       if (!GeneratedClass)
       {
           SendAutomationError(RequestingSocket, RequestId,
@@ -557,8 +582,22 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     }
   }
 
+  // --- SCS-template lookup for Blueprint-added components ---
+  FString EffectivePropertyName = PropertyName;
+  if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
+  {
+      FString ComponentSegment, RemainingPath;
+      PropertyName.Split(TEXT("."), &ComponentSegment, &RemainingPath);
+      UActorComponent* CompTemplate = FindCdoComponent(ResolvedBlueprint, RootObject, ComponentSegment);
+      if (CompTemplate)
+      {
+          RootObject = CompTemplate;
+          EffectivePropertyName = RemainingPath;
+      }
+  }
+
   // Support nested property paths (e.g., "MyComponent.PropertyName")
-  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, PropertyName);
+  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, EffectivePropertyName);
   if (!PropResult.IsValid())
   {
       SendAutomationError(
