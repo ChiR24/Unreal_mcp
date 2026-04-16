@@ -2992,8 +2992,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
   UMaterialExpression *NewExpression = nullptr;
   Type = Type.ToLower();
 
-  // For UMaterial, prefer UMaterialEditingLibrary (handles graph registration).
-  // For UMaterialFunction, use NewObject + manual add.
+  // Asymmetric creation paths by design:
+  // - UMaterial: UMaterialEditingLibrary::CreateMaterialExpression handles
+  //   graph registration, undo transactions, and editor-only data setup.
+  // - UMaterialFunction: UMaterialEditingLibrary only supports UMaterial, so we
+  //   use NewObject + manual add to the expression collection. This is
+  //   intentional due to API limitations — CreateMaterialExpression does not
+  //   accept UMaterialFunction as a host.
   auto CreateExpr = [&](UClass* ExprClass) -> UMaterialExpression* {
     if (Material) {
       return UMaterialEditingLibrary::CreateMaterialExpression(Material, ExprClass);
@@ -4132,8 +4137,15 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   FString SourcePin;
   Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
   int32 SourcePinIndex = 0;
-  if (!SourcePin.IsEmpty() && SourcePin.IsNumeric()) {
-    SourcePinIndex = FCString::Atoi(*SourcePin);
+  if (!SourcePin.IsEmpty()) {
+    if (SourcePin.IsNumeric()) {
+      SourcePinIndex = FCString::Atoi(*SourcePin);
+    } else {
+      SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("sourcePin must be a numeric index, got '%s'"), *SourcePin),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
   }
 
   FString InputName;
@@ -4182,11 +4194,15 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
       }
       return true;
     } else {
-      // MaterialFunction: connect to FunctionOutput by name
+      // MaterialFunction: connect to FunctionOutput by name (name is required)
+      if (InputName.IsEmpty()) {
+        SendAutomationError(Socket, RequestId, TEXT("inputName is required when connecting to a function output"), TEXT("MISSING_INPUT_NAME"));
+        return true;
+      }
       UMaterialExpressionFunctionOutput *TargetOutput = nullptr;
       for (UMaterialExpression *Expr : Expressions) {
         if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-          if (InputName.IsEmpty() || Out->OutputName.ToString().Equals(InputName)) { TargetOutput = Out; break; }
+          if (Out->OutputName.ToString().Equals(InputName)) { TargetOutput = Out; break; }
         }
       }
       if (TargetOutput) {
@@ -4243,6 +4259,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
   Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
   Resp->SetStringField(TEXT("targetNodeId"), ToExpression->GetName());
   Resp->SetStringField(TEXT("inputName"), InputName);
@@ -4407,6 +4424,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
   Resp->SetStringField(TEXT("nodeId"), RemovedStableName);
   Resp->SetStringField(TEXT("removedName"), RemovedName);
   Resp->SetNumberField(TEXT("remainingExpressions"), Expressions.Num());
@@ -4575,6 +4593,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
   Resp->SetStringField(TEXT("nodeId"), TargetExpression->GetName());
   Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
   if (bSpecificInput) Resp->SetStringField(TEXT("inputName"), InputName);
@@ -4667,7 +4686,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   if (!Expression) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     if (Material) McpHandlerUtils::AddVerification(Resp, Material);
-    
+    else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+
     TArray<TSharedPtr<FJsonValue>> NodeList;
     for (int32 i = 0; i < Expressions.Num(); ++i) {
       UMaterialExpression *Expr = Expressions[i];
@@ -4704,6 +4724,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   // Build response for specific node
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
   Resp->SetStringField(TEXT("nodeId"), Expression->GetName());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
@@ -5177,6 +5198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Result, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Result, Function);
   Result->SetStringField(TEXT("assetPath"), AssetPath);
   Result->SetBoolField(TEXT("rebuilt"), true);
 

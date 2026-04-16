@@ -3455,7 +3455,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
                 // Legacy path: if no propertyName given, try "style" param against "Style" property
                 PropertyName = TEXT("Style");
                 bHasValueField = Payload->HasField(TEXT("style"));
-                Value = bHasValueField ? GetJsonStringField(Payload, TEXT("style")) : FString();
+                if (bHasValueField)
+                {
+                    const TSharedPtr<FJsonValue> StyleField = Payload->TryGetField(TEXT("style"));
+                    if (StyleField.IsValid() && (StyleField->Type == EJson::Object || StyleField->Type == EJson::Array))
+                    {
+                        bUseJsonConverter = true;
+                        RawJsonValue = StyleField;
+                    }
+                    else
+                    {
+                        Value = GetJsonStringField(Payload, TEXT("style"));
+                    }
+                }
             }
 
             if (PropertyName.IsEmpty())

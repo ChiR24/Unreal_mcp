@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import util from 'util';
 
+/** Promisified child_process.exec for async shell commands. */
 const execAsync = util.promisify(exec);
 
 /** Reject UBT argument strings containing shell-dangerous characters. */

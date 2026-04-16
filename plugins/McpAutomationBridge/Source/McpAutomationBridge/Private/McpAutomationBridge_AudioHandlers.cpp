@@ -2194,11 +2194,13 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
                     : EGrammaticalNumber::Singular;
   }
 
-  FString FullPath = FString::Printf(TEXT("%s/%s"), *OutputPath, *VoiceName);
-  FString PackageName = FullPath;
-  if (!PackageName.StartsWith(TEXT("/Game/"))) {
-    PackageName = TEXT("/Game/") + PackageName;
+  FString FullPath;
+  if (!BuildSanitizedAssetPath(OutputPath, VoiceName, OutputPath, FullPath)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Invalid outputPath"), TEXT("INVALID_PATH"));
+    return true;
   }
+  FString PackageName = FullPath;
 
   UPackage *Package = CreatePackage(*PackageName);
   if (!Package) {

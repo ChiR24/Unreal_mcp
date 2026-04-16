@@ -1,3 +1,4 @@
+/** Schema for a single MCP tool exposed to the client. */
 export interface ToolDefinition {
   category?: 'core' | 'world' | 'authoring' | 'gameplay' | 'utility';
   name: string;
@@ -7,6 +8,7 @@ export interface ToolDefinition {
   [key: string]: unknown;
 }
 import { commonSchemas } from './tool-definition-utils.js';
+/** All MCP tool definitions registered with the server, grouped by category. */
 export const consolidatedToolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_pipeline',
