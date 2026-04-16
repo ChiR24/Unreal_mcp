@@ -1987,6 +1987,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
          SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save sound attenuation asset"), TEXT("SAVE_FAILED"));
          return true;
        }
+     } else {
+       Atten->MarkPackageDirty();
+       FAssetRegistryModule::AssetCreated(Atten);
      }
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

@@ -224,7 +224,15 @@ namespace WidgetAuthoringHelpers
     // Load widget blueprint - robust lookup for both in-memory and on-disk assets
     UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
     {
-        FString Path = SanitizeProjectRelativePath(WidgetPath);
+        FString Path = WidgetPath;
+
+        // Normalize relative paths before sanitization so "UI/WBP_Menu" becomes "/Game/UI/WBP_Menu"
+        if (!Path.IsEmpty() && !Path.StartsWith(TEXT("/")))
+        {
+            Path = TEXT("/Game/") + Path;
+        }
+
+        Path = SanitizeProjectRelativePath(Path);
         if (Path.IsEmpty())
         {
             return nullptr;
@@ -234,12 +242,6 @@ namespace WidgetAuthoringHelpers
         if (Path.EndsWith(TEXT("_C")))
         {
             return nullptr;
-        }
-        
-        // Normalize: ensure starts with /Game/ or /
-        if (!Path.StartsWith(TEXT("/")))
-        {
-            Path = TEXT("/Game/") + Path;
         }
         
         // Build object path and package path
@@ -896,6 +898,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         if (Folder.IsEmpty())
         {
             Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
+        }
+
+        // Normalize relative folder paths before sanitization
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/")))
+        {
+            Folder = TEXT("/Game/") + Folder;
         }
 
         // SECURITY: Validate folder path for traversal attacks
@@ -5247,6 +5255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -5353,6 +5362,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_LoadingScreen"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -5753,6 +5763,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Inventory"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -5856,6 +5867,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_DialogBox"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -5963,6 +5975,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_RadialMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -6966,6 +6979,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -7058,6 +7072,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Shop"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        if (!Folder.IsEmpty() && !Folder.StartsWith(TEXT("/"))) { Folder = TEXT("/Game/") + Folder; }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
