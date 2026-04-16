@@ -243,6 +243,13 @@ static bool BuildSanitizedAssetPath(
     const FString& InDirectory, const FString& AssetName,
     FString& OutDirectory, FString& OutFullPath)
 {
+  // Reject empty or path-like asset names (slashes are invalid in UObject names)
+  if (AssetName.IsEmpty() ||
+      AssetName.Contains(TEXT("/")) ||
+      AssetName.Contains(TEXT("\\"))) {
+    return false;
+  }
+
   OutDirectory = SanitizeProjectRelativePath(InDirectory);
   if (OutDirectory.IsEmpty()) return false;
   OutFullPath = SanitizeProjectRelativePath(
@@ -1930,6 +1937,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
      if (bSave) {
        Atten->MarkPackageDirty();
        FAssetRegistryModule::AssetCreated(Atten);
+       McpSafeAssetSave(Atten);
      }
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -2222,6 +2230,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueVoice(
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(NewVoice);
+  McpSafeAssetSave(NewVoice);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("voicePath"), NewVoice->GetPathName());
@@ -2268,10 +2277,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  USoundBase *Sound = ResolveSoundAsset(SoundPath);
-  if (!Sound) {
+  USoundWave *SoundWave = Cast<USoundWave>(ResolveSoundAsset(SoundPath));
+  if (!SoundWave) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Sound asset not found"), TEXT("ASSET_NOT_FOUND"));
+                        TEXT("soundPath must reference a SoundWave, not a SoundCue or other sound type"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -2302,14 +2312,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  // UE 5.7: DialogueVoice renamed to Speaker, SoundWave needs explicit cast from USoundBase
   FDialogueContextMapping Context;
   Context.Context.Speaker = nullptr;
-  Context.SoundWave = Cast<USoundWave>(Sound);
+  Context.SoundWave = SoundWave;
   DialogueWave->ContextMappings.Add(Context);
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(DialogueWave);
+  McpSafeAssetSave(DialogueWave);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("wavePath"), DialogueWave->GetPathName());
@@ -2480,6 +2490,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateReverbEffect(
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(ReverbEffect);
+  McpSafeAssetSave(ReverbEffect);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), ReverbEffect->GetPathName());
@@ -2543,6 +2554,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSourceEffectChain(
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(Chain);
+  McpSafeAssetSave(Chain);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
@@ -2693,6 +2705,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSubmixEffect(
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(SubmixEffect);
+  McpSafeAssetSave(SubmixEffect);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("effectPath"), SubmixEffect->GetPathName());

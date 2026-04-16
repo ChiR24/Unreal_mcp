@@ -1505,9 +1505,9 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           }
         },
         description: { type: 'string', description: 'Description for custom expression or function.' },
-        sourceNodeId: { type: 'string', description: 'Source node ID for connection.' },
-        sourcePin: { type: 'string', description: 'Source pin name (output).' },
-        targetNodeId: { type: 'string', description: 'Target node ID for connection.' },
+        sourceNodeId: commonSchemas.sourceNodeId,
+        sourcePin: { type: 'string', description: 'Source output pin index (numeric). Selects which output of a multi-output node to connect.' },
+        targetNodeId: commonSchemas.targetNodeId,
         targetPin: { type: 'string', description: 'Target pin name (input).' },
         nodeId: commonSchemas.nodeId,
         nodeIds: { type: 'array', items: { type: 'string' }, description: 'Array of node IDs (for batch delete_node or connection filtering).' },
@@ -3245,7 +3245,7 @@ export const consolidatedToolDefinitions: ToolDefinition[] = [
           description: 'The widget authoring action to perform.'
         },
         name: commonSchemas.name,
-        path: commonSchemas.directoryPath,
+        path: commonSchemas.directoryPathForCreation,
         folder: commonSchemas.directoryPath,
         widgetPath: commonSchemas.widgetPath,
         slotName: commonSchemas.slotName,

@@ -3453,6 +3453,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             if (PropertyName.IsEmpty())
             {
                 // Legacy path: if no propertyName given, try "style" param against "Style" property
+                // Reset state from any prior "value" field extraction to avoid stale data
+                bUseJsonConverter = false;
+                RawJsonValue.Reset();
+                Value.Empty();
+
                 PropertyName = TEXT("Style");
                 bHasValueField = Payload->HasField(TEXT("style"));
                 if (bHasValueField)

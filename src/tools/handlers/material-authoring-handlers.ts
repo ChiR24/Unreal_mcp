@@ -115,6 +115,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material '${name}' created`);
       }
 
+      // Set the blend mode on a material (Opaque, Translucent, Masked, etc.)
       case 'set_blend_mode': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -139,6 +140,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Blend mode set to ${blendMode}`);
       }
 
+      // Set the shading model (DefaultLit, Unlit, Subsurface, etc.)
       case 'set_shading_model': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -163,6 +165,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Shading model set to ${shadingModel}`);
       }
 
+      // Set the material domain (Surface, DeferredDecal, PostProcess, etc.)
       case 'set_material_domain': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -221,6 +224,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Texture sample added');
       }
 
+      // Add a texture coordinate (UV) node
       case 'add_texture_coordinate': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -254,6 +258,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Texture coordinate added');
       }
 
+      // Add a scalar parameter expression
       case 'add_scalar_parameter': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -287,6 +292,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Scalar parameter '${parameterName}' added`);
       }
 
+      // Add a vector parameter expression (color/vector)
       case 'add_vector_parameter': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -320,6 +326,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Vector parameter '${parameterName}' added`);
       }
 
+      // Add a static switch parameter for conditional material logic
       case 'add_static_switch_parameter': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -353,6 +360,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Static switch '${parameterName}' added`);
       }
 
+      // Add a math operation node (Add, Multiply, Lerp, etc.)
       case 'add_math_node': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -386,6 +394,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Math node '${operation}' added`);
       }
 
+      // Add utility expression nodes (world position, normals, UV animation, noise, etc.)
       case 'add_world_position':
       case 'add_vertex_normal':
       case 'add_pixel_depth':
@@ -419,6 +428,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `${action} node added`);
       }
 
+      // Add conditional nodes (if/switch) for branching material logic
       case 'add_if':
       case 'add_switch': {
         const params = normalizeArgs(args, [
@@ -444,6 +454,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `${action} node added`);
       }
 
+      // Add a custom HLSL expression node with configurable inputs/outputs
       case 'add_custom_expression': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -489,6 +500,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Custom HLSL expression added');
       }
 
+      // Connect two material expression nodes via their pins
       case 'connect_nodes':
       case 'connect_material_pins': {
         const rawArgs = args as Record<string, unknown>;
@@ -525,6 +537,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Nodes connected');
       }
 
+      // Disconnect material expression nodes or break specific pin connections
       case 'disconnect_nodes':
       case 'break_material_connections': {
         const rawArgs = args as Record<string, unknown>;
@@ -586,6 +599,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material function '${name}' created`);
       }
 
+      // Add an input or output pin to a material function
       case 'add_function_input':
       case 'add_function_output': {
         const params = normalizeArgs(args, [
@@ -617,6 +631,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Function ${action === 'add_function_input' ? 'input' : 'output'} '${inputName}' added`);
       }
 
+      // Insert a material function call node into a material graph
       case 'use_material_function': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -701,6 +716,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Material instance '${name}' created`);
       }
 
+      // Set a scalar parameter override on a material instance
       case 'set_scalar_parameter_value': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['instancePath'], required: true },
@@ -728,6 +744,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Scalar parameter '${parameterName}' set to ${value}`);
       }
 
+      // Set a vector/color parameter override on a material instance
       case 'set_vector_parameter_value': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['instancePath'], required: true },
@@ -755,6 +772,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Vector parameter '${parameterName}' set`);
       }
 
+      // Set a texture parameter override on a material instance
       case 'set_texture_parameter_value': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['instancePath'], required: true },
@@ -783,6 +801,7 @@ export async function handleMaterialAuthoringTools(
       }
 
       // ===== 8.5 Specialized Materials =====
+      // Create a specialized material (landscape, decal, or post-process)
       case 'create_landscape_material':
       case 'create_decal_material':
       case 'create_post_process_material': {
@@ -810,6 +829,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `${action.replace(/_/g, ' ')} created`);
       }
 
+      // Add a landscape layer (paint layer) to a landscape material
       case 'add_landscape_layer': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -834,6 +854,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? `Landscape layer '${layerName}' added`);
       }
 
+      // Configure the layer blend node with layer weight assignments
       case 'configure_layer_blend': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -855,6 +876,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Layer blend configured');
       }
 
+      // Compile (rebuild) the material shader and optionally save
       case 'compile_material': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },
@@ -876,6 +898,7 @@ export async function handleMaterialAuthoringTools(
         return ResponseFactory.success(res, res.message ?? 'Material compiled');
       }
 
+      // Retrieve material metadata, expressions, and property overview
       case 'get_material_info': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath', 'functionPath'], required: true },

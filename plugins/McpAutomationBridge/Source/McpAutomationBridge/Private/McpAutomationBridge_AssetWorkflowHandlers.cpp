@@ -181,6 +181,33 @@ static decltype(auto) GetHostExpressions(
                   : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 }
 
+// Find a material expression by GUID, name, path, parameter name, or numeric index.
+// Templated to accept both TArray<TObjectPtr<...>> (UE 5.1+) and TArray<UMaterialExpression*>.
+template <typename TExprArray>
+static UMaterialExpression* FindExpressionInHost(TExprArray& Expressions, const FString& IdOrIndex) {
+  if (IdOrIndex.IsEmpty()) return nullptr;
+
+  FGuid GuidId;
+  if (FGuid::Parse(IdOrIndex, GuidId)) {
+    for (UMaterialExpression *Expr : Expressions) {
+      if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr;
+    }
+  }
+  for (UMaterialExpression *Expr : Expressions) {
+    if (Expr) {
+      if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
+      if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
+        if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
+      }
+    }
+  }
+  if (IdOrIndex.IsNumeric()) {
+    int32 Index = FCString::Atoi(*IdOrIndex);
+    if (Index >= 0 && Index < Expressions.Num()) return Expressions[Index];
+  }
+  return nullptr;
+}
+
 // PostEditChange + MarkPackageDirty on whichever host is non-null.
 static void FinalizeHost(UMaterial* Material, UMaterialFunction* Function) {
   if (Material) { Material->PostEditChange(); Material->MarkPackageDirty(); }
@@ -4088,30 +4115,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   auto& Expressions = GetHostExpressions(Material, Function);
 
   // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) return nullptr;
-
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr;
-      }
-    }
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
-        }
-      }
-    }
-    int32 Index = -1;
-    if (IdOrIndex.IsNumeric()) {
-      Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) return Expressions[Index];
-    }
-    return nullptr;
-  };
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
   // Accept both sourceNodeId/targetNodeId (GUID strings) and fromExpression/toExpression (indices)
   FString SourceNodeId, TargetNodeId;
@@ -4322,28 +4326,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   auto& Expressions = GetHostExpressions(Material, Function);
 
   // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) return nullptr;
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr;
-      }
-    }
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
-        }
-      }
-    }
-    if (IdOrIndex.IsNumeric()) {
-      int32 Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) return Expressions[Index];
-    }
-    return nullptr;
-  };
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
   FString NodeId;
   int32 ExpressionIndex = -1;
@@ -4489,23 +4472,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
 
   auto& Expressions = GetHostExpressions(Material, Function);
 
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) return nullptr;
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) { if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr; }
-    }
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
-        }
-      }
-    }
-    if (IdOrIndex.IsNumeric()) { int32 Idx = FCString::Atoi(*IdOrIndex); if (Idx >= 0 && Idx < Expressions.Num()) return Expressions[Idx]; }
-    return nullptr;
-  };
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
   FString NodeId, PinName;
   bool bHasNodeId = Payload->TryGetStringField(TEXT("nodeId"), NodeId) && !NodeId.IsEmpty();
@@ -4655,23 +4622,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
 
   auto& Expressions = GetHostExpressions(Material, Function);
 
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) return nullptr;
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) { if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr; }
-    }
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
-        }
-      }
-    }
-    if (IdOrIndex.IsNumeric()) { int32 Idx = FCString::Atoi(*IdOrIndex); if (Idx >= 0 && Idx < Expressions.Num()) return Expressions[Idx]; }
-    return nullptr;
-  };
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
   FString NodeId;
   int32 ExpressionIndex = -1;
