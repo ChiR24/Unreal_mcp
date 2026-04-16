@@ -446,7 +446,13 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       return cleanObject(res);
     }
     case 'get_component_property': {
-      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
+      const normalizedComponentArgs = normalizeArgs(args, [
+        { key: 'componentName', aliases: ['component_name'] },
+        { key: 'componentPath', aliases: ['component_path'] },
+        { key: 'objectPath', aliases: ['object_path'] },
+        { key: 'actorName', aliases: ['actor_name', 'name'] },
+      ]);
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(normalizedComponentArgs, tools);
       const params = normalizeArgs(args, [
         { key: 'propertyName', aliases: ['propertyPath'], required: true }
       ]);
@@ -460,7 +466,13 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
       return cleanObject(res);
     }
     case 'set_component_property': {
-      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
+      const normalizedComponentArgs = normalizeArgs(args, [
+        { key: 'componentName', aliases: ['component_name'] },
+        { key: 'componentPath', aliases: ['component_path'] },
+        { key: 'objectPath', aliases: ['object_path'] },
+        { key: 'actorName', aliases: ['actor_name', 'name'] },
+      ]);
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(normalizedComponentArgs, tools);
       const params = normalizeArgs(args, [
         { key: 'propertyName', aliases: ['propertyPath'], required: true },
         { key: 'value' }
@@ -478,7 +490,13 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'get_component_details': {
       // Get component details by inspecting the component object
-      const componentObjectPath = await resolveComponentObjectPathFromArgs(args, tools);
+      const normalizedComponentArgs = normalizeArgs(args, [
+        { key: 'componentName', aliases: ['component_name'] },
+        { key: 'componentPath', aliases: ['component_path'] },
+        { key: 'objectPath', aliases: ['object_path'] },
+        { key: 'actorName', aliases: ['actor_name', 'name'] },
+      ]);
+      const componentObjectPath = await resolveComponentObjectPathFromArgs(normalizedComponentArgs, tools);
       
       const res = await executeAutomationRequest(
         tools,

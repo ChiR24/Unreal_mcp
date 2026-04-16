@@ -357,6 +357,48 @@ static USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 }
 
 /**
+ * @brief Resolve a USoundWave specifically (not USoundCue or other USoundBase subclasses).
+ *
+ * Unlike ResolveSoundAsset which searches both USoundWave and USoundCue,
+ * this function only searches USoundWave assets, avoiding asset-order-dependent
+ * failures when a same-named SoundCue exists alongside the desired SoundWave.
+ */
+static USoundWave* ResolveSoundWaveAsset(const FString& SoundPath) {
+  if (SoundPath.IsEmpty())
+    return nullptr;
+
+  // Full path: load directly as USoundWave
+  if (SoundPath.Contains(TEXT("/")))
+    return LoadObject<USoundWave>(nullptr, *SoundPath);
+
+  // Simple name: search asset registry for USoundWave only
+  const FString AssetName = FPaths::GetBaseFilename(SoundPath);
+  FAssetRegistryModule& AssetRegistryModule =
+      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+  TArray<FAssetData> AssetData;
+  FARFilter Filter;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  Filter.ClassPaths.Add(USoundWave::StaticClass()->GetClassPathName());
+#else
+  Filter.ClassNames.Add(USoundWave::StaticClass()->GetFName());
+#endif
+  Filter.bRecursivePaths = true;
+  Filter.PackagePaths.Add(TEXT("/Game"));
+  AssetRegistryModule.Get().GetAssets(Filter, AssetData);
+
+  for (const FAssetData& Data : AssetData) {
+    if (Data.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase)) {
+      return Cast<USoundWave>(Data.GetAsset());
+    }
+  }
+
+  UE_LOG(LogMcpAudioHandlers, Warning,
+         TEXT("SoundWave asset '%s' not found."), *SoundPath);
+  return nullptr;
+}
+
+/**
  * @brief Resolve a USoundMix by asset path or asset name.
  *
  * Attempts to load a USoundMix using the provided MixPath. If MixPath contains a
@@ -2278,7 +2320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateDialogueWave(
     return true;
   }
 
-  USoundWave *SoundWave = Cast<USoundWave>(ResolveSoundAsset(SoundPath));
+  USoundWave *SoundWave = ResolveSoundWaveAsset(SoundPath);
   if (!SoundWave) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("soundPath must reference a SoundWave, not a SoundCue or other sound type"),

@@ -269,9 +269,9 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   }
 
   // Whitelist valid roots - MUST start with one of these
-  const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) ||
-                          CleanPath.StartsWith(TEXT("/Engine/")) ||
-                          CleanPath.StartsWith(TEXT("/Script/"));
+  const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) || CleanPath == TEXT("/Game") ||
+                          CleanPath.StartsWith(TEXT("/Engine/")) || CleanPath == TEXT("/Engine") ||
+                          CleanPath.StartsWith(TEXT("/Script/")) || CleanPath == TEXT("/Script");
 
   // Reject paths that start with / but don't have a valid root
   // This catches paths like /etc/passwd or /invalid/path

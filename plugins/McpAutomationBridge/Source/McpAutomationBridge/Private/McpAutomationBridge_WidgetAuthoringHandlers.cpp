@@ -3406,7 +3406,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             }
             Widget->SetClipping(Clipping);
             WidgetBP->MarkPackageDirty();
-            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+            FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+            McpSafeAssetSave(WidgetBP);
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {
@@ -3507,6 +3508,23 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
             else
             {
                 // WRITE mode — set the property value
+                // Reject unsafe property types that should not be mutated via generic setter
+                const bool bUnsafeForWrite =
+                    Prop->HasAnyPropertyFlags(
+                        CPF_EditConst |
+                        CPF_Transient |
+                        CPF_Deprecated |
+                        CPF_InstancedReference |
+                        CPF_ContainsInstancedReference) ||
+                    CastField<FDelegateProperty>(Prop) ||
+                    CastField<FMulticastDelegateProperty>(Prop);
+                if (bUnsafeForWrite)
+                {
+                    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Property '%s' on widget '%s' is not safe to mutate via set_style"), *PropertyName, *SlotName),
+                        TEXT("PROPERTY_NOT_EDITABLE"));
+                    return true;
+                }
                 Widget->Modify();
 
                 bool bWriteSuccess = false;

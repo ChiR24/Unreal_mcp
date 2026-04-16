@@ -370,6 +370,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // "MyBPComponent.RelativeLocation"), try resolving the first segment as a
   // BP-added component via FindCdoComponent before falling back to CDO resolution.
   FString EffectivePropertyName = PropertyName;
+#if WITH_EDITOR
   if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
   {
       FString ComponentSegment, RemainingPath;
@@ -383,6 +384,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       }
       // else: fall through — ResolveNestedPropertyPath may still find it on the CDO
   }
+#endif
 
   void* TargetContainer = nullptr;
   FProperty* Property = nullptr;
@@ -623,6 +625,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
 
   // --- SCS-template lookup for Blueprint-added components ---
   FString EffectivePropertyName = PropertyName;
+#if WITH_EDITOR
   if (ResolvedBlueprint && PropertyName.Contains(TEXT(".")))
   {
       FString ComponentSegment, RemainingPath;
@@ -634,6 +637,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
           EffectivePropertyName = RemainingPath;
       }
   }
+#endif
 
   // Support nested property paths (e.g., "MyComponent.PropertyName")
   McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, EffectivePropertyName);

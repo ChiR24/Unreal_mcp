@@ -718,7 +718,7 @@ export async function handleMaterialAuthoringTools(
           }
           name = parsed.name;
           path = parsed.path;
-          parentMaterial = parentMaterialPath ?? '';
+          parentMaterial = parentMaterialPath ? normalizeAssetPath(parentMaterialPath) : '';
         } else {
           // Use normalizeArgs for individual name/path
           const params = normalizeArgs(args, [
@@ -728,7 +728,7 @@ export async function handleMaterialAuthoringTools(
           ]);
           name = extractString(params, 'name');
           path = normalizeAssetPath(extractOptionalString(params, 'path') ?? '/Game/Materials');
-          parentMaterial = extractString(params, 'parentMaterial');
+          parentMaterial = normalizeAssetPath(extractString(params, 'parentMaterial'));
         }
         
         if (!parentMaterial) {
