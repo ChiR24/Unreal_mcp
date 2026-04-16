@@ -265,18 +265,26 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'get_property': {
       const objectPath = await resolveObjectPath(args, tools);
-      const params = normalizeArgs(args, [{ key: 'propertyName', aliases: ['propertyPath'], required: true }]);
+      const params = normalizeArgs(args, [
+        { key: 'blueprintPath', aliases: ['blueprint_path'] },
+        { key: 'propertyName', aliases: ['propertyPath'], required: true },
+      ]);
+      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
+      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const propertyName = extractString(params, 'propertyName');
 
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
+      if (!objectPath && !blueprintPath) {
+        throw new Error('inspect:get_property: Either objectPath or blueprintPath is required');
       }
 
-      const res = await executeAutomationRequest(tools, 'inspect', {
+      const payload: Record<string, unknown> = {
         action: 'get_property',
-        objectPath,
-        propertyName
-      }) as InspectResponse;
+        propertyName,
+      };
+      if (blueprintPath) { payload.blueprintPath = blueprintPath; }
+      if (objectPath) { payload.objectPath = objectPath; }
+
+      const res = await executeAutomationRequest(tools, 'inspect', payload) as InspectResponse;
 
       // Smart Lookup: If property not found on the Actor, try to find it on components
       if (!res.success && (res.error === 'PROPERTY_NOT_FOUND' || String(res.error).includes('not found'))) {

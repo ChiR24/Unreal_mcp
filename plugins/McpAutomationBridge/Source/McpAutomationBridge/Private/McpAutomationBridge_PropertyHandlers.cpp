@@ -393,14 +393,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
+  // --- Parameter Validation ---
   FString ObjectPath;
-  if (!Payload->TryGetStringField(TEXT("objectPath"), ObjectPath) ||
-      ObjectPath.TrimStartAndEnd().IsEmpty()) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("get_object_property requires a non-empty objectPath."),
-        TEXT("INVALID_OBJECT"));
-    return true;
+  Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
+  ObjectPath.TrimStartAndEndInline();
+
+  FString BlueprintPath;
+  Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+  BlueprintPath.TrimStartAndEndInline();
+
+  if (ObjectPath.IsEmpty() && BlueprintPath.IsEmpty())
+  {
+      SendAutomationError(RequestingSocket, RequestId,
+          TEXT("Either objectPath or blueprintPath is required."),
+          TEXT("INVALID_OBJECT"));
+      return true;
   }
 
   FString PropertyName;
@@ -413,22 +420,59 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  // --- Object Resolution (using centralized helper) ---
-  FString ResolvedPath;
-  UObject* RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
-  if (!RootObject)
+  // --- Object Resolution ---
+  UObject* RootObject = nullptr;
+
+  // Priority 1: blueprintPath → load Blueprint → get CDO
+  if (!BlueprintPath.IsEmpty())
   {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
-          TEXT("OBJECT_NOT_FOUND"));
-      return true;
+      FString NormalizedPath, LoadError;
+      UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, LoadError);
+      if (!Blueprint)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              FString::Printf(TEXT("Blueprint not found: %s (%s)"), *BlueprintPath, *LoadError),
+              TEXT("BLUEPRINT_NOT_FOUND"));
+          return true;
+      }
+
+      UClass* GeneratedClass = Blueprint->GeneratedClass;
+      if (!GeneratedClass)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Blueprint has no GeneratedClass (not compiled?)"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      RootObject = GeneratedClass->GetDefaultObject();
+      if (!RootObject)
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("Failed to get Class Default Object"),
+              TEXT("CDO_NOT_FOUND"));
+          return true;
+      }
+
+      ObjectPath = RootObject->GetPathName();
   }
-  
-  // Use resolved path for error messages
-  if (!ResolvedPath.IsEmpty())
+  else
   {
-      ObjectPath = ResolvedPath;
+      // Priority 2: objectPath → standard resolution
+      FString ResolvedPath;
+      RootObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
+      if (!RootObject)
+      {
+          SendAutomationError(
+              RequestingSocket, RequestId,
+              FString::Printf(TEXT("Unable to find object at path %s."), *ObjectPath),
+              TEXT("OBJECT_NOT_FOUND"));
+          return true;
+      }
+      if (!ResolvedPath.IsEmpty())
+      {
+          ObjectPath = ResolvedPath;
+      }
   }
 
   // Special handling for common AActor properties that are actually functions
