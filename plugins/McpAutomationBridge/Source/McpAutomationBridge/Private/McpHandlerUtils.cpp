@@ -131,20 +131,18 @@ FString ValidateAssetPath(const FString& Path)
     }
 
     // Validate root
-    const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game")) ||
-                           CleanPath.StartsWith(TEXT("/Engine")) ||
-                           CleanPath.StartsWith(TEXT("/Script"));
+    const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) ||
+                           CleanPath.StartsWith(TEXT("/Engine/")) ||
+                           CleanPath.StartsWith(TEXT("/Script/"));
 
     if (!bValidRoot)
     {
-        // Check for plugin-like paths (e.g., /MyPlugin/Content/Asset)
-        TArray<FString> Segments;
-        CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-        const bool bLooksLikePluginPath = Segments.Num() >= 3;
-        
-        if (!bLooksLikePluginPath)
+        // Use engine validation for non-standard roots (plugin paths, etc.)
+        FText Reason;
+        if (!FPackageName::IsValidLongPackageName(CleanPath, true, &Reason))
         {
-            UE_LOG(LogTemp, Warning, TEXT("ValidateAssetPath: Rejected path without valid root: %s"), *Path);
+            UE_LOG(LogTemp, Warning, TEXT("ValidateAssetPath: Rejected path without valid root: %s (%s)"),
+                   *Path, *Reason.ToString());
             return FString();
         }
     }
@@ -434,8 +432,9 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         }
     }
     
-    // Try to load as asset (supports both /Game/ and /Engine/ paths)
-    if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")))
+    // Try to load as asset (whitelist known roots + engine-registered mount points)
+    if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")) ||
+        FPackageName::IsValidLongPackageName(Path, true))
     {
         FString PackagePath = Path;
         if (PackagePath.Contains(TEXT(".")))

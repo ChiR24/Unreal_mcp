@@ -85,6 +85,15 @@
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionVertexColor.h"
 
+// -----------------------------------------------------------------------------
+// Material Function Includes (MF support for Tier 3 handlers)
+// -----------------------------------------------------------------------------
+#include "Materials/MaterialFunction.h"
+#include "Materials/MaterialFunctionInterface.h"
+#include "Materials/MaterialExpressionFunctionInput.h"
+#include "Materials/MaterialExpressionFunctionOutput.h"
+#include "Materials/MaterialExpressionMaterialFunctionCall.h"
+
 #if WITH_EDITOR
 
 // -----------------------------------------------------------------------------
@@ -147,6 +156,64 @@
 #include "Blueprint/BlueprintSupport.h"
 
 #endif // WITH_EDITOR
+
+// =============================================================================
+// MF-AWARE HELPERS (shared by Tier 3 material handlers)
+// =============================================================================
+
+// Try loading as UMaterial first, then UMaterialFunction.
+// Returns the loaded UObject (Material or Function), or nullptr.
+static UObject* LoadMaterialOrFunctionAW(const FString& AssetPath,
+                                          UMaterial*& OutMaterial,
+                                          UMaterialFunction*& OutFunction) {
+  OutMaterial = LoadObject<UMaterial>(nullptr, *AssetPath);
+  if (OutMaterial) return OutMaterial;
+  OutFunction = LoadObject<UMaterialFunction>(nullptr, *AssetPath);
+  return OutFunction;
+}
+
+// Return a reference to the expressions TArray for either host type.
+// Caller must ensure at least one of Material/Function is non-null.
+// Uses decltype(auto) so the return type matches the underlying member
+// (TArray<TObjectPtr<...>>& on UE 5.1+, TArray<UMaterialExpression*>& on 5.0).
+static decltype(auto) GetHostExpressions(
+    UMaterial* Material, UMaterialFunction* Function) {
+  return Material ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
+                  : MCP_GET_FUNCTION_EXPRESSIONS(Function);
+}
+
+// Find a material expression by GUID, name, path, parameter name, or numeric index.
+// Templated to accept both TArray<TObjectPtr<...>> (UE 5.1+) and TArray<UMaterialExpression*>.
+template <typename TExprArray>
+static UMaterialExpression* FindExpressionInHost(TExprArray& Expressions, const FString& IdOrIndex) {
+  if (IdOrIndex.IsEmpty()) return nullptr;
+
+  FGuid GuidId;
+  if (FGuid::Parse(IdOrIndex, GuidId)) {
+    for (UMaterialExpression *Expr : Expressions) {
+      if (Expr && Expr->MaterialExpressionGuid == GuidId) return Expr;
+    }
+  }
+  for (UMaterialExpression *Expr : Expressions) {
+    if (Expr) {
+      if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) return Expr;
+      if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
+        if (Param->ParameterName.ToString() == IdOrIndex) return Expr;
+      }
+    }
+  }
+  if (IdOrIndex.IsNumeric()) {
+    int32 Index = FCString::Atoi(*IdOrIndex);
+    if (Index >= 0 && Index < Expressions.Num()) return Expressions[Index];
+  }
+  return nullptr;
+}
+
+// PostEditChange + MarkPackageDirty on whichever host is non-null.
+static void FinalizeHost(UMaterial* Material, UMaterialFunction* Function) {
+  if (Material) { Material->PostEditChange(); Material->MarkPackageDirty(); }
+  else if (Function) { Function->PostEditChange(); Function->MarkPackageDirty(); }
+}
 
 // =============================================================================
 // ASSET ACTION DISPATCHER
@@ -2954,23 +3021,47 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  UMaterial *Material = Cast<UMaterial>(Asset);
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(AssetPath, Material, Function);
 
-  if (!Material) {
+  if (!Material && !Function) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Asset is not a Material (Master Material "
-                                "required for adding parameters)"),
+                           TEXT("Asset is not a Material or Material Function"),
                            nullptr, TEXT("INVALID_ASSET_TYPE"));
     return true;
   }
 
+  UObject *HostOuter = Material ? static_cast<UObject*>(Material)
+                                : static_cast<UObject*>(Function);
+
   UMaterialExpression *NewExpression = nullptr;
   Type = Type.ToLower();
 
+  // Asymmetric creation paths by design:
+  // - UMaterial: UMaterialEditingLibrary::CreateMaterialExpression handles
+  //   graph registration, undo transactions, and editor-only data setup.
+  // - UMaterialFunction: UMaterialEditingLibrary only supports UMaterial, so we
+  //   use NewObject + manual add to the expression collection. This is
+  //   intentional due to API limitations — CreateMaterialExpression does not
+  //   accept UMaterialFunction as a host.
+  auto CreateExpr = [&](UClass* ExprClass) -> UMaterialExpression* {
+    if (Material) {
+      return UMaterialEditingLibrary::CreateMaterialExpression(Material, ExprClass);
+    }
+    UMaterialExpression* Expr = NewObject<UMaterialExpression>(HostOuter, ExprClass, NAME_None, RF_Transactional);
+    if (Expr) {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+      Function->GetEditorOnlyData()->ExpressionCollection.AddExpression(Expr);
+#else
+      Function->FunctionExpressions.Add(Expr);
+#endif
+    }
+    return Expr;
+  };
+
   if (Type == TEXT("scalar")) {
-    NewExpression = UMaterialEditingLibrary::CreateMaterialExpression(
-        Material, UMaterialExpressionScalarParameter::StaticClass());
+    NewExpression = CreateExpr(UMaterialExpressionScalarParameter::StaticClass());
     if (UMaterialExpressionScalarParameter *ScalarParam =
             Cast<UMaterialExpressionScalarParameter>(NewExpression)) {
       ScalarParam->ParameterName = FName(*Name);
@@ -2980,8 +3071,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
       }
     }
   } else if (Type == TEXT("vector")) {
-    NewExpression = UMaterialEditingLibrary::CreateMaterialExpression(
-        Material, UMaterialExpressionVectorParameter::StaticClass());
+    NewExpression = CreateExpr(UMaterialExpressionVectorParameter::StaticClass());
     if (UMaterialExpressionVectorParameter *VectorParam =
             Cast<UMaterialExpressionVectorParameter>(NewExpression)) {
       VectorParam->ParameterName = FName(*Name);
@@ -2997,8 +3087,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
       }
     }
   } else if (Type == TEXT("texture")) {
-    NewExpression = UMaterialEditingLibrary::CreateMaterialExpression(
-        Material, UMaterialExpressionTextureSampleParameter2D::StaticClass());
+    NewExpression = CreateExpr(UMaterialExpressionTextureSampleParameter2D::StaticClass());
     if (UMaterialExpressionTextureSampleParameter2D *TexParam =
             Cast<UMaterialExpressionTextureSampleParameter2D>(NewExpression)) {
       TexParam->ParameterName = FName(*Name);
@@ -3012,8 +3101,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
       }
     }
   } else if (Type == TEXT("staticswitch") || Type == TEXT("static_switch")) {
-    NewExpression = UMaterialEditingLibrary::CreateMaterialExpression(
-        Material, UMaterialExpressionStaticSwitchParameter::StaticClass());
+    NewExpression = CreateExpr(UMaterialExpressionStaticSwitchParameter::StaticClass());
     if (UMaterialExpressionStaticSwitchParameter *SwitchParam =
             Cast<UMaterialExpressionStaticSwitchParameter>(NewExpression)) {
       SwitchParam->ParameterName = FName(*Name);
@@ -3031,12 +3119,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
   }
 
   if (NewExpression) {
-    // UMaterialEditingLibrary::CreateMaterialExpression handles adding to the
-    // material and graph. We just need to ensure the material is
-    // recompiled/updated.
-    UMaterialEditingLibrary::LayoutMaterialExpressions(Material);
-    UMaterialEditingLibrary::RecompileMaterial(Material);
-    Material->MarkPackageDirty();
+    if (Material) {
+      UMaterialEditingLibrary::LayoutMaterialExpressions(Material);
+      UMaterialEditingLibrary::RecompileMaterial(Material);
+      Material->MarkPackageDirty();
+    } else {
+      FinalizeHost(nullptr, Function);
+    }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -3052,7 +3141,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
 
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -3861,14 +3950,19 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(MaterialPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *MaterialPath),
                         TEXT("MATERIAL_NOT_FOUND"));
     return true;
   }
+
+  UObject *HostOuter = Material ? static_cast<UObject*>(Material)
+                                : static_cast<UObject*>(Function);
 
   // Create material expression based on node type
   UMaterialExpression *NewExpression = nullptr;
@@ -3906,7 +4000,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
     // Try to find the class dynamically
     FString FullClassName = FString::Printf(TEXT("/Script/Engine.MaterialExpression%s"), *NodeType);
     ExpressionClass = LoadClass<UMaterialExpression>(nullptr, *FullClassName);
-    
+
     if (!ExpressionClass) {
       SendAutomationError(Socket, RequestId,
                           FString::Printf(TEXT("Unknown node type: %s"), *NodeType),
@@ -3916,7 +4010,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   }
 
   // Create the expression
-  NewExpression = NewObject<UMaterialExpression>(Material, ExpressionClass, NAME_None, RF_Transactional);
+  NewExpression = NewObject<UMaterialExpression>(HostOuter, ExpressionClass, NAME_None, RF_Transactional);
   if (!NewExpression) {
     SendAutomationError(Socket, RequestId,
                         TEXT("Failed to create material expression"),
@@ -3955,21 +4049,27 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
     }
   }
 
-  // Add to material
+  // Add to host expression collection
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Material->GetEditorOnlyData()->ExpressionCollection.AddExpression(NewExpression);
+  if (Material) Material->GetEditorOnlyData()->ExpressionCollection.AddExpression(NewExpression);
+  else Function->GetEditorOnlyData()->ExpressionCollection.AddExpression(NewExpression);
 #else
-  Material->Expressions.Add(NewExpression);
+  auto& Expressions = GetHostExpressions(Material, Function);
+  Expressions.Add(NewExpression);
 #endif
 
-  Material->MarkPackageDirty();
+  // Only mark dirty — skip PostEditChange to avoid shader recompile per node.
+  // Users batch-add nodes and compile once via compile_material.
+  if (Material) { Material->MarkPackageDirty(); }
+  if (Function) { Function->MarkPackageDirty(); }
 
   // Get the expression index for reference
-  int32 ExpressionIndex = -1;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  ExpressionIndex = Material->GetEditorOnlyData()->ExpressionCollection.Expressions.IndexOfByKey(NewExpression);
+  int32 ExpressionIndex = Material
+    ? Material->GetEditorOnlyData()->ExpressionCollection.Expressions.IndexOfByKey(NewExpression)
+    : Function->GetEditorOnlyData()->ExpressionCollection.Expressions.IndexOfByKey(NewExpression);
 #else
-  ExpressionIndex = Material->Expressions.IndexOfByKey(NewExpression);
+  int32 ExpressionIndex = Expressions.IndexOfByKey(NewExpression);
 #endif
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -3977,7 +4077,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetStringField(TEXT("nodeType"), NodeType);
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
-  Resp->SetStringField(TEXT("nodeGuid"), NewExpression->MaterialExpressionGuid.ToString());
+  Resp->SetStringField(TEXT("nodeId"), NewExpression->GetName());
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material node added successfully"), Resp, FString());
@@ -4024,80 +4124,29 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(MaterialPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *MaterialPath),
                         TEXT("MATERIAL_NOT_FOUND"));
     return true;
   }
 
-  // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Material](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) {
-      return nullptr;
-    }
+  auto& Expressions = GetHostExpressions(Material, Function);
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-        Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-    const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
+  // Helper to find expression by stable name, GUID (legacy), or index
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
-    // Try as GUID string first
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) {
-          return Expr;
-        }
-      }
-    }
-
-    // Try as name
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) {
-          return Expr;
-        }
-        // Check parameter name
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) {
-            return Expr;
-          }
-        }
-      }
-    }
-
-    // Try as numeric index
-    int32 Index = -1;
-    if (IdOrIndex.IsNumeric()) {
-      Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) {
-        return Expressions[Index];
-      }
-    }
-
-    return nullptr;
-  };
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-  const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
-
-  // Accept both sourceNodeId/targetNodeId (GUID strings) and fromExpression/toExpression (indices)
+  // Accept both sourceNodeId/targetNodeId (stable name strings) and fromExpression/toExpression (indices)
   FString SourceNodeId, TargetNodeId;
   int32 FromExpressionIndex = -1, ToExpressionIndex = -1;
-  
+
   UMaterialExpression *FromExpression = nullptr;
   UMaterialExpression *ToExpression = nullptr;
 
-  // Try GUID-based parameters first
   if (Payload->TryGetStringField(TEXT("sourceNodeId"), SourceNodeId) && !SourceNodeId.IsEmpty()) {
     FromExpression = FindExpression(SourceNodeId);
   }
@@ -4105,120 +4154,106 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
     ToExpression = FindExpression(TargetNodeId);
   }
 
-  // Fall back to index-based parameters
   if (!FromExpression && Payload->TryGetNumberField(TEXT("fromExpression"), FromExpressionIndex)) {
-    if (FromExpressionIndex >= 0 && FromExpressionIndex < Expressions.Num()) {
-      FromExpression = Expressions[FromExpressionIndex];
-    }
+    if (FromExpressionIndex >= 0 && FromExpressionIndex < Expressions.Num()) FromExpression = Expressions[FromExpressionIndex];
   }
   if (!ToExpression && Payload->TryGetNumberField(TEXT("toExpression"), ToExpressionIndex)) {
-    if (ToExpressionIndex >= 0 && ToExpressionIndex < Expressions.Num()) {
-      ToExpression = Expressions[ToExpressionIndex];
+    if (ToExpressionIndex >= 0 && ToExpressionIndex < Expressions.Num()) ToExpression = Expressions[ToExpressionIndex];
+  }
+
+  FString SourcePin;
+  Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
+  int32 SourcePinIndex = 0;
+  if (!SourcePin.IsEmpty()) {
+    if (SourcePin.IsNumeric()) {
+      SourcePinIndex = FCString::Atoi(*SourcePin);
+    } else {
+      SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("sourcePin must be a numeric index, got '%s'"), *SourcePin),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
     }
   }
 
-  // Check if target is the main material node
   FString InputName;
   Payload->TryGetStringField(TEXT("inputName"), InputName);
-  if (InputName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("targetPin"), InputName);  // Alias
-  }
-  if (InputName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("sourcePin"), InputName);  // Another alias
-  }
+  if (InputName.IsEmpty()) Payload->TryGetStringField(TEXT("targetPin"), InputName);
 
-  // Handle connection to main material node
+  // Handle connection to main material / function output node
   bool bConnectToMainNode = false;
   if ((TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) && !InputName.IsEmpty()) {
     bConnectToMainNode = true;
-  } else if (ToExpression == nullptr && !InputName.IsEmpty()) {
-    // No target expression but have input name = main node connection
-    bConnectToMainNode = true;
+  } else if (!TargetNodeId.IsEmpty() && ToExpression == nullptr) {
+    SendAutomationError(Socket, RequestId, TEXT("Target node not found"), TEXT("TARGET_NODE_NOT_FOUND"));
+    return true;
   }
 
   if (bConnectToMainNode && FromExpression) {
-    // Connect to main material input
-    bool bFound = false;
+    if (Material) {
+      bool bFound = false;
+      auto ConnectMainInput = [&](FExpressionInput& Input) {
+        Input.Expression = FromExpression;
+        Input.OutputIndex = SourcePinIndex;
+        bFound = true;
+      };
 #if WITH_EDITORONLY_DATA
-    if (InputName == TEXT("BaseColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("EmissiveColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("Roughness")) {
-      MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("Metallic")) {
-      MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("Specular")) {
-      MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("Normal")) {
-      MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("Opacity")) {
-      MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("OpacityMask")) {
-      MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("AmbientOcclusion") || InputName == TEXT("AO")) {
-      MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("SubsurfaceColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = FromExpression;
-      bFound = true;
-    } else if (InputName == TEXT("WorldPositionOffset")) {
-      MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression = FromExpression;
-      bFound = true;
-    }
-    // Note: TessellationMultiplier removed - not available in all UE versions
+      if (InputName == TEXT("BaseColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, BaseColor)); }
+      else if (InputName == TEXT("EmissiveColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor)); }
+      else if (InputName == TEXT("Roughness")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Roughness)); }
+      else if (InputName == TEXT("Metallic")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Metallic)); }
+      else if (InputName == TEXT("Specular")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Specular)); }
+      else if (InputName == TEXT("Normal")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Normal)); }
+      else if (InputName == TEXT("Opacity")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, Opacity)); }
+      else if (InputName == TEXT("OpacityMask")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, OpacityMask)); }
+      else if (InputName == TEXT("AmbientOcclusion") || InputName == TEXT("AO")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion)); }
+      else if (InputName == TEXT("SubsurfaceColor")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor)); }
+      else if (InputName == TEXT("WorldPositionOffset")) { ConnectMainInput(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset)); }
 #endif
-
-    if (bFound) {
-      Material->PostEditChange();
-      Material->MarkPackageDirty();
-
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      McpHandlerUtils::AddVerification(Resp, Material);
-      Resp->SetStringField(TEXT("inputName"), InputName);
-      Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
-      SendAutomationResponse(Socket, RequestId, true,
-                             TEXT("Connected to main material pin"), Resp, FString());
+      if (bFound) {
+        FinalizeHost(Material, Function);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(Resp, Material);
+        Resp->SetStringField(TEXT("inputName"), InputName);
+        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Connected to main material pin"), Resp, FString());
+      } else {
+        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown main material input: %s"), *InputName), TEXT("INVALID_PIN"));
+      }
+      return true;
     } else {
-      SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Unknown main material input: %s"), *InputName),
-                          TEXT("INVALID_PIN"));
+      // MaterialFunction: connect to FunctionOutput by name (name is required)
+      if (InputName.IsEmpty()) {
+        SendAutomationError(Socket, RequestId, TEXT("inputName is required when connecting to a function output"), TEXT("MISSING_INPUT_NAME"));
+        return true;
+      }
+      UMaterialExpressionFunctionOutput *TargetOutput = nullptr;
+      for (UMaterialExpression *Expr : Expressions) {
+        if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+          if (Out->OutputName.ToString().Equals(InputName)) { TargetOutput = Out; break; }
+        }
+      }
+      if (TargetOutput) {
+        TargetOutput->A.Expression = FromExpression;
+        TargetOutput->A.OutputIndex = SourcePinIndex;
+        FinalizeHost(Material, Function);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("inputName"), TargetOutput->OutputName.ToString());
+        Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Connected to function output"), Resp, FString());
+      } else {
+        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No FunctionOutput named '%s' found"), *InputName), TEXT("INVALID_PIN"));
+      }
+      return true;
     }
-    return true;
   }
 
-  // Normal expression-to-expression connection
-  if (!FromExpression) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("Source node not found"),
-                        TEXT("SOURCE_NODE_NOT_FOUND"));
-    return true;
-  }
+  if (!FromExpression) { SendAutomationError(Socket, RequestId, TEXT("Source node not found"), TEXT("SOURCE_NODE_NOT_FOUND")); return true; }
+  if (!ToExpression) { SendAutomationError(Socket, RequestId, TEXT("Target node not found"), TEXT("TARGET_NODE_NOT_FOUND")); return true; }
 
-  if (!ToExpression) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("Target node not found"),
-                        TEXT("TARGET_NODE_NOT_FOUND"));
-    return true;
-  }
+  if (InputName.IsEmpty()) InputName = TEXT("Input");
 
-  // Get input name (default to first available input)
-  if (InputName.IsEmpty()) {
-    InputName = TEXT("Input");
-  }
-
-  // Find the input on the destination expression
   FExpressionInput *TargetInput = nullptr;
-  for (FProperty *Property = ToExpression->GetClass()->PropertyLink; Property;
-       Property = Property->PropertyLinkNext) {
+  for (FProperty *Property = ToExpression->GetClass()->PropertyLink; Property; Property = Property->PropertyLinkNext) {
     if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
       if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
         if (Property->GetName().Equals(InputName, ESearchCase::IgnoreCase)) {
@@ -4228,11 +4263,8 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
       }
     }
   }
-
-  // If not found, try first available input
   if (!TargetInput) {
-    for (FProperty *Property = ToExpression->GetClass()->PropertyLink; Property;
-         Property = Property->PropertyLinkNext) {
+    for (FProperty *Property = ToExpression->GetClass()->PropertyLink; Property; Property = Property->PropertyLinkNext) {
       if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
         if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
           TargetInput = StructProp->ContainerPtrToValuePtr<FExpressionInput>(ToExpression);
@@ -4244,26 +4276,22 @@ bool UMcpAutomationBridgeSubsystem::HandleConnectMaterialPins(
   }
 
   if (!TargetInput) {
-    SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("No input found on target expression. Tried: %s"), *InputName),
-                        TEXT("INPUT_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No input found on target expression. Tried: %s"), *InputName), TEXT("INPUT_NOT_FOUND"));
     return true;
   }
 
-  // Make the connection
   TargetInput->Expression = FromExpression;
-  Material->PostEditChange();
-  Material->MarkPackageDirty();
+  TargetInput->OutputIndex = SourcePinIndex;
+  FinalizeHost(Material, Function);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->MaterialExpressionGuid.ToString());
-  Resp->SetStringField(TEXT("targetNodeId"), ToExpression->MaterialExpressionGuid.ToString());
+  if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+  Resp->SetStringField(TEXT("sourceNodeId"), FromExpression->GetName());
+  Resp->SetStringField(TEXT("targetNodeId"), ToExpression->GetName());
   Resp->SetStringField(TEXT("inputName"), InputName);
 
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Material pins connected successfully"), Resp,
-                         FString());
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Material pins connected successfully"), Resp, FString());
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -4307,67 +4335,22 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(MaterialPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *MaterialPath),
                         TEXT("MATERIAL_NOT_FOUND"));
     return true;
   }
 
-  // Get expressions array
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-  TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
+  auto& Expressions = GetHostExpressions(Material, Function);
 
-  // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) {
-      return nullptr;
-    }
+  // Helper to find expression by stable name, GUID (legacy), or index
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
-    // Try as GUID string first
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) {
-          return Expr;
-        }
-      }
-    }
-
-    // Try as name
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) {
-          return Expr;
-        }
-        // Check parameter name
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) {
-            return Expr;
-          }
-        }
-      }
-    }
-
-    // Try as numeric index
-    int32 Index = -1;
-    if (IdOrIndex.IsNumeric()) {
-      Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) {
-        return Expressions[Index];
-      }
-    }
-
-    return nullptr;
-  };
-
-  // Accept both nodeId (GUID string) and expressionIndex (int)
   FString NodeId;
   int32 ExpressionIndex = -1;
   UMaterialExpression *ExpressionToRemove = nullptr;
@@ -4382,30 +4365,73 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
 
   if (!ExpressionToRemove) {
     SendAutomationError(Socket, RequestId,
-                        TEXT("Node not found. Provide valid nodeId (GUID) or expressionIndex"),
+                        TEXT("Node not found. Provide valid nodeId (stable name) or expressionIndex"),
                         TEXT("NODE_NOT_FOUND"));
     return true;
   }
 
   FString RemovedName = ExpressionToRemove->GetName();
-  FString RemovedGuid = ExpressionToRemove->MaterialExpressionGuid.ToString();
+  FString RemovedStableName = ExpressionToRemove->GetName();
 
-  // Remove the expression
+  // Disconnect inbound links: walk all sibling expressions and clear any
+  // FExpressionInput that references the node we're about to remove.
+  for (UMaterialExpression *Expr : Expressions) {
+    if (!Expr || Expr == ExpressionToRemove) continue;
+    for (FProperty *Property = Expr->GetClass()->PropertyLink; Property;
+         Property = Property->PropertyLinkNext) {
+      FStructProperty *StructProp = CastField<FStructProperty>(Property);
+      if (StructProp && StructProp->Struct &&
+          StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
+        FExpressionInput *Input =
+            StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expr);
+        if (Input && Input->Expression == ExpressionToRemove) {
+          Input->Expression = nullptr;
+          Input->OutputIndex = 0;
+        }
+      }
+    }
+  }
+
+  // Disconnect from main material inputs (root node pins)
+  if (Material) {
+#if WITH_EDITORONLY_DATA
+    auto ClearIfMatches = [&](FExpressionInput& Input) {
+      if (Input.Expression == ExpressionToRemove) {
+        Input.Expression = nullptr;
+        Input.OutputIndex = 0;
+      }
+    };
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, BaseColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Roughness));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Metallic));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Specular));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Normal));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, Opacity));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, OpacityMask));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
+    ClearIfMatches(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+#endif
+  }
+
+  // Remove the expression from the appropriate container
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  Material->GetEditorOnlyData()->ExpressionCollection.RemoveExpression(ExpressionToRemove);
+  if (Material) Material->GetExpressionCollection().RemoveExpression(ExpressionToRemove);
+  else Function->GetExpressionCollection().RemoveExpression(ExpressionToRemove);
 #else
   Expressions.Remove(ExpressionToRemove);
 #endif
 
-  // Also remove from the material's root node if connected
-  Material->RemoveExpressionParameter(ExpressionToRemove);
+  // Also remove from the material's root node if connected (Material only)
+  if (Material) Material->RemoveExpressionParameter(ExpressionToRemove);
 
-  Material->PostEditChange();
-  Material->MarkPackageDirty();
+  FinalizeHost(Material, Function);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), RemovedGuid);
+  if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+  Resp->SetStringField(TEXT("nodeId"), RemovedStableName);
   Resp->SetStringField(TEXT("removedName"), RemovedName);
   Resp->SetNumberField(TEXT("remainingExpressions"), Expressions.Num());
   Resp->SetBoolField(TEXT("removed"), true);
@@ -4456,194 +4482,124 @@ bool UMcpAutomationBridgeSubsystem::HandleBreakMaterialConnections(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(MaterialPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *MaterialPath),
                         TEXT("MATERIAL_NOT_FOUND"));
     return true;
   }
 
-  // Get expressions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-  const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
+  auto& Expressions = GetHostExpressions(Material, Function);
 
-  // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) {
-      return nullptr;
-    }
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
-    // Try as GUID string first
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) {
-          return Expr;
-        }
-      }
-    }
-
-    // Try as name
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) {
-          return Expr;
-        }
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) {
-            return Expr;
-          }
-        }
-      }
-    }
-
-    // Try as numeric index
-    int32 Index = -1;
-    if (IdOrIndex.IsNumeric()) {
-      Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) {
-        return Expressions[Index];
-      }
-    }
-
-    return nullptr;
-  };
-
-  // Check if breaking from main material node
   FString NodeId, PinName;
   bool bHasNodeId = Payload->TryGetStringField(TEXT("nodeId"), NodeId) && !NodeId.IsEmpty();
   bool bHasPinName = Payload->TryGetStringField(TEXT("pinName"), PinName) && !PinName.IsEmpty();
-  
-  // Also check nodeId alias
-  if (!bHasNodeId) {
-    bHasNodeId = Payload->TryGetStringField(TEXT("nodeId"), NodeId) && !NodeId.IsEmpty();
-  }
 
-  // If nodeId is "Main" or empty with pinName, disconnect from main material node
+  // If nodeId is "Main" or empty with pinName, disconnect from main/output node
   if ((!bHasNodeId || NodeId == TEXT("Main")) && bHasPinName) {
-    bool bFound = false;
+    if (Material) {
+      bool bFound = false;
 #if WITH_EDITORONLY_DATA
-    if (PinName == TEXT("BaseColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("EmissiveColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("Roughness")) {
-      MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("Metallic")) {
-      MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("Specular")) {
-      MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("Normal")) {
-      MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("Opacity")) {
-      MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("OpacityMask")) {
-      MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) {
-      MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = nullptr;
-      bFound = true;
-    } else if (PinName == TEXT("SubsurfaceColor")) {
-      MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = nullptr;
-      bFound = true;
-    }
+      auto ClearMainPin = [&](FExpressionInput& Input) { Input.Expression = nullptr; Input.OutputIndex = 0; bFound = true; };
+      if (PinName == TEXT("BaseColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, BaseColor)); }
+      else if (PinName == TEXT("EmissiveColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor)); }
+      else if (PinName == TEXT("Roughness")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Roughness)); }
+      else if (PinName == TEXT("Metallic")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Metallic)); }
+      else if (PinName == TEXT("Specular")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Specular)); }
+      else if (PinName == TEXT("Normal")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Normal)); }
+      else if (PinName == TEXT("Opacity")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Opacity)); }
+      else if (PinName == TEXT("OpacityMask")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, OpacityMask)); }
+      else if (PinName == TEXT("AmbientOcclusion") || PinName == TEXT("AO")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion)); }
+      else if (PinName == TEXT("SubsurfaceColor")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor)); }
+      else if (PinName == TEXT("WorldPositionOffset")) { ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset)); }
 #endif
-
-    if (bFound) {
-      Material->PostEditChange();
-      Material->MarkPackageDirty();
-
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      McpHandlerUtils::AddVerification(Resp, Material);
-      Resp->SetStringField(TEXT("pinName"), PinName);
-      Resp->SetBoolField(TEXT("disconnected"), true);
-      SendAutomationResponse(Socket, RequestId, true,
-                             TEXT("Disconnected from main material pin"), Resp, FString());
+      if (bFound) {
+        FinalizeHost(Material, Function);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        McpHandlerUtils::AddVerification(Resp, Material);
+        Resp->SetStringField(TEXT("pinName"), PinName);
+        Resp->SetBoolField(TEXT("disconnected"), true);
+        SendAutomationResponse(Socket, RequestId, true, TEXT("Disconnected from main material pin"), Resp, FString());
+      } else {
+        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown main material pin: %s"), *PinName), TEXT("INVALID_PIN"));
+      }
     } else {
-      SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Unknown main material pin: %s"), *PinName),
-                          TEXT("INVALID_PIN"));
+      // MaterialFunction: clear FunctionOutput by name
+      bool bCleared = false;
+      for (UMaterialExpression *Expr : Expressions) {
+        if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+          if (PinName.IsEmpty() || Out->OutputName.ToString().Equals(PinName)) {
+            Out->A.Expression = nullptr; Out->A.OutputIndex = 0; bCleared = true;
+            if (!PinName.IsEmpty()) break;
+          }
+        }
+      }
+      if (!bCleared && !PinName.IsEmpty()) {
+        SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown function output pin: %s"), *PinName), TEXT("INVALID_PIN"));
+      } else {
+        if (bCleared) FinalizeHost(Material, Function);
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("pinName"), PinName);
+        Resp->SetBoolField(TEXT("disconnected"), bCleared);
+        SendAutomationResponse(Socket, RequestId, true,
+                               TEXT("Disconnected from function output"),
+                               Resp, FString());
+      }
     }
     return true;
   }
 
-  // Find target expression
   int32 ExpressionIndex = -1;
   UMaterialExpression *TargetExpression = nullptr;
-
-  if (bHasNodeId) {
-    TargetExpression = FindExpression(NodeId);
-  } else if (Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex)) {
-    if (ExpressionIndex >= 0 && ExpressionIndex < Expressions.Num()) {
-      TargetExpression = Expressions[ExpressionIndex];
-    }
+  if (bHasNodeId) TargetExpression = FindExpression(NodeId);
+  else if (Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex)) {
+    if (ExpressionIndex >= 0 && ExpressionIndex < Expressions.Num()) TargetExpression = Expressions[ExpressionIndex];
   }
 
   if (!TargetExpression) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("Node not found. Provide valid nodeId (GUID) or expressionIndex"),
-                        TEXT("NODE_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, TEXT("Node not found. Provide valid nodeId (stable name) or expressionIndex"), TEXT("NODE_NOT_FOUND"));
     return true;
   }
 
-  // Get optional input name to break specific connection
   FString InputName;
-  bool bSpecificInput = Payload->TryGetStringField(TEXT("inputName"), InputName) &&
-                        !InputName.IsEmpty();
-
+  bool bSpecificInput = Payload->TryGetStringField(TEXT("inputName"), InputName) && !InputName.IsEmpty();
   int32 BrokenConnections = 0;
 
-  // Iterate through all properties of the expression to find and break connections
-  for (FProperty *Property = TargetExpression->GetClass()->PropertyLink; Property;
-       Property = Property->PropertyLinkNext) {
+  for (FProperty *Property = TargetExpression->GetClass()->PropertyLink; Property; Property = Property->PropertyLinkNext) {
     if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
       if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
-        // Check if we should break this specific input
-        if (bSpecificInput && !Property->GetName().Equals(InputName, ESearchCase::IgnoreCase)) {
-          continue;
-        }
-
+        if (bSpecificInput && !Property->GetName().Equals(InputName, ESearchCase::IgnoreCase)) continue;
         FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpression);
-        if (Input && Input->Expression) {
-          Input->Expression = nullptr;
-          BrokenConnections++;
-
-          // If breaking specific input, we can stop after finding it
-          if (bSpecificInput) {
-            break;
-          }
-        }
+        if (Input && Input->Expression) { Input->Expression = nullptr; Input->OutputIndex = 0; BrokenConnections++; if (bSpecificInput) break; }
       }
     }
   }
 
-  Material->PostEditChange();
-  Material->MarkPackageDirty();
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), TargetExpression->MaterialExpressionGuid.ToString());
-  Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
-  if (bSpecificInput) {
-    Resp->SetStringField(TEXT("inputName"), InputName);
+  if (bSpecificInput && BrokenConnections == 0) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("No input named '%s' found on node '%s'"), *InputName, *TargetExpression->GetName()),
+                        TEXT("INPUT_NOT_FOUND"));
+    return true;
   }
 
-  SendAutomationResponse(Socket, RequestId, true,
-                         FString::Printf(TEXT("Broken %d connection(s)"), BrokenConnections),
-                         Resp, FString());
+  if (BrokenConnections > 0) {
+    FinalizeHost(Material, Function);
+  }
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+  Resp->SetStringField(TEXT("nodeId"), TargetExpression->GetName());
+  Resp->SetNumberField(TEXT("brokenConnections"), BrokenConnections);
+  if (bSpecificInput) Resp->SetStringField(TEXT("inputName"), InputName);
+
+  SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Broken %d connection(s)"), BrokenConnections), Resp, FString());
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,
@@ -4687,66 +4643,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *MaterialPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(MaterialPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *MaterialPath),
                         TEXT("MATERIAL_NOT_FOUND"));
     return true;
   }
 
-  // Get expressions
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-      Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-  const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
+  auto& Expressions = GetHostExpressions(Material, Function);
 
-  // Helper to find expression by GUID, name, or index
-  auto FindExpression = [&Expressions](const FString &IdOrIndex) -> UMaterialExpression* {
-    if (IdOrIndex.IsEmpty()) {
-      return nullptr;
-    }
+  auto FindExpression = [&Expressions](const FString &Id) { return FindExpressionInHost(Expressions, Id); };
 
-    // Try as GUID string first
-    FGuid GuidId;
-    if (FGuid::Parse(IdOrIndex, GuidId)) {
-      for (UMaterialExpression *Expr : Expressions) {
-        if (Expr && Expr->MaterialExpressionGuid == GuidId) {
-          return Expr;
-        }
-      }
-    }
-
-    // Try as name
-    for (UMaterialExpression *Expr : Expressions) {
-      if (Expr) {
-        if (Expr->GetName() == IdOrIndex || Expr->GetPathName() == IdOrIndex) {
-          return Expr;
-        }
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-          if (Param->ParameterName.ToString() == IdOrIndex) {
-            return Expr;
-          }
-        }
-      }
-    }
-
-    // Try as numeric index
-    int32 Index = -1;
-    if (IdOrIndex.IsNumeric()) {
-      Index = FCString::Atoi(*IdOrIndex);
-      if (Index >= 0 && Index < Expressions.Num()) {
-        return Expressions[Index];
-      }
-    }
-
-    return nullptr;
-  };
-
-  // Accept both nodeId (GUID string) and expressionIndex (int)
   FString NodeId;
   int32 ExpressionIndex = -1;
   UMaterialExpression *Expression = nullptr;
@@ -4754,23 +4665,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   if (Payload->TryGetStringField(TEXT("nodeId"), NodeId) && !NodeId.IsEmpty()) {
     Expression = FindExpression(NodeId);
   } else if (Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex)) {
-    if (ExpressionIndex >= 0 && ExpressionIndex < Expressions.Num()) {
-      Expression = Expressions[ExpressionIndex];
-    }
+    if (ExpressionIndex >= 0 && ExpressionIndex < Expressions.Num()) Expression = Expressions[ExpressionIndex];
   }
 
-  // If no specific node requested or node not found, return list of all nodes
   if (!Expression) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Resp, Material);
-    
+    if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+    else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+
     TArray<TSharedPtr<FJsonValue>> NodeList;
     for (int32 i = 0; i < Expressions.Num(); ++i) {
       UMaterialExpression *Expr = Expressions[i];
       if (!Expr) continue;
       
       TSharedPtr<FJsonObject> NodeInfo = McpHandlerUtils::CreateResultObject();
-      NodeInfo->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
+      NodeInfo->SetStringField(TEXT("nodeId"), Expr->GetName());
       NodeInfo->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
       NodeInfo->SetNumberField(TEXT("index"), i);
       NodeInfo->SetNumberField(TEXT("editorX"), Expr->MaterialExpressionEditorX);
@@ -4781,6 +4690,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
       // Add parameter name if applicable
       if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
         NodeInfo->SetStringField(TEXT("parameterName"), Param->ParameterName.ToString());
+      }
+      // Add function path for MaterialFunctionCall nodes
+      if (UMaterialExpressionMaterialFunctionCall *FuncCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
+        if (FuncCall->MaterialFunction) {
+          NodeInfo->SetStringField(TEXT("functionPath"), FuncCall->MaterialFunction->GetPathName());
+        }
+      }
+      // Add pin name for FunctionInput/Output expressions
+      if (UMaterialExpressionFunctionInput *FuncIn = Cast<UMaterialExpressionFunctionInput>(Expr)) {
+        NodeInfo->SetStringField(TEXT("inputName"), FuncIn->InputName.ToString());
+      }
+      if (UMaterialExpressionFunctionOutput *FuncOut = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
+        NodeInfo->SetStringField(TEXT("outputName"), FuncOut->OutputName.ToString());
       }
       NodeList.Add(MakeShared<FJsonValueObject>(NodeInfo));
     }
@@ -4799,8 +4721,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
 
   // Build response for specific node
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Resp, Material);
-  Resp->SetStringField(TEXT("nodeId"), Expression->MaterialExpressionGuid.ToString());
+  if (Material) McpHandlerUtils::AddVerification(Resp, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
+  Resp->SetStringField(TEXT("nodeId"), Expression->GetName());
   Resp->SetStringField(TEXT("name"), Expression->GetName());
   Resp->SetStringField(TEXT("class"), Expression->GetClass()->GetName());
   Resp->SetStringField(TEXT("classPath"), Expression->GetClass()->GetPathName());
@@ -4821,7 +4744,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
         InputObj->SetStringField(TEXT("name"), Property->GetName());
         InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
         if (Input->Expression) {
-          InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->MaterialExpressionGuid.ToString());
+          InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->GetName());
           InputObj->SetStringField(TEXT("connectedToName"), Input->Expression->GetName());
         }
         InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
@@ -4867,6 +4790,52 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
     DefaultObj->SetNumberField(TEXT("b"), VectorParam->DefaultValue.B);
     DefaultObj->SetNumberField(TEXT("a"), VectorParam->DefaultValue.A);
     Resp->SetObjectField(TEXT("defaultValue"), DefaultObj);
+  }
+
+  // Expose function pin metadata for MaterialFunctionCall nodes
+  if (UMaterialExpressionMaterialFunctionCall *FuncCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expression)) {
+    if (FuncCall->MaterialFunction) {
+      Resp->SetStringField(TEXT("functionPath"), FuncCall->MaterialFunction->GetPathName());
+    }
+    // Emit function inputs
+    TArray<TSharedPtr<FJsonValue>> FuncInputs;
+    for (int32 fi = 0; fi < FuncCall->FunctionInputs.Num(); ++fi) {
+      TSharedPtr<FJsonObject> FIObj = McpHandlerUtils::CreateResultObject();
+      const UMaterialExpressionFunctionInput* FuncInputExpr = FuncCall->FunctionInputs[fi].ExpressionInput;
+      FIObj->SetStringField(TEXT("inputName"), FuncInputExpr ? FuncInputExpr->InputName.ToString() : FString());
+      FIObj->SetNumberField(TEXT("index"), fi);
+      FIObj->SetBoolField(TEXT("isConnected"), FuncCall->FunctionInputs[fi].Input.Expression != nullptr);
+      if (FuncCall->FunctionInputs[fi].Input.Expression) {
+        FIObj->SetStringField(TEXT("connectedToId"), FuncCall->FunctionInputs[fi].Input.Expression->GetName());
+        FIObj->SetNumberField(TEXT("outputIndex"), FuncCall->FunctionInputs[fi].Input.OutputIndex);
+      }
+      FuncInputs.Add(MakeShared<FJsonValueObject>(FIObj));
+    }
+    Resp->SetArrayField(TEXT("functionInputs"), FuncInputs);
+
+    // Emit function outputs
+    TArray<TSharedPtr<FJsonValue>> FuncOutputs;
+    for (int32 fo = 0; fo < FuncCall->FunctionOutputs.Num(); ++fo) {
+      TSharedPtr<FJsonObject> FOObj = McpHandlerUtils::CreateResultObject();
+      const UMaterialExpressionFunctionOutput* FuncOutputExpr = FuncCall->FunctionOutputs[fo].ExpressionOutput;
+      FOObj->SetStringField(TEXT("outputName"), FuncOutputExpr ? FuncOutputExpr->OutputName.ToString() : FString());
+      FOObj->SetNumberField(TEXT("index"), fo);
+      FuncOutputs.Add(MakeShared<FJsonValueObject>(FOObj));
+    }
+    Resp->SetArrayField(TEXT("functionOutputs"), FuncOutputs);
+  }
+
+  // Expose function input/output pin metadata for FunctionInput/Output expressions
+  if (UMaterialExpressionFunctionInput *FuncIn = Cast<UMaterialExpressionFunctionInput>(Expression)) {
+    Resp->SetStringField(TEXT("inputName"), FuncIn->InputName.ToString());
+  }
+  if (UMaterialExpressionFunctionOutput *FuncOut = Cast<UMaterialExpressionFunctionOutput>(Expression)) {
+    Resp->SetStringField(TEXT("outputName"), FuncOut->OutputName.ToString());
+    Resp->SetBoolField(TEXT("isConnected"), FuncOut->A.Expression != nullptr);
+    if (FuncOut->A.Expression) {
+      Resp->SetStringField(TEXT("connectedToId"), FuncOut->A.Expression->GetName());
+      Resp->SetNumberField(TEXT("sourceOutputIndex"), FuncOut->A.OutputIndex);
+    }
   }
 
   SendAutomationResponse(Socket, RequestId, true,
@@ -5217,198 +5186,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
 }
 
 // ============================================================================
-// GET ASSET GRAPH
-// ============================================================================
-
-bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
-    const FString &RequestId, const FString &Action,
-    const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("get_asset_graph"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("get_asset_graph payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString AssetPath;
-  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
-      !Payload->TryGetStringField(TEXT("materialPath"), AssetPath)) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("assetPath is required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  if (AssetPath.IsEmpty()) {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("assetPath cannot be empty"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  // Load the asset
-  UObject *Asset = LoadObject<UObject>(nullptr, *AssetPath);
-  if (!Asset) {
-    SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Asset not found: %s"), *AssetPath),
-                        TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  McpHandlerUtils::AddVerification(Result, Asset);
-  Result->SetStringField(TEXT("assetPath"), AssetPath);
-  Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
-
-  // Check if it's a material
-  UMaterial *Material = Cast<UMaterial>(Asset);
-  if (Material) {
-    TArray<TSharedPtr<FJsonValue>> NodeList;
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    const TArray<TObjectPtr<UMaterialExpression>> &Expressions =
-        Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
-#else
-    const TArray<UMaterialExpression *> &Expressions = Material->Expressions;
-#endif
-
-    // Build node list with connections
-    TMap<UMaterialExpression*, int32> NodeIndexMap;
-    for (int32 i = 0; i < Expressions.Num(); ++i) {
-      NodeIndexMap.Add(Expressions[i], i);
-    }
-
-    for (int32 i = 0; i < Expressions.Num(); ++i) {
-      UMaterialExpression *Expr = Expressions[i];
-      if (!Expr) continue;
-
-      TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
-      NodeObj->SetNumberField(TEXT("index"), i);
-      NodeObj->SetStringField(TEXT("nodeId"), Expr->MaterialExpressionGuid.ToString());
-      NodeObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
-      NodeObj->SetStringField(TEXT("name"), Expr->GetName());
-      NodeObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
-      NodeObj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
-
-      // Add inputs with connections
-      TArray<TSharedPtr<FJsonValue>> InputsArray;
-      for (FProperty *Property = Expr->GetClass()->PropertyLink; Property;
-           Property = Property->PropertyLinkNext) {
-        if (FStructProperty *StructProp = CastField<FStructProperty>(Property)) {
-          if (StructProp->Struct && StructProp->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
-            FExpressionInput *Input = StructProp->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-            TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
-            InputObj->SetStringField(TEXT("name"), Property->GetName());
-            InputObj->SetBoolField(TEXT("isConnected"), Input->Expression != nullptr);
-            if (Input->Expression) {
-              int32 *ConnectedIndex = NodeIndexMap.Find(Input->Expression);
-              if (ConnectedIndex) {
-                InputObj->SetNumberField(TEXT("connectedToIndex"), *ConnectedIndex);
-              }
-              InputObj->SetStringField(TEXT("connectedToId"), Input->Expression->MaterialExpressionGuid.ToString());
-              InputObj->SetStringField(TEXT("connectedToName"), Input->Expression->GetName());
-            }
-            InputsArray.Add(MakeShared<FJsonValueObject>(InputObj));
-          }
-        }
-      }
-      NodeObj->SetArrayField(TEXT("inputs"), InputsArray);
-
-      // Add parameter info if applicable
-      if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
-        NodeObj->SetStringField(TEXT("parameterName"), Param->ParameterName.ToString());
-      }
-
-      NodeList.Add(MakeShared<FJsonValueObject>(NodeObj));
-    }
-
-    Result->SetStringField(TEXT("graphType"), TEXT("Material"));
-    Result->SetNumberField(TEXT("nodeCount"), Expressions.Num());
-    Result->SetArrayField(TEXT("nodes"), NodeList);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material graph retrieved"), Result, FString());
-    return true;
-  }
-
-  // Check if it's a blueprint
-  UBlueprint *Blueprint = Cast<UBlueprint>(Asset);
-  if (Blueprint) {
-    TArray<UEdGraph *> AllGraphs;
-    Blueprint->GetAllGraphs(AllGraphs);
-
-    TArray<TSharedPtr<FJsonValue>> GraphList;
-
-    for (UEdGraph *Graph : AllGraphs) {
-      if (!Graph) continue;
-
-      TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
-      GraphObj->SetStringField(TEXT("name"), Graph->GetName());
-      GraphObj->SetStringField(TEXT("graphType"), Graph->GetClass()->GetName());
-
-      TArray<TSharedPtr<FJsonValue>> NodeArray;
-      for (UEdGraphNode *Node : Graph->Nodes) {
-        if (!Node) continue;
-
-        TSharedPtr<FJsonObject> NodeObj = McpHandlerUtils::CreateResultObject();
-        NodeObj->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
-        NodeObj->SetStringField(TEXT("title"), Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
-        NodeObj->SetNumberField(TEXT("x"), Node->NodePosX);
-        NodeObj->SetNumberField(TEXT("y"), Node->NodePosY);
-        NodeObj->SetBoolField(TEXT("isDeprecated"), Node->IsDeprecated());
-
-        // Get pins
-        TArray<TSharedPtr<FJsonValue>> PinArray;
-        for (UEdGraphPin *Pin : Node->Pins) {
-          if (!Pin) continue;
-          TSharedPtr<FJsonObject> PinObj = McpHandlerUtils::CreateResultObject();
-          PinObj->SetStringField(TEXT("name"), Pin->PinName.ToString());
-          PinObj->SetStringField(TEXT("direction"), Pin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"));
-          PinObj->SetStringField(TEXT("type"), Pin->PinType.PinCategory.ToString());
-          PinObj->SetBoolField(TEXT("isConnected"), Pin->LinkedTo.Num() > 0);
-          PinArray.Add(MakeShared<FJsonValueObject>(PinObj));
-        }
-        NodeObj->SetArrayField(TEXT("pins"), PinArray);
-
-        NodeArray.Add(MakeShared<FJsonValueObject>(NodeObj));
-      }
-      GraphObj->SetArrayField(TEXT("nodes"), NodeArray);
-      GraphObj->SetNumberField(TEXT("nodeCount"), Graph->Nodes.Num());
-
-      GraphList.Add(MakeShared<FJsonValueObject>(GraphObj));
-    }
-
-    Result->SetStringField(TEXT("graphType"), TEXT("Blueprint"));
-    Result->SetNumberField(TEXT("graphCount"), AllGraphs.Num());
-    Result->SetArrayField(TEXT("graphs"), GraphList);
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Blueprint graph retrieved"), Result, FString());
-    return true;
-  }
-
-  Result->SetStringField(TEXT("graphType"), TEXT("None"));
-  Result->SetStringField(TEXT("message"), TEXT("Asset does not have a graph structure"));
-
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("No graph for this asset type"), Result, FString());
-  return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("get_asset_graph requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
-}
-
-// ============================================================================
 // REBUILD MATERIAL
 // ============================================================================
 
@@ -5444,36 +5221,36 @@ bool UMcpAutomationBridgeSubsystem::HandleRebuildMaterial(
     return true;
   }
 
-  // Load the material
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-  if (!Material) {
+  // Load the material or material function
+  UMaterial *Material = nullptr;
+  UMaterialFunction *Function = nullptr;
+  LoadMaterialOrFunctionAW(AssetPath, Material, Function);
+  if (!Material && !Function) {
     SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Material not found: %s"), *AssetPath),
+                        FString::Printf(TEXT("Material or Material Function not found: %s"), *AssetPath),
                         TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  // Rebuild the material by triggering a recompile
-  // This forces the material to update its shader maps and expressions
-  AsyncTask(ENamedThreads::GameThread, [this, RequestId, Socket, Material, AssetPath]() {
-    // Mark the material as needing recompilation
-    Material->MarkPackageDirty();
-    
-    // Force material to recompile its shader
-    Material->PreEditChange(nullptr);
-    Material->PostEditChange();
-    
-    // Save the material
-    McpSafeAssetSave(Material);
+  // Rebuild by triggering a recompile (already on game thread — no AsyncTask needed)
+  UObject *Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
+  Host->MarkPackageDirty();
+  Host->PreEditChange(nullptr);
+  Host->PostEditChange();
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, Material);
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("rebuilt"), true);
+  if (!McpSafeAssetSave(Host)) {
+    SendAutomationError(Socket, RequestId, TEXT("Failed to save rebuilt material"), TEXT("SAVE_FAILED"));
+    return true;
+  }
 
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Material rebuilt successfully"), Result, FString());
-  });
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  if (Material) McpHandlerUtils::AddVerification(Result, Material);
+  else if (Function) McpHandlerUtils::AddVerification(Result, Function);
+  Result->SetStringField(TEXT("assetPath"), AssetPath);
+  Result->SetBoolField(TEXT("rebuilt"), true);
+
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Material rebuilt successfully"), Result, FString());
 
   return true;
 #else

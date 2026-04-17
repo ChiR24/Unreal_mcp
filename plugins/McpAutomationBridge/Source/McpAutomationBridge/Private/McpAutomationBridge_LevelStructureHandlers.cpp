@@ -254,7 +254,7 @@ static bool HandleCreateLevel(
 
     // Build full path
     FString FullPath = LevelPath / LevelName;
-    if (!FullPath.StartsWith(TEXT("/Game/")))
+    if (!FullPath.StartsWith(TEXT("/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
     }
@@ -2022,7 +2022,7 @@ static bool HandleConfigureHlodLayer(
 
     // Build full path
     FString FullPath = HlodLayerPath / HlodLayerName;
-    if (!FullPath.StartsWith(TEXT("/Game/")))
+    if (!FullPath.StartsWith(TEXT("/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
     }

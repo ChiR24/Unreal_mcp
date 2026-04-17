@@ -11,6 +11,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/OutputDevice.h"
 #include "Misc/Paths.h"
+#include "Misc/PackageName.h"
 #include "Misc/ScopeLock.h"
 #include "UObject/UnrealType.h"
 #include <type_traits>
@@ -268,25 +269,21 @@ static inline FString SanitizeProjectRelativePath(const FString &InPath) {
   }
 
   // Whitelist valid roots - MUST start with one of these
-  const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game")) ||
-                          CleanPath.StartsWith(TEXT("/Engine")) ||
-                          CleanPath.StartsWith(TEXT("/Script"));
+  const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) ||
+                          CleanPath.StartsWith(TEXT("/Engine/")) ||
+                          CleanPath.StartsWith(TEXT("/Script/"));
 
   // Reject paths that start with / but don't have a valid root
   // This catches paths like /etc/passwd or /invalid/path
   if (!bValidRoot) {
-    // Check if it looks like a plugin path (e.g., /MyPlugin/Content/Asset)
-    // Plugin paths must have at least 3 segments: /PluginName/Content/...
-    TArray<FString> Segments;
-    CleanPath.ParseIntoArray(Segments, TEXT("/"), true);
-    const bool bLooksLikePluginPath = Segments.Num() >= 3 &&
-        Segments.Num() >= 2 && Segments[1].Equals(TEXT("Content"), ESearchCase::IgnoreCase);
-    
-    if (!bLooksLikePluginPath) {
+    // Validate against engine's registered mount points (covers all plugin
+    // content mounts like /MyGameFeature/, /ShooterCore/, /ALS/, etc.)
+    FText MountReason;
+    if (!FPackageName::IsValidLongPackageName(CleanPath, true, &MountReason)) {
       UE_LOG(
           LogMcpAutomationBridgeSubsystem, Warning,
-          TEXT("SanitizeProjectRelativePath: Rejected path without valid root (not /Game, /Engine, /Script, or valid plugin path): %s"),
-          *InPath);
+          TEXT("SanitizeProjectRelativePath: Rejected path '%s': %s"),
+          *InPath, *MountReason.ToString());
       return FString();
     }
   }
@@ -464,13 +461,6 @@ static inline bool ValidateAssetCreationPath(
   if (SanitizedFolder.IsEmpty()) {
     OutError = TEXT("Invalid folder path: contains traversal or invalid characters");
     return false;
-  }
-  
-  // Ensure folder starts with valid root
-  if (!SanitizedFolder.StartsWith(TEXT("/Game")) && 
-      !SanitizedFolder.StartsWith(TEXT("/Engine")) &&
-      !SanitizedFolder.StartsWith(TEXT("/Script"))) {
-    SanitizedFolder = TEXT("/Game") + SanitizedFolder;
   }
   
   // Sanitize asset name
@@ -3010,23 +3000,13 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
   // as it causes Editor hangs when called repeatedly in polling loops
   FString CheckPath = Req;
 
-  // Ensure path starts with /Game if it doesn't have a valid root
-  if (!CheckPath.StartsWith(TEXT("/Game")) &&
-      !CheckPath.StartsWith(TEXT("/Engine")) &&
-      !CheckPath.StartsWith(TEXT("/Script"))) {
-    if (CheckPath.StartsWith(TEXT("/"))) {
-      CheckPath = TEXT("/Game") + CheckPath;
-    } else {
-      CheckPath = TEXT("/Game/") + CheckPath;
-    }
-  }
-
+  // Strip suffixes first so mount-point validation sees a clean package path
   // Remove .uasset extension if present
   if (CheckPath.EndsWith(TEXT(".uasset"))) {
     CheckPath = CheckPath.LeftChop(7);
   }
 
-  // Remove object path suffix (e.g., /Game/BP.BP -> /Game/BP)
+  // Remove object path suffix (e.g., /ShooterCore/BP.BP -> /ShooterCore/BP)
   int32 DotIdx;
   if (CheckPath.FindLastChar(TEXT('.'), DotIdx)) {
     // Check if this looks like an object path (PackagePath.ObjectName)
@@ -3039,6 +3019,20 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
       if (AssetName.Equals(AfterDot, ESearchCase::IgnoreCase)) {
         CheckPath = BeforeDot;
       }
+    }
+  }
+
+  // Normalize paths without a known root — preserve valid plugin mount points
+  if (!CheckPath.StartsWith(TEXT("/Game/")) &&
+      !CheckPath.StartsWith(TEXT("/Engine/")) &&
+      !CheckPath.StartsWith(TEXT("/Script/"))) {
+    if (CheckPath.StartsWith(TEXT("/")) &&
+        FPackageName::IsValidLongPackageName(CheckPath, true)) {
+      // Valid registered mount point (e.g., /ShooterCore/BP_Widget) — keep as-is
+    } else if (CheckPath.StartsWith(TEXT("/"))) {
+      CheckPath = TEXT("/Game") + CheckPath;
+    } else {
+      CheckPath = TEXT("/Game/") + CheckPath;
     }
   }
 

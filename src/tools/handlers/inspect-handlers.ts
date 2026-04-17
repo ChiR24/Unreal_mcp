@@ -43,6 +43,7 @@ function normalizeInspectAction(action: string): string {
   return INSPECT_ACTION_ALIASES[action] ?? action;
 }
 
+/** Resolve a component's full object path from actor + component name args. */
 async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: ITools): Promise<string> {
   const argsTyped = args as InspectArgs;
   const componentName = typeof argsTyped.componentName === 'string' ? argsTyped.componentName.trim() : '';
@@ -143,6 +144,7 @@ async function resolveComponentObjectPathFromArgs(args: HandlerArgs, tools: IToo
 }
 
 
+/** Dispatch inspect/introspection actions (get_property, set_property, inspect_object, etc.). */
 export async function handleInspectTools(action: string, args: HandlerArgs, tools: ITools): Promise<Record<string, unknown>> {
   const argsTyped = args as InspectArgs;
   const originalAction = action;
@@ -183,7 +185,7 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
         if (res && res.success === false) {
           const errorCode = String(res.error || '').toUpperCase();
           const msg = String(res.message || '');
-          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || errorCode === 'NOT_FOUND' || msg.toLowerCase().includes('not found')) {
+          if (errorCode === 'OBJECT_NOT_FOUND' || errorCode === 'BLUEPRINT_NOT_FOUND' || errorCode === 'CDO_NOT_FOUND' || errorCode === 'NOT_FOUND' || msg.toLowerCase().includes('not found')) {
             return cleanObject({
               success: false,
               handled: true,
@@ -263,18 +265,26 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     }
     case 'get_property': {
       const objectPath = await resolveObjectPath(args, tools);
-      const params = normalizeArgs(args, [{ key: 'propertyName', aliases: ['propertyPath'], required: true }]);
+      const params = normalizeArgs(args, [
+        { key: 'blueprintPath', aliases: ['blueprint_path'] },
+        { key: 'propertyName', aliases: ['propertyPath'], required: true },
+      ]);
+      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
+      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const propertyName = extractString(params, 'propertyName');
 
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
+      if (!objectPath && !blueprintPath) {
+        throw new Error('inspect:get_property: Either objectPath or blueprintPath is required');
       }
 
-      const res = await executeAutomationRequest(tools, 'inspect', {
+      const payload: Record<string, unknown> = {
         action: 'get_property',
-        objectPath,
-        propertyName
-      }) as InspectResponse;
+        propertyName,
+      };
+      if (blueprintPath) { payload.blueprintPath = blueprintPath; }
+      if (objectPath) { payload.objectPath = objectPath; }
+
+      const res = await executeAutomationRequest(tools, 'inspect', payload) as InspectResponse;
 
       // Smart Lookup: If property not found on the Actor, try to find it on components
       if (!res.success && (res.error === 'PROPERTY_NOT_FOUND' || String(res.error).includes('not found'))) {
@@ -380,22 +390,28 @@ export async function handleInspectTools(action: string, args: HandlerArgs, tool
     case 'set_property': {
       const objectPath = await resolveObjectPath(args, tools);
       const params = normalizeArgs(args, [
+        { key: 'blueprintPath', aliases: ['blueprint_path'] },
         { key: 'propertyName', aliases: ['propertyPath'], required: true },
         { key: 'value' }
       ]);
+      const rawBlueprintPath = extractOptionalString(params, 'blueprintPath');
+      const blueprintPath = rawBlueprintPath?.trim().replace(/\/+$/, '') || undefined;
       const propertyName = extractString(params, 'propertyName');
       const value = params.value;
 
-      if (!objectPath) {
-        throw new Error('Invalid objectPath: must be a non-empty string');
+      if (!objectPath && !blueprintPath) {
+        throw new Error('inspect:set_property: Either objectPath or blueprintPath is required');
       }
 
-      const res = await executeAutomationRequest(tools, 'inspect', {
+      const payload: Record<string, unknown> = {
         action: 'set_property',
-        objectPath,
         propertyName,
         value
-      }) as InspectResponse;
+      };
+      if (blueprintPath) { payload.blueprintPath = blueprintPath; }
+      if (objectPath) { payload.objectPath = objectPath; }
+
+      const res = await executeAutomationRequest(tools, 'inspect', payload) as InspectResponse;
 
       if (res && res.success === false) {
         const errorCode = String(res.error || '').toUpperCase();

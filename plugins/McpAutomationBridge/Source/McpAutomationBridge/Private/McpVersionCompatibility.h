@@ -42,12 +42,16 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
     (Material)->GetEditorOnlyData()->ExpressionCollection.Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->GetEditorOnlyData()->ExpressionCollection.Expressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->GetEditorOnlyData()->InputName
   #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 1
 #else
   #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
     (Material)->Expressions
+  #define MCP_GET_FUNCTION_EXPRESSIONS(Function) \
+    (Function)->FunctionExpressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->InputName
   #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 0

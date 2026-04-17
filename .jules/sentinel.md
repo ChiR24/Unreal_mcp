@@ -72,3 +72,8 @@
 **Vulnerability:** GitHub Actions workflows (`release.yml`, `publish-mcp.yml`) used direct string interpolation (`${{ ... }}`) for tag names and event names (e.g., `${{ steps.version.outputs.version }}`, `${{ github.ref }}`) directly inside `run:` blocks. This allows command injection if a malicious tag name containing shell metacharacters is pushed, as the string is evaluated as code.
 **Learning:** Contexts like `github.ref` and outputs derived from them are user-controlled data and can contain arbitrary strings. Direct interpolation of these values into shell scripts is unsafe.
 **Prevention:** Always pass user-controlled inputs and step outputs through the `env:` context. Never use direct string interpolation (`${{ ... }}`) inside `run:` script blocks.
+
+## 2026-04-10 - [Event Loop Blocking via Synchronous File System Calls]
+**Vulnerability:** Core pipeline tools (`pipeline-handlers.ts`) used synchronous operations like `fs.readdirSync`, `fs.readFileSync`, `fs.accessSync`, and `execSync` to locate the UnrealBuildTool executable. These calls block the Node.js event loop completely, potentially causing a Denial of Service (DoS) for the entire MCP server if operations take a long time (e.g. over slow network drives).
+**Learning:** Any blocking call in a Node.js server prevents handling of concurrent requests and heartbeats, leading to degraded performance or unresponsiveness. The severity of this issue is amplified if the directory being read is large or if the path is a slow network mount.
+**Prevention:** Always use asynchronous equivalents (`fs.promises.*`, `util.promisify(child_process.exec)`) inside async request handlers to maintain an asynchronous, non-blocking event loop.
