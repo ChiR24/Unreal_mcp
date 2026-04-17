@@ -3,6 +3,7 @@
 #include "MCP/McpToolRegistry.h"
 #include "MCP/McpToolDefinition.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "McpAutomationBridgeSettings.h"
 #include "Misc/Guid.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
@@ -425,6 +426,25 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
+	// Capability token validation (mirrors McpConnectionManager logic)
+	{
+		const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+		if (Settings && Settings->bRequireCapabilityToken)
+		{
+			if (HttpReq.CapabilityToken.IsEmpty() || HttpReq.CapabilityToken != Settings->CapabilityToken)
+			{
+				UE_LOG(LogMcpNativeTransport, Warning, TEXT("Capability token mismatch - rejecting connection"));
+				FString ErrorBody = FMcpJsonRpc::BuildError(
+					MakeShared<FJsonValueNull>(), FMcpJsonRpc::ErrorInvalidRequest,
+					TEXT("Invalid capability token"));
+				SendHttpResponse(ClientSocket, 401, TEXT("application/json"), ErrorBody);
+				ClientSocket->Close();
+				SocketSub->DestroySocket(ClientSocket);
+				return;
+			}
+		}
+	}
+
 	// ── DELETE /mcp — session termination ──
 	if (HttpReq.Method == TEXT("DELETE"))
 	{
@@ -682,6 +702,10 @@ bool FMcpNativeTransport::ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& O
 			else if (Key.Equals(TEXT("Accept"), ESearchCase::IgnoreCase))
 			{
 				OutRequest.Accept = Value;
+			}
+			else if (Key.Equals(TEXT("X-MCP-Capability-Token"), ESearchCase::IgnoreCase))
+			{
+				OutRequest.CapabilityToken = Value;
 			}
 		}
 	}
@@ -1171,7 +1195,8 @@ void FMcpNativeTransport::HandleToolsCall(
 		if (UMcpAutomationBridgeSubsystem* Sub = WeakSubsystem.Get())
 		{
 			Sub->ProcessAutomationRequest(
-				CapturedRequestId, CapturedDispatchAction, CapturedArguments, nullptr);
+				CapturedRequestId, CapturedDispatchAction, CapturedArguments, nullptr,
+				ERequestOrigin::NativeHTTP);
 		}
 	});
 }

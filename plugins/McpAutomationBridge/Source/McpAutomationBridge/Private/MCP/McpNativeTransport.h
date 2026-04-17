@@ -77,6 +77,7 @@ private:
 		FString Body;
 		FString SessionId;   // from Mcp-Session-Id header
 		FString Accept;      // from Accept header
+		FString CapabilityToken;  // from X-MCP-Capability-Token header
 		int32 ContentLength = 0;
 	};
 
