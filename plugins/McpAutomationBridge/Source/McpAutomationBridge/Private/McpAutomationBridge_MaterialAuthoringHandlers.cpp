@@ -148,6 +148,18 @@
 // Forward declarations of helper functions
 #if WITH_EDITOR
 static UMaterialExpression* FindExpressionByIdOrName(UMaterial* Material, const FString& NodeIdOrName);
+
+// LOCAL PATCH: material-function support for add_custom_expression / add_math_node /
+// connect_nodes. Expressions in a UMaterialFunction live in a separate collection
+// than UMaterial's, so we branch on whichever pointer is non-null.
+static TArray<TObjectPtr<UMaterialExpression>>& GetMatOrFuncExpressions(
+	UMaterial* Material, UMaterialFunction* MaterialFunction);
+static UObject* GetMatOrFuncContainer(
+	UMaterial* Material, UMaterialFunction* MaterialFunction);
+static void NotifyMatOrFuncDirty(
+	UMaterial* Material, UMaterialFunction* MaterialFunction);
+static UMaterialExpression* FindExpressionInMatOrFunc(
+	UMaterial* Material, UMaterialFunction* MaterialFunction, const FString& IdOrName);
 #endif
 static bool SaveMaterialAsset(UMaterial *Material);
 static bool SaveMaterialFunctionAsset(UMaterialFunction *Function);
@@ -710,6 +722,38 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   Payload->TryGetNumberField(TEXT("x"), X);                                    \
   Payload->TryGetNumberField(TEXT("y"), Y)
 
+// LOCAL PATCH: like LOAD_MATERIAL_OR_RETURN but also accepts UMaterialFunction.
+// Produces two locals — exactly one will be non-null. Callers must not read
+// Material->BlendMode / MaterialDomain / etc. without first null-checking.
+#define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN()                                  \
+  FString AssetPath;                                                           \
+  if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||             \
+      AssetPath.IsEmpty()) {                                                   \
+    SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),       \
+                        TEXT("INVALID_ARGUMENT"));                             \
+    return true;                                                               \
+  }                                                                            \
+  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
+  if (ValidatedAssetPath.IsEmpty()) {                                          \
+    SendAutomationError(Socket, RequestId,                                     \
+        FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath), \
+        TEXT("INVALID_PATH"));                                                 \
+    return true;                                                               \
+  }                                                                            \
+  AssetPath = ValidatedAssetPath;                                              \
+  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);            \
+  UMaterialFunction *MaterialFunction = Material ? nullptr                     \
+      : LoadObject<UMaterialFunction>(nullptr, *AssetPath);                    \
+  if (!Material && !MaterialFunction) {                                        \
+    SendAutomationError(Socket, RequestId,                                     \
+        TEXT("Could not load Material or Material Function."),                 \
+        TEXT("ASSET_NOT_FOUND"));                                              \
+    return true;                                                               \
+  }                                                                            \
+  float X = 0.0f, Y = 0.0f;                                                    \
+  Payload->TryGetNumberField(TEXT("x"), X);                                    \
+  Payload->TryGetNumberField(TEXT("y"), Y)
+
   // --------------------------------------------------------------------------
   // add_texture_sample
   // --------------------------------------------------------------------------
@@ -1013,7 +1057,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // add_math_node
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("add_math_node")) {
-    LOAD_MATERIAL_OR_RETURN();
+    // LOCAL PATCH: accept UMaterialFunction too.
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString Operation;
     if (!Payload->TryGetStringField(TEXT("operation"), Operation)) {
@@ -1022,47 +1067,34 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
       return true;
     }
 
+    UObject* Container = GetMatOrFuncContainer(Material, MaterialFunction);
+
+    auto NewMathExpr = [Container](UClass* Klass) -> UMaterialExpression* {
+      return NewObject<UMaterialExpression>(Container, Klass, NAME_None,
+                                            RF_Transactional);
+    };
+
     UMaterialExpression *MathNode = nullptr;
     if (Operation == TEXT("Add")) {
-      MathNode = NewObject<UMaterialExpressionAdd>(
-          Material, UMaterialExpressionAdd::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionAdd::StaticClass());
     } else if (Operation == TEXT("Subtract")) {
-      MathNode = NewObject<UMaterialExpressionSubtract>(
-          Material, UMaterialExpressionSubtract::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionSubtract::StaticClass());
     } else if (Operation == TEXT("Multiply")) {
-      MathNode = NewObject<UMaterialExpressionMultiply>(
-          Material, UMaterialExpressionMultiply::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionMultiply::StaticClass());
     } else if (Operation == TEXT("Divide")) {
-      MathNode = NewObject<UMaterialExpressionDivide>(
-          Material, UMaterialExpressionDivide::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionDivide::StaticClass());
     } else if (Operation == TEXT("Lerp")) {
-      MathNode = NewObject<UMaterialExpressionLinearInterpolate>(
-          Material, UMaterialExpressionLinearInterpolate::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionLinearInterpolate::StaticClass());
     } else if (Operation == TEXT("Clamp")) {
-      MathNode = NewObject<UMaterialExpressionClamp>(
-          Material, UMaterialExpressionClamp::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionClamp::StaticClass());
     } else if (Operation == TEXT("Power")) {
-      MathNode = NewObject<UMaterialExpressionPower>(
-          Material, UMaterialExpressionPower::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionPower::StaticClass());
     } else if (Operation == TEXT("Frac")) {
-      MathNode = NewObject<UMaterialExpressionFrac>(
-          Material, UMaterialExpressionFrac::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionFrac::StaticClass());
     } else if (Operation == TEXT("OneMinus")) {
-      MathNode = NewObject<UMaterialExpressionOneMinus>(
-          Material, UMaterialExpressionOneMinus::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionOneMinus::StaticClass());
     } else if (Operation == TEXT("Append")) {
-      MathNode = NewObject<UMaterialExpressionAppendVector>(
-          Material, UMaterialExpressionAppendVector::StaticClass(), NAME_None,
-          RF_Transactional);
+      MathNode = NewMathExpr(UMaterialExpressionAppendVector::StaticClass());
     } else {
       SendAutomationError(
           Socket, RequestId,
@@ -1075,11 +1107,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     MathNode->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(MathNode);
+    GetMatOrFuncExpressions(Material, MaterialFunction).Add(MathNode);
 #endif
 
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
+    NotifyMatOrFuncDirty(Material, MaterialFunction);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
@@ -1395,7 +1426,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // add_custom_expression
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("add_custom_expression")) {
-    LOAD_MATERIAL_OR_RETURN();
+    // LOCAL PATCH: accept UMaterialFunction too (was UMaterial-only).
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString Code, OutputType, Description;
     if (!Payload->TryGetStringField(TEXT("code"), Code) || Code.IsEmpty()) {
@@ -1406,11 +1438,35 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     Payload->TryGetStringField(TEXT("outputType"), OutputType);
     Payload->TryGetStringField(TEXT("description"), Description);
 
+    // Parse input declarations (optional). Accepted shapes:
+    //   "inputs": [{"name": "TempK", "type": "Float1"}, ...]
+    // Any unknown shape falls back to a single default "A" Float1 input so the
+    // Custom node is always wireable.
+    TArray<FCustomInput> CustomInputs;
+    const TArray<TSharedPtr<FJsonValue>>* InputsArr;
+    if (Payload->TryGetArrayField(TEXT("inputs"), InputsArr)) {
+      for (const TSharedPtr<FJsonValue>& Val : *InputsArr) {
+        const TSharedPtr<FJsonObject>* InputObj;
+        if (!Val->TryGetObject(InputObj) || !InputObj->IsValid()) continue;
+        FString InputName;
+        (*InputObj)->TryGetStringField(TEXT("name"), InputName);
+        if (InputName.IsEmpty()) continue;
+        FCustomInput NewInput;
+        NewInput.InputName = FName(*InputName);
+        CustomInputs.Add(NewInput);
+      }
+    }
+
+    UObject* Container = GetMatOrFuncContainer(Material, MaterialFunction);
     UMaterialExpressionCustom *CustomExpr =
         NewObject<UMaterialExpressionCustom>(
-            Material, UMaterialExpressionCustom::StaticClass(), NAME_None,
+            Container, UMaterialExpressionCustom::StaticClass(), NAME_None,
             RF_Transactional);
     CustomExpr->Code = Code;
+
+    if (CustomInputs.Num() > 0) {
+      CustomExpr->Inputs = CustomInputs;
+    }
 
     // Set output type
     if (OutputType == TEXT("Float1") || OutputType == TEXT("CMOT_Float1"))
@@ -1434,17 +1490,85 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     CustomExpr->MaterialExpressionEditorY = (int32)Y;
 
 #if WITH_EDITORONLY_DATA
-    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(CustomExpr);
+    GetMatOrFuncExpressions(Material, MaterialFunction).Add(CustomExpr);
 #endif
 
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
+    NotifyMatOrFuncDirty(Material, MaterialFunction);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            CustomExpr->MaterialExpressionGuid.ToString());
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Custom HLSL expression added."), Result);
+    return true;
+  }
+
+  // --------------------------------------------------------------------------
+  // LOCAL PATCH: add_custom_input_pin — adds an FCustomInput to an existing
+  // UMaterialExpressionCustom node. Needed because the "inputs" array param on
+  // add_custom_expression isn't in the server schema until the upstream tool
+  // definitions are regenerated, so clients can't populate it in one shot.
+  // Uses only standard schema params: assetPath, nodeId, inputName.
+  // --------------------------------------------------------------------------
+  if (SubAction == TEXT("add_custom_input_pin")) {
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+
+    FString NodeId, InputPinName;
+    Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    Payload->TryGetStringField(TEXT("inputName"), InputPinName);
+    if (NodeId.IsEmpty() || InputPinName.IsEmpty()) {
+      SendAutomationError(Socket, RequestId,
+          TEXT("Missing 'nodeId' or 'inputName' for add_custom_input_pin."),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    UMaterialExpression* Expr = FindExpressionInMatOrFunc(Material, MaterialFunction, NodeId);
+    if (!Expr) {
+      SendAutomationError(Socket, RequestId, TEXT("Target node not found."),
+                          TEXT("NODE_NOT_FOUND"));
+      return true;
+    }
+    UMaterialExpressionCustom* CustomExpr = Cast<UMaterialExpressionCustom>(Expr);
+    if (!CustomExpr) {
+      SendAutomationError(Socket, RequestId,
+          TEXT("Target node is not a Custom expression."),
+          TEXT("INVALID_TARGET"));
+      return true;
+    }
+
+    // Skip if an input with this name already exists — idempotent.
+    const FName NewName(*InputPinName);
+    for (const FCustomInput& Existing : CustomExpr->Inputs) {
+      if (Existing.InputName == NewName) {
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        Result->SetStringField(TEXT("inputName"), InputPinName);
+        Result->SetBoolField(TEXT("alreadyExisted"), true);
+        SendAutomationResponse(Socket, RequestId, true,
+            TEXT("Custom input already present."), Result);
+        return true;
+      }
+    }
+
+    // Remove the default "A" input if it's the only one and still unused.
+    if (CustomExpr->Inputs.Num() == 1
+        && CustomExpr->Inputs[0].InputName == FName(TEXT("A"))
+        && CustomExpr->Inputs[0].Input.Expression == nullptr)
+    {
+      CustomExpr->Inputs.Empty();
+    }
+
+    FCustomInput NewInput;
+    NewInput.InputName = NewName;
+    CustomExpr->Inputs.Add(NewInput);
+
+    NotifyMatOrFuncDirty(Material, MaterialFunction);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("inputName"), InputPinName);
+    Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
+    SendAutomationResponse(Socket, RequestId, true,
+        TEXT("Custom input pin added."), Result);
     return true;
   }
 
@@ -1456,7 +1580,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   // connect_nodes
   // --------------------------------------------------------------------------
   if (SubAction == TEXT("connect_nodes")) {
-    LOAD_MATERIAL_OR_RETURN();
+    // LOCAL PATCH: accept UMaterialFunction too. Function graphs don't have
+    // a "Main" output — connect to a UMaterialExpressionFunctionOutput node
+    // by its node ID / name instead.
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString SourceNodeId, TargetNodeId, InputName, SourcePin;
     Payload->TryGetStringField(TEXT("sourceNodeId"), SourceNodeId);
@@ -1465,7 +1592,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
 
     UMaterialExpression *SourceExpr =
-        FindExpressionByIdOrName(Material, SourceNodeId);
+        FindExpressionInMatOrFunc(Material, MaterialFunction, SourceNodeId);
     if (!SourceExpr) {
       SendAutomationError(Socket, RequestId, TEXT("Source node not found."),
                           TEXT("NODE_NOT_FOUND"));
@@ -1474,6 +1601,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
 
     // Target is main material node?
     if (TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) {
+      if (MaterialFunction) {
+        SendAutomationError(Socket, RequestId,
+            TEXT("Material functions have no 'Main' output. Use the FunctionOutput node's ID/name as targetNodeId."),
+            TEXT("INVALID_TARGET"));
+        return true;
+      }
       bool bFound = false;
 #if WITH_EDITORONLY_DATA
       if (InputName == TEXT("BaseColor")) {
@@ -1529,14 +1662,67 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
 
     // Connect to another expression
     UMaterialExpression *TargetExpr =
-        FindExpressionByIdOrName(Material, TargetNodeId);
+        FindExpressionInMatOrFunc(Material, MaterialFunction, TargetNodeId);
     if (!TargetExpr) {
       SendAutomationError(Socket, RequestId, TEXT("Target node not found."),
                           TEXT("NODE_NOT_FOUND"));
       return true;
     }
 
-    // Find the input property
+    // LOCAL PATCH: Custom nodes store inputs in an FCustomInput array, not as
+    // individual UProperties. FindPropertyByName can't locate them, so we look
+    // up the named entry inside Inputs[] and wire the source expression into
+    // its embedded FExpressionInput.
+    if (UMaterialExpressionCustom *CustomExpr =
+            Cast<UMaterialExpressionCustom>(TargetExpr)) {
+      const FName SearchName(*InputName);
+      for (int32 CustomIdx = 0; CustomIdx < CustomExpr->Inputs.Num(); ++CustomIdx) {
+        if (CustomExpr->Inputs[CustomIdx].InputName == SearchName) {
+          CustomExpr->Inputs[CustomIdx].Input.Expression = SourceExpr;
+          if (!SourcePin.IsEmpty()) {
+            CustomExpr->Inputs[CustomIdx].Input.OutputIndex = 0;
+          }
+          NotifyMatOrFuncDirty(Material, MaterialFunction);
+          SendAutomationResponse(Socket, RequestId, true,
+                                 TEXT("Nodes connected (custom input)."));
+          return true;
+        }
+      }
+      SendAutomationError(
+          Socket, RequestId,
+          FString::Printf(TEXT("Custom node input '%s' not found in Inputs[]."),
+                          *InputName),
+          TEXT("PIN_NOT_FOUND"));
+      return true;
+    }
+
+    // LOCAL PATCH: MaterialFunctionCall nodes store their inputs in a
+    // FunctionInputs[] array of FFunctionExpressionInput (each carries an
+    // ExpressionInput ptr to the source function's FunctionInput node and a
+    // per-call FExpressionInput pin). Match by the referenced FunctionInput's
+    // InputName and wire the source into that pin.
+    if (UMaterialExpressionMaterialFunctionCall *CallExpr =
+            Cast<UMaterialExpressionMaterialFunctionCall>(TargetExpr)) {
+      const FName SearchName(*InputName);
+      for (int32 Idx = 0; Idx < CallExpr->FunctionInputs.Num(); ++Idx) {
+        FFunctionExpressionInput& Entry = CallExpr->FunctionInputs[Idx];
+        if (Entry.ExpressionInput && Entry.ExpressionInput->InputName == SearchName) {
+          Entry.Input.Expression = SourceExpr;
+          NotifyMatOrFuncDirty(Material, MaterialFunction);
+          SendAutomationResponse(Socket, RequestId, true,
+                                 TEXT("Nodes connected (function-call input)."));
+          return true;
+        }
+      }
+      SendAutomationError(
+          Socket, RequestId,
+          FString::Printf(TEXT("Function-call input '%s' not found."),
+                          *InputName),
+          TEXT("PIN_NOT_FOUND"));
+      return true;
+    }
+
+    // Find the input property (standard FExpressionInput member)
     FProperty *Prop =
         TargetExpr->GetClass()->FindPropertyByName(FName(*InputName));
     if (Prop) {
@@ -1545,8 +1731,7 @@ MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression =
             StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
         if (InputPtr) {
           InputPtr->Expression = SourceExpr;
-          Material->PostEditChange();
-          Material->MarkPackageDirty();
+          NotifyMatOrFuncDirty(Material, MaterialFunction);
           SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Nodes connected."));
           return true;
@@ -3217,6 +3402,79 @@ static UMaterialExpression *FindExpressionByIdOrName(UMaterial *Material,
       if (ParamExpr->ParameterName.ToString() == Needle) {
         return Expr;
       }
+    }
+  }
+  return nullptr;
+}
+
+// LOCAL PATCH helpers — shared across the add_custom_expression / add_math_node /
+// connect_nodes paths that now accept either UMaterial or UMaterialFunction.
+static TArray<TObjectPtr<UMaterialExpression>>& GetMatOrFuncExpressions(
+    UMaterial* Material, UMaterialFunction* MaterialFunction)
+{
+  static TArray<TObjectPtr<UMaterialExpression>> Empty;
+#if WITH_EDITORONLY_DATA
+  if (Material)
+  {
+    return Material->GetEditorOnlyData()->ExpressionCollection.Expressions;
+  }
+  if (MaterialFunction)
+  {
+    return MaterialFunction->GetEditorOnlyData()->ExpressionCollection.Expressions;
+  }
+#endif
+  return Empty;
+}
+
+static UObject* GetMatOrFuncContainer(
+    UMaterial* Material, UMaterialFunction* MaterialFunction)
+{
+  if (Material)          return Material;
+  if (MaterialFunction)  return MaterialFunction;
+  return nullptr;
+}
+
+static void NotifyMatOrFuncDirty(
+    UMaterial* Material, UMaterialFunction* MaterialFunction)
+{
+  if (Material)
+  {
+    Material->PostEditChange();
+    Material->MarkPackageDirty();
+  }
+  else if (MaterialFunction)
+  {
+    MaterialFunction->PostEditChange();
+    MaterialFunction->MarkPackageDirty();
+  }
+}
+
+static UMaterialExpression* FindExpressionInMatOrFunc(
+    UMaterial* Material, UMaterialFunction* MaterialFunction,
+    const FString& IdOrName)
+{
+  if (IdOrName.IsEmpty()) return nullptr;
+  const FString Needle = IdOrName.TrimStartAndEnd();
+  const TArray<TObjectPtr<UMaterialExpression>>& Exprs =
+      GetMatOrFuncExpressions(Material, MaterialFunction);
+  for (UMaterialExpression* Expr : Exprs)
+  {
+    if (!Expr) continue;
+    if (Expr->MaterialExpressionGuid.ToString() == Needle) return Expr;
+    if (Expr->GetName() == Needle)                         return Expr;
+    if (Expr->GetPathName() == Needle)                     return Expr;
+    if (UMaterialExpressionParameter* ParamExpr = Cast<UMaterialExpressionParameter>(Expr))
+    {
+      if (ParamExpr->ParameterName.ToString() == Needle) return Expr;
+    }
+    // Function inputs/outputs can be addressed by their declared name.
+    if (UMaterialExpressionFunctionInput* InExpr = Cast<UMaterialExpressionFunctionInput>(Expr))
+    {
+      if (InExpr->InputName.ToString() == Needle) return Expr;
+    }
+    if (UMaterialExpressionFunctionOutput* OutExpr = Cast<UMaterialExpressionFunctionOutput>(Expr))
+    {
+      if (OutExpr->OutputName.ToString() == Needle) return Expr;
     }
   }
   return nullptr;

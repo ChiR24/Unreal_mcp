@@ -439,6 +439,11 @@ export async function handleMaterialAuthoringTools(
         const x = extractOptionalNumber(params, 'x') ?? 0;
         const y = extractOptionalNumber(params, 'y') ?? 0;
 
+        // Forward the optional inputs[] array so the plugin can populate
+        // FCustomInput pins on creation. Shape: [{ name: "TempK" }, ...].
+        const rawInputs = (args as Record<string, unknown> | undefined)?.inputs;
+        const inputs = Array.isArray(rawInputs) ? rawInputs : undefined;
+
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
           subAction: 'add_custom_expression',
           assetPath,
@@ -447,12 +452,40 @@ export async function handleMaterialAuthoringTools(
           description,
           x,
           y,
+          inputs,
         })) as AutomationResponse;
 
         if (res.success === false) {
           return ResponseFactory.error(res.error ?? 'Failed to add custom expression', res.errorCode);
         }
         return ResponseFactory.success(res, res.message ?? 'Custom HLSL expression added');
+      }
+
+      case 'add_custom_input_pin': {
+        // Append a named FCustomInput to an existing UMaterialExpressionCustom.
+        // Needed because upstream's add_custom_expression used to create the node
+        // with only a default "A" input — making multi-input Custom nodes in a
+        // material function graph unreachable from connect_nodes by name.
+        const params = normalizeArgs(args, [
+          { key: 'assetPath', aliases: ['materialPath'], required: true },
+          { key: 'nodeId', required: true },
+          { key: 'inputName', aliases: ['pinName'], required: true },
+        ]);
+        const assetPath = extractString(params, 'assetPath');
+        const nodeId = extractString(params, 'nodeId');
+        const inputName = extractString(params, 'inputName');
+
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          subAction: 'add_custom_input_pin',
+          assetPath,
+          nodeId,
+          inputName,
+        })) as AutomationResponse;
+
+        if (res.success === false) {
+          return ResponseFactory.error(res.error ?? 'Failed to add custom input pin', res.errorCode);
+        }
+        return ResponseFactory.success(res, res.message ?? 'Custom input pin added');
       }
 
       case 'connect_nodes':

@@ -143,7 +143,10 @@
 // -----------------------------------------------------------------------------
 #include "Exporters/Exporter.h"
 #include "Misc/OutputDevice.h"
-#include "UnrealClient.h" // For FScreenshotRequest
+#include "UnrealClient.h" // For FScreenshotRequest, FViewport::ReadPixels
+#include "ImageUtils.h"   // For FImageUtils::PNGCompressImageArray
+#include "Misc/FileHelper.h" // For FFileHelper::SaveArrayToFile
+#include "RenderingThread.h" // For FlushRenderingCommands
 
 #endif // WITH_EDITOR
 
@@ -2146,15 +2149,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // Accept any of the three aliases the MCP tool schemas use.
+  // The control_actor schema declares "classPath" while inspect uses
+  // "className" — keep both working so callers don't hit schema/handler drift.
   FString ClassName;
   Payload->TryGetStringField(TEXT("className"), ClassName);
+  if (ClassName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("classPath"), ClassName);
+  }
   if (ClassName.IsEmpty()) {
     Payload->TryGetStringField(TEXT("class"), ClassName);
   }
 
   if (ClassName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("className or class is required"), nullptr);
+                              TEXT("className, classPath or class is required"), nullptr);
     return true;
   }
 
@@ -3056,27 +3065,79 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
   const FString FullPath = ScreenshotDir / Filename;
 
-  // Get the active viewport
-  FViewport* Viewport = GEditor->GetActiveViewport();
-  if (!Viewport) {
+  // Viewport selection: if PIE is running, prefer the PIE game viewport
+  // (that's the "game view" the caller usually wants); otherwise fall back to
+  // the editor's active viewport (level edit viewport, asset editor, etc.).
+  FViewport* Viewport = nullptr;
+  if (GEditor->PlayWorld != nullptr && GEditor->GetPIEViewport() != nullptr)
+  {
+    Viewport = GEditor->GetPIEViewport();
+  }
+  if (!Viewport)
+  {
+    Viewport = GEditor->GetActiveViewport();
+  }
+  if (!Viewport)
+  {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
                               TEXT("No active viewport available"), nullptr);
     return true;
   }
 
-  // Request a screenshot
-  bool bCaptured = false;
-  FScreenshotRequest::RequestScreenshot(FullPath, false, false);
-  
-  // Since screenshot is async, we respond with the expected path
+  // Synchronous capture: force a redraw, read pixels, encode PNG, write file.
+  // FScreenshotRequest::RequestScreenshot() is unreliable in editor mode
+  // (game-tick driven) and often never fires, so we capture directly.
+  const FIntPoint ViewportSize = Viewport->GetSizeXY();
+  if (ViewportSize.X <= 0 || ViewportSize.Y <= 0)
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_READY"),
+                              TEXT("Viewport has zero size"), nullptr);
+    return true;
+  }
+
+  Viewport->Draw();
+  FlushRenderingCommands();
+
+  TArray<FColor> Bitmap;
+  const FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
+  if (!Viewport->ReadPixels(Bitmap, ReadFlags))
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
+                              TEXT("Failed to read pixels from viewport"), nullptr);
+    return true;
+  }
+
+  // Force opaque alpha for consistent PNG output
+  for (FColor& Pixel : Bitmap)
+  {
+    Pixel.A = 255;
+  }
+
+  TArray64<uint8> PngData;
+  FImageUtils::PNGCompressImageArray(
+      ViewportSize.X,
+      ViewportSize.Y,
+      TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()),
+      PngData);
+
+  if (PngData.Num() == 0 || !FFileHelper::SaveArrayToFile(PngData, *FullPath))
+  {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),
+                              FString::Printf(TEXT("Failed to save screenshot to %s"), *FullPath),
+                              nullptr);
+    return true;
+  }
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("path"), FullPath);
-  Resp->SetStringField(TEXT("message"), TEXT("Screenshot request submitted"));
-  
+  Resp->SetNumberField(TEXT("width"), ViewportSize.X);
+  Resp->SetNumberField(TEXT("height"), ViewportSize.Y);
+  Resp->SetNumberField(TEXT("fileSizeBytes"), PngData.Num());
+
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Screenshot requested"), Resp, FString());
+                         TEXT("Screenshot captured"), Resp, FString());
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),

@@ -77,6 +77,8 @@
 #include "GameFramework/SpectatorPawn.h"
 #include "GameFramework/DefaultPawn.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/WorldSettings.h"
+#include "GameMapsSettings.h"
 #include "EdGraphSchema_K2.h"
 #include "Kismet/GameplayStatics.h"
 #endif
@@ -1839,36 +1841,87 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGameFrameworkAction(
         }
         else
         {
-            // Query current world's game mode if available
-            UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-            if (World)
+            // Editor-mode path: GetAuthGameMode() returns nullptr outside PIE,
+            // so resolve the active game mode by looking at (in order):
+            //   1. PIE world's live instance
+            //   2. Current map's AWorldSettings::DefaultGameMode override
+            //   3. Project default (UGameMapsSettings::GlobalDefaultGameMode)
+            UWorld* World = GEditor ? GEditor->PlayWorld : nullptr;
+            if (!World && GEditor)
             {
-                AGameModeBase* GM = World->GetAuthGameMode();
-                if (GM)
+                World = GEditor->GetEditorWorldContext().World();
+            }
+
+            AGameModeBase* GM = World ? World->GetAuthGameMode() : nullptr;
+            UClass* ResolvedGameModeClass = nullptr;
+
+            if (GM)
+            {
+                ResolvedGameModeClass = GM->GetClass();
+                InfoObj->SetStringField(TEXT("source"), TEXT("live"));
+            }
+            else if (World)
+            {
+                // AWorldSettings::DefaultGameMode — per-level override
+                if (AWorldSettings* WorldSettings = World->GetWorldSettings())
                 {
-                    InfoObj->SetStringField(TEXT("gameModeClass"), GM->GetClass()->GetPathName());
-                    
-                    if (GM->DefaultPawnClass)
+                    if (UClass* LevelGameMode = WorldSettings->DefaultGameMode.Get())
                     {
-                        InfoObj->SetStringField(TEXT("defaultPawnClass"), GM->DefaultPawnClass->GetPathName());
-                    }
-                    if (GM->PlayerControllerClass)
-                    {
-                        InfoObj->SetStringField(TEXT("playerControllerClass"), GM->PlayerControllerClass->GetPathName());
-                    }
-                    if (GM->GameStateClass)
-                    {
-                        InfoObj->SetStringField(TEXT("gameStateClass"), GM->GameStateClass->GetPathName());
-                    }
-                    if (GM->PlayerStateClass)
-                    {
-                        InfoObj->SetStringField(TEXT("playerStateClass"), GM->PlayerStateClass->GetPathName());
-                    }
-                    if (GM->HUDClass)
-                    {
-                        InfoObj->SetStringField(TEXT("hudClass"), GM->HUDClass->GetPathName());
+                        ResolvedGameModeClass = LevelGameMode;
+                        InfoObj->SetStringField(TEXT("source"), TEXT("levelDefault"));
                     }
                 }
+
+                // Fall back to project settings via the public static accessor
+                if (!ResolvedGameModeClass)
+                {
+                    const FString DefaultGameModeStr = UGameMapsSettings::GetGlobalDefaultGameMode();
+                    if (!DefaultGameModeStr.IsEmpty())
+                    {
+                        FSoftClassPath DefaultGameModePath(DefaultGameModeStr);
+                        if (UClass* ProjGameMode = DefaultGameModePath.TryLoadClass<AGameModeBase>())
+                        {
+                            ResolvedGameModeClass = ProjGameMode;
+                            InfoObj->SetStringField(TEXT("source"), TEXT("projectDefault"));
+                        }
+                    }
+                }
+            }
+
+            if (ResolvedGameModeClass)
+            {
+                InfoObj->SetStringField(TEXT("gameModeClass"), ResolvedGameModeClass->GetPathName());
+
+                // Read class defaults (for CDO values of pawn/controller/etc.)
+                if (const AGameModeBase* CDO = ResolvedGameModeClass->GetDefaultObject<AGameModeBase>())
+                {
+                    if (CDO->DefaultPawnClass)
+                    {
+                        InfoObj->SetStringField(TEXT("defaultPawnClass"), CDO->DefaultPawnClass->GetPathName());
+                    }
+                    if (CDO->PlayerControllerClass)
+                    {
+                        InfoObj->SetStringField(TEXT("playerControllerClass"), CDO->PlayerControllerClass->GetPathName());
+                    }
+                    if (CDO->GameStateClass)
+                    {
+                        InfoObj->SetStringField(TEXT("gameStateClass"), CDO->GameStateClass->GetPathName());
+                    }
+                    if (CDO->PlayerStateClass)
+                    {
+                        InfoObj->SetStringField(TEXT("playerStateClass"), CDO->PlayerStateClass->GetPathName());
+                    }
+                    if (CDO->HUDClass)
+                    {
+                        InfoObj->SetStringField(TEXT("hudClass"), CDO->HUDClass->GetPathName());
+                    }
+                }
+            }
+
+            if (World)
+            {
+                InfoObj->SetStringField(TEXT("worldName"), World->GetName());
+                InfoObj->SetBoolField(TEXT("isPlayInEditor"), World->IsPlayInEditor());
             }
         }
 

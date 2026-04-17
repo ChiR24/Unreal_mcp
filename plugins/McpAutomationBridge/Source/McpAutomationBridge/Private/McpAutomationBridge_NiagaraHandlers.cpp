@@ -167,84 +167,40 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
     return true;
   }
   
-  // Create Niagara system with proper initialization
+  // Create Niagara system. Mirrors UNiagaraSystemFactoryNew::InitializeSystem()
+  // to avoid the GraphSource ensure that fires when manually wiring emitter data
+  // in UE 5.1+. We deliberately do NOT add a default emitter here: empty systems
+  // are valid, and adding an emitter via NewObject<UNiagaraEmitter>() without the
+  // factory path leaves FVersionedNiagaraEmitterData unwired, which crashes the
+  // editor on the next tick. Callers can add emitters via add_emitter_to_system.
   UNiagaraSystem *NiagaraSystem = NewObject<UNiagaraSystem>(Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   if (NiagaraSystem)
   {
-    // Initialize system scripts
     UNiagaraScript* SystemSpawnScript = NiagaraSystem->GetSystemSpawnScript();
     UNiagaraScript* SystemUpdateScript = NiagaraSystem->GetSystemUpdateScript();
-    
-    // Create script source and graph for system
-    UNiagaraScriptSource* SystemScriptSource = NewObject<UNiagaraScriptSource>(SystemSpawnScript, TEXT("SystemScriptSource"), RF_Transactional);
+
+    UNiagaraScriptSource* SystemScriptSource = NewObject<UNiagaraScriptSource>(
+        SystemSpawnScript, TEXT("SystemScriptSource"), RF_Transactional);
     if (SystemScriptSource)
     {
-      UNiagaraGraph* SystemGraph = NewObject<UNiagaraGraph>(SystemScriptSource, TEXT("SystemScriptGraph"), RF_Transactional);
-      SystemScriptSource->NodeGraph = SystemGraph;
-      
-      // Set source on both system scripts
+      SystemScriptSource->NodeGraph = NewObject<UNiagaraGraph>(
+          SystemScriptSource, TEXT("SystemScriptGraph"), RF_Transactional);
+    }
+
+    if (SystemSpawnScript)
+    {
       SystemSpawnScript->SetLatestSource(SystemScriptSource);
+    }
+    if (SystemUpdateScript)
+    {
       SystemUpdateScript->SetLatestSource(SystemScriptSource);
     }
-    
-    // Add default emitter with proper GraphSource initialization
-    UNiagaraEmitter *NewEmitter = NewObject<UNiagaraEmitter>(NiagaraSystem, FName(TEXT("DefaultEmitter")), RF_Transactional);
-    if (NewEmitter)
-    {
-      // Create script source and graph for emitter
-      UNiagaraScriptSource* EmitterSource = NewObject<UNiagaraScriptSource>(NewEmitter, NAME_None, RF_Transactional);
-      if (EmitterSource)
-      {
-        UNiagaraGraph* EmitterGraph = NewObject<UNiagaraGraph>(EmitterSource, NAME_None, RF_Transactional);
-        EmitterSource->NodeGraph = EmitterGraph;
-        
-        // Set GraphSource - API differs between engine versions
-        // UE 5.0: GraphSource is directly on UNiagaraEmitter
-        // UE 5.1+: GraphSource is on FVersionedNiagaraEmitterData, accessed via GetLatestEmitterData()
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-        // UE 5.0: Set GraphSource directly on emitter
-        NewEmitter->GraphSource = EmitterSource;
-        
-        // Set source on emitter scripts
-        if (NewEmitter->SpawnScriptProps.Script)
-          NewEmitter->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
-        if (NewEmitter->UpdateScriptProps.Script)
-          NewEmitter->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
-#if WITH_EDITORONLY_DATA
-        if (NewEmitter->EmitterSpawnScriptProps.Script)
-          NewEmitter->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
-        if (NewEmitter->EmitterUpdateScriptProps.Script)
-          NewEmitter->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
-#endif
-#else
-        // UE 5.1+: Access via GetLatestEmitterData()
-        FVersionedNiagaraEmitterData* EmitterData = NewEmitter->GetLatestEmitterData();
-        if (EmitterData)
-        {
-          EmitterData->GraphSource = EmitterSource;
-          
-          // Set source on emitter scripts
-          if (EmitterData->SpawnScriptProps.Script)
-            EmitterData->SpawnScriptProps.Script->SetLatestSource(EmitterSource);
-          if (EmitterData->UpdateScriptProps.Script)
-            EmitterData->UpdateScriptProps.Script->SetLatestSource(EmitterSource);
-#if WITH_EDITORONLY_DATA
-          if (EmitterData->EmitterSpawnScriptProps.Script)
-            EmitterData->EmitterSpawnScriptProps.Script->SetLatestSource(EmitterSource);
-          if (EmitterData->EmitterUpdateScriptProps.Script)
-            EmitterData->EmitterUpdateScriptProps.Script->SetLatestSource(EmitterSource);
-#endif
-        }
-#endif
-      }
-      
-      // AddEmitterHandle: UE 5.0 uses 2 params, UE 5.1+ uses 3 params (with FGuid)
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")));
-#else
-      NiagaraSystem->AddEmitterHandle(*NewEmitter, FName(TEXT("DefaultEmitter")), FGuid::NewGuid());
-#endif
-    }
+
+    // ResetGraphForOutput() would add required output nodes to the graph but
+    // lives in NiagaraEditor without NIAGARAEDITOR_API export, so we can't call
+    // it from an external plugin. The system is still a valid asset without
+    // output nodes; the stack UI will prompt to add them on first open.
+    NiagaraSystem->RequestCompile(false);
   }
   
   if (!NiagaraSystem) {

@@ -79,8 +79,12 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
   // Niagara asset creation (uses dedicated C++ handlers)
   // =========================================================================
   if (action === 'create_niagara_system') {
-    // Extract name and savePath from assetPath if provided
-    const resolvedName = (argsTyped.name as string | undefined)
+    // The manage_effect tool schema exposes the name as `systemName`, so accept
+    // it first. Fall back to `name` (legacy) and a systemPath-derived name
+    // before the `NS_Custom` placeholder — otherwise every caller ends up with
+    // the same default asset name and the per-call systemName is silently lost.
+    const resolvedName = (argsTyped.systemName as string | undefined)
+      || (argsTyped.name as string | undefined)
       || (effectiveSystemPath ? effectiveSystemPath.split('/').pop()?.replace(/\.[^.]+$/, '') : undefined)
       || 'NS_Custom';
     const resolvedSavePath = (mutableArgs.savePath as string | undefined)
@@ -92,8 +96,12 @@ export async function handleEffectTools(action: string, args: HandlerArgs, tools
     return cleanObject(res);
   }
   if (action === 'create_niagara_emitter') {
-    const resolvedName = (argsTyped.name as string | undefined)
-      || (mutableArgs.emitterName as string | undefined) || 'DefaultEmitter';
+    // Same pattern: accept `emitterName` (top-level schema key) before falling
+    // back to the lower-precedence aliases so the caller's name isn't ignored.
+    const resolvedName = (argsTyped.emitterName as string | undefined)
+      || (argsTyped.name as string | undefined)
+      || (mutableArgs.emitterName as string | undefined)
+      || 'DefaultEmitter';
     const resolvedSavePath = (mutableArgs.savePath as string | undefined) || '/Game/FX';
     const res = await executeAutomationRequest(tools, 'create_niagara_emitter', {
       name: resolvedName,
