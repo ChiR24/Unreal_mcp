@@ -45,10 +45,12 @@ A comprehensive Model Context Protocol (MCP) server that enables AI assistants t
 ### Architecture
 
 - **Native C++ Automation** — All operations route through the MCP Automation Bridge plugin
+- **Dual Transport** — Native HTTP/SSE (no bridge needed) or WebSocket via TypeScript bridge
 - **Dynamic Type Discovery** — Runtime introspection for lights, debug shapes, and sequencer tracks
 - **Graceful Degradation** — Server starts even without an active Unreal connection
 - **On-Demand Connection** — Retries automation handshakes with exponential backoff
 - **Command Safety** — Blocks dangerous console commands with pattern-based validation
+- **Capability Token Auth** — Optional token-based authentication for both WS and HTTP transports
 - **Asset Caching** — 10-second TTL for improved performance
 - **Metrics Rate Limiting** — Per-IP rate limiting (60 req/min) on Prometheus endpoint
 - **Centralized Configuration** — Unified class aliases and type definitions
@@ -235,6 +237,8 @@ Features:
 - SSE streaming for real-time progress during long operations
 - Multiple concurrent sessions (Cursor + Claude Code + others simultaneously)
 - Dynamic tool management — only core tools (8) loaded by default, enable more via `manage_tools`
+- Python execution via `execute_python` action (inline code or .py files)
+- Capability token authentication — enable in project settings for network security
 
 #### Option B: TypeScript Bridge (stdio — classic setup)
 
@@ -318,7 +322,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 3. Under **Connection**, set **"Listen Host"** to `0.0.0.0`
 4. Restart the editor
 
-⚠️ **Security Warning:** Enabling LAN access exposes the automation bridge to your local network. Only use on trusted networks with appropriate firewall rules.
+⚠️ **Security Warning:** Enabling LAN access exposes the automation bridge to your local network. Only use on trusted networks with appropriate firewall rules. **Enable capability token authentication** (`Require Capability Token` in project settings) to prevent unauthorized access when using LAN mode.
 
 ---
 
@@ -335,7 +339,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | `control_actor` | Spawn, delete, transform, physics, tags |
 | `control_editor` | PIE, Camera, viewport, screenshots |
 | `manage_level` | Load/Save, World Partition, streaming |
-| `system_control` | UBT, Tests, Logs, Project Settings, CVars |
+| `system_control` | UBT, Tests, Logs, Project Settings, CVars, Python Execution |
 | `inspect` | Object Introspection |
 | `manage_pipeline` | Build automation, UBT compilation, status checks |
 | `manage_tools` | Dynamic tool management (enable/disable at runtime) |

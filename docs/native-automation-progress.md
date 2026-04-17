@@ -81,8 +81,13 @@ This document tracks ongoing work to replace stubbed or registry-based fallbacks
 | Feature | Status | Details |
 | --- | --- | --- |
 | **Path Sanitization** | ✅ Implemented | Enforces project-relative paths (`/Game`, `/Engine`, `/Script`) and rejects traversal (`..`) in `import`, `create_folder`, etc. |
+| **Symlink Resolution** | ✅ Implemented | `execute_python` file path validation resolves symlinks and re-validates against project directory to prevent escape attacks. |
+| **Code Size Limits** | ✅ Implemented | `execute_python` enforces 1 MB maximum on inline code payloads. |
+| **Capability Token Auth** | ✅ Implemented | Native MCP transport validates `X-MCP-Capability-Token` header when `bRequireCapabilityToken` is enabled. |
+| **Request Origin Tracking** | ✅ Implemented | `ERequestOrigin` enum routes HTTP vs WebSocket responses explicitly — no `TargetSocket==nullptr` inference. |
 | **Pointer Safety** | ✅ Verified | Robust `nullptr` checks and weak pointers in C++ handlers. |
 | **Concurrency** | ✅ Verified | Thread-safe queue and GameThread dispatching for all automation requests. |
+| **Tool Registry Thread Safety** | ✅ Implemented | `CacheMutex` protects `Tools`, `ToolsByName`, `CachedToolSchemas`, `bCacheValid`. `GetAllTools()` returns copy. |
 
 ## Blueprint Authoring (Recap)
 
