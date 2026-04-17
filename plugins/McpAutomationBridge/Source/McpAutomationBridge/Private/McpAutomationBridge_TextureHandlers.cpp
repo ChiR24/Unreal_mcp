@@ -71,7 +71,11 @@
 // Editor/Asset
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#if __has_include("Factories/Texture2dFactoryNew.h")
 #include "Factories/Texture2dFactoryNew.h"
+#else
+#include "Factories/Texture2DFactoryNew.h"
+#endif
 #include "EditorAssetLibrary.h"
 
 // Rendering
